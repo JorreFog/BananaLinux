@@ -59,7 +59,7 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 |---|---|
 | Games | `/data/roms/<system>` (`folder` in `systems.conf`); `.zip` ROMs are the emulator's to read |
 | BIOS files | `/data/bios` (DS: `bios7.bin`, `bios9.bin`, `firmware.bin` if the emulator wants them) |
-| Saves and states | `/data/saves/<system>`, `/data/states/<system>` (DraStic keeps its own in `/data/drastic`) |
+| Saves and states | `/data/saves/<folder>`, `/data/states/<folder>`: the system for the DS and the GBA, the core's own name for RetroArch's other systems (below; DraStic keeps its own in `/data/drastic`) |
 | The emulator's own files | `/data/<emulator>` (settings it writes, per-game memory) |
 | Logs | `/data/banana/logs/<emulator>/` (readable on a computer; keep them small) |
 | Screenshots | `/data/screenshots` |
@@ -195,7 +195,7 @@ nothing more, in the same files, so a game goes on in either:
   panel RetroArch's `video_monitor_index` names. The display plane scales the core's own picture (no GPU); with
   `ra_shader` the GPU draws libretro's zfast-lcd / zfast-crt / sharp-bilinear (SuperDrastic's shader folder).
 - **Sound:** ALSA `default` at 48 kHz, `ra_audio_latency`'s buffer, dynamic rate control against the panel's refresh.
-- **Files:** RetroArch's names and formats: saves `/data/saves/<core>/<game>.srm` (`/data/saves/gba` for every GBA
+- **Files:** RetroArch's names and formats: saves `/data/saves/<game>.srm` (`/data/saves/gba` for every GBA
   core), states `/data/states/<core>/<game>.state[N]` (RASTATE in RZIP) + `.png` thumbnails, `.state.auto` for Quick
   resume (`savestate_auto_save`), screenshots `/data/screenshots/<game>-YYMMDD-HHMMSS.png`, core options read from
   RetroArch's `config/<core>/<core>.opt` and `<game>.opt` (never written).

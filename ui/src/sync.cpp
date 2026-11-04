@@ -26,7 +26,8 @@
 // downloads go to <file>.part, are checked, then renamed; gamelist.xml is merged; saves never sync while a game runs.
 // A save comes down to /run first, is checked against the server's hash and installed through the vault (the save it
 // replaces kept, the install journalled: save_vault.h), after the journal of a run cut short is recovered; a blank
-// save is neither sent nor taken (save_adapt.h).
+// save is neither sent nor taken (save_adapt.h). RomM's saves are each game's one save file, the one its emulator
+// reads, for a game whose ROM is the server's by its contents (save_paths.h).
 #include "json.h"
 #include "save_adapt.h"
 #include "save_vault.h"
@@ -736,6 +737,7 @@ namespace
 			{
 				std::string rec = journalRecover();
 				for (size_t a = 0, e; (e = rec.find('\n', a)) != std::string::npos; a = e + 1) say("  journal: %s", rec.substr(a, e - a).c_str());
+				savesFlatFirst();
 			}
 			b->saves(states, up, down, sconf, errors, note);
 		}

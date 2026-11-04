@@ -12,6 +12,7 @@ head before writing into it, so a real server's earlier saves don't change the o
 run writes.
 """
 import hashlib
+import io
 import json
 import os
 import re
@@ -21,6 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import zipfile
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -488,6 +490,40 @@ def empty_slot_and_download_path():
     check(rows and all(x["slot"] == "" for x in rows), f"slot= listing: {[x['slot'] for x in rows]}")
     check(" " in urllib.parse.urlsplit(s["download_path"]).query.split("timestamp=")[1].split("&")[0],
           f"download_path {s['download_path']!r}")
+
+
+@case
+def rom_file_hashes():
+    """a ROM's files only with with_files=true; a zip hashed as its members' bytes in name order, each member listed"""
+    pid = next(p["id"] for p in ok(*call("GET", "/api/platforms", token=TA), "platforms") if p["fs_slug"] == "gba")
+    def every(**q):
+        out = []
+        while True:
+            r = ok(*call("GET", "/api/roms", token=TA, query={"platform_ids": pid, "limit": 500, "offset": len(out), **q}), "roms")
+            out += r["items"]
+            if not r["items"] or len(out) >= r["total"]:
+                return out
+    bare = every()
+    check(all(r["files"] == [] for r in bare), "files listed without with_files")
+    full = {r["id"]: r for r in every(with_files="true")}
+    plain = next(r for r in bare if r["fs_name"].endswith(".gba"))
+    zipped = next((r for r in bare if r["fs_name"].endswith(".zip")), None)
+    check(zipped is not None, "the cases need a zipped GBA ROM of two members on the server")
+    data = ok(*call("GET", f"/api/roms/{plain['id']}/content/{urllib.parse.quote(plain['fs_name'])}", token=TA), "content")
+    f = full[plain["id"]]["files"]
+    check(plain["md5_hash"] == md5(data) and len(f) == 1 and f[0]["md5_hash"] == md5(data) and f[0]["archive_members"] is None,
+          f"a plain ROM: {plain['md5_hash']}, {f}, its bytes {md5(data)}")
+    zdata = ok(*call("GET", f"/api/roms/{zipped['id']}/content/{urllib.parse.quote(zipped['fs_name'])}", token=TA), "content")
+    with zipfile.ZipFile(io.BytesIO(zdata)) as z:
+        inside = sorted(z.infolist(), key=lambda i: i.filename)
+        composite = md5(b"".join(z.read(i) for i in inside))
+        want = [{"name": i.filename, "size": i.file_size, "crc_hash": format(i.CRC, "08x"), "md5_hash": md5(z.read(i))} for i in inside]
+    f = full[zipped["id"]]["files"]
+    check(len(inside) == 2 and len(f) == 1, f"a zip of {len(inside)} members, {len(f)} files")
+    got = [{k: m[k] for k in ("name", "size", "crc_hash", "md5_hash")} for m in f[0]["archive_members"] or []]
+    check(sorted(got, key=lambda m: m["name"]) == want, f"archive_members {got}, the zip's {want}")
+    check(f[0]["md5_hash"] == composite == zipped["md5_hash"] != md5(zdata),
+          f"a zip's MD5 {f[0]['md5_hash']} (ROM {zipped['md5_hash']}), its members' {composite}, the zip file's {md5(zdata)}")
 
 
 for f in CASES:

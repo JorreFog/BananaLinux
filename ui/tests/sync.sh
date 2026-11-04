@@ -13,7 +13,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 fail=0
 bad() { echo "FAIL sync: $*"; fail=1; }
 BIN=$OUT/banana-sync
-${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
+${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
 PIDS=""
 cleanup() { for p in $PIDS; do kill "$p" 2>/dev/null; done; }
 trap cleanup EXIT INT TERM
@@ -21,6 +21,8 @@ port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0));
 waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null && return 0; sleep 0.1; done; return 1; }
 # card <name>: a throwaway card (its /data); bs <card> <args>: banana-sync on it
 card() { mkdir -p "$OUT/$1/banana" "$OUT/$1/run" "$OUT/$1/roms"; }
+# (the image's systems.conf, and no RetroArch cores: the systems whose save folder is a core's are said, not synced)
+export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/no-cores"
 bs() { c=$OUT/$1; shift; BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
 st() { cat "$OUT/$1/run/sync.status" 2>/dev/null; }
 has() { [ -f "$OUT/$1" ] || bad "no $1"; }
@@ -185,27 +187,28 @@ printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves.log" > "$OUT/nds-saves";
 BANANA_NDS_SAVES=$OUT/nds-saves bs rb sync --saves-only >/dev/null 2>&1
 grep -q "rb/roms/nds/Peel Quest (USA).nds$" "$OUT/nds-saves.log" 2>/dev/null || bad "nds-saves wasn't run for the .dsv"
 rm -rf "$OUT/rb/roms/nds" "$OUT/rb/drastic"; : > "$OUT/rb/banana/settings.conf"
-# saves: up from card A (RetroArch's flat saves/ and BananaDS's saves/nds), down to card B
-mkdir -p "$OUT/ra/saves/nds"; echo "ds v1" > "$OUT/ra/saves/nds/Peel Quest (USA).sav"; echo "gba v1" > "$OUT/ra/saves/Banana Run (USA).srm"
-echo bak > "$OUT/ra/saves/Banana Run (USA).srm.bak"; echo resume > "$OUT/ra/saves/nds/Peel Quest (USA).resume.sav"
+# saves: up from card A (every GBA core's saves/gba and BananaDS's saves/nds), down to card B
+mkdir -p "$OUT/ra/saves/nds" "$OUT/ra/saves/gba"; echo "ds v1" > "$OUT/ra/saves/nds/Peel Quest (USA).sav"; echo "gba v1" > "$OUT/ra/saves/gba/Banana Run (USA).srm"
+echo bak > "$OUT/ra/saves/gba/Banana Run (USA).srm.bak"; echo resume > "$OUT/ra/saves/nds/Peel Quest (USA).resume.sav"
 bs ra sync --saves-only > "$OUT/romm-saves1.log" 2>&1
 grep -q "2 saves up" "$OUT/romm-saves1.log" || bad "RomM saves up: $(tail -2 "$OUT/romm-saves1.log")"
 curl -s "$U/test/state" | grep -q 'resume\|\.bak' && bad "a .bak or quick-resume file was uploaded"
-mkdir -p "$OUT/rb/roms/nds"; cp "$OUT/ra/roms/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/"
+# (a save syncs for a game on the card: B gets A's ROMs, as someone copying them over would)
+mkdir -p "$OUT/rb/roms/nds" "$OUT/rb/roms/gba"; cp "$OUT/ra/roms/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/"; cp "$OUT/ra/roms/gba/Banana Run (USA).gba" "$OUT/rb/roms/gba/"
 bs rb sync --saves-only > "$OUT/romm-saves2.log" 2>&1
 [ "$(cat "$OUT/rb/saves/nds/Peel Quest (USA).sav" 2>/dev/null)" = "ds v1" ] || bad "card B didn't get the DS save"
-[ "$(cat "$OUT/rb/saves/Banana Run (USA).srm" 2>/dev/null)" = "gba v1" ] || bad "card B didn't get the GBA save"
+[ "$(cat "$OUT/rb/saves/gba/Banana Run (USA).srm" 2>/dev/null)" = "gba v1" ] || bad "card B didn't get the GBA save"
 # changed on B, synced; A gets it
 echo "ds v2 from B" > "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
 bs ra sync --saves-only >/dev/null 2>&1
 [ "$(cat "$OUT/ra/saves/nds/Peel Quest (USA).sav")" = "ds v2 from B" ] || bad "card A didn't get B's change"
 # both changed: the newer wins, the other kept beside it as .bak (never lost), and it's counted
-echo "gba A" > "$OUT/ra/saves/Banana Run (USA).srm"; sleep 1.1; echo "gba B newer" > "$OUT/rb/saves/Banana Run (USA).srm"
+echo "gba A" > "$OUT/ra/saves/gba/Banana Run (USA).srm"; sleep 1.1; echo "gba B newer" > "$OUT/rb/saves/gba/Banana Run (USA).srm"
 bs rb sync --saves-only >/dev/null 2>&1
 bs ra sync --saves-only > "$OUT/romm-conflict.log" 2>&1
 grep -q "1 conflicts" "$OUT/romm-conflict.log" || bad "the conflict wasn't counted: $(tail -1 "$OUT/romm-conflict.log")"
-[ "$(cat "$OUT/ra/saves/Banana Run (USA).srm")" = "gba B newer" ] || bad "the newer save didn't win"
-ls "$OUT/ra/saves/" | grep -q 'Banana Run (USA).srm.card-.*\.bak' || bad "the card's save wasn't kept in a conflict"
+[ "$(cat "$OUT/ra/saves/gba/Banana Run (USA).srm")" = "gba B newer" ] || bad "the newer save didn't win"
+ls "$OUT/ra/saves/gba/" | grep -q 'Banana Run (USA).srm.card-.*\.bak' || bad "the card's save wasn't kept in a conflict"
 # a save deleted on the card is forgotten, not deleted on the server
 rm "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
 curl -s "$U/test/state" | grep -q 'Peel Quest (USA).sav' || bad "deleting a save on the card deleted it on the server"

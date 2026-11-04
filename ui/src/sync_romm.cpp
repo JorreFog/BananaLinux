@@ -1,8 +1,12 @@
 // banana-sync's RomM backend (sync_romm.h)
 #include "sync_romm.h"
 #include "save_adapt.h"
+#include "save_paths.h"
 #include "save_vault.h"
+#include <algorithm>
 #include <ctime>
+#include <dirent.h>
+#include <iterator>
 #include <memory>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -25,7 +29,26 @@ namespace bsync
 		{ "g-and-w", "gameandwatch" },
 	};
 	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64", "gameandwatch" };
-	struct RommRom { long long id; std::string folder, stem, fsName; };
+	// a server ROM: its system (our folder), its stem and file name as RomM has them, the file the ROM sync writes for
+	// it (a disc set's .m3u; none for a game the menu can't start), and its files' hashes
+	struct RommRom { long long id; std::string folder, stem, fsName, entry; std::vector<RomFile> files; };
+	// what a server ROM lists of its files (with_files)
+	std::vector<RomFile> romFiles(const JVal& rom)
+	{
+		std::vector<RomFile> out;
+		const JVal* files = rom.get("files");
+		if (!files || !files->isArr()) return out;
+		for (auto& fj : files->arr)
+		{
+			RomFile f;
+			f.md5 = lower(fj->str("md5_hash")); f.sha1 = lower(fj->str("sha1_hash"));
+			if (const JVal* ms = fj->get("archive_members"))
+				if (ms->isArr())
+					for (auto& m : ms->arr) f.members.push_back({ (long long)m->num("size", -1), lower(m->str("crc_hash")) });
+			out.push_back(f);
+		}
+		return out;
+	}
 	struct Romm : Backend
 	{
 		using Backend::Backend;
@@ -51,8 +74,9 @@ namespace bsync
 			{
 				for (long long off = 0;; off += 500)
 				{
+					// (with_files: each ROM's files[], with their hashes and a disc set's discs; RomM 5.4 lists none without it)
 					std::string q = "/api/roms?platform_ids=" + std::to_string(pf.first) + "&platform_id=" + std::to_string(pf.first) +
-						"&limit=500&offset=" + std::to_string(off) + "&order_by=name&with_char_index=false&with_filter_values=false&with_rom_id_index=false";
+						"&limit=500&offset=" + std::to_string(off) + "&order_by=name&with_files=true&with_char_index=false&with_filter_values=false&with_rom_id_index=false";
 					Resp rr = call("GET", q);
 					if (rr.code != 200) { err = "roms: " + rr.error(); return false; }
 					JPtr page = rr.json();
@@ -62,7 +86,12 @@ namespace bsync
 					{
 						if ((long long)it->num("platform_id") != pf.first) continue;
 						romJson.push_back(it);
-						roms.push_back({ (long long)it->num("id"), pf.second, it->str("fs_name_no_ext", stemOf(it->str("fs_name"))), it->str("fs_name") });
+						std::string fsName = it->str("fs_name");
+						const JVal* files = it->get("files");
+						bool multi = it->flag("has_multiple_files") || (files && files->isArr() && files->arr.size() > 1);
+						// (as manifest() below writes it: a disc set is its .m3u, another game of several files none)
+						std::string entry = !multi ? fsName : pf.second == "psx" ? fsName + ".m3u" : "";
+						roms.push_back({ (long long)it->num("id"), pf.second, it->str("fs_name_no_ext", stemOf(fsName)), fsName, entry, romFiles(*it) });
 					}
 					long long total = page->isArr() ? (long long)items->arr.size() : (long long)page->num("total", -1);
 					if (page->isArr() || items->arr.size() < 500 || (total >= 0 && off + 500 >= total)) break;
@@ -172,16 +201,104 @@ namespace bsync
 			for (auto& kv : by) m.systems.push_back(kv.second);
 			return true;
 		}
-		// RomM keeps a save per ROM (and per file name). The card's save is matched to its ROM by name: saves/nds/<rom
-		// name>.sav (BananaDS), saves/<rom name>.srm (RetroArch, one folder for every system), states/... the same.
+		// RomM keeps a save per ROM (and per file name). A game's save is the one file its emulator reads
+		// (save_paths.h): saves/nds/<stem>.sav, saves/gba/<stem>.srm, saves/<core's name>/<stem>.srm, for a game on the
+		// card whose ROM is the server's by its contents; a server save of that ROM in that file's format is that file's.
 		// The decision, per save: changed here only -> upload; changed on the server only -> download; changed on both
 		// -> the newer one wins and the other is kept on the card as <file>.<side>-<date>.bak (never lost); the same
 		// on both -> nothing. A save deleted here is forgotten, not deleted on the server. A blank save here (a core's
 		// fresh one) is never sent: it takes the server's when it was never synced, and is left alone when it was
 		// (blanked since). Every download is checked against the server's MD5 and installed through the vault.
-		bool matchRom(const std::string& rel, RommRom& out)
+		struct Canon { RommRom rom; std::string romRel; };
+		std::map<std::string, Canon> canonical;		// data-relative save path -> its game
+		std::map<long long, std::string> saveOf;	// ROM id -> its save's path
+		// each game on the card with a save in play (one on the server, or one here in any folder under saves/), and
+		// its save's path. What can't be said for sure is said instead: a system whose save folder isn't known, a ROM
+		// other than the server's
+		void resolve(const std::set<long long>& onServer, const std::set<std::string>& stemsHere, std::vector<std::string>& errors, std::string& note)
 		{
-			// saves/<folder>/<name>.<ext> or saves/<name>.<ext>
+			canonical.clear(); saveOf.clear();
+			std::map<std::string, SysSaves> sys;
+			std::map<std::string, std::map<std::string, std::string>> index;	// system -> its ROMs on the card
+			std::set<std::string> told, shared;
+			int unmatched = 0;
+			for (auto& r : roms)
+			{
+				if (r.entry.empty()) continue;
+				if (!index.count(r.folder))
+				{
+					std::string f = romFolder(r.folder);
+					index[r.folder] = f.empty() ? std::map<std::string, std::string>() : romIndex(f);
+				}
+				auto li = index[r.folder].find(r.entry);
+				if (li == index[r.folder].end()) continue;	// (not on this card)
+				if (!sys.count(r.folder)) sys[r.folder] = systemSaves(r.folder);
+				const SysSaves& ss = sys[r.folder];
+				std::string stem = stemOf(baseOf(li->second));
+				if (ss.folder.empty())
+				{
+					if ((onServer.count(r.id) || stemsHere.count(stem)) && told.insert(r.folder).second) errors.push_back("saves: " + ss.err);
+					continue;
+				}
+				std::string rel = ss.rel(stem);
+				if (!onServer.count(r.id) && !stemsHere.count(stem)) continue;	// (no save in play: not hashed)
+				if (!romMatches(li->second, r.files, c))
+				{
+					unmatched++;
+					say("  not synced, not the server's ROM (other bytes): %s", li->second.c_str());
+					continue;
+				}
+				if (canonical.count(rel)) { shared.insert(rel); continue; }
+				canonical[rel] = { r, li->second };
+				saveOf[r.id] = rel;
+			}
+			for (auto& rel : shared)
+			{
+				say("  not synced, two games' save: %s", rel.c_str());
+				saveOf.erase(canonical[rel].rom.id);
+				canonical.erase(rel);
+			}
+			savePathCaches();
+			if (unmatched) note = std::to_string(unmatched) + (unmatched == 1 ? " game" : " games") + " not matched on the server";
+		}
+		// the same game's save in another folder, kept in the vault, said once, never sent and never removed: a core's
+		// folder from before 0.5.3's flat saves that saves-flat hasn't emptied, and for a GBA game a flat
+		// saves/<stem>.srm (a 0.5.0 download left one there; it may as well be another system's game of the same name)
+		void keepOthers(const std::string& rel, std::vector<std::string>& errors)
+		{
+			std::string folder = saveFolder(rel), name = baseOf(rel);
+			if (folder == "nds") return;
+			std::vector<std::string> dirs;
+			if (folder == "gba") dirs.push_back("");
+			if (DIR* d = opendir((ROOT + "/saves").c_str()))
+			{
+				while (dirent* e = readdir(d))
+				{
+					std::string n = e->d_name;
+					if (n[0] != '.' && n != folder && n != "nds" && n != "gba") dirs.push_back(n + "/");
+				}
+				closedir(d);
+			}
+			std::sort(dirs.begin(), dirs.end());
+			for (auto& d : dirs)
+			{
+				std::string o = "saves/" + d + name, p = ROOT + "/" + o;
+				struct stat st;
+				if (stat(p.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) continue;
+				bool ok;
+				std::string data = readFile(p, &ok);
+				if (!ok || blankSave(data, saveFolder(o))) continue;
+				if (dryRun) { say("  keep in the vault %s", o.c_str()); continue; }
+				std::string kept, err;
+				bool added = false;
+				if (!vaultKeep(o, p, kept, err, &added)) { errors.push_back(o + ": " + err); continue; }
+				if (added) say(d.empty() ? "  an earlier download, kept in the vault, not synced: %s" : "  also here, kept in the vault, not synced: %s", o.c_str());
+			}
+		}
+		// states, still matched by name: states/<rom name>.<ext> (states/nds/... for the DS)
+		bool matchStateRom(const std::string& rel, RommRom& out)
+		{
+			// states/<folder>/<name>.<ext> or states/<name>.<ext>
 			size_t s1 = rel.find('/');
 			std::string rest = rel.substr(s1 + 1), folder, name = baseOf(rel);
 			if (rest.find('/') != std::string::npos) folder = rest.substr(0, rest.find('/'));
@@ -213,24 +330,25 @@ namespace bsync
 			if (!list(skip, err)) { errors.push_back("saves: " + err); return false; }
 			ndsSavesFirst();
 			auto local = localSaves(statesToo);
-			bool ok = sync("save", local, c.saves, up, down, conflicts, errors);
-			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors);
-			(void)note;
+			bool ok = sync("save", local, c.saves, up, down, conflicts, errors, note);
+			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors, note);
 			return ok;
 		}
 		bool sync(const std::string& kind, const std::map<std::string, std::string>& localAll, std::map<std::string, SaveSt>& state,
-			int& up, int& down, int& conflicts, std::vector<std::string>& errors)
+			int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note)
 		{
-			std::string api = kind == "save" ? "/api/saves" : "/api/states", field = kind == "save" ? "saveFile" : "stateFile";
+			bool forSaves = kind == "save";
+			std::string api = forSaves ? "/api/saves" : "/api/states", field = forSaves ? "saveFile" : "stateFile";
 			std::string dev = c.device.empty() ? "" : "device_id=" + urlEsc(c.device);
 			// the server's, per platform
 			struct Srv { long long id, rom; std::string name, hash, updated; };
-			std::map<std::string, Srv> srv;	// card path -> the server's newest save of that name for that ROM
 			std::map<long long, RommRom> romById;
 			for (auto& r : roms) romById[r.id] = r;
+			std::vector<std::pair<JPtr, const RommRom*>> rows;
+			std::set<long long> onServer;
 			for (auto& pf : platforms)
 			{
-				Resp r = call("GET", api + "?platform_id=" + std::to_string(pf.first) + (kind == "save" && !dev.empty() ? "&" + dev : ""));
+				Resp r = call("GET", api + "?platform_id=" + std::to_string(pf.first) + (forSaves && !dev.empty() ? "&" + dev : ""));
 				if (r.code != 200) { errors.push_back(kind + "s: " + r.error()); return false; }
 				JPtr j = r.json();
 				if (!j || !j->isArr()) continue;
@@ -240,24 +358,60 @@ namespace bsync
 					if (ri == romById.end() || s->flag("missing_from_fs")) continue;
 					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName)) continue;	// (not chosen: not pulled)
 					if (!s->str("slot").empty()) continue;	// (another client's versioned slots: left to it)
-					std::string name = s->str("file_name");
-					if (!safeRel(name) || name.find('/') != std::string::npos || stemOf(name) != ri->second.stem) continue;
-					std::string top = kind == "save" ? "saves/" : "states/";
-					std::string rel = ri->second.folder == "nds" ? top + "nds/" + name : top + name;
-					Srv v{ (long long)s->num("id"), ri->second.id, name, lower(s->str("content_hash")), s->str("updated_at") };
-					auto e = srv.find(rel);
-					if (e == srv.end() || e->second.updated < v.updated) srv[rel] = v;
+					rows.push_back({ s, &ri->second });
+					onServer.insert(ri->second.id);
 				}
 			}
+			if (forSaves)
+			{
+				std::set<std::string> stemsHere;
+				for (auto& kv : localAll) if (kv.second == "save") stemsHere.insert(stemOf(baseOf(kv.first)));
+				resolve(onServer, stemsHere, errors, note);
+				for (auto& kv : canonical) keepOthers(kv.first, errors);
+				// (0.5.0's flat saves/<name>, which no emulator reads, forgotten: the file itself is kept in the vault above)
+				for (auto it = state.begin(); it != state.end();)
+					it = it->first.find('/', 6) == std::string::npos ? state.erase(it) : std::next(it);
+			}
+			std::map<std::string, Srv> srv;	// card path -> the server's newest save of that ROM for that path
+			std::set<std::string> notTaken;
+			for (auto& row : rows)
+			{
+				const JPtr& s = row.first;
+				const RommRom& rom = *row.second;
+				std::string name = s->str("file_name"), rel;
+				if (!safeRel(name) || name.find('/') != std::string::npos) continue;
+				if (forSaves)
+				{
+					auto so = saveOf.find(rom.id);
+					if (so == saveOf.end()) continue;	// (not on this card, or not the server's ROM: said above)
+					if (stemOf(name) != rom.stem && stemOf(name) != stemOf(baseOf(so->second))) continue;
+					if (extOf(name) != extOf(so->second))
+					{
+						if (notTaken.insert(name).second) say("  not taken yet, a format this handheld doesn't read: %s", name.c_str());
+						continue;
+					}
+					rel = so->second;
+				}
+				else
+				{
+					if (stemOf(name) != rom.stem) continue;
+					rel = rom.folder == "nds" ? "states/nds/" + name : "states/" + name;
+				}
+				Srv v{ (long long)s->num("id"), rom.id, name, lower(s->str("content_hash")), s->str("updated_at") };
+				auto e = srv.find(rel);
+				if (e == srv.end() || e->second.updated < v.updated) srv[rel] = v;
+			}
 			std::set<std::string> paths;
-			for (auto& kv : localAll) if (kv.second == kind && kv.first.compare(0, kind == "save" ? 6 : 7, kind == "save" ? "saves/" : "states/") == 0) paths.insert(kv.first);
+			for (auto& kv : localAll)
+				if (kv.second == kind && kv.first.compare(0, forSaves ? 6 : 7, forSaves ? "saves/" : "states/") == 0 && (!forSaves || canonical.count(kv.first)))
+					paths.insert(kv.first);
 			for (auto& kv : srv) paths.insert(kv.first);
-			for (auto& kv : state) paths.insert(kv.first);
+			for (auto& kv : state) if (!forSaves || canonical.count(kv.first)) paths.insert(kv.first);
 			int n = 0, total = (int)paths.size();
 			for (auto& rel : paths)
 			{
 				n++;
-				status("running " + std::to_string(n) + " " + std::to_string(total) + (kind == "save" ? " Saves|" : " States|") + baseOf(rel));
+				status("running " + std::to_string(n) + " " + std::to_string(total) + (forSaves ? " Saves|" : " States|") + baseOf(rel));
 				std::string p = ROOT + "/" + rel;
 				bool here = localAll.count(rel) > 0;
 				auto si = srv.find(rel);
@@ -290,7 +444,8 @@ namespace bsync
 						// until it changes here
 						if (st->second.hash == md5) continue;
 					}
-					if (!matchRom(rel, rom)) continue;	// (no ROM of this name on the server)
+					if (forSaves) rom = canonical[rel].rom;
+					else if (!matchStateRom(rel, rom)) continue;	// (no ROM of this name on the server)
 					if (upload(api, field, rom.id, p, rel, md5, state, dev, false, errors)) up++;
 					continue;
 				}
@@ -384,6 +539,9 @@ namespace bsync
 			}
 			st = { (double)s.id, want, s.updated };
 			say("  down %s", p.c_str());
+			// (DraStic's .dsv brought into step with the DS save just installed, before either emulator starts)
+			auto ci = canonical.find(rel);
+			if (ci != canonical.end() && saveFolder(rel) == "nds") ndsSaves(ROMS + "/" + ci->second.romRel);
 			saveConf(c);
 			return true;
 		}

@@ -56,6 +56,8 @@ import time
 import traceback
 import urllib.parse
 import uuid
+import zipfile
+import zlib
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.policy import HTTP
@@ -211,12 +213,15 @@ def roms():
             full = os.path.join(d, name)
             files, multi = [], os.path.isdir(full)
             paths = [os.path.join(full, f) for f in sorted(os.listdir(full))] if multi else [full]
+            whole = [hashlib.md5(), hashlib.sha1(), 0]     # (the ROM's own hashes: its files' bytes in name order)
             for k, fp in enumerate(paths):
                 data = open(fp, "rb").read()
+                h, members = file_hashes(fp, data)
                 files.append({"id": rid * 10 + k, "rom_id": rid, "file_name": os.path.basename(fp),
                               "file_path": f"{p['fs_slug']}/{name}" if multi else p["fs_slug"], "file_size_bytes": len(data),
-                              "full_path": fp, "crc_hash": None, "md5_hash": md5(data), "sha1_hash": hashlib.sha1(data).hexdigest(),
-                              "category": None})
+                              "full_path": fp, **h, "archive_members": members, "category": None})
+                for part in members_data(fp) if members else [data]:
+                    whole[0].update(part); whole[1].update(part); whole[2] = zlib.crc32(part, whole[2])
             stem = name if multi else os.path.splitext(name)[0]
             cover = os.path.join(LIB, "covers", f"{rid}.png")
             out.append({
@@ -229,8 +234,33 @@ def roms():
                 # (?ts= is RomM's updated_at as Python prints a datetime: a space and a "+" in it)
                 "path_cover_large": f"/assets/romm/resources/roms/{p['id']}/{rid}/cover/big.png?ts=2026-10-31 15:44:32.123456+00:00" if os.path.exists(cover) else "",
                 "has_multiple_files": multi, "has_simple_single_file": not multi, "missing_from_fs": False,
+                "md5_hash": whole[0].hexdigest(), "sha1_hash": whole[1].hexdigest(), "crc_hash": format(whole[2], "08x"),
                 "files": files, "full_path": full})
     return out
+
+
+# A ROM file's hashes as RomM 5.4.1 has them (handler/filesystem/roms_handler.py): a zip's are of its members' bytes
+# one after another in name order, not of the zip file, and each member's are listed as archive_members; a zip that
+# can't be read, and any other file, by its own bytes
+def file_hashes(fp, data):
+    members = None
+    if fp.lower().endswith(".zip"):
+        try:
+            with zipfile.ZipFile(fp) as z:
+                members = [{"name": i.filename, "size": i.file_size, "crc_hash": format(i.CRC, "08x"),
+                            "md5_hash": md5(z.read(i)), "sha1_hash": hashlib.sha1(z.read(i)).hexdigest()}
+                           for i in sorted(z.infolist(), key=lambda i: i.filename) if not i.is_dir()] or None
+        except (zipfile.BadZipFile, OSError):
+            members = None
+    m, s, c = hashlib.md5(), hashlib.sha1(), 0
+    for part in members_data(fp) if members else [data]:
+        m.update(part); s.update(part); c = zlib.crc32(part, c)
+    return {"crc_hash": format(c, "08x"), "md5_hash": m.hexdigest(), "sha1_hash": s.hexdigest()}, members
+
+
+def members_data(fp):
+    with zipfile.ZipFile(fp) as z:
+        return [z.read(i) for i in sorted(z.infolist(), key=lambda i: i.filename) if not i.is_dir()]
 
 
 def rom_ids():
@@ -653,6 +683,8 @@ class H(http.server.BaseHTTPRequestHandler):
             pid = qint(q, "platform_ids", qint(q, "platform_id", 0))
             lim, off = qint(q, "limit", 50, minimum=1), qint(q, "offset", 0, minimum=0)
             items = [r for r in roms() if r["platform_id"] == pid]
+            if q.get("with_files", "false").lower() not in ("true", "1"):    # (each ROM's files only when asked)
+                items = [{**r, "files": []} for r in items]
             return self.send(200, {"items": items[off:off + lim], "total": len(items), "limit": lim, "offset": off})
         parts = p.split("/")
         if p.startswith("/api/roms/") and "/files/content/" in p:      # /api/roms/{file id}/files/content/{name}

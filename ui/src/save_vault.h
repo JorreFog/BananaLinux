@@ -10,8 +10,9 @@ namespace bsync
 {
 	std::string vaultDir();
 	std::string journalPath();
-	// a copy of src kept as the save at rel (data-relative) was: written, synced, read back and compared. kept: its path
-	bool vaultKeep(const std::string& rel, const std::string& src, std::string& kept, std::string& err);
+	// a copy of src kept as the save at rel (data-relative) was: written, synced, read back and compared. kept: its path;
+	// added: false when the vault had those bytes already
+	bool vaultKeep(const std::string& rel, const std::string& src, std::string& kept, std::string& err, bool* added = nullptr);
 	// data (the save at rel, as just installed or sent) as rel's last-good copy, unless it is blank
 	bool vaultGood(const std::string& rel, const std::string& data);
 

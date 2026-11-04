@@ -1,6 +1,5 @@
 # A card laid out as a BananaOS handheld's /data really is after some play, for the save sync's tests (sourced, POSIX
-# sh). tests/sync.sh keeps its own flat card: it is the legacy protocol's test, and banana-sync 1.0 puts a downloaded
-# save at saves/<file>.
+# sh). tests/sync.sh keeps its own simpler card: it is the legacy protocol's test.
 #   realcard <dir>                       the folders, settings.conf with each system's core, RetroArch's config as
 #                                        run-retroarch and RetroArch leave it, a ROM per system
 #   realsave <dir> <system> <stem> [<bytes>]   a save with data in it where the system's emulator writes it;
@@ -8,17 +7,21 @@
 #   blank <file> <bytes> <hex byte>      a save as a core writes it before the game has saved anything
 #   dsv <raw> <out>                      a .dsv as DraStic writes it: the raw save and DeSmuME's 122-byte footer
 #   core_table                           what each shipped core is called and writes (below), tab-separated
+#   fakecore <so>                        a core installed there, as the save sync looks for one (only that it is)
 # The helpers' own variables start with _, so a test that sources this keeps its names. What the cores do was
 # measured in a chroot of the built image (RetroArch 1.22.2) and read from each core's source at the commit its
 # package pins.
 
-# core, library_name (retro_get_system_info: the folder under saves/), systems, the bytes of a fresh save, its sizes
+# core, library_name (retro_get_system_info: the folder under saves/ a card from before 0.5.3 kept its saves in, and
+# under states/ its states still are in), systems, the bytes of a fresh save, its sizes (BananaNES, the image's NES
+# core, a fork of FCEUmm, says it is FCEUmm: its saves are FCEUmm's)
 core_table() {
     cat <<'EOF'
 gambatte	Gambatte	gb gbc	ff	0 8192 32768 131072
 gpsp	gpSP	gba	ff	131072
 mgba	mGBA	gba	ff	512 8192 32768 65536 131072
 fceumm	FCEUmm	nes	00	128-32768
+banananes	FCEUmm	nes	00	128-32768
 snes9x	Snes9x	snes	60	1024-131072
 picodrive	PicoDrive	megadrive	00	none until written
 pcsx_rearmed	PCSX-ReARMed	psx	card	131072
@@ -30,7 +33,7 @@ EOF
 # system -> the core systems.conf runs it with
 default_core() {
     case $1 in
-        gb|gbc) echo gambatte ;; gba) echo gpsp ;; nes) echo fceumm ;; snes) echo snes9x ;; megadrive) echo picodrive ;;
+        gb|gbc) echo gambatte ;; gba) echo gpsp ;; nes) echo banananes ;; snes) echo snes9x ;; megadrive) echo picodrive ;;
         psx) echo pcsx_rearmed ;; n64) echo mupen64plus_next ;; *) return 1 ;;
     esac
 }
@@ -64,6 +67,10 @@ realsave() {
     esac
     head -c "$_b" /dev/urandom > "$_p"
     echo "$_p"
+}
+
+fakecore() {
+    mkdir -p "$(dirname "$1")" && : > "$1"
 }
 
 blank() {

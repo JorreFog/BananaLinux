@@ -27,8 +27,9 @@ namespace bsync
 	std::string gameDir(const std::string& rel) { return vaultDir() + "/" + dirOf(rel) + "/" + stemOf(baseOf(rel)); }
 	}
 
-	bool vaultKeep(const std::string& rel, const std::string& src, std::string& kept, std::string& err)
+	bool vaultKeep(const std::string& rel, const std::string& src, std::string& kept, std::string& err, bool* added)
 	{
+		if (added) *added = false;
 		if (!safeRel(rel) || rel.find('/') == std::string::npos) { err = "not a save path: " + rel; return false; }
 		bool ok;
 		std::string data = readFile(src, &ok);
@@ -50,6 +51,7 @@ namespace bsync
 		for (int i = 2; exists(kept); i++) kept = dir + "/" + utcStamp() + "-" + std::to_string(i) + tail;
 		if (!writeAtomic(kept, data)) { err = "can't keep a copy in the vault (card full?)"; unlink(kept.c_str()); return false; }
 		if (hashFile(kept, "md5") != md5) { err = "the vault's copy reads back wrong"; unlink(kept.c_str()); return false; }
+		if (added) *added = true;
 		return true;
 	}
 

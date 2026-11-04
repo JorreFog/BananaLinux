@@ -26,6 +26,7 @@ waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null &
 L=$OUT/lib
 mkdir -p "$L/gba" "$L/nds"
 for i in $(seq 20); do printf 'gba rom %s' "$i" > "$L/gba/Game $i (USA).gba"; done
+python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Zip Game (USA).gba", b"gba rom zipped " * 300); z.writestr("Zip Game (USA) [b].gba", b"second member" * 10)' "$L/gba/Zip Game (USA).zip"
 head -c 4096 /dev/urandom > "$L/nds/Peel Quest (USA).nds"
 P=$(port)
 python3 "$HERE/tests/fake-romm.py" "$P" "$L" 2> "$OUT/fake-romm.log" & PIDS="$PIDS $!"
@@ -159,15 +160,18 @@ raw_of_dsv "$RC/drastic/backup/Peel Quest (USA).dsv" "$OUT/cut.sav"
 cmp -s "$OUT/cut.sav" "$p" || bad "dsv: nds-saves doesn't cut it back to the raw save"
 
 # ---------------------------------------------------------------- the card's safety layer, under banana-sync 1.0's
-# unslotted saves (saves/<rom>.srm), on a real card against a stand-in of its own: a download is checked against the
-# server's MD5 and only then put in place, the save it replaces kept in the vault first; a blank save is never sent
-# and never taken; a run killed or a card full leaves the save as it was
+# unslotted saves, on a real card against a stand-in of its own: a download is checked against the server's MD5 and
+# only then put in place, the save it replaces kept in the vault first; a blank save is never sent and never taken; a
+# run killed or a card full leaves the save as it was
 BIN=$OUT/banana-sync
 ${CXX:-g++} -std=c++17 -O2 -Wall -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" \
-    "$HERE/src/save_adapt.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || bad "banana-sync doesn't build"
+    "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || bad "banana-sync doesn't build"
 L3=$OUT/lib3
 mkdir -p "$L3/gba"
-for g in "Bad Hash" "Blank Card" "Blank Only" "Blanked" "Blank Server" "Full Disk" "Killed" "Truncated" "Unsafe"; do printf 'gba rom %s' "$g" > "$L3/gba/$g (USA).gba"; done
+for g in "Bad Hash" "Blank Card" "Blank Only" "Blanked" "Blank Server" "Full Disk" "Killed" "Truncated" "Unsafe" \
+    "Other Bytes" "Two Cores" "Flat" "Sorted Off"; do printf 'gba rom %s' "$g" > "$L3/gba/$g (USA).gba"; done
+mkdir -p "$L3/snes" "$L3/nds"; printf 'snes rom' > "$L3/snes/Peel Kart (USA).sfc"; printf 'nds rom' > "$L3/nds/Peel Quest (USA).nds"
+python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Zip Game (USA).gba", b"gba rom zipped " * 300)' "$L3/gba/Zip Game (USA).zip"
 P3=$(port)
 python3 "$HERE/tests/fake-romm.py" "$P3" "$L3" 2> "$OUT/fake-romm3.log" & PIDS="$PIDS $!"
 waitport "$P3" /api/heartbeat || bad "the card's fake RomM didn't start"
@@ -175,6 +179,10 @@ U3=http://127.0.0.1:$P3
 T3=$(curl -s -XPOST "$U3/test/token" -d '{}' | jget '["token"]')
 C=$OUT/card
 realcard "$C"
+# (the server's games on the card, but one dumped otherwise; the image's systems.conf; Snes9x installed)
+cp "$L3/gba/"* "$C/roms/gba/"; printf 'gba rom another dump' > "$C/roms/gba/Other Bytes (USA).gba"
+mkdir -p "$OUT/cores" "$OUT/no-cores"; fakecore "$OUT/cores/snes9x_libretro.so" || bad "the test core can't be put in place"
+export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/cores"
 printf '{"backend": "romm", "server": "%s", "token": "%s"}\n' "$U3" "$T3" > "$C/banana/romsync.json"
 bs() { "$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --saves-only > "$OUT/bs.log" 2>&1; }
 # (the same, left running: $! is banana-sync itself)
@@ -185,16 +193,16 @@ rid() { srv3 "/api/roms?platform_ids=$(srv3 /api/platforms | jget '[0]["id"]')&l
 seed() { curl -s -XPOST "$U3/test/save" -d "{\"rom_id\": $(rid "$1"), \"file_name\": \"$1 (USA).srm\", \"data\": \"$2\", \"updated_at\": \"$(date -u -d "@$(( $(date +%s) + ${3:-0} ))" +%Y-%m-%dT%H:%M:%SZ)\"}" | jget '["id"]'; }
 hex() { od -An -v -tx1 "$1" | tr -d ' \n'; }
 saves3() { srv3 "/api/saves?rom_id=$(rid "$1")" | jget '.__len__()'; }
-vaulted() { ls "$C/banana/save-vault/saves/$1 (USA)/" 2>/dev/null | grep -c -- "-$(md5sum < "$2" | cut -c1-8)\.srm$"; }
+vaulted() { ls "$C/banana/save-vault/saves/${3:-gba}/$1 (USA)/" 2>/dev/null | grep -c -- "-$(md5sum < "$2" | cut -c1-8)\.srm$"; }
 cfault() { curl -s -XPOST "$U3/test/fault" -d "{\"path\": \"GET /api/saves/$1/content\", \"kind\": \"$2\"${3:+, \"arg\": $3}}" >/dev/null; }
-S=$C/saves
+S=$C/saves/gba
 # a download cut short or with other bytes than the server's MD5 says: nothing on the card, nothing recorded; then whole
 head -c 2048 /dev/urandom > "$OUT/t.srm"
 for f in truncate badhash; do
     id=$(seed Truncated "$(hex "$OUT/t.srm")"); cfault "$id" "$f"; bs
     [ -e "$S/Truncated (USA).srm" ] && bad "$f: installed anyway"
     ls "$S" | grep -q '\.part$\|\.new$' && bad "$f: a partial file left in saves/: $(ls "$S")"
-    grep -q '"saves/Truncated' "$C/banana/romsync.json" && bad "$f: recorded as synced"
+    grep -q '"saves/gba/Truncated' "$C/banana/romsync.json" && bad "$f: recorded as synced"
     grep -q 'error: Truncated (USA).srm' "$OUT/bs.log" || bad "$f: not reported: $(cat "$OUT/bs.log")"
 done
 bs; cmp -s "$S/Truncated (USA).srm" "$OUT/t.srm" || bad "a whole download wasn't installed: $(cat "$OUT/bs.log")"
@@ -218,18 +226,18 @@ head -c 2048 /dev/urandom > "$S/Blanked (USA).srm"; bs
 blank "$S/Blanked (USA).srm" 131072 ff; cp "$S/Blanked (USA).srm" "$OUT/blanked.srm"; bs
 cmp -s "$S/Blanked (USA).srm" "$OUT/blanked.srm" || bad "a save blanked since the last sync was refilled: $(cat "$OUT/bs.log")"
 [ "$(saves3 Blanked)" = 1 ] || bad "a save blanked since the last sync was sent: $(saves3 Blanked)"
-grep -q 'blank here since the last sync, left as it is: saves/Blanked' "$OUT/bs.log" || bad "the held blank not said: $(cat "$OUT/bs.log")"
+grep -q 'blank here since the last sync, left as it is: saves/gba/Blanked' "$OUT/bs.log" || bad "the held blank not said: $(cat "$OUT/bs.log")"
 grep -q 'error:' "$OUT/bs.log" && bad "a held blank is an error: $(cat "$OUT/bs.log")"
 # an install a run cut short left open in the journal: checked at the start of the next sync, said, and closed
-printf 'begin\trec.1\tinstall\tsaves/Blank Card (USA).srm\t%s\t\t\t\t%s\t20260101T000000Z\n' "$(md5sum < "$S/Blank Card (USA).srm" | cut -c1-32)" \
+printf 'begin\trec.1\tinstall\tsaves/gba/Blank Card (USA).srm\t%s\t\t\t\t%s\t20260101T000000Z\n' "$(md5sum < "$S/Blank Card (USA).srm" | cut -c1-32)" \
     "$(md5sum < "$OUT/blank-ff.srm" | cut -c1-32)" >> "$C/banana/logs/sync/journal.log"; bs
-grep -q 'journal: unchanged saves/Blank Card (USA).srm' "$OUT/bs.log" || bad "an open operation not recovered at the start: $(cat "$OUT/bs.log")"
+grep -q 'journal: unchanged saves/gba/Blank Card (USA).srm' "$OUT/bs.log" || bad "an open operation not recovered at the start: $(cat "$OUT/bs.log")"
 grep -q '^end	rec\.1	recovered unchanged	' "$C/banana/logs/sync/journal.log" || bad "the recovered operation not closed in the journal"
 # killed in the middle of a download: the save as it was, no operation left open; the next run takes it, the old one
 # kept, so every version is still somewhere
 head -c 2048 /dev/urandom > "$S/Killed (USA).srm"; cp "$S/Killed (USA).srm" "$OUT/k1.srm"; bs
 [ "$(saves3 Killed)" = 1 ] || bad "the first version wasn't sent: $(cat "$OUT/bs.log")"
-cmp -s "$C/banana/save-vault/saves/Killed (USA)/last-good.srm" "$OUT/k1.srm" || bad "last-good isn't the save just sent"
+cmp -s "$C/banana/save-vault/saves/gba/Killed (USA)/last-good.srm" "$OUT/k1.srm" || bad "last-good isn't the save just sent"
 head -c 2048 /dev/urandom > "$OUT/k2.srm"; id=$(seed Killed "$(hex "$OUT/k2.srm")" 5); cfault "$id" slow 512
 bsbg; k=$!; sleep 1.5; kill -9 $k 2>/dev/null; wait $k 2>/dev/null
 cmp -s "$S/Killed (USA).srm" "$OUT/k1.srm" || bad "a killed download changed the save"
@@ -237,8 +245,8 @@ awk -F'\t' '$1 == "begin" { o[$2] = 1 } $1 == "end" { delete o[$2] } END { for (
     bad "an operation left open by a kill during the download: $(cat "$C/banana/logs/sync/journal.log")"
 bs; cmp -s "$S/Killed (USA).srm" "$OUT/k2.srm" || bad "the download after a kill: $(cat "$OUT/bs.log")"
 [ "$(vaulted Killed "$OUT/k1.srm")" = 1 ] || bad "the save a download replaced isn't in the vault"
-cmp -s "$C/banana/save-vault/saves/Killed (USA)/last-good.srm" "$OUT/k2.srm" || bad "last-good isn't the newest save"
-grep -q "	install	saves/Killed (USA).srm	$(md5sum < "$OUT/k1.srm" | cut -c1-32)	" "$C/banana/logs/sync/journal.log" || bad "the install isn't in the journal"
+cmp -s "$C/banana/save-vault/saves/gba/Killed (USA)/last-good.srm" "$OUT/k2.srm" || bad "last-good isn't the newest save"
+grep -q "	install	saves/gba/Killed (USA).srm	$(md5sum < "$OUT/k1.srm" | cut -c1-32)	" "$C/banana/logs/sync/journal.log" || bad "the install isn't in the journal"
 # a full card (writes past 16 KiB fail, as on a card with no room: EFBIG for ENOSPC): the vault copy of a 64 KiB save
 # can't be made, so it isn't replaced; a download too big to write leaves it too
 full() { python3 -c 'import os, resource, signal, sys; signal.signal(signal.SIGXFSZ, signal.SIG_IGN); resource.setrlimit(resource.RLIMIT_FSIZE, (16384, 16384)); os.execv(sys.argv[1], sys.argv[1:])' \
@@ -253,6 +261,73 @@ ls "$S" | grep -q '\.part$\|\.new$' && bad "a full card: a partial file left in 
 # a server name that climbs out of saves/: nothing written anywhere
 curl -s -XPOST "$U3/test/save" -d "{\"rom_id\": $(rid Unsafe), \"file_name\": \"../../x.srm\", \"data\": \"00ff00ff\"}" >/dev/null; bs
 [ -z "$(find "$OUT" -name 'x.srm')" ] || bad "a server name wrote outside saves/: $(find "$OUT" -name 'x.srm')"
+
+# ---------------------------------------------------------------- each game's save where its emulator reads it: the
+# DS's saves/nds, every GBA core's saves/gba, another system's its core's folder (the core asked its name); a game is
+# the server's only by its ROM's contents
+ridf() { for p in $(srv3 /api/platforms | python3 -c 'import json,sys; print(" ".join(str(p["id"]) for p in json.load(sys.stdin)))'); do
+    srv3 "/api/roms?platform_ids=$p&limit=500" | python3 -c "import json,sys; [print(r['id']) for r in json.load(sys.stdin)['items'] if r['fs_name'] == sys.argv[1]]" "$1"; done; }
+nsaves() { srv3 "/api/saves?rom_id=$(ridf "$1")" | jget '.__len__()'; }
+seedf() { curl -s -XPOST "$U3/test/save" -d "{\"rom_id\": $(ridf "$1"), \"file_name\": \"$2\", \"data\": \"$3\", \"updated_at\": \"$(date -u -d "@$(( $(date +%s) + ${4:-0} ))" +%Y-%m-%dT%H:%M:%SZ)\"}" >/dev/null; }
+# SNES: up from Snes9x's folder, a newer one from the server down into it; nothing in the flat saves/ 0.5.0 used
+K=$C/saves/Snes9x/"Peel Kart (USA).srm"; realsave "$C" snes "Peel Kart (USA)" >/dev/null; bs
+[ "$(nsaves "Peel Kart (USA).sfc")" = 1 ] || bad "a SNES save in Snes9x's folder wasn't sent: $(cat "$OUT/bs.log")"
+head -c 8192 /dev/urandom > "$OUT/kart.srm"; seedf "Peel Kart (USA).sfc" "Peel Kart (USA).srm" "$(hex "$OUT/kart.srm")" 5; bs
+cmp -s "$K" "$OUT/kart.srm" || bad "a SNES save from the server didn't go into Snes9x's folder: $(cat "$OUT/bs.log")"
+[ -e "$C/saves/Peel Kart (USA).srm" ] && bad "a SNES save went into the flat saves/"
+# the same name, another dump: not the server's game, its save not sent, and said
+head -c 2048 /dev/urandom > "$S/Other Bytes (USA).srm"; bs
+[ "$(saves3 "Other Bytes")" = 0 ] || bad "a save of another dump of the game was sent"
+grep -q "not synced, not the server's ROM (other bytes): gba/Other Bytes (USA).gba" "$OUT/bs.log" && grep -q '1 game not matched on the server' "$OUT/bs.log" ||
+    bad "another dump not said: $(cat "$OUT/bs.log")"
+# games chosen for syncing (homesync_games = chosen): an unchosen game's save neither sent nor taken, a chosen one's sent
+head -c 8192 /dev/urandom > "$S/Not Chosen (USA).srm"; cp "$S/Not Chosen (USA).srm" "$OUT/nc.srm"; head -c 8192 /dev/urandom > "$S/Zip Game (USA).srm"
+printf 'homesync_games = chosen\n' >> "$C/banana/settings.conf"; printf 'gba/Zip Game (USA).zip\n' > "$C/banana/homesync-games.txt"; bs
+[ "$(saves3 "Not Chosen")" = 0 ] && [ "$(nsaves "Zip Game (USA).zip")" = 1 ] || bad "chosen games: unchosen $(saves3 "Not Chosen"), chosen $(nsaves "Zip Game (USA).zip") sent: $(cat "$OUT/bs.log")"
+head -c 8192 /dev/urandom > "$OUT/nc2.srm"; seed "Not Chosen" "$(hex "$OUT/nc2.srm")" 5 >/dev/null; bs
+cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc.srm" || bad "an unchosen game's save taken from the server"
+sed -i '/^homesync_games = /d' "$C/banana/settings.conf"; rm -f "$C/banana/homesync-games.txt" "$S/Not Chosen (USA).srm" "$C/roms/gba/Not Chosen (USA).gba"
+# a zipped game, the server's by the zip's members
+head -c 2048 /dev/urandom > "$S/Zip Game (USA).srm"; bs
+[ "$(nsaves "Zip Game (USA).zip")" = 1 ] || bad "a zipped game's save wasn't sent: $(cat "$OUT/bs.log")"
+# another core's save of the same game (mGBA's, from before every GBA core shared saves/gba): kept in the vault once,
+# said once, never sent, never removed
+head -c 2048 /dev/urandom > "$S/Two Cores (USA).srm"; head -c 2048 /dev/urandom > "$C/saves/mGBA/Two Cores (USA).srm"; bs
+[ "$(vaulted "Two Cores" "$C/saves/mGBA/Two Cores (USA).srm" mGBA)" = 1 ] || bad "another core's save isn't in the vault"
+grep -q 'also here, kept in the vault, not synced: saves/mGBA/Two Cores (USA).srm' "$OUT/bs.log" || bad "another core's save not said: $(cat "$OUT/bs.log")"
+[ "$(saves3 "Two Cores")" = 1 ] && [ -e "$C/saves/mGBA/Two Cores (USA).srm" ] || bad "another core's save sent or removed: $(saves3 "Two Cores")"
+bs; grep -q 'also here' "$OUT/bs.log" && bad "another core's save said again"
+# a 0.5.0 download in the flat saves/, which no emulator reads: kept in the vault and said, left where it is, its state
+# forgotten
+head -c 2048 /dev/urandom > "$C/saves/Flat (USA).srm"
+python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["saves"]["saves/Flat (USA).srm"] = {"version": 1, "md5": "0" * 32}; json.dump(c, open(sys.argv[1], "w"))' "$C/banana/romsync.json"
+bs
+[ "$(vaulted Flat "$C/saves/Flat (USA).srm" .)" = 1 ] || bad "a flat 0.5.0 save isn't in the vault: $(find "$C/banana/save-vault" -path '*Flat*')"
+grep -q 'an earlier download, kept in the vault, not synced: saves/Flat (USA).srm' "$OUT/bs.log" || bad "a flat 0.5.0 save not said: $(cat "$OUT/bs.log")"
+[ -e "$C/saves/Flat (USA).srm" ] && [ "$(saves3 Flat)" = 0 ] || bad "a flat 0.5.0 save removed or sent"
+grep -q '"saves/Flat' "$C/banana/romsync.json" && bad "a flat 0.5.0 save's state kept"
+# RetroArch told to keep every core's saves in one folder: the systems whose folder is a core's are said and left, the
+# GBA's (its own folder whatever RetroArch's settings) still synced
+cp "$C/retroarch/retroarch.cfg" "$OUT/ra.cfg"; sed -i 's/^sort_savefiles_enable = .*/sort_savefiles_enable = "false"/' "$C/retroarch/retroarch.cfg"
+head -c 8192 /dev/urandom > "$K"; head -c 2048 /dev/urandom > "$S/Sorted Off (USA).srm"; bs
+grep -q 'error: saves: snes: RetroArch keeps every core.s saves in one folder' "$OUT/bs.log" || bad "RetroArch's unsorted saves not said: $(cat "$OUT/bs.log")"
+kart() { srv3 "/api/saves?rom_id=$(ridf "Peel Kart (USA).sfc")" | jget '[0]["content_hash"]'; }
+[ "$(saves3 "Sorted Off")" = 1 ] && [ "$(kart)" = "$(md5sum < "$OUT/kart.srm" | cut -c1-32)" ] || bad "unsorted saves: gba $(saves3 "Sorted Off"), the SNES one sent anyway"
+cp "$OUT/ra.cfg" "$C/retroarch/retroarch.cfg"
+# no core for the system: said, nothing written anywhere
+seedf "Peel Kart (USA).sfc" "Peel Kart (USA).srm" "$(hex "$OUT/kart.srm")" 10; cp "$K" "$OUT/kart-here.srm"
+BANANA_LIBRETRO=$OUT/no-cores bs
+grep -q 'error: saves: snes: core snes9x isn.t installed' "$OUT/bs.log" || bad "no core not said: $(cat "$OUT/bs.log")"
+cmp -s "$K" "$OUT/kart-here.srm" && [ -z "$(find "$C/saves" -maxdepth 1 -name 'Peel Kart*')" ] || bad "a save written with no core to say where"
+# the DS: a server .dsv isn't taken (a format for later); a .sav is, and DraStic's .dsv then brought into step with it
+seedf "Peel Quest (USA).nds" "Peel Quest (USA).dsv" "00112233" 0; bs
+grep -q "not taken yet, a format this handheld doesn't read: Peel Quest (USA).dsv" "$OUT/bs.log" || bad "a server .dsv not said: $(cat "$OUT/bs.log")"
+[ -z "$(find "$C/saves" -name '*.dsv')" ] || bad "a server .dsv was put in saves/: $(find "$C/saves" -name '*.dsv')"
+printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves3.log" > "$OUT/nds-saves3"; chmod +x "$OUT/nds-saves3"
+head -c 8192 /dev/urandom > "$OUT/quest.sav"; seedf "Peel Quest (USA).nds" "Peel Quest (USA).sav" "$(hex "$OUT/quest.sav")" 5
+BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+cmp -s "$C/saves/nds/Peel Quest (USA).sav" "$OUT/quest.sav" || bad "a DS save from the server: $(cat "$OUT/bs.log")"
+grep -qx "$C/roms/nds/Peel Quest (USA).nds" "$OUT/nds-saves3.log" 2>/dev/null || bad "nds-saves wasn't run after a DS save was installed"
 
 # no traceback but those of the faults that asked the handler to fail: each traceback's last line, the exception, is
 # what tells them apart

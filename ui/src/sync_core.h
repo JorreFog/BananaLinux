@@ -46,6 +46,10 @@ namespace bsync
 	long long freeBytes(const std::string& p);
 	void pruneDirs(std::string d, const std::string& top);
 	std::string sd2Roms();
+	// a ROM's path made roms-relative from either card's roms folder (the path as it is when on neither); and a
+	// roms-relative path's file, on whichever card has it (the main card's when both or neither do)
+	std::string romsRelative(const std::string& path);
+	std::string romPath(const std::string& rel);
 	void sd2MakeRoms();
 	inline std::string fmtNum(double d) { char b[32]; snprintf(b, sizeof b, "%.0f", d); return b; }
 	inline std::string isoNow() { char b[32]; time_t t = time(nullptr); strftime(b, sizeof b, "%Y%m%d-%H%M%S", localtime(&t)); return b; }
@@ -202,7 +206,13 @@ namespace bsync
 	// ---- the saves on the card ----------------------------------------------------------------------------------------
 	std::string saveKind(const std::string& rel);
 	std::map<std::string, std::string> localSaves(bool states);
+	// saves-flat (system/rootfs/usr/libexec/banana), once a boot as the launchers run it: a save still in a RetroArch
+	// core's folder from before 0.5.3 moved to the flat saves/ (saves/gba for the GBA's cores) the emulators read now,
+	// so a card that hasn't started a game since the update syncs the save its next game will read. Run under
+	// save.lock, before anything is decided; BANANA_SAVES_FLAT names another script (the tests')
+	void savesFlatFirst();
 	void ndsSavesFirst();
+	void ndsSaves(const std::string& romPath);
 	bool gameRunning();
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
 		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr);

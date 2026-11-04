@@ -12,6 +12,7 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 namespace bsync
@@ -163,6 +164,20 @@ namespace bsync
 			return "";
 		}
 		return p;
+	}
+	std::string romsRelative(const std::string& path)
+	{
+		if (path.compare(0, ROMS.size() + 1, ROMS + "/") == 0) return path.substr(ROMS.size() + 1);
+		std::string sd2 = sd2Roms();
+		if (!sd2.empty() && path.compare(0, sd2.size() + 1, sd2 + "/") == 0) return path.substr(sd2.size() + 1);
+		return path;
+	}
+	std::string romPath(const std::string& rel)
+	{
+		std::string p = ROMS + "/" + rel;
+		if (exists(p)) return p;
+		std::string sd2 = sd2Roms();
+		return !sd2.empty() && exists(sd2 + "/" + rel) ? sd2 + "/" + rel : p;
 	}
 	// a second SD card that's in but has no roms folder (a fresh one): the folder made and the sd2 script run, as Files
 	// does for a roms folder made there, so the library shows its games and sd2Roms has it. The card at /run/sd2 (the
@@ -568,25 +583,59 @@ namespace bsync
 		}
 		return m;
 	}
-	// BananaOS: DraStic's .dsv and BananaDS's .sav brought together first (the .sav is the one that syncs). Only on the
-	// card's own /data (nds-saves knows no other root)
-	void ndsSavesFirst()
+	// BananaOS: DraStic's .dsv and BananaDS's .sav brought together (nds-saves <rom>), before a sync (the .sav is the one
+	// that syncs) and after a DS save is installed (DraStic's then matches it). Only on the card's own /data (nds-saves
+	// knows no other root)
+	namespace
+	{
+	std::string ndsTool()
 	{
 		const char* tool = getenv("BANANA_NDS_SAVES");
 		std::string t = tool ? tool : (ROOT == "/data" ? "/usr/libexec/banana/nds-saves" : "");
+		return t.empty() || access(t.c_str(), X_OK) != 0 ? "" : t;
+	}
+	void runNdsSaves(const std::string& tool, const std::string& rom)
+	{
+		std::string cmd = "'" + tool + "' '";
+		for (char ch : rom) { if (ch == '\'') cmd += "'\\''"; else cmd += ch; }
+		cmd += "' >/dev/null 2>&1";
+		if (system(cmd.c_str()) != 0) {}
+	}
+	}
+	void savesFlatFirst()
+	{
+		const char* tool = getenv("BANANA_SAVES_FLAT");
+		std::string t = tool ? tool : (ROOT == "/data" ? "/usr/libexec/banana/saves-flat" : "");
 		if (t.empty() || access(t.c_str(), X_OK) != 0) return;
+		fflush(stdout); fflush(stderr);
+		pid_t pid = fork();
+		if (pid == 0)
+		{
+			int nul = open("/dev/null", O_WRONLY);
+			if (nul >= 0) { dup2(nul, 1); dup2(nul, 2); }
+			setenv("BANANA_DATA", ROOT.c_str(), 1);
+			setenv("BANANA_RUN", RUN.c_str(), 1);
+			execl(t.c_str(), t.c_str(), (char*)nullptr);
+			_exit(127);
+		}
+		int st;
+		if (pid > 0) while (waitpid(pid, &st, 0) < 0 && errno == EINTR) {}
+	}
+	void ndsSavesFirst()
+	{
+		std::string t = ndsTool();
+		if (t.empty()) return;
 		DIR* d = opendir((ROOT + "/drastic/backup").c_str());
 		if (!d) return;
 		std::vector<std::string> games;
 		while (dirent* e = readdir(d)) { std::string n = e->d_name; if (n.size() > 4 && lower(n.substr(n.size() - 4)) == ".dsv") games.push_back(n.substr(0, n.size() - 4)); }
 		closedir(d);
-		for (auto& g : games)
-		{
-			std::string cmd = "'" + t + "' '" + ROMS + "/nds/";
-			for (char ch : g) { if (ch == '\'') cmd += "'\\''"; else cmd += ch; }
-			cmd += ".nds' >/dev/null 2>&1";
-			if (system(cmd.c_str()) != 0) {}
-		}
+		for (auto& g : games) runNdsSaves(t, ROMS + "/nds/" + g + ".nds");
+	}
+	void ndsSaves(const std::string& romPath)
+	{
+		std::string t = ndsTool();
+		if (!t.empty()) runNdsSaves(t, romPath);
 	}
 	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save
 	bool gameRunning()
