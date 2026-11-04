@@ -19,6 +19,7 @@
 #include "colors.h"
 #include "pokemon.h"
 #include "gamecomp.h"
+#include "lang.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -523,6 +524,16 @@ namespace banana
 		// langAsk the picked choice's index on the Language row (-1: not asking), langYes the button on
 		int langAsk = -1;
 		bool langYes = false;
+		// the language list (2026-11-04, owner: "a list instead of left or right"): the Language row and the setup's
+		// language slide open it; UP/DOWN pick, A takes it (Settings: then asked first, as before; the setup: the slide's
+		// pick), B leaves it. langPick: the row picked, -1 closed
+		int langPick = -1, langTop = 0;
+		bool langPickSetup = false;
+		std::vector<lang::Info> langList;
+		void openLangPick(bool setup);
+		Result pressLangPick(Key k);
+		void renderLangPick();
+		void loadCjkFont();
 		bool rawText = false;	// text() draws the string as it is (not through the menu's language): the other language's
 		bool cjkLoaded = false;
 		Result pressLangAsk(Key k);
@@ -754,6 +765,8 @@ namespace banana
 		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
 		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
 		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		static constexpr float LANG_Y = 80, LANG_H = 52, LANG_PITCH = 58;	// the language list's rows (bottom panel)
+		static constexpr int LANG_VIS = 5;
 		static constexpr float HINT_TOP = 300;	// a choice's hint, under the row's sentence
 		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
 		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
