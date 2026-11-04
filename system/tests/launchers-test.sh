@@ -162,6 +162,26 @@ check "$(cat "$D/data/saves/Kirby's Dream Land (USA, Europe).srm" 2>/dev/null)" 
 check "$(cat "$D/data/saves/gba/Pokemon Emerald (USA).srm" 2>/dev/null)" "Pokemon Emerald (USA)" "mGBA's GBA save is in saves/gba"
 check "$(cat "$D/data/saves/gba/No Game Here.srm" 2>/dev/null)" "No Game Here" "a save with no game found stays the GBA's"
 check "$(ls "$D/data/saves/gba" | wc -l)" "2" "no Game Boy save in saves/gba"
+# two core folders with a save of the same name: one game (one system has it: the newer save is flat) or two games of
+# different systems, or none found to tell (both left where they are, said in the log, tried again at the next boot)
+D=$T/flat5; mkdir -p "$D/data/saves/FCEUmm" "$D/data/saves/Gambatte" "$D/data/saves/Snes9x" "$D/data/saves/bsnes" \
+    "$D/data/roms/nes" "$D/data/roms/gb" "$D/data/roms/snes" "$D/run" "$D/etc"
+printf '[nes]\n[gb]\n[snes]\n' > "$D/etc/systems.conf"
+touch "$D/data/roms/nes/Pac-Man (USA).nes" "$D/data/roms/gb/Pac-Man (USA).gb" "$D/data/roms/snes/Mario (USA).sfc"
+echo nes > "$D/data/saves/FCEUmm/Pac-Man (USA).srm"; touch -t 202601010000 "$D/data/saves/FCEUmm/Pac-Man (USA).srm"
+echo gb > "$D/data/saves/Gambatte/Pac-Man (USA).srm"
+echo nes > "$D/data/saves/FCEUmm/Unknown.srm"; echo gb > "$D/data/saves/Gambatte/Unknown.srm"
+echo old > "$D/data/saves/Snes9x/Mario (USA).srm"; touch -t 202601010000 "$D/data/saves/Snes9x/Mario (USA).srm"
+echo new > "$D/data/saves/bsnes/Mario (USA).srm"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat" 2> "$T/log"
+check "$(cat "$D/data/saves/FCEUmm/Pac-Man (USA).srm" "$D/data/saves/Gambatte/Pac-Man (USA).srm" 2>/dev/null | tr '\n' ' ')" "nes gb " \
+    "two systems' saves of one name both stay in their core folders"
+check "$([ -e "$D/data/saves/Pac-Man (USA).srm" ] && echo flat || echo none)" "none" "neither goes flat over the other"
+check "$(cat "$D/data/saves/FCEUmm/Unknown.srm" "$D/data/saves/Gambatte/Unknown.srm" 2>/dev/null | tr '\n' ' ')" "nes gb " \
+    "with no game found to tell, both stay too"
+check "$(cat "$D/data/saves/Mario (USA).srm" 2>/dev/null)" "new" "one system's game in two cores: the newer save is flat"
+check "$(grep -c 'Pac-Man (USA).srm' "$T/log")" "1" "the clash is said in the log, once"
+check "$([ -f "$D/run/saves-flat" ] && echo marked || echo again)" "again" "no marker: tried again at the next boot"
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

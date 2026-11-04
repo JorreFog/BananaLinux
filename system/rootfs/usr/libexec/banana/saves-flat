@@ -53,17 +53,43 @@ dest_of() {
     *) echo "$DATA/saves" ;;
     esac
 }
+# core <folder name>: whether saves/<folder> is a core's save folder
+core() {
+    echo "$IDS" | grep -Fxq "$1" && return 1	# (gba, nds, psx... are systems, not cores)
+    # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
+    # moved flat, a PICO-8 game would start without it)
+    case $1 in cdata) return 1 ;; esac
+    return 0
+}
+SEEN=	# the core folders done, a line each
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
-    echo "$IDS" | grep -Fxq "$d" && continue	# (gba, nds, psx... are systems, not cores)
-    # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
-    # moved flat, a PICO-8 game would start without it)
-    case $d in cdata) continue ;; esac
+    core "$d" || continue
     for f in "$dir"*; do
         [ -f "$f" ] || continue
         n=${f##*/}
         dest=$(dest_of "$d" "$n")
+        # another core folder with a save of this name for the same flat folder: one game played in two cores (a
+        # system that has a game of that name, and only one: the newer save is taken, as below), or two games of
+        # different systems (FCEUmm's NES Pac-Man and Gambatte's Game Boy one) that a flat folder can't keep apart, or
+        # no game found to tell. Those stay in their core folders, as RetroArch had them, said once in banana-ui's log;
+        # no marker, so a later boot tries again (the game put back, or one of the saves taken away). (Not for
+        # saves/gba: its cores are all one system's.)
+        if [ "$dest" = "$DATA/saves" ]; then
+            others= first=1
+            for o in "$DATA"/saves/*/; do
+                o=${o%/}; o=${o##*/}
+                [ "$o" != "$d" ] && [ -f "$DATA/saves/$o/$n" ] && core "$o" && [ "$(dest_of "$o" "$n")" = "$dest" ] || continue
+                others="$others, $o"
+                printf '%s\n' "$SEEN" | grep -Fxq "$o" && first=
+            done
+            if [ -n "$others" ] && [ "$(systems_of "${n%.*}" | wc -l)" != 1 ]; then
+                [ -n "$first" ] && echo "saves-flat: $n is in saves/$d$others: not one game's (two systems have a game of that name, or none does), so they stay where they are" >&2
+                FAIL=1
+                continue
+            fi
+        fi
         mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
         # the core's save goes flat when there is none there, when it is newer, and always over a blank one; never a
         # blank one over a save with data in it (gpSP's real save, then mGBA's empty file of it a day later)
@@ -93,6 +119,8 @@ for dir in "$DATA"/saves/*/; do
         mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null &&
             mv -f "$f" "$b" || FAIL=1
     done
+    SEEN="$SEEN
+$d"
 done
 if [ $FAIL = 0 ]; then
     touch "$MARK"
