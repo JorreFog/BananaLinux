@@ -1169,6 +1169,10 @@ namespace banana::gba
 			m.pid = le32(p + 0x4c);
 			m.status = le32(p + 0x50);
 			for (int i = 0; i < 5; i++) m.stats[i] = le16(p + 2 + 2 * i);
+			// the IVs: 5 bits each at 0x14, between the moves and the stat stages (as vanilla's BattlePokemon); they were
+			// left 0 - a wild Rattata showed no IVs and Hidden Power Fighting 30 on the RG DS Plus 2026-11-04
+			const uint32_t iv = le32(p + 0x14);
+			for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)(iv >> (5 * i) & 31);
 			return m.level >= 1 && m.level <= 100;
 		}
 

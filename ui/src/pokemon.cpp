@@ -1488,6 +1488,10 @@ namespace banana::pkmn
 			s.playSeconds = (long)le16(nameB.data() + 0x0E) * 3600 + nameB[0x10] * 60 + nameB[0x11];
 		}
 		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
+		// the money is at most 999,999: a "key" that makes it more, when the plain value is possible, isn't this save's key
+		// (Heart & Soul keeps its money plain: 3000 read as 3,579,103,101 through the word at SaveBlock2+0xAC, on the
+		// RG DS Plus 2026-11-04); then the bag's counts are plain too
+		if (moneyB.size() >= 4 && key && (le32(moneyB.data()) ^ key) > 999999 && le32(moneyB.data()) <= 999999) key = 0;
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
 		if (bagPockets)
