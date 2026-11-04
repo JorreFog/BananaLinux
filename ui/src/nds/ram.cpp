@@ -3,6 +3,7 @@
 #include "nds/ram.h"
 #include "nds/nitro.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -89,12 +90,16 @@ namespace banana::nds
 		return s;
 	}
 
+	// the highest species number a Gen IV Pokémon may have: 493, or a ROM hack's Pokédex (an hg-engine build: 1025;
+	// set by the RamReader of the game running - one at a time)
+	static std::atomic<int> gen4MaxSpecies{ 493 };
+
 	bool parseMon(Gen gen, const uint8_t* d, size_t n, Mon& m)
 	{
 		m = Mon{};
 		m.pid = u32(d);
 		m.species = u16(d + 0x08);
-		if (!m.species || m.species > (gen == Gen::IV ? 493 : 649)) return false;
+		if (!m.species || m.species > (gen == Gen::IV ? gen4MaxSpecies.load() : 649)) return false;
 		m.item = u16(d + 0x0A);
 		m.otId = u16(d + 0x0C);
 		m.otSecret = u16(d + 0x0E);
@@ -286,6 +291,7 @@ namespace banana::nds
 
 	RamReader::RamReader(const Game& g) : game(g)
 	{
+		if (g.gen == Gen::IV) gen4MaxSpecies = std::max(493, g.dexSize);
 		switch (g.id)
 		{
 		case GameId::DIAMOND: case GameId::PEARL: layout = &L_DP; break;
@@ -878,7 +884,7 @@ namespace banana::nds
 	{
 		Mon& m = b.mon;
 		m.species = u16(p);
-		if (!m.species || m.species > 493) return false;
+		if (!m.species || m.species > gen4MaxSpecies.load()) return false;
 		for (int i = 0; i < 5; i++) m.stats[i] = u16(p + 2 + 2 * i);	// Atk, Def, Speed, SpA, SpD
 		const uint32_t iv = u32(p + 0x14);
 		for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)((iv >> (5 * i)) & 31);

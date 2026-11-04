@@ -725,9 +725,25 @@ static void testSnapshotsMoved(const std::string& dir)
 	}
 }
 
+// an hg-engine ROM hack's Pokémon past Arceus (Origin HeartGold: the Pokédex to 1025): kept once its game's reader runs,
+// refused for a retail Gen IV game (2026-11-04: the reader capped Gen IV at 493)
+static void testHackSpecies()
+{
+	uint8_t plain[236], enc[236];
+	makeMon(Gen::IV, plain, 236, 0x12345678u, 700, 30, 1234, 5678, 33);	// Sylveon
+	encryptMon(plain, 236, enc);
+	Mon m;
+	Game retail; retail.id = GameId::HEARTGOLD; retail.gen = Gen::IV; retail.dexSize = 493;
+	{ RamReader r(retail); CHECK(!readMon(Gen::IV, enc, 236, m)); }
+	Game hack = retail; hack.dexSize = 1025; hack.hack = "origin-heartgold";
+	{ RamReader r(hack); CHECK(readMon(Gen::IV, enc, 236, m) && m.species == 700 && m.level == 30); }
+	{ RamReader r(retail); CHECK(!readMon(Gen::IV, enc, 236, m)); }	// (and back for the next retail game)
+}
+
 int main(int argc, char** argv)
 {
 	testCrypto();
+	testHackSpecies();
 	testPlatinum();
 	testBlack2();
 	testDetect();

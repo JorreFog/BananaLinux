@@ -301,6 +301,9 @@ namespace banana::nds
 			if (out.game != game.hack) { if (why) *why = game.hack + ".json is the guide of another game"; out = GuideData(); return false; }
 			return true;
 		}
+		// (a DS ROM hack - an hg-engine build, game.id its base release's -: the base game's guide names its trainers and
+		// places, which the hack changed; none until one is written for it)
+		if (!game.hack.empty()) { if (why) *why = "no guide for the ROM hack " + game.hack; return false; }
 		std::string f = guideFileName(game.id);
 		if (f.empty()) { if (why) *why = "not one of the nine games"; return false; }
 		return loadGuideFile(std::string(game.gen == Gen::III ? gbaGuideDir() : guideDir()) + "/" + f, out, game.id, why, resolver);
