@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace banana::nds { class Pages; }
+namespace banana::nds { class Pages; enum class Page : uint8_t; }
 namespace banana::gba { class Host; }
 
 namespace banana
@@ -120,10 +120,13 @@ namespace banana
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameKeysOpen() const { return gKeysOpen; }	// (tests: the panel's keyboard page is up)
+		// (tests: what the Pokémon companion's panel shows: "game" (the tiles), "pages:<page>" (gbaHost's pages) or
+		// "views:<n>" (the Party/Battle/Map/Bag/Dex/Guide views of pokeRender), "" without a companion)
+		std::string gamePanelView() const;
 		void gameTouchMove(float x, float y);				// a press moving (the GBA companion's pages scroll by drag)
 		// the GBA Pokémon companion in the DS companion's pages (gba/host.h), when the host runs one for this game:
-		// shown in place of the Party, Battle, Dex and Guide views once its data is read (Map, Bag and Game stay
-		// today's). Set before gameOpen, null after gameClose
+		// shown in place of all of today's views once its data is read (the tiles' tab bar is theirs then too; 2026-11-04
+		// the owner: no way back to the old views). Set before gameOpen, null after gameClose
 		gba::Host* gbaHost = nullptr;
 		void gbaRelease();	// gbaHost is going: its pages let go of it (before it does)
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
@@ -690,7 +693,9 @@ namespace banana
 		// PK_NDS: gbaHost's pages (their own tabs; their Back to game goes to PK_GAME, whose tab bar comes back to them)
 		std::unique_ptr<nds::Pages> gbaPages;
 		bool gbaOn() const;					// gbaHost's pages can show (its data read)
-		void gbaShow(int view);				// a tab of today's bar: its page in gbaHost's pages, or today's view
+		void gbaShow(int view);				// one of today's views: its page in gbaHost's pages when they show, else that view
+		void gbaOpen(nds::Page page);		// gbaHost's pages at that page (made the first time)
+		enum { GBA_TABS = 9 };	// the tiles' bar with gbaHost's pages: their eight tabs, then Game (settings.cpp checks the count)
 		enum { PK_TABS = 7 };
 		int pkView = PK_PARTY, pkMon = 0, pkMonPage = 0;	// (the summary's right column: 0 the moves, 1 the stats)
 		bool pkBattle = false;
