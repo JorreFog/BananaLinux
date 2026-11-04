@@ -21,6 +21,11 @@ check "$(arm9 /nonexistent)" "133" "no bananads.conf: the DSi's 133"
 echo "core.arm9_mhz = 67" > "$ARM9T"; check "$(arm9 "$ARM9T")" "133" "Settings' 67 under the game's dsi timing: 133"
 echo "core.arm9_mhz = 133" > "$ARM9T"; check "$(arm9 "$ARM9T")" "conf" "Settings' 133: its own"
 printf 'render.scale = 3\ncore.arm9_mhz = 1066\n' > "$ARM9T"; check "$(arm9 "$ARM9T")" "conf" "Settings' 1066 wins over dsi's 133"
+fn "$L/run-bananads" own_arm9
+own() { (export BANANADS_CORE_ARM9_MHZ=$1; own_arm9 "$2"; echo "$BANANADS_CORE_ARM9_MHZ"); }
+check "$(own 133 1066)" "1066" "the game's own speed wins over its dsi timing's 133"
+check "$(own 133 67)" "67" "... also when it is lower"
+check "$(own 133 '')" "133" "no own speed: as it was"
 rm -f "$ARM9T"
 
 echo "run-drastic: a game's own 3D resolution (hires_3d) and Threaded 3D"

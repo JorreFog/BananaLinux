@@ -5071,6 +5071,9 @@ namespace banana
 	// Dark Dawn) stays Accurate
 	static const char* const GAME_TIMING_VALUES[] = { "", "accurate", "fast", "dsi" };
 	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast", "Fast, DSi CPU" };
+	// a DS game's own BananaDS DS CPU speed (core.arm9_mhz; nds-per-game-cpu.conf, run-bananads): over Settings' and its timing's
+	static const char* const GAME_CPU_VALUES[] = { "", "67", "133", "266", "533", "1066", "2133" };
+	static const char* const GAME_CPU_NAMES[] = { "", "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
 	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
@@ -5153,12 +5156,14 @@ namespace banana
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
-		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING };
-		pg3d = pgMic = pgRes = pgTiming = 0;
+		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
+		pg3d = pgMic = pgRes = pgTiming = pgCpu = 0;
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
 			std::string r = perGame("nds-per-game-res.conf", romName), t = perGame("nds-per-game-timing.conf", romName);
 			for (int i = 1; i < 4; i++) if (t == GAME_TIMING_VALUES[i]) pgTiming = i;
+			const std::string c = perGame("nds-per-game-cpu.conf", romName);
+			for (int i = 1; i < 7; i++) if (c == GAME_CPU_VALUES[i]) pgCpu = i;
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
@@ -5201,6 +5206,7 @@ namespace banana
 		put("nds-per-game-res.conf", GAME_RES_VALUES[pgRes]);
 		put("nds-per-game-mic.conf", GAME_MIC_VALUES[pgMic]);
 		put("nds-per-game-timing.conf", GAME_TIMING_VALUES[pgTiming]);
+		put("nds-per-game-cpu.conf", GAME_CPU_VALUES[pgCpu]);
 	}
 
 	Settings::Result Settings::pressGame(Key k)
@@ -5237,6 +5243,7 @@ namespace banana
 			}
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 4) % 4;
+			else if (row == PG_CPU) pgCpu = (pgCpu + d + 7) % 7;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
@@ -5314,6 +5321,7 @@ namespace banana
 				  "The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic)."
 				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
+				: row == PG_CPU ? "BananaDS only. How fast the DS's own CPU runs for this game, over Settings' and its Timing's. Faster stops a game's own slowdown in busy places (Origin HeartGold's towns). Above 67 MHz isn't a DS's speed: if this game hangs or goes wrong, set it back."
 				: row == PG_TIMING ? "BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in "
 				  "HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn "
 				  "loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's "
@@ -5361,14 +5369,16 @@ namespace banana
 		const std::string vres = pgRes ? std::string(GAME_RES_NAMES[pgRes]) : "As in Settings (" + gresName + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 		const std::string gslice = getConfValue("/data/bananads/bananads.conf", "core.slice", "64");
+		const std::string gcpu = getConfValue("/data/bananads/bananads.conf", "core.arm9_mhz", "67");
+		const std::string vcpu = pgCpu ? std::string(GAME_CPU_NAMES[pgCpu]) : "As in Settings (" + gcpu + " MHz)";
 		const std::string vtiming = pgTiming ? std::string(GAME_TIMING_NAMES[pgTiming]) : "As in Settings (" + std::string(gslice == "64" ? "Accurate" : "Fast") + ")";
 
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing"
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
 			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
 			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
@@ -5377,7 +5387,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
