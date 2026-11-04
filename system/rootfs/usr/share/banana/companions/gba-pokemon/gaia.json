@@ -183,7 +183,7 @@
      "ace_level": 5
     }
    ],
-   "done_when": "party",
+   "done_when": "later",
    "opens": [
     "celanto-town",
     "celanto-path",
