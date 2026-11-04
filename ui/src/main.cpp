@@ -2790,7 +2790,8 @@ int main(int argc, char** argv)
 				g = nds::detectGame(ndsHdr, sizeof ndsHdr);
 			}
 			nds::setAssets(o.assets);
-			if ((ndsMode == "test" || g.id != nds::GameId::NONE) && ndsOverlay.create(disp.width(), disp.height()))
+			const bool known = g.id != nds::GameId::NONE || (ndsMode == "on" && nds::maybeRomHack(ndsHdr, sizeof ndsHdr));	// (the reader decides)
+			if ((ndsMode == "test" || known) && ndsOverlay.create(disp.width(), disp.height()))
 			{
 				if (ndsMode == "test") ndsPage = nds::makeTestPage(ndsOverlay);
 				else
@@ -2822,6 +2823,7 @@ int main(int argc, char** argv)
 						d.rom = r;
 						if (r)
 						{
+							nds::useModernTypeChart(r->game.modern);	// (an hg-engine hack: Fairy and Generation VI's chart)
 							auto gd = std::make_shared<nds::GuideData>();
 							const nds::GuideResolver res = nds::guideResolver(*r);
 							std::string why;
@@ -2839,7 +2841,7 @@ int main(int argc, char** argv)
 					});
 				}
 			}
-			if (!ndsPage) { if (ndsMode == "test" || g.id != nds::GameId::NONE) logf("nds companion: no overlay file: %s", strerror(errno)); ndsOverlay.close(); }
+			if (!ndsPage) { if (ndsMode == "test" || known) logf("nds companion: no overlay file: %s", strerror(errno)); ndsOverlay.close(); }
 			else
 			{
 				logf("nds companion: %s (%dx%d)", ndsMode == "test" ? "the overlay's test page" : g.title.c_str(), disp.width(), disp.height());
