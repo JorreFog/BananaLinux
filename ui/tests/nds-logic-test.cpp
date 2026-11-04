@@ -324,7 +324,16 @@ static void testFedSession(const char* tmp)
 		return std::shared_ptr<const Live>(l);
 	};
 	double t = 0;
+	// (the GBA reader has the party before the save's trainer id: that reading names no playthrough - it named the card
+	// file BPEE-00000-00000 for every Emerald-coded game, RG DS Plus 2026-11-04)
+	{
+		auto early = std::make_shared<Live>(*mk(false, 20));
+		early->tid = 0; early->sid = 0; early->trainerKnown = false;
+		s.feed(early, t += 300, 1761999999);
+		CHECK(s.stateFile().empty());
+	}
 	s.feed(mk(false, 20), t += 300, 1762000000);
+	CHECK(s.stateFile().find("BPEE-04242-00001") != std::string::npos);
 	s.feed(mk(true, 20), t += 300, 1762000001);
 	CHECK(s.journey() && s.journey()->routes.size() == 1);
 	if (s.journey() && !s.journey()->routes.empty()) CHECK(s.journey()->routes[0].species == 265);

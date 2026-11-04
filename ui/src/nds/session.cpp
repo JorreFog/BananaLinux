@@ -112,7 +112,8 @@ namespace banana::nds
 			l = c;
 		}
 		cur = l;
-		if (file.empty() && l->valid)
+		// (the playthrough named by its trainer: not before the trainer id is read)
+		if (file.empty() && l->valid && l->trainerKnown)
 		{
 			char b[96];
 			snprintf(b, sizeof b, "/%s-%05u-%05u.tsv", rom->game.code.c_str(), l->tid, l->sid);
@@ -121,7 +122,8 @@ namespace banana::nds
 			// the Settings row wins over what the card kept for this playthrough (load() read the card's value)
 			if (challengeWanted >= 0 && jr->challenge != (challengeWanted == 1)) { jr->challenge = challengeWanted == 1; dirty = true; }
 		}
-		track(*l, wall);
+		if (l->trainerKnown) track(*l, wall);
+		else prev = cur;	// (nothing compared against a reading with no trainer: the next is a baseline)
 		adv = std::make_shared<const Advice>(computeAdvice(*rom, *l, guide.get(), st));
 		if (dirty && now - savedAt > 5000) { save(); savedAt = now; }
 		return true;
