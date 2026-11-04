@@ -13,7 +13,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 fail=0
 bad() { echo "FAIL sync: $*"; fail=1; }
 BIN=$OUT/banana-sync
-${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
+${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
 PIDS=""
 cleanup() { for p in $PIDS; do kill "$p" 2>/dev/null; done; }
 trap cleanup EXIT INT TERM

@@ -123,7 +123,17 @@ namespace bsync
 		for (size_t i = 1; i <= dir.size(); i++)
 			if (i == dir.size() || dir[i] == '/') mkdir(dir.substr(0, i).c_str(), 0755);
 	}
-	// written beside, synced, renamed over
+	// a rename made durable: the directory holding the new name synced too (exFAT and ext4 keep a rename in the
+	// directory's own blocks, which the file's fsync doesn't write). EINVAL: a filesystem that can't sync a directory
+	bool syncDir(const std::string& dir)
+	{
+		int fd = open(dir.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+		if (fd < 0) return false;
+		bool ok = fsync(fd) == 0 || errno == EINVAL;
+		close(fd);
+		return ok;
+	}
+	// written beside, synced, renamed over, the folder synced
 	bool writeAtomic(const std::string& path, const std::string& data)
 	{
 		mkdirs(dirOf(path));
@@ -134,7 +144,7 @@ namespace bsync
 		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
 		ok &= fclose(f) == 0;
 		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
-		return true;
+		return syncDir(dirOf(path));
 	}
 	long long freeBytes(const std::string& p)
 	{
@@ -483,7 +493,7 @@ namespace bsync
 		if (fd < 0) return false;
 		bool ok = write(fd, o.data(), o.size()) == (ssize_t)o.size() && fsync(fd) == 0;
 		ok &= close(fd) == 0;
-		return ok && rename(tmp.c_str(), CONF.c_str()) == 0;
+		return ok && rename(tmp.c_str(), CONF.c_str()) == 0 && syncDir(dirOf(CONF));
 	}
 
 	// the key of a file on the card, in the form the state keeps for the same manifest file
@@ -638,6 +648,7 @@ namespace bsync
 		}
 		else if (got) *got = hashFile(part, algo.empty() ? "sha1" : algo);
 		if (rename(part.c_str(), dst.c_str()) != 0) { err = std::string("rename: ") + strerror(errno); return false; }
+		if (!syncDir(dirOf(dst))) { err = std::string("sync: ") + strerror(errno); return false; }
 		return true;
 	}
 }

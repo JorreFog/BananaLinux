@@ -15,6 +15,7 @@
 //   banana-sync forget                         the pairing (and the sync's state) dropped; the files stay
 //   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
 //   banana-sync status                         the pairing and the last sync, for a person
+//   banana-sync blank <file> [<folder>]        exit 0 when the save is blank (a core's fresh one); folder: under saves/
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
 // --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto, homesync_tls,
 // homesync.<system>).
@@ -23,7 +24,12 @@
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
 // (the state lists them with their hashes; a file of the user's at the same path is left alone and reported);
 // downloads go to <file>.part, are checked, then renamed; gamelist.xml is merged; saves never sync while a game runs.
+// A save comes down to /run first, is checked against the server's hash and installed through the vault (the save it
+// replaces kept, the install journalled: save_vault.h), after the journal of a run cut short is recovered; a blank
+// save is neither sent nor taken (save_adapt.h).
 #include "json.h"
+#include "save_adapt.h"
+#include "save_vault.h"
 #include "sync_core.h"
 #include "sync_romm.h"
 #include "sync_util.h"
@@ -129,6 +135,9 @@ namespace
 				sums[kv.first] = hashFile(p, "sha1");
 				if (sums[kv.first].empty()) continue;
 				auto st = c.saves.find(kv.first);
+				// a core's fresh save that never synced: left out, so the server plans its own version down over it
+				// (listed, it would be a conflict with no base). One that did sync stays listed: not taken as deleted
+				if (st == c.saves.end() && blankSave(readFile(p), saveFolder(kv.first))) continue;
 				char mt[32]; snprintf(mt, sizeof mt, "%.3f", fileTime(p));
 				b += std::string(first ? "" : ", ") + "{\"path\": " + jsonStr(kv.first) + ", \"sha1\": " + jsonStr(sums[kv.first]) + ", \"size\": " +
 					std::to_string(fileSize(p)) + ", \"mtime\": " + mt + ", \"base\": " + (st == c.saves.end() ? "0" : fmtNum(st->second.version)) +
@@ -158,6 +167,8 @@ namespace
 					if (!local.count(rel)) continue;
 					std::string body = readFile(p);
 					if (hashStr(body, "sha1") != sums[rel]) { errors.push_back(rel + ": changed while syncing, next time"); continue; }
+					// (a core's fresh save: never sent; still in the plan's list, so the server doesn't take it as deleted)
+					if (blankSave(body, saveFolder(rel))) { say("  blank, not sent: %s", rel.c_str()); continue; }
 					std::string qs = act == "upload" ? "expect=" + fmtNum(a->num("expect")) : "conflict=1&base=" + (c.saves.count(rel) ? fmtNum(c.saves[rel].version) : std::string("0"));
 					char mt[48]; snprintf(mt, sizeof mt, "X-Save-Mtime: %.3f", fileTime(p));
 					if (dryRun) { say("  upload %s", rel.c_str()); continue; }
@@ -166,6 +177,7 @@ namespace
 					q.body = &body; q.timeout = 0;
 					Resp u = http(q);
 					if (u.code != 200) { errors.push_back(rel + ": " + u.error()); continue; }
+					vaultGood(rel, body);
 					if (act == "upload") { JPtr res = u.json(); c.saves[rel] = { res ? res->num("version") : 0, sums[rel], "" }; up++; say("  up %s", rel.c_str()); }
 					else { conflicts++; say("  conflict (kept here; Homeport decides) %s", rel.c_str()); }
 				}
@@ -174,9 +186,11 @@ namespace
 				{
 					if (exists(p) && hashFile(p, "sha1") != sums[rel]) { errors.push_back(rel + ": changed while syncing, next time"); continue; }
 					if (dryRun) { say("  download %s", rel.c_str()); continue; }
-					std::string err;
-					if (!fetchTo(c.server + "/api/v1/saves/file/" + pathEsc(rel) + "?version=" + fmtNum(a->num("version")), auth(), p, -1, "sha1", a->str("sha1"), err))
-					{ errors.push_back(rel + ": " + err); continue; }
+					std::string err, dl = RUN + "/sync-dl." + std::to_string(getpid());
+					Install in = fetchTo(c.server + "/api/v1/saves/file/" + pathEsc(rel) + "?version=" + fmtNum(a->num("version")), auth(), dl, -1, "sha1", a->str("sha1"), err)
+						? installSave(rel, dl, fmtNum(a->num("version")), err) : Install::Failed;
+					if (in == Install::Blank) { say("  blank on the server, not taken: %s", rel.c_str()); continue; }
+					if (in == Install::Failed) { unlink(dl.c_str()); errors.push_back(rel + ": " + err); continue; }
 					// (its time is now: newer than DraStic's .dsv, so nds-saves passes it on at the next start)
 					c.saves[rel] = { a->num("version"), a->str("sha1"), "" };
 					down++;
@@ -715,7 +729,16 @@ namespace
 			}
 		}
 		if (gameRunning()) errors.push_back("saves: a game is running, next time");
-		else b->saves(states, up, down, sconf, errors, note);
+		else
+		{
+			// (a run cut short last time: how far each operation got, before anything else touches the saves)
+			if (!dryRun)
+			{
+				std::string rec = journalRecover();
+				for (size_t a = 0, e; (e = rec.find('\n', a)) != std::string::npos; a = e + 1) say("  journal: %s", rec.substr(a, e - a).c_str());
+			}
+			b->saves(states, up, down, sconf, errors, note);
+		}
 		for (auto& e : errors) say("  error: %s", e.c_str());
 		if (!note.empty()) say("%s", note.c_str());
 		char sum[256];
@@ -766,8 +789,15 @@ int main(int argc, char** argv)
 		auto t = set.find("homesync_tls");
 		tlsVerify = t == set.end() || t->second != "off";
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
+	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
+	if (cmd == "blank" && args.size() > 1)
+	{
+		bool ok;
+		std::string b = readFile(args[1], &ok);
+		return !ok ? 2 : blankSave(b, args.size() > 2 ? args[2] : "") ? 0 : 1;
+	}
 	if (!cu.load()) { status("error libcurl is missing"); fprintf(stderr, "banana-sync: libcurl is missing\n"); return 1; }
 	if (cmd == "discover")
 	{

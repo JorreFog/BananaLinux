@@ -15,6 +15,7 @@
 /ui/tests/gba-hidden-items
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
+/ui/tests/vault-test
 /system/bananad/bananad
 /system/bananad/banana-panel-tune
 *.o

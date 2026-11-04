@@ -474,6 +474,14 @@ class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def handle(self):
+        # (a client killed mid-answer, as the tests kill banana-sync during a slow download: its connection reset is
+        # no request failing, which is what a traceback in the log stands for)
+        try:
+            super().handle()
+        except (ConnectionResetError, BrokenPipeError):
+            pass
+
     def send(self, code, body=b"", ctype="application/json", headers=None):
         """The answer, kept until the request is done with the state (route writes it, outside the lock, so a slow
         answer holds nothing up)."""

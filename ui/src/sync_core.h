@@ -41,6 +41,7 @@ namespace bsync
 	inline std::string baseOf(const std::string& p) { size_t s = p.rfind('/'); return s == std::string::npos ? p : p.substr(s + 1); }
 	inline std::string stemOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
 	inline std::string extOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos ? "" : lower(name.substr(d + 1)); }
+	bool syncDir(const std::string& dir);
 	bool writeAtomic(const std::string& path, const std::string& data);
 	long long freeBytes(const std::string& p);
 	void pruneDirs(std::string d, const std::string& top);
@@ -201,11 +202,6 @@ namespace bsync
 	// ---- the saves on the card ----------------------------------------------------------------------------------------
 	std::string saveKind(const std::string& rel);
 	std::map<std::string, std::string> localSaves(bool states);
-	// saves-flat (system/rootfs/usr/libexec/banana), once a boot as the launchers run it: a save still in a RetroArch
-	// core's folder from before 0.5.3 moved to the flat saves/ (saves/gba for the GBA's cores) the emulators read now,
-	// so a card that hasn't started a game since the update syncs the save its next game will read. Run under
-	// save.lock, before anything is decided; BANANA_SAVES_FLAT names another script (the tests')
-	void savesFlatFirst();
 	void ndsSavesFirst();
 	bool gameRunning();
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,

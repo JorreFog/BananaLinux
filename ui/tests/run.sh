@@ -56,6 +56,8 @@ make -s -C "$HERE" tests/eq-test >/dev/null && "$HERE/tests/eq-test" > "$OUT/eq-
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
+# the save sync's blank saves, vault and journal
+make -s -C "$HERE" tests/vault-test >/dev/null && rm -rf "$OUT/vault-card" && "$HERE/tests/vault-test" "$OUT/vault-card" 2> "$OUT/vault-test.log" || { echo "FAIL the save sync's vault: $(grep FAIL "$OUT/vault-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
 awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg" | while read -r ic; do
     [ -f "$HERE/assets/rnds/icons/$ic" ] || { echo "FAIL systems.cfg: no icons/$ic"; exit 1; }

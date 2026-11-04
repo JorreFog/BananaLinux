@@ -33,8 +33,8 @@ banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
 # home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
-banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/sync_core.h src/sync_romm.h src/sync_util.h src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/json.cpp -ldl
+banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_adapt.h src/save_vault.cpp src/save_vault.h src/sync_core.h src/sync_romm.h src/sync_util.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_vault.cpp src/json.cpp -ldl
 
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)
@@ -82,6 +82,9 @@ tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src
 # the translations' number placeholders (tests/run.sh runs it)
 tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/lang-raw-test.cpp src/lang.cpp -lpthread
+# the save sync's blank saves, vault and journal (tests/run.sh runs it)
+tests/vault-test: tests/vault-test.cpp src/save_adapt.cpp src/save_adapt.h src/save_vault.cpp src/save_vault.h src/sync_core.cpp src/sync_core.h src/json.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/vault-test.cpp src/save_adapt.cpp src/save_vault.cpp src/sync_core.cpp src/json.cpp -ldl
 
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
@@ -127,7 +130,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/vault-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
 
 .PHONY: host install clean
 

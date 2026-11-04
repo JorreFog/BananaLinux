@@ -1,5 +1,7 @@
 // banana-sync's RomM backend (sync_romm.h)
 #include "sync_romm.h"
+#include "save_adapt.h"
+#include "save_vault.h"
 #include <ctime>
 #include <memory>
 #include <sys/stat.h>
@@ -174,7 +176,9 @@ namespace bsync
 		// name>.sav (BananaDS), saves/<rom name>.srm (RetroArch, one folder for every system), states/... the same.
 		// The decision, per save: changed here only -> upload; changed on the server only -> download; changed on both
 		// -> the newer one wins and the other is kept on the card as <file>.<side>-<date>.bak (never lost); the same
-		// on both -> nothing. A save deleted here is forgotten, not deleted on the server.
+		// on both -> nothing. A save deleted here is forgotten, not deleted on the server. A blank save here (a core's
+		// fresh one) is never sent: it takes the server's when it was never synced, and is left alone when it was
+		// (blanked since). Every download is checked against the server's MD5 and installed through the vault.
 		bool matchRom(const std::string& rel, RommRom& out)
 		{
 			// saves/<folder>/<name>.<ext> or saves/<name>.<ext>
@@ -258,16 +262,24 @@ namespace bsync
 				bool here = localAll.count(rel) > 0;
 				auto si = srv.find(rel);
 				auto st = state.find(rel);
+				std::string md5 = here ? hashFile(p, "md5") : "";
+				if (here && !md5.empty() && blankSave(readFile(p), saveFolder(rel)) && (st == state.end() || st->second.hash != md5))
+				{
+					if (st != state.end()) { say("  blank here since the last sync, left as it is: %s", rel.c_str()); continue; }
+					if (si == srv.end() || si->second.hash == md5) continue;
+					SaveSt ns; ns.hash = md5;	// (what the download checks it is replacing)
+					if (download(api, si->second, rel, ns, dev, false, errors)) { state[rel] = ns; down++; }
+					continue;
+				}
 				if (!here)
 				{
 					if (st != state.end()) { state.erase(st); continue; }	// deleted here: forgotten (the server keeps its copy)
 					if (si == srv.end()) continue;
 					if (exists(p)) continue;	// (a file the rules leave out)
 					SaveSt ns;
-					if (download(api, si->second, p, ns, dev, false, errors)) { state[rel] = ns; down++; }
+					if (download(api, si->second, rel, ns, dev, false, errors)) { state[rel] = ns; down++; }
 					continue;
 				}
-				std::string md5 = hashFile(p, "md5");
 				if (md5.empty()) continue;
 				RommRom rom;
 				if (si == srv.end())
@@ -293,7 +305,7 @@ namespace bsync
 				}
 				if (!localChanged && !serverChanged) continue;
 				if (localChanged && !serverChanged) { if (upload(api, field, s.rom, p, rel, md5, state, dev, false, errors)) up++; continue; }
-				if (!localChanged && serverChanged) { SaveSt ns = st->second; if (download(api, s, p, ns, dev, false, errors)) { state[rel] = ns; down++; } continue; }
+				if (!localChanged && serverChanged) { SaveSt ns = st->second; if (download(api, s, rel, ns, dev, false, errors)) { state[rel] = ns; down++; } continue; }
 				// both changed (or a card that never synced holding another version): the newer wins, the other kept
 				conflicts++;
 				if (dryRun) { say("  conflict %s", rel.c_str()); continue; }
@@ -303,8 +315,9 @@ namespace bsync
 				if (fileTime(p) >= srvT)
 				{
 					// the card's is newer: the server's kept here beside it, then the card's uploaded over it
-					std::string keep = p + ".server-" + stamp + ".bak", e2;
-					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), keep, -1, "", "", e2)) { errors.push_back(rel + ": " + e2); continue; }
+					std::string keep = p + ".server-" + stamp + ".bak", e2, want = serverHash(api, s);
+					if (want.empty()) { errors.push_back(rel + ": the server gives no checksum for its copy"); continue; }
+					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), keep, -1, "md5", want, e2)) { errors.push_back(rel + ": " + e2); continue; }
 					if (upload(api, field, s.rom, p, rel, md5, state, dev, true, errors)) { up++; say("  conflict: the card's (newer) kept, the server's saved as %s", baseOf(keep).c_str()); }
 				}
 				else
@@ -312,7 +325,7 @@ namespace bsync
 					std::string keep = p + ".card-" + stamp + ".bak";
 					if (link(p.c_str(), keep.c_str()) != 0) { std::string d = readFile(p); if (!writeAtomic(keep, d)) { errors.push_back(rel + ": can't keep the card's copy"); continue; } }
 					SaveSt ns;
-					if (download(api, s, p, ns, dev, true, errors)) { state[rel] = ns; down++; say("  conflict: the server's (newer) taken, the card's kept as %s", baseOf(keep).c_str()); }
+					if (download(api, s, rel, ns, dev, true, errors)) { state[rel] = ns; down++; say("  conflict: the server's (newer) taken, the card's kept as %s", baseOf(keep).c_str()); }
 				}
 				saveConf(c);
 			}
@@ -326,6 +339,7 @@ namespace bsync
 			// a copy of the file as it is now: the emulator can't change what is sent halfway
 			std::string snap = RUN + "/sync-upload." + std::to_string(getpid());
 			std::string body = readFile(p);
+			if (blankSave(body, saveFolder(rel))) { say("  blank, not sent: %s", rel.c_str()); return false; }
 			if (hashStr(body, "md5") != md5 || !writeAtomic(snap, body)) { errors.push_back(rel + ": changed while syncing, next time"); unlink(snap.c_str()); return false; }
 			Req q; q.method = "POST"; q.headers = auth(); q.timeout = 0;
 			q.url = c.server + api + "?rom_id=" + std::to_string(romId) + (api == "/api/saves" && !dev.empty() ? "&" + dev : "") + (overwrite ? "&overwrite=true" : "") + "&emulator=" + urlEsc(baseOf(dirOf(rel)) == "nds" ? "bananaos-nds" : "retroarch");
@@ -337,18 +351,38 @@ namespace bsync
 			JPtr j = r.json();
 			if ((r.code != 200 && r.code != 201) || !j || !j->isObj()) { errors.push_back(rel + ": " + r.error()); return false; }
 			state[rel] = { j->num("id"), md5, j->str("updated_at") };
+			vaultGood(rel, body);
 			say("  up %s", rel.c_str());
 			saveConf(c);
 			return true;
 		}
-		template <class S> bool download(const std::string& api, const S& s, const std::string& p, SaveSt& st, const std::string& dev, bool force, std::vector<std::string>& errors)
+		// the MD5 the server has for a save: the listing's, else the save's own record
+		template <class S> std::string serverHash(const std::string& api, const S& s)
 		{
+			if (!s.hash.empty()) return s.hash;
+			Resp r = call("GET", api + "/" + std::to_string(s.id));
+			JPtr j = r.code == 200 ? r.json() : nullptr;
+			return j && j->isObj() ? lower(j->str("content_hash")) : "";
+		}
+		template <class S> bool download(const std::string& api, const S& s, const std::string& rel, SaveSt& st, const std::string& dev, bool force, std::vector<std::string>& errors)
+		{
+			std::string p = ROOT + "/" + rel;
 			if (dryRun) { say("  download %s", p.c_str()); return false; }
 			if (!force && exists(p) && hashFile(p, "md5") != st.hash) { errors.push_back(baseOf(p) + ": changed while syncing, next time"); return false; }
-			std::string err, got;
+			std::string want = serverHash(api, s), err;
+			if (want.empty()) { errors.push_back(baseOf(p) + ": the server gives no checksum for it, not taken"); return false; }
+			// (fetched to /run first: nothing on the card changes until it is all here and checked)
 			std::string url = c.server + api + "/" + std::to_string(s.id) + "/content" + (api == "/api/saves" && !dev.empty() ? "?" + dev : "");
-			if (!fetchTo(url, auth(), p, -1, "md5", "", err, &got)) { errors.push_back(baseOf(p) + ": " + err); return false; }
-			st = { (double)s.id, got, s.updated };
+			std::string dl = RUN + "/sync-dl." + std::to_string(getpid());
+			Install in = fetchTo(url, auth(), dl, -1, "md5", want, err) ? installSave(rel, dl, std::to_string(s.id), err) : Install::Failed;
+			if (in == Install::Blank) { say("  blank on the server, not taken: %s", baseOf(p).c_str()); return false; }
+			if (in == Install::Failed)
+			{
+				unlink(dl.c_str());
+				errors.push_back(baseOf(p) + ": " + err);
+				return false;
+			}
+			st = { (double)s.id, want, s.updated };
 			say("  down %s", p.c_str());
 			saveConf(c);
 			return true;

@@ -356,9 +356,8 @@ if [ "$BANANA_SYSTEM" = gba ]; then
         for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
             f="/data/saves/$d/$n.srm"
             [ -s "$f" ] || continue
-            # (blank: only 0xff or only 0x00 bytes; counted, not compared: the shell drops a NUL from $(...))
-            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            # (blank: what the save sync also counts as no save, all 0xff or all 0x00 for a GBA core)
+            banana-sync blank "$f" "$d" && continue
             if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
         done
         if [ -n "$best" ]; then
