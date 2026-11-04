@@ -952,6 +952,21 @@ for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; d
         --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
     grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
 done
+# a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
+# under its name gets its own again
+IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null
+mkdir -p "$IX/roms/nds/A" "$IX/roms/nds/B"
+python3 -I -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); open(sys.argv[2], "wb").write(z.read([n for n in z.namelist() if n.endswith(".nds")][0]))' \
+    "$IX/roms/nds/Yellow Planet [!].zip" "$IX/roms/nds/B/Game.nds"
+mv "$IX/roms/nds/Peel Quest.nds" "$IX/roms/nds/A/Game.nds"
+irun() { "$HERE/banana-ui" --headless "$OUT/icons-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$IX/roms" --data "$IX/data" --script "$1" 2>> "$OUT/icons.log" || { echo "FAIL: banana-ui (icons) exited $?"; fail=1; }; }
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+icn() { find "$IX/data/cache/icons" -name "Game.nds*" $1 | wc -l; }
+[ "$(icn)" = 2 ] && [ "$(icn -empty)" = 1 ] || { echo "FAIL: icons: A/Game.nds and B/Game.nds share a cached icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+cp "$IX/roms/nds/B/Game.nds" "$IX/roms/nds/A/Game.nds"; touch -d '2001-01-01' "$IX/roms/nds/A/Game.nds"
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+[ "$(icn '! -empty')" = 2 ] || { echo "FAIL: icons: a ROM replaced under its name kept the old one's (no) icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png

@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <glob.h>
 #include <map>
+#include <mutex>
 #include <unordered_map>
 #include "../rnds/RndsRaster.h"
 #include "../third_party/stb_image_write.h"
@@ -161,6 +162,35 @@ namespace banana
 	// with hard pixel edges to the cover's size on this panel (the cover frame is 214 CSS px wide, 1.6x on the RG DS
 	// Plus's 1024x768), written once to <data>/cache/icons, so the top screen's cover and the home screen's
 	// last-played cartridge show the game instead of the system's console. "" when the ROM has no icon.
+	// Its cache name has the ROM's whole path (a hash), size and time: two games of one name in two folders or on two
+	// cards each have their own, and a ROM replaced under its name is read again. Worked out once per scan per ROM (a
+	// stat of the card each time the top screen asks otherwise).
+	static std::mutex iconNamesLock;
+	static std::unordered_map<std::string, std::string> iconNames;	// the ROM's path -> its cache name, "" when it can't be read
+	static void forgetIconNames() { std::lock_guard<std::mutex> l(iconNamesLock); iconNames.clear(); }
+	static std::string iconName(const std::string& rom)
+	{
+		std::lock_guard<std::mutex> l(iconNamesLock);
+		auto known = iconNames.find(rom);
+		if (known != iconNames.end()) return known->second;
+		struct stat rs;
+		if (stat(rom.c_str(), &rs) != 0) return "";	// (not remembered: a card that comes back)
+		// the file's name for whoever looks in the folder, cut on a character's start to leave room in a name (255 bytes)
+		std::string base = rom.substr(rom.find_last_of('/') + 1);
+		if (base.size() > 160)
+		{
+			size_t cut = 160;
+			while (cut > 0 && ((unsigned char)base[cut] & 0xc0) == 0x80) cut--;
+			base.resize(cut);
+		}
+		for (char& c : base) if (c == '\\') c = '_';
+		uint64_t h = 0xcbf29ce484222325ULL;	// FNV-1a
+		for (unsigned char c : rom) { h ^= c; h *= 0x100000001b3ULL; }
+		char tail[80];
+		snprintf(tail, sizeof tail, ".%016llx.%llx.%llx", (unsigned long long)h, (unsigned long long)rs.st_size, (unsigned long long)rs.st_mtime);
+		return iconNames[rom] = base + tail;
+	}
+
 	static std::string romIconCover(const std::string& dataDir, const std::string& rom)
 	{
 		static int size = 0;
@@ -176,11 +206,13 @@ namespace banana
 			}
 			size = (int)std::lround(214.0 * w / 640);
 		}
-		std::string base = rom.substr(rom.find_last_of('/') + 1);
-		for (char& c : base) if (c == '/' || c == '\\') c = '_';
-		std::string dir = dataDir + "/cache/icons", out = dir + "/" + base + "." + std::to_string(size) + ".png";
+		std::string name = iconName(rom);
+		if (name.empty()) return "";
+		std::string dir = dataDir + "/cache/icons", out = dir + "/" + name + "." + std::to_string(size) + ".png";
 		struct stat st;
 		if (!stat(out.c_str(), &st)) return st.st_size > 0 ? out : "";
+		// (this icon's picture under the name it had before the path and time were in it: gone)
+		unlink((dir + "/" + rom.substr(rom.find_last_of('/') + 1) + "." + std::to_string(size) + ".png").c_str());
 		rnds::Bitmap ic = rnds::romIcon(rom);
 		if (mkdir((dataDir + "/cache").c_str(), 0755) && errno != EEXIST) return "";
 		if (mkdir(dir.c_str(), 0755) && errno != EEXIST) return "";
@@ -560,6 +592,7 @@ namespace banana
 
 	void Library::scan()
 	{
+		forgetIconNames();
 		loadState();
 		shelves.clear();
 		MediaIndex media;
