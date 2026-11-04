@@ -144,6 +144,17 @@ namespace rnds
 	void setTranslator(std::u32string (*translate)(const std::u32string&));
 	using Translator = std::u32string (*)(const std::u32string&);
 	Translator translator();	// (the one set: a text drawn as it is sets nullptr around it)
+	// while one is alive, the texts laid out on this thread skip the translator: what the player named (a game's title,
+	// a file's, a network's) is drawn as it is, even where it reads like one of the menu's lines ("Keep Calm")
+	struct Verbatim
+	{
+		explicit Verbatim(bool on = true);
+		~Verbatim();
+		Verbatim(const Verbatim&) = delete;
+		Verbatim& operator=(const Verbatim&) = delete;
+	private:
+		bool on;
+	};
 
 	std::u32string utf8to32(const std::string& s);
 	std::u32string upper(const std::u32string& s);

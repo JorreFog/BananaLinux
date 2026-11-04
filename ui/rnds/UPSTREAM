@@ -26,3 +26,6 @@ imageSize/setSizer; RndsUI's coverFit/coverFrame), not the square that shrank wh
 either side of the game list's game decoded ahead, so stepping to one draws it at once.
 
 Banana UX (0.5.1, owner): the box art on the game list's top screen without its pixel border (coverBox: border 0, the backing the picture's own size; the shadow kept).
+Banana (bug hunt 2026-11-04): renderLine makes no bitmap for a line over 4096x4096 px's area (a theme's numbers; it ended the
+menu on bad_alloc).
+Banana: Verbatim (RndsRaster): texts laid out on a thread while one is alive skip the translator; RndsUI's game titles use it.
