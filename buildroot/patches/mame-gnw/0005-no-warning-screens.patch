@@ -1,0 +1,31 @@
+BANANA_NO_WARNINGS: no warning screen before the game. On the RG DS's Game & Watch they were "requires external
+artwork" (without the user's artwork) and "ROM needs redump" (chips MAME hasn't verified, e.g. Zelda's melody):
+nothing a player can act on, and the game runs. The warnings still go to the log.
+
+diff --git a/src/frontend/mame/ui/ui.cpp b/src/frontend/mame/ui/ui.cpp
+index fd59bb3d..8ef5b456 100644
+--- a/src/frontend/mame/ui/ui.cpp
++++ b/src/frontend/mame/ui/ui.cpp
+@@ -49,6 +49,7 @@
+ #include "../osd/modules/lib/osdlib.h"
+ #include "../osd/modules/lib/osdobj_common.h"
+ 
++#include <cstdlib>
+ #include <functional>
+ #include <type_traits>
+ 
+@@ -669,6 +670,14 @@ void mame_ui_manager::display_startup_screens(bool first_time)
+ 	show_gameinfo = show_warnings = false;
+ #endif
+ 
++	// Banana: BANANA_NO_WARNINGS, no warning screen before the game (the RG DS's Game & Watch: "requires external
++	// artwork" without the user's artwork, "ROM needs redump" for chips MAME hasn't verified; nothing a player can act
++	// on, and the game runs). The warnings still go to the log.
++	if (getenv("BANANA_NO_WARNINGS"))
++	{
++		show_warnings = false;
++	}
++
+ 	// set up event handlers
+ 	switch_code_poller poller(machine().input());
+ 	std::string warning_text;

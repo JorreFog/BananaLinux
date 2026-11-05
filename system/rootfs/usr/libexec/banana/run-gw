@@ -46,6 +46,11 @@ fi
 
 # the panels as one SDL display, the top one above (SDL's offscreen GLES driver, scanned out straight to them)
 export SDL_VIDEODRIVER=offscreen SDL_BANANA_PANELS=stack SDL_BANANA_TOP=${BANANA_TOP:-DSI-2}
+# no MAME warning screen before the game (patch 0005): "requires external artwork", "ROM needs redump"; still logged.
+# MAME's menu (F) with only what a player here uses, and Quit (patch 0006)
+# The menu and MAME's messages on the top panel only, in a two-screen game too (patch 0007), in larger text: 16 lines
+# a panel instead of MAME's 30 (patch 0008)
+export BANANA_NO_WARNINGS=1 BANANA_SHORT_MENU=1 BANANA_UI_HEIGHT=$PH BANANA_FONT_ROWS=16
 # Mesa's shader cache on the card, not the read-only /
 export HOME=$D
 # the pad as an SDL game controller (its line in SDL's community database)
@@ -69,7 +74,7 @@ cd $D
     -rompath "$ROMS" -artpath "$ART" -ctrlrpath /usr/share/banana/mame-gnw -ctrlr banana \
     -inipath $D/ini -cfg_directory $D/cfg -nvram_directory /data/saves/gameandwatch \
     -state_directory /data/states/gameandwatch -snapshot_directory /data/screenshots -homepath $D \
-    -skip_gameinfo -nowindow -video accel -view "$VIEW" \
+    -skip_gameinfo -nowindow -video accel -view "$VIEW" -uifont /usr/share/banana/rnds/fonts/PixelifySans-Medium.ttf \
     -joystick -joystickprovider sdlgame -sound sdl &
 PID=$!
 /usr/libexec/banana/gw-hotkeys $PID &
