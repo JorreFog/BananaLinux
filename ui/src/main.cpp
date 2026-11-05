@@ -2096,7 +2096,7 @@ int main(int argc, char** argv)
 	applyColors("start");
 	// the speaker EQ (Settings > Display & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
 	// settings.conf, before any game starts (/run is empty after a boot)
-	if (!speakereq::apply(speakereq::compose(speakereq::load(o.data), o.data, o.assets + "/../speaker-eq")))
+	if (!speakereq::applySaved(o.data, speakereq::shareDir(o.assets)))
 		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());
 
 	Sound sound(o.assets + "/sounds");

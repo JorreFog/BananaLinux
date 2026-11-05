@@ -1372,7 +1372,7 @@ namespace banana
 		std::string beforeAccent = getConfValue(menu, "accent", "yellow");
 
 		resetSettings(data, emulator ? ResetScope::Emulator : ResetScope::System);
-		if (!emulator) speakereq::apply(speakereq::compose(speakereq::load(data), data, eqShare()));	// (its keys are back to theirs)
+		if (!emulator) speakereq::applySaved(data, eqShare());	// (its keys are back to theirs)
 
 		if (!emulator)
 		{
@@ -2253,11 +2253,9 @@ namespace banana
 		}
 		if (cur.key == "speaker_eq_page")
 		{
-			speakereq::State s = speakereq::load(data);
-			std::string now = s.on ? "None." : "Off.";
-			if (s.on)
-				for (auto& c : speakereq::profiles(data, eqShare(), s.profile))
-					if (c.value == s.profile) now = c.name + ".";
+			// (drawn every frame: settings.conf and one access(), not the card's folder listed)
+			const speakereq::State s = speakereq::load(data);
+			const std::string now = !s.on ? "Off." : speakereq::profileName(s.profile, data, eqShare()) + (speakereq::adjusted(s) ? " (adjusted)." : ".");
 			help = "Evens out the speakers: the peaks that make them shrill or boxy taken down, in every game and the menu (never the headphones). "
 				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders to adjust it by ear. Now: " + now;
 		}
@@ -3911,7 +3909,8 @@ namespace banana
 
 	void Settings::eqLive(const speakereq::State& s)
 	{
-		eqText = speakereq::compose(s, data, eqShare());
+		const std::string own = speakereq::profileText(s, data, eqShare());	// (its file read once)
+		eqText = speakereq::compose(s, own);
 		if (!speakereq::apply(eqText)) message = "The speaker EQ can't be written now (" + speakereq::livePath() + ").";
 		speakereq::curve(eqText, eqFreqs(), eqCurve);
 		// the sliders: the curve with the EQ on (Off shows what On would play, dimmed), and the profile's own
@@ -3919,11 +3918,11 @@ namespace banana
 		on.on = true;
 		prof = on;
 		for (int& g : prof.gain) g = 0;
-		const std::string shown = speakereq::compose(on, data, eqShare()), profText = speakereq::compose(prof, data, eqShare());
-		std::vector<double> bands(speakereq::BAND_HZ, speakereq::BAND_HZ + speakereq::BANDS), now, own;
+		const std::string shown = speakereq::compose(on, own), profText = speakereq::compose(prof, own);
+		std::vector<double> bands(speakereq::BAND_HZ, speakereq::BAND_HZ + speakereq::BANDS), now, its;
 		speakereq::curve(shown, bands, now);
-		speakereq::curve(profText, bands, own);
-		for (int i = 0; i < speakereq::BANDS; i++) { eqBand[i] = now[i]; eqBandProfile[i] = own[i]; }
+		speakereq::curve(profText, bands, its);
+		for (int i = 0; i < speakereq::BANDS; i++) { eqBand[i] = now[i]; eqBandProfile[i] = its[i]; }
 		speakereq::curve(profText, eqFreqs(), eqProfCurve);
 	}
 
@@ -3950,10 +3949,15 @@ namespace banana
 			else if (eqRow == 1)
 			{
 				const int n = (int)eqChoices.size();
-				int i = -1;
-				for (int j = 0; j < n; j++) if (eqChoices[j].value == eqEdit.profile) i = j;
+				int i = -1, none = 0;
+				for (int j = 0; j < n; j++)
+				{
+					if (eqChoices[j].value == eqEdit.profile) i = j;
+					if (eqChoices[j].value == "none") none = j;
+				}
 				if (!n) return NONE;
-				eqEdit.profile = eqChoices[i < 0 ? 0 : (i + d + n) % n].value;
+				if (i < 0) i = none;	// (one not offered, Tuned on a board with none, is shown as None: a step goes on from there)
+				eqEdit.profile = eqChoices[(i + d + n) % n].value;
 				eqEdit.on = true;	// (a profile picked is one to hear)
 				for (int& g : eqEdit.gain) g = 0;	// (and as it is: the sliders show its own curve; B brings the changes back)
 			}
@@ -3978,19 +3982,16 @@ namespace banana
 		{
 			speakereq::save(data, eqEdit);
 			eqSaved = eqEdit;
-			eqLive(eqEdit);
-			page = LIST;
-			std::string what = "Off";
-			if (eqEdit.on)
-			{
-				what = "None";
-				for (auto& c : eqChoices) if (c.value == eqEdit.profile) what = c.name;
-				bool sliders = false;
-				for (int g : eqEdit.gain) sliders = sliders || g;
-				if (sliders) what += ", and the sliders";
-			}
 			message.clear();
-			toast("Speaker EQ", what, 0x6ad07a, 1, 3000);
+			eqLive(eqEdit);
+			if (!message.empty())	// (kept, but not heard: say so on the page rather than a toast that it's done)
+			{
+				message = "Kept, and heard from the next start: " + speakereq::livePath() + " can't be written now.";
+				return CHANGED;
+			}
+			page = LIST;
+			toast("Speaker EQ", eqEdit.on ? speakereq::profileName(eqEdit.profile, data, eqShare()) + (speakereq::adjusted(eqEdit) ? " (adjusted)" : "") : "Off",
+				0x6ad07a, 1, 3000);
 			return CHANGED;
 		}
 		case Key::B: case Key::START:

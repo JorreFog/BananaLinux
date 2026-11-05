@@ -392,7 +392,7 @@ namespace banana
 		// what each slider shows: the curve's level at its frequency (the profile with the changes made to it), and the
 		// profile's own there (the tick on its track)
 		double eqBand[speakereq::BANDS] = {}, eqBandProfile[speakereq::BANDS] = {};
-		std::string eqShare() const { return assets + "/../speaker-eq"; }	// (/usr/share/banana/speaker-eq)
+		std::string eqShare() const { return speakereq::shareDir(assets); }	// (/usr/share/banana/speaker-eq)
 		void openEq();
 		void eqLive(const speakereq::State& s);
 		Result pressEq(Key k);

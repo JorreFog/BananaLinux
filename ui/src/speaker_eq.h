@@ -34,12 +34,26 @@ namespace banana
 		State load(const std::string& dataDir);
 		void save(const std::string& dataDir, const State& s);
 
+		// <assets>/../speaker-eq: the profiles shipped with the image (/usr/share/banana/speaker-eq)
+		std::string shareDir(const std::string& assets);
+
 		// what Profile offers: the handheld's tuned profile ("RG DS Plus Tuned", when <shareDir>/<board>.txt is there), None, then the card's
 		// .txt files in banana/speaker-eq, by name. A chosen file no longer on the card is listed too, as missing.
 		std::vector<Choice> profiles(const std::string& dataDir, const std::string& shareDir, const std::string& current);
 
-		// the text the plugin is given ("" when there is nothing to do: off, or no profile and every slider at 0)
+		// a profile's name on screen ("RG DS Plus Tuned", "None", "Mine", "Mine (not on the card)"), without listing the
+		// card's folder; and whether any slider moves it
+		std::string profileName(const std::string& value, const std::string& dataDir, const std::string& shareDir);
+		bool adjusted(const State& s);
+
+		// the profile's own text, as its file has it ("" for none, or a file that isn't there)
+		std::string profileText(const State& s, const std::string& dataDir, const std::string& shareDir);
+		// the text the plugin is given ("" when there is nothing to do: off, or no profile and every slider at 0), from
+		// the profile's text (one read of its file for several States)
+		std::string compose(const State& s, const std::string& profile);
 		std::string compose(const State& s, const std::string& dataDir, const std::string& shareDir);
+		// what settings.conf keeps, given to the plugin (the menu's start, and Reset system settings)
+		bool applySaved(const std::string& dataDir, const std::string& shareDir);
 
 		// /run/banana/speaker-eq (BANANA_SPEAKER_EQ in the host tests): written beside and renamed over, so the plugin
 		// never reads half of it; "" removes it. False when it couldn't be written.

@@ -85,6 +85,26 @@ namespace banana
 			return b.empty() || b.find('/') != std::string::npos ? "" : shareDir + "/" + b + ".txt";
 		}
 
+		std::string shareDir(const std::string& assets) { return assets + "/../speaker-eq"; }
+
+		std::string profileName(const std::string& value, const std::string& dataDir, const std::string& shareDir)
+		{
+			if (value == "tuned")
+			{
+				const std::string t = tunedPath(shareDir);
+				return !t.empty() && access(t.c_str(), R_OK) == 0 ? tunedName() : "None";	// (a board with none: nothing plays)
+			}
+			if (value == "none" || !cardName(value)) return "None";
+			const std::string n = value.substr(0, value.size() - 4);
+			return access((dataDir + "/speaker-eq/" + value).c_str(), R_OK) == 0 ? n : n + " (not on the card)";
+		}
+
+		bool adjusted(const State& s)
+		{
+			for (int g : s.gain) if (g) return true;
+			return false;
+		}
+
 		std::vector<Choice> profiles(const std::string& dataDir, const std::string& shareDir, const std::string& current)
 		{
 			std::vector<Choice> c;
@@ -108,12 +128,26 @@ namespace banana
 			return c;
 		}
 
+		std::string profileText(const State& s, const std::string& dataDir, const std::string& shareDir)
+		{
+			if (s.profile == "tuned") { std::string t = tunedPath(shareDir); return t.empty() ? "" : readText(t); }
+			if (s.profile != "none" && cardName(s.profile)) return readText(dataDir + "/speaker-eq/" + s.profile);
+			return "";
+		}
+
 		std::string compose(const State& s, const std::string& dataDir, const std::string& shareDir)
 		{
+			return s.on ? compose(s, profileText(s, dataDir, shareDir)) : "";
+		}
+
+		bool applySaved(const std::string& dataDir, const std::string& shareDir)
+		{
+			return apply(compose(load(dataDir), dataDir, shareDir));
+		}
+
+		std::string compose(const State& s, const std::string& text)
+		{
 			if (!s.on) return "";
-			std::string text;
-			if (s.profile == "tuned") { std::string t = tunedPath(shareDir); if (!t.empty()) text = readText(t); }
-			else if (s.profile != "none" && cardName(s.profile)) text = readText(dataDir + "/speaker-eq/" + s.profile);
 			struct eq_profile p;
 			eq_parse(text.data(), text.size(), &p);
 			// the sliders after the profile's own filters (a profile with more than room leaves room for them)
