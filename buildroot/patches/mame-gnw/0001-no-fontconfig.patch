@@ -1,0 +1,48 @@
+Build without fontconfig, which BananaOS doesn't have: MAME_NO_FONTCONFIG leaves out the SDL font provider's
+fontconfig lookups and FcInit/FcFini (MAME then uses its built-in UI font).
+
+diff --git a/src/osd/modules/font/font_sdl.cpp b/src/osd/modules/font/font_sdl.cpp
+index 9767f5d3..e8d6ec32 100644
+--- a/src/osd/modules/font/font_sdl.cpp
++++ b/src/osd/modules/font/font_sdl.cpp
+@@ -7,7 +7,8 @@
+ 
+ #include "font_module.h"
+ 
+-#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID) && !defined(SDLMAME_SDL3)
++// Banana: MAME_NO_FONTCONFIG drops the SDL_ttf/fontconfig provider (MAME's built-in font is used).
++#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID) && !defined(SDLMAME_SDL3) && !defined(MAME_NO_FONTCONFIG)
+ 
+ #include "corestr.h"
+ #include "emucore.h"
+diff --git a/src/osd/sdl/sdlmain.cpp b/src/osd/sdl/sdlmain.cpp
+index 1933bde1..6e098740 100644
+--- a/src/osd/sdl/sdlmain.cpp
++++ b/src/osd/sdl/sdlmain.cpp
+@@ -31,7 +31,7 @@
+ 
+ #ifdef SDLMAME_UNIX
+ #if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
+-#ifndef SDLMAME_HAIKU
++#if !defined(SDLMAME_HAIKU) && !defined(MAME_NO_FONTCONFIG)
+ #include <fontconfig/fontconfig.h>
+ #endif
+ #endif
+@@ -88,7 +88,7 @@ int main(int argc, char** argv)
+ 
+ #ifdef SDLMAME_UNIX
+ 	sdl_entered_debugger = 0;
+-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
++#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(MAME_NO_FONTCONFIG))
+ 	FcInit();
+ #endif
+ #endif
+@@ -101,7 +101,7 @@ int main(int argc, char** argv)
+ 	}
+ 
+ #ifdef SDLMAME_UNIX
+-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
++#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(MAME_NO_FONTCONFIG))
+ 	if (!sdl_entered_debugger)
+ 	{
+ 		FcFini();
