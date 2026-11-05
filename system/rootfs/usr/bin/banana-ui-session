@@ -17,4 +17,10 @@ done
 # a card file it can't read is left out, and said so in this log)
 /usr/libexec/banana/systems-merge 2>> $LOG
 [ -s /run/banana/systems.conf ] && export BANANA_SYSTEMS=/run/banana/systems.conf
+# the Game & Watch games' names and covers, from MAME and the card's artwork (gw-meta: in the background, only what's
+# missing, waiting while a game plays)
+if [ -x /usr/libexec/banana/gw-meta ]; then
+    mkdir -p /data/banana/logs/mame-gnw 2>/dev/null
+    /usr/libexec/banana/gw-meta > /data/banana/logs/mame-gnw/meta.log 2>&1 &
+fi
 exec /usr/bin/banana-ui >> $LOG 2>&1
