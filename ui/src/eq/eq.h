@@ -51,6 +51,7 @@ struct eq_chain {
 	float gain;		/* linear: the preamp and the headroom, applied before the filters */
 	double headroom;	/* dB the curve's peak took off the preamp (0 when the profile's own was enough) */
 	struct eq_coef c[EQ_MAX_BANDS];
+	struct eq_band band[EQ_MAX_BANDS];	/* what each filter is, for eq_carry */
 };
 
 /* a decimal number ("-6.25", "1e3" isn't one) without strtod, which reads the process's locale: in a game that set
@@ -163,17 +164,20 @@ static void eq_coef_of(const struct eq_band *b, double rate, struct eq_coef *c)
 	c->a1 = (float)(a1 / a0); c->a2 = (float)(a2 / a0);
 }
 
-/* the chain's gain in dB at f (the filters only, without the preamp) */
+/* the chain's gain in dB at f (the filters only, without the preamp). The filters' power gains are multiplied and
+ * one log taken: eq_design's headroom sweep runs this ~700 times on the audio thread when a profile changes, and a log
+ * per filter made that ~1 ms on the A55 for 14 filters. (32 filters each between -300 and +30 dB stay well inside a
+ * double.) */
 static double eq_response(const struct eq_chain *ch, double f, double rate)
 {
-	double w = 2 * M_PI * f / rate, c1 = cos(w), s1 = sin(w), c2 = cos(2 * w), s2 = sin(2 * w), db = 0;
+	double w = 2 * M_PI * f / rate, c1 = cos(w), s1 = sin(w), c2 = cos(2 * w), s2 = sin(2 * w), pw = 1;
 	for (int i = 0; i < ch->n; i++) {
 		const struct eq_coef *k = &ch->c[i];
 		double nr = k->b0 + k->b1 * c1 + k->b2 * c2, ni = -(k->b1 * s1 + k->b2 * s2);
 		double dr = 1 + k->a1 * c1 + k->a2 * c2, di = -(k->a1 * s1 + k->a2 * s2);
-		db += 10 * log10((nr * nr + ni * ni) / (dr * dr + di * di) + 1e-30);
+		pw *= (nr * nr + ni * ni + 1e-30) / (dr * dr + di * di + 1e-30);
 	}
-	return db;
+	return 10 * log10(pw + 1e-300);
 }
 
 /* the profile's filters for this sample rate; a filter at or past the Nyquist frequency is left out */
@@ -182,7 +186,10 @@ static void eq_design(const struct eq_profile *p, double rate, struct eq_chain *
 	memset(ch, 0, sizeof *ch);
 	ch->gain = 1;
 	for (int i = 0; i < p->n; i++)
-		if (p->b[i].f < rate * 0.49) eq_coef_of(&p->b[i], rate, &ch->c[ch->n++]);
+		if (p->b[i].f < rate * 0.49) {
+			ch->band[ch->n] = p->b[i];
+			eq_coef_of(&p->b[i], rate, &ch->c[ch->n++]);
+		}
 	if (!ch->n && p->preamp == 0) return;
 	double peak = ch->n ? -1e9 : 0;	/* (no filters: flat) */
 	for (double f = 20; ch->n && f < rate * 0.49; f *= 1.01) {
@@ -195,6 +202,32 @@ static void eq_design(const struct eq_profile *p, double rate, struct eq_chain *
 		pre = -peak;
 	}
 	ch->gain = (float)pow(10, pre / 20);
+}
+
+/* one channel's filter state (z, two floats a filter, EQ_MAX_BANDS of them) from the chain it ran with (old) to the new
+ * one: a filter still there (the same type, frequency and Q: only its gain moved) keeps its state wherever it now is in
+ * the chain, so a change while sound plays is a change of tone, not a click; a new filter starts at rest. (Kept by
+ * position, a filter added or gone ahead of others, a slider moved to or from 0, ran the next one on another filter's
+ * state: a burst up to 3 dB over the sound.) */
+static void eq_carry(const struct eq_chain *old, const struct eq_chain *ch, float *z)
+{
+	float was[EQ_MAX_BANDS * 2];
+	int used[EQ_MAX_BANDS] = { 0 };
+	memcpy(was, z, sizeof was);
+	for (int k = 0; k < EQ_MAX_BANDS; k++) {
+		int j = -1;
+		for (int t = -1; k < ch->n && j < 0 && t < old->n; t++) {
+			const int i = t < 0 ? k : t;	/* (where it was first: the usual case) */
+			const struct eq_band *a = &old->band[i], *b = &ch->band[k];
+			if (i < old->n && !used[i] && a->type == b->type && a->f == b->f && a->q == b->q) j = i;
+		}
+		if (j >= 0) {
+			used[j] = 1;
+			z[2 * k] = was[2 * j];
+			z[2 * k + 1] = was[2 * j + 1];
+		} else
+			z[2 * k] = z[2 * k + 1] = 0;
+	}
 }
 
 static inline int eq_active(const struct eq_chain *ch)

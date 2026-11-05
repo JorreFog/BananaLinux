@@ -87,7 +87,7 @@ int main(void)
 		double g = eq_response(&ch, sref[i][0], 48000);
 		CHECK(fabs(g - sref[i][1]) < 0.02, "shelves at %g Hz: %.3f dB, want %.3f", sref[i][0], g, sref[i][1]);
 	}
-	chain_of("Filter: ON LS Fc 105 Hz Gain 5.5 dB\nFilter: ON HS Fc 8000 Hz Gain -4 dB\n", 48000, &p);
+	ch = chain_of("Filter: ON LS Fc 105 Hz Gain 5.5 dB\nFilter: ON HS Fc 8000 Hz Gain -4 dB\n", 48000, &p);
 	CHECK(p.n == 2 && p.b[0].type == EQ_LSC && fabs(p.b[0].q - M_SQRT1_2) < 1e-9 && p.b[1].type == EQ_HSC, "LS and HS");
 	CHECK(fabs(ch.headroom - 5.5) < 0.05, "shelves: headroom %.3f, want the low shelf's 5.5", ch.headroom);
 
@@ -178,6 +178,33 @@ int main(void)
 		}
 		for (int k = 0; k < ch.n * 2; k++) if (!isfinite(z[k])) bad++;
 		CHECK(!bad, "random profile %d: unstable (%s)", t, txt);
+	}
+
+	/* a profile changed while sound plays (the plugin's reload, eq_carry): a filter added ahead of others (a slider
+	 * moved off 0 under kept ones) is a change of tone, not a burst over the sound */
+	{
+		static const char a[] = "Filter: ON HPQ Fc 220 Hz Q 0.707\nFilter: ON PK Fc 982 Hz Gain -10 dB Q 1.2\n"
+			"Filter: ON PK Fc 500 Hz Gain 3 dB Q 1.41\nFilter: ON PK Fc 8000 Hz Gain -3 dB Q 1.41\n";
+		static const char b[] = "Filter: ON HPQ Fc 220 Hz Q 0.707\nFilter: ON PK Fc 982 Hz Gain -10 dB Q 1.2\n"
+			"Filter: ON PK Fc 250 Hz Gain -1 dB Q 1.41\nFilter: ON PK Fc 500 Hz Gain 3 dB Q 1.41\nFilter: ON PK Fc 8000 Hz Gain -3 dB Q 1.41\n";
+		struct eq_chain ca = chain_of(a, 48000, &p), cb = chain_of(b, 48000, &p);
+		static short in[96000], o[96000];
+		for (int i = 0; i < 96000; i++) in[i] = (short)(6000 * sin(2 * M_PI * 440 * i / 48000.0) + 3000 * sin(2 * M_PI * 3000 * i / 48000.0));
+		int steady = 0, after = 0;
+		float z[EQ_MAX_BANDS * 2] = { 0 };
+		eq_run(&cb, z, in, 1, o, 1, 96000);
+		for (int i = 48000; i < 96000; i++) if (abs(o[i]) > steady) steady = abs(o[i]);
+		memset(z, 0, sizeof z);
+		eq_run(&ca, z, in, 1, o, 1, 48000);
+		eq_carry(&ca, &cb, z);
+		eq_run(&cb, z, in + 48000, 1, o + 48000, 1, 48000);
+		for (int i = 48000; i < 96000; i++) if (abs(o[i]) > after) after = abs(o[i]);
+		CHECK(after <= steady * 1.05, "a filter added ahead of others while playing: peak %d, the new profile's own %d", after, steady);
+		memset(z, 1, sizeof z);	/* (any state) */
+		eq_carry(&cb, &ca, z);
+		int rest = 1;
+		for (int k = ca.n; k < EQ_MAX_BANDS; k++) rest = rest && z[2 * k] == 0 && z[2 * k + 1] == 0;
+		CHECK(rest, "a filter gone: the state past the new chain isn't at rest");
 	}
 
 	/* a rough speed figure for this computer: the Nova profile on a minute of stereo */

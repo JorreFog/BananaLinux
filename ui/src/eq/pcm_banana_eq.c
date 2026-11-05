@@ -38,8 +38,8 @@ typedef struct {
 	float *z;			/* each channel's filter state: channels x EQ_MAX_BANDS x 2 */
 } banana_eq_t;
 
-/* the profile again if the file changed (or came or went); the filters' state is kept, so a change mid-song is a
- * change of tone, not a click */
+/* the profile again if the file changed (or came or went); each filter still in it keeps its state (eq_carry), so a
+ * change mid-song is a change of tone, not a click */
 static void eq_reload(banana_eq_t *eq, int force)
 {
 	struct stat st;
@@ -58,9 +58,7 @@ static void eq_reload(banana_eq_t *eq, int force)
 	eq_parse(text, n > 0 ? (size_t)n : 0, &eq->prof);
 	struct eq_chain ch;
 	eq_design(&eq->prof, eq->ext.rate ? eq->ext.rate : 48000, &ch);
-	/* fewer filters than before: the state of the ones that went must not linger into a later profile */
-	for (unsigned c = 0; eq->z && c < eq->channels; c++)
-		for (int k = ch.n; k < EQ_MAX_BANDS; k++) eq->z[(c * EQ_MAX_BANDS + k) * 2] = eq->z[(c * EQ_MAX_BANDS + k) * 2 + 1] = 0;
+	for (unsigned c = 0; eq->z && c < eq->channels; c++) eq_carry(&eq->chain, &ch, eq->z + c * EQ_MAX_BANDS * 2);
 	eq->chain = ch;
 }
 
