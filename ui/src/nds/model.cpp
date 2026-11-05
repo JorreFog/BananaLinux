@@ -27,6 +27,7 @@ namespace banana::nds
 		// that ROM (tests/nds-rom-test), then list its letter here
 		static const char CHECKED_LANGUAGES[] = {
 			'E',	// USA, and the English European dumps that carry it
+			'S',	// Spain (the Latin American fan translations keep its code)
 			'O',	// Black 2/White 2's international English code
 		};
 		const char lang = g.code.size() == 4 ? g.code[3] : 0;
