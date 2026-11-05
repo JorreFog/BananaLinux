@@ -6,9 +6,10 @@
  *
  * It filters inside each program's own audio thread, as plug's conversions do: no sound server, no extra copy, no
  * latency. The profile (Equalizer APO's parametric text, see eq.h) is the file bananad names, /run/banana/speaker-eq
- * unless `file` says otherwise. It is looked at again every tenth of a second of sound (one stat), so a change in
- * Settings is heard at once in a game that is already playing; no file, an empty one or one with no filters: the
- * samples pass through untouched.
+ * unless `file` says otherwise. It is looked at again every 10 ms of sound (one stat), so a change in Settings is heard
+ * at once in a game that is already playing, and the menu's beep for the press that made it (written after the file)
+ * is the new profile's from its start, not 0.1 s of the old one's (up to 13 dB apart: the beeps are where a speaker's
+ * profile cuts); no file, an empty one or one with no filters: the samples pass through untouched.
  *
  * Built as libasound_module_pcm_banana_eq.so in alsa-lib's plugin folder, where `type banana_eq` finds it.
  */
@@ -68,7 +69,7 @@ static snd_pcm_sframes_t eq_transfer(snd_pcm_extplug_t *ext, const snd_pcm_chann
 {
 	banana_eq_t *eq = ext->private_data;
 	eq->since += size;
-	if (eq->since >= ext->rate / 10) {
+	if (eq->since >= ext->rate / 100) {
 		eq->since = 0;
 		eq_reload(eq, 0);
 	}

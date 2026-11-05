@@ -1120,7 +1120,7 @@ static void audio_route(void)
 	char play[256], cap[160];
 	/* the speakers, through the speaker EQ (banana-ui's ALSA plugin, ui/src/eq): a tiny speaker's peaks and dips
 	 * evened out, in each program's own audio thread, after plug has made the sound S16 stereo 48 kHz. It reads
-	 * /run/banana/speaker-eq, which Settings writes, every tenth of a second: a change is heard at once, and no
+	 * /run/banana/speaker-eq, which Settings writes, every 10 ms: a change is heard at once, and no
 	 * file passes the sound through untouched. Never the headphones or Bluetooth: the profile is the speakers'.
 	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) */
 	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
