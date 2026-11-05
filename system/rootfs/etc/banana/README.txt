@@ -33,6 +33,11 @@ Bluetooth: Settings > Network > Bluetooth switches it on (off at first: it costs
 finds controllers, headphones and speakers in pairing mode and pairs them (A). While Bluetooth headphones are
 connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
 
+Speaker EQ: Settings > Display & sound > Speaker EQ evens out the speakers (never the headphones): a profile
+measured for this handheld, or one of your own, and seven sliders on top. Your own: a .txt in banana/speaker-eq in
+Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", "Filter 1: ON PK Fc 1000 Hz Gain -4 dB
+Q 1.2"), picked in Profile.
+
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
 

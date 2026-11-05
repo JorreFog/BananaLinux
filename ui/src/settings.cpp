@@ -471,6 +471,7 @@ namespace banana
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
+		add(D, "music", "Speaker EQ", "", "", "speaker_eq_page", {}, {}, Item::PAGE);
 		add(D, "picture", "Shown systems", "Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).", "", "shelves", {}, {}, Item::PAGE);
 		add(D, "picture", "Menu look", "The menu's smaller looks: the top screen's motion, battery and clock, the boot animation, and what the DS cartridges show.", "", "menu_look", {}, {}, Item::PAGE);
 		// the Menu look page (Display & sound > Menu look)
@@ -845,7 +846,7 @@ namespace banana
 			{ "", { "Nintendo DS", "Other systems", "Display & sound", "Network", "Sleep & power", "System" } },	// the tiles
 			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name" } },
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
-			{ "Display & sound", { "Volume", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
+			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
@@ -1234,6 +1235,7 @@ namespace banana
 			if (it.key == "developer") { recordEvent("settings", "Developer options"); openSection("Developer options"); return MOVED; }
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
+			if (it.key == "speaker_eq_page") { openEq(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
@@ -1370,6 +1372,7 @@ namespace banana
 		std::string beforeAccent = getConfValue(menu, "accent", "yellow");
 
 		resetSettings(data, emulator ? ResetScope::Emulator : ResetScope::System);
+		if (!emulator) speakereq::apply(speakereq::compose(speakereq::load(data), data, eqShare()));	// (its keys are back to theirs)
 
 		if (!emulator)
 		{
@@ -1435,6 +1438,7 @@ namespace banana
 		if (page == GAME) return pressGame(k);
 		if (page == ARTPICK) return pressArt(k);
 		if (page == COLORS) return pressColors(k);
+		if (page == SPEAKEREQ) return pressEq(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (page == THEMES) return pressThemes(k);
@@ -1623,6 +1627,7 @@ namespace banana
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
+		if (page == SPEAKEREQ) return touchEq(cx, cy);
 		if (page == THEMES) return touchThemes(cx, cy);
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
@@ -2246,6 +2251,16 @@ namespace banana
 				"and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: ") +
 				(c.neutral() ? "no correction." : c.screen == 0 ? "the top screen corrected." : "the bottom screen corrected.");
 		}
+		if (cur.key == "speaker_eq_page")
+		{
+			speakereq::State s = speakereq::load(data);
+			std::string now = s.on ? "None." : "Off.";
+			if (s.on)
+				for (auto& c : speakereq::profiles(data, eqShare(), s.profile))
+					if (c.value == s.profile) now = c.name + ".";
+			help = "Evens out the speakers: the peaks that make them shrill or boxy taken down, in every game and the menu (never the headphones). "
+				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders on top. Now: " + now;
+		}
 		if (cur.key == "share_account")
 			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
 		if (cur.key == "share")
@@ -2326,6 +2341,7 @@ namespace banana
 		if (page == GAME) { renderGame(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
 		if (page == COLORS) { renderColors(); return; }
+		if (page == SPEAKEREQ) { renderEq(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == THEMES) { renderThemes(); return; }
@@ -3860,6 +3876,202 @@ namespace banana
 			arrow(true, 576, y + 9, c);
 			text(v, true, 17, 566 - vw, y + 5, c);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 9, c);
+		}
+		float bw = faceWidth("B", "Cancel");
+		face("B", "Cancel", 18, bw);
+		float aw = faceWidth("A", "Keep");
+		face("A", "Keep", 622 - aw, aw);
+		be->endScreen();
+	}
+
+	// ---- Speaker EQ ------------------------------------------------------------------------------------------------
+	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders over it. Every change is written to the
+	// plugin's file at once (speakereq::apply), so it is heard in whatever plays (a game paused under the menu, its
+	// sound going on); A keeps it in settings.conf, B puts back what was kept. The top screen draws the curve.
+	namespace
+	{
+		const int EQ_ROWS = 2 + speakereq::BANDS;	// On, Profile, the sliders
+		const float EQ_Y = 52, EQ_PITCH = 40, EQ_H = 36;
+		// the curve's frequencies: 100 Hz to 20 kHz, evenly on a log scale, one every 2 units of the graph's width
+		const float EQ_GX = 70, EQ_GW = 540, EQ_GY = 70, EQ_GH = 330, EQ_DB = 20;	// (a tuned cut and a slider's on top: -17 dB)
+		const std::vector<double>& eqFreqs()
+		{
+			static std::vector<double> f;
+			if (f.empty())
+				for (int i = 0; i <= (int)(EQ_GW / 2); i++) f.push_back(100 * std::pow(200.0, i / (EQ_GW / 2)));
+			return f;
+		}
+		float eqX(double hz) { return EQ_GX + (float)(std::log(hz / 100) / std::log(200.0)) * EQ_GW; }
+		float eqY(double db) { return EQ_GY + EQ_GH / 2 - (float)(std::max(-(double)EQ_DB, std::min((double)EQ_DB, db)) / EQ_DB) * EQ_GH / 2; }
+		std::string bandName(int hz) { return hz >= 1000 ? std::to_string(hz / 1000) + " kHz" : std::to_string(hz) + " Hz"; }
+	}
+
+	void Settings::eqLive(const speakereq::State& s)
+	{
+		eqText = speakereq::compose(s, data, eqShare());
+		if (!speakereq::apply(eqText)) message = "The speaker EQ can't be written now (" + speakereq::livePath() + ").";
+		speakereq::curve(eqText, eqFreqs(), eqCurve);
+	}
+
+	void Settings::openEq()
+	{
+		eqSaved = eqEdit = speakereq::load(data);
+		eqChoices = speakereq::profiles(data, eqShare(), eqEdit.profile);
+		eqRow = 0;
+		message.clear();
+		eqLive(eqEdit);	// (what was kept, in case the file was lost: a reboot is the menu's start, which writes it too)
+		page = SPEAKEREQ;
+	}
+
+	Settings::Result Settings::pressEq(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: eqRow = (eqRow + EQ_ROWS - 1) % EQ_ROWS; return MOVED;
+		case Key::DOWN: eqRow = (eqRow + 1) % EQ_ROWS; return MOVED;
+		case Key::LEFT: case Key::RIGHT:
+		{
+			const int d = k == Key::LEFT ? -1 : 1;
+			if (eqRow == 0) eqEdit.on = !eqEdit.on;
+			else if (eqRow == 1)
+			{
+				const int n = (int)eqChoices.size();
+				int i = -1;
+				for (int j = 0; j < n; j++) if (eqChoices[j].value == eqEdit.profile) i = j;
+				if (!n) return NONE;
+				eqEdit.profile = eqChoices[i < 0 ? 0 : (i + d + n) % n].value;
+				eqEdit.on = true;	// (a profile picked is one to hear)
+			}
+			else
+			{
+				int& g = eqEdit.gain[eqRow - 2];
+				int v = std::max(-speakereq::BAND_MAX_DB, std::min(speakereq::BAND_MAX_DB, g + d));
+				if (v == g) return NONE;
+				g = v;
+				eqEdit.on = true;
+			}
+			message.clear();
+			eqLive(eqEdit);
+			return MOVED;
+		}
+		case Key::X:
+			for (int& g : eqEdit.gain) g = 0;
+			message = "Every slider at 0 dB: the profile alone. A keeps that, B goes back to what was kept.";
+			eqLive(eqEdit);
+			return MOVED;
+		case Key::A:
+		{
+			speakereq::save(data, eqEdit);
+			eqSaved = eqEdit;
+			eqLive(eqEdit);
+			page = LIST;
+			std::string what = "Off";
+			if (eqEdit.on)
+			{
+				what = "None";
+				for (auto& c : eqChoices) if (c.value == eqEdit.profile) what = c.name;
+				bool sliders = false;
+				for (int g : eqEdit.gain) sliders = sliders || g;
+				if (sliders) what += ", and the sliders";
+			}
+			message.clear();
+			toast("Speaker EQ", what, 0x6ad07a, 1, 3000);
+			return CHANGED;
+		}
+		case Key::B: case Key::START:
+			eqEdit = eqSaved;
+			eqLive(eqSaved);	// (what was kept, heard again)
+			page = LIST; message.clear();
+			if (k == Key::START) { mOpen = false; return CLOSED; }
+			return MOVED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchEq(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 422) return pressEq(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < EQ_ROWS; r++)
+		{
+			float ry = EQ_Y + r * EQ_PITCH;
+			if (downY < ry || downY > ry + EQ_H) continue;
+			if (r != eqRow) { eqRow = r; return MOVED; }
+			return pressEq(downX < 320 ? Key::LEFT : Key::RIGHT);
+		}
+		return NONE;
+	}
+
+	void Settings::renderEq()
+	{
+		SPal p = pal(light);
+		std::string profileName = "None";
+		for (auto& c : eqChoices) if (c.value == eqEdit.profile) profileName = c.name;
+
+		// the top screen: the curve the speakers play through now, 100 Hz to 20 kHz, -20 to +20 dB
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		text("Speaker EQ", true, 20, 24, 18, p.ink, true, 1.2f);
+		std::string state = eqEdit.on ? profileName : "Off";
+		float sw = text(state, true, 18, 0, 0, p.accent, false, 0, true);
+		text(state, true, 18, 616 - sw, 20, p.accent);
+		for (int db = -15; db <= 15; db += 5)
+		{
+			be->fill(X(EQ_GX), X(eqY(db)), X(EQ_GW), std::max(1.0f, X(db ? 1 : 2)), db ? p.line : p.muted);
+			if (db % 10) continue;	// (a line every 5 dB, a number every 10)
+			char l[8];
+			snprintf(l, sizeof l, db > 0 ? "+%d" : "%d", db);
+			float lw = text(l, false, 13, 0, 0, p.muted, false, 0, true);
+			text(l, false, 13, EQ_GX - 10 - lw, eqY(db) - 8, p.muted);
+		}
+		for (int hz : { 100, 1000, 10000 })
+		{
+			be->fill(X(eqX(hz)), X(EQ_GY), std::max(1.0f, X(1)), X(EQ_GH), p.line);
+			text(bandName(hz), false, 13, eqX(hz) + 4, EQ_GY + EQ_GH + 6, p.muted);
+		}
+		for (int i = 0; i < speakereq::BANDS; i++)	// (the sliders' places, under the graph)
+			be->fill(X(eqX(speakereq::BAND_HZ[i]) - 1), X(EQ_GY + EQ_GH - 8), X(3), X(8), eqRow == i + 2 ? p.accent : p.muted);
+		const auto& f = eqFreqs();
+		const Color& cc = eqEdit.on ? p.accent : p.muted;
+		for (size_t i = 0; i < f.size(); i++)
+		{
+			float y = eqY(eqEdit.on && i < eqCurve.size() ? eqCurve[i] : 0);
+			float y0 = i ? eqY(eqEdit.on && i - 1 < eqCurve.size() ? eqCurve[i - 1] : 0) : y;
+			float top = std::min(y, y0) - 1.5f, bottom = std::max(y, y0) + 1.5f;
+			be->fill(X(EQ_GX + i * 2.0f), X(top), std::max(1.0f, X(2.5f)), std::max(1.0f, X(bottom - top)), cc);
+		}
+		std::string hint = !message.empty() ? message : eqEdit.on ? "Heard at once in what's playing, on the speakers only. X: every slider to 0 dB."
+			: "Off: the speakers play the sound as it is.";
+		text(fit(hint, true, 14, 592), true, 14, 24, 446, p.muted);
+		be->endScreen();
+
+		// the bottom screen: the rows, the sliders as bars from their 0 dB
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int r = 0; r < EQ_ROWS; r++)
+		{
+			bool on = r == eqRow;
+			float y = EQ_Y + r * EQ_PITCH;
+			if (on) box("pick", true, 18, y, 604, EQ_H);
+			Color c = on ? p.onPick : p.ink;
+			std::string v;
+			if (r == 0) { text("Speaker EQ", true, 17, 38, y + 9, c); v = eqEdit.on ? "On" : "Off"; }
+			else if (r == 1) { text("Profile", true, 17, 38, y + 9, c); v = profileName; }
+			else
+			{
+				const int g = eqEdit.gain[r - 2];
+				text(bandName(speakereq::BAND_HZ[r - 2]), true, 17, 38, y + 9, c);
+				const float mid = 330, half = 110, bar = half * g / speakereq::BAND_MAX_DB;
+				be->fill(X(mid - half), X(y + EQ_H / 2 - 1), X(2 * half), std::max(1.0f, X(2)), on ? p.onPick : p.line);
+				be->fill(X(mid - 1), X(y + 8), X(2), X(EQ_H - 16), on ? p.onPick : p.muted);
+				if (g) be->fill(X(std::min(mid, mid + bar)), X(y + EQ_H / 2 - 5), X(std::fabs(bar)), X(10), on ? p.onPick : (eqEdit.on ? p.accent : p.muted));
+				v = (g > 0 ? "+" : "") + std::to_string(g) + " dB";
+			}
+			v = fit(v, true, 17, r == 1 ? 330 : 100);
+			float vw = text(v, true, 17, 0, 0, c, false, 0, true);
+			arrow(true, 576, y + 13, c);
+			text(v, true, 17, 566 - vw, y + 9, c);
+			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 13, c);
 		}
 		float bw = faceWidth("B", "Cancel");
 		face("B", "Cancel", 18, bw);

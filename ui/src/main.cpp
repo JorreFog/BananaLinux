@@ -2094,6 +2094,10 @@ int main(int argc, char** argv)
 		else if (!c.neutral()) logf("screen colours (%s): the %s screen corrected", when, c.screen == 0 ? "top" : "bottom");
 	};
 	applyColors("start");
+	// the speaker EQ (Settings > Display & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
+	// settings.conf, before any game starts (/run is empty after a boot)
+	if (!speakereq::apply(speakereq::compose(speakereq::load(o.data), o.data, o.assets + "/../speaker-eq")))
+		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());
 
 	Sound sound(o.assets + "/sounds");
 	FrameStats fstat;
