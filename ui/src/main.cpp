@@ -430,6 +430,15 @@ struct RomWatch
 	}
 	bool logged = false;	// this wait's first change logged
 	std::set<std::string> changed;	// the folders changed since the last rescan (systems.conf's "changed" commands)
+	// systems.conf's "changed" commands: in the background, detached from the menu
+	static void run(const std::vector<std::string>& cmds, const char* why)
+	{
+		for (auto& cmd : cmds)
+		{
+			logf("%s: %s", why, cmd.c_str());
+			if (system(("( " + cmd + " ) </dev/null >/dev/null 2>&1 &").c_str()) != 0) {}
+		}
+	}
 };
 
 // ---- boot timing: seconds since the kernel started, for logs/boot.txt (rcS gathers /run/banana/boot-times) ------
@@ -2244,6 +2253,9 @@ int main(int argc, char** argv)
 	bool batteryDue = true;
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
+	// the systems' "changed" commands once at the start, now that the folders are watched: what was copied while the
+	// menu wasn't running, and the second card when it was mounted before this (one mounted after is a change)
+	roms.run(lib.changedCommands(), "the menu started");
 	// the volume and brightness keys' level card, 1.5 s from the last key (bananad changes the level and says so)
 	std::string osdLabel;
 	int osdPercent = 0;
@@ -3193,12 +3205,8 @@ int main(int argc, char** argv)
 				ui->setHome(at);
 				roms.watch(lib.watchDirs());
 				logf("the games on the card changed: %d systems", lib.systemCount());
-				// a system's "changed" command (systems.conf), for a change in its folder: in the background, detached
-				for (auto& cmd : lib.changedRuns(roms.changed))
-				{
-					logf("a system's folder changed: %s", cmd.c_str());
-					if (system(("( " + cmd + " ) </dev/null >/dev/null 2>&1 &").c_str()) != 0) {}
-				}
+				// a system's "changed" command (systems.conf), for a change in its folder
+				roms.run(lib.changedRuns(roms.changed), "a system's folder changed");
 				roms.changed.clear();
 				dirty = true;
 			}

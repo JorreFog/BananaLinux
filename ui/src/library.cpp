@@ -544,9 +544,25 @@ namespace banana
 		return r;
 	}
 
+	std::vector<std::string> Library::changedCommands() const
+	{
+		std::vector<std::string> r;
+		for (auto& d : defs)
+		{
+			if (!d.changed.empty() && std::find(r.begin(), r.end(), d.changed) == r.end())
+			{
+				r.push_back(d.changed);
+			}
+		}
+		return r;
+	}
+
 	std::vector<std::string> Library::changedRuns(const std::set<std::string>& dirs) const
 	{
 		std::vector<std::string> r;
+		// the second card came in (bananad names its roms folder in /run/banana/sd2): every system's folder on it is
+		// new to the menu, so it counts as changed (a card in at boot is mounted after the menu started)
+		bool card = dirs.count("/run/banana/sd2") > 0;
 		for (auto& d : defs)
 		{
 			if (d.changed.empty())
@@ -556,6 +572,10 @@ namespace banana
 			bool hit = false;
 			for (auto& root : roots())
 			{
+				if (card && root != romRoot)
+				{
+					hit = true;
+				}
 				std::string dir = folderPath(root, d.folder);
 				for (auto& c : dirs)
 				{

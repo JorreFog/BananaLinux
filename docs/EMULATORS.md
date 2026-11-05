@@ -311,3 +311,5 @@ as they are downloaded: nothing per game in BananaOS, no layouts of its own.
   artwork).
 - **RomM**: the `g-and-w` platform syncs to `gameandwatch`; its `artwork` folder, which RomM lists as one ROM of
   several files, comes as each game's artwork zip, checked by size (RomM's hashes of those files aren't theirs).
+  RomM's covers aren't downloaded (`covers = own` in systems.conf): every game's cover is gw-meta's, synced or copied
+  by hand alike. `covers =` in the card's `banana/systems.conf` brings RomM's (box art from its scraper) instead.
