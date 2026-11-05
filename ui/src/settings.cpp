@@ -2259,7 +2259,7 @@ namespace banana
 				for (auto& c : speakereq::profiles(data, eqShare(), s.profile))
 					if (c.value == s.profile) now = c.name + ".";
 			help = "Evens out the speakers: the peaks that make them shrill or boxy taken down, in every game and the menu (never the headphones). "
-				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders on top. Now: " + now;
+				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders to adjust it by ear. Now: " + now;
 		}
 		if (cur.key == "share_account")
 			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
@@ -3885,9 +3885,12 @@ namespace banana
 	}
 
 	// ---- Speaker EQ ------------------------------------------------------------------------------------------------
-	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders over it. Every change is written to the
-	// plugin's file at once (speakereq::apply), so it is heard in whatever plays (a game paused under the menu, its
-	// sound going on); A keeps it in settings.conf, B puts back what was kept. The top screen draws the curve.
+	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
+	// curve's level at its frequency, the profile's to begin with (Tuned's 1 kHz starts at -10 dB), and a step moves
+	// the curve there by 1 dB: what is kept is the change (settings.conf's speaker_eq_bands, a peak filter an octave
+	// wide at each slider's frequency, after the profile's own filters), so a profile's narrow cuts stay as they are.
+	// Every change is written to the plugin's file at once (speakereq::apply), so it is heard in whatever plays (a game
+	// paused under the menu, its sound going on); A keeps it, B puts back what was kept. The top screen draws the curve.
 	namespace
 	{
 		const int EQ_ROWS = 2 + speakereq::BANDS;	// On, Profile, the sliders
@@ -3911,6 +3914,17 @@ namespace banana
 		eqText = speakereq::compose(s, data, eqShare());
 		if (!speakereq::apply(eqText)) message = "The speaker EQ can't be written now (" + speakereq::livePath() + ").";
 		speakereq::curve(eqText, eqFreqs(), eqCurve);
+		// the sliders: the curve with the EQ on (Off shows what On would play, dimmed), and the profile's own
+		speakereq::State on = s, prof;
+		on.on = true;
+		prof = on;
+		for (int& g : prof.gain) g = 0;
+		const std::string shown = speakereq::compose(on, data, eqShare()), profText = speakereq::compose(prof, data, eqShare());
+		std::vector<double> bands(speakereq::BAND_HZ, speakereq::BAND_HZ + speakereq::BANDS), now, own;
+		speakereq::curve(shown, bands, now);
+		speakereq::curve(profText, bands, own);
+		for (int i = 0; i < speakereq::BANDS; i++) { eqBand[i] = now[i]; eqBandProfile[i] = own[i]; }
+		speakereq::curve(profText, eqFreqs(), eqProfCurve);
 	}
 
 	void Settings::openEq()
@@ -3941,6 +3955,7 @@ namespace banana
 				if (!n) return NONE;
 				eqEdit.profile = eqChoices[i < 0 ? 0 : (i + d + n) % n].value;
 				eqEdit.on = true;	// (a profile picked is one to hear)
+				for (int& g : eqEdit.gain) g = 0;	// (and as it is: the sliders show its own curve; B brings the changes back)
 			}
 			else
 			{
@@ -3956,7 +3971,7 @@ namespace banana
 		}
 		case Key::X:
 			for (int& g : eqEdit.gain) g = 0;
-			message = "Every slider at 0 dB: the profile alone. A keeps that, B goes back to what was kept.";
+			message = "The sliders back to the profile as it is. A keeps that, B goes back to what was kept.";
 			eqLive(eqEdit);
 			return MOVED;
 		case Key::A:
@@ -4032,6 +4047,11 @@ namespace banana
 		for (int i = 0; i < speakereq::BANDS; i++)	// (the sliders' places, under the graph)
 			be->fill(X(eqX(speakereq::BAND_HZ[i]) - 1), X(EQ_GY + EQ_GH - 8), X(3), X(8), eqRow == i + 2 ? p.accent : p.muted);
 		const auto& f = eqFreqs();
+		bool changed = false;
+		for (int g : eqEdit.gain) changed = changed || g;
+		if (eqEdit.on && changed)	// (the profile as it is, under the curve the sliders made of it)
+			for (size_t i = 0; i < f.size() && i < eqProfCurve.size(); i++)
+				be->fill(X(EQ_GX + i * 2.0f), X(eqY(eqProfCurve[i]) - 1), std::max(1.0f, X(2)), std::max(1.0f, X(2)), p.muted);
 		const Color& cc = eqEdit.on ? p.accent : p.muted;
 		for (size_t i = 0; i < f.size(); i++)
 		{
@@ -4040,7 +4060,7 @@ namespace banana
 			float top = std::min(y, y0) - 1.5f, bottom = std::max(y, y0) + 1.5f;
 			be->fill(X(EQ_GX + i * 2.0f), X(top), std::max(1.0f, X(2.5f)), std::max(1.0f, X(bottom - top)), cc);
 		}
-		std::string hint = !message.empty() ? message : eqEdit.on ? "Heard at once in what's playing, on the speakers only. X: every slider to 0 dB."
+		std::string hint = !message.empty() ? message : eqEdit.on ? "Heard at once in what's playing, on the speakers only. X: back to the profile as it is."
 			: "Off: the speakers play the sound as it is.";
 		text(fit(hint, true, 14, 592), true, 14, 24, 446, p.muted);
 		be->endScreen();
@@ -4059,13 +4079,18 @@ namespace banana
 			else if (r == 1) { text("Profile", true, 17, 38, y + 9, c); v = profileName; }
 			else
 			{
-				const int g = eqEdit.gain[r - 2];
-				text(bandName(speakereq::BAND_HZ[r - 2]), true, 17, 38, y + 9, c);
-				const float mid = 330, half = 110, bar = half * g / speakereq::BAND_MAX_DB;
+				const int b = r - 2;
+				text(bandName(speakereq::BAND_HZ[b]), true, 17, 38, y + 9, c);
+				// the bar: the curve's level at this frequency, from 0 dB (-20 to +20 dB, as the graph)
+				const float mid = 330, half = 110;
+				auto at = [&](double db) { return mid + half * (float)(std::max(-(double)EQ_DB, std::min((double)EQ_DB, db)) / EQ_DB); };
+				const int lvl = (int)std::lround(eqBand[b]);
 				be->fill(X(mid - half), X(y + EQ_H / 2 - 1), X(2 * half), std::max(1.0f, X(2)), on ? p.onPick : p.line);
 				be->fill(X(mid - 1), X(y + 8), X(2), X(EQ_H - 16), on ? p.onPick : p.muted);
-				if (g) be->fill(X(std::min(mid, mid + bar)), X(y + EQ_H / 2 - 5), X(std::fabs(bar)), X(10), on ? p.onPick : (eqEdit.on ? p.accent : p.muted));
-				v = (g > 0 ? "+" : "") + std::to_string(g) + " dB";
+				if (lvl) be->fill(X(std::min(mid, at(eqBand[b]))), X(y + EQ_H / 2 - 5), X(std::fabs(at(eqBand[b]) - mid)), X(10), on ? p.onPick : (eqEdit.on ? p.accent : p.muted));
+				if (eqEdit.gain[b])	// (where the profile itself is: a tick on the track)
+					be->fill(X(at(eqBandProfile[b]) - 1.5f), X(y + 6), X(3), X(EQ_H - 12), on ? p.onPick : p.muted);
+				v = (lvl > 0 ? "+" : "") + std::to_string(lvl) + " dB";
 			}
 			v = fit(v, true, 17, r == 1 ? 330 : 100);
 			float vw = text(v, true, 17, 0, 0, c, false, 0, true);

@@ -34,7 +34,7 @@ finds controllers, headphones and speakers in pairing mode and pairs them (A). W
 connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
 
 Speaker EQ: Settings > Display & sound > Speaker EQ evens out the speakers (never the headphones): a profile
-measured for this handheld, or one of your own, and seven sliders on top. Your own: a .txt in banana/speaker-eq in
+measured for this handheld, or one of your own, and seven sliders to adjust it by ear. Your own: a .txt in banana/speaker-eq in
 Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", "Filter 1: ON PK Fc 1000 Hz Gain -4 dB
 Q 1.2"), picked in Profile.
 

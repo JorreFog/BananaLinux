@@ -388,7 +388,10 @@ namespace banana
 		std::vector<speakereq::Choice> eqChoices;
 		int eqRow = 0;
 		std::string eqText;				// what the plugin was given last (the curve drawn is its)
-		std::vector<double> eqCurve;	// eqText's curve at EQ_FREQS (dB)
+		std::vector<double> eqCurve, eqProfCurve;	// eqText's curve and the profile's own, at the graph's frequencies (dB)
+		// what each slider shows: the curve's level at its frequency (the profile with the changes made to it), and the
+		// profile's own there (the tick on its track)
+		double eqBand[speakereq::BANDS] = {}, eqBandProfile[speakereq::BANDS] = {};
 		std::string eqShare() const { return assets + "/../speaker-eq"; }	// (/usr/share/banana/speaker-eq)
 		void openEq();
 		void eqLive(const speakereq::State& s);
