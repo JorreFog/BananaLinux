@@ -5,7 +5,7 @@ with, so the page works on its own (from file:// or any static host) and shows e
 
 | File | What it is |
 | --- | --- |
-| `theme-wasm.cpp` | The binding. It drives `ui/src/layout.cpp` (and `expr.cpp`, `json.cpp`, `library.cpp`, `theme.cpp`, `soft.cpp`, `zip.cpp`, the rnds rasterizer) as `banana-ui --headless` does: a `SoftBackend` draws both screens in memory, a `Library` reads the made-up test library. C calls for JS (`bt_init`, `bt_load`, `bt_frame`, `bt_pixels`, `bt_press`, `bt_touch`, `bt_script`, `bt_eval`, ...). |
+| `theme-wasm.cpp` | The binding. It drives `ui/src/layout.cpp` (and `expr.cpp`, `json.cpp`, `library.cpp`, `theme.cpp`, `soft.cpp`, `zip.cpp`, `zipdir.cpp`, the rnds rasterizer) as `banana-ui --headless` does: a `SoftBackend` draws both screens in memory, a `Library` reads the made-up test library. C calls for JS (`bt_init`, `bt_load`, `bt_frame`, `bt_pixels`, `bt_press`, `bt_touch`, `bt_script`, `bt_eval`, ...). |
 | `build.sh` | Builds `banana-engine.js` with Emscripten: one file with the wasm, the built-in fonts and icons, `systems.conf` and two libraries inlined (`ui/tests/fixture.sh`'s, at `/fx`, and the same with a game for every system, at `/fxall`). |
 | `sources.sh` | The hash of everything it is built from; the build writes it into the output and `tests/engine.test.js` says when they differ. |
 | `banana-engine.js` | The build (generated: don't edit). |
