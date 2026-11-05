@@ -677,6 +677,20 @@ namespace
 			if (system(cmd.c_str()) != 0) {}
 		}
 	}
+	// BananaOS: the Game & Watch games the sync brought, named and given covers from MAME and their artwork (gw-meta:
+	// in the background, detached, only what's missing; waits while a game plays). Only on the card's own /data
+	void gwMetaAfter()
+	{
+		const char* tool = getenv("BANANA_GW_META");
+		std::string t = tool ? tool : (ROOT == "/data" ? "/usr/libexec/banana/gw-meta" : "");
+		if (t.empty() || access(t.c_str(), X_OK) != 0)
+		{
+			return;
+		}
+		std::string cmd = "mkdir -p '" + ROOT + "/banana/logs/mame-gnw' && ( '" + t + "' > '" + ROOT +
+			"/banana/logs/mame-gnw/meta.log' 2>&1 & ) >/dev/null 2>&1";
+		if (system(cmd.c_str()) != 0) {}
+	}
 	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save
 	bool gameRunning()
 	{
@@ -1892,6 +1906,7 @@ int main(int argc, char** argv)
 		logWanted = !dryRun;
 		int rc = doSync(savesOnly, autoWhy);
 		unlink((RUN + "/sync.pid").c_str());
+		gwMetaAfter();
 		return rc;
 	}
 	fprintf(stderr, "banana-sync: unknown command %s\n", cmd.c_str());
