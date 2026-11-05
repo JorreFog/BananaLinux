@@ -7,7 +7,7 @@
 # file sharing, the Files page, a card put in; what changed during a game, when it ends).
 #   gw-meta [<folder>...]      default: roms/gameandwatch on the card, and on the second card while it's in
 # The name: MAME's description without "Game & Watch: " ("Donkey Kong II"). The cover: MAME's picture of the game
-# after a few seconds (its LCD as it starts), in the artwork's "Unit Only" view (the console), else its first
+# after a second, MAME's least (its LCD as it starts), in the artwork's "Unit Only" view (the console), else its first
 # "Background" view; 480 pixels high. A game without artwork gets none (the bare LCD looked poor): the menu shows its
 # own picture until the artwork comes, and the cover is drawn then.
 MAME=${MAME:-/usr/bin/mame-gnw}
@@ -116,7 +116,7 @@ cover() {
     if [ -z "$view" ] || [ -z "$size" ]; then
         return
     fi
-    nice -n 19 $MAME "$g" -rompath "$dir" -artpath "$dir/artwork" -video none -sound none -seconds_to_run 3 \
+    nice -n 19 $MAME "$g" -rompath "$dir" -artpath "$dir/artwork" -video none -sound none -seconds_to_run 1 \
         -snapview "$view" -snapsize "$size" -snapname "%g" -snapshot_directory $TMP \
         -cfg_directory $TMP -nvram_directory $TMP -inipath $TMP -homepath $TMP -skip_gameinfo >$TMP/mame.log 2>&1
     if [ -s $TMP/$g.png ]; then
