@@ -889,8 +889,9 @@ namespace
 		{ "megadrive", "megadrive" }, { "psx", "psx" }, { "ps", "psx" }, { "n64", "n64" },
 		{ "c64", "c64" }, { "commodore-64", "c64" }, { "commodore64", "c64" },
 		{ "zxs", "zxspectrum" }, { "zx-spectrum", "zxspectrum" }, { "zxspectrum", "zxspectrum" },
+		{ "g-and-w", "gameandwatch" },
 	};
-	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64" };
+	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64", "gameandwatch" };
 	struct RommRom { long long id; std::string folder, stem, fsName; };
 	struct Romm : Backend
 	{
@@ -942,10 +943,34 @@ namespace
 			if (!list(skip, err)) return false;
 			std::map<std::string, MSystem> by;
 			for (auto& f : platforms) by[f.second].folder = f.second;
+			// Game & Watch: the games' MAME artwork zips, in the platform's artwork folder, which RomM lists as one ROM of
+			// several files (its files only on its own page): each zip goes with its game (gameandwatch/artwork/<game>.zip,
+			// run-gw's place for it), so a chosen game brings its artwork and the folder is no game of its own
+			std::map<std::string, MFile> gwArt;
+			for (auto& it : romJson)
+			{
+				if (platforms[(long long)it->num("platform_id")] != "gameandwatch" || it->str("fs_name") != "artwork") continue;
+				Resp d = call("GET", "/api/roms/" + std::to_string((long long)it->num("id")));
+				JPtr dj = d.code == 200 ? d.json() : nullptr;
+				const JVal* files = dj ? dj->get("files") : nullptr;
+				if (!files || !files->isArr()) continue;
+				for (auto& fj : files->arr)
+				{
+					std::string fn = fj->str("file_name");
+					if (fn.empty() || !safeRel(fn) || lower(extOf(fn)) != "zip") continue;
+					MFile f;
+					f.path = "gameandwatch/artwork/" + fn;
+					f.size = (long long)fj->num("file_size_bytes", -1);
+					f.sha1 = lower(fj->str("sha1_hash")); f.md5 = lower(fj->str("md5_hash"));
+					f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
+					gwArt[stemOf(fn)] = f;
+				}
+			}
 			for (auto& it : romJson)
 			{
 				std::string folder = platforms[(long long)it->num("platform_id")], fsName = it->str("fs_name");
 				long long id = (long long)it->num("id");
+				if (folder == "gameandwatch" && fsName == "artwork") continue;	// (its zips go with their games: above)
 				if (!safeRel(folder + "/" + fsName) || it->flag("missing_from_fs")) { m.skipped++; continue; }
 				MGame g;
 				g.title = it->str("name", fsName);
@@ -993,8 +1018,15 @@ namespace
 				}
 				else { m.skipped++; continue; }	// (a game of several files on a cartridge system: not one the menu can start)
 				std::string stem = stemOf(entry);
+				if (folder == "gameandwatch")
+				{
+					auto art = gwArt.find(stem);
+					if (art != gwArt.end()) g.files.push_back(art->second);
+				}
 				// the cover, as the menu's library reads it (media/box/<rom name>.png or .jpg)
-				std::string cover = it->str("path_cover_large");
+				// (none for Game & Watch: gw-meta draws its covers from the artwork, all alike, and the card's own covers
+				// would otherwise be reported as files in the way)
+				std::string cover = folder == "gameandwatch" ? std::string() : it->str("path_cover_large");
 				std::string cext = extOf(cover.substr(0, cover.find('?')));
 				std::string image;
 				if (!cover.empty() && (cext == "png" || cext == "jpg" || cext == "jpeg"))
