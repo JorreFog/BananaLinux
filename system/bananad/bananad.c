@@ -880,6 +880,10 @@ static void suspend_now(const char *why)
 {
 	if (powering_off()) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
 	double t0 = mono();
+	/* the panels dark first: the pre-sleep hooks (Wi-Fi down and its driver unloaded, Bluetooth down) take ~2 s on the
+	 * RG DS Plus, and the panels stayed lit that long with the lid shut. The wake lights them again (below: the lid
+	 * open, or dark while charging) */
+	backlights_power(0);
 	lid_held = 0;
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
