@@ -16,12 +16,13 @@ cd "$BINARIES_DIR"
 # No host build may reach the card. `make ui` leaves x86 binaries in ui/ (the host gate), Buildroot's local-source
 # rsync copies them into the package's build dir, and an install step that skipped the target build puts one in
 # /usr/bin -- which booted to a black screen: the kernel and init came up, and the menu died on "syntax error".
-for f in banana-ui banana-scrape banana-sync banana-bshare banana-fetch; do
+for f in banana-ui banana-scrape banana-sync banana-bshare banana-fetch bananatube; do
     [ -f "$TARGET_DIR/usr/bin/$f" ] || continue
     m=$(od -An -tx1 -j18 -N2 "$TARGET_DIR/usr/bin/$f" | tr -d ' \n')
     [ "$m" = b700 ] || {
         echo "post-image: $f is not an aarch64 binary (ELF machine $m): a host build reached the target." >&2
         echo "post-image: rebuild it with 'make -C $(dirname "$BINARIES_DIR") banana-ui-rebuild', not -reinstall." >&2
+        echo "post-image: for bananatube, 'make -C $(dirname "$BINARIES_DIR") bananatube-dirclean bananatube'." >&2
         exit 1
     }
 done
