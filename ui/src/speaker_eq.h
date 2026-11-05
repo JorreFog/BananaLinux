@@ -34,7 +34,7 @@ namespace banana
 		State load(const std::string& dataDir);
 		void save(const std::string& dataDir, const State& s);
 
-		// what Profile offers: Tuned for this handheld (when <shareDir>/<board>.txt is there), None, then the card's
+		// what Profile offers: the handheld's tuned profile ("RG DS Plus Tuned", when <shareDir>/<board>.txt is there), None, then the card's
 		// .txt files in banana/speaker-eq, by name. A chosen file no longer on the card is listed too, as missing.
 		std::vector<Choice> profiles(const std::string& dataDir, const std::string& shareDir, const std::string& current);
 

@@ -72,6 +72,13 @@ namespace banana
 			setConfValue(conf, "speaker_eq_bands", bands);
 		}
 
+		// the tuned profile's name: the handheld's ("RG DS Plus Tuned"), so it reads as this speaker's correction, not a style
+		static std::string tunedName()
+		{
+			const std::string b = board();
+			return (b == "rgds-plus" ? "RG DS Plus" : b == "rgds" ? "RG DS" : "Handheld") + std::string(" Tuned");
+		}
+
 		static std::string tunedPath(const std::string& shareDir)
 		{
 			std::string b = board();
@@ -82,7 +89,7 @@ namespace banana
 		{
 			std::vector<Choice> c;
 			std::string tuned = tunedPath(shareDir);
-			if (!tuned.empty() && access(tuned.c_str(), R_OK) == 0) c.push_back({ "tuned", "Tuned for this handheld" });
+			if (!tuned.empty() && access(tuned.c_str(), R_OK) == 0) c.push_back({ "tuned", tunedName() });
 			c.push_back({ "none", "None" });
 			std::vector<std::string> files;
 			if (DIR* d = opendir((dataDir + "/speaker-eq").c_str()))
@@ -119,7 +126,7 @@ namespace banana
 			static const char* const TYPE[] = { "PK", "LSC", "HSC", "LPQ", "HPQ" };
 			char ln[160];
 			snprintf(ln, sizeof ln, "# banana-ui: Settings > Display & sound > Speaker EQ (%s)\nPreamp: %.2f dB\n",
-				s.profile == "tuned" ? "tuned for this handheld" : s.profile == "none" ? "no profile" : s.profile.c_str(), p.preamp);
+				s.profile == "tuned" ? tunedName().c_str() : s.profile == "none" ? "no profile" : s.profile.c_str(), p.preamp);
 			std::string out = ln;
 			for (int i = 0; i < p.n; i++)
 			{
