@@ -13,6 +13,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Download</a> ·
   <a href="#get-it">Install</a> ·
   <a href="#new-in-0-5-2-2">What's new</a> ·
+  <a href="#seen-on-youtube">Videos</a> ·
   <a href="#status">Known issues</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a> ·
   <a href="https://discord.gg/3wf73cK2Qq">Discord</a>
@@ -36,7 +37,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 
 BananaOS is a complete Linux system built specifically for the RG DS and RG DS Plus. It uses Buildroot, a Linux kernel with [ROCKNIX](https://rocknix.org) hardware support, BusyBox init and a dedicated interface for both screens. The system image is read-only; games, saves and settings live on a separate exFAT partition.
 
-It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)), Italian (Italiano, translated by Olympicus) and Finnish (Suomi, translated by HANHITSI).
+It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)). Italian (Italiano, translated by Olympicus) and Finnish (Suomi, translated by HANHITSI) arrive in 0.5.3.
 
 <p align="center">
   <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, BananaDS 12.6% faster, 10 built-in layout themes, 2 DS emulators">
@@ -84,6 +85,9 @@ The full list: the [0.5.2.2 release notes](https://github.com/JorreFog/BananaLin
 - **A tidier Settings:** a page per emulator, and subpages such as System › Updates and Network › Bluetooth.
 - **BananaDS:** faster at 3x and 4x, and a per-game "Fast, DSi CPU" timing (Pokémon HeartGold: Origin at 60 fps).
 - **Files and sharing:** games from a NAS or a computer (SMB, SFTP, FTP), archives unpacked on the handheld, and Bshare for LocalSend in the App Store.
+
+> [!NOTE]
+> **Coming in 0.5.3:** Italian and Finnish, a journey log and a Nuzlocke-style challenge in the GBA Pokémon companion, and GBA DS in the App Store. Poketool and PortMaster move to the Store: they no longer come with BananaOS, and your bank and your ports stay on the card.
 
 <a id="new-in-0-5-0"></a>
 
@@ -233,19 +237,22 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 - Other systems: Game Boy, Game Boy Color, GBA, Mega Drive, NES, SNES and PICO-8 in BananaFront, BananaOS's own player; Commodore 64 and ZX Spectrum through it too, with a touch keyboard on the second screen (or F + B over the game); PlayStation and N64 in RetroArch; each on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
 - Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, game companions for 500+ GBA games (off by default), and the DS Pokémon companion (alpha) for Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2 in BananaDS (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
 - Ports and PICO-8: PortMaster (from the App Store) with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
-- App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster and eReaderDS from the menu. From 0.5.3 Poketool and PortMaster no longer come with BananaOS: get them from the Store (your bank and your ports stay on the card).
+- App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster and eReaderDS from the menu.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
 - Your library on a home server: sync games, box art and saves with BananaOS's own Romhost or with RomM (Settings › Network › Home server).
 - Files: copy, move, rename and delete files and folders, and make folders, on the card and the RG DS Plus's second SD card, from a tile on the home screen (it stays open while it copies; Y twice stops). It also gets games from a NAS or a computer over SMB, SFTP or FTP(S): into the folder their type says, or any folder chosen (or made) on either card, or pasted where you want them. A cut download resumes where it stopped, whatever the protocol; zip, 7z and RAR archives are unpacked (multi-volume and password-protected ones as well), and archives already on a card too. Close the lid and the download finishes before the handheld sleeps.
 - File sharing: over Wi-Fi the card is `\\<address>\banana` (log in as `banana` / `linux`). Copied games show up in the menu.
 
-| System | RetroArch core (RetroArch 1.22, built for the RK3566's Cortex-A55) |
+| System | Core (first is the default; RetroArch 1.22's cores, built for the RK3566's Cortex-A55) |
 |---|---|
-| GBA | gpSP or mGBA |
-| Game Boy | Gambatte |
-| NES | BananaNES (a FCEUmm fork) / FCEUmm |
-| SNES | Snes9x |
+| GBA | gpSP, mGBA or BananaGBA |
+| Game Boy, Game Boy Color | Gambatte |
+| NES | BananaNES (a FCEUmm fork) or FCEUmm |
+| SNES | Snes9x or BananaSNES |
 | Mega Drive | PicoDrive |
+| PICO-8 | fake-08 |
+| Commodore 64 | VICE |
+| ZX Spectrum | Fuse |
 | PlayStation | PCSX ReARMed |
 | N64 | Mupen64Plus-Next |
 
@@ -288,7 +295,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 ## Status and known issues
 
-0.5.0 is a beta. The QA team tested it on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. These are checks of this release, not a compatibility guarantee.
+BananaOS is a beta. The QA team tested 0.5.0 on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both its update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. 0.5.2.2 was tested on both handhelds, with the DS companion checked game by game. These are checks of those releases, not a compatibility guarantee.
 
 Known issues in 0.5.2.2:
 
@@ -298,7 +305,7 @@ Known issues in 0.5.2.2:
 Known issues from 0.5.0:
 
 - **DSi games and DSiWare** (.dsi, .cia; unpack a .7z first) run on BananaDS with the BIOS dumped from your own DSi: put `dsi_bios9.bin` and `dsi_bios7.bin` (64 KB each; a dump's `DSI_bios9.bin` names and a `DSi BIOS` folder inside it work too) in `bios/` on the card. Your DSi's NAND (`dsi_nand.bin`, optional) goes there too; without it BananaDS keeps DSiWare saves on a NAND of its own. Without the BIOS they stop at a white screen. DSi-enhanced DS games (Pokémon Black 2 / White 2) run as DS games.
-- **SuperDrastic's low latency on the RG DS Plus** is a little rougher than with it off: DraStic runs at 60.0 fps and the Plus's panels at 60.17 Hz. BananaDS's low latency is smooth on both.
+- **SuperDrastic's low latency on the RG DS Plus** is a little rougher than with it off. BananaDS's low latency is smooth on both.
 - **The heaviest themes** (Neon Arcade, Vinyl Lounge, Oak Bookshelf) can still drop frames while scrolling the home row.
 - **Chinese:** lines added after Majirefy's 0.5.0 translation (the first-time setup's slides, the new low-latency help texts, a few Credits lines) still show in English or as a draft, for the next round.
 - **RetroAchievements** shows "Achievement Unlocked: Unsupported Game Version" for a game it doesn't recognise; nothing is unlocked.
@@ -308,7 +315,6 @@ Known issues from 0.5.0:
 
 Not available yet:
 
-- Charging while switched off on the RG DS Plus ([#34](https://github.com/JorreFog/BananaLinux/issues/34)).
 - One card image for both handhelds: each has its own image for now.
 
 What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Releases](https://github.com/JorreFog/BananaLinux/releases).
@@ -320,7 +326,7 @@ What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Release
 
 ### Build from source
 
-On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The released 0.5.0 is the tag `v0.5.0`:
+On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The latest release is the tag `v0.5.2.2`:
 
 ```sh
 make rgds          # output/rgds/images/banana-rgds.img.gz
@@ -354,7 +360,7 @@ make test          # renders the menu from a test library into ui/tests/out
 
 ## Built on community work
 
-The people who made 0.5.0 (also in Settings › System › Credits):
+The people who make BananaOS (also in Settings › System › Credits):
 
 - **Development:** JorreFog (maintainer) · jesussaves-ai · marlupatrocinio
 - **Translation:** Majirefy (简体中文, Simplified Chinese) · Vladislav (LVD) and Ruslan (Nestrahoff) (Русский, Russian) · Olympicus (Italiano, Italian) · HANHITSI (Suomi, Finnish)
@@ -371,7 +377,7 @@ Thanks to:
 - casualducko: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
 - swouapiy: the shutdown animation (the boot animation backwards).
 - The Pokémon companion is inspired by [PokeDaisy](https://github.com/lidor30/pokedaisy) by Lidor Itzhari (lidor30), the companion app for Android handhelds with two screens. BananaOS's is its own code, written from the games' documented data.
-- The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started. Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
+- The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started. Banana's mark is the bunch of BananaUI, redrawn as pixel art.
 - The RG DS's kernel support, device trees and drivers come from [ROCKNIX](https://rocknix.org). DS emulation is DraStic by Exophase (through [SuperDrastic](https://github.com/JorreFog/SuperDrastic)) and [melonDS](https://melonds.kuribo64.net/)'s core (BananaDS).
 - [Retro Game Corps](https://www.youtube.com/@RetroGameCorps), [forthenext](https://www.youtube.com/@forthenext) and [Trenton Faykus](https://www.youtube.com/@trentonfaykus) for showing BananaOS to a lot of people, and GammaOS for all the inspiration.
 

@@ -702,7 +702,7 @@ SHOTS = ["home", "library", "options", "settings", "nds", "zh-home", "zh-setting
 HEADERS = [  # (file, title, icon, subtitle)
     ("what", "What it is", "banana", "Lightweight Linux for two handhelds"),
     ("videos", "Seen on YouTube", "video", "See BananaOS in action"),
-    ("new", "New in 0.5.0", "store", "Faster, cooler, Bluetooth and updates over Wi-Fi"),
+    ("new", "New in 0.5.2.2", "store", "BananaFront, new cores and the DS Pokémon companion"),
     ("install", "Get it", "cart", "Install, update and move your saves"),
     ("tour", "A tour", "picture", "Captured on an RG DS Plus running 0.4.2"),
     ("emulators", "Nintendo DS", "nds", "Two emulators. Your choice."),
