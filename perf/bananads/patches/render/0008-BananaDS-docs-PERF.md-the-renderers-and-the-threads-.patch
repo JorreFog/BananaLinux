@@ -1,0 +1,62 @@
+From f76bfca9e97cb48f6d9b17e373037706b8b1120c Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:18:44 +0000
+Subject: [PATCH 08/18] BananaDS docs: PERF.md, the renderers and the threads
+ (2026-10-18)
+
+The six changes of the session (render.3d_pipeline, render.2d_batch, 3d_share/3d_wait2d at 1x, render.2d_comp_unroll,
+render.2d_quarters, render.2d_emit_zip), what they act on, how they were checked, and what was found and not done
+(display capture on the 2D thread, the dropped counting sort, the job ring, the geometry engine's remaining share).
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/PERF.md | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/bananads/docs/PERF.md b/bananads/docs/PERF.md
+index 7eb71a6..5b38d5c 100644
+--- a/bananads/docs/PERF.md
++++ b/bananads/docs/PERF.md
+@@ -448,6 +448,38 @@ Later rounds the same night (all exact, same toggles; qemu-count unless said):
+ Left, by agent: the geometry's FIFO ring buffer (savestates hold both FIFOs) and its vertex copies; rotscale
+ sprites and OBJ mosaic, skipping unchanged lines in 2D; the mix's per-sample tail and batched ARM9 DMA for VRAM.
+ 
++## The renderers and the threads over the four A55s (2026-10-18, agent `render`)
++
++Six changes, each exact and behind a toggle (default on), measured without the device: the exactness matrix under
++qemu (pictures every 10th frame of 300 and the audio dump, rtc.fixed) at 2x and 1x, Gengis on 3/2/1/0 threads, the
++2D thread on and off, a savestate reload, on dsstress L1/L5/L10/ramp (ARM, Thumb), dsswap, ds2dtest, membench and
++geomtest; unit tests of the new NEON and structural code against the old code on random inputs; qemu-count and
++rgds-sim on the device-like build (`tools/build-a64-device.sh`: Buildroot's -O2 with the Bootlin GCC 14.3, not the
++-O3 of the PC builds, which matters for the 2D engine). Numbers: BananaLinux's `perf/bananads/findings/render.md`.
++
++| Change | Toggle | Where it acts |
++|---|---|---|
++| `render.3d_pipeline`: two Gengis frame slots (polygons, rows, the pipeline's DISP3DCNT/alpha/toon blocks each), bins claimed from one gen+bin word; VBlank waits only for the frame's conversion (melonDS's polygon RAM is free after it), a frame's bins may still draw while the next starts; the next-next frame waits for the slot. The emulator's thread no longer draws bins at VBlank (`render.gengis_help` applies to the bins it does need: X scroll, capture, no 2D thread) | `render.3d_pipeline` | the emulator's thread's VBlank wait |
++| `render.2d_batch`: `KickBatch` (16) as a setting: the jobs handed over before the 2D thread is woken (a futex syscall on the emulator's thread, a 220 us idle exit for the 2D thread's core) | `render.2d_batch` | the emulator's thread, ~24 wakeups a frame at 16 |
++| `render.3d_share` and `render.3d_wait2d` at 1x too: the job points at Gengis's row, the 2D thread waits for the bin (no 1 KB copy per 3D line, no bin wait on the emulator's thread) | the same two settings | the emulator's thread at `render.scale=1` with the 2D thread (off by default at 1x) |
++| `render.2d_comp_unroll`: the compositor's loop over the layer steps unrolled by a fold (each step's constants its own variable). At -O2 GCC 14 kept the plain loop's per-step arrays on the stack: 2.5-3x the instructions per line of its -O3 code (2588/3966/5665 vs 847/1432/1833 for 2/3/4 steps: core's "membench 2D +37% at -O2" is this one loop); the fold costs -O3's at -O2 | `render.2d_comp_unroll` | the 2D thread at 2x, the emulator's thread at 1x |
++| `render.2d_quarters`: at 2x the four quarters' composites of a 3D line differ only in the 3D layer: the layers below it are painted onto the base once, the layers above onto nothing once, and each quarter merges its 3D line in (random-stack test: 12000 quarter cases, 0 mismatches) | `render.2d_quarters` | the 2D thread at 2x (Composite was its biggest own cost) |
++| `render.2d_emit_zip`: at 2x the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's rows, the quarters zipped and 2D lines doubled, no 1 KB line in between (6000 random lines, 0 mismatches) | `render.2d_emit_zip` | the 2D thread at 2x |
++
++Found and not done, with what it would take:
++- Display capture (DISPCAPCNT) draws unit A on the emulator's thread (at 2x all four composites of each line) while it
++  is on: the `[2d]` log line's "lines with unit A drawn in place" says how much a game does it. Moving it needs the
++  captured VRAM written at the line's time or every CPU read of the capture target to wait for the 2D thread.
++- Gengis's kernels: `bananads/gengis/` is byte-identical to SuperDrastic `claude/gengis-a55-scheduling` @ a63fe5b,
++  which is `main` plus that branch: nothing newer to port.
++- The job ring: 512 jobs x 4.9 KB (the unused Line3D/Display copies at 2x) = 2.5 MB of address space, ~160 KB of it
++  touched: only L1 dTLB misses from the stride; left alone.
++- VBlank's polygon Y-sort as a counting sort (a melonDS patch, tried and dropped): exact, but dsstress L10, the
++  heaviest 3D ROM here, gains 18k instructions a frame (0.1%) and geomtest nothing (under 64 polygons a frame).
++- The geometry engine after 0011 (dsstress L5, device configuration, instructions a frame on the emulator's thread):
++  RunFast 399k, SubmitPolygonBody 200k, Write32 101k, SubmitVertexBody 67k, ClipAgainstPlane 31k. The strip's
++  vertex copies are a few percent of SubmitVertexBody; nothing large is left there short of restructuring.
++
+ ## Levers not pulled yet, largest first (1-3 above are pulled, unmeasured)
+ 
+ 1. **The scheduler slice.** *Pulled: `core.slice`, above.* 64 → 256 bus cycles gives +8.5% and 512 gives +10%. It's an accuracy trade: coarser
+-- 
+2.43.0
+

@@ -1,0 +1,10 @@
+== melonDS::SPU::SPU(: 570.6k/frame; by innermost function
+    467.4k  81.9%  melonDS::SPU::MixChannelsFast
+     65.1k  11.4%  melonDS::SPU::Mix
+     14.7k   2.6%  vld1q_u32
+      9.8k   1.7%  int const& std::max<int>
+      6.0k   1.1%  melonDS::SPU::SPU
+      2.7k   0.5%  melonDS::DSi_I2S::SampleClock
+      2.7k   0.5%  vaddvq_u32
+      2.2k   0.4%  melonDS::Mic::Advance
+      0.0k   0.0%  melonDS::NDS::UpdateIRQ

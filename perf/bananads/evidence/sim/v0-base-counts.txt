@@ -1,0 +1,119 @@
+# qemu-count (v0 = instruction counts, exact) on the base reference build, 2026-10-18 15:1x UTC
+# command (from any dir; OUT is where the runs go):
+QEMU=/home/user/perf/qemu-src/build/qemu-aarch64 PLUGIN=/home/user/perf/tools/libjitcount.so OUT=/home/user/perf/sim/runs/v0 \
+  sh /home/user/perf/base/bananads/tools/perf/qemu-count/measure.sh /home/user/perf/build-ref/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds base-cpubench-thumb
+# (and the same with dsstress-L5.nds / label base-dsstress-L5). Wall time ~5 s (thumb), see below.
+
+## cpubench-thumb
+main thread: 4808.0k insns/frame
+  jit-code                  2746.8k   57.1%
+  core                       962.5k   20.0%
+  2d/gpu                     461.4k    9.6%
+  memory                     245.0k    5.1%
+  libs                       192.0k    4.0%
+  3d                          87.9k    1.8%
+  audio                       73.9k    1.5%
+  other                       37.8k    0.8%
+  jit-runtime                  0.6k    0.0%
+  interpreter-fallback         0.0k    0.0%
+  JIT total (code+runtime+fallback): 2747.4k/frame
+top symbols:
+      904.2k  [core] _ZN7melonDS3NDS12RunSlicesJITEv.part.0
+      111.5k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+      101.2k  [2d/gpu] _ZN7melonDS14BananaRenderer11OutputLineAEPjjtPKt.part.0
+       93.5k  [2d/gpu] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       77.7k  [3d] _ZN7melonDS14SoftRenderer3D12ClearBuffersEv
+       63.1k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       49.7k  [2d/gpu] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+       29.0k  [core] _ZZN7melonDS3RTCC4ERNS_3NDSEENUlPvjE_4_FUNES3_j.lto_priv.0
+       25.3k  [2d/gpu] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_4_FUNES9_j
+       25.0k  [2d/gpu] _ZN7melonDS3GPU13StartScanlineEj.localalias
+       24.8k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       22.1k  [2d/gpu] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+       21.1k  [2d/gpu] _ZN7melonDS16BananaRenderer2D14PrepareSpritesERNS_12Banana2DRegsE
+       20.4k  [2d/gpu] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+       19.6k  [other] blip_read_samples.constprop.0.isra.0
+       19.3k  [core] _ZN7melonDS3NDS9CheckDMAsEjj.localalias.lto_priv.0
+       18.3k  [memory] _ZN7melonDSL18NDS_ARM9IOWriteRegIjLj67109520EEEvjT_.lto_priv.0
+       17.9k  [other] _ZN8bananads12run_headlessERNS_3EmuERKNS_6ConfigE
+       17.7k  [memory] _ZN7melonDSL18NDS_ARM9IOWriteRegIjLj67109524EEEvjT_.lto_priv.0
+       17.7k  [memory] _ZN7melonDSL18NDS_ARM9IOWriteRegIjLj67109528EEEvjT_.lto_priv.0
+       17.7k  [memory] _ZN7melonDSL18NDS_ARM9IOWriteRegIjLj67109532EEEvjT_.lto_priv.0
+       16.5k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       16.5k  [memory] _ZN7melonDSL18NDS_ARM9IOWriteRegItLj67109504EEEvjT_.lto_priv.0
+       15.9k  [memory] _ZN7melonDS9SlowRead9IjLi0EEET_jPNS_5ARMv5E
+       13.8k  [2d/gpu] _ZN7melonDS16BananaRenderer2D12DrawScanlineEj
+top JIT blocks:
+      427.9k  mj9:02000a48
+      303.3k  mj9:02000904
+      292.8k  mj9:0200084e
+      230.4k  stub:0000ec00
+      174.0k  mj9:02000936
+      108.6k  mj9:02000ab8
+       77.4k  stub:0000e900
+       77.0k  mj9:020007ba
+       75.3k  stub:0000e902
+       73.5k  mj9:02000aca
+       62.4k  mj9:020008f8
+       49.7k  mj9:0100000c
+
+real	0m5.201s
+user	0m4.644s
+sys	0m0.506s
+
+## dsstress-L5
+main thread: 20866.3k insns/frame
+  3d                       18562.7k   89.0%
+  2d/gpu                     696.0k    3.3%
+  core                       507.0k    2.4%
+  other                      484.6k    2.3%
+  memory                     268.8k    1.3%
+  jit-code                   205.6k    1.0%
+  audio                       73.9k    0.4%
+  libs                        67.6k    0.3%
+  jit-runtime                  0.0k    0.0%
+  interpreter-fallback         0.0k    0.0%
+  JIT total (code+runtime+fallback): 205.6k/frame
+top symbols:
+    12340.5k  [3d] _ZN7melonDS14SoftRenderer3D21RenderPolygonScanlineEPNS0_15RendererPolygonEi
+     4272.5k  [3d] _ZNK7melonDS14SoftRenderer3D11RenderPixelEPKNS_7PolygonEhhhss.localalias
+      450.9k  [3d] _ZN7melonDS14SoftRenderer3D11RenderFrameEv
+      402.3k  [core] _ZN7melonDS3NDS12RunSlicesJITEv.part.0
+      398.7k  [3d] _ZN7melonDS5GPU3D7RunFastEv
+      352.2k  [3d] _ZN7melonDS14SoftRenderer3D20PlotTranslucentPixelEjjjjj.localalias
+      262.6k  [other] _ZN7melonDS18DepthTest_LessThanEiij
+      212.9k  [2d/gpu] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+      199.5k  [3d] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+      199.1k  [3d] _ZN7melonDS14SoftRenderer3D17ScanlineFinalPassEi.localalias
+      155.1k  [other] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+      121.2k  [2d/gpu] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+      110.0k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+      101.2k  [3d] _ZN7melonDS5GPU3D7Write32Ejj.part.0
+       96.0k  [2d/gpu] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       92.8k  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       67.4k  [3d] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       66.0k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       63.1k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       56.3k  [core] _ZN7melonDSL13GXWrite9RouteERNS_3NDSEjj
+       46.5k  [3d] _ZNK7melonDS14SoftRenderer3D20SetupPolygonLeftEdgeEPNS0_15RendererPolygonEi.isra.0
+       45.2k  [3d] _ZNK7melonDS14SoftRenderer3D21SetupPolygonRightEdgeEPNS0_15RendererPolygonEi.isra.0
+       41.1k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       31.1k  [3d] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       30.5k  [2d/gpu] _ZN7melonDS3GPU13StartScanlineEj.localalias
+top JIT blocks:
+       30.5k  mj9:0200085c
+       17.9k  mj9:02000768
+       17.3k  mj9:02000728
+       16.5k  mj9:02000668
+       16.3k  mj9:020003b0
+       15.8k  stub:0000ec00
+       15.6k  mj9:020005e8
+       15.5k  mj9:020006e8
+       15.3k  mj9:020006a8
+       14.2k  mj9:02000894
+       13.4k  mj9:02000628
+        2.1k  mj9:0200078c
+
+real	0m15.154s
+user	0m14.528s
+sys	0m0.461s

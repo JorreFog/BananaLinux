@@ -1,0 +1,37 @@
+From e3c69b1b122e37651bbe767a0ff992c8ae7c6779 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 17:13:51 +0000
+Subject: [PATCH 2/3] BananaDS perf: FillLine (screen off, display mode 0) 64
+ bytes a NEON store under render.2d_fast
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/gpu2d/GPU_Banana.cpp | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/bananads/gpu2d/GPU_Banana.cpp b/bananads/gpu2d/GPU_Banana.cpp
+index 9a2c3a3..a451530 100644
+--- a/bananads/gpu2d/GPU_Banana.cpp
++++ b/bananads/gpu2d/GPU_Banana.cpp
+@@ -108,6 +108,17 @@ static inline u32 Expand(u32 c)
+ 
+ void BananaRenderer::FillLine(u32* dst, u32 val)
+ {
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++    if (Banana2DFast)
++    {
++        // 64 bytes (a cache line) a store
++        const uint32x4_t v = vdupq_n_u32(val);
++        const uint32x4x4_t v4 = {{ v, v, v, v }};
++        for (int i = 0; i < 256; i += 16)
++            vst1q_u32_x4(dst + i, v4);
++        return;
++    }
++#endif
+     for (int i = 0; i < 256; i++)
+         dst[i] = val;
+ }
+-- 
+2.43.0
+

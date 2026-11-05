@@ -1,0 +1,14 @@
+all: 13334k vs 13488k; without rendering symbols: 12910k vs 12674k (-1.83%)
+    140.5k       0.0k   -140.5k  _ZN7melonDS3NDS11ARM7Write32Ejj
+     29.7k       9.7k    -20.1k  _ZN7melonDS3NDS10ARM7Read32Ej
+     16.3k       0.0k    -16.3k  _ZN7melonDS3NDS11ARM7Write16Ejt
+     22.5k      32.6k    +10.1k  _ZN7melonDS10SlowWrite7IjLi0EEEvjj
+     11.9k      17.1k     +5.2k  _ZN7melonDS10SlowWrite7ItLi0EEEvjj
+      4.5k       0.0k     -4.5k  _ZN7melonDS3NDS10ARM7Write8Ejh
+     53.7k      57.7k     +3.9k  _ZN7melonDS18SlowBlockTransfer7ILb1ELi0EEEvjPmj
+      9.5k       6.4k     -3.1k  _ZN7melonDS18SlowBlockTransfer7ILb0ELi0EEEvjPmj
+      3.0k       4.8k     +1.7k  _ZN7melonDS10SlowWrite7IhLi0EEEvjj
+      9.8k      10.3k     +0.6k  _ZN7melonDS9SlowRead7IjLi0EEET_j
+      3.5k       4.0k     +0.4k  _ZN7melonDS9SlowRead7IhLi0EEET_j
+      4.4k       4.8k     +0.4k  _ZN7melonDS9SlowRead7ItLi0EEET_j
+      8.3k       8.3k     +0.0k  _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E

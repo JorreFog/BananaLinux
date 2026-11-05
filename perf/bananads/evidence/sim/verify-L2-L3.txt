@@ -1,0 +1,42 @@
+# LEDGER L2 (jit.hugepages) and L3 (jit.irqchain) verification (sim): my device build of perf/jit @ b178c99 (build-a64-device.sh, /home/user/perf/sim/vb-jit)
+# ROMs: tests/irqmask and tests/bigcode built by me from b178c99 (python3 build.py): byte-identical to jit's /home/user/perf/jit/bin copies
+# rgds-sim model v2 (params.json v2), st mode, frames 100-300 (bigcode 20-50 as jit ran it)
+
+## L2-cbthumb: A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds L2-cbthumb-A --mode st --frames 100:300 --set jit.hugepages=off B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds L2-cbthumb-B --mode st --frames 100:300 --set jit.hugepages=on 
+
+== thread 0 (main): ms/frame @1104 5.553 -> 5.528 (-0.45%)   @1992 3.120 -> 3.107 (-0.45%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.751 -> 3.727 (-0.66%)
+  insn 4986.4k->4986.4k (+0.0%)  base 5457.4k->5457.4k (+0.0%)  l1i_miss 4.3k->4.3k (+0.0%)  l1i_l3miss 0.2k->0.2k (+3.7%)  ld_miss 2.3k->2.3k (+0.0%)  ld_l3miss 0.5k->0.5k (-1.8%)  st_miss 1.1k->1.1k (-0.1%)  st_l3miss 0.5k->0.5k (-0.4%)  itlb_l2 5.7k->5.1k (-10.5%)  itlb_walk 0.0k->0.0k (-1.2%)  dtlb_l2 35.9k->22.8k (-36.4%)  dtlb_walk 0.0k->0.0k (+8.0%)  bcond_miss 24.6k->24.6k (+0.0%)  bind_miss 10.0k->10.0k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.366     1.355    -0.011    1142.5k    1142.5k
+  jit-code             2.919     2.910    -0.010    2797.4k    2797.4k
+  jit-runtime          0.196     0.194    -0.002     190.2k     190.2k
+  2d                   0.588     0.586    -0.001     432.2k     432.2k
+
+## L2-bigcode: A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/sim/roms-jit/bigcode-thumb.nds L2-bigcode-A --mode st --frames 20:50 --set jit.hugepages=off B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/sim/roms-jit/bigcode-thumb.nds L2-bigcode-B --mode st --frames 20:50 --set jit.hugepages=on 
+
+== thread 0 (main): ms/frame @1104 10.069 -> 10.008 (-0.61%)   @1992 7.279 -> 7.245 (-0.46%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 10.895 -> 10.864 (-0.29%)
+  insn 4127.2k->4127.3k (+0.0%)  base 4428.2k->4428.2k (+0.0%)  l1i_miss 45.1k->45.1k (+0.0%)  l1i_l3miss 23.5k->23.5k (+0.0%)  ld_miss 19.1k->19.5k (+2.1%)  ld_l3miss 8.0k->8.0k (+0.1%)  st_miss 1.9k->2.1k (+13.6%)  st_l3miss 1.0k->0.9k (-0.3%)  itlb_l2 16.8k->6.5k (-61.2%)  itlb_walk 0.0k->0.0k (-84.8%)  dtlb_l2 70.1k->40.6k (-42.0%)  dtlb_walk 0.1k->0.0k (-55.5%)  bcond_miss 28.4k->28.4k (+0.0%)  bind_miss 17.5k->17.5k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  jit-code             6.120     6.073    -0.047    1702.1k    1702.1k
+  scheduler/core       1.822     1.805    -0.017    1022.1k    1022.1k
+  2d                   0.851     0.859    +0.008     432.2k     432.2k
+  jit-runtime          0.233     0.229    -0.004     176.7k     176.7k
+  memory               0.640     0.639    -0.001     546.9k     546.9k
+  gengis               0.227     0.226    -0.001     160.1k     160.1k
+  audio                0.096     0.096    -0.001      76.0k      76.0k
+
+## L3-irqmask: A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/sim/roms-jit/irqmask-thumb-arm7.nds L3-irqmask-A --mode st --frames 100:300 --set jit.irqchain=off B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit/b/bananads /home/user/perf/sim/roms-jit/irqmask-thumb-arm7.nds L3-irqmask-B --mode st --frames 100:300 --set jit.irqchain=on 
+
+== thread 0 (main): ms/frame @1104 9.317 -> 7.691 (-17.45%)   @1992 5.194 -> 4.293 (-17.34%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 7.332 -> 6.279 (-14.37%)
+  insn 7976.9k->6629.0k (-16.9%)  base 8627.3k->7036.5k (-18.4%)  l1i_miss 12.6k->13.9k (+10.4%)  l1i_l3miss 0.1k->0.1k (-1.5%)  ld_miss 4.2k->3.7k (-10.4%)  ld_l3miss 0.3k->0.4k (+1.7%)  st_miss 1.9k->1.8k (-9.2%)  st_l3miss 0.4k->0.4k (+2.9%)  itlb_l2 10.7k->10.8k (+0.9%)  itlb_walk 0.0k->0.0k (+0.0%)  dtlb_l2 82.0k->81.5k (-0.6%)  dtlb_walk 0.5k->0.4k (-29.1%)  bcond_miss 48.0k->47.8k (-0.5%)  bind_miss 60.5k->32.4k (-46.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       2.811     1.696    -1.115    2251.2k    1306.4k
+  jit-runtime          1.208     0.543    -0.664    1038.2k     421.2k
+  jit-code             2.951     3.351    +0.400    2842.4k    3271.1k
+  other                0.388     0.116    -0.272     300.2k      85.2k
+  2d                   0.674     0.697    +0.023     435.6k     435.6k
+  audio                0.078     0.081    +0.003      76.0k      76.0k
+  interpreter          0.026     0.025    -0.001      15.2k      15.2k

@@ -1,0 +1,8 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/geomtest-geomtest.nds st-geomtest-sort-A --mode st --frames 100:300 --set render.geom_sort=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/geomtest-geomtest.nds st-geomtest-sort-B --mode st --frames 100:300 --set render.geom_sort=on
+
+== thread 0 (main): ms/frame @1104 4.291 -> 4.291 (+0.00%)   @1992 2.475 -> 2.475 (+0.00%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.965 -> 2.965 (-0.00%)
+  insn 3621.6k->3621.6k (-0.0%)  base 4104.1k->4104.1k (-0.0%)  l1i_miss 3.1k->3.1k (+0.0%)  l1i_l3miss 0.9k->0.9k (+0.1%)  ld_miss 3.4k->3.4k (-0.0%)  ld_l3miss 0.3k->0.2k (-0.0%)  st_miss 6.2k->6.2k (-0.0%)  st_l3miss 3.5k->3.5k (-0.0%)  itlb_l2 6.5k->6.5k (-0.0%)  itlb_walk 0.0k->0.0k (+0.0%)  dtlb_l2 12.6k->12.6k (-0.0%)  dtlb_walk 0.0k->0.0k (+0.0%)  bcond_miss 12.6k->12.6k (-0.1%)  bind_miss 2.5k->2.5k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B

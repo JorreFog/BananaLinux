@@ -1,0 +1,31 @@
+{
+ "base_scale": 0.5000000000013771,
+ "l3_cyc": 80.0,
+ "l3_ns": 22.87575579115371,
+ "dram_ns": 60.0,
+ "mispredict_cyc": 16.0,
+ "tlb_l2_cyc": 2.0,
+ "walk_cyc": 25.0,
+ "st_cost": 0.2,
+ "version": "v1-fit-threaded",
+ "calibration": {
+  "device": "device-e67e3ef.tsv",
+  "combine": "overlap",
+  "rows": 25,
+  "rms_error": 0.09032286304906535,
+  "max_error": 0.20834472439180995,
+  "alpha": [
+   0.412414269623687,
+   0.41399558765456024
+  ],
+  "frame_const_ms": 1.3838965267367376e-87,
+  "free": [
+   "base_scale",
+   "l3_cyc",
+   "l3_ns",
+   "dram_ns",
+   "mispredict_cyc"
+  ],
+  "fixed": {}
+ }
+}

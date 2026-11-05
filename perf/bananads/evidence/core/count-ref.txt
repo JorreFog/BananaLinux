@@ -1,0 +1,12 @@
+# qemu-count on the reference build (/home/user/perf/build-ref/b/bananads), frames 100-300, main thread; 15:20 UTC
+# command: sh /home/user/perf/core/runs/count.sh /home/user/perf/build-ref/b/bananads ref   (wraps bananads/tools/perf/qemu-count/measure.sh; raw reports in /home/user/perf/core/runs/ref/<rom>/report.txt)
+cpubench-cpubench-thumb          main 4808.0k insns/frame jit 2746.8k   core 962.5k    2d 461.4k    mem 245.0k    3d 87.9k    audio 73.9k    libs 192.0k
+cpubench-cpubench-arm            main 4324.3k insns/frame jit 2210.0k   core 1014.8k   2d 461.4k    mem 247.5k    3d 87.9k    audio 73.9k    libs 190.4k
+cpubench-cpubench-thumb-arm7     main 5244.7k insns/frame jit 3033.2k   core 1019.3k   2d 461.4k    mem 245.0k    3d 87.9k    audio 73.9k    libs 285.5k
+membench-membench                main 5660.0k insns/frame jit 126.5k    core 889.0k    2d 1114.3k   mem 190.2k    3d 2878.2k  audio 73.9k    libs 20.5k
+dsstress-L5                      main 20866.3k insns/frame jit 205.6k    core 507.0k    2d 696.0k    mem 268.8k    3d 18562.7k audio 73.9k    libs 67.6k
+dsstress-L10                     main 18625.2k insns/frame jit 205.5k    core 536.8k    2d 695.9k    mem 233.3k    3d 16309.5k audio 73.9k    libs 73.3k
+arm7-thumb-dsstress-L5           main 21278.4k insns/frame jit 532.3k    core 549.7k    2d 696.0k    mem 268.8k    3d 18562.7k audio 73.9k    libs 110.3k
+sndbench-sndbench                main 4821.9k insns/frame jit 391.2k    core 989.4k    2d 594.5k    mem 706.6k    3d 88.0k    audio 437.3k   libs 255.9k
+ipcrom-ipctest                   main 2799.5k insns/frame jit 320.9k    core 604.7k    2d 447.5k    mem 454.9k    3d 6.6k     audio 73.9k    libs 147.6k
+ds2dtest-ds2dtest                main 13684.9k insns/frame jit 241.1k    core 1026.2k   2d 11440.9k  mem 520.5k    3d 87.9k    audio 73.9k    libs 204.8k

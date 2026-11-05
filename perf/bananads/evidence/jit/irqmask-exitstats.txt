@@ -1,0 +1,17 @@
+# MELONDS_JIT_EXITSTATS=10 qemu-dev d1/b/bananads (device build, perf/jit + 0021-0023 incl. self loops) --set jit.irqchain=off|on ... --set headless.frames=120 irqmask-thumb-arm7.nds
+== irqchain=off
+melonDS JIT exit stats: frames 10-119 (110), per frame ARM9 / ARM7
+  lookup misses (blocks compiled)                           0.0          0.0
+  region setups (SetupExecutableRegion)                   411.3        439.8
+  back for an IRQ taken (CPSR.I clear)                    158.3        110.6
+  back for an IRQ masked (CPSR.I set)                   25146.2       1663.4
+  back for a halt or idle loop                              3.2          0.0
+  back at the slice's end, an IRQ masked                 4681.8       3341.3
+== irqchain=on
+melonDS JIT exit stats: frames 10-119 (110), per frame ARM9 / ARM7
+  lookup misses (blocks compiled)                           0.0          0.0
+  region setups (SetupExecutableRegion)                   318.5        295.8
+  back for an IRQ taken (CPSR.I clear)                    158.3        110.6
+  back for an IRQ masked (CPSR.I set)                       0.0          0.0
+  back for a halt or idle loop                              3.2          0.0
+  back at the slice's end, an IRQ masked                 4681.8       3341.3

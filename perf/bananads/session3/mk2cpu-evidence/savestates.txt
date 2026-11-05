@@ -1,0 +1,5 @@
+# full savestates (geomlazy's sst.sh: headless.reload_at), MK scene, checkpoint 8e98258 vs mk2cpu head (0072 + render.2d_ring, defaults)
+a57737e0567aab4f488ed894bdec854d 1850 mkall-b/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 mkall-b/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 mk2cpu-work/bananads-r 
+f476c39ef33cd7a1166128040aa358d1 2000 mk2cpu-work/bananads-r 

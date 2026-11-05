@@ -1,0 +1,427 @@
+# 15:22:57 p3x-noexitpc-1: /data/bananads-dev/s3/k-p3 held=40s temp=50C env: BANANADS_RENDER_GEOM_THREAD=off MELONDS_JIT_NOEXITPC=1
+temp 50-62C
+
+BananaDS 0.1.0, /data/roms/nds/Mario Kart DS (USA) (En,Fr,De,Es,It).nds
+[emu] ROM mapped (32 MB), read in the background
+[emu] save /data/kmsmk/s3-p3x-noexitpc-1/sv/Mario Kart DS (USA) (En,Fr,De,Es,It).sav (262144 bytes)
+[wifi] on: internet through slirp, DNS kaeru
+Inserted cart with game code: AMCE
+Inserted cart with ID: 00001FC2
+ROM entry: 02000000 00000005
+[jit] code memory at 0x5595800000, 32768 kB, 32768 kB on huge pages
+MAC: 00:09:BF:11:22:33
+Secure area decryption OK
+Game is now booting
+[gengis] Gengis Engine at 2x, 3 render threads
+[emu] Mario Kart DS (USA) (En,Fr,De,Es,It) started (JIT on, MAC 00:09:bf:11:22:33)
+[kms] DSI-2 top, DSI-1 bottom, 1024x768 at 59.999 Hz; 512x384 frames drawn straight into the scanout buffers, scaled by the display plane
+[kms] input event6: buttons
+[kms] input event5: buttons
+[kms] input event1: the touchscreen
+[cpugov] on: 1104..1992 MHz, down a step after 10 s without a late frame
+[cpugov] remembered strikes for /data/kmsmk/s3-p3x-noexitpc-1/gov/Mario Kart DS (USA) (En,Fr,De,Es,It).nds.2x: none
+[cheats] 1048 codes (0 on) from /usr/share/libretro/cheats/Nintendo - Nintendo DS/Mario Kart DS (USA) (CTGP Nitro (v1.0.0)).cht
+[ra] RetroAchievements off: no account (BANANADS_RA_USER)
+[shader] draws the DS screen at a whole-number scale, centred (touch follows)
+[shader] "ds-grid-2x" from /usr/lib/superdrastic/shaders/ds-grid-2x.frag, EGL 1.5 (system libEGL, default display)
+[kms] GPU at least 600 MHz while the shader runs
+[kms] shader ds-grid-2x: on (panel-sized, 1:1)
+[menu] font /usr/share/banana/rnds/fonts/PixelifySans-Medium.ttf
+[menu] font /usr/share/banana/rnds/fonts/PixelifySans-Regular.ttf
+[cpugov] window: 0 late, busiest 6%, - fps at 1992 MHz
+[cpugov] window: 0 late, busiest 17%, - fps at 1992 MHz
+[cpugov] window: 16 late, busiest 84%, - fps at 1992 MHz
+[cpugov] window: 0 late, busiest 5%, 43.0 fps at 1992 MHz
+[cpugov] window: 1 late, busiest 49%, 42.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.49 s (40.26/s), 42.27 emulated/s: 17 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 15.7 at most
+[cpugov] window: 0 late, busiest 36%, 48.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 46%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 37%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 61.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 20%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 16%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 16%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 16%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 16%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 17%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 16%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 18%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 35%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 49%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 31%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 9.2 at most
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.7 at most
+[cpugov] window: 0 late, busiest 21%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 23%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 20%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 20%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 20%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 23%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 23%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 33%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 50%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 53%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 55%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 43%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.9 at most
+[cpugov] window: 0 late, busiest 27%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 27%, 59.9 fps at 1992 MHz
+[alsa] 10 s: 54 short chunks (0.29 s held), skew 0.913-1.020 avg 1.000, backlog avg 703
+[cpugov] window: 0 late, busiest 27%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 28%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.8 at most
+[cpugov] window: 0 late, busiest 29%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 29%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 28%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 56%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.98/s), 58.98 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.7 ms a frame on average, 9.4 at most
+[cpugov] 1992 -> 1800 MHz (clean: 0 frames late, busiest thread 50%, 59.9 fps)
+[cpugov] window: 0 late, busiest 50%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 48%, - fps at 1800 MHz
+[cpugov] window: 0 late, busiest 52%, - fps at 1800 MHz
+[cpugov] window: 0 late, busiest 47%, - fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (59.98/s), 59.98 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 49%, - fps at 1800 MHz
+[cpugov] window: 0 late, busiest 47%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 47%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 47%, 59.9 fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 47%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 41%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 28%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 31%, 59.9 fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 61.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.5 at most
+[cpugov] window: 0 late, busiest 31%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 31%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 31%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 29%, 59.9 fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 9.6 at most
+[cpugov] window: 0 late, busiest 37%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 55%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 55%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 46%, 59.9 fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 59.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 8.7 at most
+[cpugov] window: 0 late, busiest 52%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 53%, 59.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 48%, 60.9 fps at 1800 MHz
+[cpugov] window: 0 late, busiest 54%, 59.9 fps at 1800 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.6 ms a frame on average, 9.0 at most
+[cpugov] 1800 -> 1992 MHz (late: 2 frames late, busiest thread 59%, 56.9 fps)
+[cpugov] window: 2 late, busiest 59%, 56.9 fps at 1992 MHz
+[cpugov] window: 10 late, busiest 97%, - fps at 1992 MHz
+[cpugov] window: 1 late, busiest 66%, - fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, - fps at 1992 MHz
+[kms] 60 frames shown in 1.17 s (51.37/s), 52.23 emulated/s: 10 refreshes without a new frame, 0 dropped
+[kms] shader: 9.7 ms a frame on average, 12.5 at most
+[cpugov] window: 0 late, busiest 62%, - fps at 1992 MHz
+[cpugov] window: 0 late, busiest 64%, 62.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 66%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 67%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.02/s), 60.02 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 10.0 ms a frame on average, 12.9 at most
+[cpugov] window: 0 late, busiest 68%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 68%, 59.9 fps at 1992 MHz
+[alsa] 10 s: 32 short chunks (0.17 s held), skew 0.857-1.020 avg 0.997, backlog avg 785
+[cpugov] window: 0 late, busiest 56%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 37%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.04/s), 60.04 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 9.4 ms a frame on average, 13.0 at most
+[cpugov] window: 0 late, busiest 48%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 45%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 49%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 47%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.7 ms a frame on average, 10.5 at most
+[cpugov] window: 0 late, busiest 48%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 51%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 51%, 59.9 fps at 1992 MHz
+[cpugov] window: 2 late, busiest 73%, 56.8 fps at 1992 MHz
+[kms] 60 frames shown in 1.05 s (56.88/s), 54.98 emulated/s: 3 refreshes without a new frame, 0 dropped
+[kms] shader: 9.1 ms a frame on average, 13.2 at most
+[cpugov] window: 3 late, busiest 96%, 54.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 88%, 55.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 87%, 55.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 91%, 58.9 fps at 1992 MHz
+[cpugov] window: 6 late, busiest 93%, 57.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.05 s (57.27/s), 57.27 emulated/s: 4 refreshes without a new frame, 0 dropped
+[kms] shader: 10.4 ms a frame on average, 17.7 at most
+[cpugov] window: 0 late, busiest 94%, 56.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 94%, 56.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 94%, 57.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 95%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.93/s), 61.93 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 10.5 ms a frame on average, 15.1 at most
+[cpugov] window: 0 late, busiest 94%, 61.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 92%, 61.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 88%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 88%, 61.7 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.19/s), 61.19 emulated/s: 0 refreshes without a new frame, 2 dropped
+[kms] shader: 10.4 ms a frame on average, 14.7 at most
+[cpugov] window: 0 late, busiest 87%, 60.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 87%, 59.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 87%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 92%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.83/s), 59.83 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 10.8 ms a frame on average, 14.4 at most
+[cpugov] window: 0 late, busiest 90%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 85%, 60.8 fps at 1992 MHz
+[cpugov] window: 2 late, busiest 91%, 58.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 98%, 57.7 fps at 1992 MHz
+[kms] 60 frames shown in 0.99 s (60.47/s), 58.46 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 10.2 ms a frame on average, 14.0 at most
+[cpugov] window: 3 late, busiest 98%, 57.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 99%, 57.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 99%, 59.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 99%, 61.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.04 s (57.49/s), 61.32 emulated/s: 2 refreshes without a new frame, 1 dropped
+[kms] shader: 10.9 ms a frame on average, 15.1 at most
+[cpugov] window: 0 late, busiest 97%, 62.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 91%, 62.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 91%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 90%, 59.7 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.02/s), 60.02 emulated/s: 0 refreshes without a new frame, 1 dropped
+[kms] shader: 10.9 ms a frame on average, 14.1 at most
+[cpugov] window: 0 late, busiest 89%, 59.7 fps at 1992 MHz
+[alsa] 10 s: 15 short chunks (0.08 s held), skew 0.859-1.020 avg 0.999, backlog avg 930
+[cpugov] window: 0 late, busiest 83%, 59.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 86%, 60.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 83%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 0.99 s (60.32/s), 60.32 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 9.8 ms a frame on average, 15.6 at most
+[cpugov] window: 0 late, busiest 83%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 79%, 59.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 78%, 59.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 80%, 59.8 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 9.0 ms a frame on average, 11.1 at most
+[cpugov] window: 0 late, busiest 82%, 59.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 82%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 77%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 75%, 60.8 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 75%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 74%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 76%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 78%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 77%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 76%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 79%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 81%, 58.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 10.5 at most
+[cpugov] window: 0 late, busiest 78%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 77%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 75%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 75%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 8.9 at most
+[cpugov] window: 0 late, busiest 74%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 71%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 71%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 68%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 67%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 63%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 64%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.8 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 60%, 60.8 fps at 1992 MHz
+[alsa] 10 s: 0 short chunks (0.00 s held), skew 0.972-1.020 avg 1.000, backlog avg 698
+[cpugov] window: 0 late, busiest 59%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 60.8 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 63%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 65%, 58.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 10.3 at most
+[cpugov] window: 0 late, busiest 63%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 1 late, busiest 74%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 59.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 12.6 at most
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 58%, 59.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 60.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 60.7 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 58%, 60.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 60.9 fps at 1992 MHz
+[alsa] 10 s: 2 short chunks (0.01 s held), skew 0.955-1.020 avg 1.001, backlog avg 729
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 11.8 at most
+[cpugov] window: 0 late, busiest 56%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 59.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 12.6 at most
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 60.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 59.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 9.0 ms a frame on average, 12.5 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.01/s), 61.01 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 12.1 at most
+[cpugov] window: 0 late, busiest 57%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (59.99/s), 58.99 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 11.9 at most
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.7 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 57%, 59.7 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.7 fps at 1992 MHz
+[alsa] 10 s: 0 short chunks (0.00 s held), skew 0.983-1.015 avg 1.000, backlog avg 714
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 59.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 61%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 60.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 60.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 63%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 62%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.9 ms a frame on average, 9.1 at most
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 61%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 58%, 59.9 fps at 1992 MHz
+[kms] 60 frames shown in 1.00 s (60.00/s), 60.00 emulated/s: 0 refreshes without a new frame, 0 dropped
+[kms] shader: 8.8 ms a frame on average, 9.0 at most
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 60%, 59.9 fps at 1992 MHz
+[cpugov] window: 0 late, busiest 59%, 59.9 fps at 1992 MHz
+[kms] asked to quit: 3823 frames shown, 4 dropped
+[cpugov] back to 1992 MHz
+Stopping emulated console (Reason: External)
+[emu] the DS stopped (reason 1)
+[2d] 2D thread: 1471104 jobs, 25728 lines with unit A drawn in place (display capture), 45.5 MB through the copy log, 5 waits for the thread (capture, full ring or log)
+[gengis] the emulator's thread drew 3 of 36624 bins and converted 0 frames
+unmappinged everything

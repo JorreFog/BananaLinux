@@ -1,0 +1,8 @@
+== spin
+# 366 samples (192 a second of its CPU time; 0 dropped, 1546 timer overruns); 1.91 s CPU in 8.68 s (22% busy), 45.9 fps
+# waiting: 4.9% of the samples (sched_yield 4.6%, futex/condition-variable/mutex waits 0.0%, the 2D thread's wait functions 0.3%, Gengis's bin waits 0.0%): CPU time /proc counts as busy
+# JIT code: 4.4% of the samples (MELONDS_JIT_PERFMAP=1 names its blocks and stubs)
+== block
+# 404 samples (219 a second of its CPU time; 0 dropped, 1446 timer overruns); 1.85 s CPU in 6.81 s (27% busy), 58.6 fps
+# waiting: 0.5% of the samples (sched_yield 0.0%, futex/condition-variable/mutex waits 0.0%, the 2D thread's wait functions 0.2%, Gengis's bin waits 0.2%): CPU time /proc counts as busy
+# JIT code: 6.7% of the samples (MELONDS_JIT_PERFMAP=1 names its blocks and stubs)

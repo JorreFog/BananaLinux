@@ -1,0 +1,13 @@
+# qemu-count, main thread insns/frame (frames 100-300): the device PGO build trained WITHOUT any 3D stress ROM (prof-dev-no3d: cpubench x3, membench x2, ds2dtest, sndbench, ipcrom, dmasnd, iorom-L1, jitloops x2) vs the device build and the full-suite PGO build; 16:25 UTC
+# training: ROMS="..." QEMU=/home/user/perf/tools/qemu-dev QEMU_L=<bootlin sysroot> sh bananads/tools/perf/pgo/train.sh <instrumented dev bananads> /home/user/perf/roms <compiled-in dir> /home/user/perf/core/prof-dev-no3d (log /home/user/perf/core/runs/train-dev-no3d.out); build: CCACHE_DISABLE=1 JOBS=2 build-a64-device.sh /home/user/perf/core/sd /home/user/perf/core/build-devno3d -DBANANADS_PGO=/home/user/perf/core/prof-dev-no3d (binary kept as /home/user/perf/core/bin/bananads-devno3d)
+# count: QEMU=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/count.sh <bin> devno3d <roms>  (raw: /home/user/perf/core/runs/devno3d/<rom>/report.txt)
+## main thread; the dsstress ROMs were never seen by this profile
+rom                                  dev     devno3d      devpgodevno3d/devdevpgo/dev
+arm7-thumb-dsstress-L5          21157.1k    21388.9k    19324.1k    +1.10%    -8.66%
+cpubench-cpubench-thumb          4896.0k     4702.9k     4707.1k    -3.94%    -3.86%
+dsstress-L10                    18450.8k    18882.5k    16824.4k    +2.34%    -8.81%
+dsstress-L5                     20746.1k    20978.7k    18917.2k    +1.12%    -8.82%
+ipcrom-ipctest                   2852.9k     2561.5k     2581.1k   -10.21%    -9.53%
+membench-membench                6013.3k     5384.9k     5520.7k   -10.45%    -8.19%
+sndbench-sndbench                4873.8k     4406.0k     4424.3k    -9.60%    -9.22%
+## the never-seen 3D ROMs get SLOWER with this profile (+1.1%, +2.3%, +1.1% instructions) although -fprofile-partial-training is on: their hot paths were executed a little during training (membench's GX traffic, cpubench's 3D clear) and so were profiled as cold; the full-suite profile gives them -8.7..-8.8%. Trained ROMs: the same gains as the full profile (-3.9%, -9.6..-10.5%).

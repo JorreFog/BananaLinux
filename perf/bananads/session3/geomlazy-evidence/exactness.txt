@@ -1,0 +1,34 @@
+# geomlazy exactness checks (2026-10-18, aarch64 device builds under qemu; scripts in /home/user/perf3/gl/)
+# toggles: render.geom_batch (0050), render.gx_dmafast (0060 + 0062), render.geom_fifo (0061); all default on
+
+Mario Kart DS (USA), race start (mkside's input: fresh save, Figure-8 Circuit GP; rtc.fixed, Gengis 2x, slice 64)
+- mk-scene.sh frames 1500,1740,1800,1860,1920,1980,2040,2100 + audio.raw md5 = mkbase reference
+  (mkside-work/s-mkb/md5.txt): 0060 (both versions), 0061, 0062 builds: SAME
+- frames 1700, 1900, 2100, 2400 + headless.audio_dump, build-dev/b (00c34c78) vs branch (0050-0061): identical
+- savestate reload at 1850, frames 1900/2000/2100: identical to base's reload run
+- full savestate bytes (mkds.3.mst) at frame 1850 and 2000, branch (all on, with 0062) vs 00c34c78: identical
+  (1850: a57737e0567aab4f488ed894bdec854d, 2000: f476c39ef33cd7a1166128040aa358d1)
+- bananads-difftest --every --from 1600 (main RAM each frame), --input = the scene's presses, fresh saves:
+  * 0050+0060 off vs on to 2150: SAME; 0060 final off vs on: SAME; 0061 off vs on: SAME; 0062 (gx_dmafast) off vs on: SAME
+  * all three toggles off vs on to 2400, with --regs --timing: SAME
+Test ROMs (pictures every 10th of 300: soft, Gengis 2x + 2d thread, savestate reload at 150; difftest --every 300):
+- gxstm, geomtest, dsstress L5, L10 (pics) / gxstm, geomtest, L5, iorom-L5 (difftest): 0060, 0061, 0062 off vs on: all identical
+jit's exact-suite.sh (QEMU=qemu-dev), all three toggles off vs on: FAILS=0 (27 checks, incl. bananads-tests) on the 0050-0061
+  build and on the final 0050-0062 build
+MK soft renderer 1x, frames every 100 to 2100, 00c34c78 vs final: identical (21 frames)
+Merge with mkside e855c82 (local): mk-scene md5s+audio = base, savestate at 1850 = base
+
+Sabotage builds (each must be caught):
+- 0060: an entry into an empty FIFO goes to the FIFO, not the pipe: MK difftest DIFFERENT (first compared frame);
+  gxstm hangs at boot. CAUGHT.
+- 0060: GXSTAT busy bit not set by the block writer: nothing differs anywhere. Not observable: when the FIFO holds an
+  entry the busy bit is already set (the pipe fills first; the bit is cleared only with the pipe empty). Not a bug.
+- 0061: the deferred DMA/IRQ checks run before the FIFO level is written back (a GXFIFO DMA/IRQ one run late):
+  MK difftest DIFFERENT after frame 1600. CAUGHT.
+- 0061: no deferred check when every refill of a run found <2 entries in the FIFO: MK same (its DMA is already
+  running then; IRQ_GXFIFO isn't in IE). CAUGHT since commit 12f4a5a by geomtest's FIFO IRQ phase: difftest
+  (geom_fifo off vs on) DIFFERENT after frame 1; the real build SAME over 100 frames.
+- 0062: a DMA's first unit not starting a new burst: MK RAM, regs and GPU3D timing state at frame ends SAME, test
+  ROMs SAME; MK full savestate at 1850 DIFFERS. CAUGHT (by the savestate compare only).
+- 0062: the new table not remembered at a table's end: no effect (DMA3 restarts every burst with burststart; the table is the same). Not observable.
+Still to run on the device (user): exact.sh on Golden Sun: Dark Dawn and HeartGold, toggles on vs off vs base.

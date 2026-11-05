@@ -1,0 +1,18 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/bin/bananads-devpgo /home/user/perf/roms/ipcrom-ipctest.nds align-ipcrom-ipctest-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/bin/bananads-align /home/user/perf/roms/ipcrom-ipctest.nds align-ipcrom-ipctest-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 3.466 -> 3.401 (-1.88%)   @1992 1.921 -> 1.885 (-1.88%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.064 -> 3.858 (-5.07%)
+  insn 2588.2k->2601.3k (+0.5%)  base 2753.9k->2759.5k (+0.2%)  l1i_miss 20.3k->18.2k (-10.4%)  ld_miss 3.8k->4.0k (+4.5%)  st_miss 1.0k->1.1k (+6.8%)  itlb_l2 15.3k->15.8k (+3.1%)  itlb_walk 0.1k->0.0k (-95.1%)  dtlb_l2 47.7k->42.5k (-10.7%)  dtlb_walk 0.3k->0.3k (-3.8%)  bcond_miss 21.9k->21.0k (-4.0%)  bind_miss 4.0k->3.9k (-1.1%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  memory               0.583     0.552    -0.031     412.9k     412.9k
+  jit-runtime          0.753     0.724    -0.030     599.3k     598.6k
+  2d                   0.517     0.494    -0.023     377.0k     387.0k
+  libc/lib             0.064     0.080    +0.015      36.0k      36.0k
+  other                0.161     0.172    +0.010      77.4k      77.4k
+  jit-code             0.388     0.381    -0.008     325.7k     325.7k
+  interpreter          0.052     0.055    +0.003      31.3k      31.3k
+  gengis               0.019     0.017    -0.003       9.8k       9.8k
+  scheduler/core       0.850     0.851    +0.001     640.4k     644.1k
+  audio                0.077     0.076    -0.001      78.5k      78.5k

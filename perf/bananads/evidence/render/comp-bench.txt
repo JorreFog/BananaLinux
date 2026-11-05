@@ -1,0 +1,35 @@
+# comp_bench: instructions per CompositeLoop call (256 pixels) per variant, device compiler (Bootlin GCC 14.3, -mcpu=cortex-a55), under qemu + jitcount, 2000 calls each
+# build: aarch64-linux-g++.br_real --sysroot=... -O2|-O3 -g0 -DNDEBUG -std=gnu++17 -mcpu=cortex-a55 -fwrapv -static comp_bench.cpp; run: qemu-aarch64 -plugin libjitcount.so,out=cb-O2 ./comp_bench-O2 2000
+# A = verbatim CompositeLoop (base), C = fold-unrolled (render.2d_comp_unroll), D = C minus the AND for non-3D steps. n2: 2 BG steps; n3s: 3 steps with the second line; n4h: 4 steps incl. an OBJ step with a priority line and a raw 3D step; n4hs: + second line. A count of 1 = the symbol was merged with an identical one (ICF): read the sibling
+== O2
+C_n1         587
+D_n1         587
+A_n1         651
+C_n2           1
+D_n2           1
+A_n2        2588
+C_n3s       1558
+D_n3s       1558
+A_n3s       3966
+C_n4h       1833
+D_n4h       2081
+A_n4h       5665
+C_n4hs      2154
+D_n4hs      2402
+A_n4hs      5796
+== O3
+A_n1         521
+C_n1         521
+D_n1         521
+C_n2         655
+D_n2         655
+A_n2         847
+C_n3s          1
+D_n3s          1
+A_n3s       1432
+C_n4h       1769
+D_n4h       1823
+A_n4h       1833
+A_n4hs      2026
+D_n4hs      2144
+C_n4hs      2154

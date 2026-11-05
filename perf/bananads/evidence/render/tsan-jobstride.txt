@@ -1,0 +1,6 @@
+# ThreadSanitizer (x86-64, no Gengis: render.renderer=soft, the Banana 2D engine on its thread) of render.2d_job_stride, 3 runs of 300 frames. The only warnings are "signal-unsafe call inside of a signal" from melonDS ARMJIT_Memory::FaultHandler (its SIGSEGV handler allocates: pre-existing, not a race); "data race" count per run: L5-compact 0, ds2d-compact-reload 0, L5-inline 0 (grep -c "data race" runs/tsan3/*.log). MEASURED.
+-rwxr-xr-x 1 root root 36220840 Oct 18 17:12 /home/user/perf/render/x86tsan/b/bananads
+L5-compact             [2d] 2D thread: 115200 jobs, 0 lines with unit A drawn in place (display capture), 3.9 MB through the copy log, 1 waits for the thread (capture, full ring or log) | 1 TSan warnings; 0 finished
+ds2d-compact-reload    [2d] 2D thread: 115200 jobs, 24576 lines with unit A drawn in place (display capture), 9.2 MB through the copy log, 28370 waits for the thread (capture, full ring or log) | 33 TSan warnings; 0 finished
+L5-inline              [2d] 2D thread: 115200 jobs, 0 lines with unit A drawn in place (display capture), 3.9 MB through the copy log, 5 waits for the thread (capture, full ring or log) | 1 TSan warnings; 0 finished
+TSAN-DONE
