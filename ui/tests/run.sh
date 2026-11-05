@@ -46,6 +46,8 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
+make -s -C "$HERE" tests/eq-test >/dev/null && "$HERE/tests/eq-test" > "$OUT/eq-test.log" || { echo "FAIL the speaker EQ: $(grep FAIL "$OUT/eq-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
