@@ -6,8 +6,13 @@
 #   gw-meta [<folder>...]      default: roms/gameandwatch on the card, and on the second card while it's in
 # The name: MAME's description without "Game & Watch: " ("Donkey Kong II"). The cover: MAME's picture of the game
 # after a few seconds (its LCD as it starts), in the artwork's "Unit Only" view (the console), else its first
-# "Background" view, else the bare LCD; 480 pixels high.
+# "Background" view; 480 pixels high. A game without artwork gets none (the bare LCD looked poor): the menu shows its
+# own picture until the artwork comes, and the cover is drawn then.
 MAME=${MAME:-/usr/bin/mame-gnw}
+# MAME draws the covers off screen: none of a game's display settings (run-gw starts this with them set, and SDL's
+# panel mode would try to take the panels from the menu), SDL's plain dummy display and no sound
+unset SDL_BANANA_PANELS SDL_BANANA_TOP SDL_GAMECONTROLLERCONFIG BANANA_TARGET_HEIGHT BANANA_SVG_MAXW
+export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
 LOCK=/run/banana/gw-meta.lock
 mkdir -p /run/banana
 mkdir $LOCK 2>/dev/null || exit 0
@@ -88,22 +93,18 @@ cover() {
         fi
     fi
     rm -f $TMP/$g.png
-    if [ -n "$view" ] && [ -n "$size" ]; then
-        nice -n 19 $MAME "$g" -rompath "$dir" -artpath "$dir/artwork" -video none -sound none -seconds_to_run 3 \
-            -snapview "$view" -snapsize "$size" -snapname "%g" -snapshot_directory $TMP \
-            -cfg_directory $TMP -nvram_directory $TMP -inipath $TMP -homepath $TMP -skip_gameinfo >/dev/null 2>&1
-    else
-        # no artwork: the LCD alone, drawn 480 wide
-        BANANA_SVG_MAXW=480 nice -n 19 $MAME "$g" -rompath "$dir" -artpath $TMP -video none -sound none \
-            -seconds_to_run 3 -snapview native -snapname "%g" -snapshot_directory $TMP \
-            -cfg_directory $TMP -nvram_directory $TMP -inipath $TMP -homepath $TMP -skip_gameinfo >/dev/null 2>&1
+    if [ -z "$view" ] || [ -z "$size" ]; then
+        return
     fi
+    nice -n 19 $MAME "$g" -rompath "$dir" -artpath "$dir/artwork" -video none -sound none -seconds_to_run 3 \
+        -snapview "$view" -snapsize "$size" -snapname "%g" -snapshot_directory $TMP \
+        -cfg_directory $TMP -nvram_directory $TMP -inipath $TMP -homepath $TMP -skip_gameinfo >$TMP/mame.log 2>&1
     if [ -s $TMP/$g.png ]; then
         mkdir -p "$dir/media/box"
         mv -f $TMP/$g.png "$dir/media/box/$g.png.new" && mv -f "$dir/media/box/$g.png.new" "$dir/media/box/$g.png"
         echo "gw-meta: cover for $g ($view)"
     else
-        echo "gw-meta: no cover for $g" >&2
+        echo "gw-meta: no cover for $g: $(tail -n 3 $TMP/mame.log | tr '\n' ' ')" >&2
     fi
 }
 

@@ -960,8 +960,9 @@ namespace
 					if (fn.empty() || !safeRel(fn) || lower(extOf(fn)) != "zip") continue;
 					MFile f;
 					f.path = "gameandwatch/artwork/" + fn;
+					// checked by size only: RomM's hashes of the files in a folder like this one aren't the files' own (it
+					// hashes what's inside a zip; checked with RomM 5.4.1: every artwork zip "mismatched", sent intact)
 					f.size = (long long)fj->num("file_size_bytes", -1);
-					f.sha1 = lower(fj->str("sha1_hash")); f.md5 = lower(fj->str("md5_hash"));
 					f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
 					gwArt[stemOf(fn)] = f;
 				}
