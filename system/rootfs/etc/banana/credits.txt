@@ -43,4 +43,5 @@ Exophase = DraStic (through SuperDrastic)
 melonDS = The DS emulator core behind BananaDS
 Retro Game Corps = For showing BananaOS to a lot of people
 forthenext = For showing BananaOS to a lot of people
+Trenton Faykus = For showing BananaOS to a lot of people
 GammaOS = for all the inspiration
