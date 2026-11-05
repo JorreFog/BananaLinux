@@ -43,6 +43,29 @@ It starts directly in the menu, releases display, input and audio resources when
 </p>
 <p align="center"><sub>9.8 s from the power button to the menu (12.0 s in 0.4.2), timed with a stopwatch by a QA tester (which handheld was not recorded); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
 
+<a id="seen-on-youtube"></a>
+<img src="docs/img/readme/h-videos.png" width="100%" alt="">
+
+## See BananaOS in action
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
+      <sub><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a>: Custom Firmware on the Anbernic RG DS Plus. BananaOS from 15:48.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
+      <sub><a href="https://www.youtube.com/@forthenext">forthenext</a>: ANBERNIC RG DS Plus, BananaOS and your games tested.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://www.youtube.com/watch?v=8eFy3ZvNbbg"><img src="docs/img/readme/video-8eFy3ZvNbbg.png" alt="Trenton Faykus: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins. Watch on YouTube"></a><br>
+      <sub><a href="https://www.youtube.com/@trentonfaykus">Trenton Faykus</a>: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins.</sub>
+    </td>
+  </tr>
+</table>
+<p align="center"><sub>Thank you all! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
+
 <a id="new-in-0-5-2-2"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
 
@@ -325,29 +348,6 @@ make test          # renders the menu from a test library into ui/tests/out
 | `tools/` | the menu engine's import, ROCKNIX's hardware sync, the pixel bunch, the logo, the boot animation, the Banana Theme Studio (`theme-studio/`), this page's pictures (`make-readme-art.py`) |
 | `web/` | the website on GitHub Pages: the [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/), with the [Banana Theme Studio](https://jorrefog.github.io/BananaLinux/theme-studio/) (`tools/theme-studio/`) published next to it |
 | `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EMULATORS.md](docs/EMULATORS.md), [FIRST-BOOT.md](docs/FIRST-BOOT.md), [COMPANIONS.md](docs/COMPANIONS.md), [MAKE-A-THEME.md](docs/MAKE-A-THEME.md), [THEMES.md](docs/THEMES.md), [THEME-EDITOR.md](docs/THEME-EDITOR.md), [PERFORMANCE-0.5.0.md](docs/PERFORMANCE-0.5.0.md), [ROADMAP.md](docs/ROADMAP.md) |
-
-<a id="seen-on-youtube"></a>
-<img src="docs/img/readme/h-videos.png" width="100%" alt="">
-
-## See BananaOS in action
-
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
-      <sub><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a>: Custom Firmware on the Anbernic RG DS Plus. BananaOS from 15:48.</sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
-      <sub><a href="https://www.youtube.com/@forthenext">forthenext</a>: ANBERNIC RG DS Plus, BananaOS and your games tested.</sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://www.youtube.com/watch?v=8eFy3ZvNbbg"><img src="docs/img/readme/video-8eFy3ZvNbbg.png" alt="Trenton Faykus: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins. Watch on YouTube"></a><br>
-      <sub><a href="https://www.youtube.com/@trentonfaykus">Trenton Faykus</a>: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins.</sub>
-    </td>
-  </tr>
-</table>
-<p align="center"><sub>Thank you all! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
 
 <a id="credits"></a>
 <img src="docs/img/readme/h-credits.png" width="100%" alt="">
