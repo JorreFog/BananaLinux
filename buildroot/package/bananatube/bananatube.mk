@@ -21,7 +21,7 @@
 # To build a newer one: git rev-parse HEAD in the bananatube checkout, put it here, and refresh the hash with
 #   sha256sum $(BR2_DL_DIR)/bananatube-<version>.tar.gz > package/bananatube/bananatube.hash
 # (or download the tarball from the GitHub archive URL first).
-BANANATUBE_VERSION = 0226e1339bad1ddc0609708be004d2c8f7ddd60c
+BANANATUBE_VERSION = 1c44d39300385b155556ed5d83e131e8d7bda218
 BANANATUBE_SITE = $(call github,jesussaves-ai,bananatube,$(BANANATUBE_VERSION))
 BANANATUBE_LICENSE = GPL-3.0-or-later
 BANANATUBE_LICENSE_FILES = LICENSE
