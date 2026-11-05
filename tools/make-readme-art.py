@@ -491,6 +491,7 @@ def video_card(thumb, channel, title):
 VIDEOS = [  # (YouTube id, channel, title)
     ("yW6LavgyhL4", "Retro Game Corps", "Custom Firmware on the Anbernic RG DS Plus"),
     ("KPENdDlkI5M", "forthenext", "ANBERNIC RG DS Plus, BananaOS and your games tested"),
+    ("8eFy3ZvNbbg", "Trenton Faykus", "I tested 4 firmwares on RG DS Plus. here's why BananaOS wins"),
 ]
 
 # ---- the numbers, as the home screen shows a system's -------------------------------------------------------------

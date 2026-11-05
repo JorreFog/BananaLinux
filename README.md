@@ -333,17 +333,21 @@ make test          # renders the menu from a test library into ui/tests/out
 
 <table>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
       <sub><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a>: Custom Firmware on the Anbernic RG DS Plus. BananaOS from 15:48.</sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
       <sub><a href="https://www.youtube.com/@forthenext">forthenext</a>: ANBERNIC RG DS Plus, BananaOS and your games tested.</sub>
     </td>
+    <td align="center" width="33%">
+      <a href="https://www.youtube.com/watch?v=8eFy3ZvNbbg"><img src="docs/img/readme/video-8eFy3ZvNbbg.png" alt="Trenton Faykus: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins. Watch on YouTube"></a><br>
+      <sub><a href="https://www.youtube.com/@trentonfaykus">Trenton Faykus</a>: I tested 4 firmwares on RG DS Plus. here's why BananaOS wins.</sub>
+    </td>
   </tr>
 </table>
-<p align="center"><sub>Thank you both! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
+<p align="center"><sub>Thank you all! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
 
 <a id="credits"></a>
 <img src="docs/img/readme/h-credits.png" width="100%" alt="">
@@ -369,7 +373,7 @@ Thanks to:
 - The Pokémon companion is inspired by [PokeDaisy](https://github.com/lidor30/pokedaisy) by Lidor Itzhari (lidor30), the companion app for Android handhelds with two screens. BananaOS's is its own code, written from the games' documented data.
 - The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started. Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
 - The RG DS's kernel support, device trees and drivers come from [ROCKNIX](https://rocknix.org). DS emulation is DraStic by Exophase (through [SuperDrastic](https://github.com/JorreFog/SuperDrastic)) and [melonDS](https://melonds.kuribo64.net/)'s core (BananaDS).
-- [Retro Game Corps](https://www.youtube.com/@RetroGameCorps) and [forthenext](https://www.youtube.com/@forthenext) for showing BananaOS to a lot of people, and GammaOS for all the inspiration.
+- [Retro Game Corps](https://www.youtube.com/@RetroGameCorps), [forthenext](https://www.youtube.com/@forthenext) and [Trenton Faykus](https://www.youtube.com/@trentonfaykus) for showing BananaOS to a lot of people, and GammaOS for all the inspiration.
 
 ### Development and AI
 
