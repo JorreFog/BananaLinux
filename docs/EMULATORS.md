@@ -1,7 +1,7 @@
 # What Banana gives an emulator, and what it expects back
 
 This is the contract between the menu and any program that plays a game: DraStic (through SuperDrastic),
-RetroArch and BananaDS. Keep to it and the rest of Banana (sleep, the volume keys, the logs,
+RetroArch, BananaDS and MAME (Game & Watch). Keep to it and the rest of Banana (sleep, the volume keys, the logs,
 the settings) works around the emulator without knowing it.
 
 ## Starting
@@ -281,3 +281,33 @@ too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo)
   clock governor the stock core needs a 1156 MHz mean for the same smoothness, BananaSNES holds 805 MHz. Against RetroArch + Snes9x the whole process uses
   25-37% less CPU. EarthBound (owner's game, Plus): identical picture and sound for 3600 frames, about -5% on top of the lazy timers (the profile is from the
   stress ROM and homebrew). Details, every attempt and the exactness gates: the repo's BANANA.md and tools/stress-roms/snes/CALIBRATION.md.
+
+## Game & Watch (MAME)
+
+Nintendo's Game & Watch through MAME's own driver (`hh_sm510`), with the user's MAME ROM zips and MAME artwork zips
+as they are downloaded: nothing per game in BananaOS, no layouts of its own.
+
+- **The package** (`buildroot/package/mame-gnw`): MAME's 0.289 release built with only that driver
+  (`SUBTARGET=gnw SOURCES=src/mame/handheld/hh_sm510.cpp`), SDL2 and its GLES renderer, at most 6 compilers (some
+  of MAME's files take 1–2 GB each to compile). `/usr/bin/mame-gnw`, 41 MB. Patches in
+  `buildroot/patches/mame-gnw`, each saying what and why: no fontconfig (fonts by path, SDL_ttf), quitting on
+  `SIGTERM`, the menu on `SIGUSR1`, the LCD drawn at panel width (`BANANA_SVG_MAXW`), the SDL renderer on the two
+  panels (GPU cropping, `BANANA_TARGET_HEIGHT`, the panel swap on `SIGUSR2`), no warning screens, a short menu,
+  the menu on the top panel and its text size.
+- **The display**: one SDL window over both panels (`SDL_VIDEODRIVER=offscreen`, `SDL_BANANA_PANELS=stack`: SDL's
+  zero-copy path), the artwork's "Background(s) Only" view. By MAME's own description of the game (`-listxml`): one
+  screen on the top panel; two side by side (`screen_left`/`screen_right`) both on the top panel; two one above the
+  other on a panel each. Full speed on the Plus with a core to spare (the main thread at 25–75% of one).
+- **Input**: SDL's game controller (the pad's line from SDL's database), `/usr/share/banana/mame-gnw/banana.cfg`:
+  Start = Game A, Select = Game B, L = Time, R = Alarm, a right-hand pair (Mario Bros.) on X/B. MAME doesn't see F:
+  `gw-hotkeys` (in the package) reads the pad beside it: F + Start quits (`SIGTERM`, `SIGKILL` after 5 s), F alone
+  opens the menu (`SIGUSR1`; the game paused), L2 swaps the panels (`SIGUSR2`).
+- **The launcher** (`run-gw`): ROMs in `roms/gameandwatch` on either card, the artwork beside them in `artwork/`;
+  MAME's settings in `/data/mame-gnw`, the games' memory (high scores) in `saves/gameandwatch`, the log of the
+  last game in `banana/logs/mame-gnw/last.log`.
+- **Names and covers** (`gw-meta`, at the menu's start and after each game, in the background, waiting while a
+  game plays): names, years and makers from MAME's game list into the folder's `gamelist.xml` (entries already
+  there are left alone), covers drawn by MAME from the artwork's "Unit Only" view into `media/box` (none without
+  artwork).
+- **RomM**: the `g-and-w` platform syncs to `gameandwatch`; its `artwork` folder, which RomM lists as one ROM of
+  several files, comes as each game's artwork zip, checked by size (RomM's hashes of those files aren't theirs).
