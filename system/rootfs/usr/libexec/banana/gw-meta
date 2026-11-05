@@ -2,7 +2,9 @@
 # The Game & Watch games' names, years, makers and covers, from MAME itself and the user's own artwork, with no
 # connection: written for the menu as the scraper writes them, into roms/gameandwatch/gamelist.xml (a game entry
 # added for each game it doesn't have yet; entries already there are left alone) and media/box/<game>.png (only where
-# there's no cover). Run in the background, at low priority, when the menu starts and after a Game & Watch game.
+# there's no cover). Run in the background, at low priority, when the menu starts and when a Game & Watch folder
+# changes (systems.conf's "changed": the menu's watch on the games folders, once the copying has been quiet; a sync,
+# file sharing, the Files page, a card put in; what changed during a game, when it ends).
 #   gw-meta [<folder>...]      default: roms/gameandwatch on the card, and on the second card while it's in
 # The name: MAME's description without "Game & Watch: " ("Donkey Kong II"). The cover: MAME's picture of the game
 # after a few seconds (its LCD as it starts), in the artwork's "Unit Only" view (the console), else its first
@@ -15,9 +17,18 @@ unset SDL_BANANA_PANELS SDL_BANANA_TOP SDL_GAMECONTROLLERCONFIG BANANA_TARGET_HE
 export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
 LOCK=/run/banana/gw-meta.lock
 mkdir -p /run/banana
-mkdir $LOCK 2>/dev/null || exit 0
+if ! mkdir $LOCK 2>/dev/null; then
+    # one is running: it looks once more before it ends (the games copied while it drew its covers)
+    : > $LOCK/again 2>/dev/null
+    exit 0
+fi
 TMP=/run/banana/gw-meta.$$
-trap 'rm -rf $TMP; rmdir $LOCK' EXIT INT TERM
+trap 'rm -rf $TMP $LOCK' EXIT INT TERM
+# its log (this run's), unless started with its output somewhere already (a terminal)
+if [ ! -t 1 ]; then
+    mkdir -p /data/banana/logs/mame-gnw 2>/dev/null
+    exec > /data/banana/logs/mame-gnw/meta.log 2>&1
+fi
 mkdir -p $TMP
 
 if [ $# -eq 0 ]; then
@@ -28,19 +39,27 @@ if [ $# -eq 0 ]; then
     fi
 fi
 
-# nothing to do without a game (most menu starts): no MAME at all
-found=
-for dir in "$@"; do
-    for z in "$dir"/*.zip "$dir"/*.ZIP; do
-        if [ -f "$z" ]; then
-            found=1
-            break 2
-        fi
+# anything to do: a game with no entry in its folder's gamelist.xml, or with its artwork and no cover (most menu
+# starts and folder changes have none: no MAME at all)
+todo() {
+    for dir in "$@"; do
+        for z in "$dir"/*.zip "$dir"/*.ZIP; do
+            [ -f "$z" ] || continue
+            f=$(basename "$z")
+            g=${f%.*}
+            if ! grep -q "<path>\./$f</path>" "$dir/gamelist.xml" 2>/dev/null; then
+                return 0
+            fi
+            if [ -f "$dir/artwork/$g.zip" ] && [ ! -f "$dir/media/box/$g.png" ] && [ ! -f "$dir/media/box/$g.jpg" ]; then
+                return 0
+            fi
+        done
     done
-done
-[ -n "$found" ] || exit 0
+    return 1
+}
 
 # every game MAME knows: short name TAB description TAB year TAB maker (as XML text, as -listxml writes them)
+machines() {
 $MAME -listxml 2>/dev/null | awk '
     /<machine name="/ { n = $0; sub(/.*<machine name="/, "", n); sub(/".*/, "", n); d = ""; y = ""; m = "" }
     /<description>/ { d = $0; sub(/.*<description>/, "", d); sub(/<\/description>.*/, "", d) }
@@ -51,6 +70,7 @@ if [ ! -s $TMP/machines.tsv ]; then
     echo "gw-meta: no game list from MAME" >&2
     exit 1
 fi
+}
 
 # while a game is playing (banana-ui's /run/banana/game.pid, its process still there), wait: no CPU taken from it
 wait_idle() {
@@ -108,6 +128,7 @@ cover() {
     fi
 }
 
+run() {
 for dir in "$@"; do
     [ -d "$dir" ] || continue
     GL=$dir/gamelist.xml
@@ -144,5 +165,18 @@ for dir in "$@"; do
         echo "gw-meta: $(grep -c '<game>' $TMP/new) name(s) added to $GL"
     fi
 done
-sync
+}
+
+# again while another start asked for it during this run
+while :; do
+    rm -f $LOCK/again
+    if todo "$@"; then
+        if [ ! -s $TMP/machines.tsv ]; then
+            machines
+        fi
+        run "$@"
+        sync
+    fi
+    [ -e $LOCK/again ] || break
+done
 exit 0

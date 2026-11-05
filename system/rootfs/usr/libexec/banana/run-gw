@@ -83,6 +83,4 @@ wait $PID
 RC=$?
 kill $HK 2>/dev/null
 echo "run-gw: exit $RC"
-# a game copied in while the menu ran: its name and cover now (in the background; the menu shows them when written)
-/usr/libexec/banana/gw-meta > $LOGS/meta.log 2>&1 &
 exit $RC

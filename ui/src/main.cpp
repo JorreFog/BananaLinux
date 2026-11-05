@@ -410,6 +410,10 @@ struct RomWatch
 			{
 				auto* e = (inotify_event*)p;
 				auto it = dirOf.find(e->wd);
+				if (it != dirOf.end())
+				{
+					changed.insert(it->second);
+				}
 				if ((e->mask & IN_ISDIR) && (e->mask & (IN_CREATE | IN_MOVED_TO)) && e->len && it != dirOf.end() && e->name[0] != '.')
 					add(it->second + "/" + e->name);
 				// what started a new wait, in the log (the owner saw "Looking for games" after every game and
@@ -425,6 +429,7 @@ struct RomWatch
 		if (any) due = now + 2000;
 	}
 	bool logged = false;	// this wait's first change logged
+	std::set<std::string> changed;	// the folders changed since the last rescan (systems.conf's "changed" commands)
 };
 
 // ---- boot timing: seconds since the kernel started, for logs/boot.txt (rcS gathers /run/banana/boot-times) ------
@@ -3188,6 +3193,13 @@ int main(int argc, char** argv)
 				ui->setHome(at);
 				roms.watch(lib.watchDirs());
 				logf("the games on the card changed: %d systems", lib.systemCount());
+				// a system's "changed" command (systems.conf), for a change in its folder: in the background, detached
+				for (auto& cmd : lib.changedRuns(roms.changed))
+				{
+					logf("a system's folder changed: %s", cmd.c_str());
+					if (system(("( " + cmd + " ) </dev/null >/dev/null 2>&1 &").c_str()) != 0) {}
+				}
+				roms.changed.clear();
 				dirty = true;
 			}
 		}

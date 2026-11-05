@@ -218,7 +218,7 @@ namespace banana
 		loadLooks();
 	}
 
-	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, perf, always, flat)
+	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, perf, always, flat, changed)
 	void Library::loadDefs()
 	{
 		defs.clear();
@@ -246,6 +246,7 @@ namespace banana
 			else if (k == "perf") cur->perf = v;
 			else if (k == "always") cur->always = v == "yes" || v == "1" || v == "true";
 			else if (k == "flat") cur->flat = v == "yes" || v == "1" || v == "true";
+			else if (k == "changed") cur->changed = v;
 			else if (k == "ext")
 			{
 				std::istringstream is(v);
@@ -535,7 +536,38 @@ namespace banana
 				r.push_back(dir);
 				r.push_back(dir + "/media");
 				for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
-				if (!d.flat) gameDirs(dir, 0, r);	// the folders games are found in too (listRoms looks 2 deep)
+				// the folders games are found in too (listRoms looks 2 deep); a system with a "changed" command, its
+				// folders' files too (Game & Watch's artwork zips, in artwork/)
+				if (!d.flat || !d.changed.empty()) gameDirs(dir, 0, r);
+			}
+		}
+		return r;
+	}
+
+	std::vector<std::string> Library::changedRuns(const std::set<std::string>& dirs) const
+	{
+		std::vector<std::string> r;
+		for (auto& d : defs)
+		{
+			if (d.changed.empty())
+			{
+				continue;
+			}
+			bool hit = false;
+			for (auto& root : roots())
+			{
+				std::string dir = folderPath(root, d.folder);
+				for (auto& c : dirs)
+				{
+					if (c == dir || c.compare(0, dir.size() + 1, dir + "/") == 0)
+					{
+						hit = true;
+					}
+				}
+			}
+			if (hit && std::find(r.begin(), r.end(), d.changed) == r.end())
+			{
+				r.push_back(d.changed);
 			}
 		}
 		return r;

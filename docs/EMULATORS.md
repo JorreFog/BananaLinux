@@ -305,8 +305,8 @@ as they are downloaded: nothing per game in BananaOS, no layouts of its own.
 - **The launcher** (`run-gw`): ROMs in `roms/gameandwatch` on either card, the artwork beside them in `artwork/`;
   MAME's settings in `/data/mame-gnw`, the games' memory (high scores) in `saves/gameandwatch`, the log of the
   last game in `banana/logs/mame-gnw/last.log`.
-- **Names and covers** (`gw-meta`, at the menu's start and after each game, in the background, waiting while a
-  game plays): names, years and makers from MAME's game list into the folder's `gamelist.xml` (entries already
+- **Names and covers** (`gw-meta`, at the menu's start and when a Game & Watch folder changes, in the background,
+  waiting while a game plays; it runs MAME only when a game has no name or no cover): names, years and makers from MAME's game list into the folder's `gamelist.xml` (entries already
   there are left alone), covers drawn by MAME from the artwork's "Unit Only" view into `media/box` (none without
   artwork).
 - **RomM**: the `g-and-w` platform syncs to `gameandwatch`; its `artwork` folder, which RomM lists as one ROM of
