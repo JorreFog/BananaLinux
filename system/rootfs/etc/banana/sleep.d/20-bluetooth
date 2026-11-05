@@ -3,15 +3,21 @@
 # again after when it was on. Headphones playing at the sleep: the sound stays routed to them meanwhile (down sleep), so a game woken stays
 # quiet until they are called back instead of playing on the speakers. "post" runs in the background already; the
 # up goes on beside the Wi-Fi's.
+# One at a time: the up a wake starts runs on in the background (2-3 s), and the lid shut again within that ran a pre
+# beside it, before bluetoothd.pid was written: it found Bluetooth off, so the sleep went by with it still on. pre now
+# waits for that up (at most 10 s: a stuck one mustn't keep the handheld awake); the up holds the lock, its daemons
+# don't (8>&-)
+exec 8>/run/banana/bt-hook.lock
+flock -w 10 8 || :
 [ -f /run/banana/bluetoothd.pid ] || [ -f /run/banana/bt-was-up ] || exit 0	# off: nothing to do, at once
 case $1 in
 pre)
     touch /run/banana/bt-was-up
-    /usr/libexec/banana/bluetooth down sleep
+    /usr/libexec/banana/bluetooth down sleep 8>&-
     ;;
 post)
     rm -f /run/banana/bt-was-up
-    /usr/libexec/banana/bluetooth up >/dev/null 2>&1 &
+    ( /usr/libexec/banana/bluetooth up 8>&- >/dev/null 2>&1; exit 0 ) &	# (not the last command: ash would exec it, lock closed)
     ;;
 esac
 exit 0
