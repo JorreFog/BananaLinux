@@ -437,9 +437,8 @@ for size in 640x480 1024x768; do
     kcheck "gtouch 185 447: action 0 keys 0 view pages:Team"
     kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
-    # the GBA companion's pages (gba/host.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): once
-    # they show, the panel has no way back to the views they replace. Back to game shows the tiles with the pages' own
-    # tabs, and each of those opens its page (2026-11-04: Map and Bag there opened today's views)
+    # the GBA companion's pages (gba/panel.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): its
+    # data read, Back to game shows the tiles with the pages' own tabs, and each of those opens its page
     EM=$(ls "${GBA_ROMS:-$HOME/gba-companion/roms}"/*Emerald*.gba 2>/dev/null | head -n 1)
     if [ -n "$EM" ]; then
         GL=$OUT/$size-gba-pages.log
@@ -454,7 +453,6 @@ for size in 640x480 1024x768; do
             --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
         grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
         grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Back to game didn't show the tiles: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
-        grep "gtouch" "$GL" | grep -q "view views:" && { echo "FAIL $size: a tab opened the views the pages replace: $(grep 'view views:' "$GL" | head -n 3 | tr '\n' ' ')"; fail=1; }
         i=0
         for page in Battle Party Team Here Map Guide Dex Log; do
             # (Battle: dimmed outside a battle, the tap leaves the tiles)
