@@ -1308,7 +1308,6 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		{
 			// gbahost: waits (up to 10 s) for the GBA companion's ROM data (gamepanel's host)
 			if (!settings.companion) { logf("gbahost: no companion"); return 2; }
-			std::string v;
 			for (int i = 0; i < 1000; i++)
 			{
 				settings.gameUpdate(now);
