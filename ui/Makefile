@@ -105,7 +105,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/gba-hidden-items tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
 
 .PHONY: host install clean
 
@@ -135,6 +135,10 @@ tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/r
 GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/gen3live.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp src/nds/guide.cpp src/json.cpp
 tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3live.h src/gba/hacks.h src/gba/gen3items.inc src/gba/gen4names.inc src/pokemon.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-rom-test.cpp $(GBA_ROM_SRC) -lz -lpthread
+
+# the hidden items of a GBA Pokémon ROM, for its guide's secrets: tests/gba-hidden-items <rom.gba>
+tests/gba-hidden-items: tests/gba-hidden-items.cpp src/pokemon.cpp src/pokemap.cpp src/pokemon.h src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-hidden-items.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 
 tests/gba-items-gen: tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
