@@ -10,8 +10,26 @@
 
 namespace banana::gba
 {
-	Host::Host(pkmn::Companion& c, std::string sd, std::string cd, bool ch)
-		: comp(c), stateDir(std::move(sd)), cacheDir(std::move(cd)), challenge(ch) {}
+	// a ROM file's name as a title: no folder, no extension, no "(v2.1)" or "[!]" tags
+	static std::string titleOf(const std::string& path)
+	{
+		std::string s = path.substr(path.find_last_of('/') + 1);
+		if (size_t dot = s.rfind('.'); dot != std::string::npos && dot > 0) s.erase(dot);
+		std::string o;
+		int depth = 0;
+		for (char c : s)
+		{
+			if (c == '(' || c == '[') depth++;
+			else if ((c == ')' || c == ']') && depth > 0) depth--;
+			else if (!depth) o += c == '_' ? ' ' : c;
+		}
+		while (!o.empty() && o.back() == ' ') o.pop_back();
+		while (!o.empty() && o.front() == ' ') o.erase(0, 1);
+		return o;
+	}
+
+	Host::Host(pkmn::Companion& c, std::string sd, std::string cd, bool ch, std::string romPath)
+		: comp(c), stateDir(std::move(sd)), cacheDir(std::move(cd)), romName(titleOf(romPath)), challenge(ch) {}
 
 	Host::~Host()
 	{
@@ -21,6 +39,8 @@ namespace banana::gba
 
 	bool Host::tick(double now)
 	{
+		// (till the ROM's data is read: the pages say so)
+		if (!started) { started = true; out = nds::PageData(); out.reading = true; fresh = true; }
 		// the ROM's data: once the companion's tables are read, on a thread of its own
 		if (!loading && !base.rom && !loadFailed)
 		{
@@ -28,11 +48,11 @@ namespace banana::gba
 			if (t && t->rom)
 			{
 				loading = true;
-				load = std::async(std::launch::async, [t, cd = cacheDir]
+				load = std::async(std::launch::async, [t, cd = cacheDir, name = romName]
 				{
 					nds::PageData d;
 					const auto t0 = std::chrono::steady_clock::now();
-					const nds::Game g = detectGame(t->rom->data(), t->rom->size(), t->crc);	// (the CRC-32 the companion worked out)
+					const nds::Game g = detectGame(*t, name);	// (by the CRC-32 the companion worked out, and its tables)
 					if (g.id == nds::GameId::NONE) return d;
 					d.rom = readRomData(*t, g, cd);
 					if (!d.rom) return d;
@@ -55,7 +75,7 @@ namespace banana::gba
 		{
 			loading = false;
 			base = load.get();
-			if (!base.rom) { loadFailed = true; return false; }
+			if (!base.rom) { loadFailed = true; out = nds::PageData(); fresh = true; return true; }	// ("No game data")
 			nds::useModernTypeChart(base.rom->game.modern);	// (Fairy and Generation VI's chart for a hack that has them)
 			auto ss = std::make_unique<nds::Session>(base.rom, base.guide, stateDir);
 			ss->setChallenge(challenge);
@@ -81,6 +101,11 @@ namespace banana::gba
 			auto l = toLive(comp.snapshot(), t.get(), base.rom.get(), itemMap, speciesMap);
 			if (l->valid) { session->feed(l); fed++; }
 		}
+		// no save to show yet: why, when the emulator says (no memory map in this core, a release with no profile)
+		const pkmn::Snapshot& cs = comp.snapshot();
+		const std::string why = cs.seen ? "" : cs.unknownRelease ? "This release of the game isn't one the companion knows." :
+			!cs.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + cs.error : "";
+		if (why != base.waitWhy) { base.waitWhy = why; out.waitWhy = why; fresh = true; }
 		nds::SessionThread::Snapshot sn;
 		if (session->take(sn))
 		{

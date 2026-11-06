@@ -33,6 +33,7 @@ namespace banana::nds
 		bool reading = false;
 		float readProgress = 0;
 		std::string readWhat;
+		std::string waitWhy;	// no save yet and why, when the host knows ("" the usual "load your save")
 		std::vector<std::string> seenNotices;	// notice ids the player has already seen (no count on the tabs for them)
 	};
 

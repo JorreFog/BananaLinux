@@ -1099,22 +1099,33 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "gamepanel")
 		{
 			// gamepanel <screen> <rom>: the game panel for a RetroArch game on the other screen, with the Pokémon
-			// companion when the ROM is a game it knows (its tables read before going on)
+			// companion and its pages when the ROM is a game it knows (its tables read before going on), as gamePanel
+			// runs them for a real game
 			int scr = 1; std::string rom;
 			cs >> scr;
 			std::getline(cs >> std::ws, rom);
 			static pkmn::Companion comp;
+			static std::unique_ptr<gba::Host> host;
+			settings.gbaRelease();
+			host.reset();
 			bool pk = comp.open(rom);
 			for (int i = 0; pk && i < 300 && !comp.tables(); i++) usleep(10000);
 			settings.companion = pk ? &comp : nullptr;
+			if (pk)
+			{
+				mkdir((o.headless + "gba-state").c_str(), 0755);
+				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", "", false, rom);
+			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
+			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
 		}
 		else if (op == "pokefeed")
 		{
-			// pokefeed <file>: the companion's requests, then the file as RetroArch's answers to them
+			// pokefeed <file>: the companion's requests, then the file as RetroArch's answers to them; a read the file has
+			// no answer for (the save's, which the pages ask for) answered with zeros: nothing there
 			std::string path;
 			std::getline(cs >> std::ws, path);
 			if (!settings.companion) { logf("pokefeed: no companion"); return 2; }
@@ -1123,11 +1134,21 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::stringstream b;
 			b << f.rdbuf();
 			std::string d = b.str();
+			std::istringstream asked(r);
+			for (std::string line; std::getline(asked, line);)
+			{
+				std::istringstream w(line);
+				std::string cmd, addr; int len = 0;
+				if (!(w >> cmd >> addr >> len) || cmd != "READ_CORE_MEMORY" || d.find("READ_CORE_MEMORY " + addr + " ") != std::string::npos) continue;
+				d += "READ_CORE_MEMORY " + addr;
+				for (int i = 0; i < len; i++) d += " 00";
+				d += "\n";
+			}
 			settings.companion->feed(d.data(), d.size());
 			settings.gameUpdate(now);
 			const pkmn::Snapshot& sn = settings.companion->snapshot();
-			logf("pokefeed %s: asked %d, party %zu, battle %d, foes %zu", path.c_str(), (int)std::count(r.begin(), r.end(), '\n'),
-				sn.party.size(), (int)sn.inBattle, sn.foes.size());
+			logf("pokefeed %s: asked %d, party %zu, battle %d, foes %zu, view %s", path.c_str(), (int)std::count(r.begin(), r.end(), '\n'),
+				sn.party.size(), (int)sn.inBattle, sn.foes.size(), settings.gamePanelView().c_str());
 		}
 		else if (op == "gcpanel")
 		{
@@ -1285,18 +1306,18 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "gbahost")
 		{
-			// gbahost: the GBA companion's pages (gba/host.h) on the open panel's companion, as gamePanel runs them for a
-			// real game; waits (up to 10 s) for its ROM data
-			static std::unique_ptr<gba::Host> host;
+			// gbahost: waits (up to 10 s) for the GBA companion's ROM data (gamepanel's host)
 			if (!settings.companion) { logf("gbahost: no companion"); return 2; }
-			settings.gbaRelease();
-			host = std::make_unique<gba::Host>(*settings.companion, o.headless + "gba-state", "", false);
-			mkdir((o.headless + "gba-state").c_str(), 0755);
-			settings.gbaHost = host.get();
-			for (int i = 0; i < 1000 && !host->ready() && !host->failed(); i++) { settings.gameUpdate(now); usleep(10000); }
+			std::string v;
+			for (int i = 0; i < 1000; i++)
+			{
+				settings.gameUpdate(now);
+				if (settings.gbaReady() != 0) break;
+				usleep(10000);
+			}
 			settings.gameUpdate(now);
-			logf("gbahost: %s %s view %s", host->ready() ? "ready" : host->failed() ? "failed" : "timeout", host->title().c_str(),
-				settings.gamePanelView().c_str());
+			logf("gbahost: %s %s view %s", settings.gbaReady() > 0 ? "ready" : settings.gbaReady() < 0 ? "failed" : "timeout",
+				settings.gbaTitle().c_str(), settings.gamePanelView().c_str());
 		}
 		else if (op == "gshot")
 		{
@@ -2499,26 +2520,24 @@ int main(int argc, char** argv)
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
-		// the GBA Pokémon companion in the DS companion's pages (gba/host.h; settings.conf gba_companion_pages, on unless
-		// "off"): the retail games once their ROM data is read; ROM hacks and the rest keep today's views
+		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
-		if (outFd >= 0 && companion.active() && getConfValue(o.data + "/settings.conf", "gba_companion_pages", "on") != "off")
+		if (outFd >= 0 && companion.active())
 		{
 			mkdir((o.data + "/cache").c_str(), 0755);
 			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
 			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
-				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
+				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on", gameRomPath);	// (its own row: Second screen)
 		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
-			settingsView.gbaHost = nullptr;
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
-			settingsView.gbaHost = gbaHost.get();
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
+			settingsView.gbaAttach(gbaHost.get());
 		}
 		be.invalidate();
 		bool want = true;

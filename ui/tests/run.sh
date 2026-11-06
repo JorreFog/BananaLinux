@@ -419,20 +419,23 @@ for size in 640x480 1024x768; do
         done
     done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
-    # decoder's test): the party, a member's summary by touch, another member from the strip, back, a battle (shown by
-    # itself), the Game tab (the panel's tiles and achievements); then the same in the light theme and in Chinese
+    # decoder's test): its pages from the start (the made-up ROM has too little for them: "No game data"), Back to game
+    # (the tiles with the pages' tabs), the Team tab, a battle (the Battle page by itself); then the same in the light
+    # theme and in Chinese
     klog=$OUT/$size-pokemon.log
-    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 100 70; gshot pk-mon; gtouch 470 200; gshot pk-mon-stats; \
-        gtouch 134 384; gshot pk-mon2; gtouch 570 384; gshot pk-back; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; \
-        pokefeed $OUT/poke-battle.txt; gshot pk-battle; gtouch 580 447; gshot pk-game"
+    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; gbahost; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 600 28; gshot pk-game; \
+        gtouch 185 447; gshot pk-team; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$pkscript; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot pk-none" 2> "$klog" ||
         { echo "FAIL $size: banana-ui (Pokémon companion) exited $?"; fail=1; }
     kcheck() { grep -q "$1" "$klog" || { echo "FAIL $size: no '$1' (Pokémon companion)"; fail=1; }; }
     kcheck "gamepanel .*poke.gba: companion Pokémon Emerald"
     kcheck "413 icons (413 palette numbers, 3 palettes), 6 growth rates"
-    kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
-    kcheck "pokefeed .*poke-battle.txt: asked 6, party 4, battle 1, foes 1"
+    kcheck "gbahost: failed .*view pages:Party"
+    kcheck "pokefeed .*poke-party.txt: asked [0-9]*, party 4, battle 0, foes 0, view pages:Party"
+    kcheck "gtouch 600 28: action 0 keys 0 view game"
+    kcheck "gtouch 185 447: action 0 keys 0 view pages:Team"
+    kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
     # the GBA companion's pages (gba/host.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): once
     # they show, the panel has no way back to the views they replace. Back to game shows the tiles with the pages' own
@@ -491,7 +494,7 @@ for size in 640x480 1024x768; do
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }
-    for s in pk-wait pk-party pk-mon pk-mon-stats pk-mon2 pk-back pk-battle pk-game pk-none zh-pk-party zh-pk-mon zh-pk-mon-stats zh-pk-battle zh-pk-game; do
+    for s in pk-wait pk-party pk-game pk-team pk-battle pk-none zh-pk-party zh-pk-game zh-pk-team zh-pk-battle; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
@@ -530,7 +533,7 @@ for size in 640x480 1024x768; do
     # the first-time setup's slides and the first boot's arrival
     . "$HERE/tests/setup.sh"
     # each view drew something of its own (not the same frame again)
-    for pair in "pk-party pk-mon" "pk-mon pk-mon2" "pk-mon2 pk-back" "pk-back pk-battle" "pk-battle pk-game" "pk-party zh-pk-party"; do
+    for pair in "pk-party pk-game" "pk-game pk-team" "pk-game pk-battle" "pk-party zh-pk-party"; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done

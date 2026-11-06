@@ -1042,7 +1042,8 @@ namespace banana::nds
 		else if (!dt.rom)
 			message("No game data", "The companion couldn't read this game's data. Back to game plays on as usual.");
 		else if (!dt.live || !dt.live->valid)
-			message("Waiting for your save", "Load your save in the game: your party, the battle and your Pokédex show up once the game has loaded it.");
+			message("Waiting for your save", !dt.waitWhy.empty() ? dt.waitWhy :
+				"Load your save in the game: your party, the battle and your Pokédex show up once the game has loaded it.");
 		else
 		{
 			switch (o.cur)

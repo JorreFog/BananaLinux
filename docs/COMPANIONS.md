@@ -255,6 +255,12 @@ sit in its own folder).
 - Levels, teams and place names were checked against the ROMs' own tables; the story facts are `reference-only`.
 
 ### The GBA ROM hacks
+The pages read every hack the companion opens (2026-11-06: the old Party/Battle/Map/Bag/Dex/Guide views are gone, and so
+is the Settings row that chose between them). A hack in `ui/src/gba/hacks.cpp`'s list is told by its whole ROM's CRC-32
+and has its title, Pokédex size and guide; any other is read by its engine alone (`anyHack`: `any-expansion` for a
+pokeemerald-expansion build, `any-cfru` for a CFRU FireRed, `any-emerald` / `any-firered` for grown tables), titled by its
+ROM file's name, with no guide. Another release of a listed hack is one of those until its CRC-32 is added.
+
 A hack's guide is `gba-pokemon/<key>.json` with `"game": "<key>"` and its base game's code (`ui/src/gba/hacks.cpp`, the
 GAMES table in `ui/src/nds/guide.cpp`): `glazed`, `golden-glazed`, `glazed-unofficial`, `heart-and-soul`, `lazarus`,
 `seaglass`, `soulgold` (BPEE) and `gaia` (BPRE); national numbers up to 1500 (the validator checks names to 649), the
