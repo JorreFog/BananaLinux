@@ -1334,7 +1334,6 @@ namespace banana::gba
 		t.numSpecies = L.numSpecies;
 		t.has.modernTypes = true;
 		t.has.ownDex = true;
-		t.has.leadersFromTrainers = false;
 		t.has.plainMons = false;
 		const Dex dex = dexOf(r);
 		t.species.assign((size_t)L.numSpecies, "");
@@ -1378,7 +1377,6 @@ namespace banana::gba
 		t.items.assign((size_t)L.numItems, {});
 		for (int i = 1; i < L.numItems; i++) t.items[i].name = r.itemName(i);
 		t.icons.clear(); t.iconPal.clear();		// (the party icons: not read for these yet)
-		t.leaders.clear(); t.leaderTypes.clear();
 		t.dexEntries = -1; t.wildHeaders = -1; t.trainers = -1; t.learnsets = -1;
 
 		auto p = std::make_shared<OwnProfile>();

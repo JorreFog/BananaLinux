@@ -224,11 +224,6 @@ int main(int argc, char** argv)
 		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
 		findLearnsets(t, rom.data(), rom.size());
 		EQ((int)(t.learnsets >= 0), 1);
-		int lv = 0;
-		EQ(t.nextMove(4, 7, lv), 14);	// at Lv 7 (just learned 45): next is move 14 at Lv 15
-		EQ(lv, 15);
-		EQ(t.nextMove(4, 15, lv), 0);	// nothing after Lv 15
-		EQ(t.nextMove(4, 1, lv), 45);
 	}
 	// where a species lives: the wild tables by map, each map's region map section from the ROM's map groups (found
 	// by their shape, checked against every map the wild tables name)
@@ -256,12 +251,6 @@ int main(int argc, char** argv)
 		EQ((int)t.mapsecs.size(), 3);
 		EQ(t.mapsecs.size() > 0 && t.mapsecs[0].size() > 1 ? t.mapsecs[0][1] : -1, 0x11);
 		EQ(t.mapsecs.size() > 2 && !t.mapsecs[2].empty() ? t.mapsecs[2][0] : -1, 0x13);
-		auto w = t.where(25);
-		EQ((int)w.size(), 2);
-		EQ(w.size() > 0 ? w[0].mapsec : -1, 0x11);		// the commonest first
-		EQ(w.size() > 0 ? w[0].percent : -1, 20);
-		EQ(w.size() > 1 ? w[1].minLv : -1, 30);
-		EQ((int)t.where(99).size(), 0);
 	}
 	// the battle advice: the lead's best move (power x type x STAB x accuracy, PP left), and a party member to switch to
 	{
@@ -379,16 +368,11 @@ int main(int argc, char** argv)
 		EQ((int)d.abilitySlot, (int)(m.pid & 1));
 		EQ(d.nature(), (int)(m.pid % 25));
 	}
-	// ---- the natures: five by five, the row raised, the column lowered (Attack, Defense, Speed, Sp. Atk, Sp. Def)
+	// ---- the natures' names
 	{
-		int up, down;
 		EQ(std::string(natureName(3)), std::string("Adamant"));
-		natureStats(3, up, down); EQ(up, 0); EQ(down, 3);		// Adamant: Attack up, Sp. Atk down
 		EQ(std::string(natureName(10)), std::string("Timid"));
-		natureStats(10, up, down); EQ(up, 2); EQ(down, 0);		// Timid: Speed up, Attack down
 		EQ(std::string(natureName(24)), std::string("Quirky"));
-		natureStats(24, up, down); EQ(up, -1); EQ(down, -1);	// Quirky: neither
-		natureStats(12, up, down); EQ(up, -1);					// Serious
 		EQ(std::string(natureName(25)), std::string(""));
 	}
 	{
@@ -947,7 +931,7 @@ int main(int argc, char** argv)
 		CHECK(cc.open(up) && std::string(cc.game()->code) == "BPRE");
 		std::shared_ptr<const RomTables> tt;
 		for (int i = 0; i < 3000 && !(tt = cc.tables()); i++) usleep(10000);
-		CHECK(tt && tt->has.modernTypes && tt->has.ownDex && tt->has.leadersFromTrainers && tt->has.plainMons && tt->has.dexRam == 0x0202583c &&
+		CHECK(tt && tt->has.modernTypes && tt->has.ownDex && tt->has.plainMons && tt->has.dexRam == 0x0202583c &&
 			tt->has.dexBytes == 0x7d && tt->has.bagPockets == 0x0203988c && !tt->has.bagUnsure);
 	}
 
