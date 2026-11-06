@@ -51,7 +51,7 @@ echo "the user's own" > "$OUT/ra/roms/gba/Old Game (USA).gba"
 bs ra pair "$U" > "$OUT/romm-pair.log" 2>&1 & PP=$!
 for i in $(seq 30); do grep -q '^pair ' "$OUT/ra/run/sync.status" 2>/dev/null && break; sleep 0.2; done
 UC=$(st ra | cut -d' ' -f2)
-case "$(st ra)" in "pair $UC $U/pair/device?user_code=$UC") ;; *) bad "RomM pairing showed no code, or an address without it (#141): $(st ra)";; esac
+case "$(st ra)" in "pair $UC $U/pair/device?user_code=$UC 600") ;; *) bad "RomM pairing showed no code, the address without it (#141), or not the time it lasts: $(st ra)";; esac
 curl -s -XPOST "$U/test/approve" -d "{\"user_code\": \"$UC\"}" >/dev/null
 wait $PP || bad "RomM pairing failed: $(cat "$OUT/romm-pair.log")"
 grep -q '"token": "rmm_' "$OUT/ra/banana/romsync.json" || bad "no RomM token on the card"
@@ -388,6 +388,26 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     for i in $(seq 50); do curl -sk "https://127.0.0.1:$TP/api/heartbeat" >/dev/null && break; sleep 0.1; done
     card ta
     [ "$(bs ta probe "https://127.0.0.1:$TP" | cut -d' ' -f1)" = none ] || bad "https: a certificate of no CA's was taken with Check certificate On"
+    # (said as the certificate, not the clock, though this card's run has had no time sync: its dates aren't what failed)
+    r=$(bs ta probe --romm "https://127.0.0.1:$TP"); case $r in "fail tls"*) ;; *) bad "https: a certificate of no CA's, before a time sync: $r" ;; esac
+    # one not valid until 2099, as a real one is to a clock the RTC left behind: the clock before a time sync, the
+    # certificate after one (OpenSSL 3.0's req can't date a certificate ahead: ca can)
+    FT=$TLS/future; mkdir -p "$FT/db"; : > "$FT/db/index"; echo 01 > "$FT/db/serial"
+    printf '[ca]\ndefault_ca = d\n[d]\ndatabase = %s\nserial = %s\nnew_certs_dir = %s\ndefault_md = sha256\npolicy = p\n[p]\ncommonName = supplied\n' \
+        "$FT/db/index" "$FT/db/serial" "$FT/db" > "$FT/ca.cnf"
+    if openssl req -new -newkey rsa:2048 -nodes -subj /CN=romm.lan -keyout "$FT/key.pem" -out "$FT/req.pem" >/dev/null 2>&1 &&
+        openssl ca -batch -notext -config "$FT/ca.cnf" -selfsign -keyfile "$FT/key.pem" -in "$FT/req.pem" \
+            -startdate 20990101000000Z -enddate 20991231000000Z -out "$FT/cert.pem" >/dev/null 2>&1; then
+        FP=$(port)
+        FAKE_ROMM_TLS="$FT/cert.pem:$FT/key.pem" python3 "$HERE/tests/fake-romm.py" "$FP" "$L" 2>> "$OUT/romm-tls.log" & PIDS="$PIDS $!"
+        for i in $(seq 50); do curl -sk "https://127.0.0.1:$FP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+        r=$(bs ta probe --romm "https://127.0.0.1:$FP"); case $r in "fail clock"*) ;; *) bad "https: a certificate not valid yet, before a time sync: $r" ;; esac
+        mkdir -p "$OUT/ta/run"; : > "$OUT/ta/run/time-synced"
+        r=$(bs ta probe --romm "https://127.0.0.1:$FP"); case $r in "fail tls"*) ;; *) bad "https: a certificate not valid yet, after a time sync: $r" ;; esac
+        rm -f "$OUT/ta/run/time-synced"
+    else
+        bad "openssl couldn't make a certificate dated ahead"
+    fi
     printf 'homesync_tls = off\n' > "$OUT/ta/banana/settings.conf"
     [ "$(bs ta probe "https://127.0.0.1:$TP")" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "https probe: $(bs ta probe "https://127.0.0.1:$TP")"
     t0=$(date +%s); r=$(bs ta probe "127.0.0.1:$TP"); t1=$(date +%s)

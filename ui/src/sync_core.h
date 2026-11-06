@@ -115,6 +115,7 @@ namespace bsync
 	{
 		long code = 0;			// 0: no answer (err says why, curl is libcurl's code)
 		int curl = 0;
+		long long certFrom = 0, certTo = 0;	// Req's certDates: the server's certificate's own dates (unix time; 0 not read)
 		std::string body, err;
 		std::map<std::string, std::string> hdr;	// lower-case names
 		JPtr json() const { return banana::parseJson(body); }
@@ -141,6 +142,8 @@ namespace bsync
 		std::vector<std::pair<std::string, std::string>> fileParts;	// multipart: (field name, file path)
 		std::string partName;					// the multipart file's name as sent
 		long timeout = callTimeout;				// whole request (0 = none: the speed floor below instead)
+		bool follow = true;						// redirects followed; off, a 3xx is the answer (its location in hdr)
+		bool certDates = false;					// the server's certificate taken unchecked, for its dates (Resp's certFrom, certTo)
 	};
 	Resp http(const Req& q);
 

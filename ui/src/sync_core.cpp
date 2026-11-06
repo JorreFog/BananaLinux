@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <cstdarg>
 #include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -293,8 +295,28 @@ namespace bsync
 		O_HEADERDATA = 10029, O_CUSTOMREQUEST = 10036, O_MIMEPOST = 10269, O_WRITEFUNCTION = 20011, O_HEADERFUNCTION = 20079,
 		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
 		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
-		O_HTTPGET = 80, O_CAINFO = 10065, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002
+		O_HTTPGET = 80, O_CAINFO = 10065, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002,
+		O_CERTINFO = 172, I_CERTINFO = 0x400022
 	};
+	struct CertInfo { int n; struct Slist { char* data; Slist* next; }** certs; };	// (libcurl's curl_certinfo)
+	// a date as libcurl's certificate information gives it: OpenSSL's "Jan  1 00:00:00 2099 GMT", or its own
+	// "2099-01-01 00:00:00 GMT" with other TLS libraries. 0: neither
+	long long certTime(const char* s)
+	{
+		static const char* M[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+		struct tm t = {};
+		char mon[4] = "";
+		if (sscanf(s, "%3s %d %d:%d:%d %d", mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec, &t.tm_year) == 6)
+		{
+			t.tm_mon = -1;
+			for (int i = 0; i < 12; i++) if (strcmp(mon, M[i]) == 0) t.tm_mon = i;
+			if (t.tm_mon < 0) return 0;
+		}
+		else if (sscanf(s, "%d-%d-%d %d:%d:%d", &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec) == 6) t.tm_mon--;
+		else return 0;
+		t.tm_year -= 1900;
+		return (long long)timegm(&t);
+	}
 	}
 	std::string urlEsc(const std::string& s)
 	{
@@ -349,6 +371,8 @@ namespace bsync
 	size_t onHeader(char* p, size_t sz, size_t n, void* u)
 	{
 		std::string l(p, sz * n);
+		// (each hop's headers alone: a redirect's location gone with it once the next answer starts)
+		if (l.compare(0, 5, "HTTP/") == 0) { ((std::map<std::string, std::string>*)u)->clear(); return sz * n; }
 		size_t c = l.find(':');
 		if (c != std::string::npos) (*(std::map<std::string, std::string>*)u)[lower(trim(l.substr(0, c)))] = trim(l.substr(c + 1));
 		return sz * n;
@@ -377,9 +401,10 @@ namespace bsync
 		cu.setopt(h, O_CONNECTTIMEOUT, connectTimeout);
 		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
 		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
-		cu.setopt(h, O_FOLLOWLOCATION, 1L);
+		cu.setopt(h, O_FOLLOWLOCATION, q.follow ? 1L : 0L);
 		if (!CA.empty()) cu.setopt(h, O_CAINFO, CA.c_str());	// (the owner's own CA, for a server with a certificate it signed)
-		if (!tlsVerify) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }	// (a self-signed one, the owner's choice)
+		if (!tlsVerify || q.certDates) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }	// (a self-signed one, the owner's choice)
+		if (q.certDates) cu.setopt(h, O_CERTINFO, 1L);
 		cu.setopt(h, O_HEADERFUNCTION, onHeader);
 		cu.setopt(h, O_HEADERDATA, &r.hdr);
 		if (q.out) { cu.setopt(h, O_WRITEFUNCTION, onFile); cu.setopt(h, O_WRITEDATA, q.out); }
@@ -413,6 +438,13 @@ namespace bsync
 		int rc = cu.perform(h);
 		if (hl) cu.slistFree(hl);
 		if (mime) cu.mimeFree(mime);
+		CertInfo* ci = nullptr;
+		if (q.certDates && cu.getinfo(h, I_CERTINFO, &ci) == 0 && ci && ci->n > 0)
+			for (auto* l = ci->certs[0]; l; l = l->next)	// (the server's own certificate first, then its chain)
+			{
+				if (strncmp(l->data, "Start date:", 11) == 0) r.certFrom = certTime(l->data + 11);
+				if (strncmp(l->data, "Expire date:", 12) == 0) r.certTo = certTime(l->data + 12);
+			}
 		if (rc != 0)
 		{
 			r.curl = rc;

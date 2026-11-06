@@ -9,11 +9,20 @@
 // Usage (the menu runs it; it says how far it got in /run/banana/sync.status, one line):
 //   banana-sync discover                       Romhost servers on the LAN: "ROMHOST\t<url>\t<name>" lines
 //   banana-sync probe <address>                what answers there: "romhost <url> <name>" / "romm <url> <version>" / "none";
-//                                              an address with no scheme is tried on HTTPS first
-//   banana-sync pair <address> [code]          Romhost: the code from Homeport. RomM: no code = the device flow (the
-//                                              status shows the code to type in RomM: "pair <code> <url>"); a code =
+//                                              an address with no scheme is tried on Romhost's port, 8080 and 80, then
+//                                              on HTTPS; one with a scheme or a port as typed
+//   banana-sync probe --romm <url>             RomM at that base URL and nowhere else: "romm <url> RomM <version>" (and
+//                                              " old" before 5.4), or "fail <why> [detail]", why one of dns, refused,
+//                                              timeout, tls, clock (tls with the clock not set yet), ca, redirect
+//                                              <location>, access <location> (Cloudflare Access's login), denied
+//                                              <status>, http <status>, notromm, noanswer <curl's message>
+//   banana-sync pair [--romm] <address> [code] Romhost: the code from Homeport. RomM: no code = the device flow (the
+//                                              status shows the code and the page that approves it, and the seconds
+//                                              the code lasts: "pair <code> <url> <seconds>"); a code =
 //                                              a client token's pairing code; rmm_... = a token pasted. Whichever,
-//                                              the card is then a RomM device: bananaos-<banana/sync-id>, kept
+//                                              the card is then a RomM device: bananaos-<banana/sync-id>, kept.
+//                                              --romm: the address is RomM's base URL, checked as probe --romm does;
+//                                              what fails says why as "error <why> [detail]" with probe's words
 //   banana-sync forget                         the pairing (and the sync's state) dropped; the files stay
 //   banana-sync sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run]
 //                                              --rom: that one game's save and, with homesync_states, its states (its
@@ -652,7 +661,10 @@ namespace
 		if (!hasPort && !scheme) tries.push_back(normUrl("https://" + a, 0));
 		for (auto& u : tries)
 		{
-			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5;
+			// (redirects not followed: a web port that sends everything to https would otherwise answer as the https
+			// server, and that port then be kept, every POST to it turned into a GET by the redirect; the https try
+			// further down finds the server where it is)
+			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5; q.follow = false;
 			Resp r = http(q);
 			if (tls && (r.curl == CURL_UNTRUSTED || r.curl == CURL_BAD_CA)) *tls = r.curl;
 			if (r.code == 0) continue;	// (nothing there, on this scheme and port: the heartbeat wouldn't get further)
@@ -665,6 +677,64 @@ namespace
 		}
 		return "none";
 	}
+	// RomM at the base URL given, asked once (its heartbeat), no port guessed and no redirect followed: the answer the
+	// form on the handheld shows. ok: "romm"; else why it isn't, and what it found (a redirect's location, a status)
+	std::string probeRomm(const std::string& base, std::string& version, std::string& detail)
+	{
+		Req q; q.url = base + "/api/heartbeat"; q.timeout = 8; q.follow = false;
+		Resp r = http(q);
+		if (r.code == 0)
+		{
+			switch (r.curl)
+			{
+			case 6: return "dns";			// (CURLE_COULDNT_RESOLVE_HOST)
+			case 7: return "refused";		// (CURLE_COULDNT_CONNECT)
+			case 28: return "timeout";		// (CURLE_OPERATION_TIMEDOUT)
+			case CURL_BAD_CA: return "ca";
+			case 35: case 51: case 58: case CURL_UNTRUSTED:
+			{
+				// (a certificate is checked against the clock too, and until Wi-Fi's first time sync (the wifi script
+				// writes time-synced) the clock is whatever the RTC kept: a certificate newer than that isn't valid
+				// yet. Said as the clock only when the certificate's own dates are what this clock fails, looked at
+				// with a second request that takes it unchecked and sends nothing; one simply not trusted is that, with
+				// or without the time, so the form offers its way past it. curl's words can't tell the two apart: the
+				// image's libcurl has none)
+				if (access((RUN + "/time-synced").c_str(), F_OK) == 0) return "tls";
+				q.certDates = true;
+				Resp d = http(q);
+				const long long now = (long long)time(nullptr);
+				return d.certFrom && d.certTo && (now < d.certFrom || now > d.certTo) ? "clock" : "tls";
+			}
+			}
+			detail = r.err;
+			return "noanswer";
+		}
+		if (r.code >= 300 && r.code < 400)
+		{
+			detail = r.hdr.count("location") ? r.hdr["location"] : "";
+			std::string host = lower(detail);
+			size_t h = host.find("://");
+			host = h == std::string::npos ? "" : host.substr(h + 3, host.find('/', h + 3) == std::string::npos ? std::string::npos : host.find('/', h + 3) - h - 3);
+			const std::string cf = ".cloudflareaccess.com";
+			bool cfa = (host.size() > cf.size() && host.compare(host.size() - cf.size(), cf.size(), cf) == 0)
+				|| detail.find("/cdn-cgi/access/") != std::string::npos;
+			return cfa ? "access" : "redirect";
+		}
+		if (r.code == 401 || r.code == 403) { detail = std::to_string(r.code); return "denied"; }
+		JPtr j = r.code == 200 ? r.json() : nullptr;
+		if (r.code == 200 && !(j && j->get("SYSTEM") && j->get("SYSTEM")->isObj())) return "notromm";
+		if (r.code != 200) { detail = std::to_string(r.code); return "http"; }
+		version = j->get("SYSTEM")->str("VERSION");
+		return "romm";
+	}
+	// a RomM base URL as typed: a scheme (https when none), no slash at its end
+	std::string rommBase(std::string a)
+	{
+		a = trim(a);
+		while (!a.empty() && a.back() == '/') a.pop_back();
+		if (a.find("://") == std::string::npos) a = "https://" + a;
+		return a;
+	}
 	std::string deviceName()
 	{
 		std::string model = trim(readFile("/proc/device-tree/model"));
@@ -674,11 +744,25 @@ namespace
 		char h[64] = {}; gethostname(h, sizeof h - 1);
 		return h[0] ? h : "BananaOS";
 	}
-	int pair(const std::string& addr, const std::string& codeIn)
+	int pair(const std::string& addr, const std::string& codeIn, bool romm)
 	{
 		std::string url, name;
 		int tls = 0;
-		std::string kind = probe(addr, url, name, &tls);
+		std::string kind;
+		if (romm)
+		{
+			std::string v, detail;
+			url = rommBase(addr);
+			kind = probeRomm(url, v, detail);
+			if (kind != "romm")
+			{
+				status("error " + kind + (detail.empty() ? "" : " " + detail));
+				say("no RomM at %s: %s %s", url.c_str(), kind.c_str(), detail.c_str());
+				return 1;
+			}
+			name = "RomM " + v;
+		}
+		else kind = probe(addr, url, name, &tls);
 		if (kind == "none" && tls == CURL_BAD_CA)
 		{
 			status("error homesync_ca can't be read");
@@ -709,7 +793,7 @@ namespace
 		{
 			if (code.empty()) { status("error the pairing code from Homeport is needed"); return 1; }
 			std::string b = "{\"code\": " + jsonStr(code) + ", \"name\": " + jsonStr(dev) + "}";
-			Req q; q.method = "POST"; q.url = url + "/api/v1/pair"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/v1/pair"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (!j || j->str("token").empty()) { status("error " + r.error()); say("pairing failed: %s", r.error().c_str()); return 1; }
@@ -721,7 +805,7 @@ namespace
 		{
 			// a client token's pairing code (RomM: Profile > Client tokens > Pair)
 			std::string b = "{\"code\": " + jsonStr(code) + "}";
-			Req q; q.method = "POST"; q.url = url + "/api/client-tokens/exchange"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/client-tokens/exchange"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (!j || j->str("raw_token").empty()) { status("error " + r.error()); say("pairing failed: %s", r.error().c_str()); return 1; }
@@ -733,7 +817,7 @@ namespace
 			// (as the device it then registers: RomM makes the device from this when the code is approved)
 			std::string b = "{\"client_device_identifier\": " + jsonStr("bananaos-" + cardId()) + ", " + deviceFields(n) + ", "
 				"\"requested_scopes\": [\"me.read\", \"roms.read\", \"platforms.read\", \"assets.read\", \"assets.write\", \"devices.read\", \"devices.write\"]}";
-			Req q; q.method = "POST"; q.url = url + "/api/auth/device/init"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/auth/device/init"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = (r.code == 200 || r.code == 201) ? r.json() : nullptr;
 			if (!j || j->str("device_code").empty()) { status("error " + (r.code == 404 ? std::string("this RomM has no device pairing (update it, or type a client token's code)") : r.error())); return 1; }
@@ -742,13 +826,13 @@ namespace
 			// the page's address with the code in it (verification_path_complete): RomM's /pair/device has no field to
 			// type a code into, it takes it from ?user_code= only (#141)
 			std::string verify = url + j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
-			status("pair " + uc + " " + verify);
+			status("pair " + uc + " " + verify + " " + std::to_string(left));
 			say("On RomM, open %s and enter %s", verify.c_str(), uc.c_str());
 			std::string body = "{\"device_code\": " + jsonStr(dc) + "}";
 			for (; left > 0; left -= interval)
 			{
 				sleep(interval);
-				Req t; t.method = "POST"; t.url = url + "/api/auth/device/token"; t.body = &body; t.headers = { "Content-Type: application/json" };
+				Req t; t.method = "POST"; t.url = url + "/api/auth/device/token"; t.body = &body; t.headers = { "Content-Type: application/json" }; t.follow = false;
 				Resp tr = http(t);
 				JPtr tj = tr.code == 200 ? tr.json() : nullptr;
 				if (tj && !tj->str("access_token").empty()) { n.token = tj->str("access_token"); n.device = tj->str("device_id"); break; }
@@ -1110,7 +1194,7 @@ int main(int argc, char** argv)
 		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
 		tlsVerify = set["homesync_tls"] != "off";
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
 	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
 	if (cmd == "blank" && args.size() > 1)
@@ -1137,6 +1221,14 @@ int main(int argc, char** argv)
 	if (cmd == "discover")
 	{
 		for (auto& s : discover(2.0)) printf("ROMHOST\t%s\t%s\n", s.first.c_str(), s.second.c_str());
+		return 0;
+	}
+	if (cmd == "probe" && args.size() > 2 && args[1] == "--romm")
+	{
+		std::string v, detail, url = rommBase(args[2]);
+		std::string k = probeRomm(url, v, detail);
+		if (k != "romm") { printf("fail %s%s%s\n", k.c_str(), detail.empty() ? "" : " ", detail.c_str()); return 1; }
+		printf("romm %s RomM %s%s\n", url.c_str(), v.c_str(), v.empty() || versionAtLeast(v, 5, 4, 0) ? "" : " old");
 		return 0;
 	}
 	if (cmd == "probe" && args.size() > 1)
@@ -1255,7 +1347,17 @@ int main(int argc, char** argv)
 	}
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
-	if (cmd == "pair" && args.size() > 1) return pair(args[1], args.size() > 2 ? args[2] : "");
+	if (cmd == "pair" && args.size() > 1)
+	{
+		// (its pid as a sync's: the menu's pairing screen stops it with B or X, the device flow waiting up to 10 minutes
+		// for RomM's approval; it says "error stopped" as it goes)
+		catchKill();
+		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		bool romm = args[1] == "--romm";
+		int rc = romm ? (args.size() > 2 ? pair(args[2], args.size() > 3 ? args[3] : "", true) : 2) : pair(args[1], args.size() > 2 ? args[2] : "", false);
+		unlink((RUN + "/sync.pid").c_str());
+		return rc;
+	}
 	if (cmd == "sync")
 	{
 		// the pid for the menu's Stop (Settings > Network > Home server > Sync now while it runs)
