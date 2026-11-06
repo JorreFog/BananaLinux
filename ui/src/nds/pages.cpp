@@ -671,6 +671,47 @@ namespace banana::nds
 			if (ts[1] != ts[0]) x += typeChip(ts[1], x, y) + 5;
 			return x;
 		}
+		// what a Pokémon of these types takes from each attacking type, a row each: weak to (4x, then 2x), resists (1/4x,
+		// then 1/2x), immune (0x) - a label at x, the types with their multipliers after it, wrapped at x + w. Rows that
+		// don't fit above bottom are left out. Returns the bottom of the last row
+		float matchups(Type t1, Type t2, float x, float y, float w, float bottom, float labelW = 84)
+		{
+			std::vector<std::pair<Type, int>> g[3];
+			for (int a = 0; a < numTypes(); a++)
+			{
+				const int q = effectiveness((Type)a, t1, t2);
+				if (q > 4) g[0].push_back({ (Type)a, q });
+				else if (q == 0) g[2].push_back({ (Type)a, q });
+				else if (q < 4) g[1].push_back({ (Type)a, q });
+			}
+			std::stable_sort(g[0].begin(), g[0].end(), [](auto& a, auto& b) { return a.second > b.second; });
+			std::stable_sort(g[1].begin(), g[1].end(), [](auto& a, auto& b) { return a.second < b.second; });
+			static const char* const LABEL[3] = { "Weak to", "Resists", "Immune to" };
+			float end = y;
+			for (int i = 0; i < 3; i++)
+			{
+				if (g[i].empty()) continue;
+				if (y + 18 > bottom) break;
+				text(tr(LABEL[i]), false, 12, x, y + 2, p.muted);
+				float cx = x + labelW;
+				for (auto& e : g[i])
+				{
+					const std::string l = i == 2 ? trType(e.first) : trType(e.first) + " " + times(e.second);
+					const float cw = chip(l, TYPE_COLORS[e.first], 0, 0, true, true);
+					if (cx > x + labelW && cx + cw > x + w)
+					{
+						if (y + 22 + 18 > bottom) break;
+						cx = x + labelW;
+						y += 22;
+					}
+					chip(l, TYPE_COLORS[e.first], cx, y);
+					cx += cw + 5;
+				}
+				end = y + 18;
+				y += 24;
+			}
+			return end;
+		}
 		void bar(float x, float y, float w, float h, float f, const Color& c, const Color* track = nullptr)
 		{
 			fill(x, y, w, h, track ? *track : barTrack());
@@ -1005,7 +1046,8 @@ namespace banana::nds
 		void notices(Page pg, float x, float& y, float w);
 		void message(const std::string& title, const std::string& body, float progress = -1, const std::string& what = "");
 		void battle();
-		void battlerCard(const Battler& b, bool foe, float x, float y, float w, float h, bool compact, const std::string& speed);
+		void battlerCard(const Battler& b, bool foe, float x, float y, float w, float h, bool compact, const std::string& speed,
+			const std::string& hint = "");
 		void moveCard(const Mon& m, int i, const MoveVerdict* v, const Battler& foe, float x, float y, float w, float h, bool compact,
 			const std::string& firstNote);
 		void party();
@@ -1192,7 +1234,8 @@ namespace banana::nds
 
 	// ---- Battle --------------------------------------------------------------------------------------------------------
 	// speed: who moves first ("faster" / "slower", "" not known), under the lead's ability
-	void Pages::Impl::battlerCard(const Battler& b, bool foe, float x, float y, float w, float h, bool compact, const std::string& speed)
+	void Pages::Impl::battlerCard(const Battler& b, bool foe, float x, float y, float w, float h, bool compact, const std::string& speed,
+		const std::string& hint)
 	{
 		const Mon& m = b.mon;
 		box(foe ? "bubble" : "hero", x, y, w, h);
@@ -1208,6 +1251,8 @@ namespace banana::nds
 		float cy = y + (compact ? 30 : 36);
 		Type ts[2] = { b.types[0], b.types[1] };
 		float ex = typeChips(ts, tx, cy);
+		// (what a tap on the card does, at the right of the types)
+		const float hintW = hint.empty() || compact ? 0 : textR(hint, false, 11, x + w - 12, cy + 3, p.accent, true) + 8;
 		std::string sn = statusName(m.status);
 		if (m.hp == 0) sn = "FNT";
 		if (!sn.empty()) ex += chip(sn, statusColour(sn), ex, cy) + 5;
@@ -1217,7 +1262,7 @@ namespace banana::nds
 		{
 			static const char* const STG[8] = { "", "Atk", "Def", "Spe", "SpA", "SpD", "Acc", "Eva" };
 			for (int i = 1; i < 8; i++)
-				if (b.stages[i] && ex < x + w - 60)
+				if (b.stages[i] && ex < x + w - 60 - hintW)
 				{
 					char l[24]; snprintf(l, sizeof l, "%s %+d", STG[i], b.stages[i]);
 					ex += chip(l, b.stages[i] > 0 ? 0x3c8c50 : 0xa84848, ex, cy) + 4;
@@ -1372,10 +1417,15 @@ namespace banana::nds
 		std::string speed = rated ? tr(mostlyFirst ? "faster" : "slower") : "";
 		float y = 58;
 		float ch = wild ? 104 : 112;
+		// a tap on a foe's card shows its type matchups where the moves are, till it (or the panel) is tapped again
+		int mf = o.matchFoe;
+		if (mf >= 0 && (mf > (dbl ? 1 : 0) || !b.foes[mf].present)) mf = b.foes[0].present ? 0 : -1;
+		auto toggle = [this](int i) { return [this, i] { o.matchFoe = o.matchFoe == i ? -1 : i; }; };
 		if (!dbl)
 		{
 			battlerCard(b.ours[0], false, 12, y, 304, ch, false, speed);
-			battlerCard(b.foes[0], true, 324, y, 304, ch, false, "");
+			battlerCard(b.foes[0], true, 324, y, 304, ch, false, "", tr(mf == 0 ? "Moves" : "Matchups"));
+			hit(324, y, 304, ch, toggle(0));
 			y += ch + 8;
 		}
 		else
@@ -1383,13 +1433,24 @@ namespace banana::nds
 			for (int i = 0; i < 2; i++)
 			{
 				if (b.ours[i].present) battlerCard(b.ours[i], false, 12, y + i * 58, 304, 54, true, "");
-				if (b.foes[i].present) battlerCard(b.foes[i], true, 324, y + i * 58, 304, 54, true, "");
+				if (b.foes[i].present) { battlerCard(b.foes[i], true, 324, y + i * 58, 304, 54, true, ""); hit(324, y + i * 58, 304, 54, toggle(i)); }
 			}
 			y += 120;
 		}
-		// the lead's four moves against the first foe
 		float mh = wild ? 62 : 78;
-		for (int i = 0; i < 4; i++)
+		if (mf >= 0)
+		{
+			// the foe's types against every attacking type (the old GBA battle view's, 2026-11-06)
+			const Battler& f = b.foes[mf];
+			const float ph = 2 * (mh + 8) - 8;
+			box("bubble", 12, y, 616, ph);
+			float hw = text(speciesName(f.mon.species), true, 14, 26, y + 8, p.accent, true);
+			typeChips(f.types, 26 + hw + 10, y + 7);
+			matchups(f.types[0], f.types[1], 26, y + 34, 588, y + ph - 8);
+			hit(12, y, 616, ph, toggle(mf));
+		}
+		// the lead's four moves against the first foe
+		for (int i = 0; mf < 0 && i < 4; i++)
 		{
 			const MoveVerdict* v = nullptr;
 			if (dt.advice)
@@ -2495,38 +2556,10 @@ namespace banana::nds
 				y += 6;
 			}
 		}
-		// what it takes extra damage from (and nothing from)
+		// what it takes extra damage from, less, and nothing from
 		{
-			std::vector<std::pair<Type, int>> weak, immune;
-			for (int a = 0; a < numTypes(); a++)
-			{
-				int q = effectiveness((Type)a, sp->types[0], sp->types[1]);
-				if (q > 4) weak.push_back({ (Type)a, q });
-				else if (q == 0) immune.push_back({ (Type)a, q });
-			}
-			std::stable_sort(weak.begin(), weak.end(), [](auto& a, auto& b) { return a.second > b.second; });
-			if (!weak.empty() || !immune.empty())
-			{
-				y = heading(tr("Weak to"), x, y);
-				float cx = x;
-				for (auto& wk : weak)
-				{
-					std::string l = trType(wk.first) + " " + times(wk.second);
-					float cw = chip(l, TYPE_COLORS[wk.first], 0, 0, true, true);
-					if (cx + cw > x + w) { cx = x; y += 24; }
-					chip(l, TYPE_COLORS[wk.first], cx, y);
-					cx += cw + 5;
-				}
-				y += 26;
-				if (!immune.empty())
-				{
-					float iw = text(tr("Immune to"), false, 12, x, y + 2, p.muted);
-					float cx2 = x + iw + 8;
-					for (auto& im : immune) cx2 += typeChip(im.first, cx2, y) + 5;
-					y += 26;
-				}
-				y += 4;
-			}
+			y = heading(tr("Type matchups"), x, y);
+			y = matchups(sp->types[0], sp->types[1], x, y, w, 1e9f) + 10;
 		}
 		// where it lives in this game
 		{
