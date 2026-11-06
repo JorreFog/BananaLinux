@@ -17,6 +17,7 @@
 #include "wifi.h"
 #include "bluetooth.h"
 #include "colors.h"
+#include "speaker_eq.h"
 #include "pokemon.h"
 #include "gamecomp.h"
 #include "lang.h"
@@ -234,7 +235,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -381,6 +382,22 @@ namespace banana
 		Result touchColors(float cx, float cy);
 		void renderColors();
 		void colorsPattern(int screen, float y0, float h);
+		// Speaker EQ: what is being tried (playing already: the plugin follows the file) and what was kept; the
+		// profiles Profile offers, read when the page opens
+		speakereq::State eqEdit, eqSaved;
+		std::vector<speakereq::Choice> eqChoices;
+		int eqRow = 0;
+		std::string eqText;				// what the plugin was given last (the curve drawn is its)
+		std::vector<double> eqCurve, eqProfCurve;	// eqText's curve and the profile's own, at the graph's frequencies (dB)
+		// what each slider shows: the curve's level at its frequency (the profile with the changes made to it), and the
+		// profile's own there (the tick on its track)
+		double eqBand[speakereq::BANDS] = {}, eqBandProfile[speakereq::BANDS] = {};
+		std::string eqShare() const { return speakereq::shareDir(assets); }	// (/usr/share/banana/speaker-eq)
+		void openEq();
+		void eqLive(const speakereq::State& s);
+		Result pressEq(Key k);
+		Result touchEq(float cx, float cy);
+		void renderEq();
 		std::vector<wifi::Network> nets;
 		wifi::Status wstat;
 		bool scanning = false, scannedOnce = false, wifiEnabled = true;

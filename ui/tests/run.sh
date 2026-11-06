@@ -46,6 +46,8 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
+make -s -C "$HERE" tests/eq-test >/dev/null && "$HERE/tests/eq-test" > "$OUT/eq-test.log" || { echo "FAIL the speaker EQ: $(grep FAIL "$OUT/eq-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
@@ -234,32 +236,58 @@ for size in 640x480 1024x768; do
     grep -q "resume after power-off: /run/sd2/roms/gba/Later.gba is on the second SD card, waiting" "$rlog" || { echo "FAIL $size: second card game: $(tail -n 3 "$rlog")"; fail=1; }
     [ -e "$FX/data/resume-boot" ] && { echo "FAIL $size: resume-boot (second card) not consumed"; fail=1; }
     rm -f "$FX/data/resume-boot"
-    # Screen colours (N3): Display & sound > Screen colours (the eighth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
+    # Screen colours (N3): Display & sound > Screen colours (the ninth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
     # in screen-colors.conf; then X (no correction) and A: "none"
     clog=$OUT/$size-colors.log; CF="$FX/data/screen-colors.conf"; rm -f "$CF"
     L10="press left; press left; press left; press left; press left; press left; press left; press left; press left; press left;"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.90' "$CF" || { echo "FAIL $size: screen-colors.conf: $(tr '\n' ' ' < "$CF" 2>/dev/null)"; fail=1; }
     # X is no correction on the Screen row too: from the bottom kept, X then Right is None -> the bottom again (it
     # stayed "Correct the bottom" and Right went to the top); Red one step (0.99) and A keep that
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours X) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.99' "$CF" || { echo "FAIL $size: X didn't set the Screen row to None: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 2) exited $?"; fail=1; }
     grep -qx 'screen = none' "$CF" && grep -qx 'red = 1.00' "$CF" || { echo "FAIL $size: X then A didn't take the correction away: $(tr '\n' ' ' < "$CF")"; fail=1; }
     # a file edited by hand (review M1/L1): a capital, an empty value, a letter O for a zero, an indented key: the page
     # opens on them read as meant (empty and wrong: the default, not the bottom of the range), and A keeps that
     printf 'screen = Bottom\nred =\ngreen = O.9\n  blue = 0.8\n' > "$CF"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 3) exited $?"; fail=1; }
     [ "$(grep -E '^(screen|red|green|blue) ' "$CF" | tr '\n' ' ')" = "screen = bottom red = 1.00 green = 1.00 blue = 0.80 " ] || { echo "FAIL $size: a hand-edited file: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     rm -f "$CF"
+    # Speaker EQ: Display & sound > Speaker EQ (the second row). The page writes what the speakers' ALSA plugin plays
+    # (BANANA_SPEAKER_EQ stands in for /run/banana/speaker-eq): the RG DS Plus's tuned profile from the start; 8 kHz
+    # down 3 dB and A keeps it in settings.conf and the file; B puts back what was kept; Off and A: no file; a profile of
+    # the player's own in banana/speaker-eq (comments dropped, its preamp kept), picked with Right twice from Tuned
+    elog=$OUT/$size-speaker-eq.log; EQF=$OUT/$size-speaker-eq; S="$FX/data/settings.conf"; rm -f "$EQF"
+    EQ_OPEN="home 0; press start; press r; press r; press a; press down; press a;"
+    eqrun() { BANANA_BOARD=rgds-plus BANANA_SPEAKER_EQ="$EQF" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$elog" \
+        || { echo "FAIL $size: banana-ui (speaker EQ: $2) exited $?"; fail=1; }; }
+    eqrun "$EQ_OPEN shot speaker-eq; press b" "open"
+    [ "$(grep -c '^Filter [0-9]*: ON ' "$EQF" 2>/dev/null)" = 7 ] && grep -q '^Preamp: -3.00 dB' "$EQF" \
+        || { echo "FAIL $size: the tuned profile isn't what the plugin is given: $(tr '\n' ' ' < "$EQF" 2>/dev/null)"; fail=1; }
+    eqrun "$EQ_OPEN press down; press down; press down; press down; press down; press down; press down; press left; press left; press left; shot speaker-eq-8k; press a" "8 kHz"
+    grep -qx 'speaker_eq_bands = 0,0,0,0,0,-3,0' "$S" && grep -q '^Filter 8: ON PK Fc 8000.00 Hz Gain -3.00 dB Q 1.4100' "$EQF" \
+        || { echo "FAIL $size: 8 kHz -3 dB not kept: $(grep '^speaker_eq' "$S" | tr '\n' ' ') / $(tail -n 1 "$EQF" 2>/dev/null)"; fail=1; }
+    eqrun "$EQ_OPEN press right; press b" "cancel"
+    grep -qx 'speaker_eq = on' "$S" && [ "$(grep -c '^Filter' "$EQF" 2>/dev/null)" = 8 ] || { echo "FAIL $size: B didn't put back what was kept"; fail=1; }
+    eqrun "$EQ_OPEN press right; shot speaker-eq-off; press a" "off"
+    grep -qx 'speaker_eq = off' "$S" && [ ! -e "$EQF" ] || { echo "FAIL $size: Off kept a file for the plugin"; fail=1; }
+    mkdir -p "$FX/data/speaker-eq"
+    printf '# from AutoEq\nPreamp: -2 dB\nFilter 1: ON PK Fc 3000 Hz Gain -4 dB Q 2   # the shrill one\nFilter 2: OFF PK Fc 100 Hz Gain 5 dB Q 1\n' > "$FX/data/speaker-eq/Mine.txt"
+    eqrun "$EQ_OPEN press right; press down; press right; press right; press x; shot speaker-eq-mine; press a" "own profile"
+    grep -qx 'speaker_eq_profile = Mine.txt' "$S" && grep -qx 'speaker_eq_bands = 0,0,0,0,0,0,0' "$S" && grep -q '^Preamp: -2.00 dB' "$EQF" \
+        && [ "$(grep -c '^Filter' "$EQF")" = 1 ] && grep -q '^Filter 1: ON PK Fc 3000.00 Hz Gain -4.00 dB Q 2.0000$' "$EQF" \
+        || { echo "FAIL $size: the card's profile: $(grep '^speaker_eq' "$S" | tr '\n' ' ') / $(tr '\n' ' ' < "$EQF" 2>/dev/null)"; fail=1; }
+    rm -rf "$FX/data/speaker-eq" "$EQF"; sed -i '/^speaker_eq/d' "$S"
     # a DS game's own Threaded 3D and microphone (#27): X on the first DS game, down to Threaded 3D, right (On), down to
     # Microphone, right (Low), A: both kept per game; then both back to "As in Settings": no lines (and no files) left
     plog3=$OUT/$size-pergame-opts.log; F3="$FX/data/nds-per-game-3d.conf"; FM="$FX/data/nds-per-game-mic.conf"; rm -f "$F3" "$FM"

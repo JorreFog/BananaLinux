@@ -26,6 +26,8 @@
  *     Bluetooth headphones or speakers, while connected, come before both: the bluetooth script writes the one
  *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
  *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
+ *     On the speakers (only: never the headphones or Bluetooth) the sound goes through the speaker EQ, banana-ui's
+ *     ALSA plugin banana_eq, which follows the profile Settings writes to /run/banana/speaker-eq (none: untouched).
  *
  * The menu's Sleep: banana-ui writes /run/banana/sleep-now and sends SIGHUP; the power button's sleep follows.
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
@@ -1115,11 +1117,23 @@ static void audio_route(void)
 	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
 	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
 	 * rate, ALSA's plug resampling it, and the two streams agree. */
-	char play[192], cap[160];
+	char play[256], cap[160];
+	/* the speakers, through the speaker EQ (banana-ui's ALSA plugin, ui/src/eq): a tiny speaker's peaks and dips
+	 * evened out, in each program's own audio thread, after plug has made the sound S16 stereo 48 kHz. It reads
+	 * /run/banana/speaker-eq, which Settings writes, every 10 ms: a change is heard at once, and no
+	 * file passes the sound through untouched. Never the headphones or Bluetooth: the profile is the speakers'.
+	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) The plugin is named by its
+	 * path in the config, so a program with its own libasound (a port's, whose plugin folder may be elsewhere) finds
+	 * it too instead of failing to open the speakers. */
+	static const char eq_lib[] = "/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so";
+	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
+	const int eq = speakers && access(eq_lib, R_OK) == 0;
 	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP), plug converting the rest; the microphone stays the
 	 * rk817's */
 	if (bt)
 		snprintf(play, sizeof play, "{ type plug slave.pcm { type bluealsa device \"%s\" profile \"a2dp\" } }", bt_mac);
+	else if (eq)
+		snprintf(play, sizeof play, "{ type plug slave { pcm { type banana_eq slave.pcm \"hw:%d\" } format S16_LE channels 2 rate 48000 } }", card_play);
 	else if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
@@ -1129,12 +1143,13 @@ static void audio_route(void)
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
 	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
-		: card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
+		: eq ? "speakers, through the speaker EQ" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
+		"%s%s%s"
 		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		where, play, cap);
+		where, eq ? "pcm_type.banana_eq { lib \"" : "", eq ? eq_lib : "", eq ? "\" }\n" : "", play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
