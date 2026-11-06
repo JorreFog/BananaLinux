@@ -7,6 +7,8 @@
 #include "gba/gen3rom.h"
 #include "gba/hacks.h"
 #include "nds/rom.h"
+#include "pokemon.h"
+#include <thread>
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -35,7 +37,7 @@ static double msSince(std::chrono::steady_clock::time_point t0)
 	return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
-// the header alone: the five codes, anything else NONE
+// the header alone: the five codes, anything else NONE (and a FireRed header with no tables behind it)
 static void testHeaders()
 {
 	std::vector<uint8_t> h(0x200, 0);
@@ -108,14 +110,21 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ(gba::detectGame(rom->data(), rom->size()).romHash, g.romHash);
 	if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
 	{
-		// a CFRU-style hack: its species names moved to a longer table, or the Fairy type in the base stats
+		// a hack the list doesn't know, read by its engine alone: its species names moved to a longer table (a CFRU
+		// FireRed, a patched Emerald), or the Fairy type in the base stats (a patched one)
+		const bool em = g.id == GameId::EMERALD;
 		std::vector<uint8_t> h(*rom);
 		uint32_t sp; memcpy(&sp, h.data() + 0x144, 4); sp += 11 * 100; memcpy(h.data() + 0x144, &sp, 4);
-		EQ((int)gba::detectGame(h.data(), h.size()).id, (int)GameId::NONE);
+		Game a = gba::detectGame(h.data(), h.size());
+		EQ((int)a.id, (int)GameId::HACK);
+		EQ(a.hack, std::string(em ? "any-emerald" : "any-cfru"));
 		h = *rom;
 		uint32_t bs; memcpy(&bs, h.data() + 0x1bc, 4);
 		h[bs - 0x08000000u + 28 * 35 + 7] = 23;	// (Clefairy)
-		EQ((int)gba::detectGame(h.data(), h.size()).id, (int)GameId::NONE);
+		a = gba::detectGame(h.data(), h.size());
+		EQ((int)a.id, (int)GameId::HACK);
+		EQ(a.hack, std::string(em ? "any-emerald" : "any-firered"));
+		CHECK(a.modern);
 	}
 	t0 = std::chrono::steady_clock::now();
 	pkmn::RomTables t = pkmn::findTables(rom->data(), rom->size());
@@ -480,6 +489,39 @@ static void testHack(const std::string& path, const std::string& pngDir)
 		r->moves.size() - 1, r->trainers.size(), r->zones.size(), r->items.size());
 }
 
+// every ROM the companion opens (pokemon.h: a retail game, a hack it knows by its CRC-32 or one it reads by its engine
+// alone - another release of a known hack, a CFRU or pokeemerald-expansion build) is one the pages read too: the old
+// views that read the rest are gone (2026-11-06)
+static void testPagesRead(const std::string& path)
+{
+	pkmn::Companion c;
+	if (!c.open(path)) return;
+	std::shared_ptr<const pkmn::RomTables> t;
+	for (int i = 0; i < 600 && !(t = c.tables()); i++) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	CHECK(t && t->rom);
+	if (!t || !t->rom) return;
+	const Game g = gba::detectGame(*t, "My Hack");
+	CHECK(g.id != GameId::NONE);
+	if (!g.hack.compare(0, 4, "any-")) EQ(g.title, std::string("My Hack"));
+	CHECK(!g.title.empty());
+	auto r = g.id == GameId::NONE ? nullptr : gba::readRomData(*t, g, "");
+	CHECK(r != nullptr);
+	if (!r) { fprintf(stderr, "FAIL %s: the companion opens it (%s), the pages don't read it\n", path.c_str(), c.game()->name); return; }
+	CHECK(r->species.size() > 386);
+	if (g.id == GameId::HACK && gba::hackByCrc(t->crc))
+	{
+		// (another release of it - a CRC-32 not in the list: read by its engine alone, as much of it)
+		const Game any = gba::detectGame(t->rom->data(), t->rom->size(), t->crc ^ 1);
+		EQ((int)any.id, (int)GameId::HACK);
+		EQ(any.hack.compare(0, 4, "any-"), 0);
+		auto ra = gba::readRomData(*t, any, "");
+		CHECK(ra != nullptr);
+		if (ra) EQ(ra->species.size(), r->species.size());
+		fprintf(stderr, "gba-rom-test: %s: as another release: %s\n", path.c_str(), any.hack.c_str());
+	}
+	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
+}
+
 int main(int argc, char** argv)
 {
 	testHeaders();
@@ -497,7 +539,7 @@ int main(int argc, char** argv)
 			}
 			closedir(d);
 			std::sort(files.begin(), files.end());
-			for (auto& fl : files) { testRom(fl, pngDir); roms++; }
+			for (auto& fl : files) { testRom(fl, pngDir); testPagesRead(fl); roms++; }
 		}
 	if (!roms) fprintf(stderr, "gba-rom-test: no ROMs (GBA_ROMS or the first argument: a folder of .gba files): header checks only\n");
 	// the ROM hacks: a folder of them, each .gba in it or one folder down
@@ -520,7 +562,7 @@ int main(int argc, char** argv)
 	};
 	if (!hacks.empty()) scan(hacks, 1);
 	std::sort(hf.begin(), hf.end());
-	for (auto& fl : hf) { const int before = checks; testHack(fl, pngDir); hackRoms += checks > before; }
+	for (auto& fl : hf) { const int before = checks; testHack(fl, pngDir); testPagesRead(fl); hackRoms += checks > before; }
 	if (!hackRoms) fprintf(stderr, "gba-rom-test: no ROM hacks (GBA_HACKS or the third argument): skipped\n");
 	fprintf(stderr, "gba-rom-test: %d checks, %d failed\n", checks, fails);
 	return fails ? 1 : 0;

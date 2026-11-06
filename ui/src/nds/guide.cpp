@@ -297,6 +297,8 @@ namespace banana::nds
 		if (game.id == GameId::HACK)	// (a ROM hack: its key is its file's name and the file's "game")
 		{
 			if (game.hack.empty()) { if (why) *why = "a ROM hack without a key"; return false; }
+			// (one read by its engine alone, gba/hacks.h anyHack: no guide written for it)
+			if (!game.hack.compare(0, 4, "any-")) { if (why) *why = "no guide for a ROM hack not in the list"; return false; }
 			if (!loadGuideFile(std::string(gbaGuideDir()) + "/" + game.hack + ".json", out, GameId::NONE, why, resolver)) return false;
 			if (out.game != game.hack) { if (why) *why = game.hack + ".json is the guide of another game"; out = GuideData(); return false; }
 			return true;

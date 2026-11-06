@@ -21,6 +21,14 @@ namespace banana::gba
 		{ "unbound", "Unbound", "BPRE", 0x4b3d4957u, Engine::CFRU },					// v2.1.1.1
 	};
 
+	// a hack not in the list, read by its engine alone (no guide: its key names no file; its title the ROM file's)
+	static const HackInfo ANY[] = {
+		{ "any-expansion", "ROM hack", "BPEE", 0, Engine::EXPANSION },
+		{ "any-cfru", "ROM hack", "BPRE", 0, Engine::CFRU },
+		{ "any-emerald", "ROM hack", "BPEE", 0, Engine::BINARY },
+		{ "any-firered", "ROM hack", "BPRE", 0, Engine::BINARY },
+	};
+
 	const HackInfo* hackByCrc(uint32_t crc)
 	{
 		for (const HackInfo& h : HACKS) if (h.crc == crc) return &h;
@@ -28,7 +36,15 @@ namespace banana::gba
 	}
 	const HackInfo* hackByKey(const char* key)
 	{
-		for (const HackInfo& h : HACKS) if (key && !strcmp(h.key, key)) return &h;
+		if (!key) return nullptr;
+		for (const HackInfo& h : HACKS) if (!strcmp(h.key, key)) return &h;
+		for (const HackInfo& h : ANY) if (!strcmp(h.key, key)) return &h;
+		return nullptr;
+	}
+	const HackInfo* anyHack(Engine e, const char* base)
+	{
+		if (base && !strcmp(base, "BPGE")) base = "BPRE";	// (LeafGreen's: FireRed's)
+		for (const HackInfo& h : ANY) if (h.engine == e && !strcmp(h.base, base)) return &h;
 		return nullptr;
 	}
 	const HackInfo* allHacks(size_t& n) { n = sizeof HACKS / sizeof HACKS[0]; return HACKS; }

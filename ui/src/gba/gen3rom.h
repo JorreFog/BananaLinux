@@ -20,16 +20,20 @@ namespace banana::gba
 {
 	// the game in a GBA ROM (its first 0xC0 bytes are enough for the code; the whole ROM for the hack check and the
 	// hash): one of the five English releases (header 0xAC: AXVE AXPE BPEE BPRE BPGE, any revision at 0xBC), Gen III,
-	// dexSize 386; or one of the ROM hacks gba/hacks.h knows, by the whole ROM's CRC-32 (crc: when known - the
-	// companion's tables carry it, pkmn::RomTables::crc -, else 0 and it is worked out here: ~10 ms a 32 MB ROM on a
-	// PC): GameId::HACK, Game::hack its key, its title, its Pokédex's size, modern when it has the Fairy type. NONE for
-	// anything else, and for another CFRU hack (more species, the Fairy type: it keeps today's pages)
+	// dexSize 386; or a ROM hack built on Emerald, FireRed or LeafGreen (GameId::HACK, Game::hack its key, modern when it
+	// has the Fairy type): one gba/hacks.h knows by the whole ROM's CRC-32 (crc: when known - the companion's tables
+	// carry it, pkmn::RomTables::crc -, else 0 and it is worked out here: ~10 ms a 32 MB ROM on a PC) with its title and
+	// its Pokédex's size, else one read by its engine alone (hacks.h anyHack: a pokeemerald-expansion build, a CFRU
+	// FireRed, tables grown past the base game's). NONE for anything else
 	nds::Game detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
+	// the same with the companion's tables (t.rom the whole ROM): also a hack whose header is its base game's but whose
+	// tables aren't (more species, its own Pokédex, the modern chart). romName: the title of a hack not in the list (its
+	// file's name; "" keeps "ROM hack")
+	nds::Game detectGame(const pkmn::RomTables& t, const std::string& romName = "");
 
 	// the whole RomData, from the ROM and today's tables (t.rom holds the whole ROM). Runs on a background thread (tens
 	// of ms on a PC); sprite() is safe from any thread. cacheDir: unused (the reads are fast enough without one).
-	// Null when the ROM is not one of the five or a hack read here (the Glazed releases: Emerald patched; Gaia: CFRU),
-	// or a table isn't found.
+	// Null when g is NONE or a table isn't found.
 	std::shared_ptr<const nds::RomData> readRomData(const pkmn::RomTables& t, const nds::Game& g, const std::string& cacheDir);
 
 	// the game's own numbers in the RomData's (for the running game's state, gen3live): a species index -> its national
