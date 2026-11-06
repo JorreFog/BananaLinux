@@ -895,6 +895,7 @@ int main(int argc, char** argv)
 				else if (a == 0x0203988c) v = bp;
 				else if (a == 0x0203bb20) { v[0] = 13; v[2] = 2; v[4] = 14; v[6] = 1; }	// 2 Potions, an Antidote
 				else if (a == 0x0203c354) { v[0] = 4; v[2] = 5; }					// 5 Poké Balls
+				else if (a == 0x0202552c + 0xee0 + 0x500 / 8 && n >= 108) { v[0] = 0x20; v[300 / 8] = 1 << (300 % 8); }	// trainers 5 and 300 beaten
 				f += reply(a, v);
 			}
 			return f;
@@ -909,6 +910,9 @@ int main(int argc, char** argv)
 		const Snapshot& s2 = c.snapshot();
 		CHECK(s2.ext && s2.dexSeen.size() == 0x7d && s2.dexOwned.size() == 0x7d);
 		CHECK(s2.dexSeen.size() == 0x7d && s2.dexSeen[0] == 0x07 && s2.dexSeen[100] == 0x80 && s2.dexOwned[0] == 0x01);
+		// the trainer flags (SaveBlock1's flags + 0x500 / 8: the guide's milestones done when their foe is beaten)
+		CHECK(r.find("READ_CORE_MEMORY 20264ac 108\n") != std::string::npos);
+		CHECK(s2.trainersBeaten.size() == 108 && s2.trainersBeaten[0] == 0x20 && (s2.trainersBeaten[37] >> 4 & 1) && !(s2.trainersBeaten[37] & 0xef));
 		CHECK(r.find("READ_CORE_MEMORY 202583c 250\n") != std::string::npos && r.find("READ_CORE_MEMORY 2025") != std::string::npos);
 		// the bag: gBagPockets read in the second set, the pockets where it points in the third (not FireRed's own
 		// bag in the save block, where a CFRU hack keeps the Pokédex)

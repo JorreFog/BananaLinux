@@ -174,6 +174,27 @@ static void testGuide()
 		q.badges = 1;
 		CHECK(nextMilestone(h, q) == &h.milestones[3]);	// the legend before the gym passed, the one after stays
 	}
+	// a milestone's foe beaten (the GBA games' trainer flags): done then, not at the next badge; and the "later" ones
+	// before it with it - but an optional fight ("none") beaten early says nothing of the story before it
+	{
+		GuideData h;
+		Milestone r0; r0.id = "rival"; r0.doneWhen = "later"; r0.trainerIds = { 12 };
+		Milestone a1; a1.id = "admin"; a1.doneWhen = "later"; a1.trainerIds = { 40, 41 };
+		Milestone o2; o2.id = "optional"; o2.doneWhen = "none"; o2.trainerIds = { 90 };
+		Milestone g3; g3.id = "gym2"; g3.doneWhen = "badge:2"; g3.trainerIds = { 70 };
+		h.milestones = { r0, a1, o2, g3 };
+		Live q; q.valid = true;
+		auto beat = [&](int id) { if ((size_t)(id >> 3) >= q.trainersBeaten.size()) q.trainersBeaten.resize((id >> 3) + 1); q.trainersBeaten[id >> 3] |= (uint8_t)(1 << (id & 7)); };
+		CHECK(nextMilestone(h, q) == &h.milestones[0]);
+		beat(12);
+		CHECK(nextMilestone(h, q) == &h.milestones[1]);	// (the rival beaten: no badge yet)
+		beat(90);
+		CHECK(nextMilestone(h, q) == &h.milestones[1]);	// (the optional fight beaten early: the admin still next)
+		beat(41);
+		CHECK(nextMilestone(h, q) == &h.milestones[3]);	// (either of the admin's teams; the optional one done already)
+		Live r; r.valid = true; r.trainersBeaten.assign(16, 0); r.trainersBeaten[70 >> 3] |= 1 << (70 & 7);
+		CHECK(nextMilestone(h, r) == nullptr);			// (the gym's leader beaten: before the badge is read too)
+	}
 	CHECK(tmNumber(Gen::IV, 328) == 1 && tmNumber(Gen::IV, 420) == 93 && tmNumber(Gen::V, 618) == 93 && tmNumber(Gen::V, 420) == 96);
 	CHECK(tmNumber(Gen::IV, 4) == 0);
 }

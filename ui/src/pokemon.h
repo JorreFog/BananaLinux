@@ -280,6 +280,9 @@ namespace banana::pkmn
 		bool bag = false;
 		std::vector<uint8_t> dexOwned, dexSeen;	// the Pokédex: a bit a national number (from 1)
 		int badges = -1;				// the eight badges' bits (-1 not read)
+		// the trainers beaten: the save's trainer flags (TRAINER_FLAGS_START 0x500 + the trainer's id, the battle's
+		// opponent id), bit n of byte n / 8 for trainer n (empty: not read)
+		std::vector<uint8_t> trainersBeaten;
 		bool champion = false;
 	};
 
@@ -328,7 +331,7 @@ namespace banana::pkmn
 		std::vector<uint8_t> bagPtrB, pocketB[5];
 		int dexOwn = 0;				// the set's Pokédex read: the game's own flags in RAM, each that many bytes (0 the save's)
 		uint32_t sbUsed[2] = {}, sbSeen[2] = {};	// the save blocks' addresses the set's reads used, and the latest read
-		std::vector<uint8_t> sbp, sb1h, mh, bagB, moneyB, keyB, dexB, flagB, nameB;
+		std::vector<uint8_t> sbp, sb1h, mh, bagB, moneyB, keyB, dexB, flagB, nameB, trainB;
 		struct Want { uint32_t addr; int len; std::vector<uint8_t>* into; bool done; };
 		std::vector<Want> wants;
 		bool changed = false;

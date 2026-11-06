@@ -66,6 +66,10 @@ namespace banana::pkmn
 		}
 
 		// the saves' layouts (pokeruby / pokeemerald / pokefirered: SaveBlock1, SaveBlock2)
+		// the trainer flags: TRAINER_FLAGS_START in every Gen III game and the builds on them (pokeruby, pokeemerald,
+		// pokefirered, CFRU and pokeemerald-expansion: 0x500), up to 864 trainers (expansion's MAX_TRAINERS_COUNT;
+		// Emerald has 855)
+		const int TRAINER_FLAGS = 0x500, TRAINER_FLAG_BYTES = 864 / 8;
 		const SaveLayout SAVE_RS = { 0x1220, 0x807, 0x800, 0x490, 0, { 0x560, 0x5b0, 0x600, 0x640, 0x740 }, { 20, 20, 16, 64, 46 } };
 		const SaveLayout SAVE_E = { 0x1270, 0x867, 0x864, 0x490, 0xac, { 0x560, 0x5d8, 0x650, 0x690, 0x790 }, { 30, 30, 16, 64, 46 } };
 		const SaveLayout SAVE_FR = { 0x0ee0, 0x820, 0x82c, 0x290, 0xf20, { 0x310, 0x3b8, 0x430, 0x464, 0x54c }, { 42, 30, 13, 58, 43 } };
@@ -1262,7 +1266,7 @@ namespace banana::pkmn
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
 		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
 		bagPtrB.clear(); for (auto& b : pocketB) b.clear();
-		sbp.clear(); sb1h.clear(); mh.clear(); bagB.clear(); moneyB.clear(); keyB.clear(); dexB.clear(); flagB.clear(); nameB.clear();
+		sbp.clear(); sb1h.clear(); mh.clear(); bagB.clear(); moneyB.clear(); keyB.clear(); dexB.clear(); flagB.clear(); nameB.clear(); trainB.clear();
 		next = Snapshot();
 		wantBattle = snap.inBattle;
 		wants.clear();
@@ -1301,6 +1305,7 @@ namespace banana::pkmn
 				if (!dexOwn && L.dexSb1) wants.push_back({ s1 + L.dexSb1, 2 * L.dexBytes, &dexB, false });
 				else if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
+				wants.push_back({ s1 + L.flags + TRAINER_FLAGS / 8, TRAINER_FLAG_BYTES, &trainB, false });
 				wants.push_back({ s2, 0x12, &nameB, false });	// (the name, then the trainer id at 0x0A and the play time at 0x0E)
 			}
 			// the game's own Pokédex flags (seen, then caught), at a fixed address (a CFRU hack's)
@@ -1353,7 +1358,7 @@ namespace banana::pkmn
 		// (kept from the last set when this one didn't read them, or read them where the save no longer is)
 		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.tid = snap.tid; s.sid = snap.sid; s.playSeconds = snap.playSeconds; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
-			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
+			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; s.trainersBeaten = snap.trainersBeaten; };
 		if (!wantSave) { keep(); return; }
 		if (!info->fixedSave && sbp.size() >= (size_t)sbPtrs(*info).len)
 		{
@@ -1436,6 +1441,7 @@ namespace banana::pkmn
 			for (int i = 0; i < 8; i++) if (flag(L.badge0 + i)) s.badges |= 1 << i;
 			s.champion = flag(L.clear);
 		}
+		if (trainB.size() >= (size_t)TRAINER_FLAG_BYTES) s.trainersBeaten = trainB;
 	}
 
 	void Companion::finish()
@@ -1517,6 +1523,7 @@ namespace banana::pkmn
 				std::to_string(x.y) + "," + std::to_string(x.mapsec) + "," + std::to_string(x.money) + "," + std::to_string(x.badges) + std::to_string(x.champion);
 			for (auto& p : x.pockets) { k += "|"; for (auto& e : p) k += std::to_string(e.item) + "x" + std::to_string(e.count) + ","; }
 			k.append(x.dexOwned.begin(), x.dexOwned.end()); k.append(x.dexSeen.begin(), x.dexSeen.end());
+			k += "/"; k.append(x.trainersBeaten.begin(), x.trainersBeaten.end());
 			return k;
 		};
 		if (key(s) != key(snap)) { changed = true; serialNo++; }	// (the play time alone isn't a change)

@@ -295,17 +295,25 @@ namespace banana::nds
 		bool known;
 		return doneByRule(s.doneWhen, live, known);
 	}
+	// one of the milestone's foes (the ROM's trainers its foe names) beaten, as the save's trainer flags say
+	static bool foeBeaten(const Milestone& m, const Live& l)
+	{
+		for (uint16_t id : m.trainerIds)
+			if ((size_t)(id >> 3) < l.trainersBeaten.size() && (l.trainersBeaten[id >> 3] >> (id & 7)) & 1) return true;
+		return false;
+	}
 	bool milestoneDone(const Milestone& m, const Live& live, const GuideData& g, size_t index)
 	{
 		bool known;
-		if (doneByRule(m.doneWhen, live, known)) return true;
+		if (doneByRule(m.doneWhen, live, known) || foeBeaten(m, live)) return true;
 		if (known || (m.doneWhen != "later" && m.doneWhen != "none")) return false;
 		// "later" (and "none": an optional fight or legend must not hold the story's next goal): done once any later
 		// milestone is
 		for (size_t j = index + 1; j < g.milestones.size(); j++)
 		{
 			bool k;
-			if (doneByRule(g.milestones[j].doneWhen, live, k)) return true;
+			// (an optional fight beaten early - "none" - says nothing of the story before it)
+			if (doneByRule(g.milestones[j].doneWhen, live, k) || (g.milestones[j].doneWhen != "none" && foeBeaten(g.milestones[j], live))) return true;
 		}
 		return false;
 	}

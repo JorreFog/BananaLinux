@@ -6,6 +6,7 @@
 #include "gba/gen3live.h"
 #include "gba/gen3rom.h"
 #include "gba/hacks.h"
+#include "nds/guide.h"
 #include "nds/rom.h"
 #include "pokemon.h"
 #include <thread>
@@ -520,6 +521,27 @@ static void testPagesRead(const std::string& path)
 		fprintf(stderr, "gba-rom-test: %s: as another release: %s\n", path.c_str(), any.hack.c_str());
 	}
 	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
+	// its guide (the repository's, BANANA_GBA_GUIDE): every place a zone of this ROM, every milestone's foe a trainer
+	// in it (the save's trainer flags tick a milestone off by them)
+	if (!getenv("BANANA_GBA_GUIDE")) return;
+	GuideData gd;
+	const GuideResolver res = guideResolver(*r);
+	std::string why;
+	if (!loadGuide(r->game, gd, &why, &res)) { fprintf(stderr, "gba-rom-test: %s: no guide (%s)\n", g.title.c_str(), why.c_str()); return; }
+	int foes = 0, found = 0;
+	std::string missing;
+	for (auto& m : gd.milestones)
+	{
+		if (m.foeName.empty()) continue;
+		foes++;
+		if (!m.trainerIds.empty()) found++;
+		else missing += " " + m.id;
+	}
+	fprintf(stderr, "gba-rom-test: %s guide: %zu milestones, %d foes found in the ROM of %d,%s %zu steps, %zu secrets, %zu notes, %zu unresolved places%s\n",
+		g.title.c_str(), gd.milestones.size(), found, foes, missing.empty() ? "" : (" not:" + missing + ",").c_str(), gd.steps.size(), gd.secrets.size(),
+		gd.notes.size(), gd.unresolved.size(), why.empty() ? "" : (" (" + why + ")").c_str());
+	CHECK(found == foes);
+	CHECK(gd.unresolved.empty());
 }
 
 int main(int argc, char** argv)

@@ -105,23 +105,17 @@
  "milestones": [
   {
    "id": "story-bronze-fields",
-   "name": "Team Chimera in Bronze Fields",
+   "name": "Bronze Fields and your starter",
    "kind": "story",
    "place": "bronze-fields",
    "level_cap": 5,
-   "foe": [
-    {
-     "name": "Grunt",
-     "ace_level": 5
-    }
-   ],
    "done_when": "party",
    "opens": [
     "acrisia-city",
     "bronze-fields",
     "acrisia-mountains"
    ],
-   "tips": "Professor Elia at Acrisia University offers nine starters (Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly), then the Rotom Phone, the Exp. Share and an outfit box. On the parcel errand a Team Chimera thug with a Lv 5 Pancham blocks Bronze Fields.",
+   "tips": "Professor Elia at Acrisia University offers nine starters (Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly), then the Rotom Phone, the Exp. Share and an outfit box.",
    "quality": "reference-only",
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
