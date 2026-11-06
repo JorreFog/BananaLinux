@@ -97,8 +97,8 @@ st_check touch "setupstate: slide=name"
 st_run again "home 0; setupagain; press b; setupstate; setupagain; press start; press start; press start; press start; press start; press start; press a; setupstate"
 st_check again "setupstate: closed page=0 open=1"
 st_not again "setup finished"
-# the language picked on the first slide (from the list: right opens it, down to fi, A takes it; up to Next): saved, the menu starts again (LANGUAGE), on the Wi-Fi slide (setup-step)
-st_run lang "home 0; setup; press right; shot st-langlist; press down; press a; press up; press a"
+# the language picked on the first slide (from the list: right opens it, down to fi (es, then fi), A takes it; up to Next): saved, the menu starts again (LANGUAGE), on the Wi-Fi slide (setup-step)
+st_run lang "home 0; setup; press right; shot st-langlist; press down; press down; press a; press up; press a"
 st_check lang "press a: settings result 9"
 grep -q '^language = fi' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
 [ "$(cat "$SFX/data/setup-step" 2>/dev/null)" = "wifi boot" ] || { echo "FAIL $size: setup-step after the language: $(cat "$SFX/data/setup-step" 2>/dev/null)"; fail=1; }
