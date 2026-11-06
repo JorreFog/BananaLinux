@@ -164,7 +164,7 @@ namespace banana
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
-			const std::string& scraped = "");
+			const std::string& scraped = "", const std::string& folder = "");	// folder: the system's on the card (Save sync's key)
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
@@ -246,14 +246,32 @@ namespace banana
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
 		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES, HOMESRV } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
-		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
+		struct PickGame { std::string sys, key, title, failed; long long bytes = 0; bool on = false, there = false; };	// failed: why its download didn't come (Get games)
 		std::vector<PickGame> pickGames;
 		std::vector<std::string> pickSys;		// the systems' folders, in the server's order
 		int pickLevel = 0, pickSysSel = 0, pickSel = 0, pickTop = 0;	// level 0: the systems, 1: a system's games
 		bool pickLoading = false, pickDirty = false;
 		std::string pickError;
 		wifi::Job pickJob;
-		void openPickGames();
+		// get: RomM's Get games, the same lists, A putting a game on the download list (banana/homesync-get.txt, which
+		// any sync takes games off as they come) and starting a sync; on: waiting on that list. hide: the games on the
+		// card left out of the list (X)
+		bool pickGet = false, pickHide = false;
+		double pickPoll = 0;
+		// query: Get games' search (Y), the titles holding it; from the systems, every system's (pickSysSel -1)
+		std::string pickQuery;
+		// asked: the games A put on the list on this visit; restarted: those a sync has been started again for, once
+		// each, when one ended without reading the list after they were asked for (wasSync: a sync ran at the last look)
+		std::set<std::string> pickAsked, pickRestarted;
+		bool pickWasSync = false;
+		double getRestartAt = 0;
+		bool pollGetRestart();
+		void openPickGames(bool get);
+		bool editGetList(const std::string& key, bool add);
+		std::set<std::string> readGetList() const;
+		bool gameOnCard(const std::string& rel) const;
+		int getWaiting = -1;		// the Get games row's count (-1 not read yet)
+		double getWaitingAt = 0;
 		bool pollPickGames();
 		Result pressPickGames(Key k);
 		void renderPickGames();
@@ -307,7 +325,12 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_SYNC };
+		// Save sync (paired with RomM): off keeps this game's saves on this handheld, its line "<system folder>/<ROM file
+		// name>" in banana/homesync-local.txt, which banana-sync reads
+		std::string pgLocalKey;
+		bool pgLocal = false;
+		bool setSaveLocal(const std::string& key, bool local);
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
@@ -323,7 +346,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -633,7 +656,7 @@ namespace banana
 		wifi::Job hsJob;
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
-		void startSync();
+		bool startSync();	// (true: a sync was started)
 		void startPairing();
 		void hsRun(const std::string& args);	// banana-sync <args> in the background
 		// banana-sync with this card's root, pairing and settings, then args, as one sh command line (the Sync row's

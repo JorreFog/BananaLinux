@@ -3,7 +3,8 @@
 # pairs, a sync is done at once. RomM at any address: probe --romm answers as $FAKE_SYNC_PROBE says (ok, old, or a
 # failure: redirect, for an http:// address only, access, tls, dns), and pair --romm shows a code and is approved 2 s
 # later (FAKE_SYNC_PAIR=deny: refused; hang: no answer), a code given pairs at once (FAKE_SYNC_FIND=romm: no Romhost
-# found, and RomM at the address typed instead). Each call's arguments go to $FAKE_SYNC_LOG
+# found, and RomM at the address typed instead); games lists two GBA games, one on the card; a sync run by hand leaves
+# its status as it is, or with FAKE_SYNC_DONE says it is done a second later. Each call's arguments go to $FAKE_SYNC_LOG
 echo "$*" >> "$FAKE_SYNC_LOG"
 # what banana-sync saves lists, as $FAKE_SYNC_SAVES says (the sync before a game leaves the same in launch.conflict)
 lines() {
@@ -31,6 +32,8 @@ while [ $# -gt 0 ]; do
     --root|--settings|--rom) shift 2 ;;
     discover) [ "${FAKE_SYNC_FIND:-}" = romm ] && exit 0; printf 'ROMHOST\thttp://192.168.50.96:8092\tTest server\n'; exit 0 ;;
     saves) lines; exit 0 ;;
+    # the server's games for Get games: one on the card, one not
+    games) printf 'gba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\ngba\tgba/Pocket Hack.gba\tPocket Hack [Hack by Someone v1.0]\t16777216\t0\t0\n'; exit 0 ;;
     resolve) case ${FAKE_SYNC_RESOLVE:-} in fail) echo 'error no answer'; exit 1 ;; hang) exec sleep 60 ;; slow) sleep 2 ;; esac; echo ok; exit 0 ;;
     restore) echo ok; exit 0 ;;
     probe)
@@ -62,6 +65,8 @@ while [ $# -gt 0 ]; do
 done
 # the sync before a game, as $FAKE_SYNC_LAUNCH says: done at once, a conflict held, failed, the first answer and then
 # nothing, nothing at all, or the saves held by another sync for 8 s (held) or for good (heldlong) and then nothing
+# (FAKE_SYNC_DONE: a sync run by hand says it's done a second later, as banana-sync's own would)
+[ -z "$when" ] && [ -n "${FAKE_SYNC_DONE:-}" ] && [ -n "$status" ] && { sleep 1; echo 'done 0 0 0 0 0 0|' > "$status.new"; mv "$status.new" "$status"; exit 0; }
 [ "$when" = launch ] || exit 0
 say() { echo "$1" > "$run/launch.status.new"; mv "$run/launch.status.new" "$run/launch.status"; }
 say 'running 0 0 |Test server'

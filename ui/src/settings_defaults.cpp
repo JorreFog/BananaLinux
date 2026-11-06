@@ -59,7 +59,7 @@ namespace banana
 			{ "theme", "dark", TEXT, nullptr, 0, 0 },
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ds_cart_art", "box", ENUM, DS_CART_ART, 0, 0 },
-			{ "homesync_games", "chosen", ENUM, ALL_CHOSEN, 0, 0 },
+			{ "homesync_games", "all", ENUM, ALL_CHOSEN, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
 			{ "speaker_eq", "on", ENUM, ON_OFF, 0, 0 },
 			{ "speaker_eq_profile", "tuned", TEXT, nullptr, 0, 0 },

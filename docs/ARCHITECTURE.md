@@ -258,9 +258,25 @@ into a GET (405). It is still Romhost's typed address, without following redirec
 Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
 check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
 
-Games come to the card only when chosen (Games to sync: Chosen, the default; `banana/homesync-games.txt`), since a RomM
-library can be hundreds of GB; All copies every game of the synced systems. The choice is only of the games that come
-down: every game on the card that the server has syncs its saves, chosen or not. Choose games and the gamelist name a
+On RomM, games and saves are apart, as in Grout. Games come by Get games, a store's download: the server's games a
+system at a time (`banana-sync games`), A putting one on the download list (`banana/homesync-get.txt`, written under
+`/run/banana/get.lock`; `banana-sync get [--drop] <key>`) and starting a sync, since a RomM library can be hundreds of
+GB. Any sync of the games brings what the list holds, games asked for while it runs included (before its saves when
+it can, so a game's save comes with it; those asked for during the saves after them, with `save.lock` let go, so the
+sync after a game never waits on a download; one asked for as a sync is ending is brought by another the menu
+starts, once), and takes each off once its files are in place, or a file of the owner's
+own is at its path; a download that failed stays for the next sync, its row saying Failed and why (the sync writes
+`banana/homesync-get-failed.txt`), and Auto sync on Wi-Fi carries the list on. Y searches the titles and file names,
+every system's from the systems list, one system's inside it. Once
+on the card a game is the owner's like any copied over File sharing: nothing updates it, nothing removes it when it
+leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on
+the card already, copied by hand, is adopted with the entry its owner gave it). Saves follow what is on the
+card, however it came: every game the server has (by platform and file name) syncs its saves, and a server's save for
+a game that isn't on the card stays there. Systems leaves a system's saves out; one game's can stay on this handheld
+by its page in the library (X on the game, Save sync), a line `<system folder>/<ROM file name>` in
+`banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at once. Romhost
+is unchanged: the card follows the server's list (Games to sync: All, or the games ticked in Choose games), and
+Homeport decides the rest. Get games and the gamelist name a
 RomM game by its title and the tags RomM parses from its file name (a revision, a hack's `[Hack by ... v1.0]`, a
 translation), so a hack doesn't read as a second copy of its base game; the regions follow only where two games of a
 system would share a title, and the file names where that still doesn't tell them apart. A compressed ROM's hashes on

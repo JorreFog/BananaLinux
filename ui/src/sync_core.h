@@ -209,6 +209,7 @@ namespace bsync
 	void takeSaves(Conf& to, const Conf& from);	// the saves' part of the state (saves, states, slots, conflicts, held, queue)
 	// save.lock (one run at a time over the card's saves), waited for up to secs; kept until the run ends
 	bool lockSaves(int secs);
+	void unlockSaves();	// (the saves done: another run, the sync after a game, may have them while this one copies games)
 
 	// ---- what a server offers: one list of files whichever server it is ----------------------------------------------
 	struct MFile
@@ -242,8 +243,10 @@ namespace bsync
 	{
 		Conf& c;
 		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
-		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
 		std::set<std::string> ownCovers;	// system folders that make their own covers (systems.conf: covers = own)
+		// RomM: the games whose saves stay on this handheld ("<system folder>/<ROM file name>", banana/homesync-local.txt,
+		// the game page's Save sync), neither sent nor taken
+		std::set<std::string> local;
 		std::string settleKey;		// resolve: the conflict its owner settled for the card's save, sent or kept as the run decides it
 		std::string onlyRom;		// sync --rom: only that game's save (roms-relative); RomM 5.4 and newer, others every save
 		bool gameStarted = false;

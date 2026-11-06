@@ -89,9 +89,26 @@ namespace bsync
 		bool listed = false;
 		bool scoped() const { return !onlyRom.empty() || onlyQueued; }
 		std::vector<JPtr> romJson;
+		// (the list as fetched, and the systems left out of it: each call's own view is made from it, so one skipping
+		// more doesn't take games from one after it that skips less)
+		std::map<long long, std::string> allPlatforms;
+		std::vector<RommRom> allRoms;
+		std::vector<JPtr> allJson;
+		std::set<std::string> fetchSkip;
 		bool list(const std::set<std::string>& skip, std::string& err)
 		{
-			if (listed) return true;
+			// (listed once a run, and seen as each call skips: Get games' passes list every system, the saves leave out
+			// those set to Skip. A call wanting a system the fetch left out fetches again)
+			if (listed && std::includes(skip.begin(), skip.end(), fetchSkip.begin(), fetchSkip.end()))
+			{
+				platforms.clear(); roms.clear(); romJson.clear();
+				for (auto& p : allPlatforms) if (!skip.count(p.second)) platforms.insert(p);
+				for (auto& r : allRoms) if (!skip.count(r.folder)) roms.push_back(r);
+				for (auto& j : allJson) if (platforms.count((long long)j->num("platform_id"))) romJson.push_back(j);
+				return true;
+			}
+			listed = false;
+			platforms.clear(); roms.clear(); romJson.clear();
 			Resp r = call("GET", "/api/platforms");
 			if (r.code != 200) { err = r.code == 401 || r.code == 403 ? "unpaired" : "platforms: " + r.error(); return false; }
 			JPtr j = r.json();
@@ -137,6 +154,7 @@ namespace bsync
 				}
 			}
 			listed = true;
+			allPlatforms = platforms; allRoms = roms; allJson = romJson; fetchSkip = skip;
 			return true;
 		}
 		bool manifest(Manifest& m, const std::set<std::string>& skip, std::string& err) override
@@ -288,6 +306,9 @@ namespace bsync
 			auto li = cardIndex[r.folder].find(r.entry);
 			return li == cardIndex[r.folder].end() ? "" : li->second;
 		}
+		// a game whose saves stay on this handheld (its page's Save sync), keyed as that page writes it: the folder on the
+		// card, which systems.conf can name apart from the system, and the ROM's file name
+		bool keptHere(const RommRom& r, const std::string& here) const { return local.count(romFolder(r.folder) + "/" + baseOf(here)) > 0; }
 		// each game on the card with a save in play (one on the server, or one here in any folder under saves/), and
 		// its save's path. What can't be said for sure is said instead: a system whose save folder isn't known, a ROM
 		// other than the server's
@@ -301,6 +322,7 @@ namespace bsync
 			{
 				std::string here = onCard(r);
 				if (here.empty()) continue;	// (not on this card)
+				if (keptHere(r, here)) { unsure.insert(r.id); say("  not synced, its saves stay on this handheld: %s", here.c_str()); continue; }
 				if (here == resumeRom && onlyRom != here) { unsure.insert(r.id); say("  not synced, about to start again after Power off after sleeping, its resume state with the save here: %s", here.c_str()); continue; }
 				if (!sys.count(r.folder)) sys[r.folder] = systemSaves(r.folder);
 				const SysSaves& ss = sys[r.folder];
@@ -1080,8 +1102,10 @@ namespace bsync
 				{
 					auto ri = romById.find((long long)s->num("rom_id"));
 					if (ri == romById.end() || s->flag("missing_from_fs")) continue;
-					// (a game not chosen and not on the card: not pulled; its saves sync whenever it's on the card, chosen or not)
-					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName) && onCard(ri->second).empty()) continue;
+					// (a game not on the card: its saves not pulled, as Get games brings only what was asked for; one whose
+					// saves stay on this handheld: neither way)
+					std::string here = onCard(ri->second);
+					if (here.empty() || keptHere(ri->second, here)) continue;
 					if (!s->str("slot").empty()) continue;	// (another client's versioned slots: left to it)
 					rows.push_back({ s, &ri->second });
 					onServer.insert(ri->second.id);

@@ -858,9 +858,10 @@ namespace bsync
 		}
 		return gameStarted;
 	}
+	static int saveLockFd = -1;	// (save.lock, held from lockSaves until unlockSaves or the run's end)
 	bool lockSaves(int secs)
 	{
-		static int fd = -1;
+		int& fd = saveLockFd;
 		if (fd < 0) fd = open((RUN + "/save.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 		if (fd < 0) return true;	// (no /run to lock in: as before the lock)
 		for (int i = 0; flock(fd, LOCK_EX | LOCK_NB) != 0; i++)
@@ -869,6 +870,10 @@ namespace bsync
 			usleep(100000);
 		}
 		return true;
+	}
+	void unlockSaves()
+	{
+		if (saveLockFd >= 0) flock(saveLockFd, LOCK_UN);
 	}
 	void dropDownload(const std::string& dl)
 	{

@@ -69,6 +69,7 @@
 #include <fstream>
 #include <memory>
 #include <signal.h>
+#include <sstream>
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -312,24 +313,120 @@ namespace
 		for (auto& f : g.files) if (!f.media) return f.path;
 		return g.files.empty() ? std::string() : g.files[0].path;
 	}
-	std::string choiceFile() { return ROOT + "/banana/homesync-games.txt"; }
-	std::set<std::string> readChoice()
+	std::vector<std::string> readLines(const std::string& path)
 	{
-		std::set<std::string> out;
-		std::ifstream f(choiceFile());
+		std::vector<std::string> out;
+		std::ifstream f(path);
 		std::string l;
-		while (std::getline(f, l)) { while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back(); if (!l.empty() && l[0] != '#') out.insert(l); }
+		while (std::getline(f, l)) { while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back(); if (!l.empty() && l[0] != '#') out.push_back(l); }
 		return out;
+	}
+	std::set<std::string> readChoice() { auto v = readLines(ROOT + "/banana/homesync-games.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	// RomM's Get games: the games asked for and not on the card yet, banana/homesync-get.txt, a key a line (as games
+	// lists them), in the order asked. Any sync of the games brings them, and a game leaves the list once its files are
+	// in place (or a file of the owner's own is at its path); one whose download failed stays for the next sync. Once
+	// on the card a game is the owner's like any other: nothing updates it or removes it. The list is changed under
+	// get.lock, the menu adding (banana-sync get) while a sync takes games off it
+	std::string getFile() { return ROOT + "/banana/homesync-get.txt"; }
+	std::string getFailedFile() { return ROOT + "/banana/homesync-get-failed.txt"; }
+	bool editGet(const std::vector<std::string>& add, const std::set<std::string>& drop)
+	{
+		int lk = open((RUN + "/get.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		std::vector<std::string> now = readLines(getFile()), out;
+		std::set<std::string> seen;
+		for (auto& k : now) if (!drop.count(k) && seen.insert(k).second) out.push_back(k);
+		for (auto& k : add) if (!drop.count(k) && seen.insert(k).second) out.push_back(k);
+		bool ok = true;
+		if (out != now)
+		{
+			std::string body = "# Home server > Get games: the games to download, taken off as each comes\n";
+			for (auto& k : out) body += k + "\n";
+			ok = writeAtomic(getFile(), body);
+		}
+		// (and the last try's failure gone, as the menu's page does: a game asked for again, or taken back, waits afresh)
+		std::set<std::string> touched(drop.begin(), drop.end());
+		touched.insert(add.begin(), add.end());
+		std::string failed, was = readFile(getFailedFile());
+		std::istringstream in(was);
+		for (std::string l; std::getline(in, l);)
+		{
+			size_t t = l.find('\t');
+			if (l.empty() || (l[0] != '#' && t != std::string::npos && touched.count(l.substr(0, t)))) continue;
+			failed += l + "\n";
+		}
+		if (failed != was)
+		{
+			bool any = false;
+			std::istringstream f(failed);
+			for (std::string l; std::getline(f, l);) if (!l.empty() && l[0] != '#') any = true;
+			if (!any) unlink(getFailedFile().c_str());
+			else ok &= writeAtomic(getFailedFile(), failed);
+		}
+		if (lk >= 0) close(lk);
+		return ok;
+	}
+	// why each game still on Get games' list didn't come the last time a sync tried it (banana/homesync-get-failed.txt,
+	// "<key> TAB <why>", for the page's Failed): a game that came, or was taken off the list, has no line
+	// (files: each game's paths under the ROMs folder, as the manifest has them, a disc set's every disc: an error is a
+	// game's when it names one of them)
+	void noteGetFailed(const std::set<std::string>& tried, const std::vector<std::string>& passErrors, const std::map<std::string, std::vector<std::string>>& files)
+	{
+		int lk = open((RUN + "/get.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		auto q = readLines(getFile());
+		std::set<std::string> listed(q.begin(), q.end());
+		std::map<std::string, std::string> why;
+		for (auto& l : readLines(getFailedFile())) { size_t t = l.find('\t'); if (t != std::string::npos) why[l.substr(0, t)] = l.substr(t + 1); }
+		for (auto& k : tried)
+		{
+			if (!listed.count(k)) { why.erase(k); continue; }
+			// (its own files' error when there is one, else what stopped the whole pass: no space, the server's list.
+			// Never another game's file's)
+			auto about = [&](const std::string& e, const std::string& path) { return e.compare(0, path.size() + 2, path + ": ") == 0; };
+			auto anyGame = [&](const std::string& e) { for (auto& g : files) for (auto& f : g.second) if (about(e, f)) return true; return about(e, k); };
+			std::string w;
+			auto own = files.find(k);
+			for (auto& e : passErrors)
+			{
+				if (about(e, k)) { w = e.substr(k.size() + 2); break; }
+				if (own != files.end()) for (auto& f : own->second) if (about(e, f)) { w = e; break; }
+				if (!w.empty()) break;
+			}
+			if (w.empty()) for (auto& e : passErrors) if (!anyGame(e)) { w = e; break; }
+			if (w.empty()) w = "not brought, for no reason given";
+			for (char& ch : w) if (ch == '\t' || ch == '\n') ch = ' ';
+			why[k] = w;
+		}
+		std::string lines;
+		for (auto& kv : why) if (listed.count(kv.first)) lines += kv.first + "\t" + kv.second + "\n";
+		// (no file when nothing failed: the page takes none as none)
+		if (lines.empty()) unlink(getFailedFile().c_str());
+		else
+		{
+			std::string body = "# Home server > Get games: why a game still on the list didn't come last time\n" + lines;
+			if (body != readFile(getFailedFile())) writeAtomic(getFailedFile(), body);
+		}
+		if (lk >= 0) close(lk);
+	}
+	// RomM: the games whose saves stay on this handheld (the game page's Save sync), "<system folder>/<ROM file name>"
+	std::set<std::string> readLocal() { auto v = readLines(ROOT + "/banana/homesync-local.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	std::string localKeyOf(const std::string& romRel)
+	{
+		size_t s = romRel.find('/');
+		return s == std::string::npos || romRel[0] == '/' ? "" : romRel.substr(0, s) + "/" + baseOf(romRel);
 	}
 
 	// chosen: null = every game; else only those games come to the card, and the others' files already on it stay (an
 	// unticked game isn't removed: un-choosing never deletes, as a skipped system's games stay)
+	// fetch (RomM's Get games): the chosen games downloaded once and left to the owner, nothing removed, and only their
+	// own gamelist entries written; the server's list isn't followed after (no etag kept)
 	// toSd2 (settings homesync_roms_to = sd2): new games go to the second SD card instead of this one. A game the sync
 	// already put on a card stays on that card (its updates and its removal happen there); a new game whose files are
 	// on either card already (copied by hand) is adopted where it is. With the second card out, the files that belong
 	// on it wait for the next sync (an error says so): they never go to this card instead
 	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders, const std::set<std::string>* chosen = nullptr,
-		bool toSd2 = false)
+		bool toSd2 = false, bool fetch = false)
 	{
 		RomResult res;
 		std::map<std::string, const MFile*> want;
@@ -442,6 +539,7 @@ namespace
 		bool emptyList = want.empty() && !c.files.empty();
 		for (auto& kv : c.files)
 		{
+			if (fetch) break;	// (a download only: nothing leaves the card)
 			if (want.count(kv.first)) continue;
 			std::string folder = kv.first.substr(0, kv.first.find('/'));
 			if (skipFolders.count(folder)) continue;	// (a system skipped on this handheld: its games stay as they are)
@@ -477,6 +575,7 @@ namespace
 		}
 		long long doneBytes = 0;
 		int i = 0;
+		std::set<std::string> got;	// (the files this run downloaded)
 		for (auto* f : todo)
 		{
 			i++;
@@ -528,6 +627,7 @@ namespace
 			}
 			res.downloaded++;
 			res.changed = true;
+			got.insert(f->path);
 			saveConf(c);	// progress kept: a sync cut short goes on from here
 			say("  [%d/%zu] %s", i, todo.size(), f->path.c_str());
 		}
@@ -552,6 +652,10 @@ namespace
 			std::vector<std::vector<std::pair<std::string, std::string>>> ours[2];
 			for (auto& g : s.games)
 			{
+				// (a download writes the entries of the games it brought, no other's: a game asked for that was on the
+				// card already, copied by hand and adopted, keeps the entry its owner gave it)
+				if (fetch && !chosen->count(gameKey(g))) continue;
+				if (fetch && std::none_of(g.files.begin(), g.files.end(), [&](const MFile& f) { return !f.media && got.count(f.path); })) continue;
 				bool all = !g.gl.empty();
 				for (auto& f : g.files) { auto st = c.files.find(f.path); if (!f.media && (st == c.files.end() || st->second != f.key())) all = false; }
 				if (!all) continue;
@@ -578,7 +682,10 @@ namespace
 					continue;	// (the second SD card is out: its gamelist when it's back)
 				}
 				std::string path = root + "/" + s.folder + "/gamelist.xml", out;
-				auto& before = c.gamelist[key];
+				if (fetch && ours[k].empty()) continue;
+				// (a download's entries are the owner's once written: not kept to be taken out again)
+				std::vector<std::string> none;
+				auto& before = fetch ? none : c.gamelist[key];
 				std::set<std::string> drop(before.begin(), before.end());
 				bool had = exists(path);
 				if (ours[k].empty() && drop.empty()) { c.gamelist.erase(key); continue; }
@@ -591,7 +698,7 @@ namespace
 		}
 		std::set<std::string> listed;
 		for (auto& s : m.systems) listed.insert(s.folder);
-		for (auto it = c.gamelist.begin(); it != c.gamelist.end();)
+		for (auto it = c.gamelist.begin(); !fetch && it != c.gamelist.end();)
 		{
 			bool sd = it->first.compare(0, 5, "@sd2/") == 0;
 			std::string folder = sd ? it->first.substr(5) : it->first, root = sd ? sd2 : ROMS;
@@ -607,7 +714,33 @@ namespace
 			res.errors.push_back("the second SD card is out, has no roms folder or its games are off in Settings: " + std::to_string(waiting) +
 				(waiting == 1 ? " file waits" : " files wait") + " for it");
 		}
-		if (res.errors.empty()) c.etag = m.etag;
+		if (res.errors.empty() && !fetch) c.etag = m.etag;
+		if (fetch)
+		{
+			// (each game asked for taken off the list once its files are all in place, or one of them is the owner's own)
+			std::set<std::string> done, mine(res.conflicts.begin(), res.conflicts.end());
+			for (auto& s : m.systems)
+				for (auto& g : s.games)
+				{
+					std::string k = gameKey(g);
+					if (!chosen->count(k)) continue;
+					bool in = true, own = false;
+					for (auto& f : g.files)
+					{
+						if (f.media) continue;
+						own = own || mine.count(f.path);
+						auto st = c.files.find(f.path);
+						std::string root = c.where.count(f.path) ? sd2 : ROMS;
+						in = in && st != c.files.end() && st->second == f.key() && !root.empty() && exists(root + "/" + f.path);
+					}
+					if (in || own) done.insert(k);
+				}
+			// (and one the server no longer lists: nothing to bring)
+			std::set<std::string> listedKeys;
+			for (auto& s : m.systems) for (auto& g : s.games) listedKeys.insert(gameKey(g));
+			for (auto& k : *chosen) if (!listedKeys.count(k)) { done.insert(k); say("  get: %s isn't on the server any more", k.c_str()); }
+			if (!dryRun) editGet({}, done);
+		}
 		saveConf(c);
 		b.report(m, res.downloaded, res.removed, res.conflicts, res.errors);
 		return res;
@@ -1061,21 +1194,34 @@ namespace
 		bool states = get("homesync_states", "off") == "on" || settleKey.find("/state:") != std::string::npos;
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
-		bool pick = get("homesync_games", "chosen") == "chosen";
+		// RomM: the games come only by Get games (fetch: the games asked for, downloaded once), and a game's saves stay
+		// on this handheld when its page says so. Romhost: the card follows the server's list, every game or the chosen
+		const bool romm = c.backend == "romm";
+		bool pick = !romm && get("homesync_games", "all") == "chosen";
 		std::set<std::string> chosen;
-		if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
+		if (romm) { auto v = readLines(getFile()); chosen.insert(v.begin(), v.end()); c.etag.clear(); }
+		else if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
 		auto b = backendFor(c);
 		b->skip = skip;
-		b->chosen = pick ? &chosen : nullptr;
 		b->ownCovers = ownCoversOf(SYSTEMS);
+		if (romm) b->local = readLocal();
 		b->onlyRom = onlyRom;
+		// (one game's sync, before it or after it, for a game whose saves stay here: nothing to do, said at once so the
+		// wait before the game is over)
+		if (romm && !onlyRom.empty() && b->local.count(localKeyOf(onlyRom)))
+		{
+			say("%s: its saves stay on this handheld", onlyRom.c_str());
+			if (autoWhy == "launch" && !dryRun) writeAtomic(RUN + "/launch.conflict", "");
+			status("done 0 0 0 0 0 0|");
+			return 0;
+		}
 		b->onlyQueued = queued;
 		b->settleKey = settleKey;
 		b->beforeGame = autoWhy == "launch";
 		if (!onlyRom.empty() && c.backend != "romm") say("Romhost decides which saves move: all of them synced, not only %s's", onlyRom.c_str());
 		// (one game's: its states go too, when they are on, except while it waits to start)
 		if (!onlyRom.empty()) { savesOnly = true; if (autoWhy == "launch") states = false; }
-		bool roms = !savesOnly && get("homesync_roms", "on") == "on";
+		bool roms = !savesOnly && (romm ? !chosen.empty() : get("homesync_roms", "on") == "on");
 		Awake awake;
 		if (roms) awake.take();
 		// (the line before the server's first answer: the menu's wait before a game gives that answer 5 s from it)
@@ -1084,13 +1230,27 @@ namespace
 		std::vector<std::string> errors, conflicts;
 		int downloaded = 0, removed = 0, up = 0, down = 0, sconf = 0;
 		std::string note;
-		if (roms)
+		auto romsPass = [&]() -> bool
 		{
+			const size_t before = errors.size();
+			// (Get games: what didn't come said per game, for the page)
 			Manifest m;
-			std::string err;
-			if (!b->manifest(m, skip, err))
+			std::map<std::string, std::vector<std::string>> files;
+			auto noteFailed = [&]()
 			{
-				if (err == "unpaired") { status("error unpaired"); c.last = "unpaired"; saveConf(c); return 1; }
+				if (!romm || dryRun) return;
+				for (auto& s : m.systems) for (auto& g : s.games)
+				{
+					std::string k = gameKey(g);
+					if (k.empty() || !chosen.count(k)) continue;
+					for (auto& f : g.files) if (!f.media) files[k].push_back(f.path);
+				}
+				noteGetFailed(chosen, std::vector<std::string>(errors.begin() + before, errors.end()), files);
+			};
+			std::string err;
+			if (!b->manifest(m, romm ? std::set<std::string>() : skip, err))
+			{
+				if (err == "unpaired") { status("error unpaired"); c.last = "unpaired"; saveConf(c); noteFailed(); return false; }
 				errors.push_back(err);
 			}
 			else if (m.unchanged) say("roms: up to date");
@@ -1103,11 +1263,28 @@ namespace
 				{
 					sd2MakeRoms();	// (a fresh card; not one whose games are off in Settings)
 				}
-				RomResult r = syncRoms(*b, c, m, skip, pick ? &chosen : nullptr, toSd2);
-				downloaded = r.downloaded; removed = r.removed; conflicts = r.conflicts;
+				RomResult r = syncRoms(*b, c, m, skip, romm || pick ? &chosen : nullptr, toSd2, romm);
+				downloaded += r.downloaded; removed += r.removed; conflicts.insert(conflicts.end(), r.conflicts.begin(), r.conflicts.end());
 				for (auto& e : r.errors) errors.push_back(e);
 			}
-		}
+			noteFailed();
+			return true;
+		};
+		// (Get games: what was asked for while this run was going, brought by it too, once each: a game whose download
+		// failed waits for the next sync. Before the saves, so a game's save comes with it; after them, the last ones)
+		std::set<std::string> tried = chosen;
+		auto more = [&]()
+		{
+			if (!romm || savesOnly || dryRun) return false;
+			std::set<std::string> next;
+			for (auto& k : readLines(getFile())) if (tried.insert(k).second) next.insert(k);
+			if (next.empty()) return false;
+			chosen = next;
+			awake.take();
+			return true;
+		};
+		if (roms && !romsPass()) return 1;
+		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
 		// (the saves one run at a time: a sync of one game's beside a sync copying games waits for the other's to end,
 		// and takes the saves' state as that one left it)
 		// (and asked again once it has them: a game can start during that wait, with no lock of its own if a sync held it then)
@@ -1149,6 +1326,10 @@ namespace
 			b->resumeRom = !rr.empty() && rr[0] == '/' ? "" : rr;
 			b->saves(states, up, down, sconf, errors, note);
 		}
+		// (the saves' part written and save.lock let go first: the games asked for meanwhile can take minutes, and the
+		// sync after a game, or before one, must not wait on them)
+		if (holdSaves) { saveConf(c); holdSaves = false; unlockSaves(); }
+		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
 		for (auto& e : errors) say("  error: %s", e.c_str());
 		if (!note.empty()) say("%s", note.c_str());
 		char sum[256];
@@ -1212,7 +1393,7 @@ int main(int argc, char** argv)
 		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
 		tlsVerify = set["homesync_tls"] != "off";
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | get [--drop] <key>... | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
 	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
 	if (cmd == "blank" && args.size() > 1)
@@ -1268,7 +1449,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	// banana-sync games: the server's games for the menu's chooser, a line each: system folder TAB key TAB title TAB
-	// bytes TAB chosen (1/0) TAB on the card (1/0); "error <why>" on failure
+	// bytes TAB chosen (1/0; on RomM, waiting in Get games' list) TAB on the card (1/0); "error <why>" on failure
 	if (cmd == "games")
 	{
 		Conf c = loadConf();
@@ -1280,6 +1461,7 @@ int main(int argc, char** argv)
 		std::string err;
 		if (!b->manifest(m, {}, err)) { printf("error %s\n", err.c_str()); return 1; }
 		std::set<std::string> chosen = readChoice();
+		if (c.backend == "romm") { auto v = readLines(getFile()); chosen = std::set<std::string>(v.begin(), v.end()); }
 		std::string sd2 = sd2Roms();	// (a game on either card is on the handheld)
 		for (auto& s : m.systems)
 			for (auto& g : s.games)
@@ -1303,6 +1485,16 @@ int main(int argc, char** argv)
 				printf("%s\t%s\t%s\t%lld\t%d\t%d\n", s.folder.c_str(), k.c_str(), t.c_str(), bytes, chosen.count(k) ? 1 : 0, there ? 1 : 0);
 			}
 		return 0;
+	}
+	// banana-sync get <key>...: games added to Get games' list (RomM), for the next sync to bring; get --drop <key>...:
+	// taken off it. "ok" or "error <why>"
+	if (cmd == "get" && args.size() > 1)
+	{
+		bool drop = args[1] == "--drop";
+		std::vector<std::string> keys(args.begin() + (drop ? 2 : 1), args.end());
+		for (auto& k : keys) if (!safeRel(k) || k.find('/') == std::string::npos) return answer("not a game: " + k);
+		bool ok = drop ? editGet({}, std::set<std::string>(keys.begin(), keys.end())) : editGet(keys, {});
+		return answer(ok ? "" : "the list can't be written");
 	}
 	if (cmd == "forget")
 	{

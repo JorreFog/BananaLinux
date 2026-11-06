@@ -5,8 +5,8 @@
 #            $ROMHOST_PY imports aiohttp; skipped otherwise
 # What must hold: pairing (RomM's device code, a client token's pairing code; Romhost's code from Homeport, UDP
 # discovery), the games with their covers and gamelist entries in the card's layout, a gamelist's own entries and a
-# file of the user's at a server path left alone, a system skipped on the handheld left as it is, a game gone from
-# the server removed (unless changed on the card), a RomM before 5.4 only giving its saves (one changed on both sides
+# file of the user's at a server path left alone, RomM's Get games (only what was asked for comes, once, and stays the
+# owner's: a game gone from the server or deleted from the card is left so), a RomM before 5.4 only giving its saves (one changed on both sides
 # held, both kept), and Romhost's saves both ways with nothing lost in a conflict. RomM's saves by slot are
 # tests/sync-slots.sh's.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -25,9 +25,15 @@ waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null &
 card() { mkdir -p "$OUT/$1/banana" "$OUT/$1/run" "$OUT/$1/roms"; }
 # (the image's systems.conf, and no RetroArch cores: the systems whose save folder is a core's are said, not synced)
 export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/no-cores"
-# (every game of the synced systems, as the cases here were written for, unless a card's settings choose: Chosen is
-# the default)
-bs() { c=$OUT/$1; shift; grep -qs '^homesync_games' "$c/banana/settings.conf" || echo 'homesync_games = all' >> "$c/banana/settings.conf"
+# (RomM's games come only by Get games: before a sync run by hand, every game the server lists for a system the card
+# syncs is asked for, as the cases here were written for a card holding them all, unless GETALL=0, a case asking for
+# its own)
+getall() { skip=" $(sed -n 's/^homesync\.\([a-z0-9]*\) *= *off.*/\1/p' "$1/banana/settings.conf" 2>/dev/null | tr '\n' ' ') "
+    "$BIN" --root "$1" --run "$1/run" games 2>/dev/null | awk -F'\t' -v s="$skip" 'index(s, " " $1 " ") == 0 { print $2 }' |
+        tr '\n' '\0' | xargs -0 -r "$BIN" --root "$1" --run "$1/run" get >/dev/null; }
+bs() { c=$OUT/$1; shift
+    case " $* " in *" --rom "*|*" --saves-only "*|*" --auto "*) ;; " sync "*)
+        [ "${GETALL:-1}" = 1 ] && grep -qs '"backend": *"romm"' "$c/banana/romsync.json" && getall "$c" ;; esac
     BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
 st() { cat "$OUT/$1/run/sync.status" 2>/dev/null; }
 has() { [ -f "$OUT/$1" ] || bad "no $1"; }
@@ -132,22 +138,104 @@ grep -q 'would register as a RomM device' "$OUT/romm-dev5.log" && ! grep -q 'reg
 card rw; mkdir "$OUT/rw/banana/sync-id"
 bs rw pair "$U" "$(mint)" >/dev/null 2>&1 && bad "paired without the card's id"
 [ "$(st rw)" = "error can't write banana/sync-id" ] && [ "$(ndevs)" = "$n" ] || bad "no card id: $(st rw), $(ndevs) devices (were $n)"
-# choosing games (homesync_games = chosen): only the chosen game comes, the list says which are chosen and on the card,
-# and un-choosing a game already on the card leaves it there
+# Get games (RomM): only the game asked for comes, with its gamelist entry, and leaves the list once it's in; the list
+# says which wait and which are on the card; a game taken back before a sync doesn't come; one deleted from the card
+# afterwards isn't brought back, and one gone from the server stays: once on the card a game is the owner's
 card rc
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rc pair "$U" "$CODE" >/dev/null 2>&1 || bad "rc: pairing failed: $(st rc)"
-printf 'homesync_games = chosen\n' > "$OUT/rc/banana/settings.conf"
-printf 'gba/Banana Run (USA).gba\n' > "$OUT/rc/banana/homesync-games.txt"
-bs rc sync > "$OUT/pick-sync1.log" 2>&1 || bad "pick sync: $(tail -3 "$OUT/pick-sync1.log")"
+[ "$(bs rc get 'gba/Banana Run (USA).gba' 'nds/Peel Quest (USA).nds')" = ok ] || bad "get: games not added to the list"
+[ "$(bs rc get --drop 'nds/Peel Quest (USA).nds')" = ok ] || bad "get --drop: a game not taken back"
+[ "$(bs rc get '../x')" = "error not a game: ../x" ] || bad "get: a path out of the roms folder taken"
+bs rc games > "$OUT/pick-games0.tsv" 2>&1
+grep -q "^gba	gba/Banana Run (USA).gba	.*	1	0$" "$OUT/pick-games0.tsv" || bad "games: the game asked for not listed as waiting: $(cat "$OUT/pick-games0.tsv")"
+GETALL=0 bs rc sync > "$OUT/pick-sync1.log" 2>&1 || bad "get sync: $(tail -3 "$OUT/pick-sync1.log")"
 has "rc/roms/gba/Banana Run (USA).gba"
-[ -e "$OUT/rc/roms/nds/Peel Quest (USA).nds" ] && bad "pick: a game that wasn't chosen came to the card"
+grep -q 'Banana Run' "$OUT/rc/roms/gba/gamelist.xml" 2>/dev/null || bad "get: no gamelist entry for the game asked for"
+[ -e "$OUT/rc/roms/nds/Peel Quest (USA).nds" ] && bad "get: a game taken back (or never asked for) came to the card"
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get.txt" && bad "get: the game stayed on the list once in: $(cat "$OUT/rc/banana/homesync-get.txt")"
 bs rc games > "$OUT/pick-games.tsv" 2>&1 || bad "games: $(head -2 "$OUT/pick-games.tsv")"
-grep -q "^gba	gba/Banana Run (USA).gba	.*	1	1$" "$OUT/pick-games.tsv" || bad "games: the chosen game not listed as chosen + on the card: $(cat "$OUT/pick-games.tsv")"
-grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not chosen + not on the card: $(cat "$OUT/pick-games.tsv")"
-: > "$OUT/rc/banana/homesync-games.txt"
-bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "pick sync 2: $(tail -3 "$OUT/pick-sync2.log")"
+grep -q "^gba	gba/Banana Run (USA).gba	.*	0	1$" "$OUT/pick-games.tsv" || bad "games: the game got not listed as on the card: $(cat "$OUT/pick-games.tsv")"
+grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not waiting + not on the card: $(cat "$OUT/pick-games.tsv")"
+# (games asked for while a sync runs: brought by it, the saves' look at the library held up so the list changes mid-run)
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-sync3.log" 2>&1 & _k=$!
+sleep 1; bs rc get 'nds/Peel Quest (USA).nds' >/dev/null; wait $_k
+has "rc/roms/nds/Peel Quest (USA).nds"
+rm "$OUT/rc/roms/gba/Banana Run (USA).gba"
+GETALL=0 bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "get sync 2: $(tail -3 "$OUT/pick-sync2.log")"
+[ -e "$OUT/rc/roms/gba/Banana Run (USA).gba" ] && bad "get: a game deleted from the card was brought back"
+# (a download that fails: the game stays on the list, why said in homesync-get-failed.txt for the page; the next sync
+# brings it and the line goes)
+bs rc get 'gba/Banana Run (USA).gba' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "badhash", "count": 9}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail.log" 2>&1
+grep -q '^gba/Banana Run (USA).gba	.*mismatch' "$OUT/rc/banana/homesync-get-failed.txt" 2>/dev/null || bad "get: a failed download's reason not kept: $(cat "$OUT/rc/banana/homesync-get-failed.txt" 2>&1) $(tail -3 "$OUT/pick-fail.log")"
+grep -qx 'gba/Banana Run (USA).gba' "$OUT/rc/banana/homesync-get.txt" || bad "get: a failed download left the list"
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail2.log" 2>&1
 has "rc/roms/gba/Banana Run (USA).gba"
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get-failed.txt" && bad "get: a game that came kept its failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+# (two failing, the first a GBA game, the second the disc set by a file other than the one it is listed by: each
+# game's line is its own, never the other's error)
+DK=$(bs rc games | awk -F'\t' '$1 == "psx" { print $2 }')
+case $DK in *.bin) DX=cue ;; *) DX=bin ;; esac
+rm -rf "$OUT/rc/roms/gba/Banana Run (USA).gba" "$OUT/rc/roms/psx/Disc Game (USA)"*
+bs rc get 'gba/Banana Run (USA).gba' "$DK" >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "badhash", "count": 9}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d "{\"path\": \"GET /api/roms/.*/files/content/.*\\\\.$DX\$\", \"kind\": \"badhash\", \"count\": 9}" >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail3.log" 2>&1
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+DL=$(grep -F "$DK	" "$OUT/rc/banana/homesync-get-failed.txt" 2>/dev/null)
+case $DL in *"Banana Run"*|"") bad "get: the disc set's failure not its own: '$DL' $(grep -i 'error\|mismatch' "$OUT/pick-fail3.log")" ;; esac
+case $DL in *".$DX: "*) ;; *) bad "get: the disc set's failure doesn't name its file: '$DL'" ;; esac
+grep -q '^gba/Banana Run (USA).gba	.*mismatch' "$OUT/rc/banana/homesync-get-failed.txt" || bad "get: the GBA game's failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+# (asked for again, by banana-sync get as by the page: that game's failure gone, the other's kept)
+bs rc get 'gba/Banana Run (USA).gba' >/dev/null
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get-failed.txt" && bad "get: a game asked for again kept its failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+grep -qF "$DK	" "$OUT/rc/banana/homesync-get-failed.txt" || bad "get: another game's failure went with it: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+GETALL=0 bs rc sync > "$OUT/pick-fail4.log" 2>&1
+has "rc/roms/gba/Banana Run (USA).gba"
+# (a game asked for during the saves comes after them, save.lock let go first: the sync after a game runs beside that
+# download at once, not after a 10 s wait for the lock)
+rm "$OUT/rc/roms/nds/Peel Quest (USA).nds"
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Peel", "kind": "delay", "arg": 6}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-late.log" 2>&1 & _k=$!
+sleep 1; bs rc get 'nds/Peel Quest (USA).nds' >/dev/null; sleep 2.5
+t=$(date +%s); bs rc sync --rom "gba/Banana Run (USA).gba" > "$OUT/pick-late-rom.log" 2>&1
+[ $(( $(date +%s) - t )) -lt 4 ] && ! grep -q 'another sync is saving' "$OUT/pick-late-rom.log" ||
+    bad "get: the sync after a game waited on a download after the saves: $(cat "$OUT/pick-late-rom.log")"
+wait $_k
+has "rc/roms/nds/Peel Quest (USA).nds"
+# (a game asked for that is on the card already, copied by hand: adopted, nothing downloaded, and the gamelist entry
+# its owner gave it kept)
+cp "$L/gba/Old Game (USA).gba" "$OUT/rc/roms/gba/"
+sed -i 's|</gameList>|  <game><path>./Old Game (USA).gba</path><name>Mine</name></game>\n</gameList>|' "$OUT/rc/roms/gba/gamelist.xml"
+bs rc get 'gba/Old Game (USA).gba' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-adopt.log" 2>&1
+grep -q '0 to download' "$OUT/pick-adopt.log" || bad "get: a game on the card already was downloaded: $(head -3 "$OUT/pick-adopt.log")"
+grep -q '<name>Mine</name>' "$OUT/rc/roms/gba/gamelist.xml" || bad "get: an adopted game's own gamelist entry was replaced: $(grep -A1 'Old Game' "$OUT/rc/roms/gba/gamelist.xml")"
+grep -q 'Old Game' "$OUT/rc/banana/homesync-get.txt" && bad "get: an adopted game stayed on the list"
+# (a system set to Skip keeps its saves on the card in a sync that also brings games: Get games' part lists every
+# system, and the saves after it go by Systems all the same)
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "skip: the GBA save was synced before the test"
+head -c 8192 /dev/urandom > "$OUT/rc/saves/gba/Banana Run (USA).srm"
+printf 'homesync.gba = off\n' >> "$OUT/rc/banana/settings.conf"
+bs rc get 'nds/Peel Quest (USA).nds' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-skip.log" 2>&1
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "a sync bringing games synced a skipped system's save: $(grep -i 'banana run' "$OUT/pick-skip.log")"
+# (and a game of that system asked for while the saves are going still comes, by the pass after them: the saves'
+# leaving the system out isn't the list's)
+rm "$OUT/rc/roms/gba/Old Game (USA).gba"
+curl -s -XPOST "$U/test/fault" -d '{"path": "POST /api/sync/negotiate", "kind": "delay", "arg": 4}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-skip2.log" 2>&1 & _k=$!
+sleep 1.5; bs rc get 'gba/Old Game (USA).gba' >/dev/null
+wait $_k
+[ -f "$OUT/rc/roms/gba/Old Game (USA).gba" ] || bad "skip: a game of a skipped system asked for during the saves didn't come: $(grep -i 'old game\|roms:' "$OUT/pick-skip2.log")"
+grep -q 'Old Game' "$OUT/rc/banana/homesync-get.txt" && bad "skip: a game asked for during the saves stayed on the list"
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "a sync bringing a skipped system's game synced its save: $(grep -i 'banana run' "$OUT/pick-skip2.log")"
+sed -i '/^homesync\.gba/d' "$OUT/rc/banana/settings.conf"; rm "$OUT/rc/saves/gba/Banana Run (USA).srm"
 # a stand-in of its own (its ids apart from the one above): a zipped hack, its base game and one title from two regions.
 # A zip comes down whole, checked by its members' CRCs, as RomM's hashes of a zip are of what is inside; each game is
 # listed (Choose games, the gamelist) by its title and its tags, the regions only where a title is shared
@@ -257,6 +345,7 @@ fi
 # a download cut short goes on from its .part (a Range request), and is checked whole
 mkdir -p "$OUT/rb/roms/nds"; head -c 1000 "$L/nds/Peel Quest (USA).nds" > "$OUT/rb/roms/nds/Peel Quest (USA).nds.part"
 printf 'homesync.gba = off\nhomesync.psx = off\n' > "$OUT/rb/banana/settings.conf"
+: > "$OUT/rb/banana/homesync-get.txt"	# (what the killed sync was asked for: Get games' list doesn't go by Systems)
 bs rb sync >/dev/null 2>&1
 curl -s "$U/test/log" | grep -q 'Peel%20Quest%20%28USA%29.nds? range=bytes=1000-' || bad "no Range request for the .part"
 cmp -s "$L/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/Peel Quest (USA).nds" || bad "the resumed download isn't the server's file"
@@ -267,20 +356,22 @@ printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves.log" > "$OUT/nds-saves";
 BANANA_NDS_SAVES=$OUT/nds-saves bs rb sync --saves-only >/dev/null 2>&1
 grep -q "rb/roms/nds/Peel Quest (USA).nds$" "$OUT/nds-saves.log" 2>/dev/null || bad "nds-saves wasn't run for the .dsv"
 rm -rf "$OUT/rb/roms/nds" "$OUT/rb/drastic"; : > "$OUT/rb/banana/settings.conf"
-# a system skipped on this handheld: left as it is; a game gone from the server: removed; changed on the card: kept
+# games gone from the server (RomM): left on the card with their gamelist entries, as Get games' games are the
+# owner's; a game asked for again that was changed on the card since: kept, not downloaded over
 printf 'homesync.nds = off\n' > "$OUT/ra/banana/settings.conf"
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 104}' >/dev/null      # Peel Quest (nds, skipped)
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 102}' >/dev/null      # Banana Run (gba)
 bs ra sync > "$OUT/romm-sync3.log" 2>&1
 has "ra/roms/nds/Peel Quest (USA).nds"
-[ -f "$OUT/ra/roms/gba/Banana Run (USA).gba" ] && bad "a game removed on the server stayed"
-grep -q 'Banana Run (USA).gba' "$G" && bad "its gamelist entry stayed"
-grep -q '<name>My own</name>' "$G" || bad "the gamelist's own entry was lost on removal"
+has "ra/roms/gba/Banana Run (USA).gba"
+grep -q 'Banana Run (USA).gba' "$G" || bad "a game gone from the server lost its gamelist entry"
+grep -q '<name>My own</name>' "$G" || bad "the gamelist's own entry was lost"
 printf 'homesync.nds = on\n' > "$OUT/ra/banana/settings.conf"
 echo patched >> "$OUT/ra/roms/nds/Peel Quest (USA).nds"
+bs ra get "nds/Peel Quest (USA).nds" >/dev/null
 bs ra sync > "$OUT/romm-sync4.log" 2>&1
-has "ra/roms/nds/Peel Quest (USA).nds"
-grep -q "changed on the card, kept" "$OUT/romm-sync4.log" || bad "a ROM changed on the card wasn't kept: $(tail -3 "$OUT/romm-sync4.log")"
+tail -c 8 "$OUT/ra/roms/nds/Peel Quest (USA).nds" | grep -q patched || bad "a ROM changed on the card was downloaded over: $(tail -3 "$OUT/romm-sync4.log")"
+grep -q 'Peel Quest' "$OUT/ra/banana/homesync-get.txt" 2>/dev/null && bad "a game held back by a file of the owner's stayed on the list"
 # an empty server listing never empties the card
 rm -rf "$L/nds" "$L/gba" "$L/psx"; bs ra sync > "$OUT/romm-sync5.log" 2>&1
 has "ra/roms/psx/Disc Game (USA).m3u"
@@ -660,6 +751,48 @@ if [ -x "$HERE/banana-ui" ]; then
     ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
     rlog deny "home server: pairing failed: refused in RomM"
     [ "$(grep -c 'pair --romm' "$SL")" -ge 2 ] || bad "RomM: A after a refusal didn't ask again: $(cat "$SL")"
+    # paired with RomM: Get games (the third row, after Server and Sync now) lists the server's games; A on one on the
+    # card does nothing, A on one that isn't puts it on the download list and starts a sync, A again takes it back
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
+    GL=$FX/data/homesync-get.txt; rm -f "$GL"; : > "$SL"; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
+    ug() { env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$1" 2> "$OUT/ui-get.log" || bad "banana-ui (Get games) exited $?"; }
+    GET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; shot hs-getrow; press a; sleep 300; wait 300"
+    ug "$GET; shot hs-get0; press a; shot hs-get1; press a; wait 100; press down; press a; sleep 300; wait 1100; shot hs-get2"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" 2>/dev/null || bad "Get games: A didn't put the game on the list: $(cat "$GL" 2>&1)"
+    grep -qx 'gba/Orchard Tactics.gba' "$GL" && bad "Get games: a game on the card was put on the list"
+    grep -q '^--root .* sync$\| sync$' "$SL" || bad "Get games: no sync started: $(cat "$SL")"
+    for s in hs-getrow hs-get0 hs-get1 hs-get2; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
+    cmp -s "$OUT/ui-hs-get0-bot.png" "$OUT/ui-hs-get1-bot.png" && bad "Get games: A didn't open the system"
+    # (a download that failed: Failed on its row, why under its title)
+    printf '# x\ngba/Pocket Hack.gba\tchecksum mismatch\n' > "$FX/data/homesync-get-failed.txt"
+    ug "$GET; press a; press down; sleep 300; wait 1100; shot hs-get-failed"
+    cmp -s "$OUT/ui-hs-get2-top.png" "$OUT/ui-hs-get-failed-top.png" && bad "Get games: a failed download not shown"
+    ug "$GET; press a; press down; press a; sleep 300; wait 1100"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" && bad "Get games: A again didn't take the game back: $(cat "$GL")"
+    grep -q 'Pocket Hack' "$FX/data/homesync-get-failed.txt" 2>/dev/null && bad "Get games: taken back, the game kept its last failure: $(cat "$FX/data/homesync-get-failed.txt")"
+    rm -f "$FX/data/homesync-get-failed.txt"
+    # (a sync that ends without having taken a game asked for on this visit, or said why: started again, once, the
+    # page left at once for the Home server page)
+    : > "$SL"; rm -f "$BANANA_RUN/sync.status"
+    FAKE_SYNC_DONE=1 ug "$GET; press a; press down; press a; press b; press b; sleep 1500; wait 1100; sleep 1500; wait 1100; sleep 1500; wait 1100"
+    n=$(grep -c ' sync$' "$SL")
+    [ "$n" = 2 ] || bad "Get games: a sync ending with the game still waiting not started again once ($n syncs): $(cat "$SL")"
+    : > "$GL"
+    # (search, Y: from the systems every system's games, part of a title; B takes it away)
+    ug "$GET; press y; type pock; press start; wait 300; shot hs-get-search; press a; sleep 300; wait 300; press b; press b; wait 100"
+    grep -q 'get games: "pock" finds 1' "$OUT/ui-get.log" || bad "Get games: the search: $(grep 'get games' "$OUT/ui-get.log")"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: A on a game found didn't put it on the list: $(cat "$GL" 2>&1)"
+    ug "$GET; press a; press y; type zzz; press start; wait 300; press down; press a; wait 100"
+    grep -q 'get games: "zzz" finds 0' "$OUT/ui-get.log" || bad "Get games: a search finding nothing: $(grep 'get games' "$OUT/ui-get.log")"
+    # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows, name, sort and art)
+    LC=$FX/data/homesync-local.txt; rm -f "$LC"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"
+    grep -qx 'nds/Banana Kart DS.nds' "$LC" 2>/dev/null || bad "Save sync: the game's line not written: $(cat "$LC" 2>&1)"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press left; wait 300; press b; wait 300"
+    grep -q 'Banana Kart' "$LC" && bad "Save sync on again left the line: $(cat "$LC")"
+    rm -f "$FX/data/romsync.json"
     unset BANANA_RUN
 fi
 # ---------------------------------------------------------------- the sync before a game

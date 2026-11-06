@@ -504,14 +504,38 @@ head -c 8192 /dev/urandom > "$S/Other Bytes (USA).srm"; bs
 [ "$(saves3 "Other Bytes")" = 0 ] || bad "a save of another dump of the game was sent"
 grep -q "not synced, not the server's ROM (other bytes): gba/Other Bytes (USA).gba" "$OUT/bs.log" && grep -q '1 game not matched on the server' "$OUT/bs.log" ||
     bad "another dump not said: $(cat "$OUT/bs.log")"
-# games chosen for syncing (homesync_games = chosen, the default): the choice is of the games that come to the card,
-# never of the saves; a game on the card that isn't chosen has its save sent and the server's newer one taken
+# a game whose saves stay on this handheld (banana/homesync-local.txt, its page's Save sync off): its save neither sent
+# nor taken, the other games' as ever, and the sync after it done at once without asking the server
 head -c 8192 /dev/urandom > "$S/Not Chosen (USA).srm"; head -c 8192 /dev/urandom > "$S/Zip Game (USA).srm"
-printf 'homesync_games = chosen\n' >> "$C/banana/settings.conf"; printf 'gba/Zip Game (USA).zip\n' > "$C/banana/homesync-games.txt"; bs
-[ "$(saves3 "Not Chosen")" = 1 ] && [ "$(nsaves "Zip Game (USA).zip")" = 1 ] || bad "chosen games: unchosen $(saves3 "Not Chosen"), chosen $(nsaves "Zip Game (USA).zip") sent: $(cat "$OUT/bs.log")"
+printf '# kept here\ngba/Not Chosen (USA).gba\n' > "$C/banana/homesync-local.txt"; bs
+[ "$(saves3 "Not Chosen")" = 0 ] && [ "$(nsaves "Zip Game (USA).zip")" = 1 ] || bad "a game kept here: sent $(saves3 "Not Chosen"), the other game's $(nsaves "Zip Game (USA).zip"): $(cat "$OUT/bs.log")"
+grep -q 'not synced, its saves stay on this handheld: gba/Not Chosen (USA).gba' "$OUT/bs.log" || bad "a game kept here not said: $(cat "$OUT/bs.log")"
+cp "$S/Not Chosen (USA).srm" "$OUT/nc1.srm"
 head -c 8192 /dev/urandom > "$OUT/nc2.srm"; seed "Not Chosen" "$(hex "$OUT/nc2.srm")" 5 >/dev/null; bs
-cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc2.srm" || bad "an unchosen game's newer save on the server wasn't taken: $(cat "$OUT/bs.log")"
-sed -i '/^homesync_games = /d' "$C/banana/settings.conf"; rm -f "$C/banana/homesync-games.txt" "$S/Not Chosen (USA).srm" "$C/roms/gba/Not Chosen (USA).gba"
+cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc1.srm" || bad "a game kept here took the server's newer save: $(cat "$OUT/bs.log")"
+"$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --rom "$C/roms/gba/Not Chosen (USA).gba" > "$OUT/bs.log" 2>&1
+grep -q 'its saves stay on this handheld' "$OUT/bs.log" && grep -q '^done ' "$C/run/gameend.status" || bad "the sync after a game kept here: $(cat "$OUT/bs.log")"
+# (and the sync before it: done at once, nothing held for the menu to ask about, the server not asked)
+printf 'homesync_auto = quit\nhomesync_launch = on\n' >> "$C/banana/settings.conf"; echo held > "$C/run/launch.conflict"
+n=$(curl -s "$U3/test/log" | jget '.__len__()')	# (each look at the log is in it: the next one is one more)
+"$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --auto launch --rom "$C/roms/gba/Not Chosen (USA).gba" > "$OUT/bs.log" 2>&1
+[ ! -s "$C/run/launch.conflict" ] && grep -q '^done ' "$C/run/launch.status" && [ "$(curl -s "$U3/test/log" | jget '.__len__()')" = $((n + 1)) ] ||
+    bad "the sync before a game kept here: $(cat "$C/run/launch.status" "$C/run/launch.conflict" "$OUT/bs.log")"
+sed -i '/^homesync_auto = quit$/d; /^homesync_launch = on$/d' "$C/banana/settings.conf"
+# (keyed by the folder on the card, as the game page writes it: a system whose folder systems.conf names otherwise
+# keeps its game's saves here all the same)
+sed 's/^\[gba\]$/[gba]\nfolder = gbx/' "$BANANA_SYSTEMS" > "$OUT/sys-gbx.conf"; mv "$C/roms/gba" "$C/roms/gbx"
+printf '# kept here\ngbx/Not Chosen (USA).gba\n' > "$C/banana/homesync-local.txt"
+# (its states too, with them on: the server's not taken into the vault)
+curl -s -XPOST "$U3/test/save" -d "{\"kind\": \"states\", \"rom_id\": $(rid "Not Chosen"), \"file_name\": \"Not Chosen (USA).state\", \"data\": \"$(printf 'a state of the server' | od -An -v -tx1 | tr -d ' \n')\"}" >/dev/null
+echo 'homesync_states = on' >> "$C/banana/settings.conf"
+BANANA_SYSTEMS=$OUT/sys-gbx.conf bs
+grep -q 'not synced, its saves stay on this handheld: gbx/Not Chosen (USA).gba' "$OUT/bs.log" && cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc1.srm" ||
+    bad "a game kept here, its system in a folder of another name: $(cat "$OUT/bs.log")"
+grep -q 'Not Chosen (USA).state' "$OUT/bs.log" && bad "a game kept here, its system in a folder of another name: the server's state taken: $(grep 'Not Chosen' "$OUT/bs.log")"
+sed -i '/^homesync_states = on$/d' "$C/banana/settings.conf"
+mv "$C/roms/gbx" "$C/roms/gba"
+rm -f "$C/banana/homesync-local.txt" "$S/Not Chosen (USA).srm" "$C/roms/gba/Not Chosen (USA).gba"
 # a zipped game, the server's by the zip's members
 bs; [ "$(nsaves "Zip Game (USA).zip")" = 1 ] || bad "a zipped game's save wasn't sent: $(cat "$OUT/bs.log")"
 # another core's save of the same game (mGBA's, from before every GBA core shared saves/gba): kept in the vault once,
@@ -1183,9 +1207,9 @@ hr a --rom "gba/Nowhere (USA).gba" && grep -q 'not a game on the server: gba/Now
 hs a; [ "$(nv4 "Other (USA).gba")" = 1 ] || bad "slots: the other game's save, the next full sync: $(cat "$OUT/hs-a.log")"
 # beside a sync copying games (sync.lock held), one game's save goes at once, and neither run writes over what the
 # other wrote in romsync.json: the games the first has copied so far, the save the second has agreed (a game started
-# meanwhile, so the first leaves the saves alone and writes only its games; every game copied, Games to sync on All)
-echo 'homesync_games = all' >> "$OUT/h-a/banana/settings.conf"
+# meanwhile, so the first leaves the saves alone and writes only its games; the two games asked for in Get games)
 printf 'gba rom conc a' > "$L4/gba/Conc A (USA).gba"; printf 'gba rom conc b' > "$L4/gba/Conc B (USA).gba"
+"$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" get "gba/Conc A (USA).gba" "gba/Conc B (USA).gba" >/dev/null
 curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/roms/.*/content/Conc(%20| )B", "kind": "delay", "arg": 6}' >/dev/null
 hr a & _k=$!
 for i in $(seq 50); do [ "$(rs a '"gba/Conc A (USA).gba" in c["state"]["files"]' 2>/dev/null)" = True ] && break; sleep 0.1; done
@@ -1199,7 +1223,6 @@ wait $_k; kill "$_g"; rm "$OUT/h-a/run/game.pid"
 grep -q 'saves: a game is running' "$OUT/hr-a.log" || bad "slots: the sync copying games took the saves with a game running: $(cat "$OUT/hr-a.log")"
 [ "$(rs a 'c["slots"]["'"$(rid4 "Solo (USA).gba")"'/autosave"]["md5"]')" = "$(m "$GA/Solo (USA).srm")" ] && [ "$(rs a '"gba/Conc B (USA).gba" in c["state"]["files"]')" = True ] ||
     bad "slots: the two runs' romsync.json: $(rs a 'c["slots"].get("'"$(rid4 "Solo (USA).gba")"'/autosave"), sorted(c["state"]["files"])') $(cat "$OUT/hr-a.log")"
-sed -i '/^homesync_games = all$/d' "$OUT/h-a/banana/settings.conf"
 # one game's run stopped (as when the time before a game runs out): the status line says so, and another sync's
 # sync.pid, for the menu's Stop, stays
 echo 4242 > "$OUT/h-a/run/sync.pid"
