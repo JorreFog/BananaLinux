@@ -25,6 +25,7 @@ namespace banana::nds
 			{ GameId::HACK, "glazed-unofficial", "BPEE", 1500 }, { GameId::HACK, "gaia", "BPRE", 1500 },
 			{ GameId::HACK, "heart-and-soul", "BPEE", 1500 }, { GameId::HACK, "lazarus", "BPEE", 1500 },
 			{ GameId::HACK, "seaglass", "BPEE", 1500 }, { GameId::HACK, "soulgold", "BPEE", 1500 },
+			{ GameId::HACK, "unbound", "BPRE", 1500 },
 		};
 		const GameRow* rowFor(GameId id)
 		{
