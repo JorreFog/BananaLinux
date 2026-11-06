@@ -600,6 +600,21 @@ def rom_file_hashes():
           f"a zip's MD5 {f[0]['md5_hash']} (ROM {zipped['md5_hash']}), its members' {composite}, the zip file's {md5(zdata)}")
 
 
+@case
+def rom_name_tags():
+    """a ROM's file name parsed as RomM's roms handler does: a region by name in regions, a "Rev 1" in revision, and
+    another (...) or [...] tag, a hack's name and version, kept whole in tags"""
+    pid = next(p["id"] for p in ok(*call("GET", "/api/platforms", token=TA), "platforms") if p["fs_slug"] == "gba")
+    roms = ok(*call("GET", "/api/roms", token=TA, query={"platform_ids": pid, "limit": 500}), "roms")["items"]
+    hack = next((r for r in roms if "[Hack by " in r["fs_name"]), None)
+    check(hack is not None, "the cases need a GBA ROM named with a [Hack by ...] tag on the server")
+    want = hack["fs_name"].split("[")[1].split("]")[0]
+    check(hack["tags"] == [want] and hack["revision"] in ("", None), f"a hack's tags {hack['tags']}, revision {hack['revision']!r}")
+    usa = next(r for r in roms if r["fs_name"].endswith(" (USA).gba") and "[" not in r["fs_name"])
+    check(usa["regions"] == ["USA"] and usa["tags"] == [] and usa["revision"] in ("", None),
+          f"{usa['fs_name']}: regions {usa['regions']}, tags {usa['tags']}, revision {usa['revision']!r}")
+
+
 for f in CASES:
     EMU[0] = f"{f.__name__}-{RUN}"
     try:

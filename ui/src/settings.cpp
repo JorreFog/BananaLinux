@@ -916,9 +916,9 @@ namespace banana
 			else
 				items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects. Never while a game runs." };
 			add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
-			add(HS, "phone", "Games to sync", "Which of the server's games come to the card.",
+			add(HS, "phone", "Games to sync", "Which of the server's games come to the card. Saves sync for every game on the card.",
 				menu, "homesync_games", { "All", "Chosen" }, { "all", "chosen" });
-			items.back().hints = { "Every game of the systems above.", "Only the games ticked in Choose games." };
+			items.back().hints = { "Every game of the systems above: on a large server, maybe more than the card holds.", "Only the games ticked in Choose games. One unticked later stays until you delete it." };
 			add(HS, "phone", "Choose games", "The server's games, a system at a time. A ticks one, X ticks them all.", "", "hs_pick", {}, {}, Item::PAGE);
 			// (Check certificate is on Server's RomM form only, where the address is: changed there it holds at once)
 			if (romm)

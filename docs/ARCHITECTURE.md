@@ -258,6 +258,15 @@ into a GET (405). It is still Romhost's typed address, without following redirec
 Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
 check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
 
+Games come to the card only when chosen (Games to sync: Chosen, the default; `banana/homesync-games.txt`), since a RomM
+library can be hundreds of GB; All copies every game of the synced systems. The choice is only of the games that come
+down: every game on the card that the server has syncs its saves, chosen or not. Choose games and the gamelist name a
+RomM game by its title and the tags RomM parses from its file name (a revision, a hack's `[Hack by ... v1.0]`, a
+translation), so a hack doesn't read as a second copy of its base game; the regions follow only where two games of a
+system would share a title, and the file names where that still doesn't tell them apart. A compressed ROM's hashes on
+RomM (zip, 7z, rar, tar, gz, bz2) are of what is inside, so a download of one is checked by its size, and a zip also
+by its members' CRCs against RomM's `archive_members`; any other file by its hash.
+
 The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on RomM
 what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses, before
 the game starts or on Settings > Network > Home server > Saves. That page also lists the kept copies, which it can put

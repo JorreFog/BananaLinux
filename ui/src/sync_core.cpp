@@ -877,7 +877,8 @@ namespace bsync
 	}
 	// downloaded to <dst>.part, checked, renamed. The part file is left for a retry when the connection broke
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
-		const std::string& algo, const std::string& want, std::string& err, std::string* got)
+		const std::string& algo, const std::string& want, std::string& err, std::string* got,
+		const std::function<std::string(const std::string&)>& check)
 	{
 		mkdirs(dirOf(dst));
 		std::string part = dst + ".part";
@@ -898,7 +899,7 @@ namespace bsync
 			if (r.code == 200 && have > 0)	// (the server sent it all again: the part file has it after the old bytes)
 			{
 				unlink(part.c_str());
-				return fetchTo(url, headers, dst, size, algo, want, err, got);
+				return fetchTo(url, headers, dst, size, algo, want, err, got, check);
 			}
 			if (r.code != 200 && r.code != 206)
 			{
@@ -916,6 +917,7 @@ namespace bsync
 			if (h != want) { err = "checksum mismatch"; unlink(part.c_str()); return false; }
 		}
 		else if (got) *got = hashFile(part, algo.empty() ? "sha1" : algo);
+		if (check) { std::string e = check(part); if (!e.empty()) { err = e; unlink(part.c_str()); return false; } }
 		if (rename(part.c_str(), dst.c_str()) != 0) { err = std::string("rename: ") + strerror(errno); return false; }
 		if (!syncDir(dirOf(dst))) { err = std::string("sync: ") + strerror(errno); return false; }
 		return true;

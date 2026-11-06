@@ -219,6 +219,11 @@ namespace bsync
 		std::string url;		// absolute
 		std::string content;	// made here (a PS1 set's .m3u): no download
 		bool generated = false, media = false;
+		// compressed (zip, 7z, rar, tar, gz, bz2): RomM's hashes are of what is inside, never of these bytes, so they
+		// can't check a download; a zip's members (size, CRC32 in hex), from its listing, are checked against its own
+		// central directory instead, and a 7z or rar has only its size checked
+		bool packed = false;
+		std::vector<std::pair<long long, std::string>> members;
 		std::string key() const	// what the state keeps for it: its hash, or for a cover the URL (its ?ts= changes with it)
 		{
 			if (generated) return "sha1:" + hashStr(content, "sha1");
@@ -330,5 +335,6 @@ namespace bsync
 	// a download to a name of this run's own given up: what fetchTo keeps for a retry is never retried under it
 	void dropDownload(const std::string& dl);
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
-		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr);
+		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr,
+		const std::function<std::string(const std::string&)>& check = nullptr);
 }

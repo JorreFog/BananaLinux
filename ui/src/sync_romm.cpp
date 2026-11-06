@@ -52,6 +52,35 @@ namespace bsync
 		}
 		return out;
 	}
+	// a ROM's name for the lists (Choose games, the library): RomM's title, then what its file name says that the
+	// title doesn't and that sets one version of a game apart from another, its revision and other tags (a hack's name
+	// and version, a translation, a beta), as RomM parses them from the file name; with no title, the file's own name,
+	// its tags in it already. The regions (on nearly every name of a No-Intro set) only where two games of a system
+	// would read the same without them, and a "(v1.1)", which RomM's listing doesn't give, by the file names then
+	std::string romTitle(const JVal& it, const std::string& stem)
+	{
+		std::string t = it.str("name");
+		if (t.empty()) return stem;
+		if (!it.str("revision").empty()) t += " (Rev " + it.str("revision") + ")";
+		if (const JVal* a = it.get("tags"))
+			if (a->isArr()) for (auto& g : a->arr) if (g->isStr() && !g->s.empty()) t += " [" + g->s + "]";
+		return t;
+	}
+	std::string romRegions(const JVal& it)
+	{
+		std::string r;
+		if (const JVal* a = it.get("regions"))
+			if (a->isArr()) for (auto& e : a->arr) if (e->isStr() && !e->s.empty()) r += (r.empty() ? "" : ", ") + e->s;
+		return r;
+	}
+	// a file RomM reads into to hash (as its roms handler does: these archives, and a gzip or bzip2 file), so that its
+	// hashes are of what's inside
+	bool packedName(const std::string& fsName)
+	{
+		std::string e = extOf(fsName);
+		return e == "zip" || e == "7z" || e == "rar" || e == "tar" || e == "tgz" || e == "tbz2" || e == "txz" || e == "gz" || e == "bz2" ||
+			(e == "xz" && extOf(stemOf(fsName)) == "tar");
+	}
 	struct Romm : Backend
 	{
 		using Backend::Backend;
@@ -114,6 +143,7 @@ namespace bsync
 		{
 			if (!list(skip, err)) return false;
 			std::map<std::string, MSystem> by;
+			std::map<std::string, std::vector<std::pair<std::string, std::string>>> alt;	// per game as by has them: its regions, its file's stem
 			for (auto& f : platforms) by[f.second].folder = f.second;
 			// Game & Watch: the games' MAME artwork zips, in the platform's artwork folder, which RomM lists as one ROM of
 			// several files (its files only on its own page): each zip goes with its game (gameandwatch/artwork/<game>.zip,
@@ -126,7 +156,7 @@ namespace bsync
 				if (folder == "gameandwatch" && fsName == "artwork") continue;	// (its zips go with their games: above)
 				if (!safeRel(folder + "/" + fsName) || it->flag("missing_from_fs")) { m.skipped++; continue; }
 				MGame g;
-				g.title = it->str("name", fsName);
+				g.title = romTitle(*it, it->str("fs_name_no_ext", stemOf(fsName)));
 				const JVal* files = it->get("files");
 				std::string entry = fsName;
 				bool multi = it->flag("has_multiple_files") || (files && files->isArr() && files->arr.size() > 1);
@@ -139,7 +169,9 @@ namespace bsync
 					{
 						f.sha1 = lower(files->arr[0]->str("sha1_hash")); f.md5 = lower(files->arr[0]->str("md5_hash"));
 						if (files->arr[0]->get("file_size_bytes")) f.size = (long long)files->arr[0]->num("file_size_bytes");
+						if (packedName(fsName)) { f.packed = true; f.members = romFiles(*it)[0].members; }
 					}
+					else f.packed = packedName(fsName);
 					f.url = c.server + "/api/roms/" + std::to_string(id) + "/content/" + urlEsc(fsName);
 					g.files.push_back(f);
 				}
@@ -190,7 +222,7 @@ namespace bsync
 					if (safeRel(f.path)) { g.files.push_back(f); image = "./media/box/" + stem + "." + (cext == "png" ? "png" : "jpg"); }
 				}
 				g.gl.push_back({ "path", "./" + entry });
-				g.gl.push_back({ "name", it->str("name", stem) });
+				g.gl.push_back({ "name", g.title });
 				if (!it->str("summary").empty()) g.gl.push_back({ "desc", it->str("summary") });
 				if (!image.empty()) g.gl.push_back({ "image", image });
 				if (const JVal* md = it->get("metadatum"))
@@ -207,6 +239,26 @@ namespace bsync
 					if (!pub.empty()) g.gl.push_back({ "publisher", pub });
 				}
 				by[folder].games.push_back(g);
+				alt[folder].push_back({ romRegions(*it), it->str("fs_name_no_ext", stemOf(fsName)) });
+			}
+			// two games of a system by one title (the same game from two regions, or two dumps): the regions after it,
+			// and where that still doesn't tell them apart, the file names
+			for (auto& kv : by)
+			{
+				auto& games = kv.second.games;
+				auto& a = alt[kv.first];
+				for (int pass = 0; pass < 2; pass++)
+				{
+					std::map<std::string, int> n;
+					for (auto& g : games) n[g.title]++;
+					for (size_t i = 0; i < games.size(); i++)
+					{
+						if (n[games[i].title] < 2) continue;
+						if (pass == 0) { if (!a[i].first.empty()) games[i].title += " (" + a[i].first + ")"; }
+						else games[i].title = a[i].second;
+					}
+				}
+				for (auto& g : games) for (auto& kvp : g.gl) if (kvp.first == "name") kvp.second = g.title;
 			}
 			for (auto& kv : by) m.systems.push_back(kv.second);
 			return true;
@@ -249,7 +301,6 @@ namespace bsync
 			{
 				std::string here = onCard(r);
 				if (here.empty()) continue;	// (not on this card)
-				if (chosen && !chosen->count(r.folder + "/" + r.fsName)) continue;	// (games chosen for syncing, and this not one)
 				if (here == resumeRom && onlyRom != here) { unsure.insert(r.id); say("  not synced, about to start again after Power off after sleeping, its resume state with the save here: %s", here.c_str()); continue; }
 				if (!sys.count(r.folder)) sys[r.folder] = systemSaves(r.folder);
 				const SysSaves& ss = sys[r.folder];
@@ -1029,7 +1080,8 @@ namespace bsync
 				{
 					auto ri = romById.find((long long)s->num("rom_id"));
 					if (ri == romById.end() || s->flag("missing_from_fs")) continue;
-					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName)) continue;	// (not chosen: not pulled)
+					// (a game not chosen and not on the card: not pulled; its saves sync whenever it's on the card, chosen or not)
+					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName) && onCard(ri->second).empty()) continue;
 					if (!s->str("slot").empty()) continue;	// (another client's versioned slots: left to it)
 					rows.push_back({ s, &ri->second });
 					onServer.insert(ri->second.id);

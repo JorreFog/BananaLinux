@@ -25,7 +25,10 @@ waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null &
 card() { mkdir -p "$OUT/$1/banana" "$OUT/$1/run" "$OUT/$1/roms"; }
 # (the image's systems.conf, and no RetroArch cores: the systems whose save folder is a core's are said, not synced)
 export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/no-cores"
-bs() { c=$OUT/$1; shift; BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
+# (every game of the synced systems, as the cases here were written for, unless a card's settings choose: Chosen is
+# the default)
+bs() { c=$OUT/$1; shift; grep -qs '^homesync_games' "$c/banana/settings.conf" || echo 'homesync_games = all' >> "$c/banana/settings.conf"
+    BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
 st() { cat "$OUT/$1/run/sync.status" 2>/dev/null; }
 has() { [ -f "$OUT/$1" ] || bad "no $1"; }
 
@@ -145,6 +148,39 @@ grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "ga
 : > "$OUT/rc/banana/homesync-games.txt"
 bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "pick sync 2: $(tail -3 "$OUT/pick-sync2.log")"
 has "rc/roms/gba/Banana Run (USA).gba"
+# a stand-in of its own (its ids apart from the one above): a zipped hack, its base game and one title from two regions.
+# A zip comes down whole, checked by its members' CRCs, as RomM's hashes of a zip are of what is inside; each game is
+# listed (Choose games, the gamelist) by its title and its tags, the regions only where a title is shared
+LZ=$OUT/romm-lib-tags
+mkdir -p "$LZ/gba"
+python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Pocket Hack (USA) [Hack by Someone v1.0].gba", b"hacked rom " * 5000)' "$LZ/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip"
+head -c 40000 /dev/urandom > "$LZ/gba/Pocket Hack (USA).gba"
+# (and a zip whose list of members isn't read here, its entry count not what its central directory holds, as zipMembers
+# also finds zip64's: kept, not checked, rather than a mismatch thrown away and fetched again every sync)
+python3 -c 'import sys, zipfile
+z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Odd Zip (USA).gba", b"odd rom " * 5000); z.close()
+b = bytearray(open(sys.argv[1], "rb").read()); e = b.rfind(b"PK\x05\x06"); b[e + 8:e + 12] = (2).to_bytes(2, "little") * 2
+open(sys.argv[1], "wb").write(b)' "$LZ/gba/Odd Zip (USA).zip"
+head -c 30000 /dev/urandom > "$LZ/gba/Twin (USA).gba"
+head -c 30000 /dev/urandom > "$LZ/gba/Twin (Japan).gba"
+PZ=$(port)
+python3 "$HERE/tests/fake-romm.py" "$PZ" "$LZ" & PIDS="$PIDS $!"
+waitport "$PZ" /api/heartbeat || bad "the tags stand-in didn't start"
+UZ=http://127.0.0.1:$PZ
+card rz
+bs rz pair "$UZ" "$(curl -s -XPOST "$UZ/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')" >/dev/null 2>&1 || bad "rz: pairing failed: $(st rz)"
+bs rz sync > "$OUT/tags-sync.log" 2>&1 || bad "a zipped hack's sync: $(tail -3 "$OUT/tags-sync.log")"
+has "rz/roms/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip"
+grep -q 'mismatch' "$OUT/tags-sync.log" && bad "a zip checked against RomM's hash of what's inside: $(cat "$OUT/tags-sync.log")"
+has "rz/roms/gba/Odd Zip (USA).zip"
+grep -q "Odd Zip (USA).zip: its members can't be read here, not checked" "$OUT/tags-sync.log" || bad "a zip whose members aren't read: $(grep -i 'odd zip' "$OUT/tags-sync.log")"
+cmp -s "$LZ/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip" "$OUT/rz/roms/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip" || bad "the zip isn't the server's"
+bs rz games > "$OUT/tags-games.tsv" 2>&1 || bad "tags games: $(head -2 "$OUT/tags-games.tsv")"
+for t in "Pocket Hack [Hack by Someone v1.0]" "Pocket Hack" "Twin (USA)" "Twin (Japan)"; do
+    cut -f3 "$OUT/tags-games.tsv" | grep -qxF "$t" || bad "games: no title '$t': $(cut -f3 "$OUT/tags-games.tsv" | tr '\n' '|')"
+done
+grep -qF '<name>Pocket Hack [Hack by Someone v1.0]</name>' "$OUT/rz/roms/gba/gamelist.xml" && grep -qF '<name>Twin (Japan)</name>' "$OUT/rz/roms/gba/gamelist.xml" ||
+    bad "gamelist names: $(grep '<name>' "$OUT/rz/roms/gba/gamelist.xml" | tr -d '\t' | tr '\n' ' ')"
 # games to the second SD card (homesync_roms_to = sd2; its roms folder is the one run/sd2/roms names, as the sd2
 # script writes it): new games go there with their covers and gamelist, a game already on this card stays here, a
 # card that's out holds its games back (never this card instead), and back in nothing downloads twice

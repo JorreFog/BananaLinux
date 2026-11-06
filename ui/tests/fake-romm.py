@@ -231,9 +231,9 @@ def roms():
             cover = os.path.join(LIB, "covers", f"{rid}.png")
             out.append({
                 "id": rid, "platform_id": p["id"], "platform_slug": p["slug"], "platform_fs_slug": p["fs_slug"],
-                "fs_name": name, "fs_name_no_tags": stem.split(" (")[0], "fs_name_no_ext": stem,
+                "fs_name": name, "fs_name_no_tags": parse_tags(stem)["name"], "fs_name_no_ext": stem, **parse_tags(stem),
                 "fs_extension": "" if multi else os.path.splitext(name)[1][1:], "fs_path": f"roms/{p['fs_slug']}",
-                "fs_size_bytes": sum(f["file_size_bytes"] for f in files), "name": stem.split(" (")[0],
+                "fs_size_bytes": sum(f["file_size_bytes"] for f in files),
                 "summary": f"About {stem}.", "metadatum": {"rom_id": rid, "genres": ["Puzzle"], "publishers": ["Banana"],
                                                          "first_release_date": 1262304000000},
                 # (?ts= is RomM's updated_at as Python prints a datetime: a space and a "+" in it)
@@ -242,6 +242,29 @@ def roms():
                 "md5_hash": whole[0].hexdigest(), "sha1_hash": whole[1].hexdigest(), "crc_hash": format(whole[2], "08x"),
                 "files": files, "full_path": full})
     return out
+
+
+# What RomM 5.4.1 parses from a file name's (...) and [...] tags (roms_handler.py parse_tags), for the names the tests
+# use: a region by its name, "Rev X", a "vX" (parsed, but not in the listing), and anything else kept as a tag (a
+# hack's "Hack by Someone v1.0", a beta); the title is the name with every tag taken out, as RomM's is for a game no
+# metadata source matched
+REGION_NAMES = {"USA", "Europe", "Japan", "World", "Korea", "China", "Australia", "Brazil", "France", "Germany", "Spain", "Italy"}
+
+
+def parse_tags(stem):
+    regions, tags, revision = [], [], ""
+    for m in re.findall(r"\(([^)]*)\)|\[([^\]]*)\]", stem):
+        for t in (c.strip() for c in (m[0] or m[1]).split(",")):
+            if t in REGION_NAMES:
+                regions.append(t)
+            elif re.fullmatch(r"Rev[ -]?(\S+)", t):
+                revision = re.fullmatch(r"Rev[ -]?(\S+)", t)[1]
+            elif re.fullmatch(r"v(\d[\w.]*)", t):
+                pass
+            elif t:
+                tags.append(t)
+    return {"name": re.sub(r"\s*(\([^)]*\)|\[[^\]]*\])", "", stem).strip(), "regions": regions, "tags": tags,
+            "revision": revision}
 
 
 # A ROM file's hashes as RomM 5.4.1 has them (handler/filesystem/roms_handler.py): a zip's are of its members' bytes

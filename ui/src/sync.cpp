@@ -493,8 +493,26 @@ namespace
 			if (f->generated) ok = writeAtomic(dst, f->content);
 			else
 			{
-				std::string algo = !f->sha1.empty() ? "sha1" : !f->md5.empty() ? "md5" : "";
-				ok = fetchTo(f->url, b.auth(), dst, f->media ? -1 : f->size, algo, !f->sha1.empty() ? f->sha1 : f->md5, err);
+				std::string algo = f->packed ? "" : !f->sha1.empty() ? "sha1" : !f->md5.empty() ? "md5" : "";
+				std::function<std::string(const std::string&)> members;
+				if (f->packed && !f->members.empty() && extOf(f->path) == "zip")
+					members = [f](const std::string& part) {
+						// (a zip whose list of members isn't read here (zip64, a member of 4 GB) is kept unchecked, as a
+						// download the server gave no hash for is, rather than thrown away and fetched again every sync;
+						// a member the server gave no size is matched by its CRC, and one with no CRC isn't checked)
+						auto local = zipMembers(part);
+						if (local.empty()) { say("  %s: its members can't be read here, not checked", baseOf(f->path).c_str()); return std::string(); }
+						for (auto& m : f->members)
+						{
+							const std::string crc = lower(m.second);
+							if (crc.empty()) continue;
+							bool found = false;
+							for (auto& l : local) if (l.second == crc && (m.first < 0 || l.first == m.first)) { found = true; break; }
+							if (!found) return std::string("checksum mismatch (a member of the zip)");
+						}
+						return std::string();
+					};
+				ok = fetchTo(f->url, b.auth(), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members);
 			}
 			progress = nullptr;
 			doneBytes += std::max(0LL, f->size);
@@ -1043,7 +1061,7 @@ namespace
 		bool states = get("homesync_states", "off") == "on" || settleKey.find("/state:") != std::string::npos;
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
-		bool pick = get("homesync_games", "all") == "chosen";
+		bool pick = get("homesync_games", "chosen") == "chosen";
 		std::set<std::string> chosen;
 		if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
 		auto b = backendFor(c);
