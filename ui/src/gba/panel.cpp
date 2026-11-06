@@ -27,6 +27,7 @@ namespace banana::gba
 	}
 
 	bool Panel::active() const { return host && comp && comp->active(); }
+	bool Panel::tabs() const { return active() && !host->unsupported(); }
 
 	bool Panel::update(double now)
 	{
@@ -83,7 +84,7 @@ namespace banana::gba
 
 	void Panel::openTab(int i)
 	{
-		if (!active() || !tabOn(i)) return;
+		if (!tabs() || !tabOn(i)) return;
 		if (i == (int)nds::Page::COUNT) { onPages = false; return; }
 		pages->show((nds::Page)i);
 		onPages = true;
@@ -95,6 +96,6 @@ namespace banana::gba
 		return pagesShown() ? std::string("pages:") + nds::pageName(pages->page()) : "game";
 	}
 
-	int Panel::ready() const { return !active() ? 0 : host->ready() ? 1 : host->failed() ? -1 : 0; }
+	int Panel::ready() const { return !active() ? 0 : host->ready() ? 1 : host->unsupported() ? -2 : host->failed() ? -1 : 0; }
 	std::string Panel::title() const { return active() ? host->title() : std::string(); }
 }

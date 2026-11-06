@@ -420,9 +420,9 @@ for size in 640x480 1024x768; do
         done
     done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
-    # decoder's test): its pages from the start (the made-up ROM has too little for them: "No game data"), Back to game
-    # (the tiles with the pages' tabs), the Team tab, a battle (the Battle page by itself); then the same in the light
-    # theme and in Chinese
+    # decoder's test): its pages from the start - the made-up ROM is none of the games the pages read, so "Not
+    # supported" alone, as for a ROM hack not in the list -, Back to game (the tiles, no tabs of the pages), a battle;
+    # then the same in the light theme and in Chinese
     klog=$OUT/$size-pokemon.log
     pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; gbahost; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 600 28; gshot pk-game; \
         gtouch 185 447; gshot pk-team; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle"
@@ -432,10 +432,10 @@ for size in 640x480 1024x768; do
     kcheck() { grep -q "$1" "$klog" || { echo "FAIL $size: no '$1' (Pokémon companion)"; fail=1; }; }
     kcheck "gamepanel .*poke.gba: companion Pokémon Emerald"
     kcheck "413 icons (413 palette numbers, 3 palettes), 6 growth rates"
-    kcheck "gbahost: failed .*view pages:Party"
+    kcheck "gbahost: unsupported .*view pages:Party"
     kcheck "pokefeed .*poke-party.txt: asked [0-9]*, party 4, battle 0, foes 0, view pages:Party"
     kcheck "gtouch 600 28: action 0 keys 0 view game"
-    kcheck "gtouch 185 447: action 0 keys 0 view pages:Team"
+    kcheck "gtouch 185 447: action 0 keys 0 view game"
     kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
     # the GBA companion's pages (gba/panel.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): its

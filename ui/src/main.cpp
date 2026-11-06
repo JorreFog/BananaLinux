@@ -1114,7 +1114,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (pk)
 			{
 				mkdir((o.headless + "gba-state").c_str(), 0755);
-				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", "", false, rom);
+				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", "", false);
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
@@ -1315,7 +1315,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				usleep(10000);
 			}
 			settings.gameUpdate(now);
-			logf("gbahost: %s %s view %s", settings.gbaReady() > 0 ? "ready" : settings.gbaReady() < 0 ? "failed" : "timeout",
+			logf("gbahost: %s %s view %s", settings.gbaReady() > 0 ? "ready" : settings.gbaReady() < -1 ? "unsupported" : settings.gbaReady() < 0 ? "failed" : "timeout",
 				settings.gbaTitle().c_str(), settings.gamePanelView().c_str());
 		}
 		else if (op == "gshot")
@@ -2526,7 +2526,7 @@ int main(int argc, char** argv)
 			mkdir((o.data + "/cache").c_str(), 0755);
 			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
 			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
-				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on", gameRomPath);	// (its own row: Second screen)
+				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
 		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

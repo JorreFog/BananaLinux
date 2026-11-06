@@ -20,20 +20,15 @@ namespace banana::gba
 {
 	// the game in a GBA ROM (its first 0xC0 bytes are enough for the code; the whole ROM for the hack check and the
 	// hash): one of the five English releases (header 0xAC: AXVE AXPE BPEE BPRE BPGE, any revision at 0xBC), Gen III,
-	// dexSize 386; or a ROM hack built on Emerald, FireRed or LeafGreen (GameId::HACK, Game::hack its key, modern when it
-	// has the Fairy type): one gba/hacks.h knows by the whole ROM's CRC-32 (crc: when known - the companion's tables
-	// carry it, pkmn::RomTables::crc -, else 0 and it is worked out here: ~10 ms a 32 MB ROM on a PC) with its title and
-	// its Pokédex's size, else one read by its engine alone (hacks.h anyHack: a pokeemerald-expansion build, a CFRU
-	// FireRed, tables grown past the base game's). NONE for anything else
+	// dexSize 386; or one of the ROM hacks gba/hacks.h lists, by the whole ROM's CRC-32 (crc: when known - the
+	// companion's tables carry it, pkmn::RomTables::crc -, else 0 and it is worked out here: ~10 ms a 32 MB ROM on a
+	// PC): GameId::HACK, Game::hack its key, its title, its Pokédex's size, modern when it has the Fairy type. NONE for
+	// anything else - any other ROM hack is not supported (the panel says so)
 	nds::Game detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
-	// the same with the companion's tables (t.rom the whole ROM): also a hack whose header is its base game's but whose
-	// tables aren't (more species, its own Pokédex, the modern chart). romName: the title of a hack not in the list (its
-	// file's name; "" keeps "ROM hack")
-	nds::Game detectGame(const pkmn::RomTables& t, const std::string& romName = "");
-	// detectGame(t, romName), then readRomData: and a game that looks like its base game but isn't read as one (a
-	// patched Emerald whose header still points at the old tables: Glazed 9.2.0) read again as a hack of it. game:
-	// what it was read as (NONE when it wasn't)
-	std::shared_ptr<const nds::RomData> readGame(const pkmn::RomTables& t, const std::string& romName, nds::Game* game = nullptr);
+	// detectGame by the companion's tables (their CRC-32), then readRomData. Null when it isn't one of the games or
+	// can't be read; unsupported then: the ROM has one of the five games' codes (a ROM hack not in the list, or one
+	// patched over its base game's tables). game: what it was read as
+	std::shared_ptr<const nds::RomData> readGame(const pkmn::RomTables& t, nds::Game* game = nullptr, bool* unsupported = nullptr);
 
 	// the whole RomData, from the ROM and today's tables (t.rom holds the whole ROM). Runs on a background thread (tens
 	// of ms on a PC); sprite() is safe from any thread. cacheDir: unused (the reads are fast enough without one).

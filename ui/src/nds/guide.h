@@ -36,12 +36,6 @@ namespace banana::nds
 	// the guide for a recognised game from guideDir()
 	bool loadGuide(const Game& game, GuideData& out, std::string* why = nullptr, const GuideResolver* resolver = nullptr);
 
-	// a guide made from the ROM alone, for a game with no file (a ROM hack not written up): its gym leaders (class
-	// "Leader" / "Gym Leader"), then its Elite Four and Champion, in the order their first teams' levels say, each
-	// with every team the ROM has for that name (difficulty variants, rematches). A gym is done by its badge (the first
-	// eight) or its leader beaten, the rest by the trainer beaten. Empty when the ROM has none of them
-	GuideData guideFromRom(const RomData& rom);
-
 	// the type a guide file names ("fire"), NO_TYPE for anything else
 	Type typeFromName(const std::string& name);
 }

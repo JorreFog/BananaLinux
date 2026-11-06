@@ -2,7 +2,7 @@
 // banana-ui: the GBA Pokémon companion on the game panel. The DS companion's pages (nds/pages.h) with gba::Host's data
 // have all of the panel; their Back to game shows the panel's own tiles (Settings draws them), whose tab bar is the
 // pages' tabs and Game, each opening its page. From the game's start: "Reading your game" till the ROM's data is read,
-// "No game data" when it can't be. A battle starting shows the Battle page, its end the Party page (on the pages).
+// "No game data" when it can't be; a ROM hack not supported: "Not supported" alone, and the tiles without the tabs. A battle starting shows the Battle page, its end the Party page (on the pages).
 #include "../nds/pages.h"
 #include <memory>
 #include <string>
@@ -28,6 +28,7 @@ namespace banana::gba
 		void close();		// (before the host goes)
 		bool active() const;
 		bool pagesShown() const { return active() && pages && onPages; }
+		bool tabs() const;	// the tiles' tab bar has the pages' tabs (not for a ROM hack the companion doesn't support)
 
 		// each turn of the menu's loop: the host's newest data, the battle's start and end. True: draw again
 		bool update(double nowMs);
@@ -41,7 +42,7 @@ namespace banana::gba
 		bool tabOn(int i) const;
 		void openTab(int i);
 		std::string view() const;	// (tests) "pages:<page>", "game" or "" without a game
-		int ready() const;			// (tests) the ROM's data: 1 read, -1 couldn't be, 0 not yet (or no game)
+		int ready() const;			// (tests) the ROM's data: 1 read, -1 couldn't be, -2 a hack not supported, 0 not yet (or no game)
 		std::string title() const;	// (tests) the game's title, once read
 
 	private:

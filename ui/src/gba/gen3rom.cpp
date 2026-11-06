@@ -606,30 +606,13 @@ namespace banana::gba
 			h.add(len, 4);
 			g.romHash = h.hex();
 		};
-		// a ROM hack (its base game's code): one the companion knows by its whole ROM's CRC-32 (its title, its Pokédex,
-		// its guide), else one read by its engine alone - a pokeemerald-expansion build ("RHHEXP" in its header), or one
-		// whose tables have outgrown its base game's (a CFRU FireRed, a patched Emerald or FireRed)
-		if (g.id == GameId::EMERALD || g.id == GameId::FIRERED || g.id == GameId::LEAFGREEN)
+		// a ROM hack (its base game's code) the companion knows, by its whole ROM's CRC-32: who it is, its Pokédex, its
+		// chart
+		if ((g.id == GameId::EMERALD || g.id == GameId::FIRERED) && n >= 0x1000000)
 		{
-			const HackInfo* h = nullptr;
-			if (n >= 0x1000000)
-			{
-				if (!crc) crc = romCrc32(rom, n);
-				h = hackByCrc(crc);
-				if (h && g.code != h->base) h = nullptr;
-			}
-			int maj, min, pat;
-			if (!h && expansionVersion(rom, n, maj, min, pat)) h = anyHack(Engine::EXPANSION, "BPEE");
-			if (!h)
-			{
-				long sp = ptr(rom, n, 0x144), mv = ptr(rom, n, 0x148), bs = ptr(rom, n, 0x1bc, 28 * 412);
-				if (sp < 0 && mv < 0 && bs < 0) { g.id = GameId::NONE; return g; }	// (no tables behind the header at all)
-				bool grown = sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
-				for (int i = 0; !grown && i < 412; i++) grown = rom[bs + 28 * i + 6] > 17 || rom[bs + 28 * i + 7] > 17;
-				if (grown) h = g.id != GameId::EMERALD && (sp < 0 || mv < 0 || mv - sp != 412 * 11) ? anyHack(Engine::CFRU, "BPRE")
-					: anyHack(Engine::BINARY, g.code.c_str());
-			}
-			if (h)
+			if (!crc) crc = romCrc32(rom, n);
+			const HackInfo* h = hackByCrc(crc);
+			if (h && g.code == h->base)
 			{
 				g.id = GameId::HACK;
 				g.title = h->title;
@@ -644,43 +627,33 @@ namespace banana::gba
 				return g;
 			}
 		}
+		// any other ROM hack isn't supported: a pokeemerald-expansion build ("RHHEXP" in its header), or tables grown
+		// past the base game's (a CFRU hack moves the species names to a longer table - they no longer end where the
+		// move names start, 412 x 11 bytes - or a base stat record has a type past Dark: Fairy)
+		if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
+		{
+			int maj, min, pat;
+			long sp = ptr(rom, n, 0x144), mv = ptr(rom, n, 0x148), bs = ptr(rom, n, 0x1bc, 28 * 412);
+			bool hack = expansionVersion(rom, n, maj, min, pat) || sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
+			for (int i = 0; !hack && i < 412; i++) hack = rom[bs + 28 * i + 6] > 17 || rom[bs + 28 * i + 7] > 17;
+			if (hack) { g.id = GameId::NONE; return g; }
+		}
 		hash();
 		return g;
 	}
 
-	Game detectGame(const pkmn::RomTables& t, const std::string& romName)
+	std::shared_ptr<const RomData> readGame(const pkmn::RomTables& t, Game* out, bool* unsupported)
 	{
-		if (!t.rom) return Game();
-		Game g = detectGame(t.rom->data(), t.rom->size(), t.crc);
-		// (a header like its base game's, tables that aren't: a hack read by its engine alone)
-		if (g.gen == Gen::III && g.id != GameId::HACK && g.id != GameId::NONE && (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412))
-			if (const HackInfo* any = anyHack(Engine::BINARY, g.code.c_str()))
-			{
-				g.id = GameId::HACK;
-				g.hack = any->key;
-				g.title = any->title;
-				g.dexSize = 0;
-				g.modern = t.has.modernTypes;
-			}
-		if (!g.hack.compare(0, 4, "any-") && !romName.empty()) g.title = romName;
-		return g;
-	}
-
-	std::shared_ptr<const RomData> readGame(const pkmn::RomTables& t, const std::string& romName, Game* out)
-	{
-		Game g = detectGame(t, romName);
-		std::shared_ptr<const RomData> r = g.id == GameId::NONE ? nullptr : readRomData(t, g, "");
-		if (!r && (g.id == GameId::EMERALD || g.id == GameId::FIRERED || g.id == GameId::LEAFGREEN))
-			if (const HackInfo* any = anyHack(Engine::BINARY, g.code.c_str()))
-			{
-				g.id = GameId::HACK;
-				g.hack = any->key;
-				g.title = romName.empty() ? any->title : romName;
-				g.dexSize = 0;
-				g.modern = t.has.modernTypes || (g.code == "BPEE" && t.rom && fairyAt9(t.rom->data(), t.rom->size()));
-				r = readRomData(t, g, "");
-				if (r) fprintf(stderr, "gba companion: %s: not read as its base game, read as a patched one\n", g.title.c_str());
-			}
+		std::shared_ptr<const RomData> r;
+		Game g;
+		if (t.rom)
+		{
+			g = detectGame(t.rom->data(), t.rom->size(), t.crc);
+			if (g.id != GameId::NONE) r = readRomData(t, g, "");
+		}
+		// (a ROM with one of the five games' codes that isn't one of them, or one the list knows: a hack not
+		// supported - one whose header still points at its base game's tables too, Glazed 9.2.0 before it was listed)
+		if (unsupported) *unsupported = !r && t.rom && t.rom->size() >= 0xb0 && pkmn::detectGame(t.rom->data(), t.rom->size()) != nullptr;
 		if (out) *out = r ? r->game : Game();
 		return r;
 	}

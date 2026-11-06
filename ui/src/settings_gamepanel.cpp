@@ -631,7 +631,7 @@ namespace banana
 			}
 		}
 		// the GBA companion: the tiles' tab bar, the pages' tabs (each opening its page; Battle only in a battle) and Game
-		if (gbaPanel.active() && ly >= 424)
+		if (gbaPanel.tabs() && ly >= 424)
 		{
 			const int i = (int)std::floor((lx - 18) / (604.0f / gba::Panel::TABS));
 			if (!down) gbaPanel.openTab(i);
@@ -876,7 +876,7 @@ namespace banana
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
-		if (gbaPanel.active()) { gbaTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
+		if (gbaPanel.tabs()) { gbaTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
 		if (gc) { gcTabs(p); be->endScreen(); return; }
 		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);

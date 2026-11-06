@@ -10,26 +10,8 @@
 
 namespace banana::gba
 {
-	// a ROM file's name as a title: no folder, no extension, no "(v2.1)" or "[!]" tags
-	static std::string titleOf(const std::string& path)
-	{
-		std::string s = path.substr(path.find_last_of('/') + 1);
-		if (size_t dot = s.rfind('.'); dot != std::string::npos && dot > 0) s.erase(dot);
-		std::string o;
-		int depth = 0;
-		for (char c : s)
-		{
-			if (c == '(' || c == '[') depth++;
-			else if ((c == ')' || c == ']') && depth > 0) depth--;
-			else if (!depth) o += c == '_' ? ' ' : c;
-		}
-		while (!o.empty() && o.back() == ' ') o.pop_back();
-		while (!o.empty() && o.front() == ' ') o.erase(0, 1);
-		return o;
-	}
-
-	Host::Host(pkmn::Companion& c, std::string sd, std::string cd, bool ch, std::string romPath)
-		: comp(c), stateDir(std::move(sd)), cacheDir(std::move(cd)), romName(titleOf(romPath)), challenge(ch) {}
+	Host::Host(pkmn::Companion& c, std::string sd, std::string cd, bool ch)
+		: comp(c), stateDir(std::move(sd)), cacheDir(std::move(cd)), challenge(ch) {}
 
 	Host::~Host()
 	{
@@ -48,21 +30,20 @@ namespace banana::gba
 			if (t && t->rom)
 			{
 				loading = true;
-				load = std::async(std::launch::async, [t, cd = cacheDir, name = romName]
+				load = std::async(std::launch::async, [t]
 				{
 					nds::PageData d;
 					const auto t0 = std::chrono::steady_clock::now();
-					d.rom = readGame(*t, name);	// (by the CRC-32 the companion worked out, and its tables)
-					(void)cd;
-					if (!d.rom) return d;
+					bool unsupported = false;
+					d.rom = readGame(*t, nullptr, &unsupported);	// (by the CRC-32 the companion worked out)
+					if (!d.rom) { d.unsupported = unsupported; return d; }
 					auto gd = std::make_shared<nds::GuideData>();
 					const nds::GuideResolver res = nds::guideResolver(*d.rom);
 					std::string why;
 					if (!nds::loadGuide(d.rom->game, *gd, &why, &res))
 					{
-						// (no guide written for it: the one its ROM's gym leaders, Elite Four and Champion make)
-						*gd = nds::guideFromRom(*d.rom);
-						fprintf(stderr, "banana-ui: gba companion: no guide (%s): %zu milestones from the ROM\n", why.c_str(), gd->milestones.size());
+						fprintf(stderr, "banana-ui: gba companion: no guide: %s\n", why.c_str());
+						*gd = nds::GuideData();
 					}
 					d.guide = gd;
 					fprintf(stderr, "banana-ui: gba companion: %s read in %.0f ms\n", d.rom->game.title.c_str(),
@@ -75,7 +56,14 @@ namespace banana::gba
 		{
 			loading = false;
 			base = load.get();
-			if (!base.rom) { loadFailed = true; out = nds::PageData(); fresh = true; return true; }	// ("No game data")
+			if (!base.rom)	// ("Not supported" for a ROM hack not in the list, else "No game data")
+			{
+				loadFailed = true;
+				out = nds::PageData();
+				out.unsupported = base.unsupported;
+				fresh = true;
+				return true;
+			}
 			nds::useModernTypeChart(base.rom->game.modern);	// (Fairy and Generation VI's chart for a hack that has them)
 			auto ss = std::make_unique<nds::Session>(base.rom, base.guide, stateDir);
 			ss->setChallenge(challenge);

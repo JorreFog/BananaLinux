@@ -1081,6 +1081,8 @@ namespace banana::nds
 		if (dt.reading)
 			message("Reading your game", "The companion reads names, sprites and places from your own game once, and keeps them on the card. The game plays on meanwhile.",
 				dt.readProgress, dt.readWhat);
+		else if (!dt.rom && dt.unsupported)
+			message("Not supported", "This ROM hack isn't one the companion supports. The game plays on as usual.");
 		else if (!dt.rom)
 			message("No game data", "The companion couldn't read this game's data. Back to game plays on as usual.");
 		else if (!dt.live || !dt.live->valid)
@@ -1156,9 +1158,10 @@ namespace banana::nds
 		const Area ba = backArea();
 		const float bx0 = ba.x0, by0 = ba.y0, bx1 = ba.x1, by1 = ba.y1;
 		const float dockEnd = backTop() ? 628 : bx0 - 8;
-		box("bubble", 12, 424, dockEnd - 12, 48);
 		bool usable = !dt.reading && dt.rom && dt.live && dt.live->valid;
-		int n = (int)Page::COUNT;
+		// (a ROM hack not supported: no tabs, Back to game alone)
+		if (!dt.unsupported) box("bubble", 12, 424, dockEnd - 12, 48);
+		int n = dt.unsupported ? 0 : (int)Page::COUNT;
 		float cell = (dockEnd - 12 - 12) / n;
 		for (int i = 0; i < n; i++)
 		{

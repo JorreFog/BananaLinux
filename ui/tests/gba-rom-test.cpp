@@ -111,21 +111,15 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ(gba::detectGame(rom->data(), rom->size()).romHash, g.romHash);
 	if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
 	{
-		// a hack the list doesn't know, read by its engine alone: its species names moved to a longer table (a CFRU
-		// FireRed, a patched Emerald), or the Fairy type in the base stats (a patched one)
-		const bool em = g.id == GameId::EMERALD;
+		// a ROM hack the list doesn't know isn't supported: its species names moved to a longer table (a CFRU FireRed, a
+		// patched Emerald), or a type past Dark in the base stats
 		std::vector<uint8_t> h(*rom);
 		uint32_t sp; memcpy(&sp, h.data() + 0x144, 4); sp += 11 * 100; memcpy(h.data() + 0x144, &sp, 4);
-		Game a = gba::detectGame(h.data(), h.size());
-		EQ((int)a.id, (int)GameId::HACK);
-		EQ(a.hack, std::string(em ? "any-emerald" : "any-cfru"));
+		EQ((int)gba::detectGame(h.data(), h.size()).id, (int)GameId::NONE);
 		h = *rom;
 		uint32_t bs; memcpy(&bs, h.data() + 0x1bc, 4);
 		h[bs - 0x08000000u + 28 * 35 + 7] = 23;	// (Clefairy)
-		a = gba::detectGame(h.data(), h.size());
-		EQ((int)a.id, (int)GameId::HACK);
-		EQ(a.hack, std::string(em ? "any-emerald" : "any-firered"));
-		CHECK(a.modern);
+		EQ((int)gba::detectGame(h.data(), h.size()).id, (int)GameId::NONE);
 	}
 	t0 = std::chrono::steady_clock::now();
 	pkmn::RomTables t = pkmn::findTables(rom->data(), rom->size());
@@ -490,9 +484,8 @@ static void testHack(const std::string& path, const std::string& pngDir)
 		r->moves.size() - 1, r->trainers.size(), r->zones.size(), r->items.size());
 }
 
-// every ROM the companion opens (pokemon.h: a retail game, a hack it knows by its CRC-32 or one it reads by its engine
-// alone - another release of a known hack, a CFRU or pokeemerald-expansion build) is one the pages read too: the old
-// views that read the rest are gone (2026-11-06)
+// every game the companion supports (the five, the hacks gba/hacks.h lists) is read by the pages; another release of a
+// listed hack isn't supported (the panel says so, nothing more: 2026-11-06, the owner)
 static void testPagesRead(const std::string& path)
 {
 	pkmn::Companion c;
@@ -502,43 +495,26 @@ static void testPagesRead(const std::string& path)
 	CHECK(t && t->rom);
 	if (!t || !t->rom) return;
 	Game g;
-	auto r = gba::readGame(*t, "My Hack", &g);
+	bool unsupported = true;
+	auto r = gba::readGame(*t, &g, &unsupported);
 	CHECK(g.id != GameId::NONE);
-	if (!g.hack.compare(0, 4, "any-")) EQ(g.title, std::string("My Hack"));
+	CHECK(!unsupported);
 	CHECK(!g.title.empty());
 	CHECK(r != nullptr);
 	if (!r) { fprintf(stderr, "FAIL %s: the companion opens it (%s), the pages don't read it\n", path.c_str(), c.game()->name); return; }
 	CHECK(r->species.size() > 386);
-	if (g.id == GameId::HACK && gba::hackByCrc(t->crc))
-	{
-		// (another release of it - a CRC-32 not in the list: read by its engine alone, as much of it)
-		pkmn::RomTables other = *t;
-		other.crc ^= 1;
-		Game any;
-		auto ra = gba::readGame(other, "", &any);
-		EQ((int)any.id, (int)GameId::HACK);
-		EQ(any.hack.compare(0, 4, "any-"), 0);
-		CHECK(ra != nullptr);
-		if (ra) EQ(ra->species.size(), r->species.size());
-		fprintf(stderr, "gba-rom-test: %s: as another release: %s\n", path.c_str(), any.hack.c_str());
-	}
-	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
-	// the guide its ROM makes (for a hack with none written): its eight gyms at least, in the order they're met
 	if (g.id == GameId::HACK)
 	{
-		GuideData own = guideFromRom(*r);
-		int gyms = 0, prev = 0; bool ordered = true; std::string road;
-		for (auto& m : own.milestones)
-		{
-			road += " " + m.name + " (" + std::to_string(m.levelCap) + ")";
-			if (m.kind != "gym") continue;
-			gyms++;
-			ordered &= m.levelCap >= prev; prev = m.levelCap;
-			CHECK(!m.trainerIds.empty());
-		}
-		fprintf(stderr, "gba-rom-test: %s: the ROM's own guide:%s\n", g.title.c_str(), road.c_str());
-		CHECK(gyms >= 8 && ordered);
+		// (another release of it - a CRC-32 not in the list: not supported)
+		pkmn::RomTables other = *t;
+		other.crc ^= 1;
+		Game none;
+		bool no = false;
+		CHECK(gba::readGame(other, &none, &no) == nullptr);
+		CHECK(no);
+		EQ((int)none.id, (int)GameId::NONE);
 	}
+	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
 	// its guide (the repository's, BANANA_GBA_GUIDE): every place a zone of this ROM, every milestone's foe a trainer
 	// in it (the save's trainer flags tick a milestone off by them)
 	if (!getenv("BANANA_GBA_GUIDE")) return;
@@ -547,7 +523,8 @@ static void testPagesRead(const std::string& path)
 	std::string why;
 	if (!loadGuide(r->game, gd, &why, &res))
 	{
-		fprintf(stderr, "gba-rom-test: %s: no guide written (%s): the ROM's own\n", g.title.c_str(), why.c_str());
+		fprintf(stderr, "FAIL %s: no guide (%s)\n", g.title.c_str(), why.c_str());
+		CHECK(!"every supported game has a guide");
 		return;
 	}
 	int foes = 0, found = 0;

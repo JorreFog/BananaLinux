@@ -19,9 +19,7 @@ namespace banana::gba
 		Engine engine;
 	};
 	const HackInfo* hackByCrc(uint32_t crc);			// null: not one of them
-	const HackInfo* hackByKey(const char* key);		// (the list's, or one of anyHack's)
-	// a hack not in the list, read by its engine alone: EXPANSION (BPEE), CFRU (BPRE), BINARY (either); null: none
-	const HackInfo* anyHack(Engine e, const char* base);
+	const HackInfo* hackByKey(const char* key);
 	const HackInfo* allHacks(size_t& n);
 	uint32_t romCrc32(const uint8_t* rom, size_t n);	// (zlib's crc32)
 }

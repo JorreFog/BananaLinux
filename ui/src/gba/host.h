@@ -19,9 +19,8 @@ namespace banana::gba
 	{
 	public:
 		// c: the game's companion (open, a retail game); stateDir: where the journey log is kept on the card
-		// (cache/gba-companion); cacheDir: the RomData's cache ("" none). challenge: the Settings row's. romPath: the
-		// game's file (a ROM hack not in gba/hacks.h's list is titled by its name; "" none)
-		Host(pkmn::Companion& c, std::string stateDir, std::string cacheDir, bool challenge, std::string romPath = "");
+		// (cache/gba-companion); cacheDir: the RomData's cache ("" none). challenge: the Settings row's
+		Host(pkmn::Companion& c, std::string stateDir, std::string cacheDir, bool challenge);
 		~Host();
 		// each turn of the menu's loop: the loaded data picked up, a new Snapshot handed to the Session, the Session's
 		// newest taken. True when the pages have new data (takeData): from the first, "Reading your game" till the ROM's
@@ -29,6 +28,7 @@ namespace banana::gba
 		bool tick(double nowMs);
 		bool ready() const { return base.rom != nullptr; }	// the ROM's data read
 		bool failed() const { return loadFailed; }			// it couldn't be (the pages say "No game data")
+		bool unsupported() const { return loadFailed && base.unsupported; }	// a ROM hack not supported: a message alone
 		bool takeData(nds::PageData& out);
 		// what the pages saw (Pages::takeSeen) and the season (none in Gen III)
 		void markSeen(const std::vector<std::string>& ids);
@@ -36,7 +36,7 @@ namespace banana::gba
 		uint64_t fed = 0;		// (statistics: Snapshots handed over)
 	private:
 		pkmn::Companion& comp;
-		std::string stateDir, cacheDir, romName;
+		std::string stateDir, cacheDir;
 		bool challenge;
 		std::future<nds::PageData> load;
 		bool started = false, loading = false, loadFailed = false;
