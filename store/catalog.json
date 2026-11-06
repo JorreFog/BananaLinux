@@ -61,7 +61,7 @@
    "releasedate": "20261013T000000",
    "accent": "#5140b9",
    "summary": "Game Boy Advance on both screens: the game on one, its own map on the other.",
-   "description": "A Game Boy Advance emulator made for dual-screen handhelds, built on mGBA. The game plays on the top screen; for 28 games (Castlevania, Metroid, Zelda, Golden Sun, Advance Wars, Mario Kart and more) the bottom screen shows the game's own map, race HUD or unit intel and keeps it current as you play, the way the DS Castlevanias do. It finds the games in roms/gba on the card by itself (the banana share's roms\\gba folder): it lists the ones it has second-screen support for, and show_all = 1 in store/apps/gbads/gba-ds.cfg lists every game (the others play on one screen). HOME or a tap on the bottom screen opens its menu: save states, rewind, cheats, display options, Close GBA DS. Its battery saves go in the card's saves folder as .sav files, apart from the Game Boy Advance list's own (saves/gba), so a game you've played there starts over in GBA DS; its save states and settings stay in store/apps/gbads, also when the app is removed. In its Settings, GBA DS in BananaOS's GBA list starts the supported games from Banana's own Game Boy Advance list in GBA DS (switch it off before removing the app). Made by kyannon (free software, GPL-3.0); it updates itself too, and the Store follows its releases.",
+   "description": "A Game Boy Advance emulator made for dual-screen handhelds, built on mGBA. The game plays on the top screen; for 37 games (Castlevania, Metroid, Zelda, Golden Sun, Advance Wars, Mario Kart and more) the bottom screen shows the game's own map, race HUD or unit intel and keeps it current as you play, the way the DS Castlevanias do. It finds the games in roms/gba on the card by itself (the banana share's roms\\gba folder): it lists the ones it has second-screen support for, and show_all = 1 in store/apps/gbads/gba-ds.cfg lists every game (the others play on one screen). HOME or a tap on the bottom screen opens its menu: save states, rewind, cheats, display options, Close GBA DS. From v1.4.10 its battery saves are the Game Boy Advance list's own (saves/gba, .srm), so a game goes on from the same save in GBA DS and in Banana's emulators; its save states and settings stay in store/apps/gbads, also when the app is removed. In its Settings, GBA DS in BananaOS's GBA list starts the supported games from Banana's own Game Boy Advance list in GBA DS; the others then play in RetroArch without Banana's own second screen, so leave it off if you use that (from v1.4.10, removing the app leaves the list starting its games in Banana's own emulator again). Made by kyannon (free software, GPL-3.0); it updates itself too, and the Store follows its releases.",
    "icon": "apps/gbads/icon.png",
    "screenshots": [
     "apps/gbads/screen.png"
@@ -100,7 +100,8 @@
     "folder": "/storage/.config/rocknixds/apps/gbads",
     "entry": "GBADS.sh",
     "launch": "launch.sh",
-    "ports": false
+    "ports": false,
+    "media": {"image": "images/icon.png"}
    }
   },
   {
