@@ -1346,7 +1346,14 @@ int main(int argc, char** argv)
 		return answer(bar != std::string::npos ? a.last.substr(bar + 1) : "held again: the server's changed since");
 	}
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
+	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0)
+	{
+		if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n");
+		// (the pairing screen waits for a line: a pairing started as a sync began isn't left asking for a code. Said
+		// only over the menu's own "pairing": a line the running sync wrote is that sync's)
+		if (cmd == "pair" && trim(readFile(STATUS)) == "pairing") status("error busy");
+		return 3;
+	}
 	if (cmd == "pair" && args.size() > 1)
 	{
 		// (its pid as a sync's: the menu's pairing screen stops it with B or X, the device flow waiting up to 10 minutes

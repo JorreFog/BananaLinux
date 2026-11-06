@@ -1,6 +1,9 @@
 #!/bin/sh
 # A stand-in for banana-sync in the headless test (Network > Home server): one Romhost found on the LAN, any code
-# pairs, a sync is done at once. Each call's arguments go to $FAKE_SYNC_LOG
+# pairs, a sync is done at once. RomM at any address: probe --romm answers as $FAKE_SYNC_PROBE says (ok, old, or a
+# failure: redirect, for an http:// address only, access, tls, dns), and pair --romm shows a code and is approved 2 s
+# later (FAKE_SYNC_PAIR=deny: refused; hang: no answer), a code given pairs at once (FAKE_SYNC_FIND=romm: no Romhost
+# found, and RomM at the address typed instead). Each call's arguments go to $FAKE_SYNC_LOG
 echo "$*" >> "$FAKE_SYNC_LOG"
 # what banana-sync saves lists, as $FAKE_SYNC_SAVES says (the sync before a game leaves the same in launch.conflict)
 lines() {
@@ -18,18 +21,42 @@ lines() {
         *) printf 'conflict\t5/autosave\tsaves/gba/Orchard Tactics.srm\t\taa\t8192\tbb\t8192\tOther Handheld\t2026-11-01T10:00:00\t/v/x.srm\tboth\tgba/Orchard Tactics.gba\tboth\nkept\tsaves/gba/Orchard Tactics.srm\t/v/20261101T100000Z-bb.srm\t8192\n' ;;
     esac
 }
-conf= run= when=
+conf= run= when= status=
 while [ $# -gt 0 ]; do
     case $1 in
     --conf) conf=$2; shift 2 ;;
     --run) run=$2; shift 2 ;;
     --auto) when=$2; shift 2 ;;
-    --root|--settings|--status|--rom) shift 2 ;;
-    discover) printf 'ROMHOST\thttp://192.168.50.96:8092\tTest server\n'; exit 0 ;;
+    --status) status=$2; shift 2 ;;
+    --root|--settings|--rom) shift 2 ;;
+    discover) [ "${FAKE_SYNC_FIND:-}" = romm ] && exit 0; printf 'ROMHOST\thttp://192.168.50.96:8092\tTest server\n'; exit 0 ;;
     saves) lines; exit 0 ;;
     resolve) case ${FAKE_SYNC_RESOLVE:-} in fail) echo 'error no answer'; exit 1 ;; hang) exec sleep 60 ;; slow) sleep 2 ;; esac; echo ok; exit 0 ;;
     restore) echo ok; exit 0 ;;
-    pair) printf '{"backend": "romhost", "server": "%s", "token": "rh1_test", "serverName": "Test server"}\n' "$2" > "$conf"; exit 0 ;;
+    probe)
+        # (an address typed where Romhost's was asked for: RomM's there with FAKE_SYNC_FIND=romm)
+        [ "$2" = --romm ] || { [ "${FAKE_SYNC_FIND:-}" = romm ] && { echo "romm http://$2 RomM 5.4.1"; exit 0; }; exit 1; }
+        case ${FAKE_SYNC_PROBE:-ok} in
+        ok) echo "romm $3 RomM 5.4.1" ;;
+        old) echo "romm $3 RomM 5.3.0 old" ;;
+        redirect) case $3 in http://*) echo "fail redirect https://${3#http://}/api/heartbeat"; exit 1 ;; *) echo "romm $3 RomM 5.4.1" ;; esac ;;
+        access) echo "fail access https://team.cloudflareaccess.com/cdn-cgi/access/login/x"; exit 1 ;;
+        *) echo "fail $FAKE_SYNC_PROBE"; exit 1 ;;
+        esac
+        exit 0 ;;
+    pair)
+        st() { [ -n "$status" ] && { echo "$1" > "$status.new"; mv "$status.new" "$status"; }; }
+        if [ "$2" = --romm ]; then
+            romm() { printf '{"backend": "romm", "server": "%s", "token": "rmm_test", "serverName": "RomM 5.4.1", "name": "RG DS"}\n' "$1" > "$conf"; st "paired RomM 5.4.1"; }
+            [ -n "${4:-}" ] && { romm "$3"; exit 0; }
+            st "pair ABCD-EFGH $3/pair/device?user_code=ABCD-EFGH 600"
+            case ${FAKE_SYNC_PAIR:-approve} in
+            hang) exec sleep 60 ;;
+            deny) sleep 2; st "error refused in RomM"; exit 1 ;;
+            esac
+            sleep 2; romm "$3"; exit 0
+        fi
+        printf '{"backend": "romhost", "server": "%s", "token": "rh1_test", "serverName": "Test server"}\n' "$2" > "$conf"; st "paired Test server"; exit 0 ;;
     *) shift ;;
     esac
 done

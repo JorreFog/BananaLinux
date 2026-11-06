@@ -244,7 +244,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES, HOMESRV } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -323,13 +323,14 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
+		bool urlKeys() const;		// the keyboard's symbols are an address's pieces (RomM's address)
 		std::string account(const char* key);
 		std::string shareUser();
 		static void popChar(std::string& t);
@@ -559,6 +560,7 @@ namespace banana
 		void gameFrame();	// gameRender()'s frame: the game panel, a companion's view or the tiles
 
 		void build();
+		void loadAll();						// every row's value read from its file
 		void load(Item& it);
 		Result change(int dir);
 		// the language switch asked first (owner: "Are you sure?"), in the language now and the one picked, No first:
@@ -626,7 +628,8 @@ namespace banana
 		std::string syncLine;				// that file's line, as last read
 		double syncNext = 0;
 		std::string hsUrl, hsName, hsKind;	// the server being paired with
-		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running
+		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running,
+											// 4 asking RomM's address (probe --romm)
 		wifi::Job hsJob;
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
@@ -638,8 +641,41 @@ namespace banana
 		std::string syncCmd(const std::string& args) const;
 		std::string syncShort() const;		// for the Sync now row: "Not yet", "12 / 300", "Done", "Didn't work"
 		std::string homeServer() const;		// the paired server's name, "" when none
-		mutable std::string hsPaired;
+		std::string hsBackend() const;		// the paired server's kind: "romm", "romhost", "" when none
+		mutable std::string hsPaired, hsPairedKind, hsPairedUrl;
 		mutable double hsPairedAt = -1e18;
+		std::string hsRowsFor = "?";		// the kind the Home server page's rows were made for (build())
+		void hsRebuild();					// the rows made again for the kind paired now, the cursor on the same row
+		// Home server, the pages of its own (settings_homesrv.cpp): RomM or Romhost chosen, RomM's address (protocol,
+		// address, port, certificate check), and RomM's pairing screen (its code, the page that approves it as a QR code)
+		enum HsView { HS_CHOOSE, HS_FORM, HS_PAIR } hsView = HS_CHOOSE;
+		int hsSel = 0;
+		bool hsHttps = true;
+		std::string hsHost, hsPort, hsPath;	// RomM's address as typed, in parts (hsPort "": the protocol's own)
+		std::string hsMsg;					// the form's or the pairing screen's last word
+		std::string hsCause, hsMoved;		// why the address failed (probe's word), and where a redirect went
+		std::string hsNote;					// said on the pairing screen too (a RomM before 5.4)
+		std::string hsCode, hsVerify;		// RomM's code and the page that approves it
+		double hsExpires = 0;				// when the code runs out (the menu's clock)
+		int hsShownSec = -1;				// the second the countdown last drew
+		bool hsDone = false;				// paired: the pairing screen says so, A goes on
+		rnds::TexPtr hsQr;					// the QR code of hsVerify, made for hsQrFor at hsQrPx a module
+		std::string hsQrFor;
+		int hsQrPx = 0, hsQrSize = 0;
+		void openHome(HsView v);
+		Result pressHome(Key k);
+		Result touchHome(float cx, float cy);
+		void renderHome();
+		std::string hsBase() const;			// the form's parts as one base URL
+		void hsSetAddress(const std::string& typed);	// a URL typed (or pasted) into the parts
+		void hsConnect();					// probe --romm on the form's address
+		void hsProbed(const std::string& out);
+		void hsRommFound(const std::string& url, const std::string& ver, bool old);	// a probe's RomM, about to be paired
+		void hsStartPair(const std::string& code);	// banana-sync pair --romm (no code: the device flow)
+		void hsPairLine(const std::string& ln);	// a line of the status file while RomM pairs
+		void hsCancelPair();				// the pairing running stopped (its sync.pid)
+		std::string hsWhy(const std::string& cause, const std::string& detail) const;	// probe's word, for a person
+		std::vector<int> hsFormRows() const;
 		void syncBar(float x, float y, float w);
 		std::string syncTool() const;
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
@@ -803,6 +839,7 @@ namespace banana
 		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
 		struct Chip { Key key; std::string face, label; bool right = false; };
 		void drawChips(const std::vector<Chip>& cs);
+		std::vector<Chip> homeChips();		// the Home server pages' buttons
 		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
 		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
 		std::vector<Chip> keyboardChips();

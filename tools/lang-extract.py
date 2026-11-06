@@ -343,6 +343,7 @@ BL_UI = [
     ("ui/src/settings_servers.cpp", "settings", "Files: servers, downloads and archives"),
     ("ui/src/settings_bshare.cpp", "settings", "Bshare"),
     ("ui/src/settings_gamepanel.cpp", "settings", "Game panel (second screen)"),
+    ("ui/src/settings_homesrv.cpp", "settings", "Settings: Home server pairing"),
     ("ui/src/wifi.cpp", "settings", "Settings: Wi-Fi and the keyboard"),
     ("ui/src/bluetooth.cpp", "settings", "Settings: Bluetooth"),
     ("ui/src/scrape.cpp", "settings", "Box art download"),

@@ -13,6 +13,8 @@ SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/co
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/panel.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
+# (Home server's pairing pages, and the QR code library they draw RomM's approval page with)
+SRC += src/settings_homesrv.cpp src/qr/qrcodegen.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib

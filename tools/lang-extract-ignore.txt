@@ -7,6 +7,10 @@
 @~running .*\|.*
 @~done \{.*
 @~error .*
+@~probe --romm .*
+@~pair --romm .*
+refused in RomM
+the code ran out
 @~(?s)READ_CORE_MEMORY.*
 RIFF
 WAVE

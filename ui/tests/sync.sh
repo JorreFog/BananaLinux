@@ -378,6 +378,17 @@ for v in 5.3.1 development; do
     esac
 done
 
+# (a pairing refused because a sync holds the lock: "error busy" over the menu's "pairing", never over the line the
+# running sync wrote)
+card pb; flock "$OUT/pb/run/sync.lock" sleep 6 & _f=$!; sleep 0.3
+echo 'running 2 9 Saves|Banana Run (USA).srm' > "$OUT/pb/run/sync.status"
+bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'running 2 9 Saves|Banana Run (USA).srm' ] || bad "a pairing refused by a running sync wrote over its line: $r $(st pb)"
+echo pairing > "$OUT/pb/run/sync.status"
+bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1
+[ "$(st pb)" = 'error busy' ] || bad "a pairing refused by a running sync didn't say so: $(st pb)"
+kill $_f 2>/dev/null; wait $_f 2>/dev/null
+
 # ---------------------------------------------------------------- RomM on https (#109)
 # behind a certificate of its own making (no CA on the handheld for it): https typed is used as it is, the check
 # refuses it until Settings' Check certificate is Off, and http to the TLS port is a quick none, not a hang
@@ -483,26 +494,39 @@ if [ -x "$HERE/banana-ui" ]; then
     FX=$OUT/fixture; "$HERE/tests/fixture.sh" "$FX" >/dev/null
     printf 'wifi = on\n' >> "$FX/data/settings.conf"
     SL=$OUT/fake-sync.log; : > "$SL"
-    # Settings > Network (the fifth tile) > its last row (Home server) > Server: A looks on the LAN, finds the stand-in's
-    # server and asks for its code (typed: 1, START); then Sync now
+    export BANANA_RUN=$OUT/ui-run; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
+    # Settings > Network (the fifth tile) > its last row (Home server) > Server, not paired: A asks which kind, Romhost
+    # (DOWN, A) looks on the LAN, finds the stand-in's server and asks for its code (typed: 1, START); then Sync now
     BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; shot hs-row; press a; shot hs-page; press a; wait 300; shot hs-code; press a; press start; wait 300; shot hs-paired; press down; shot hs-sync; press b; press b" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; shot hs-row; press a; shot hs-page; press a; shot hs-choose; press down; press a; wait 300; shot hs-code; press a; press start; sleep 300; wait 600; shot hs-paired; press down; shot hs-sync; press b; press b" \
         2> "$OUT/ui.log" || bad "banana-ui (Home server) exited $?"
     grep -q '^discover' "$SL" || bad "the Server row didn't look on the LAN: $(cat "$SL")"
     grep -q 'pair http://192.168.50.96:8092 .' "$SL" || bad "the code wasn't sent to pair: $(cat "$SL")"
     grep -q '"token": "rh1_test"' "$FX/data/romsync.json" 2>/dev/null || bad "no pairing written"
-    for s in hs-row hs-page hs-code hs-paired hs-sync; do
+    for s in hs-row hs-page hs-choose hs-code hs-paired hs-sync; do
         [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"
     done
     cmp -s "$OUT/ui-hs-row-top.png" "$OUT/ui-hs-page-top.png" && bad "A on Home server didn't open its page"
+    cmp -s "$OUT/ui-hs-paired-top.png" "$OUT/ui-hs-sync-top.png" && bad "Romhost paired: the page's rows weren't made for it (no Sync now under Server)"
+    # (no Romhost on the LAN, and RomM's address typed where Romhost's was asked for: RomM's pairing screen, its code
+    # shown, and paired once it is approved)
+    FXR=$OUT/fixture-rh; "$HERE/tests/fixture.sh" "$FXR" >/dev/null; printf 'wifi = on\n' >> "$FXR/data/settings.conf"; : > "$SL"
+    BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" FAKE_SYNC_FIND=romm "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FXR/roms" --data "$FXR/data" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press a; press down; press a; wait 300; press a; press start; sleep 300; wait 600; shot hs-rhromm; sleep 2600; wait 600" \
+        2> "$OUT/ui-rhromm.log" || bad "banana-ui (RomM where Romhost's address was asked) exited $?"
+    grep -q ' pair --romm http://' "$SL" || bad "RomM where Romhost's address was asked: no RomM pairing: $(cat "$SL")"
+    grep -q '"token": "rmm_test"' "$FXR/data/romsync.json" 2>/dev/null || bad "RomM where Romhost's address was asked: not paired: $(grep 'home server' "$OUT/ui-rhromm.log")"
+    grep -q 'home server: RomM 5.4.1 at http://' "$OUT/ui-rhromm.log" || bad "RomM where Romhost's address was asked: not taken as RomM's form takes it: $(grep 'home server' "$OUT/ui-rhromm.log")"
     # Home server > Saves: a game's conflict settled, then a kept copy restored; X deletes nothing
     : > "$SL"
     BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; wait 300; shot sv-list; press a; wait 100; shot sv-game; press a; wait 300; press down; press down; press x; press x; wait 100; press a; wait 300; shot sv-restored" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press a; wait 300; shot sv-list; press a; wait 100; shot sv-game; press a; wait 300; press down; press down; press x; press x; wait 100; press a; wait 300; shot sv-restored" \
         2> "$OUT/ui-sv.log" || bad "banana-ui (Saves) exited $?"
     grep -q "resolve 5/autosave card" "$SL" || bad "Saves: this handheld's not chosen: $(cat "$SL")"
     [ "$(grep -c "^.* saves" "$SL")" -ge 2 ] || bad "Saves: the list not read again after a choice: $(cat "$SL")"
@@ -510,7 +534,7 @@ if [ -x "$HERE/banana-ui" ]; then
     cmp -s "$OUT/ui-sv-list-top.png" "$OUT/ui-sv-game-top.png" && bad "Saves: A didn't open a game"
     # (a game with nothing to choose: every button on it is safe. Two conflicts, the first settled: the next A opens the
     # list's, never settles the second's. Left during a choice and come back to: no freeze)
-    SAVESCRIPT="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; wait 300"
+    SAVESCRIPT="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press a; wait 300"
     uis() { BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" FAKE_SYNC_SAVES=$1 "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$SAVESCRIPT; $2" 2> "$OUT/ui-sv.log" || bad "banana-ui (Saves, $1) exited $?"; }
     : > "$SL"; uis queued "press a; wait 100; press down; press a; press x; press r; press a; wait 100; press b; wait 100"
     grep -q "resolve\\|restore\\|drop" "$SL" && bad "Saves: a game with no actions ran: $(cat "$SL")"
@@ -531,6 +555,76 @@ if [ -x "$HERE/banana-ui" ]; then
     for p in format:ds format:unread ds:unread unread:server ds:server; do
         cmp -s "$OUT/ui-sv-${p%:*}-top.png" "$OUT/ui-sv-${p#*:}-top.png" && bad "Saves: two kinds of note shown alike (${p%:*}, ${p#*:})"
     done
+fi
+# ---------------------------------------------------------------- RomM paired by its address (Network > Home server)
+if [ -x "$HERE/banana-ui" ]; then
+    FX=$OUT/fixture-r; "$HERE/tests/fixture.sh" "$FX" >/dev/null
+    printf 'wifi = on\n' >> "$FX/data/settings.conf"
+    SL=$OUT/fake-sync-r.log
+    export BANANA_RUN=$OUT/ui-run-r
+    HS="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press a"
+    # ur <name> <script> [VAR=value...]: the menu on a card never paired, from the Home server choice page, with the
+    # stand-in; its log in $OUT/ui-<name>.log. UR_SYNC_PID: a sync's pid in sync.pid from the start
+    ur() {
+        n=$1 sc=$2; shift 2
+        : > "$SL"; rm -rf "$BANANA_RUN" "$FX/data/romsync.json"; mkdir -p "$BANANA_RUN"
+        [ -n "${UR_SYNC_PID:-}" ] && echo "$UR_SYNC_PID" > "$BANANA_RUN/sync.pid"
+        env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$@" "$HERE/banana-ui" --headless "$OUT/ui-" --size ${UR_SIZE:-640x480} --assets "$HERE/assets/rnds" \
+            --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "$HS; $sc" 2> "$OUT/ui-$n.log" || bad "banana-ui (RomM, $n) exited $?"
+    }
+    rlog() { grep -q "$2" "$OUT/ui-$1.log" || bad "RomM ($1): no \"$2\" in the menu's log: $(grep 'home server' "$OUT/ui-$1.log")"; }
+    # RomM, A: the form, on Address; its URL keyboard's https:// key (L, the symbols' first row), the rest typed with a
+    # port and a folder: they go to their rows. START connects: the stand-in's RomM, then its code and QR code, approved
+    # 2 s later; A then goes to Sync now on the paired page, with RomM's rows
+    ur romm "shot hs-choose-romm; press a; shot hs-form0; press a; press l; press up; shot hs-urlkeys; press a; type romm.example.com:8443/romm; press start; shot hs-form; press start; sleep 400; wait 600; sleep 300; wait 600; shot hs-pair; sleep 2500; wait 600; wait 600; shot hs-paired-r; press a; shot hs-after"
+    grep -q 'probe --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the form's address not asked as one URL: $(cat "$SL")"
+    grep -q 'pair --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the device flow not started at the address checked: $(cat "$SL")"
+    grep -q 'discover' "$SL" && bad "RomM: looked on the LAN for Romhost"
+    rlog romm "home server: RomM 5.4.1 at https://romm.example.com:8443/romm"
+    rlog romm "home server: code ABCD-EFGH, approve at https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH"
+    rlog romm "home server: QR code"
+    rlog romm "home server: paired with RomM 5.4.1"
+    grep -q '"backend": "romm"' "$FX/data/romsync.json" 2>/dev/null || bad "RomM: no pairing written"
+    for s in hs-choose-romm hs-form0 hs-urlkeys hs-form hs-pair hs-paired-r hs-after; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
+    cmp -s "$OUT/ui-hs-form-bot.png" "$OUT/ui-hs-pair-bot.png" && bad "RomM: the pairing screen shows no QR code"
+    cmp -s "$OUT/ui-hs-pair-top.png" "$OUT/ui-hs-paired-r-top.png" && bad "RomM: the approval not shown"
+    # (the QR code read back, where a reader is at hand: the bottom panel's picture names the approval page)
+    if command -v zbarimg >/dev/null 2>&1; then
+        q=$(zbarimg -q --raw "$OUT/ui-hs-pair-bot.png" 2>/dev/null)
+        [ "$q" = "https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH" ] || bad "RomM: the QR code reads \"$q\""
+    else
+        echo "SKIP sync: the QR code read back (no zbarimg)"
+    fi
+    # (and at 1024x768: the code and QR code as large as that panel allows)
+    UR_SIZE=1024x768 ur romm-l "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 300; wait 600; shot hs-pair-l; press b; wait 100"
+    [ -s "$OUT/ui-hs-pair-l-bot.png" ] || bad "no screenshot hs-pair-l"
+    # http:// redirected to https://: said, and Y takes the address it went to; then a RomM before 5.4 is said on the
+    # pairing screen, and B cancels the pairing back to the form
+    ur redirect "press a; press up; press right; press down; press a; type romm.example.com; press start; press start; sleep 300; wait 300; shot hs-redirect; press y; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-redirected; press b; wait 100; shot hs-cancelled" FAKE_SYNC_PROBE=redirect FAKE_SYNC_PAIR=hang
+    grep -q 'probe --romm http://romm.example.com$' "$SL" && grep -q 'probe --romm https://romm.example.com$' "$SL" || bad "RomM: the redirect's address not taken: $(cat "$SL")"
+    rlog redirect "home server: no RomM: redirect https://romm.example.com/api/heartbeat"
+    rlog redirect "home server: code ABCD-EFGH"
+    cmp -s "$OUT/ui-hs-redirected-top.png" "$OUT/ui-hs-cancelled-top.png" && bad "RomM: B on the pairing screen didn't go back"
+    # Cloudflare Access's login in the way: said, nothing paired; a pairing code instead (X on the pairing screen)
+    ur access "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; shot hs-access" FAKE_SYNC_PROBE=access
+    rlog access "home server: no RomM: access https://team.cloudflareaccess.com"
+    grep -q 'pair' "$SL" && bad "RomM: paired past Cloudflare Access's login: $(cat "$SL")"
+    # a sync running (a banana-sync's pid in sync.pid): the pairing says so and isn't started, and B leaves that sync be
+    ln -sf "$(command -v sleep)" "$OUT/banana-sync"; "$OUT/banana-sync" 60 & BP=$!
+    UR_SYNC_PID=$BP ur busy "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; shot hs-busy; press b; wait 100"
+    rlog busy "home server: pairing not started: a sync is running"
+    grep -q 'pair --romm' "$SL" && bad "RomM: a pairing started under a running sync: $(cat "$SL")"
+    kill -0 $BP 2>/dev/null || bad "RomM: B on the pairing screen stopped a sync that was running"
+    kill $BP 2>/dev/null; wait $BP 2>/dev/null
+    ur code "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; type ABCD-1234; press start; sleep 300; wait 600; shot hs-code-r" FAKE_SYNC_PAIR=hang
+    grep -q "pair --romm https://romm.example.com 'ABCD-1234'\|pair --romm https://romm.example.com ABCD-1234" "$SL" || bad "RomM: the pairing code not sent: $(cat "$SL")"
+    rlog code "home server: paired with RomM 5.4.1"
+    # refused in RomM: said, A asks again
+    ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
+    rlog deny "home server: pairing failed: refused in RomM"
+    [ "$(grep -c 'pair --romm' "$SL")" -ge 2 ] || bad "RomM: A after a refusal didn't ask again: $(cat "$SL")"
+    unset BANANA_RUN
 fi
 # ---------------------------------------------------------------- the sync before a game
 if [ -x "$HERE/banana-ui" ]; then

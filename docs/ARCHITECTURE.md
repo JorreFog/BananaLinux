@@ -236,6 +236,28 @@ takes the panels back, records the play, and shows the game's library again.
 
 ### Saves and a home server
 
+Pairing (Settings > Network > Home server > Server) starts by asking which kind of server, as the sync has one at a time.
+Romhost is looked for on the LAN (a UDP broadcast only it answers), its address typed when none answers, then paired
+with the code Homeport shows. RomM is a form, as Grout's: protocol (HTTPS by default), address, an optional port and
+Check certificate (`homesync_tls`, only here: with a server paired, a change to it holds at once, and Server opens the
+form on the paired address); a full URL typed in fills the rows it names, and its path is kept
+for a RomM served under a subpath. Connect runs `banana-sync probe --romm <url>`, which asks that URL's `/api/heartbeat` once, with
+no port guessed and no redirect followed, and answers `romm <url> RomM <version>` (with `old` before 5.4) or `fail
+<why>`: `dns`, `refused`, `timeout`, `tls`, `clock` (a certificate failure before Wi-Fi's first time sync, so the clock
+is the RTC's), `ca`, `redirect <location>`, `access <location>` (Cloudflare Access's login), `denied <status>`, `http
+<status>`, `notromm`, `noanswer`. The menu says each in words of its own, offers to turn the check off after `tls` and
+to take the address a `redirect` went to. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line
+`pair <code> <url> <seconds>` is the pairing screen, the code large on the top panel with the approval page written out
+and the time left, and that page as a QR code on the bottom one (Nayuki's qrcodegen, `ui/src/qr`), for a phone where
+the owner is signed in to RomM, through Cloudflare Access's login when there is one; X takes a client token's pairing
+code instead, B stops the pairing (its pid is in `sync.pid`, as a sync's). Only the approval page is ever opened in a
+browser: the handheld talks to the API alone, so a server behind Cloudflare Access needs a bypass for `/api`. The old
+probe, which guessed http on 8092, 8080 and 80 before https, followed redirects: Cloudflare answers 8080 with a
+redirect to https, so a bare name paired at `http://<name>:8080`, and the redirect then turned the device flow's POST
+into a GET (405). It is still Romhost's typed address, without following redirects, and no pairing POST follows one.
+Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
+check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
+
 The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on RomM
 what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses, before
 the game starts or on Settings > Network > Home server > Saves. That page also lists the kept copies, which it can put
