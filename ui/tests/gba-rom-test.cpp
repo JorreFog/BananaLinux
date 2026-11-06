@@ -521,13 +521,33 @@ static void testPagesRead(const std::string& path)
 		fprintf(stderr, "gba-rom-test: %s: as another release: %s\n", path.c_str(), any.hack.c_str());
 	}
 	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
+	// the guide its ROM makes (for a hack with none written): its eight gyms at least, in the order they're met
+	if (g.id == GameId::HACK)
+	{
+		GuideData own = guideFromRom(*r);
+		int gyms = 0, prev = 0; bool ordered = true; std::string road;
+		for (auto& m : own.milestones)
+		{
+			road += " " + m.name + " (" + std::to_string(m.levelCap) + ")";
+			if (m.kind != "gym") continue;
+			gyms++;
+			ordered &= m.levelCap >= prev; prev = m.levelCap;
+			CHECK(!m.trainerIds.empty());
+		}
+		fprintf(stderr, "gba-rom-test: %s: the ROM's own guide:%s\n", g.title.c_str(), road.c_str());
+		CHECK(gyms >= 8 && ordered);
+	}
 	// its guide (the repository's, BANANA_GBA_GUIDE): every place a zone of this ROM, every milestone's foe a trainer
 	// in it (the save's trainer flags tick a milestone off by them)
 	if (!getenv("BANANA_GBA_GUIDE")) return;
 	GuideData gd;
 	const GuideResolver res = guideResolver(*r);
 	std::string why;
-	if (!loadGuide(r->game, gd, &why, &res)) { fprintf(stderr, "gba-rom-test: %s: no guide (%s)\n", g.title.c_str(), why.c_str()); return; }
+	if (!loadGuide(r->game, gd, &why, &res))
+	{
+		fprintf(stderr, "gba-rom-test: %s: no guide written (%s): the ROM's own\n", g.title.c_str(), why.c_str());
+		return;
+	}
 	int foes = 0, found = 0;
 	std::string missing;
 	for (auto& m : gd.milestones)

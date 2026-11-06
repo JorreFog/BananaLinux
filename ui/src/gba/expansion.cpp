@@ -690,7 +690,14 @@ namespace banana::gba
 				empty = !sz && !p;
 				if (empty) return true;
 				if (sz < 1 || sz > 24 || ptrAt(rom, n, a + y.party, 8) < 0) return false;
-				return isText(rom, n, (long)(a + y.name), 11, true);
+				// (or a name the game fills in: a placeholder, 0xFD and its number - the rival the player names -, or
+				// one not given, "???": SoulGold 1.2's 225th and 250th records, where the table seemed to end)
+				const size_t nm = a + (size_t)y.name;
+				if (isText(rom, n, (long)nm, 11, true)) return true;
+				if (nm + 3 <= n && rom[nm] == 0xfd && rom[nm + 2] == 0xff) return true;
+				size_t q = 0;
+				while (q < 10 && nm + q < n && rom[nm + q] == 0xac) q++;
+				return q > 0 && nm + q < n && rom[nm + q] == 0xff;
 			};
 			int best = 0;
 			for (const Lay& y : LAYS)

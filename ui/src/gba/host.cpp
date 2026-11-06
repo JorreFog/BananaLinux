@@ -61,8 +61,9 @@ namespace banana::gba
 					std::string why;
 					if (!nds::loadGuide(d.rom->game, *gd, &why, &res))
 					{
-						fprintf(stderr, "banana-ui: gba companion: no guide: %s\n", why.c_str());
-						*gd = nds::GuideData();
+						// (no guide written for it: the one its ROM's gym leaders, Elite Four and Champion make)
+						*gd = nds::guideFromRom(*d.rom);
+						fprintf(stderr, "banana-ui: gba companion: no guide (%s): %zu milestones from the ROM\n", why.c_str(), gd->milestones.size());
 					}
 					d.guide = gd;
 					fprintf(stderr, "banana-ui: gba companion: %s read in %.0f ms\n", d.rom->game.title.c_str(),

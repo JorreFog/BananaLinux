@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <map>
 #include <set>
 #include "../json.h"
 
@@ -309,5 +310,73 @@ namespace banana::nds
 		std::string f = guideFileName(game.id);
 		if (f.empty()) { if (why) *why = "not one of the nine games"; return false; }
 		return loadGuideFile(std::string(game.gen == Gen::III ? gbaGuideDir() : guideDir()) + "/" + f, out, game.id, why, resolver);
+	}
+
+	GuideData guideFromRom(const RomData& rom)
+	{
+		GuideData g;
+		g.game = rom.game.hack;
+		g.title = rom.game.title;
+		g.sources = { "the ROM's own trainer table (no guide written for this game)" };
+		enum { GYM, ELITE, CHAMPION };
+		struct Foe { int kind = GYM, first = 999; std::vector<uint16_t> ids; const Trainer* t = nullptr; };
+		std::map<std::string, Foe> foes;	// by kind and name
+		for (auto& kv : rom.trainers)
+		{
+			const Trainer& t = kv.second;
+			const std::string c = fold(t.cls);
+			const int kind = c == "leader" || c == "gymleader" ? GYM : c.find("elite") != std::string::npos ? ELITE :
+				c.find("champion") != std::string::npos ? CHAMPION : -1;
+			if (kind < 0 || t.name.empty() || t.team.empty()) continue;
+			int top = 0;
+			for (auto& m : t.team) top = std::max(top, (int)m.level);
+			Foe& f = foes[std::to_string(kind) + "/" + t.name];
+			f.kind = kind;
+			f.ids.push_back(t.id);
+			if (top < f.first) { f.first = top; f.t = &t; }	// (the first fight: its lowest-levelled team)
+		}
+		std::vector<const Foe*> order;
+		for (auto& kv : foes) order.push_back(&kv.second);
+		std::stable_sort(order.begin(), order.end(), [](const Foe* a, const Foe* b) { return a->kind != b->kind ? a->kind < b->kind : a->first < b->first; });
+		int gyms = 0, elite = 0;
+		for (const Foe* f : order)
+		{
+			Milestone m;
+			const Trainer& t = *f->t;
+			m.trainerIds = f->ids;
+			m.foeName = t.name; m.foeClass = t.cls; m.foeAceLevel = f->first;
+			m.levelCap = f->first;
+			m.q = Quality::LIVE_VERIFIED;
+			m.source = "ROM trainer table";
+			// its type: the one most of the first team has
+			std::map<int, int> types;
+			for (auto& tm : t.team)
+				if (tm.species < rom.species.size())
+				{
+					const Species& sp = rom.species[tm.species];
+					types[sp.types[0]] += 2;
+					if (sp.types[1] != sp.types[0]) types[sp.types[1]]++;
+				}
+			int most = 0;
+			for (auto& x : types) if (x.second > most && x.first < NUM_TYPES) { most = x.second; m.theme = (Type)x.first; }
+			if (f->kind == GYM)
+			{
+				gyms++;
+				m.kind = "gym"; m.leader = t.name;
+				m.id = "rom-gym-" + std::to_string(gyms);
+				m.name = "Gym " + std::to_string(gyms) + ": " + t.name;
+				if (gyms <= 8) { m.doneWhen = "badge:" + std::to_string(gyms); m.badge = gyms; }
+				else m.doneWhen = "later";
+			}
+			else
+			{
+				m.kind = f->kind == ELITE ? "elite4" : "champion";
+				m.id = (f->kind == ELITE ? "rom-elite-" + std::to_string(++elite) : "rom-champion-" + t.name);
+				m.name = (f->kind == ELITE ? "Elite Four " : "Champion ") + t.name;
+				m.doneWhen = "later";
+			}
+			g.milestones.push_back(std::move(m));
+		}
+		return g;
 	}
 }
