@@ -30,6 +30,10 @@ namespace banana::gba
 	// tables aren't (more species, its own Pokédex, the modern chart). romName: the title of a hack not in the list (its
 	// file's name; "" keeps "ROM hack")
 	nds::Game detectGame(const pkmn::RomTables& t, const std::string& romName = "");
+	// detectGame(t, romName), then readRomData: and a game that looks like its base game but isn't read as one (a
+	// patched Emerald whose header still points at the old tables: Glazed 9.2.0) read again as a hack of it. game:
+	// what it was read as (NONE when it wasn't)
+	std::shared_ptr<const nds::RomData> readGame(const pkmn::RomTables& t, const std::string& romName, nds::Game* game = nullptr);
 
 	// the whole RomData, from the ROM and today's tables (t.rom holds the whole ROM). Runs on a background thread (tens
 	// of ms on a PC); sprite() is safe from any thread. cacheDir: unused (the reads are fast enough without one).

@@ -52,9 +52,8 @@ namespace banana::gba
 				{
 					nds::PageData d;
 					const auto t0 = std::chrono::steady_clock::now();
-					const nds::Game g = detectGame(*t, name);	// (by the CRC-32 the companion worked out, and its tables)
-					if (g.id == nds::GameId::NONE) return d;
-					d.rom = readRomData(*t, g, cd);
+					d.rom = readGame(*t, name);	// (by the CRC-32 the companion worked out, and its tables)
+					(void)cd;
 					if (!d.rom) return d;
 					auto gd = std::make_shared<nds::GuideData>();
 					const nds::GuideResolver res = nds::guideResolver(*d.rom);

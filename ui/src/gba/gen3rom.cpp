@@ -666,6 +666,25 @@ namespace banana::gba
 		return g;
 	}
 
+	std::shared_ptr<const RomData> readGame(const pkmn::RomTables& t, const std::string& romName, Game* out)
+	{
+		Game g = detectGame(t, romName);
+		std::shared_ptr<const RomData> r = g.id == GameId::NONE ? nullptr : readRomData(t, g, "");
+		if (!r && (g.id == GameId::EMERALD || g.id == GameId::FIRERED || g.id == GameId::LEAFGREEN))
+			if (const HackInfo* any = anyHack(Engine::BINARY, g.code.c_str()))
+			{
+				g.id = GameId::HACK;
+				g.hack = any->key;
+				g.title = romName.empty() ? any->title : romName;
+				g.dexSize = 0;
+				g.modern = t.has.modernTypes || (g.code == "BPEE" && t.rom && fairyAt9(t.rom->data(), t.rom->size()));
+				r = readRomData(t, g, "");
+				if (r) fprintf(stderr, "gba companion: %s: not read as its base game, read as a patched one\n", g.title.c_str());
+			}
+		if (out) *out = r ? r->game : Game();
+		return r;
+	}
+
 	namespace
 	{
 		// a hack's species name (the ROM's own bytes: a Glazed release writes its Mega Evolutions with the symbol 0x57)

@@ -501,21 +501,23 @@ static void testPagesRead(const std::string& path)
 	for (int i = 0; i < 600 && !(t = c.tables()); i++) std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	CHECK(t && t->rom);
 	if (!t || !t->rom) return;
-	const Game g = gba::detectGame(*t, "My Hack");
+	Game g;
+	auto r = gba::readGame(*t, "My Hack", &g);
 	CHECK(g.id != GameId::NONE);
 	if (!g.hack.compare(0, 4, "any-")) EQ(g.title, std::string("My Hack"));
 	CHECK(!g.title.empty());
-	auto r = g.id == GameId::NONE ? nullptr : gba::readRomData(*t, g, "");
 	CHECK(r != nullptr);
 	if (!r) { fprintf(stderr, "FAIL %s: the companion opens it (%s), the pages don't read it\n", path.c_str(), c.game()->name); return; }
 	CHECK(r->species.size() > 386);
 	if (g.id == GameId::HACK && gba::hackByCrc(t->crc))
 	{
 		// (another release of it - a CRC-32 not in the list: read by its engine alone, as much of it)
-		const Game any = gba::detectGame(t->rom->data(), t->rom->size(), t->crc ^ 1);
+		pkmn::RomTables other = *t;
+		other.crc ^= 1;
+		Game any;
+		auto ra = gba::readGame(other, "", &any);
 		EQ((int)any.id, (int)GameId::HACK);
 		EQ(any.hack.compare(0, 4, "any-"), 0);
-		auto ra = gba::readRomData(*t, any, "");
 		CHECK(ra != nullptr);
 		if (ra) EQ(ra->species.size(), r->species.size());
 		fprintf(stderr, "gba-rom-test: %s: as another release: %s\n", path.c_str(), any.hack.c_str());
