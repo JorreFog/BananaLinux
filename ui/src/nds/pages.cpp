@@ -1188,10 +1188,10 @@ namespace banana::nds
 			if (usable) hit(tx, 424, cell, 52, [this, pg] { o.show(pg); });
 		}
 		box("back", bx0, by0, bx1 - bx0, by1 - by0);
-		std::string b = tr("Back to game");
+		std::string b = tr(o.backLabel.empty() ? "Back to game" : o.backLabel.c_str());
 		float bw = measure(b, true, 14, true);
 		float cxm = (bx0 + bx1) / 2;
-		if (bw > bx1 - bx0 - 16)
+		if (bw > bx1 - bx0 - 16 && o.backLabel.empty())
 		{
 			std::string a = tr("Back"), c = tr("to game");
 			text(a, true, 14, cxm - measure(a, true, 14, true) / 2, by0 + 8, p.onPick, true);

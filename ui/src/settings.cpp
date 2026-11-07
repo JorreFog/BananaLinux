@@ -439,11 +439,13 @@ namespace banana
 		// L2, R2, L3 and R3, a row each (keys <prefix>l2<suffix>...: nds_btn_l2, ra_btn_r3.snes), R3's help saying the RG DS
 		// Plus has none. As INFO rows (a hotkeys page's) they show those keys' rows as they are now (mirror), key "hk"
 		auto buttonRows = [&](const char* section, const char* icon, const std::string& help, const std::string& file, const std::string& prefix,
-			const std::string& suffix, const std::vector<std::string>& names, const std::vector<std::string>& values, Item::Kind kind = Item::CHOICE)
+			const std::string& suffix, const std::vector<std::string>& names, const std::vector<std::string>& values, Item::Kind kind = Item::CHOICE, bool back = false)
 		{
-			for (const char* b : { "L2", "R2", "L3", "R3" })
+			for (const char* b : { "L2", "R2", "L3", "R3", "Back" })
 			{
-				const std::string key = prefix + (char)tolower(b[0]) + b[1] + suffix;
+				if (b[0] == 'B' && !back) continue;	// (the back button beside F: the Game Boy Advance's Companion)
+				std::string key = prefix + b + suffix;
+				for (size_t i = prefix.size(); i < prefix.size() + strlen(b); i++) key[i] = (char)tolower((unsigned char)key[i]);
 				const std::string h = help + (std::string(b) == "R3" ? " (The RG DS Plus has no R3.)" : "");
 				add(section, icon, b, h.c_str(), file, kind == Item::INFO ? "hk" : key.c_str(), names, values, kind);
 				if (kind == Item::INFO) items.back().mirror = key;
@@ -798,7 +800,18 @@ namespace banana
 			{
 				const std::string sec = raButtonsSection(sys), id = sys.id;
 				const char* help = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
-				buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
+				if (id == "gba")
+				{
+					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
+					// button does; Back, beside F, by default)
+					std::vector<std::string> n = names, v = values;
+					n.insert(n.end() - 1, "Companion");
+					v.insert(v.end() - 1, "companion");
+					buttonRows(sec.c_str(), "gamepad", std::string(help) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
+						menu, "ra_btn_", "." + id, n, v, Item::CHOICE, true);
+				}
+				else
+					buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
 				add(sec.c_str(), "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
 					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}

@@ -42,6 +42,7 @@ namespace banana
 		case BTN_START: case KEY_S: return Key::START;
 		case BTN_SELECT: case KEY_TAB: return Key::SELECT;
 		case BTN_MODE: case KEY_F1: return Key::MENU;
+		case BTN_Z: case BTN_THUMBL: case BTN_THUMBR: return Key::OTHER;
 		default: return Key::NONE;
 		}
 	}
@@ -205,6 +206,7 @@ namespace banana
 					InputEvent o;
 					o.type = e.value ? InputEvent::PRESS : InputEvent::RELEASE;
 					o.key = k;
+					o.code = e.code;
 					sink1(o, e);
 				}
 				else if (e.type == EV_ABS && dv->stick && (e.code == ABS_X || e.code == ABS_Y))

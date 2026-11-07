@@ -62,6 +62,9 @@ namespace banana::nds
 		// the icon's rectangle on the bottom panel (device px): Back to game covers it. Default: the bottom-right
 		// 48x48 CSS px
 		void setCorner(int x, int y, int w, int h);
+		// the corner button's label: "" Back to game (the DS: the game's bottom screen again), else this (the GBA game
+		// panel's "Menu": its tiles)
+		void setBackLabel(const std::string& label) { backLabel = label; }
 
 		// the companion opened: lands on the page an unseen notice is for, else Battle in a battle, else where it was
 		void opened(double nowMs);
@@ -108,7 +111,8 @@ namespace banana::nds
 		uint16_t dexSel = 1;
 		int partyIdx = 0;
 		int pickedSeason = -1;
-		int matchFoe = -1;		// the Battle page: the foe whose type matchups show in place of the moves (-1 the moves)
+		int matchFoe = -1;
+		std::string backLabel;		// the Battle page: the foe whose type matchups show in place of the moves (-1 the moves)
 		friend struct Impl;
 	};
 

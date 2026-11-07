@@ -1,8 +1,10 @@
 #pragma once
-// banana-ui: the GBA Pokémon companion on the game panel. The DS companion's pages (nds/pages.h) with gba::Host's data
-// have all of the panel; their Back to game shows the panel's own tiles (Settings draws them), whose tab bar is the
-// pages' tabs and Game, each opening its page. From the game's start: "Reading your game" till the ROM's data is read,
-// "No game data" when it can't be; a ROM hack not supported: "Not supported" alone, and the tiles without the tabs. A battle starting shows the Battle page, its end the Party page (on the pages).
+// banana-ui: the GBA Pokémon companion on the game panel. The DS companion's pages (nds/pages.h) with gba::Host's data,
+// switched with the panel's menu (its tiles, Settings draws them) as the DS companion is with the game's bottom screen:
+// one button in the top-right corner - the companion's icon on the menu's header (iconPicture, its red badge the
+// pages' unseen notices), the pages' Menu where it was - and the back button (or F, the menu always). The pages show
+// first: "Reading your game" till the ROM's data is read, "No game data" when it can't be; a ROM hack not supported:
+// "Not supported" alone. A battle starting shows the Battle page, its end the Party page (while the pages show).
 #include "../nds/pages.h"
 #include <memory>
 #include <string>
@@ -18,7 +20,6 @@ namespace banana::gba
 	class Panel
 	{
 	public:
-		enum { TABS = (int)nds::Page::COUNT + 1 };	// the tiles' tab bar: the pages' tabs, then Game
 		// how the pages are drawn: the off-screen target, the panel's screen, its size in device px, the rnds assets,
 		// the theme
 		struct Look { rnds::Backend* be = nullptr; int screen = 1, w = 640, h = 480; std::string assets; bool light = false; };
@@ -28,20 +29,21 @@ namespace banana::gba
 		void close();		// (before the host goes)
 		bool active() const;
 		bool pagesShown() const { return active() && pages && onPages; }
-		bool tabs() const;	// the tiles' tab bar has the pages' tabs (not for a ROM hack the companion doesn't support)
 
 		// each turn of the menu's loop: the host's newest data, the battle's start and end. True: draw again
 		bool update(double nowMs);
 		void draw();		// the pages (pagesShown), within the frame the caller began
-		// a touch on the pages (pagesShown): Back to game shows the tiles
+		// a touch on the pages (pagesShown): their Menu shows the menu
 		void touch(bool down, int x, int y, double nowMs);
 		void touchMove(int x, int y, double nowMs);
 
-		// the tiles' tab bar: tab i's label, whether it can be opened now (Battle only in a battle), and opening it
-		static std::string tabLabel(int i);
-		bool tabOn(int i) const;
-		void openTab(int i);
-		std::string view() const;	// (tests) "pages:<page>", "game" or "" without a game
+		// the switch: the pages (on the page a new notice is for, else Battle in a battle, else where they were) or the menu
+		void showPages(double nowMs);
+		void showMenu() { onPages = false; }
+		void toggle(double nowMs) { if (pagesShown()) showMenu(); else showPages(nowMs); }
+		int badge() const;			// the icon's red count: the pages' notices not yet seen
+
+		std::string view() const;	// (tests) "pages:<page>", "game" (the menu) or "" without a game
 		int ready() const;			// (tests) the ROM's data: 1 read, -1 couldn't be, -2 a hack not supported, 0 not yet (or no game)
 		std::string title() const;	// (tests) the game's title, once read
 

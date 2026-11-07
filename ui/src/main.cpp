@@ -14,6 +14,7 @@
 
 #include "../rnds/RndsUI.h"
 #include "input.h"
+#include <linux/input.h>
 #include "kms.h"
 #include "library.h"
 #include "soft.h"
@@ -1292,6 +1293,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::string one = r;
 			std::replace(one.begin(), one.end(), '\n', ';');
 			logf("gcfeed %s: asked %d (%s) seen %d", path.c_str(), settings.gameComp->reads(), one.c_str(), (int)settings.gameComp->snapshot().seen);
+		}
+		else if (op == "gbutton")
+		{
+			// gbutton <f|back|l2|r2|l3|r3>: that button pressed while the game runs (F: the menu; a Companion button
+			// switches between the menu and the companion)
+			std::string b;
+			cs >> b;
+			const int code = b == "f" ? BTN_MODE : b == "back" ? BTN_Z : b == "l2" ? BTN_TL2 : b == "r2" ? BTN_TR2 : b == "l3" ? BTN_THUMBL : b == "r3" ? BTN_THUMBR : 0;
+			const bool changed = settings.gameButton(code);
+			logf("gbutton %s: %s view %s", b.c_str(), changed ? "switched" : "nothing", settings.gamePanelView().c_str());
 		}
 		else if (op == "gtouch")
 		{
@@ -2643,7 +2654,16 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
-						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
+						// the buttons are the game's; F and a Companion button (the back button's job by default) also
+						// switch the panel between its menu and the companion
+						if (ev.type == InputEvent::PRESS)
+						{
+							std::lock_guard<std::mutex> l(worker.uiLock);
+							if (settingsView.gameButton(ev.code)) want = true;
+							return;
+						}
+						if (ev.type == InputEvent::RELEASE) return;
+						if (ev.screen != panelScreen) return;	// touch only on the panel
 						if (ev.type == InputEvent::TOUCH_MOVE)	// (the GBA companion's pages scroll by drag)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);

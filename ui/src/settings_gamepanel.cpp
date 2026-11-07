@@ -12,6 +12,7 @@
 #include "json.h"
 #include "gba/host.h"
 #include "nds/pages.h"
+#include "nds/overlay.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -335,8 +336,18 @@ namespace banana
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
 		gKeysOpen = false; gKeyPage = 0; gKeyShift = 0; gKeyTyped.clear();
-		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
+		gcView = gcLast = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
+		// the buttons that switch between the menu and the companion: a job of Companion (Settings > Other systems >
+		// Buttons > Game Boy Advance; run-retroarch takes them off the game). Back's by default
+		gCompKeys.clear();
+		{
+			static const struct { const char* b; int code; } BTNS[] = { { "back", BTN_Z }, { "l2", BTN_TL2 }, { "r2", BTN_TR2 }, { "l3", BTN_THUMBL }, { "r3", BTN_THUMBR } };
+			for (auto& b : BTNS)
+				if (getConfValue(data + "/settings.conf", std::string("ra_btn_") + b.b + ".gba", strcmp(b.b, "back") ? "" : "companion") == "companion") gCompKeys.push_back(b.code);
+		}
+		gIconTex = nullptr;
+		gIconBadge = -1;
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
 		std::string cfg = "/data/retroarch/retroarch.cfg";
@@ -477,7 +488,66 @@ namespace banana
 
 	void Settings::gbaRelease() { gbaPanel.close(); }
 
-	std::string Settings::gamePanelView() const { return gbaPanel.view(); }
+	std::string Settings::gamePanelView() const
+	{
+		if (gbaPanel.active() || !gameComp || !gameComp->active()) return gbaPanel.view();
+		return gcView == GC_GAME ? "game" : std::string("gc:") + gcomp::pageIdName(gcView);
+	}
+
+	// ---- the companion's switch (either companion): the icon on the menu's header in the top-right corner, the pages'
+	// Menu in the same place (the DS companion's way: nds/overlay.h); the back button (a job of Companion); F the menu
+
+	bool Settings::compOn() const { return gbaPanel.active() || (gameComp && gameComp->active()); }
+
+	bool Settings::compCorner(float lx, float ly) const { return lx >= 512 && ly < 72; }
+
+	void Settings::compMenu()
+	{
+		if (gbaPanel.active()) { gbaPanel.showMenu(); return; }
+		if (!gameComp || !gameComp->active() || gcView == GC_GAME) return;
+		gcLast = gcView;
+		gcView = GC_GAME; gcScreen = 0; gcList = gcRow = -1;
+		gameComp->want(-1);
+	}
+
+	void Settings::compToggle()
+	{
+		gDown = gFlash = -1;
+		gStates = false;
+		if (gbaPanel.active()) { gbaPanel.toggle(now); return; }
+		if (!gameComp || !gameComp->active()) return;
+		if (gcView != GC_GAME) { compMenu(); return; }
+		// (back on the page the menu left; Battle when a fight started meanwhile)
+		gcView = gcLast;
+		const gcomp::Def* d = gameComp->game();
+		if (d && d->pages[gcomp::P_BATTLE].when.set && gameComp->pageOn(gcomp::P_BATTLE)) gcView = gcomp::P_BATTLE;
+		gcScreen = 0; gcList = gcRow = -1;
+		gameComp->want(gcView);
+	}
+
+	bool Settings::gameButton(int code)
+	{
+		if (!compOn() || gKeysOpen) return false;
+		const bool onComp = gbaPanel.active() ? gbaPanel.pagesShown() : gcView != GC_GAME;
+		if (code == BTN_MODE) { if (!onComp) return false; compMenu(); return true; }	// (F: the menu, where its combos are)
+		if (std::find(gCompKeys.begin(), gCompKeys.end(), code) == gCompKeys.end()) return false;
+		compToggle();
+		return true;
+	}
+
+	void Settings::compIcon()
+	{
+		// the DS companion's icon (iconPicture), its badge the GBA pages' new notices; drawn again when the count changes
+		const int badge = gbaPanel.active() ? gbaPanel.badge() : 0;
+		if (!gIconTex || badge != gIconBadge)
+		{
+			nds::setAssets(assets);
+			rnds::Bitmap b = nds::iconPicture(s, badge, BOVL_CORNER_TR);
+			gIconTex = b.empty() ? nullptr : be->upload(b, true);
+			gIconBadge = badge;
+		}
+		if (gIconTex) be->draw(gIconTex, std::round(X(638)) - gIconTex->w, std::round(X(2)), (float)gIconTex->w, (float)gIconTex->h, Color(1, 1, 1, 1));
+	}
 
 	void Settings::gameTouchMove(float x, float y) { gbaPanel.touchMove((int)x, (int)y, now); }
 
@@ -579,6 +649,13 @@ namespace banana
 			return G_NONE;
 		}
 		bool gamePage = !(gameComp && gameComp->active() && gcView != GC_GAME);
+		// the corner: the icon on the menu, Menu on the game companion's pages - the switch (on the release)
+		if (compOn() && compCorner(lx, ly) && !(gamePage && gStates))
+		{
+			if (!down) compToggle();
+			gDown = gFlash = -1;
+			return G_NONE;
+		}
 		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
 		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
 		{
@@ -602,20 +679,19 @@ namespace banana
 			float tx = 18 + i * tstep;
 			if (lx >= tx && lx < tx + tw && ly >= 300 && ly < 420) hit = i;
 		}
-		// the game companion: the tab bar, a page's screens (the pager), a list's row opened or closed; the Game tab is
-		// the panel's own (its tiles, below)
-		if (gameComp && gameComp->active())
+		// the game companion's pages: the tab bar, a page's screens (the pager), a list's row opened or closed (the menu
+		// has the tiles alone, below)
+		if (gameComp && gameComp->active() && gcView != GC_GAME)
 		{
 			if (ly >= 424)
 			{
 				if (!down)
-					for (int i = 0; i < GC_TABS; i++)
+					for (int i = 0; i < gcomp::NUM_PAGES; i++)
 						if (gcTabW[i] > 0 && lx >= gcTabX[i] && lx < gcTabX[i] + gcTabW[i] && i != gcView) { gcView = i; gcScreen = 0; gcList = gcRow = -1; }
-				gameComp->want(gcView == GC_GAME ? -1 : gcView, gcList);
+				gameComp->want(gcView, gcList);
 				gDown = gFlash = -1;
 				return G_NONE;
 			}
-			if (gcView != GC_GAME)
 			{
 				if (!down)
 				{
@@ -629,14 +705,6 @@ namespace banana
 				}
 				return G_NONE;
 			}
-		}
-		// the GBA companion: the tiles' tab bar, the pages' tabs (each opening its page; Battle only in a battle) and Game
-		if (gbaPanel.tabs() && ly >= 424)
-		{
-			const int i = (int)std::floor((lx - 18) / (604.0f / gba::Panel::TABS));
-			if (!down) gbaPanel.openTab(i);
-			gDown = gFlash = -1;
-			return G_NONE;
 		}
 		if (down) { gDown = gFlash = hit; gFlashUntil = now + 10000; return G_NONE; }
 		int was = gDown;
@@ -759,16 +827,17 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		std::string sys = fit(gSystem, true, 17, 200);
 		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
+		const float sysEnd = compOn() ? 574 : 602;	// (the companion's icon at the header's right end)
 		if (rpText.empty())
 		{
-			text(sys, true, 17, 602 - sw, 31, p.muted);
-			text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
+			text(sys, true, 17, sysEnd - sw, 31, p.muted);
+			text(fit(gTitle, true, 22, sysEnd - 62 - sw), true, 22, 38, 28, p.ink);
 		}
 		else
 		{
 			// the game's rich presence under its name (RetroAchievements, any game with a script: "Lv 23, Viridian Forest")
-			text(sys, true, 15, 602 - sw * 15 / 17, 20, p.muted);
-			text(fit(gTitle, true, 19, 540 - sw), true, 19, 38, 18, p.ink);
+			text(sys, true, 15, sysEnd - sw * 15 / 17, 20, p.muted);
+			text(fit(gTitle, true, 19, sysEnd - 62 - sw), true, 19, 38, 18, p.ink);
 			text(fit(rpText, false, 15, 564), false, 15, 38, 44, p.accent);
 		}
 		// ---- the achievements (or, after a tap on them, the save states)
@@ -876,11 +945,10 @@ namespace banana
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
-		if (gbaPanel.tabs()) { gbaTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
-		if (gc) { gcTabs(p); be->endScreen(); return; }
 		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
 		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
+		if (compOn()) compIcon();
 		be->endScreen();
 	}
 
@@ -972,23 +1040,6 @@ namespace banana
 	{
 		if (ly < b.y - 4 || ly >= b.y + b.h + 6 || lx < b.x - 4) return 0;
 		return lx < b.x + b.w + b.gap / 2 ? -1 : 1;
-	}
-
-	void Settings::gbaTabs(const SPal& p)
-	{
-		// the tiles' tab bar with the GBA companion: the pages' tabs (Battle dimmed outside a battle), each opening its
-		// page, then Game, this one
-		box("bubble", false, 18, 424, 604, 46);
-		const float cell = 604.0f / gba::Panel::TABS;
-		for (int i = 0; i < gba::Panel::TABS; i++)
-		{
-			const bool game = i == gba::Panel::TABS - 1, dim = !gbaPanel.tabOn(i);
-			const std::string label = gba::Panel::tabLabel(i);
-			const float w = text(label, true, 14, 0, 0, p.ink, true, 1.0f, true);
-			const float tx = std::round(18 + i * cell + cell / 2 - w / 2);
-			text(label, true, 14, tx, 438, game ? p.accent : dim ? p.muted : p.ink, true, 1.0f);
-			if (game) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
-		}
 	}
 
 	// ---- the game companion (gamecomp.h): the Pokémon companion's look for any GBA game with a definition. The whole
@@ -1266,7 +1317,8 @@ namespace banana
 		text(fit(nm, true, 22, 420), true, 22, 36, 28, p.ink);
 		std::string back = "Tap: back";
 		float bw = text(back, false, 15, 0, 0, p.muted, false, 0, true);
-		text(back, false, 15, 604 - bw, 32, p.muted);
+		text(back, false, 15, 504 - bw, 32, p.muted);
+		gcMenuButton(p);
 		box("bubble", false, 18, 76, 604, 336);
 		float y = GC_TOP;
 		for (size_t f = lw->fields.size() > 1 ? 1 : 0; f < lw->fields.size() && y + 32 <= 404; f++)
@@ -1298,17 +1350,18 @@ namespace banana
 		if (pg.reference)
 		{
 			rw = chip("Reference", 0x6a6a74, 0, 0, true);
-			chip("Reference", 0x6a6a74, 604 - rw, 30);
+			chip("Reference", 0x6a6a74, 504 - rw, 30);
 			rw += 12;
 		}
 		else
 		{
 			std::string g = fit(d.title, true, 15, 260);
 			rw = text(g, true, 15, 0, 0, p.muted, false, 0, true);
-			text(g, true, 15, 604 - rw, 32, Color::hex(gcInk(d.accent, light)));
+			text(g, true, 15, 504 - rw, 32, Color::hex(gcInk(d.accent, light)));
 			rw += 12;
 		}
-		text(fit(pg.title, true, 22, 568 - rw), true, 22, 36, 28, p.ink);
+		text(fit(pg.title, true, 22, 468 - rw), true, 22, 36, 28, p.ink);
+		gcMenuButton(p);
 		// ---- the page
 		bool live = !pg.reference;
 		if (live && !sn.seen)
@@ -1380,16 +1433,24 @@ namespace banana
 		return issues;
 	}
 
+	void Settings::gcMenuButton(const SPal& p)
+	{
+		// Menu at the header's right end, where the menu's icon is (the same spot switches back)
+		box("pick", true, 516, 20, 100, 42);
+		const float mw = text("Menu", true, 17, 0, 0, p.onPick, false, 0, true);
+		text("Menu", true, 17, 566 - mw / 2, 31, p.onPick);
+	}
+
 	void Settings::gcTabs(const SPal& p)
 	{
-		// the tab bar: the seven pages (Battle only in a fight when the game can tell), then Game (the panel's tiles)
+		// the tab bar: the seven pages (Battle only in a fight when the game can tell); the menu is the corner's Menu
 		const gcomp::Def& d = *gameComp->game();
 		box("bubble", false, 18, 424, 604, 46);
 		bool show[GC_TABS];
 		int n = 0;
 		for (int i = 0; i < GC_TABS; i++)
 		{
-			show[i] = (i >= gcomp::NUM_PAGES || d.pages[i].present) && (i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i));
+			show[i] = i < gcomp::NUM_PAGES && d.pages[i].present && (i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i));
 			n += show[i];
 		}
 		float cell = 604.0f / n, cx = 18;
@@ -1403,7 +1464,7 @@ namespace banana
 			bool grey = i < gcomp::NUM_PAGES && d.pages[i].when.set && !gameComp->pageOn(i);
 			float size = n > 7 ? 13 : n > 6 ? 14 : 16;
 			// the tab's own name, else the page's title when it fits, else what the page is
-			std::string l = i == GC_GAME ? "Game" : !d.pages[i].tab.empty() ? d.pages[i].tab : d.pages[i].title;
+			std::string l = !d.pages[i].tab.empty() ? d.pages[i].tab : d.pages[i].title;
 			if (i < gcomp::NUM_PAGES && d.pages[i].tab.empty() && text(l, true, size, 0, 0, p.ink, true, 0.5f, true) > cell - 6) l = GENERIC[i];
 			l = fit(l, true, size, cell - 6);
 			float w = text(l, true, size, 0, 0, p.ink, true, 0.5f, true);

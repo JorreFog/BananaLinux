@@ -426,7 +426,8 @@ for size in 640x480 1024x768; do
     # then the same in the light theme and in Chinese
     klog=$OUT/$size-pokemon.log
     pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; gbahost; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 600 28; gshot pk-game; \
-        gtouch 185 447; gshot pk-team; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle"
+        gtouch 185 447; gshot pk-team; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle; \
+        gbutton back; gbutton back; gbutton back; gbutton f; gbutton f; gbutton l3"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$pkscript; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot pk-none" 2> "$klog" ||
         { echo "FAIL $size: banana-ui (Pokémon companion) exited $?"; fail=1; }
@@ -438,6 +439,13 @@ for size in 640x480 1024x768; do
     kcheck "gtouch 600 28: action 0 keys 0 view game"
     kcheck "gtouch 185 447: action 0 keys 0 view game"
     kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view game"
+    # the switch: Back (its job Companion, the template's) the companion and the menu again; F the menu, and nothing on
+    # it; L3 (the game's own) nothing
+    kcheck "gbutton back: switched view pages:"
+    kcheck "gbutton back: switched view game"
+    kcheck "gbutton f: switched view game"
+    kcheck "gbutton f: nothing view game"
+    kcheck "gbutton l3: nothing view game"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
     # the GBA companion's pages (gba/panel.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): its
     # data read, Back to game shows the tiles with the pages' own tabs, and each of those opens its page
@@ -445,10 +453,12 @@ for size in 640x480 1024x768; do
     if [ -n "$EM" ]; then
         GL=$OUT/$size-gba-pages.log
         gs="home 0; gamepanel 1 $EM; pokefeed $OUT/poke-party.txt; gbahost; gshot gba-pages"
+        # Menu (the pages' corner) shows the menu, the icon in the same corner the pages again; then each page by the
+        # pages' own tabs (eight across the dock, x 12..628)
+        gs="$gs; gtouch 600 28; gshot gba-game; gtouch 600 28; gshot gba-again"
         i=0
         for page in Battle Party Team Here Map Guide Dex Log; do
-            # (the tiles' tab bar: the pages' eight tabs and Game, in nine cells across x 18..622)
-            gs="$gs; gtouch 600 28; gshot gba-game-$i; gtouch $((18 + i * 604 / 9 + 604 / 18)) 447; gshot gba-tab-$page"
+            gs="$gs; gtouch $((12 + i * 604 / 8 + 604 / 16)) 447; gshot gba-tab-$page"
             i=$((i + 1))
         done
         # a battle starting shows the Battle page (the made-up battle's replies on the player's Emerald)
@@ -457,13 +467,15 @@ for size in 640x480 1024x768; do
             --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
         grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
         grep -q "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle" "$GL" || { echo "FAIL $size: a battle didn't show the Battle page: $(grep poke-battle "$GL" | tail -1)"; fail=1; }
-        grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Back to game didn't show the tiles: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Menu didn't show the menu: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view pages:" "$GL" || { echo "FAIL $size: the menu's icon didn't show the pages: $(grep 'gtouch 600' "$GL" | tail -1)"; fail=1; }
+        cmp -s "$OUT/$size-gba-pages-bot.png" "$OUT/$size-gba-game-bot.png" && { echo "FAIL $size: the menu is the pages' picture"; fail=1; }
         i=0
         for page in Battle Party Team Here Map Guide Dex Log; do
-            # (Battle: dimmed outside a battle, the tap leaves the tiles)
-            want="pages:$page"; [ $page = Battle ] && want=game
-            grep -q "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447: action 0 keys 0 view $want\$" "$GL" ||
-                { echo "FAIL $size: the tiles' $page tab: $(grep "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447" "$GL")"; fail=1; }
+            # (Battle: dimmed outside a battle, the tap stays on the page before)
+            x=$((12 + i * 604 / 8 + 604 / 16))
+            if [ $page = Battle ]; then want="pages:"; else want="pages:$page\$"; fi
+            grep -q "gtouch $x 447: action 0 keys 0 view $want" "$GL" || { echo "FAIL $size: the pages' $page tab: $(grep "gtouch $x 447" "$GL")"; fail=1; }
             i=$((i + 1))
         done
     else
@@ -475,10 +487,10 @@ for size in 640x480 1024x768; do
     if [ -n "$UB" ]; then
         UL=$OUT/$size-gba-unbound.log
         "$HERE/banana-ui" --headless "$OUT/$size-ub-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 319 447; gshot ub-map" 2> "$UL" ||
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 600 28; gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447; gshot ub-map" 2> "$UL" ||
             { echo "FAIL $size: banana-ui (Unbound's pages) exited $?"; fail=1; }
         grep -q "gbahost: ready Unbound view pages:" "$UL" || { echo "FAIL $size: Unbound's pages: $(grep -E 'gbahost|gba companion' "$UL" | head -n 3 | tr '\n' ' ')"; fail=1; }
-        grep -q "gtouch 319 447: action 0 keys 0 view pages:Map" "$UL" || { echo "FAIL $size: Unbound's Map tab: $(grep 'gtouch 319' "$UL")"; fail=1; }
+        grep -q "gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447: action 0 keys 0 view pages:Map" "$UL" || { echo "FAIL $size: Unbound's Map tab: $(grep "gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447" "$UL")"; fail=1; }
     else
         echo "the Unbound panel test skipped (no Unbound ROM in GBA_HACKS)"
     fi
@@ -503,16 +515,18 @@ for size in 640x480 1024x768; do
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
     done
     # the game panel with the game companion (gamecomp.h; definitions from the companion data in tests/companions):
-    # Castlevania's seven pages by their tabs with RetroArch's replies for each, a list row opened and closed, the Game
-    # tab; Golden Sun's party list; Tetris Worlds (reference pages: nothing read); Emerald (the Pokémon companion's)
+    # Castlevania's seven pages by their tabs with RetroArch's replies for each, a list row opened and closed, Menu (the
+    # corner) to the menu, its icon and Back back to the companion, F to the menu; Golden Sun's party list; Tetris
+    # Worlds (reference pages: nothing read); Emerald (the Pokémon companion's)
     glog=$OUT/$size-gamecomp.log
     tab() { echo "gtouch $((18 + 604 * $1 / $2 + 302 / $2)) 447"; }
     gcs="home 0; gcpanel 1 $HERE/tests/companions $OUT/gc-castlevania.gba; gshot gc-wait; gcfeed $OUT/gc-cv-status.txt; gshot gc-status"
     i=1; for pg in detail battle map bag collection progress; do
-        gcs="$gcs; $(tab $i 8); gcfeed $OUT/gc-cv-$pg.txt; gshot gc-$pg"; i=$((i + 1))
+        gcs="$gcs; $(tab $i 7); gcfeed $OUT/gc-cv-$pg.txt; gshot gc-$pg"; i=$((i + 1))
     done
-    gcs="$gcs; $(tab 4 8); gcfeed $OUT/gc-cv-bag.txt; gshot gc-bag2; gtouch 200 175; gshot gc-row; gtouch 200 175; gshot gc-row-back; $(tab 7 8); gshot gc-game"
-    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-goldensun.gba; gcfeed $OUT/gc-gs-status.txt; gshot gc-gs-status; $(tab 1 8); gcfeed $OUT/gc-gs-detail.txt; gshot gc-gs-detail"
+    gcs="$gcs; $(tab 4 7); gcfeed $OUT/gc-cv-bag.txt; gshot gc-bag2; gtouch 200 175; gshot gc-row; gtouch 200 175; gshot gc-row-back; gtouch 600 28; gshot gc-game"
+    gcs="$gcs; gtouch 600 28; gbutton back; gbutton back; gbutton f; gbutton f"
+    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-goldensun.gba; gcfeed $OUT/gc-gs-status.txt; gshot gc-gs-status; $(tab 1 7); gcfeed $OUT/gc-gs-detail.txt; gshot gc-gs-detail"
     gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-tetris.gba; gcfeed -; gshot gc-tetris; gcpanel 1 $HERE/tests/companions $OUT/gc-emerald.gba"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$gcs" 2> "$glog" || { echo "FAIL $size: banana-ui (game companion) exited $?"; fail=1; }
@@ -522,6 +536,12 @@ for size in 640x480 1024x768; do
     gcheck "gcpanel .*gc-goldensun.gba: companion Golden Sun"
     gcheck "gcfeed -: asked 0 () seen 1"
     gcheck "gcpanel .*gc-emerald.gba: companion none"
+    gcheck "gtouch 600 28: action 0 keys 0 view game"
+    gcheck "gtouch 600 28: action 0 keys 0 view gc:bag"
+    gcheck "gbutton back: switched view game"
+    gcheck "gbutton back: switched view gc:bag"
+    gcheck "gbutton f: switched view game"
+    gcheck "gbutton f: nothing view game"
     for s in gc-wait gc-status gc-detail gc-battle gc-map gc-bag gc-collection gc-progress gc-row gc-row-back gc-game gc-gs-status gc-gs-detail gc-tetris; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

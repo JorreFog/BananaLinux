@@ -13,6 +13,7 @@ namespace banana::gba
 		comp = c;
 		pages = std::make_unique<nds::Pages>(look.be, look.screen, look.w, look.h, look.assets, look.light);
 		pages->setDecoderThread(true);	// (the panel never waits on a picture's decode)
+		pages->setBackLabel("Menu");	// (in the top-right corner, where the menu's icon is: the same spot switches)
 		pages->show(nds::Page::PARTY);
 		onPages = true;
 		inBattle = false;
@@ -27,7 +28,6 @@ namespace banana::gba
 	}
 
 	bool Panel::active() const { return host && comp && comp->active(); }
-	bool Panel::tabs() const { return active() && !host->unsupported(); }
 
 	bool Panel::update(double now)
 	{
@@ -71,24 +71,14 @@ namespace banana::gba
 		if (pagesShown()) pages->touchMove(x, y, now);
 	}
 
-	std::string Panel::tabLabel(int i)
+	void Panel::showPages(double now)
 	{
-		return i >= 0 && i < (int)nds::Page::COUNT ? nds::pageName((nds::Page)i) : "Game";
-	}
-
-	bool Panel::tabOn(int i) const
-	{
-		if (i < 0 || i >= TABS) return false;
-		return (nds::Page)i != nds::Page::BATTLE || (comp && comp->snapshot().inBattle);
-	}
-
-	void Panel::openTab(int i)
-	{
-		if (!tabs() || !tabOn(i)) return;
-		if (i == (int)nds::Page::COUNT) { onPages = false; return; }
-		pages->show((nds::Page)i);
+		if (!active()) return;
+		if (!onPages) pages->opened(now);
 		onPages = true;
 	}
+
+	int Panel::badge() const { return active() ? pages->unseen() : 0; }
 
 	std::string Panel::view() const
 	{

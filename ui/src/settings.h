@@ -120,8 +120,13 @@ namespace banana
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameKeysOpen() const { return gKeysOpen; }	// (tests: the panel's keyboard page is up)
-		// (tests: what the GBA Pokémon companion's panel shows: "game" (the tiles), "pages:<page>", "" without one)
+		// (tests: what the GBA Pokémon companion's panel shows: "game" (the tiles), "pages:<page>", "" without one; the
+		// game companion's: "game" or "gc:<page>")
 		std::string gamePanelView() const;
+		// a button pressed while the game runs (its evdev code; the game has it too): F shows the menu (its tiles, where
+		// F's combos are printed), a button whose job is Companion (Settings > Other systems > Buttons > Game Boy
+		// Advance: Back's, by default) switches between the menu and the companion. True: the panel changed
+		bool gameButton(int code);
 		void gameTouchMove(float x, float y);				// a press moving (the GBA companion's pages scroll by drag)
 		// the GBA Pokémon companion's pages (gba/panel.h) for the game the host runs one for: host, null none (after
 		// gameOpen, with companion set); gbaRelease before the host goes
@@ -682,8 +687,16 @@ namespace banana
 		int gSeen = -1;						// the watch's generation last drawn
 		int awardsSeen = 0; bool wake = false;	// (gameWake)
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
-		gba::Panel gbaPanel;		// the GBA Pokémon companion's pages, and the tiles' tab bar with them (gbaTabs)
-		void gbaTabs(const SPal& p);
+		gba::Panel gbaPanel;		// the GBA Pokémon companion's pages
+		// the companion's switch (either companion): the icon on the menu's header, the button that switches
+		std::vector<int> gCompKeys;	// (the buttons whose job is Companion: evdev codes, read at gameOpen)
+		rnds::TexPtr gIconTex;
+		int gIconBadge = -1;
+		bool compOn() const;
+		bool compCorner(float lx, float ly) const;	// (CSS px: the top-right corner, the icon's and Menu's place)
+		void compIcon();
+		void compToggle();
+		void compMenu();
 		void pager(const SPal& p, int page, int pages, const std::string& left);
 		// a pager's back and on buttons, side by side (w x h each, gap between): drawn, greyed at the first and the
 		// last page; a tap on them: -1 back, 1 on, 0 neither (each button's whole box and a little around it)
@@ -694,8 +707,8 @@ namespace banana
 		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
 		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
 		// rows were drawn (for touch)
-		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };
-		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1;
+		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };	// (GC_GAME: the menu)
+		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1, gcLast = 0;	// (gcLast: the page the menu left)
 		bool gcBattle = false;
 		float gcTabX[GC_TABS] = {}, gcTabW[GC_TABS] = {};
 		struct GcHit { float y0, y1; int list, row; };
@@ -703,6 +716,7 @@ namespace banana
 		struct GcBlock { const gcomp::Widget* w; int part; float h; };	// a widget, or one of its rows/paragraphs
 		void gcRender(const SPal& p);
 		void gcTabs(const SPal& p);
+		void gcMenuButton(const SPal& p);
 		void gcRowView(const SPal& p);
 		std::vector<GcBlock> gcBlocks(const gcomp::Page& pg, float width);
 		void gcBlock(const SPal& p, const GcBlock& b, float x, float y, float w);
