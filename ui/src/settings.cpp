@@ -2402,6 +2402,7 @@ namespace banana
 					(cf ? "; " + std::to_string(cf) + (hsBackend() == "romhost" ? " in conflict (decide in Homeport)" : " in conflict (both are kept and the save is held: choose on Saves)") : "") +
 					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : why.empty() ? "." : ". " + why + ".");
 			}
+			else if (syncLine.compare(0, 16, "error noconnect ") == 0) help = "The last sync couldn't reach the server: " + syncLine.substr(16) + ". Check Wi-Fi, then Sync now again.";
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
 		}
 		if ((cur.key == "hs_server" || cur.key == "hs_forget") && !message.empty()) help = message;
@@ -2719,8 +2720,10 @@ namespace banana
 	bool Settings::update(double t)
 	{
 		now = t;
+		// (a sync waiting for Wi-Fi starts with Settings closed too)
+		bool waited = pollSyncWifi();
 		if (!mOpen) return false;
-		bool scrapeChanged = pollScrape(t);
+		bool scrapeChanged = waited | pollScrape(t);
 		scrapeChanged |= pollSync(t);
 		scrapeChanged |= pollPickGames();
 		scrapeChanged |= pollGetRestart();
@@ -2728,7 +2731,7 @@ namespace banana
 		// nor on Settings' other pages)
 		if (page == LIST && hsRowsFor == "romm" && sel >= 0 && sel < (int)items.size() && items[sel].section == "Home server" && t >= getWaitingAt)
 		{
-			getWaitingAt = t + 1;
+			getWaitingAt = t + 1000;
 			int w = (int)readListFile(data + "/homesync-get.txt").size();
 			if (w != getWaiting) { getWaiting = w; scrapeChanged = true; }
 		}
@@ -2897,6 +2900,9 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading || pickRefreshing) return 150;	// (Choose games: the server's list as it comes)
+		if (syncWifiUntil > 0) return 250;	// (Sync now waiting for Wi-Fi to come back)
+		// (a sync's progress, Get games' rows as games come, and the sync started again for a game asked for late)
+		if (syncing() || (page == PICKGAMES && pickGet) || !pickAsked.empty()) return 1000;
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -4801,6 +4807,14 @@ namespace banana
 	// ---- Home server > Choose games ---------------------------------------------------------------------------------
 	void Settings::stopSync()
 	{
+		if (syncWifiUntil > 0)
+		{
+			syncWifiUntil = 0;
+			std::ofstream(runDir + "/sync.status") << "error stopped\n";
+			syncNext = 0;
+			message = "Stopped before it started.";
+			return;
+		}
 		// banana-sync's pid (it writes it while a sync runs); it writes "error stopped" itself as it ends
 		int pid = atoi(readLine(runDir + "/sync.pid").c_str());
 		std::string comm = pid > 0 ? readLine("/proc/" + std::to_string(pid) + "/comm") : "";
@@ -4936,7 +4950,7 @@ namespace banana
 		// on it, for the next sync)
 		if (page == PICKGAMES && pickGet && !pickLoading && now >= pickPoll)
 		{
-			pickPoll = now + 1;
+			pickPoll = now + 1000;
 			auto q = readGetList();
 			std::map<std::string, std::string> why;
 			for (auto& l : readListFile(data + "/homesync-get-failed.txt")) { size_t t = l.find('\t'); if (t != std::string::npos) why[l.substr(0, t)] = l.substr(t + 1); }
@@ -4955,7 +4969,7 @@ namespace banana
 		// (Get games: the kept list read again when a sync rewrote it)
 		if (page == PICKGAMES && pickGet && !pickLoading && !pickRefreshing && now >= pickCacheAt)
 		{
-			pickCacheAt = now + 1;
+			pickCacheAt = now + 1000;
 			long long m = mtimeOf(pickCachePath());
 			if (m >= 0 && m != pickCacheMtime && loadPickCache()) return true;
 		}
@@ -4993,7 +5007,7 @@ namespace banana
 	bool Settings::pollGetRestart()
 	{
 		if (pickAsked.empty() || now < getRestartAt) return false;
-		getRestartAt = now + 1;
+		getRestartAt = now + 1000;
 		const bool sy = syncing();
 		if (!pickWasSync || sy) { pickWasSync = sy; return false; }
 		auto q = readGetList();
@@ -5139,7 +5153,7 @@ namespace banana
 			if (g.on) pickAsked.insert(g.key); else { pickAsked.erase(g.key); pickRestarted.erase(g.key); }
 			message.clear();
 			if (g.on && !syncing() && startSync()) pickWasSync = true;	// (a quick one may be over before the status is read)
-			pickPoll = now + 1;
+			pickPoll = now + 1000;
 			return MOVED;
 		}
 		else if (k == Key::Y && pickGet)
@@ -7536,13 +7550,41 @@ namespace banana
 	}
 	bool Settings::startSync()
 	{
-		if (syncing()) return false;
+		if (syncing() || syncWifiUntil > 0) return false;
 		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return false; }
 		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return false; }
+		// (Wi-Fi coming back, as it is for a few seconds after a wake: waited for, up to 20 s as the sync before a game
+		// does, rather than a sync that can't find the server's name. On the device that read "Error (curl 6)")
+		gamesync::WifiFacts f = wifiFacts ? wifiFacts() : gamesync::readWifi(runDir);
+		if (gamesync::wifiStage(f) == gamesync::Wifi::ComingUp)
+		{
+			syncWifiUntil = now + 20000;
+			std::ofstream(runDir + "/sync.status") << "running 0 0 Waiting for Wi-Fi|\n";
+			syncLine.clear();
+			syncNext = 0;
+			fprintf(stderr, "home server: the sync waits for Wi-Fi\n");
+			return true;
+		}
+		runSync();
+		return true;
+	}
+	void Settings::runSync()
+	{
 		std::ofstream(runDir + "/sync.status") << "running 0 0 |starting\n";
 		syncLine.clear();
 		syncNext = 0;
 		hsRun("sync");
+	}
+	// the sync waiting for Wi-Fi: started once it has an address, or at the 20 s (a sync that can't reach the server then
+	// says so)
+	bool Settings::pollSyncWifi()
+	{
+		if (syncWifiUntil <= 0) return false;
+		gamesync::WifiFacts f = wifiFacts ? wifiFacts() : gamesync::readWifi(runDir);
+		if (gamesync::wifiStage(f) != gamesync::Wifi::Online && now < syncWifiUntil) return false;
+		syncWifiUntil = 0;
+		fprintf(stderr, "home server: the sync starts\n");
+		runSync();
 		return true;
 	}
 	bool Settings::pollSync(double t)
@@ -7640,7 +7682,7 @@ namespace banana
 		in >> state;
 		if (state == "running") { int a = 0, b = 0; in >> a >> b; return b ? std::to_string(a) + " / " + std::to_string(b) : "Syncing"; }
 		if (state == "done") { int g, rm, up, dn, cf, er = 0; in >> g >> rm >> up >> dn >> cf >> er; return er ? "Didn't all work" : cf ? "Done, conflicts" : "Done"; }
-		if (state == "error") return syncLine.find("unpaired") != std::string::npos ? "Pair again" : "Didn't work";
+		if (state == "error") return syncLine.compare(0, 16, "error noconnect ") == 0 ? "No connection" : syncLine.find("unpaired") != std::string::npos ? "Pair again" : "Didn't work";
 		return "Not yet";
 	}
 	void Settings::syncBar(float x, float y, float w)

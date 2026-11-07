@@ -451,7 +451,17 @@ namespace bsync
 			r.err = cu.strerror(rc);
 			if (r.err == "Error")
 			{
-				r.err += " (curl " + std::to_string(rc) + ")";	// (a libcurl without its messages, as the image's: which one)
+				// (a libcurl without its messages, as the image's: the usual ones in words, the rest by number. Sync now
+				// pressed as the lid opened, before Wi-Fi was back, read "Error (curl 6)")
+				switch (rc)
+				{
+				case 6: r.err = "the server's name wasn't found (no connection yet?)"; break;
+				case 7: r.err = "the server refused the connection"; break;
+				case 28: r.err = "no answer from the server in time"; break;
+				case 35: r.err = "the secure connection to the server failed"; break;
+				case 51: case 58: case 60: case 77: r.err = "the server's certificate wasn't accepted"; break;
+				default: r.err += " (curl " + std::to_string(rc) + ")";
+				}
 			}
 			cu.cleanup(h);
 			h = nullptr;

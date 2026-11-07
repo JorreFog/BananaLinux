@@ -963,6 +963,10 @@ ls "$OUT/h-a/banana/save-vault/saves/gba/Shared (USA)/" | grep -q -- "-$(m "$OUT
 cp "$OUT/sa.srm" "$OUT/sa-kept.srm"; hs b; cmp -s "$GB/Shared (USA).srm" "$OUT/sa-kept.srm" && hs a && grep -q " 0 conflicts" "$OUT/hs-a.log" || bad "slots: a kept save didn't settle on both: $(cat "$OUT/hs-b.log")"
 # (the server's, with no server at all: placed from the vault, the card's kept, agreed by the next sync with no transfer)
 hold2; SURL=$(rs a 'c["server"]'); sed -i "s#$SURL#http://127.0.0.1:9#" "$OUT/h-a/banana/romsync.json"
+# (the card's, with no server: said as that, not as the last sync's words, and still held)
+r=$(rv a resolve "$SKEY" card)
+case $r in "error the server can't be reached: "?*) ;; *) bad "slots: keeping this handheld's with no server answered: $r" ;; esac
+[ "$(rs a '"'"$SKEY"'" in c["conflicts"]')" = True ] || bad "slots: keeping this handheld's with no server let the conflict go"
 [ "$(rv a resolve "$SKEY" server)" = ok ] && cmp -s "$GA/Shared (USA).srm" "$OUT/sb.srm" && [ "$(rs a '"'"$SKEY"'" in c["conflicts"]')" = False ] || bad "slots: using the server's: $(rs a 'c["conflicts"]')"
 ls "$OUT/h-a/banana/save-vault/saves/gba/Shared (USA)/" | grep -q -- "-$(m "$OUT/sa.srm" | cut -c1-8)\.srm$" || bad "slots: using the server's lost the card's"
 sed -i "s#http://127.0.0.1:9#$SURL#" "$OUT/h-a/banana/romsync.json"

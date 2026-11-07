@@ -22,6 +22,7 @@
 #include "gamecomp.h"
 #include "gba/panel.h"
 #include "lang.h"
+#include "gamesync.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -91,6 +92,10 @@ namespace banana
 		static void bshareServe(bool want);
 		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
+		// Sync now waiting for Wi-Fi to come back: update() looks every 250 ms, with Settings closed too (the menu's
+		// loop calls it then); the headless tests give wlan0's state
+		bool syncWaitsForWifi() const { return syncWifiUntil > 0; }
+		void setWifiFacts(std::function<gamesync::WifiFacts()> f) { wifiFacts = std::move(f); }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
@@ -664,7 +669,14 @@ namespace banana
 		wifi::Job hsJob;
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
-		bool startSync();	// (true: a sync was started)
+		bool startSync();	// (true: a sync was started, or waits for Wi-Fi coming back to start)
+		void runSync();
+		// Sync now as Wi-Fi comes back (pressed as the lid opens, before it has an address): waited for until this time
+		// (the menu's clock, 0 not waiting), as the sync before a game waits; wifiFacts: wlan0's state, the headless
+		// tests' "wifi" in place of the device's
+		double syncWifiUntil = 0;
+		std::function<gamesync::WifiFacts()> wifiFacts;
+		bool pollSyncWifi();
 		void startPairing();
 		void hsRun(const std::string& args);	// banana-sync <args> in the background
 		// banana-sync with this card's root, pairing and settings, then args, as one sh command line (the Sync row's

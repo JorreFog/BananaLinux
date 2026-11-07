@@ -884,6 +884,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	std::string gateRom, gateSys;
 	auto gamePlays = [&] { if (!gate.active()) { if (gate.backed()) logf("game not started: %s", gateRom.c_str()); else logf("game starts: %s", gateRom.c_str()); } };
 	gate.wifi = [&] { return testWifi; };
+	settings.setWifiFacts([&] { return testWifi; });
 	gate.log = [](const std::string& s) { logf("%s", s.c_str()); };
 	be.overlay = [&](int screen)
 	{
@@ -3250,6 +3251,11 @@ int main(int argc, char** argv)
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
 		}
+		else if (settingsView.syncWaitsForWifi())
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			settingsView.update(now);	// (Sync now, left waiting for Wi-Fi: started once it's back)
+		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
 		if (!gate.active() && access("/run/banana/launch", F_OK) == 0)
 		{
@@ -3419,6 +3425,7 @@ int main(int argc, char** argv)
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			timeout = want || drawn ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
+			if (!want && !drawn && !settingsView.isOpen() && settingsView.syncWaitsForWifi()) timeout = timeout < 0 ? 250 : std::min(timeout, 250);
 		}
 		if (want && !drawn && !disp.flipPending())	// ...unless no flip is pending: then the end of the quiet refresh
 			timeout = std::max(1, (int)(quietUntil - nowMs() + 0.999));

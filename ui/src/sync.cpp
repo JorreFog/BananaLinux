@@ -1275,6 +1275,21 @@ namespace
 		// (the line before the server's first answer: the menu's wait before a game gives that answer 5 s from it)
 		const std::string first = "running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName);
 		status(first);
+		// (RomM, a run of every save or of games: the server asked first, and one that doesn't answer at all (Wi-Fi not
+		// back yet, the server down) ends the run there, said as that, rather than as each part failing in turn and the
+		// menu saying it didn't all work. One game's sync has its own way with the server out of reach: the vault)
+		if (romm && onlyRom.empty())
+		{
+			Req q; q.url = c.server + "/api/heartbeat"; q.timeout = 8; q.follow = false;
+			Resp r = http(q);
+			if (r.code == 0)
+			{
+				std::string why = r.err.empty() ? "no answer" : r.err;
+				say("the server can't be reached: %s", why.c_str());
+				status("error noconnect " + why);
+				return 1;
+			}
+		}
 		std::vector<std::string> errors, conflicts;
 		int downloaded = 0, removed = 0, up = 0, down = 0, sconf = 0;
 		std::string note;
@@ -1587,7 +1602,11 @@ int main(int argc, char** argv)
 		STATUS = RUN + "/resolve.status";	// (the menu's Sync row is another run's)
 		holdRoms = holdSaves = false;
 		catchKill(false);
-		doSync(true, "", onlyRom);
+		const int ran = doSync(true, "", onlyRom);
+		// (a server out of reach ends the run before it writes anything to the state: said as that, not as the last
+		// sync's words)
+		const std::string said = trim(readFile(STATUS));
+		if (ran != 0 && said.compare(0, 16, "error noconnect ") == 0) return answer("the server can't be reached: " + said.substr(16));
 		// (settled only if the card's save is now the agreed version, however the run came to it: a run can end with the
 		// note gone and nothing sent)
 		Conf a = loadConf();

@@ -178,6 +178,13 @@ printf 'gba/Asked (USA).gba\n' >> "$OUT/rcf/banana/homesync-get.txt"; printf 'gb
 bs rcf forget >/dev/null 2>&1
 [ -e "$OUT/rcf/banana/homesync-server-games.tsv" ] && bad "Forget left the server's kept games"
 [ -e "$OUT/rcf/banana/homesync-get.txt" ] || [ -e "$OUT/rcf/banana/homesync-get-failed.txt" ] && bad "Forget left the games asked of the server"
+# (a server that doesn't answer at all, as with Wi-Fi not back yet: the sync ends at once as that, said in words, not
+# as each part failing in turn)
+cp -r "$OUT/rc" "$OUT/rcn"
+python3 -c 'import json,sys; p=sys.argv[1]; j=json.load(open(p)); j["server"]="http://127.0.0.1:1"; json.dump(j, open(p, "w"))' "$OUT/rcn/banana/romsync.json"
+bs rcn sync --saves-only > "$OUT/noconnect.log" 2>&1 && bad "a sync with the server unreachable said it worked"
+case $(st rcn) in "error noconnect "?*) ;; *) bad "the server unreachable: $(st rcn)" ;; esac
+grep -q 'the server can.t be reached' "$OUT/noconnect.log" || bad "the server unreachable not said: $(cat "$OUT/noconnect.log")"
 # (games asked for while a sync runs: brought by it, the saves' look at the library held up so the list changes mid-run)
 curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
 GETALL=0 bs rc sync > "$OUT/pick-sync3.log" 2>&1 & _k=$!
@@ -833,6 +840,16 @@ if [ -x "$HERE/banana-ui" ]; then
     ug "$GET; wait 100"
     [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: another server's kept list was shown: $(cat "$SL")"
     rm -f "$GKF"
+    # (Sync now as Wi-Fi comes back, pressed as the lid opens: it waits, and starts once Wi-Fi has an address)
+    HSN="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a"
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; wifi coming; press down; press a; sleep 1000; wait 100; shot hs-wifiwait"
+    grep -q 'home server: the sync waits for Wi-Fi' "$OUT/ui-get.log" || bad "Sync now with Wi-Fi coming back didn't wait: $(grep 'home server' "$OUT/ui-get.log")"
+    grep -q ' sync$' "$SL" && bad "Sync now started before Wi-Fi was back: $(cat "$SL")"
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; wifi coming; press down; press a; sleep 500; wait 100; wifi online; sleep 500; wait 100"
+    grep -q 'home server: the sync starts' "$OUT/ui-get.log" && [ "$(grep -c ' sync$' "$SL")" = 1 ] || bad "Sync now didn't start once Wi-Fi was back: $(cat "$SL")"
+    rm -f "$BANANA_RUN/sync.status"
     # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows, name, sort and art)
     LC=$FX/data/homesync-local.txt; rm -f "$LC"
     ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"

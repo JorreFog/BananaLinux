@@ -328,6 +328,12 @@ What the sync holds to, whatever happens around it:
   conflict, both kept). A DS pair that can't be brought together has both of its saves kept and is not left waiting:
   which of the two is the save is settled at the game's next start. A save that waited and was never sent, the server's
   then taken over it, stays in the vault, said in the sync's log, as nothing else names it.
+- A sync of every save or of games on RomM asks the server's heartbeat first, and one with no answer at all ends there
+  (`error noconnect <why>`, the Sync now row saying No connection) with nothing touched. Sync now (and Get games' A)
+  pressed while Wi-Fi is coming back, as it is for a few seconds after a wake, waits for it as the sync before a game
+  does, up to 20 s, rather than starting a sync that can't find the server's name. The image's libcurl has no
+  messages of its own, so the usual failures (a name not found, refused, no answer in time, a certificate) are put in
+  words by the sync.
 - DraStic's and BananaDS's saves not brought together before a sync (both changed, DraStic's unreadable, or a read
   or a write that failed) leave that game out of that sync, so a save that may be the older of the two is never
   decided on; a failure is tried again at the next sync. Both changed is settled at the game's next start: the
