@@ -8,12 +8,13 @@
 
 namespace banana
 {
-	enum class Key { NONE, LEFT, RIGHT, UP, DOWN, A, B, X, Y, L, R, START, SELECT, MENU };
+	enum class Key { NONE, LEFT, RIGHT, UP, DOWN, A, B, X, Y, L, R, START, SELECT, MENU, OTHER };	// (OTHER: back, L3, R3 - the menu's no use; the game panel's by code)
 
 	struct InputEvent
 	{
 		enum Type { PRESS, RELEASE, TOUCH_DOWN, TOUCH_MOVE, TOUCH_UP } type;
 		Key key = Key::NONE;
+		int code = 0;			// the evdev code of a button (L2 and L, back: the game panel's Companion button)
 		int screen = 1;
 		float x = 0, y = 0;		// panel px
 		double t = 0;			// when the kernel had it: CLOCK_MONOTONIC ms (BANANA_FRAME_STATS's press-to-panel delay)

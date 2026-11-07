@@ -237,6 +237,13 @@ still lack a game id), the loader `ui/src/nds/guide.{h,cpp}` into `GuideData` (`
 skipped and counted in `why`. `$BANANA_NDS_GUIDE` redirects the folder for tests.
 
 ### The GBA games (the GBA Pokémon companion)
+On the game panel the companion and the panel's menu (its tiles) switch as the DS companion and the game's bottom screen
+do: one button in the top-right corner - the DS companion's icon on the menu's header (with the red count of new
+notices), the pages' **Menu** in the same place - and the back button beside F (Settings > Other systems > Buttons > Game
+Boy Advance > Back, job **Companion**; L2/R2/L3/R3 can take it too). F always shows the menu, where its combos are
+printed. The companion shows first; a battle starting shows its Battle page while it is open. The Game companion
+(other GBA games) switches the same way.
+
 The GBA Pokémon companion reuses the DS pages (design: `docs/superpowers/specs/2026-11-03-gba-pokemon-companion-design.md`), so
 its guide data is the same schema (`"kind": "nds-pokemon-guide"`), one file per game in
 `/usr/share/banana/companions/gba-pokemon/<game>.json`: `ruby` (AXVE), `sapphire` (AXPE), `emerald` (BPEE), `firered` (BPRE),
@@ -255,6 +262,12 @@ sit in its own folder).
 - Levels, teams and place names were checked against the ROMs' own tables; the story facts are `reference-only`.
 
 ### The GBA ROM hacks
+The pages read the hacks in `ui/src/gba/hacks.cpp`'s list, each told by its whole ROM's CRC-32 (one release of it: another
+version is another ROM, added once its guide is checked against it). Any other ROM hack isn't supported: the panel shows
+"Not supported" alone, and its tiles without the pages' tabs (2026-11-06, the owner). A milestone is done by its rule, or
+when its foe is beaten (the save's trainer flags, 0x500 + the trainer's id; `tests/gba-rom-test` with
+`BANANA_GBA_GUIDE` checks every guide's foes and places against its ROM).
+
 A hack's guide is `gba-pokemon/<key>.json` with `"game": "<key>"` and its base game's code (`ui/src/gba/hacks.cpp`, the
 GAMES table in `ui/src/nds/guide.cpp`): `glazed`, `golden-glazed`, `glazed-unofficial`, `heart-and-soul`, `lazarus`,
 `seaglass`, `soulgold` (BPEE) and `gaia` (BPRE); national numbers up to 1500 (the validator checks names to 649), the

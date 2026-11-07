@@ -35,6 +35,9 @@ namespace banana::nds
 	};
 	// the game in a ROM header (the first 0x200 bytes); NONE: not one of the nine
 	Game detectGame(const uint8_t* header, size_t n);
+	// a header detectGame doesn't know that may still be a game the ROM reader reads: HeartGold or SoulSilver in a language
+	// not checked here, which an hg-engine ROM hack is built on (Origin HeartGold: the Japanese; rom.cpp hgEngine)
+	bool maybeRomHack(const uint8_t* header, size_t n);
 
 	// ---- types and moves -------------------------------------------------------------------------------------
 	enum Type : uint8_t { NORMAL, FIGHTING, FLYING, POISON, GROUND, ROCK, BUG, GHOST, STEEL, FIRE, WATER, GRASS,
@@ -189,6 +192,9 @@ namespace banana::nds
 		TimeOfDay timeOfDay = TimeOfDay::DAY; uint8_t season = 0, weekday = 0;
 		uint16_t repelSteps = 0;
 		std::vector<uint8_t> flags;				// story/event flags (for the guide's progress), as the game keeps them
+		// the trainers beaten, by the ROM's trainer id (bit n of byte n / 8; empty: not known): a milestone's foe beaten
+		// is that milestone done (the GBA games' save keeps one flag a trainer)
+		std::vector<uint8_t> trainersBeaten;
 	};
 
 	// ---- guide data (ours, per game: /usr/share/banana/companions/nds-pokemon/<game>.json) ----------------------

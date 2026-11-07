@@ -259,7 +259,9 @@ case $BANANA_SYSTEM in
         j=$(setting "ra_btn_$b.$BANANA_SYSTEM")
         case $j in
         ff) c=FAST_FORWARD ;; save) c=SAVE_STATE ;; load) c=LOAD_STATE ;; menu) c=MENU_TOGGLE ;;
-        pause) c=PAUSE_TOGGLE ;; screenshot) c=SCREENSHOT ;; none) c=- ;; *) c= ;;
+        pause) c=PAUSE_TOGGLE ;; screenshot) c=SCREENSHOT ;; none) c=- ;;
+        companion) c=- ;;	# (banana-ui's: the second screen's menu or companion; off the game, nothing to RetroArch)
+        *) c= ;;
         esac
         if [ -n "$c" ]; then
             echo "$b $c" >> $RBF

@@ -9,6 +9,8 @@
 /ui/tests/pokemon-test
 /ui/tests/gamecomp-test
 /ui/tests/input-test
+/ui/tests/wav-test
+/ui/tests/gba-hidden-items
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
 /system/bananad/bananad
