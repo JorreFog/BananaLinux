@@ -267,7 +267,12 @@ sync after a game never waits on a download; one asked for as a sync is ending i
 starts, once), and takes each off once its files are in place, or a file of the owner's
 own is at its path; a download that failed stays for the next sync, its row saying Failed and why (the sync writes
 `banana/homesync-get-failed.txt`), and Auto sync on Wi-Fi carries the list on. Y searches the titles and file names,
-every system's from the systems list, one system's inside it. Once
+every system's from the systems list, one system's inside it. The server's list is kept on the card
+(`banana/homesync-server-games.tsv`, its first line the server's address and when it was listed), as the full list
+took over half a minute on a real server of 742 games: Get games opens from it at once, saying how old it is, and
+X (Refresh) asks the server again with the kept list still up. `banana-sync games` writes it whole, and every sync that
+lists the server's games (the saves do, unless it is one game's sync) replaces the systems it listed, keeping a
+skipped system's; Forget removes it, and a list naming another server is not shown. Once
 on the card a game is the owner's like any copied over File sharing: nothing updates it, nothing removes it when it
 leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on
 the card already, copied by hand, is adopted with the entry its owner gave it). Saves follow what is on the

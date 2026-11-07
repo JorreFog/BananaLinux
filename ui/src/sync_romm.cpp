@@ -157,6 +157,7 @@ namespace bsync
 			allPlatforms = platforms; allRoms = roms; allJson = romJson; fetchSkip = skip;
 			return true;
 		}
+		bool haveList() const override { return listed && !scoped(); }
 		bool manifest(Manifest& m, const std::set<std::string>& skip, std::string& err) override
 		{
 			if (!list(skip, err)) return false;

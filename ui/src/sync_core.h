@@ -277,6 +277,7 @@ namespace bsync
 			return http(q);
 		}
 		virtual bool manifest(Manifest& m, const std::set<std::string>& skip, std::string& err) = 0;
+		virtual bool haveList() const { return false; }	// the server's games listed by this run already (manifest() then asks nothing)
 		virtual void report(const Manifest&, int, int, const std::vector<std::string>&, const std::vector<std::string>&) {}
 		virtual bool saves(bool statesToo, int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note) = 0;
 	};

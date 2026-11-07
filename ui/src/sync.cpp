@@ -409,6 +409,54 @@ namespace
 		}
 		if (lk >= 0) close(lk);
 	}
+	// a game as the games command prints it, "<system>\t<key>\t<title>\t<bytes>\t<chosen>\t<on the handheld>", "" for one
+	// with no key; chosen is on Get games' list (RomM) or ticked (Romhost), on the handheld is on either card (not looked
+	// at without look: 0)
+	std::string gameLine(const MSystem& s, const MGame& g, const std::set<std::string>& chosen, const std::string& sd2, bool look = true)
+	{
+		std::string k = gameKey(g);
+		if (k.empty()) return "";
+		long long bytes = 0;
+		bool there = look;
+		for (auto& f : g.files)
+		{
+			if (f.media) continue;
+			bytes += std::max(0LL, f.size);
+			if (there && !exists(ROMS + "/" + f.path) && (sd2.empty() || !exists(sd2 + "/" + f.path))) there = false;
+		}
+		std::string t = g.title.empty() ? baseOf(k) : g.title;
+		for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
+		return s.folder + "\t" + k + "\t" + t + "\t" + std::to_string(bytes) + "\t" + (chosen.count(k) ? "1" : "0") + "\t" + (there ? "1" : "0") + "\n";
+	}
+	// RomM's games as Get games shows them, kept on the card (banana/homesync-server-games.tsv) so the page opens at once
+	// rather than after the half a minute the full list took on a real server of 742 games: "# <server>\t<unix time>",
+	// then the games command's lines. Whole (the games command, every system): written afresh. From a sync, which lists
+	// the systems not skipped: those systems' lines replaced, a skipped system's kept from before (the same server's).
+	// The page works out what is waiting or on the card itself, as both change after: the chosen column is as it was
+	// when written, and the cards aren't looked at for the other (0), which every sync would otherwise do for each game
+	std::string gamesCacheFile() { return ROOT + "/banana/homesync-server-games.tsv"; }
+	void writeGamesCache(const Conf& c, const Manifest& m, bool whole)
+	{
+		auto v = readLines(getFile());
+		std::set<std::string> chosen(v.begin(), v.end()), fresh;
+		std::string sd2 = sd2Roms(), rows;
+		for (auto& s : m.systems)
+		{
+			fresh.insert(s.folder);
+			for (auto& g : s.games) rows += gameLine(s, g, chosen, sd2, false);
+		}
+		if (!whole)
+		{
+			std::ifstream f(gamesCacheFile());
+			std::string head;
+			std::getline(f, head);
+			if (head.compare(0, 2 + c.server.size() + 1, "# " + c.server + "\t") == 0)
+				for (std::string l; std::getline(f, l);)
+					if (!l.empty() && l[0] != '#' && !fresh.count(l.substr(0, l.find('\t')))) rows += l + "\n";
+		}
+		if (!writeAtomic(gamesCacheFile(), "# " + c.server + "\t" + std::to_string((long long)time(nullptr)) + "\n" + rows))
+			say("the server's games couldn't be kept on the card (%s)", gamesCacheFile().c_str());
+	}
 	// RomM: the games whose saves stay on this handheld (the game page's Save sync), "<system folder>/<ROM file name>"
 	std::set<std::string> readLocal() { auto v = readLines(ROOT + "/banana/homesync-local.txt"); return std::set<std::string>(v.begin(), v.end()); }
 	std::string localKeyOf(const std::string& romRel)
@@ -1330,6 +1378,14 @@ namespace
 		// sync after a game, or before one, must not wait on them)
 		if (holdSaves) { saveConf(c); holdSaves = false; unlockSaves(); }
 		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
+		// (RomM: the server's games, listed for the saves or for Get games' downloads, kept for Get games' page; not
+		// from one game's sync, which lists that game's system alone)
+		if (romm && onlyRom.empty() && !dryRun && b->haveList())
+		{
+			Manifest m;
+			std::string err;
+			if (b->manifest(m, skip, err)) writeGamesCache(c, m, false);
+		}
 		for (auto& e : errors) say("  error: %s", e.c_str());
 		if (!note.empty()) say("%s", note.c_str());
 		char sum[256];
@@ -1464,26 +1520,8 @@ int main(int argc, char** argv)
 		if (c.backend == "romm") { auto v = readLines(getFile()); chosen = std::set<std::string>(v.begin(), v.end()); }
 		std::string sd2 = sd2Roms();	// (a game on either card is on the handheld)
 		for (auto& s : m.systems)
-			for (auto& g : s.games)
-			{
-				std::string k = gameKey(g);
-				if (k.empty()) continue;
-				long long bytes = 0; bool there = true;
-				for (auto& f : g.files)
-				{
-					if (!f.media)
-					{
-						bytes += std::max(0LL, f.size);
-						if (!exists(ROMS + "/" + f.path) && (sd2.empty() || !exists(sd2 + "/" + f.path)))
-						{
-							there = false;
-						}
-					}
-				}
-				std::string t = g.title.empty() ? baseOf(k) : g.title;
-				for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
-				printf("%s\t%s\t%s\t%lld\t%d\t%d\n", s.folder.c_str(), k.c_str(), t.c_str(), bytes, chosen.count(k) ? 1 : 0, there ? 1 : 0);
-			}
+			for (auto& g : s.games) fputs(gameLine(s, g, chosen, sd2).c_str(), stdout);
+		if (c.backend == "romm" && !dryRun) writeGamesCache(c, m, true);
 		return 0;
 	}
 	// banana-sync get <key>...: games added to Get games' list (RomM), for the next sync to bring; get --drop <key>...:
@@ -1505,6 +1543,12 @@ int main(int argc, char** argv)
 		unlink((CONF + ".new").c_str());	// (a copy a cut rename left, which the state is otherwise read from)
 		if (lk >= 0) close(lk);
 		if (rc) return rc;
+		// (the server's games, for Get games, and what was asked of it and why some didn't come: another server's next,
+		// which would otherwise download games asked of this one. The games whose saves stay here are this handheld's,
+		// whichever server)
+		unlink(gamesCacheFile().c_str());
+		unlink(getFile().c_str());
+		unlink(getFailedFile().c_str());
 		status("");
 		return 0;
 	}

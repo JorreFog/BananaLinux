@@ -157,6 +157,27 @@ grep -q 'Banana Run' "$OUT/rc/banana/homesync-get.txt" && bad "get: the game sta
 bs rc games > "$OUT/pick-games.tsv" 2>&1 || bad "games: $(head -2 "$OUT/pick-games.tsv")"
 grep -q "^gba	gba/Banana Run (USA).gba	.*	0	1$" "$OUT/pick-games.tsv" || bad "games: the game got not listed as on the card: $(cat "$OUT/pick-games.tsv")"
 grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not waiting + not on the card: $(cat "$OUT/pick-games.tsv")"
+# (the server's games kept on the card for Get games' page: games writes them whole, under the server's address; a
+# sync replaces the systems it listed and keeps a skipped one's; one game's sync leaves them; Forget takes them away)
+GC=$OUT/rc/banana/homesync-server-games.tsv
+head -1 "$GC" 2>/dev/null | grep -q "^# $U	[0-9][0-9]*$" || bad "games: the list not kept on the card under the server: $(head -1 "$GC" 2>&1)"
+# (but for its last column, on the card, which the page looks at for itself: 0 in what is kept)
+[ "$(tail -n +2 "$GC")" = "$(grep '	' "$OUT/pick-games.tsv" | sed 's/	[01]$/	0/')" ] || bad "games: the kept list isn't what was printed: $(cat "$GC")"
+printf 'gba\tgba/Gone (USA).gba\tGone\t1\t0\t0\n' >> "$GC"
+cp "$GC" "$OUT/gc-before.tsv"
+bs rc sync --rom "gba/Banana Run (USA).gba" > "$OUT/pick-gc-rom.log" 2>&1
+cmp -s "$GC" "$OUT/gc-before.tsv" || bad "a game's own sync rewrote the kept list: $(cat "$GC")"
+printf 'homesync.nds = off\n' >> "$OUT/rc/banana/settings.conf"
+bs rc sync --saves-only > "$OUT/pick-gc-sync.log" 2>&1 || bad "gc sync: $(tail -3 "$OUT/pick-gc-sync.log")"
+grep -q 'Gone (USA)' "$GC" && bad "a sync didn't replace the kept list's games of a system it listed: $(cat "$GC")"
+grep -q '^nds	nds/Peel Quest (USA).nds	' "$GC" || bad "a sync dropped a skipped system's games from the kept list: $(cat "$GC")"
+grep -q '^gba	gba/Banana Run (USA).gba	' "$GC" || bad "a sync's kept list lost a listed system's game: $(cat "$GC")"
+sed -i '/^homesync\.nds/d' "$OUT/rc/banana/settings.conf"
+cp -r "$OUT/rc" "$OUT/rcf"
+printf 'gba/Asked (USA).gba\n' >> "$OUT/rcf/banana/homesync-get.txt"; printf 'gba/Asked (USA).gba\tchecksum mismatch\n' >> "$OUT/rcf/banana/homesync-get-failed.txt"
+bs rcf forget >/dev/null 2>&1
+[ -e "$OUT/rcf/banana/homesync-server-games.tsv" ] && bad "Forget left the server's kept games"
+[ -e "$OUT/rcf/banana/homesync-get.txt" ] || [ -e "$OUT/rcf/banana/homesync-get-failed.txt" ] && bad "Forget left the games asked of the server"
 # (games asked for while a sync runs: brought by it, the saves' look at the library held up so the list changes mid-run)
 curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
 GETALL=0 bs rc sync > "$OUT/pick-sync3.log" 2>&1 & _k=$!
@@ -786,6 +807,32 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: A on a game found didn't put it on the list: $(cat "$GL" 2>&1)"
     ug "$GET; press a; press y; type zzz; press start; wait 300; press down; press a; wait 100"
     grep -q 'get games: "zzz" finds 0' "$OUT/ui-get.log" || bad "Get games: a search finding nothing: $(grep 'get games' "$OUT/ui-get.log")"
+    # (the server's list kept on the card: shown at once with nothing asked of the server, Start asks it once, another
+    # server's isn't shown; X (Refresh) asks it again, from the systems or a system's games)
+    GKF=$FX/data/homesync-server-games.tsv
+    printf '# https://romm.example.com\t%s\ngba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t0\n' "$(($(date +%s) - 7200))" > "$GKF"
+    : > "$SL"
+    ug "$GET; shot hs-get-kept; press a; wait 300; press down; wait 100"
+    grep -q ' games$' "$SL" && bad "Get games: a kept list, yet the server asked: $(cat "$SL")"
+    grep -q 'get games: 2 games kept on the card' "$OUT/ui-get.log" || bad "Get games: the kept list not shown: $(grep 'get games' "$OUT/ui-get.log")"
+    # (on the card as the cards say now, not as the kept list had it: a game kept as there, deleted since, is asked for
+    # by A)
+    printf '# https://romm.example.com\t%s\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t1\ngba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\n' "$(($(date +%s) - 7200))" > "$GKF"
+    : > "$GL"; : > "$SL"
+    ug "$GET; press a; wait 300; press a; sleep 300; wait 300"
+    grep -qx 'gba/Kept Only.gba' "$GL" || bad "Get games: a game gone from the card since the list was kept couldn't be asked for: $(cat "$GL")"
+    : > "$GL"
+    : > "$SL"
+    ug "$GET; press x; sleep 300; wait 600; shot hs-get-refreshed; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: X didn't ask the server once: $(cat "$SL")"
+    grep -q 'get games: refreshed, 2 games' "$OUT/ui-get.log" || bad "Get games: X's list not taken: $(grep 'get games' "$OUT/ui-get.log")"
+    : > "$SL"
+    ug "$GET; press a; wait 300; press down; press x; sleep 300; wait 600; shot hs-get-refreshed1; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: X in a system's games didn't ask the server once: $(cat "$SL")"
+    printf '# https://other.example.com\t1\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t0\n' > "$GKF"; : > "$SL"
+    ug "$GET; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: another server's kept list was shown: $(cat "$SL")"
+    rm -f "$GKF"
     # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows, name, sort and art)
     LC=$FX/data/homesync-local.txt; rm -f "$LC"
     ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"

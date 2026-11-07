@@ -248,15 +248,14 @@ namespace banana
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title, failed; long long bytes = 0; bool on = false, there = false; };	// failed: why its download didn't come (Get games)
 		std::vector<PickGame> pickGames;
-		std::vector<std::string> pickSys;		// the systems' folders, in the server's order
+		std::vector<std::string> pickSys;		// the systems' folders, by their names
 		int pickLevel = 0, pickSysSel = 0, pickSel = 0, pickTop = 0;	// level 0: the systems, 1: a system's games
 		bool pickLoading = false, pickDirty = false;
 		std::string pickError;
 		wifi::Job pickJob;
 		// get: RomM's Get games, the same lists, A putting a game on the download list (banana/homesync-get.txt, which
-		// any sync takes games off as they come) and starting a sync; on: waiting on that list. hide: the games on the
-		// card left out of the list (X)
-		bool pickGet = false, pickHide = false;
+		// any sync takes games off as they come) and starting a sync; on: waiting on that list
+		bool pickGet = false;
 		double pickPoll = 0;
 		// query: Get games' search (Y), the titles holding it; from the systems, every system's (pickSysSel -1)
 		std::string pickQuery;
@@ -266,6 +265,15 @@ namespace banana
 		bool pickWasSync = false;
 		double getRestartAt = 0;
 		bool pollGetRestart();
+		// Get games' list as banana-sync keeps it on the card (banana/homesync-server-games.tsv): when the server listed
+		// it, the file's time as last read, and a refresh (X) under way with the kept list still up
+		double pickListedAt = 0;
+		long long pickCacheMtime = -1;
+		double pickCacheAt = 0;
+		bool pickRefreshing = false;
+		std::string pickCachePath() const;
+		bool loadPickCache();
+		std::string takePickRows(const std::string& text);	// banana-sync games' lines as the page's, the cursor kept; "" or why not
 		void openPickGames(bool get);
 		bool editGetList(const std::string& key, bool add);
 		std::set<std::string> readGetList() const;

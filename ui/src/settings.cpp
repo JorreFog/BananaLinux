@@ -2896,7 +2896,7 @@ namespace banana
 		if (hsStep == 3) return page == HOMESRV ? 250 : 500;
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
-		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
+		if (pickLoading || pickRefreshing) return 150;	// (Choose games: the server's list as it comes)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -4812,13 +4812,121 @@ namespace banana
 	{
 		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return; }
 		page = PICKGAMES;
-		pickGet = get; pickHide = false; pickPoll = 0; pickQuery.clear();
+		pickGet = get; pickPoll = 0; pickQuery.clear();
 		pickAsked.clear(); pickRestarted.clear(); pickWasSync = syncing();
 		pickLevel = 0; pickSysSel = 0; pickSel = 0; pickTop = 0; pickDirty = false;
 		pickGames.clear(); pickSys.clear(); pickError.clear();
+		pickCacheMtime = -1;
+		// (Get games: the list kept on the card at once, Wi-Fi or not; X asks the server again. A refresh still
+		// running from the last visit carries on, its rows replacing these when it ends)
+		if (get && (loadPickCache() || pickRefreshing)) return;
+		pickRefreshing = false;
 		if (!wifiOn()) { pickError = "Wi-Fi is off: switch it on in Network first."; return; }
 		pickLoading = true;
 		pickJob.start(syncCmd("games") + " 2>/dev/null", sync);
+	}
+
+	// Get games' list as banana-sync keeps it on the card, and the file's time (-1: none)
+	std::string Settings::pickCachePath() const { return data + "/homesync-server-games.tsv"; }
+	static long long mtimeOf(const std::string& path)
+	{
+		struct stat st;
+		return stat(path.c_str(), &st) == 0 ? (long long)st.st_mtime : -1;
+	}
+
+	// Get games' list as banana-sync last kept it: only the paired server's (the first line names it). False when there
+	// is none to show
+	bool Settings::loadPickCache()
+	{
+		pickCacheMtime = mtimeOf(pickCachePath());
+		if (pickCacheMtime < 0) return false;
+		std::ifstream f(pickCachePath());
+		std::string head;
+		std::getline(f, head);
+		homeServer();	// (hsPairedUrl read afresh)
+		const std::string want = "# " + hsPairedUrl + "\t";
+		if (hsPairedUrl.empty() || head.compare(0, want.size(), want) != 0) return false;
+		std::stringstream rest;
+		rest << f.rdbuf();
+		if (!takePickRows(rest.str()).empty() || pickGames.empty()) return false;
+		pickListedAt = atof(head.substr(want.size()).c_str());
+		pickError.clear();
+		pickPoll = 0;	// (what waits, what came and what failed, worked out at the next look, not as they were written)
+		fprintf(stderr, "get games: %zu games kept on the card\n", pickGames.size());
+		return true;
+	}
+
+	static std::string pickSysName(const std::string& f)
+	{
+		static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
+			{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
+		auto it = N.find(f);
+		return it == N.end() ? f : it->second;
+	}
+
+	std::string Settings::takePickRows(const std::string& text)
+	{
+		// (the cursor on the same system and game after a refresh, wherever they are in the new list)
+		std::string atSys = pickSysSel >= 0 && pickSysSel < (int)pickSys.size() ? pickSys[pickSysSel] : "", atKey;
+		if (pickLevel == 1) { auto v = pickList(); if (pickSel < (int)v.size()) atKey = pickGames[v[pickSel]].key; }
+		std::vector<PickGame> games;
+		std::istringstream in(text);
+		std::string ln;
+		while (std::getline(in, ln))
+		{
+			if (ln.compare(0, 6, "error ") == 0) return ln.substr(6) == "unpaired" ? "The server doesn't know this handheld any more: pair it again." : "The server's list can't be read: " + ln.substr(6) + ".";
+			std::vector<std::string> f;
+			size_t a = 0;
+			for (size_t b; (b = ln.find('\t', a)) != std::string::npos; a = b + 1) f.push_back(ln.substr(a, b - a));
+			f.push_back(ln.substr(a));
+			if (f.size() < 6) continue;
+			PickGame g; g.sys = f[0]; g.key = f[1]; g.title = f[2]; g.bytes = atoll(f[3].c_str()); g.on = f[4] == "1"; g.there = f[5] == "1";
+			games.push_back(g);
+		}
+		if (pickGet)
+		{
+			// (Get games: which are on the card looked at now, by each game's first file as after a download, not taken
+			// from the list kept at the last sync: a game deleted since can be asked for again. A folder listed once on
+			// each card, not a look per game)
+			std::map<std::string, std::set<std::string>> dirs;
+			auto present = [&](const std::string& path)
+			{
+				size_t sl = path.rfind('/');
+				std::string d = path.substr(0, sl);
+				auto it = dirs.find(d);
+				if (it == dirs.end())
+				{
+					it = dirs.emplace(d, std::set<std::string>()).first;
+					if (DIR* dp = opendir(d.c_str())) { while (dirent* e = readdir(dp)) it->second.insert(e->d_name); closedir(dp); }
+				}
+				return it->second.count(path.substr(sl + 1)) > 0;
+			};
+			std::string sd2 = readLine(runDir + "/sd2/roms");
+			for (auto& g : games) g.there = present(romRoot + "/" + g.key) || (!sd2.empty() && present(sd2 + "/" + g.key));
+		}
+		// (what failed stays said until the next look)
+		std::map<std::string, std::string> failed;
+		for (auto& g : pickGames) if (!g.failed.empty()) failed[g.key] = g.failed;
+		pickGames = games;
+		for (auto& g : pickGames) if (failed.count(g.key)) g.failed = failed[g.key];
+		pickSys.clear();
+		for (auto& g : pickGames) if (std::find(pickSys.begin(), pickSys.end(), g.sys) == pickSys.end()) pickSys.push_back(g.sys);
+		std::sort(pickSys.begin(), pickSys.end(), [](const std::string& a, const std::string& b) { return pickSysName(a) < pickSysName(b); });
+		if (pickSysSel >= 0)
+		{
+			auto it = std::find(pickSys.begin(), pickSys.end(), atSys);
+			pickSysSel = it == pickSys.end() ? std::min(pickSysSel, std::max(0, (int)pickSys.size() - 1)) : (int)(it - pickSys.begin());
+		}
+		if (pickLevel == 1)
+		{
+			auto v = pickList();
+			int at = -1;
+			for (size_t i = 0; i < v.size(); i++) if (pickGames[v[i]].key == atKey) at = (int)i;
+			pickSel = at >= 0 ? at : std::min(pickSel, std::max(0, (int)v.size() - 1));
+			const int VIS = 8;
+			if (pickSel < pickTop || pickSel >= pickTop + VIS) pickTop = std::max(0, pickSel - VIS / 2);
+		}
+		return "";
 	}
 
 	bool Settings::pollPickGames()
@@ -4844,21 +4952,36 @@ namespace banana
 			}
 			if (changed) return true;
 		}
-		if (!pickLoading || !pickJob.take(out)) return false;
-		pickLoading = false;
-		std::istringstream in(out);
-		std::string ln;
-		while (std::getline(in, ln))
+		// (Get games: the kept list read again when a sync rewrote it)
+		if (page == PICKGAMES && pickGet && !pickLoading && !pickRefreshing && now >= pickCacheAt)
 		{
-			if (ln.compare(0, 6, "error ") == 0) { pickError = ln.substr(6) == "unpaired" ? "The server doesn't know this handheld any more: pair it again." : "The server's list can't be read: " + ln.substr(6) + "."; break; }
-			std::vector<std::string> f;
-			size_t a = 0;
-			for (size_t b; (b = ln.find('\t', a)) != std::string::npos; a = b + 1) f.push_back(ln.substr(a, b - a));
-			f.push_back(ln.substr(a));
-			if (f.size() < 6) continue;
-			PickGame g; g.sys = f[0]; g.key = f[1]; g.title = f[2]; g.bytes = atoll(f[3].c_str()); g.on = f[4] == "1"; g.there = f[5] == "1";
-			if (std::find(pickSys.begin(), pickSys.end(), g.sys) == pickSys.end()) pickSys.push_back(g.sys);
-			pickGames.push_back(g);
+			pickCacheAt = now + 1;
+			long long m = mtimeOf(pickCachePath());
+			if (m >= 0 && m != pickCacheMtime && loadPickCache()) return true;
+		}
+		if ((!pickLoading && !pickRefreshing) || !pickJob.take(out)) return false;
+		if (pickRefreshing)
+		{
+			// a refresh (X): the kept list stays up if it didn't work, with why
+			pickRefreshing = false;
+			std::vector<PickGame> keep = pickGames;
+			std::vector<std::string> keepSys = pickSys;
+			std::string why = takePickRows(out);
+			if (why.empty() && pickGames.empty()) why = "The server listed no games.";
+			if (!why.empty()) { pickGames = keep; pickSys = keepSys; message = "Couldn't refresh. " + why; fprintf(stderr, "get games: refresh failed\n"); return true; }
+			pickListedAt = (double)time(nullptr);
+			pickCacheMtime = mtimeOf(pickCachePath());
+			pickPoll = 0;
+			message.clear();
+			fprintf(stderr, "get games: refreshed, %zu games\n", pickGames.size());
+			return true;
+		}
+		pickLoading = false;
+		pickError = takePickRows(out);
+		if (pickError.empty() && !pickGames.empty())
+		{
+			pickListedAt = (double)time(nullptr);
+			pickCacheMtime = mtimeOf(pickCachePath());
 		}
 		if (pickError.empty() && pickGames.empty()) pickError = "The server has no games for this handheld's systems.";
 		return true;
@@ -4931,7 +5054,6 @@ namespace banana
 		{
 			const PickGame& g = pickGames[i];
 			if (pickSysSel >= 0 && g.sys != pickSys[pickSysSel]) continue;
-			if (pickHide && g.there && !g.on) continue;
 			if (!q.empty() && low(g.title).find(q) == std::string::npos && low(g.key).find(q) == std::string::npos) continue;
 			v.push_back((int)i);
 		}
@@ -4955,6 +5077,19 @@ namespace banana
 	Settings::Result Settings::pressPickGames(Key k)
 	{
 		const int VIS = 8;
+		if (k == Key::X && pickGet)
+		{
+			// Get games: the server asked for its games again, the kept list up meanwhile (or, with none to show, asked
+			// afresh)
+			if (pickLoading || pickRefreshing) return NONE;
+			if (pickGames.empty()) { openPickGames(true); return MOVED; }
+			if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return MOVED; }
+			pickRefreshing = true;
+			message.clear();
+			pickJob.start(syncCmd("games") + " 2>/dev/null", sync);
+			fprintf(stderr, "get games: refreshing\n");
+			return MOVED;
+		}
 		if (k == Key::START) { savePickGames(); page = LIST; mOpen = false; return CLOSED; }
 		if (k == Key::B && pickGet)
 		{
@@ -5013,13 +5148,6 @@ namespace banana
 			startEntry(ENTRY_GET_SEARCH, "Get games", pickLevel == 0 || pickSysSel < 0 ? "Search every system" : "Search this system", PICKGAMES, pickQuery);
 			return MOVED;
 		}
-		else if (k == Key::X && pickGet)
-		{
-			// the games on the card hidden or shown again
-			pickHide = !pickHide;
-			pickSel = 0; pickTop = 0;
-			return MOVED;
-		}
 		else if (k == Key::A)
 		{
 			if (pickLevel == 0) { pickLevel = 1; pickSel = 0; pickTop = 0; message.clear(); return MOVED; }
@@ -5053,10 +5181,7 @@ namespace banana
 		const int VIS = 8;
 		// (a game under a megabyte, as most of the Game Boy's are, in KB rather than a row of "0 MB")
 		auto size = [](long long b) { char t[32]; if (b >= (1LL << 30)) snprintf(t, sizeof t, "%.1f GB", b / 1073741824.0); else if (b > 0 && b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%lld MB", (b + 524288) >> 20); return std::string(t); };
-		auto sysName = [](const std::string& f) -> std::string {
-			static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
-			auto it = N.find(f); return it == N.end() ? f : it->second; };
+		auto sysName = pickSysName;
 		long long chosenBytes = 0; int chosenN = 0;
 		for (auto& g : pickGames) if (g.on) { chosenBytes += g.bytes; chosenN++; }
 		be->beginScreen(0);
@@ -5068,9 +5193,9 @@ namespace banana
 		text(fit(std::to_string(chosenN) + (chosenN == 1 ? " game " : " games ") + (pickGet ? "waiting, " : "chosen, ") + size(chosenBytes), true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help = pickLoading ? "Asking the server for its games..." : !pickError.empty() ? pickError
 			: pickGet && !message.empty() ? message
-			: pickGet ? (pickLevel == 0 ? "A opens a system. Y searches every system's games. X hides the games already on the card, or shows them again. B goes back."
-				: !pickQuery.empty() ? "A downloads a game (A again, while it waits, takes it back). Y searches again. X hides the games on the card. L and R jump a page. B clears the search."
-				: "A downloads a game (A again, while it waits, takes it back). Y searches this system's games. X hides the games on the card. L and R jump a page. B goes back to the systems.")
+			: pickGet ? (pickLevel == 0 ? "A opens a system. Y searches every system's games. X asks the server for its list again (it is kept on the card, and every sync brings it up to date). B goes back."
+				: !pickQuery.empty() ? "A downloads a game (A again, while it waits, takes it back). Y searches again. X asks the server for its list again. L and R jump a page. B clears the search."
+				: "A downloads a game (A again, while it waits, takes it back). Y searches this system's games. X asks the server for its list again. L and R jump a page. B goes back to the systems.")
 			: pickLevel == 0 ? "A opens a system. X ticks all of its games, or unticks them when all are ticked. B saves and goes back."
 			: "A ticks or unticks a game. X: all of this system's, or none. L and R jump a page. Games already on the card say so. B goes back to the systems.";
 		// (while a sync runs, its bar in the help's place, the chips saying what A and X do; a message or an error still
@@ -5103,6 +5228,16 @@ namespace banana
 		if (pickLoading) text("Loading...", true, 20, 38, 226, p.muted);
 		else if (pickLevel == 0)
 		{
+			// (Get games: how old the list is, kept on the card; X asks again)
+			if (pickGet && (pickRefreshing || pickListedAt > 0))
+			{
+				long long age = std::max(0LL, (long long)time(nullptr) - (long long)pickListedAt);
+				std::string when = pickRefreshing ? "Refreshing..." : age < 60 ? "Listed just now"
+					: age < 3600 ? "Listed " + std::to_string(age / 60) + " min ago"
+					: age < 86400 * 2 ? "Listed " + std::to_string(age / 3600) + " h ago" : "Listed " + std::to_string(age / 86400) + " days ago";
+				float ww = text(when, true, 17, 0, 0, p.muted, false, 0, true);
+				text(when, true, 17, 602 - ww, 31, p.muted);
+			}
 			int top = std::max(0, std::min(pickSysSel - VIS + 1, (int)pickSys.size() - VIS));
 			top = std::max(0, std::min(top, pickSysSel));
 			for (int r = 0; r < VIS && top + r < (int)pickSys.size(); r++)
@@ -5123,6 +5258,9 @@ namespace banana
 		else
 		{
 			auto v = pickList();
+			// (nothing to show: a search finding nothing)
+			if (v.empty() && !pickGames.empty())
+				wrapped(!pickQuery.empty() ? "No games match \"" + pickQuery + "\"." : "No games here.", 20, 38, 100, 564, 3, p.muted);
 			for (int r = 0; r < VIS && pickTop + r < (int)v.size(); r++)
 			{
 				const PickGame& g = pickGames[v[pickTop + r]];
@@ -5153,6 +5291,8 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
+		// (Get games with nothing to show, the server's list not read: X asks again)
+		if (pickGet && !pickLoading && pickGames.empty()) { float xw = faceWidth("X", "Refresh"); face("X", "Refresh", 18 + bw + 12, xw); }
 		if (!pickLoading && !pickGames.empty())
 		{
 			std::string xa = "All / none", aa = pickLevel == 0 ? "Open" : "Tick";
@@ -5160,7 +5300,7 @@ namespace banana
 			{
 				auto v = pickList();
 				const PickGame* g = pickLevel == 1 && pickSel < (int)v.size() ? &pickGames[v[pickSel]] : nullptr;
-				xa = pickHide ? "Show all" : "Hide on card";
+				xa = pickRefreshing ? "Refreshing" : "Refresh";
 				aa = pickLevel == 0 ? "Open" : !g ? "" : g->on ? "Take back" : g->there ? "" : "Get";
 			}
 
