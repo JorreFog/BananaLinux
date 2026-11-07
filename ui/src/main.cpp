@@ -1114,7 +1114,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (pk)
 			{
 				mkdir((o.headless + "gba-state").c_str(), 0755);
-				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", "", false);
+				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", false);
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
@@ -2525,7 +2525,7 @@ int main(int argc, char** argv)
 		{
 			mkdir((o.data + "/cache").c_str(), 0755);
 			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
-			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
+			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion",
 				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
 		}
 		{

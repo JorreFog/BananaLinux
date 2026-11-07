@@ -1422,7 +1422,7 @@ namespace banana::nds
 		float ch = wild ? 104 : 112;
 		// a tap on a foe's card shows its type matchups where the moves are, till it (or the panel) is tapped again
 		int mf = o.matchFoe;
-		if (mf >= 0 && (mf > (dbl ? 1 : 0) || !b.foes[mf].present)) mf = b.foes[0].present ? 0 : -1;
+		if (mf >= 0 && (mf > (dbl ? 1 : 0) || !b.foes[mf].present)) mf = o.matchFoe = -1;	// (that foe gone: the moves again)
 		auto toggle = [this](int i) { return [this, i] { o.matchFoe = o.matchFoe == i ? -1 : i; }; };
 		if (!dbl)
 		{
@@ -2773,6 +2773,7 @@ namespace banana::nds
 	{
 		if (pg >= Page::COUNT) return;
 		if (pg != cur) d->stopFling();
+		if (pg == Page::BATTLE && pg != cur) matchFoe = -1;	// (a battle's page opens on the moves, not the last one's matchups)
 		cur = pg;
 		d->markSeen(pg);
 	}

@@ -604,14 +604,6 @@ namespace banana::pkmn
 			o.push_back(0xff);
 			return true;
 		}
-		// a trainer record (40 bytes: party flags, class, music, picture, name[12], items[4], doubles, AI flags, party
-		// size, party pointer) that looks like one
-		bool trainerAt(const uint8_t* rom, size_t n, size_t a)
-		{
-			if (a + 40 > n || rom[a] > 3 || rom[a + 32] < 1 || rom[a + 32] > 6) return false;
-			if (nameAt(rom + a + 4, 12) <= 0) return false;
-			return romPtr(rom, n, a + 36, 8 * rom[a + 32]) >= 0;
-		}
 	}
 
 	namespace
@@ -1442,6 +1434,7 @@ namespace banana::pkmn
 			s.champion = flag(L.clear);
 		}
 		if (trainB.size() >= (size_t)TRAINER_FLAG_BYTES) s.trainersBeaten = trainB;
+		else s.trainersBeaten = snap.trainersBeaten;	// (a read that failed this round: the last ones, not none)
 	}
 
 	void Companion::finish()

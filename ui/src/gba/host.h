@@ -19,8 +19,8 @@ namespace banana::gba
 	{
 	public:
 		// c: the game's companion (open, a retail game); stateDir: where the journey log is kept on the card
-		// (cache/gba-companion); cacheDir: the RomData's cache ("" none). challenge: the Settings row's
-		Host(pkmn::Companion& c, std::string stateDir, std::string cacheDir, bool challenge);
+		// (cache/gba-companion). challenge: the Settings row's
+		Host(pkmn::Companion& c, std::string stateDir, bool challenge);
 		~Host();
 		// each turn of the menu's loop: the loaded data picked up, a new Snapshot handed to the Session, the Session's
 		// newest taken. True when the pages have new data (takeData): from the first, "Reading your game" till the ROM's
@@ -36,7 +36,7 @@ namespace banana::gba
 		uint64_t fed = 0;		// (statistics: Snapshots handed over)
 	private:
 		pkmn::Companion& comp;
-		std::string stateDir, cacheDir;
+		std::string stateDir;
 		bool challenge;
 		std::future<nds::PageData> load;
 		bool started = false, loading = false, loadFailed = false;

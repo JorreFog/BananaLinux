@@ -147,8 +147,6 @@ namespace banana::pkmn
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450, const BattlerLayout& layout = BattlerLayout());
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
 	const char* natureName(int nature);		// English, by personality % 25 ("" out of range)
-	// the stat a nature raises and the one it lowers, as Mon::stats numbers them (0 Attack ... 4 Sp. Def): -1 for both
-	// when it changes neither (Hardy, Docile, Serious, Bashful, Quirky)
 	int maxPP(int basePP, uint8_t ppBonuses, int slot);
 
 	struct MoveInfo { uint8_t power = 0, type = 0, accuracy = 0, pp = 0; };

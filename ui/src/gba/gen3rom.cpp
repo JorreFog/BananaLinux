@@ -653,6 +653,8 @@ namespace banana::gba
 		}
 		// (a ROM with one of the five games' codes that isn't one of them, or one the list knows: a hack not
 		// supported - one whose header still points at its base game's tables too, Glazed 9.2.0 before it was listed)
+		// (a patched hack not listed has its base game's header, so one of the five games read and failed counts as one
+		// too: the five's own releases are read - tests/gba-rom-test)
 		if (unsupported) *unsupported = !r && t.rom && t.rom->size() >= 0xb0 && pkmn::detectGame(t.rom->data(), t.rom->size()) != nullptr;
 		if (out) *out = r ? r->game : Game();
 		return r;

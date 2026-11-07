@@ -10,8 +10,8 @@
 
 namespace banana::gba
 {
-	Host::Host(pkmn::Companion& c, std::string sd, std::string cd, bool ch)
-		: comp(c), stateDir(std::move(sd)), cacheDir(std::move(cd)), challenge(ch) {}
+	Host::Host(pkmn::Companion& c, std::string sd, bool ch)
+		: comp(c), stateDir(std::move(sd)), challenge(ch) {}
 
 	Host::~Host()
 	{
