@@ -206,6 +206,7 @@ namespace bsync
 	bool saveConf(const Conf& c);
 	// a new pairing written whole; the same server's saves part and files taken from the file as it is then
 	bool savePairing(const Conf& c);
+	bool saveName(const Conf& c);	// the handheld's name (and the device it registered), alone, as rename sets them
 	void takeSaves(Conf& to, const Conf& from);	// the saves' part of the state (saves, states, slots, conflicts, held, queue)
 	// save.lock (one run at a time over the card's saves), waited for up to secs; kept until the run ends
 	bool lockSaves(int secs);

@@ -39,6 +39,8 @@ while [ $# -gt 0 ]; do
     games) printf 'gba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\ngba\tgba/Pocket Hack.gba\tPocket Hack [Hack by Someone v1.0]\t16777216\t0\t0\n'; exit 0 ;;
     resolve) case ${FAKE_SYNC_RESOLVE:-} in fail) echo 'error no answer'; exit 1 ;; hang) exec sleep 60 ;; slow) sleep 2 ;; esac; echo ok; exit 0 ;;
     restore) echo ok; exit 0 ;;
+    # (rename: the name kept as the pairing's, as banana-sync does once RomM has it)
+    rename) sed -i "s/\"name\": \"[^\"]*\"/\"name\": \"$2\"/" "$conf"; echo ok; exit 0 ;;
     probe)
         # (an address typed where Romhost's was asked for: RomM's there with FAKE_SYNC_FIND=romm)
         [ "$2" = --romm ] || { [ "${FAKE_SYNC_FIND:-}" = romm ] && { echo "romm http://$2 RomM 5.4.1"; exit 0; }; exit 1; }

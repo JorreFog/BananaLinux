@@ -982,7 +982,7 @@ namespace
 		// would be one device)
 		if (kind == "romm" && cardId().empty()) { status("error can't write banana/sync-id"); say("can't write %s/banana/sync-id", ROOT.c_str()); return 1; }
 		Conf c = loadConf();
-		std::string code = trim(codeIn), dev = getenv("BANANA_SYNC_NAME") ? getenv("BANANA_SYNC_NAME") : deviceName();
+		std::string code = trim(codeIn), dev = getenv("BANANA_SYNC_NAME") ? getenv("BANANA_SYNC_NAME") : !c.name.empty() ? c.name : deviceName();	// (paired again: the name it was given)
 		Conf n;
 		n.backend = kind; n.server = url; n.serverName = name; n.name = dev;
 		if (kind == "romm" && name.compare(0, 5, "RomM ") == 0) n.serverVersion = name.substr(5);
@@ -1561,6 +1561,20 @@ int main(int argc, char** argv)
 		for (auto& k : keys) if (!safeRel(k) || k.find('/') == std::string::npos) return answer("not a game: " + k);
 		bool ok = drop ? editGet({}, std::set<std::string>(keys.begin(), keys.end())) : editGet(keys, {});
 		return answer(ok ? "" : "the list can't be written");
+	}
+	// banana-sync rename <name>: the handheld's name in RomM's Devices, set there at once (the device registered if it
+	// has none), then kept as the pairing's. "ok" or "error <why>"; nothing changes on an error
+	if (cmd == "rename" && args.size() > 1)
+	{
+		std::string nm = trim(args[1]);
+		if (nm.empty() || nm.size() > 63) return answer("a name of 1 to 63 characters");
+		Conf c = loadConf();
+		if (!c.paired()) return answer("not paired");
+		if (c.backend != "romm") return answer("Homeport names this handheld (ROMs > Devices)");
+		c.name = nm;
+		std::string e = registerDevice(c);
+		if (!e.empty()) return answer(e);
+		return answer(saveName(c) ? "" : "the pairing changed meanwhile");
 	}
 	if (cmd == "forget")
 	{

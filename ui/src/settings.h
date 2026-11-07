@@ -359,7 +359,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_HS_NAME, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -667,6 +667,7 @@ namespace banana
 		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running,
 											// 4 asking RomM's address (probe --romm)
 		wifi::Job hsJob;
+		wifi::Job nameJob;	// banana-sync rename, from the Device name row
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
 		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
@@ -688,7 +689,7 @@ namespace banana
 		std::string syncShort() const;		// for the Sync now row: "Not yet", "12 / 300", "Done", "Didn't work"
 		std::string homeServer() const;		// the paired server's name, "" when none
 		std::string hsBackend() const;		// the paired server's kind: "romm", "romhost", "" when none
-		mutable std::string hsPaired, hsPairedKind, hsPairedUrl;
+		mutable std::string hsPaired, hsPairedKind, hsPairedUrl, hsPairedName;
 		mutable int hsConflicts = 0, hsHeld = 0;	// the paired server's saves to settle and held back (romsync.json)
 		std::string hsSettleShort() const;		// "1 conflict, 2 held", "" for none
 		mutable double hsPairedAt = -1e18;

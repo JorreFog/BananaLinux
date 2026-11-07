@@ -116,6 +116,15 @@ n=$(ndevs); CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,s
 c=$OUT/ra; BANANA_SYNC_NAME="RG DS renamed" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" pair "$U" "$CODE" >/dev/null 2>&1 || bad "card A pairing again failed: $(st ra)"
 [ "$(devof ra)" = "$DA" ] && [ "$(ndevs)" = "$n" ] || bad "pairing again made another device: $(devof ra), $(ndevs) devices (were $n)"
 devs | grep -q '"name": "RG DS renamed"' || bad "the device held wasn't brought up to date when the card paired again"
+# (rename: the name in RomM's Devices at once and kept as the pairing's; a sync after it doesn't write the old one back;
+# an empty name or one on a card not paired changes nothing)
+[ "$(bs ra rename 'Living room DS')" = ok ] || bad "rename: $(bs ra rename 'Living room DS')"
+devs | grep -q '"name": "Living room DS"' || bad "rename: RomM's device not renamed"
+grep -q '"name": "Living room DS"' "$OUT/ra/banana/romsync.json" || bad "rename: the name not kept on the card"
+bs ra sync --saves-only > "$OUT/romm-rename.log" 2>&1
+grep -q '"name": "Living room DS"' "$OUT/ra/banana/romsync.json" || bad "rename: a sync wrote the old name back: $(grep name "$OUT/ra/banana/romsync.json")"
+[ "$(bs ra rename '  ')" = "error a name of 1 to 63 characters" ] || bad "rename: an empty name taken"
+card rn; [ "$(bs rn rename x)" = "error not paired" ] || bad "rename: a card not paired renamed"
 curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$DD" >/dev/null
 bs rp sync --saves-only > "$OUT/romm-dev1.log" 2>&1
 grep -q 'the device was gone from RomM' "$OUT/romm-dev1.log" && grep -q 'registered as RomM device' "$OUT/romm-dev1.log" && [ "$(dev "$(devof rp)")" != none ] || bad "a deleted device wasn't registered again: $(cat "$OUT/romm-dev1.log")"
@@ -768,6 +777,15 @@ if [ -x "$HERE/banana-ui" ]; then
     rlog romm-launch "home server: Auto sync on (Leaving a game)"
     grep -q 'sync --auto launch --rom' "$SL" || bad "RomM: the game after a pairing had no sync before it: $(cat "$SL")"
     sed -i '/^homesync_launch/d' "$FX/data/settings.conf"
+    # (Device name, the paired page's row after Systems: typed, renamed in RomM by banana-sync rename, the new name on the row)
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-namerow; press a; press b; press b; press b; press b; press b; type Max DS; press start; sleep 300; wait 600; wait 600; shot hs-renamed" \
+        2> "$OUT/ui-rename.log" || bad "banana-ui (rename) exited $?"
+    grep -q ' rename Max DS$' "$SL" || bad "Device name: no rename asked: $(tail -3 "$SL")"
+    grep -q '"name": "Max DS"' "$FX/data/romsync.json" || bad "Device name: the name not kept: $(cat "$FX/data/romsync.json")"
+    rlog rename "home server: rename ok"
+    for s in hs-namerow hs-renamed; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
     grep -q '"backend": "romm"' "$FX/data/romsync.json" 2>/dev/null || bad "RomM: no pairing written"
     for s in hs-choose-romm hs-form0 hs-urlkeys hs-form hs-pair hs-paired-r hs-after; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
     cmp -s "$OUT/ui-hs-form-bot.png" "$OUT/ui-hs-pair-bot.png" && bad "RomM: the pairing screen shows no QR code"

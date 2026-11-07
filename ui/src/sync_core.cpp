@@ -587,6 +587,9 @@ namespace bsync
 		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
 		Conf d = loadConf(), w = c;
 		bool same = d.server == c.server && d.backend == c.backend && d.token == c.token;
+		// (the handheld's name is the pairing's and rename's, never a sync's: a sync that read the file before a rename
+		// writes the new name back, not the one it read)
+		if (!fresh && same) w.name = d.name;
 		if (fresh)
 		{
 			// (paired again with the same server: what its saves had agreed, held or waiting, and its files, as they are
@@ -599,7 +602,7 @@ namespace bsync
 		// (the card forgotten or paired again meanwhile: this run's state is the old pairing's, and would write that
 		// pairing back; nothing written)
 		if (!same) { if (lk >= 0) close(lk); return false; }
-		if (holdRoms && holdSaves) { bool ok = writeConf(c); if (lk >= 0) close(lk); return ok; }
+		if (holdRoms && holdSaves) { bool ok = writeConf(w); if (lk >= 0) close(lk); return ok; }
 		if (!holdRoms)
 		{
 			w = d;
@@ -616,6 +619,22 @@ namespace bsync
 		return ok;
 	}
 	bool saveConf(const Conf& c) { return writeBack(c, false); }
+	bool saveName(const Conf& c)
+	{
+		if (dryRun) return true;
+		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		Conf d = loadConf();
+		bool ok = d.server == c.server && d.backend == c.backend && d.token == c.token;
+		if (ok)
+		{
+			d.name = c.name;
+			if (!c.device.empty()) { d.device = c.device; d.deviceNum = c.deviceNum; }	// (registered by the rename, when RomM had none)
+			ok = writeConf(d);
+		}
+		if (lk >= 0) close(lk);
+		return ok;
+	}
 	bool savePairing(const Conf& c) { return writeBack(c, true); }
 	namespace
 	{

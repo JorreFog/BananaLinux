@@ -260,6 +260,9 @@ without a press is what pairing is for, and a pairing left on the image's defaul
 pairing with RomM 5.4 or newer (the version `romsync.json` keeps) turns Sync before playing on as well, so another
 handheld's newer save comes before the game rather than as a conflict after it; a RomM before 5.4 has no sync before a
 game to turn on.
+The handheld pairs under its model's name (RG DS, RG DS Plus), or the name it had when it pairs again; RomM's Device
+name row renames it with `banana-sync rename <name>`, which updates the RomM device at once and only then keeps the
+name in `romsync.json` (a sync's write-back never puts back a name it read before).
 Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
 check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
 

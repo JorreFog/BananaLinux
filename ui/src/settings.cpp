@@ -950,6 +950,7 @@ namespace banana
 			items.back().hints = { "Only the games' own saves.", "Save states too. A state from RomM goes to the vault. Quick-resume states never sync." };
 			add(HS, "phone", "Manage saves", "Conflicts to settle, held saves, and kept copies to put back.", "", "hs_saves", {}, {}, Item::PAGE);
 			add(HS, "phone", "Systems", "Which systems' saves sync. One game's can stay here: X on it, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
+			add(HS, "phone", "Device name", "This handheld's name in RomM, shown on the saves it sends.", "", "hs_name", {}, {}, Item::PAGE);
 			// (Check certificate is on Server's RomM form only, where the address is: changed there it holds at once)
 		}
 		else if (!hsRowsFor.empty())
@@ -1398,6 +1399,7 @@ namespace banana
 			if (it.key == "hs_pick") { openPickGames(false); return MOVED; }
 			if (it.key == "hs_get") { openPickGames(true); return MOVED; }
 			if (it.key == "hs_saves") { openSaves(); return MOVED; }
+			if (it.key == "hs_name") { homeServer(); startEntry(ENTRY_HS_NAME, "Device name", "As RomM lists this handheld", LIST, hsPairedName); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
@@ -2411,7 +2413,7 @@ namespace banana
 			else if (syncLine.compare(0, 16, "error noconnect ") == 0) help = "The last sync couldn't reach the server: " + syncLine.substr(16) + ". Check Wi-Fi, then Sync now again.";
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
 		}
-		if ((cur.key == "hs_server" || cur.key == "hs_forget") && !message.empty()) help = message;
+		if ((cur.key == "hs_server" || cur.key == "hs_forget" || cur.key == "hs_name") && !message.empty()) help = message;
 		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "colors")
 		{
@@ -2641,6 +2643,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "homesync" && !hsStep && !homeServer().empty() && !hsSettleShort().empty()) v = hsSettleShort();	// (saves to settle: said a level up too)
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_saves") v = hsSettleShort();
+			else if (it.kind == Item::PAGE && it.key == "hs_name") { homeServer(); v = nameJob.running() ? "Renaming" : fit(hsPairedName, true, 19, 300); }
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (it.kind == Item::PAGE && it.key == "hs_get") v = getWaiting > 0 ? std::to_string(getWaiting) + " waiting" : "";
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
@@ -2735,6 +2738,18 @@ namespace banana
 		scrapeChanged |= pollSync(t);
 		scrapeChanged |= pollPickGames();
 		scrapeChanged |= pollGetRestart();
+		// (the Device name row's rename: the new name read back, or why it wasn't, under the row)
+		{
+			std::string out;
+			if (nameJob.take(out))
+			{
+				out = trim(out);
+				hsPairedAt = -1e18;
+				message = out == "ok" ? "" : "Not renamed: " + (out.compare(0, 6, "error ") == 0 ? out.substr(6) : out);
+				fprintf(stderr, "home server: rename %s\n", out.c_str());
+				scrapeChanged = true;
+			}
+		}
 		// (Get games' row: how many wait, looked at once a second while the Home server page is up, not at each draw,
 		// nor on Settings' other pages)
 		if (page == LIST && hsRowsFor == "romm" && sel >= 0 && sel < (int)items.size() && items[sel].section == "Home server" && t >= getWaitingAt)
@@ -3524,6 +3539,7 @@ namespace banana
 			: entry == ENTRY_HS_ADDR ? "Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
 			: entry == ENTRY_HS_URL ? "RomM's host name or IP (romm.example.com, 192.168.1.20), with a path if RomM is served under one (example.com/romm). A full URL works too (https://romm.example.com:8443/romm): the scheme goes to Protocol and the port to Port. L: the symbols, and keys for https://, romm., .com and the like."
 			: entry == ENTRY_HS_PORT ? "The port, when RomM isn't on the protocol's usual one (443 for HTTPS, 80 for HTTP). Nothing: the usual. START when it is typed."
+			: entry == ENTRY_HS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM."
 			: entry == ENTRY_BETA_PASS ? "The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only."
 			: entry == ENTRY_HS_CODE && hsKind == "romm" ? "In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234. It works for 60 seconds, so type it soon. A client token itself (rmm_...) works too. START when it is typed."
 			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device. START when it is typed."
@@ -6653,6 +6669,17 @@ namespace banana
 			hsMsg.clear(); hsCause.clear();
 			return MOVED;
 		}
+		case ENTRY_HS_NAME:
+		{
+			std::string v = trim(pw);
+			if (v.empty()) { message = "The name can't be empty."; return MOVED; }
+			pw.clear();
+			page = entryBack;
+			if (v == hsPairedName) { message.clear(); return MOVED; }
+			message.clear();
+			nameJob.start(syncCmd("rename " + gamesync::shellQuote(v)) + " 2>/dev/null", sync);
+			return MOVED;
+		}
 		case ENTRY_BETA_PASS:
 		{
 			if (pw.empty()) { message = "Type the beta password, then START."; return MOVED; }
@@ -7527,6 +7554,7 @@ namespace banana
 		hsPaired = !paired ? "" : j->str("serverName").empty() ? j->str("server") : j->str("serverName");
 		hsPairedKind = paired ? j->str("backend") : "";
 		hsPairedUrl = paired ? j->str("server") : "";
+		hsPairedName = paired ? j->str("name") : "";
 		// (what Manage saves has to settle, counted for its row and the Home server row above it)
 		auto count = [&](const char* k) { const JVal* o = paired ? j->get(k) : nullptr; return o && o->isObj() ? (int)o->obj.size() : 0; };
 		hsConflicts = count("conflicts");
