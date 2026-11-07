@@ -23,12 +23,14 @@ lines() {
     esac
 }
 conf= run= when= status=
+report=
 while [ $# -gt 0 ]; do
     case $1 in
     --conf) conf=$2; shift 2 ;;
     --run) run=$2; shift 2 ;;
     --auto) when=$2; shift 2 ;;
     --status) status=$2; shift 2 ;;
+    --report) report=$2; shift 2 ;;
     --root|--settings|--rom) shift 2 ;;
     discover) [ "${FAKE_SYNC_FIND:-}" = romm ] && exit 0; printf 'ROMHOST\thttp://192.168.50.96:8092\tTest server\n'; exit 0 ;;
     saves) lines; exit 0 ;;
@@ -67,6 +69,27 @@ done
 # nothing, nothing at all, or the saves held by another sync for 8 s (held) or for good (heldlong) and then nothing
 # (FAKE_SYNC_DONE: a sync run by hand says it's done a second later, as banana-sync's own would)
 [ -z "$when" ] && [ -n "${FAKE_SYNC_DONE:-}" ] && [ -n "$status" ] && { sleep 1; echo 'done 0 0 0 0 0 0|' > "$status.new"; mv "$status.new" "$status"; exit 0; }
+# the sync after a game, as $FAKE_SYNC_QUIT says: the save sent (a second's run with slow), nothing to send, a conflict
+# held, the server out of reach (the save kept to send later), a note with nothing sent, a game whose saves stay here,
+# or a run gone with its "running" line left (stuck: the line three minutes old); held: that line as old, but the run
+# still holding save.lock as a long upload does, its done after. Its lines go to the menu's --report file
+if [ "$when" = quit ] && [ -n "$run" ]; then
+    out=${report:-$run/gameend.status}
+    end() { echo "$1" > "$out.new"; mv "$out.new" "$out"; }
+    end 'running 0 0 |Test server'
+    case ${FAKE_SYNC_QUIT:-sent} in
+    sent) end 'done 0 0 1 0 0 0|' ;;
+    slow) sleep 2; end 'done 0 0 1 0 0 0|' ;;
+    same) end 'done 0 0 0 0 0 0|' ;;
+    conflict) end 'done 0 0 0 0 1 0|' ;;
+    away) end "done 0 0 0 0 0 1|saves: the server's name wasn't found (no connection yet?); kept to send with the next sync" ;;
+    note) end 'done 0 0 0 0 0 0|1 state from the server kept in the vault' ;;
+    local) end 'done 0 0 0 0 0 0|its saves stay on this handheld' ;;
+    stuck) touch -d '3 minutes ago' "$out" ;;
+    held) ( flock 9; touch -d '3 minutes ago' "$out"; sleep 2; end 'done 0 0 1 0 0 0|' ) 9> "$run/save.lock" ;;
+    esac
+    exit 0
+fi
 [ "$when" = launch ] || exit 0
 say() { echo "$1" > "$run/launch.status.new"; mv "$run/launch.status.new" "$run/launch.status"; }
 say 'running 0 0 |Test server'

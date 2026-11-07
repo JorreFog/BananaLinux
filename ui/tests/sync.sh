@@ -1005,11 +1005,36 @@ if [ -x "$HERE/banana-ui" ]; then
     has "game starts: $ROM" "the resume launch"; called "the resume launch"
     # the game's end: the exact call
     gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"
-    [ "$(cat "$SL")" = "sync --auto quit --rom $ROM" ] || bad "the sync after a game's call: $(cat "$SL")"
+    # (its lines to a file of this game end's own, so an earlier game's sync still going isn't read as this one's)
+    [ "$(sed -E 's/gameend-[0-9]+\.status/gameend-N.status/' "$SL")" = "--run $RUNG --report $RUNG/gameend-N.status sync --auto quit --rom $ROM" ] ||
+        bad "the sync after a game's call: $(cat "$SL")"
+    # what it did, said in the banner: sent, nothing to send, a conflict, the server out of reach; a slow one says it
+    # is syncing first, and its outcome after
+    for q in sent:"Save synced" same:"Save up to date" conflict:"Save conflict" note:"Save up to date: Orchard Tactics: 1 state from the server" \
+        away:"Save not synced: Orchard Tactics: the server's name wasn't found (no connection yet?); kept to send with the next sync"; do
+        FAKE_SYNC_QUIT=${q%%:*} gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 600; shot ge-${q%%:*}"
+        has "notice: ${q#*:}" "the sync after a game, ${q%%:*}"
+    done
+    FAKE_SYNC_QUIT=slow gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 1200; sleep 300; shot ge-running; sleep 1500; sleep 600"
+    has "notice: Syncing the save: Orchard Tactics" "a slow sync after a game"; has "notice: Save synced: Orchard Tactics" "a slow sync after a game's outcome"
+    # a game whose saves stay here: nothing said; a run gone with its line left: let go, nothing more said
+    FAKE_SYNC_QUIT=local gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 600"
+    hasnt "notice:" "the sync after a game kept here"
+    FAKE_SYNC_QUIT=stuck gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; wait 600"
+    has "the sync said nothing more" "a sync after a game gone"; hasnt "notice:" "a sync after a game gone"
+    # (a line as old from a run still holding save.lock, as a long upload is: watched on, its outcome said)
+    FAKE_SYNC_QUIT=held gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; sleep 2500; wait 600"
+    hasnt "the sync said nothing more" "a long sync after a game"; has "notice: Save synced: Orchard Tactics" "a long sync after a game's outcome"
+    # (two game ends, the first's sync still going at the second: each file gone once its run is over, none left in
+    # /run, which is memory)
+    rm -f "$RUNG"/gameend-*.status
+    FAKE_SYNC_QUIT=held gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; sleep 2500; wait 600; sleep 2500; wait 600"
+    [ -z "$(ls "$RUNG" | grep '^gameend-')" ] || bad "game ends' status files left: $(ls "$RUNG" | grep '^gameend-' | tr '\n' ' ')"
     # (a DS game's end: nds-saves told what its saves hold now, --played, beside the sync; not for a GBA game, above)
     NDSROM="$FX/roms/nds/Peel Quest.nds"
     BANANA_NDS_SAVES=$HERE/tests/fake-sync.sh gs answer "wifi none; launchpath $NDSROM; wait 100; gameend; sleep 300"
-    grep -qx -- "$NDSROM --played" "$SL" && grep -qx -- "sync --auto quit --rom $NDSROM" "$SL" || bad "a DS game's end: $(cat "$SL")"
+    grep -qx -- "$NDSROM --played" "$SL" && sed -E 's/gameend-[0-9]+\.status/gameend-N.status/' "$SL" | grep -qxF -- "--run $RUNG --report $RUNG/gameend-N.status sync --auto quit --rom $NDSROM" ||
+        bad "a DS game's end: $(cat "$SL")"
 fi
 [ $fail = 0 ] && echo "banana-sync: all checks passed"
 exit $fail

@@ -387,6 +387,7 @@ bsq "gba/Killed (USA).gba"
 grep -q 'waiting to be sent, the server out of reach (a copy in the vault): saves/gba/Killed' "$OUT/bs.log" && [ "$(vaulted Killed "$OUT/k5.srm")" = 1 ] &&
     python3 -c 'import json, sys; q = json.load(open(sys.argv[1]))["queue"]; sys.exit(0 if any(v["md5"] == sys.argv[2] and v["vault"] for v in q.values()) else 1)' "$C/banana/romsync.json" "$(md5sum < "$OUT/k5.srm" | cut -c1-32)" ||
     bad "the sync after a game, the server out of reach: $(cat "$OUT/bs.log")"
+grep -q '|.*; kept to send with the next sync$' "$C/run/gameend.status" || bad "the sync after a game, the server out of reach, not said: $(cat "$C/run/gameend.status")"
 bsq "gba/Offline (USA).gba"
 grep -q 'waiting to be sent, the server out of reach (a copy in the vault): saves/gba/Offline' "$OUT/bs.log" && [ "$(vaulted Offline "$S/Offline (USA).srm")" = 1 ] &&
     [ "$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["queue"]["rom:gba/Offline (USA).gba"]["path"])' "$C/banana/romsync.json")" = "saves/gba/Offline (USA).srm" ] ||
@@ -514,7 +515,8 @@ cp "$S/Not Chosen (USA).srm" "$OUT/nc1.srm"
 head -c 8192 /dev/urandom > "$OUT/nc2.srm"; seed "Not Chosen" "$(hex "$OUT/nc2.srm")" 5 >/dev/null; bs
 cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc1.srm" || bad "a game kept here took the server's newer save: $(cat "$OUT/bs.log")"
 "$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --rom "$C/roms/gba/Not Chosen (USA).gba" > "$OUT/bs.log" 2>&1
-grep -q 'its saves stay on this handheld' "$OUT/bs.log" && grep -q '^done ' "$C/run/gameend.status" || bad "the sync after a game kept here: $(cat "$OUT/bs.log")"
+grep -q 'its saves stay on this handheld' "$OUT/bs.log" && [ "$(cat "$C/run/gameend.status")" = "done 0 0 0 0 0 0|its saves stay on this handheld" ] ||
+    bad "the sync after a game kept here: $(cat "$C/run/gameend.status") $(cat "$OUT/bs.log")"
 # (and the sync before it: done at once, nothing held for the menu to ask about, the server not asked)
 printf 'homesync_auto = quit\nhomesync_launch = on\n' >> "$C/banana/settings.conf"; echo held > "$C/run/launch.conflict"
 n=$(curl -s "$U3/test/log" | jget '.__len__()')	# (each look at the log is in it: the next one is one more)

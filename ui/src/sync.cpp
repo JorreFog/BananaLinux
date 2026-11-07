@@ -28,7 +28,8 @@
 //                                              --rom: that one game's save and, with homesync_states, its states (its
 //                                              ROM's path, roms-relative or absolute, on either SD card), beside a sync
 //                                              that is copying games: one at a time over the saves only, its status in
-//                                              <run>/gameend.status. Romhost and a RomM before 5.4 sync every save
+//                                              <run>/gameend.status (--report <file>: there instead, the menu's own
+//                                              file for each game's end). Romhost and a RomM before 5.4 sync every save
 //                                              instead;
 //                                              --auto launch --rom: the one before the game starts (homesync_launch),
 //                                              the save alone, each request given less time, its status in
@@ -1260,7 +1261,8 @@ namespace
 		{
 			say("%s: its saves stay on this handheld", onlyRom.c_str());
 			if (autoWhy == "launch" && !dryRun) writeAtomic(RUN + "/launch.conflict", "");
-			status("done 0 0 0 0 0 0|");
+			// (the menu's banner after a game says nothing for this note: keep the two the same)
+			status("done 0 0 0 0 0 0|its saves stay on this handheld");
 			return 0;
 		}
 		b->onlyQueued = queued;
@@ -1411,7 +1413,10 @@ namespace
 		// (before a game: what is held for it, as the Saves page lists it, for the menu's question, written before the
 		// done line it reads it after; read off the card, the menu would wait on it)
 		if (autoWhy == "launch" && !dryRun) writeAtomic(RUN + "/launch.conflict", noteLines(loadConf(), onlyRom, false));
-		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + (errors.empty() ? note : errors[0]));
+		// (one game's save left waiting, the server out of reach: said, for the menu's banner after a game)
+		std::string said = errors.empty() ? note : errors[0];
+		if (b->keptUnsent) said += "; kept to send with the next sync";
+		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + said);
 		say("done: %d games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
 		return errors.empty() ? 0 : 1;
 	}
@@ -1423,6 +1428,7 @@ int main(int argc, char** argv)
 	std::string autoWhy;
 	bool savesOnly = false;
 	std::string onlyRom;
+	std::string report;	// (sync --rom after a game: where its lines go, else <run>/gameend.status)
 	for (int i = 1; i < argc; i++)
 	{
 		std::string a = argv[i];
@@ -1438,6 +1444,7 @@ int main(int argc, char** argv)
 		else if (a == "--saves-only") savesOnly = true;
 		else if (a == "--auto") autoWhy = val();
 		else if (a == "--rom") onlyRom = val();
+		else if (a == "--report") report = val();
 		else if (a == "-v") verbose = true;
 		else args.push_back(a);
 	}
@@ -1575,7 +1582,7 @@ int main(int argc, char** argv)
 		// on sync.status the page would offer a Stop with nothing to stop, and take a line left unchanged through a slow
 		// upload for a sync gone)
 		holdRoms = holdSaves = false;
-		if (autoWhy != "launch") STATUS = RUN + "/gameend.status";
+		if (autoWhy != "launch") STATUS = report.empty() ? RUN + "/gameend.status" : report;
 		int other = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 		bool beside = other >= 0 && flock(other, LOCK_EX | LOCK_NB) != 0;
 		if (other >= 0) close(other);

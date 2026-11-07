@@ -87,7 +87,7 @@ namespace gamesync
 		std::getline(std::ifstream(run + "/sd2/roms"), p);
 		return p;
 	}
-	bool syncAfterGame(const std::string& tool, const std::string& rom)
+	bool syncAfterGame(const std::string& tool, const std::string& rom, const std::string& run, const std::string& report)
 	{
 		if (access(tool.c_str(), X_OK) != 0) return false;
 		pid_t p = fork();
@@ -98,7 +98,7 @@ namespace gamesync
 				setsid();
 				int nul = open("/dev/null", O_RDWR);
 				if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-				execl(tool.c_str(), tool.c_str(), "sync", "--auto", "quit", "--rom", rom.c_str(), (char*)nullptr);
+				execl(tool.c_str(), tool.c_str(), "--run", run.c_str(), "--report", report.c_str(), "sync", "--auto", "quit", "--rom", rom.c_str(), (char*)nullptr);
 				_exit(127);
 			}
 			_exit(0);

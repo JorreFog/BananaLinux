@@ -253,6 +253,7 @@ namespace bsync
 		bool oneGame = false;	// this run moves one game's save and no other's (--rom alone doesn't say: see saves())
 		bool onlyQueued = false;	// only the saves waiting to be sent (their games'), the same way
 		bool beforeGame = false;	// the sync before a game starts: that game's save or none, never every save
+		bool keptUnsent = false;	// one game's save, the server out of reach, left waiting in the vault for the next sync
 		// the game started again after Power off after sleeping, not started yet (roms-relative, "" for none): its resume
 		// state belongs with the save on the card, so a sync of other games leaves that one as it is
 		std::string resumeRom;

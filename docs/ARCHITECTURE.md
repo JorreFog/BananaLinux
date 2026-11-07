@@ -356,7 +356,13 @@ Around a game, `banana-sync sync --rom <path>` (after a game, and `--auto launch
 alone, and its states when they are on, except before a game; after a game Romhost and a RomM before 5.4 sync every
 save, and before one nothing. It takes `/run/banana/save.lock` but not `sync.lock`, so it runs beside a sync copying
 games, and each run writes back only the part of `banana/romsync.json` whose lock it holds; it says how far it got in
-`/run/banana/gameend.status`, not on the Home server page, whose Stop is for a sync copying games. A game on the second
+a file the menu names for that game's end (`--report /run/banana/gameend-<ms>.status`, so an earlier game's sync still
+going writes to its own, and the file removed once its run is over; `/run/banana/gameend.status` when run without it), not on the Home server page, whose Stop is
+for a sync copying games. The menu reads that file and says what came of it in the banner at the top: "Syncing the save" while a run longer than a second goes on
+(a press hides it), then "Save synced", "Save up to date", "Save conflict" (settled on Manage saves) or "Save not
+synced", with banana-sync's own words beside it: a note such as a state kept in the vault, the reason it failed, and,
+only when the save was left waiting in the vault with the server out of reach, "kept to send with the next sync". A
+game whose saves stay on the handheld says nothing, and a run whose "running" line is 120 s old, with `save.lock` free (a long upload holds it), is let go. A game on the second
 SD card is on the handheld as one on the card is, its save on the card. The menu's side is
 `ui/src/gamesync.cpp`: a wait in its main loop before the game, about 8 s for Wi-Fi coming up, then 5 s for the
 server's first answer in `/run/banana/launch.status` (a `waiting` line there is another sync's lock on the saves,

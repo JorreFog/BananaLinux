@@ -48,8 +48,9 @@ namespace gamesync
 
 	std::string syncTool();
 	bool syncsAfterGame(const std::string& autoSync);
-	// the game's save to the server now the game has let go of it, in the background. False: no banana-sync
-	bool syncAfterGame(const std::string& tool, const std::string& rom);
+	// the game's save to the server now the game has let go of it, in the background, its lines in report (the
+	// banner's file for this game's end, so an earlier game's sync still going writes to its own). False: no banana-sync
+	bool syncAfterGame(const std::string& tool, const std::string& rom, const std::string& run, const std::string& report);
 	// a DS game over: nds-saves told (--played, in the background) what its saves hold now, which is what the game's
 	// resume state belongs to; a save replaced by hand before the next start then isn't played under that state.
 	// False: not a DS game, or no nds-saves

@@ -538,6 +538,7 @@ namespace bsync
 			QueueSt& w = c.queue[key];
 			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), key.compare(0, 4, "rom:") == 0 ? g.rel : "" };
 			say("  waiting to be sent, the server out of reach (a copy in the vault): %s", g.rel.c_str());
+			keptUnsent = true;
 			saveConf(c);
 		}
 		// ---- RomM's save slots (5.4 and newer): each game's save is the autosave slot of its ROM, a version per change,
