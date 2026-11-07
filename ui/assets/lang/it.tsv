@@ -1548,3 +1548,241 @@ menu		Games went into their system's folder.	I giochi sono andati nella cartella
 menu		Nothing was sent.	Non è stato inviato nulla.
 bananads		or press L3	o premi L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Il gioco sente un soffio oltre la linea rossa (sensibilità: %s).
+# (the save sync's and the home server's rows below (the wait before a game, RomM's address and pairing, Get games,
+# Manage saves, Device name, the banner after a game) are a machine-translated draft, not Olympicus's: for them to
+# check in the next round)
+menu		Syncing the save	Sincronizzazione del salvataggio
+menu		Save not synced	Salvataggio non sincronizzato
+menu		its saves stay on this handheld	i suoi salvataggi restano su questa console
+menu		Save conflict	Conflitto di salvataggio
+menu		{game}: settle it in Settings > Network > Home server > Manage saves.	{game}: risolvilo in Impostazioni > Rete > Server di casa > Gestisci salvataggi.
+menu		Save synced	Salvataggio sincronizzato
+menu		Save up to date	Salvataggio aggiornato
+menu		No save here: the server has one, {server}{when}	Nessun salvataggio qui: il server ne ha uno, {server}{when}
+menu		Save conflict: here {here}, server {server}{when}	Conflitto di salvataggio: qui {here}, server {server}{when}
+menu		Not synced yet	Non ancora sincronizzato
+menu		It syncs when you quit	Si sincronizza quando esci
+menu		Playing this handheld's save	Si gioca con il salvataggio di questa console
+menu		A: take the server's  B: play without	A: prendi quello del server  B: gioca senza
+menu		A: this handheld's  X: the server's  B: later	A: quello della console  X: quello del server  B: più tardi
+menu		Settling the save...	Risoluzione del salvataggio...
+menu		The save couldn't be settled	Impossibile risolvere il salvataggio
+menu		A: play this handheld's  B: back	A: gioca con quello della console  B: indietro
+menu		The server's newer save didn't arrive	Il salvataggio più recente del server non è arrivato
+menu		A: play this handheld's (older)  B: back	A: gioca con quello della console (più vecchio)  B: indietro
+menu		Waiting for Wi-Fi...	In attesa del Wi-Fi...
+menu		Syncing this game's save...	Sincronizzazione del salvataggio di questo gioco...
+menu		B: play now	B: gioca ora
+settings		Game Boy Advance	Game Boy Advance
+settings		Game Boy Color	Game Boy Color
+settings		Game Boy	Game Boy
+settings		Super Nintendo	Super Nintendo
+settings		Mega Drive	Mega Drive
+settings		Commodore 64	Commodore 64
+settings		ZX Spectrum	ZX Spectrum
+settings		PlayStation	PlayStation
+settings		Nintendo 64	Nintendo 64
+settings		Your saves synced, and your games, from your own RomM or Romhost server.	I tuoi salvataggi sincronizzati, e i tuoi giochi, dal tuo server RomM o Romhost.
+settings		Syncs the saves both ways, and downloads any games waiting in Get games. It carries on in the background.	Sincronizza i salvataggi in entrambe le direzioni e scarica i giochi in attesa in Scarica giochi. Prosegue in background.
+settings		Get games	Scarica giochi
+settings		Downloads the server's games, one at a time. Once on the card a game is yours: nothing updates or removes it.	Scarica i giochi del server, uno alla volta. Una volta sulla scheda un gioco è tuo: nulla lo aggiorna o lo rimuove.
+settings		Games go to	Destinazione giochi
+settings		Where downloaded games go: this card or the second SD card. With the second card out, its games wait.	Dove vanno i giochi scaricati: questa scheda o la seconda scheda SD. Con la seconda scheda fuori, i suoi giochi aspettano.
+settings		This card	Questa scheda
+settings		Leaving a game: its save goes to the server as you leave it. And on Wi-Fi: every save and waiting game too, whenever Wi-Fi connects. Never while a game runs.	Uscendo da un gioco: il suo salvataggio va al server quando esci. E con il Wi-Fi: anche ogni salvataggio e gioco in attesa, ogni volta che il Wi-Fi si connette. Mai mentre un gioco è in esecuzione.
+settings		Sync before playing	Sincronizza prima di giocare
+settings		On: a game's save is updated from the server before it starts (with Auto sync on). B skips the wait.	Attivo: il salvataggio di un gioco viene aggiornato dal server prima che parta (con Sincronizzazione automatica attiva). B salta l'attesa.
+settings		On: save states sync too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	Attivo: si sincronizzano anche gli stati salvati. Uno da RomM viene conservato in Gestisci salvataggi, mai caricato da solo. Gli stati di ripresa rapida non si sincronizzano mai.
+settings		Manage saves	Gestisci salvataggi
+settings		Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.	Risolvi conflitti e salvataggi trattenuti, o rimetti una copia precedente di un salvataggio sostituito dalla sincronizzazione.
+settings		Systems	Sistemi
+settings		Which systems' saves sync. For one game: X on it in the library, then Save sync.	I salvataggi di quali sistemi si sincronizzano. Per un solo gioco: X su di esso nella libreria, poi Sincronizzazione salvataggi.
+settings		Device name	Nome dispositivo
+settings		This handheld's name in RomM, shown on the saves it sends.	Il nome di questa console in RomM, mostrato sui salvataggi che invia.
+settings		Games	Giochi
+settings		Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.	Dove vanno i giochi scaricati. Seconda scheda SD: la sua cartella roms (creata se non c'è), finché è inserita e Seconda scheda SD mostra i suoi giochi. Un gioco già su una scheda resta lì; con la seconda scheda fuori, i suoi giochi aspettano la prossima sincronizzazione.
+settings		Games to sync	Giochi da sincronizzare
+settings		All: every game of those systems. Chosen: only the games ticked in Choose games (one unticked later stays until you delete it).	Tutti: ogni gioco di quei sistemi. Scelti: solo i giochi spuntati in Scegli giochi (uno tolto in seguito resta finché non lo elimini).
+settings		All	Tutti
+settings		Chosen	Scelti
+settings		Choose games	Scegli giochi
+settings		Tick the games to sync, for Games to sync on Chosen.	Spunta i giochi da sincronizzare, per Giochi da sincronizzare su Scelti.
+settings		Unpairs this handheld: nothing syncs until it is paired again. Games and saves stay on the card. Press A twice.	Dissocia questa console: nulla si sincronizza finché non viene associata di nuovo. Giochi e salvataggi restano sulla scheda. Premi A due volte.
+settings		Sync: its games' saves sync with RomM. Skip: they stay on this handheld.	Sincronizza: i salvataggi dei suoi giochi si sincronizzano con RomM. Salta: restano su questa console.
+settings		As RomM lists this handheld	Come RomM elenca questa console
+settings		Unpaired. The games and saves stay on the card. A on Server pairs it again.	Dissociata. I giochi e i salvataggi restano sulla scheda. A su Server la associa di nuovo.
+settings		Not paired. A pairs this handheld with RomM or Romhost.	Non associata. A associa questa console a RomM o Romhost.
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again.	Associata a {n} su {hsPairedUrl}. A apre il suo indirizzo e Verifica certificato. Connetti lì associa di nuovo.
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again.	Associata a {n} (Romhost) su {hsPairedUrl}. A associa di nuovo.
+settings		{value} in conflict (decide in Homeport)	{value} in conflitto (decidi in Homeport)
+settings		{value} in conflict (both are kept and the save is held: choose on Manage saves)	{value} in conflitto (entrambi conservati e il salvataggio è trattenuto: scegli in Gestisci salvataggi)
+settings		The last sync couldn't reach the server: {syncLine}. Check Wi-Fi, then Sync now again.	L'ultima sincronizzazione non ha raggiunto il server: {syncLine}. Controlla il Wi-Fi, poi di nuovo Sincronizza ora.
+settings		Renaming	Rinomina in corso
+settings		{getWaiting} waiting	{getWaiting} in attesa
+settings		Stop	Ferma
+settings		Set up	Configura
+settings		Not renamed: {out}	Non rinominata: {out}
+settings		Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	L'indirizzo di Romhost: il suo nome o IP, e :porta se non è 8092. A digita il tasto, B cancella, L simboli (il punto e i due punti), START quando hai finito di scrivere.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed.	Come in un browser: romm.example.com, 192.168.1.20, o un URL completo. L: simboli, e tasti per https://, .com e simili. START quando hai finito di scrivere.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed.	Solo se RomM non è sulla porta solita (443 per HTTPS, 80 per HTTP); vuoto per quella solita. START quando hai finito di scrivere.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START la rinomina in RomM.
+settings		In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed.	In RomM: Settings > Client API Tokens > Pair device mostra un codice come ABCD-1234, valido per 60 secondi. Funziona anche un token client (rmm_...). START quando hai finito di scrivere.
+settings		The code Homeport shows under ROMs > Pair a device. START when it is typed.	Il codice che Homeport mostra in ROMs > Pair a device. START quando hai finito di scrivere.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START searches the server's games: part of a title or a file name is enough. Nothing typed: every game again.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START cerca tra i giochi del server: basta una parte di un titolo o di un nome file. Niente digitato: di nuovo tutti i giochi.
+settings		{value} game	{value} gioco
+settings		{value} games	{value} giochi
+settings		{total} MB	{total} MB
+settings		Stopped before it started.	Interrotto prima di iniziare.
+settings		The server doesn't know this handheld any more: pair it again.	Il server non conosce più questa console: associala di nuovo.
+settings		The server's list can't be read: {ln}.	Impossibile leggere l'elenco del server: {ln}.
+settings		The server listed no games.	Il server non ha elencato alcun gioco.
+settings		Couldn't refresh. {reason}	Impossibile aggiornare. {reason}
+settings		Home server > Get games: the games to download, taken off as each comes	Server di casa > Scarica giochi: i giochi da scaricare, tolti man mano che arrivano
+settings		Home server > Get games: why a game still on the list didn't come last time	Server di casa > Scarica giochi: perché un gioco ancora in elenco non è arrivato l'ultima volta
+settings		{value} game waits	{value} gioco in attesa
+settings		{value} games wait	{value} giochi in attesa
+settings		{on} to download: Sync now brings them, and every sync until they're in.	{on} da scaricare: Sincronizza ora li porta, e ogni sincronizzazione finché non sono arrivati.
+settings		On the card already.	Già sulla scheda.
+settings		The download list can't be written: the card may be read-only.	Impossibile scrivere l'elenco dei download: la scheda potrebbe essere in sola lettura.
+settings		Search every system	Cerca in tutti i sistemi
+settings		Search this system	Cerca in questo sistema
+settings		%.1f GB	%.1f GB
+settings		waiting, {value}	in attesa, {value}
+settings		chosen, {value}	scelti, {value}
+settings		A opens a system. Y searches every system. X gets the server's list again.	A apre un sistema. Y cerca in tutti i sistemi. X scarica di nuovo l'elenco del server.
+settings		A downloads a game, or cancels one waiting. L and R jump a page. B clears the search.	A scarica un gioco, o ne annulla uno in attesa. L e R saltano di una pagina. B cancella la ricerca.
+settings		A downloads a game, or cancels one waiting. Y searches this system. L and R jump a page.	A scarica un gioco, o ne annulla uno in attesa. Y cerca in questo sistema. L e R saltano di una pagina.
+settings		{value} · didn't come	{value} · non arrivato
+settings		{value} · waiting to download	{value} · in attesa di download
+settings		{value} · on the card	{value} · sulla scheda
+settings		{value} · chosen	{value} · scelto
+settings		{failed}. The next sync tries again.	{failed}. La prossima sincronizzazione riprova.
+settings		Every system	Tutti i sistemi
+settings		Refreshing...	Aggiornamento...
+settings		Listed just now	Elencati proprio ora
+settings		Listed {age} min ago	Elencati {age} min fa
+settings		Listed {age} h ago	Elencati {age} h fa
+settings		Listed {age} days ago	Elencati {age} giorni fa
+settings		, {in} on card	, {in} sulla scheda
+settings		, {ch} waiting	, {ch} in attesa
+settings		{ch} of {all}{b}	{ch} di {all}{b}
+settings		No games match "{pickQuery}".	Nessun gioco corrisponde a "{pickQuery}".
+settings		No games here.	Nessun gioco qui.
+settings		Waiting	In attesa
+settings		On card	Sulla scheda
+settings		Sync · on card	Sincronizza · sulla scheda
+settings		Refresh	Aggiorna
+settings		All / none	Tutti / nessuno
+settings		Tick	Spunta
+settings		Refreshing	Aggiornamento
+settings		Get	Scarica
+settings		Done.	Fatto.
+settings		Not done.	Non fatto.
+settings		%lld bytes	%lld byte
+settings		Held back	Trattenuto
+settings		Conflict	Conflitto
+settings		, from {device}	, da {device}
+settings		This handheld: {here}. The server: {server}{from}{when}. The one not chosen stays in the vault.	Questa console: {here}. Il server: {server}{from}{when}. Quello non scelto resta nell'archivio.
+settings		Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.	Modificato qui e sul server. La prossima sincronizzazione che raggiunge il server scarica la sua copia per scegliere.
+settings		Missing or blank here since the last sync. Nothing is put back by itself.	Mancante o vuoto qui dall'ultima sincronizzazione. Nulla viene rimesso da solo.
+settings		DraStic's and BananaDS's saves differ. Starting the game brings them together.	I salvataggi di DraStic e BananaDS differiscono. Avviare il gioco li riunisce.
+settings		DraStic's save here can't be read. The game isn't synced until it can.	Il salvataggio di DraStic qui non si può leggere. Il gioco non viene sincronizzato finché non si potrà.
+settings		The server's save is in a format or size this handheld can't use. It stays on the server.	Il salvataggio del server ha un formato o una dimensione che questa console non può usare. Resta sul server.
+settings		Keep this handheld's	Tieni quello della console
+settings		Use the server's	Usa quello del server
+settings		Last good	Ultimo valido
+settings		Restore {when} ({f})	Ripristina {when} ({f})
+settings		Working...	Elaborazione...
+settings		Saves	Salvataggi
+settings		Reading the card...	Lettura della scheda...
+settings		Nothing here: no conflicts, nothing held, and no kept copies.	Niente qui: nessun conflitto, nulla di trattenuto e nessuna copia conservata.
+settings		A puts a kept copy back, and the save it replaces is kept too. The next sync sends it.	A rimette una copia conservata, e anche il salvataggio che sostituisce viene conservato. La prossima sincronizzazione lo invia.
+settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	A apre un gioco. Un conflitto resta com'è finché non lo risolvi: nel frattempo non si perde nulla.
+settings		Home server: the games whose saves stay on this handheld (the game page's Save sync)	Server di casa: i giochi i cui salvataggi restano su questa console (Sincronizzazione salvataggi nella pagina del gioco)
+settings		Save sync can't be changed: the card may be read-only.	Impossibile cambiare Sincronizzazione salvataggi: la scheda potrebbe essere in sola lettura.
+settings		On: this game's saves sync with RomM. Off: they stay on this handheld only, for a playthrough of its own here; the server's are left as they are.	Attivo: i salvataggi di questo gioco si sincronizzano con RomM. Disattivo: restano solo su questa console, per una partita a parte qui; quelli del server restano come sono.
+settings		Save sync	Sincronizzazione salvataggi
+settings		Off: saves stay here	Disattivo: i salvataggi restano qui
+settings		This game's timing	Temporizzazione di questo gioco
+settings		This game's saves	Salvataggi di questo gioco
+settings		A port is a number from 1 to 65535, or nothing for the usual one.	Una porta è un numero da 1 a 65535, o niente per quella solita.
+settings		The name can't be empty.	Il nome non può essere vuoto.
+settings		No code typed: the QR code is still the way to pair.	Nessun codice digitato: il codice QR resta il modo per associare.
+settings		Checking {ra}...	Verifica di {ra}...
+settings		{value} conflict	{value} conflitto
+settings		{value} conflicts	{value} conflitti
+settings		{hsHeld} held	{hsHeld} trattenuti
+settings		No Romhost answered. Its address	Nessun Romhost ha risposto. Il suo indirizzo
+settings		Romhost	Romhost
+settings		No Romhost answers there. Check the address (and :port, when it isn't 8092) and that the handheld is on the same network as Homeport. For RomM, choose RomM instead: A on Server.	Nessun Romhost risponde lì. Controlla l'indirizzo (e :porta, se non è 8092) e che la console sia sulla stessa rete di Homeport. Per RomM, scegli invece RomM: A su Server.
+settings		Paired with {ln}. Saves now sync as you leave a game (Auto sync). Sync now, below, gets the games and saves.	Associata a {ln}. Ora i salvataggi si sincronizzano quando esci da un gioco (Sincronizzazione automatica). Sincronizza ora, qui sotto, scarica giochi e salvataggi.
+settings		Stopped.	Interrotto.
+settings		Protocol	Protocollo
+settings		Address	Indirizzo
+settings		Port	Porta
+settings		Its address	Il suo indirizzo
+settings		Type RomM's address first.	Digita prima l'indirizzo di RomM.
+settings		RomM {ver}	RomM {ver}
+settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}: finché non è 5.4 o più recente, i salvataggi vengono solo scaricati da lì, nessuno viene inviato.
+settings		banana-sync didn't answer.	banana-sync non ha risposto.
+settings		Asking {hsName} for a code...	Richiesta di un codice a {hsName}...
+settings		Pairing with the code...	Associazione con il codice...
+settings		Paired with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Associata a {srv}. Ora i salvataggi si sincronizzano quando esci da un gioco (Sincronizzazione automatica). Scarica giochi porta i giochi.
+settings		Paired with {srv}. Get games brings games over.	Associata a {srv}. Scarica giochi porta i giochi.
+settings		Paired as {dev} with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Associata come {dev} a {srv}. Ora i salvataggi si sincronizzano quando esci da un gioco (Sincronizzazione automatica). Scarica giochi porta i giochi.
+settings		Paired with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Associata a {srv}. Ora i salvataggi si sincronizzano prima di giocare e quando esci da un gioco. Scarica giochi porta i giochi.
+settings		Paired as {dev} with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Associata come {dev} a {srv}. Ora i salvataggi si sincronizzano prima di giocare e quando esci da un gioco. Scarica giochi porta i giochi.
+settings		Paired as {dev} with {srv}. Get games brings games over.	Associata come {dev} a {srv}. Scarica giochi porta i giochi.
+settings		Refused in RomM. A asks for a new code.	Rifiutata in RomM. A chiede un nuovo codice.
+settings		The code ran out before it was approved. A asks for a new one.	Il codice è scaduto prima di essere approvato. A ne chiede uno nuovo.
+settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	Impossibile trovare {host}. Controlla l'indirizzo, e che questo Wi-Fi raggiunga la rete su cui si trova RomM.
+settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} ha rifiutato la connessione. Controlla la porta, e HTTPS o HTTP.
+settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} non ha risposto in tempo. È raggiungibile da questo Wi-Fi? Controlla la porta, e HTTPS o HTTP.
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	Il certificato del server non è attendibile. Per un certificato creato da te, Y disattiva Verifica certificato (oppure metti il certificato della tua CA sulla scheda come homesync_ca).
+settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	Il certificato non può ancora essere verificato: l'orologio non è stato impostato da internet. Aspetta un minuto con il Wi-Fi e riprova.
+settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca indica un file che non si può leggere: controllalo in banana/settings.conf.
+settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access chiede un accesso lì. Lascia passare l'API di RomM: una policy Bypass per {host}/api in Access. Il telefono accede comunque, per la pagina che approva la console.
+settings		The server sends this address to {hsMoved}. Y uses that address.	Il server rimanda questo indirizzo a {hsMoved}. Y usa quell'indirizzo.
+settings		The server sends this address elsewhere, not to RomM: {detail}	Il server rimanda questo indirizzo altrove, non a RomM: {detail}
+settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, Cloudflare's bot protection, a login page): let /api through.	{host} ha rifiutato l'accesso ({detail}). Qualcosa davanti a RomM potrebbe bloccare la console (un firewall, la protezione anti-bot di Cloudflare, una pagina di accesso): lascia passare /api.
+settings		{host} answered {detail} where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).	{host} ha risposto {detail} dove dovrebbe esserci l'API di RomM. Controlla l'host, e il percorso se RomM è servito sotto uno (https://example.com/romm).
+settings		Something answers at {url}, but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).	Qualcosa risponde su {url}, ma non è l'API di RomM. Controlla l'host, e il percorso se RomM è servito sotto uno (https://example.com/romm).
+settings		No answer from {host}.	Nessuna risposta da {host}.
+settings		No answer from {host} ({detail}).	Nessuna risposta da {host} ({detail}).
+settings		RomM	RomM
+settings		Port (443 if empty)	Porta (443 se vuota)
+settings		Port (80 if empty)	Porta (80 se vuota)
+settings		Check certificate is off: Connect tries again.	Verifica certificato è disattivata: Connetti riprova.
+settings		Pairing code	Codice di associazione
+settings		Don't check	Non verificare
+settings		Use it	Usalo
+settings		Use a code	Usa un codice
+settings		Home server > RomM	Server di casa > RomM
+settings		Pair with a server	Associa a un server
+settings		RomM, on this network or the internet. You approve this handheld by scanning a QR code with your phone.	RomM, su questa rete o su internet. Approvi questa console scansionando un codice QR con il telefono.
+settings		Romhost (Homeport), on this network: found by itself, then paired with the code Homeport shows.	Romhost (Homeport), su questa rete: trovato da solo, poi associato con il codice che mostra Homeport.
+settings		This replaces the pairing with {homeServer}.	Questo sostituisce l'associazione con {homeServer}.
+settings		RomM's address	Indirizzo di RomM
+settings		HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network.	HTTPS per un server su internet o con un certificato. HTTP per uno semplice su questa rete.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm.	Come in un browser: romm.example.com, 192.168.1.20, o un URL completo come https://example.com:8443/romm.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP).	Solo se RomM non è sulla porta solita (443 per HTTPS, 80 per HTTP).
+settings		On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once.	Attivo: il certificato del server viene verificato, come fa un browser. Disattivo: per un certificato autofirmato. Tienilo Attivo sulle reti di cui non ti fidi. Una modifica vale subito.
+settings		Asks {hsBase} for RomM, then shows a QR code to approve this handheld from your phone.	Chiede RomM a {hsBase}, poi mostra un codice QR per approvare questa console dal telefono.
+settings		the address	l'indirizzo
+settings		Scan the QR code below with your phone, or open:	Scansiona il codice QR qui sotto con il telefono, oppure apri:
+settings		Waiting for approval in RomM...	In attesa di approvazione in RomM...
+settings		Scan with your phone	Scansiona con il telefono
+settings		Asking RomM	Richiesta a RomM
+settings		A: Sync now syncs the saves. B: back to Home server.	A: Sincronizza ora sincronizza i salvataggi. B: torna a Server di casa.
+settings		A moment...	Un momento...
+settings		A asks RomM for a new code. X pairs with a code from RomM instead. B goes back to the address.	A chiede a RomM un nuovo codice. X associa invece con un codice da RomM. B torna all'indirizzo.
+settings		Which server?	Quale server?
+settings		Romhost (Homeport)	Romhost (Homeport)
+settings		Address and QR code	Indirizzo e codice QR
+settings		On this network	Su questa rete
+settings		HTTPS	HTTPS
+settings		HTTP	HTTP
+settings		Usual (443)	Solita (443)
+settings		Usual (80)	Solita (80)
+settings		Check certificate	Verifica certificato
+settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Ultima sincronizzazione, download di Scarica giochi: {g} file di giochi scaricati. I salvataggi non sono stati sincronizzati: Sincronizza ora li sincronizza{er}

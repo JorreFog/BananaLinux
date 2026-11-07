@@ -1620,13 +1620,8 @@ menu		A: play this handheld's  B: back	A：用此掌机的存档游玩  B：返�
 menu		The server's newer save didn't arrive	服务器上较新的存档未能取回
 menu		A: play this handheld's (older)  B: back	A：用此掌机的存档游玩（较旧）  B：返回
 menu		Playing this handheld's save	正在用此掌机的存档游玩
-settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Before a game too, on RomM (B skips the wait). Never while a game runs.	离开游戏时：其存档会在你离开时发送到服务器（后台进行，耗时数秒）。并且通过 Wi-Fi：每次 Wi-Fi 连接时也会同步游戏与存档。在 RomM 上，游戏开始前也会同步（按 B 跳过等待）。游戏运行时永不进行。
-settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). A state from RomM is kept in the vault, never put in place. Quick-resume states never sync.	开：即时存档也会同步，而不只是游戏自身的存档（RomM；在 Romhost 上由其 Devices 页面决定）。来自 RomM 的即时存档保存在保管库中，绝不会自动放入使用。快速继续的状态永不同步。
 settings		Sync before playing	游玩前同步
-settings		On: a game's save is brought up to date before it starts (RomM, with Auto sync on). B plays at once.	开：游戏启动前先将其存档更新到最新（RomM，且需开启「自动同步」）。按 B 立即游玩。
 settings		Saves	存档
-settings		Conflicts to settle, saves held back, and the copies kept of every save the sync replaced: A opens them.	待处理的冲突、暂缓同步的存档，以及同步替换过的每个存档的保留副本：按 A 打开。
-settings		; {cf} in conflict (on RomM both are kept and the save is held: choose on Saves; on Romhost, decide in Homeport)	；{cf} 个冲突（RomM 上：两份都会保留，该存档暂缓同步：在「存档」中选择；Romhost 上：在 Homeport 中决定）
 settings		Reading the card...	正在读取存储卡…
 settings		Nothing here: no conflicts, nothing held, and no kept copies.	这里没有内容：没有冲突、没有暂缓同步的存档，也没有保留的副本。
 settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	按 A 打开游戏。冲突会保持原样，直到你处理它：在此期间不会丢失任何内容。
@@ -1648,3 +1643,197 @@ settings		%lld bytes	%lld 字节
 settings		Working...	处理中…
 settings		Done.	完成。
 settings		Not done.	未完成。
+# (the home server's rows below (RomM's address and pairing, Get games, Manage saves, Device name, the banner after a
+# game) are a machine-translated draft, not Majirefy's: for them to check in the next round)
+menu		Syncing the save	正在同步存档
+menu		Save not synced	存档未同步
+menu		its saves stay on this handheld	其存档保留在此掌机上
+menu		{game}: settle it in Settings > Network > Home server > Manage saves.	{game}：请在 设置 > 网络 > 家庭服务器 > 管理存档 中处理。
+menu		Save synced	存档已同步
+menu		Save up to date	存档已是最新
+settings		Game Boy Advance	Game Boy Advance
+settings		Game Boy Color	Game Boy Color
+settings		Game Boy	Game Boy
+settings		Super Nintendo	Super Nintendo
+settings		Mega Drive	Mega Drive
+settings		Commodore 64	Commodore 64
+settings		ZX Spectrum	ZX Spectrum
+settings		PlayStation	PlayStation
+settings		Nintendo 64	Nintendo 64
+settings		Your saves synced, and your games, from your own RomM or Romhost server.	从你自己的 RomM 或 Romhost 服务器同步存档，并获取游戏。
+settings		Syncs the saves both ways, and downloads any games waiting in Get games. It carries on in the background.	双向同步存档，并下载「获取游戏」中等待的游戏。会在后台继续进行。
+settings		Get games	获取游戏
+settings		Downloads the server's games, one at a time. Once on the card a game is yours: nothing updates or removes it.	逐个下载服务器上的游戏。游戏一旦存到卡上就归你所有：不会被更新或移除。
+settings		Where downloaded games go: this card or the second SD card. With the second card out, its games wait.	下载的游戏存放的位置：本卡或第二张 SD 卡。第二张卡未插入时，其游戏会等待。
+settings		Leaving a game: its save goes to the server as you leave it. And on Wi-Fi: every save and waiting game too, whenever Wi-Fi connects. Never while a game runs.	退出游戏时：其存档在退出时即上传到服务器。连接 Wi-Fi 时：每当 Wi-Fi 连上，所有存档和等待中的游戏也会同步。游戏运行时从不同步。
+settings		On: a game's save is updated from the server before it starts (with Auto sync on). B skips the wait.	开：游戏启动前先从服务器更新其存档（需开启「自动同步」）。按 B 跳过等待。
+settings		On: save states sync too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	开：即时存档也会同步。来自 RomM 的即时存档保存在「管理存档」中，不会自动读取。快速继续的状态永不同步。
+settings		Manage saves	管理存档
+settings		Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.	处理冲突和暂缓同步的存档，或放回被同步替换的任一存档的旧副本。
+settings		Systems	系统
+settings		Which systems' saves sync. For one game: X on it in the library, then Save sync.	同步哪些系统的存档。针对单个游戏：在游戏库中对其按 X，然后选择「存档同步」。
+settings		Device name	设备名称
+settings		This handheld's name in RomM, shown on the saves it sends.	此掌机在 RomM 中的名称，会显示在它上传的存档上。
+settings		Games	游戏
+settings		Games to sync	要同步的游戏
+settings		All: every game of those systems. Chosen: only the games ticked in Choose games (one unticked later stays until you delete it).	全部：这些系统的所有游戏。已选：仅「选择游戏」中勾选的游戏（之后取消勾选的游戏会保留，直到你删除它）。
+settings		All	全部
+settings		Chosen	已选
+settings		Choose games	选择游戏
+settings		Tick the games to sync, for Games to sync on Chosen.	勾选要同步的游戏，用于「要同步的游戏」设为「已选」时。
+settings		Unpairs this handheld: nothing syncs until it is paired again. Games and saves stay on the card. Press A twice.	取消此掌机的配对：在重新配对前不会同步任何内容。游戏与存档保留在卡上。按 A 两次。
+settings		Sync: its games' saves sync with RomM. Skip: they stay on this handheld.	同步：其游戏的存档与 RomM 同步。跳过：存档保留在此掌机上。
+settings		As RomM lists this handheld	与 RomM 中列出的名称一致
+settings		Unpaired. The games and saves stay on the card. A on Server pairs it again.	未配对。游戏与存档保留在卡上。在「服务器」上按 A 可重新配对。
+settings		Not paired. A pairs this handheld with RomM or Romhost.	未配对。按 A 将此掌机与 RomM 或 Romhost 配对。
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again.	已与 {n}（{hsPairedUrl}）配对。按 A 打开其地址与「检查证书」。在那里选择「连接」可重新配对。
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again.	已与 {n}（Romhost，{hsPairedUrl}）配对。按 A 重新配对。
+settings		{value} in conflict (decide in Homeport)	{value} 个冲突（在 Homeport 中决定）
+settings		{value} in conflict (both are kept and the save is held: choose on Manage saves)	{value} 个冲突（两份均已保留，存档暂缓同步：请在「管理存档」中选择）
+settings		The last sync couldn't reach the server: {syncLine}. Check Wi-Fi, then Sync now again.	上次同步无法连接服务器：{syncLine}。请检查 Wi-Fi，然后再次「立即同步」。
+settings		Renaming	正在重命名
+settings		{getWaiting} waiting	{getWaiting} 个等待中
+settings		Stop	停止
+settings		Set up	开始设置
+settings		Not renamed: {out}	未重命名：{out}
+settings		Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	Romhost 的地址：其名称或 IP，非 8092 端口时加 :port。按 A 输入字符，B 删除，L 符号（点号与冒号），输入完成后按 START。
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed.	与浏览器中一样：romm.example.com、192.168.1.20，或完整 URL。L：符号，以及 https://、.com 等按键。输入完成后按 START。
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed.	仅当 RomM 不在默认端口时填写（HTTPS 为 443，HTTP 为 80）；默认端口则留空。输入完成后按 START。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，START 在 RomM 中重命名。
+settings		In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed.	在 RomM 中：Settings > Client API Tokens > Pair device 会显示类似 ABCD-1234 的配对码，60 秒内有效。客户端令牌（rmm_...）也可以。输入完成后按 START。
+settings		The code Homeport shows under ROMs > Pair a device. START when it is typed.	Homeport 在 ROMs > Pair a device 下显示的配对码。输入完成后按 START。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START searches the server's games: part of a title or a file name is enough. Nothing typed: every game again.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，START 搜索服务器上的游戏：输入部分标题或文件名即可。不输入任何内容：重新显示所有游戏。
+settings		{value} game	{value} 个游戏
+settings		{value} games	{value} 个游戏
+settings		{total} MB	{total} MB
+settings		Stopped before it started.	在开始前已停止。
+settings		The server doesn't know this handheld any more: pair it again.	服务器已不再识别此掌机：请重新配对。
+settings		The server's list can't be read: {ln}.	无法读取服务器的列表：{ln}。
+settings		The server listed no games.	服务器未列出任何游戏。
+settings		Couldn't refresh. {reason}	无法刷新。{reason}
+settings		Home server > Get games: the games to download, taken off as each comes	家庭服务器 > 获取游戏：待下载的游戏，每下载完一个即从中移除
+settings		Home server > Get games: why a game still on the list didn't come last time	家庭服务器 > 获取游戏：仍在列表中的游戏上次未能取回的原因
+settings		{value} game waits	{value} 个游戏等待
+settings		{value} games wait	{value} 个游戏等待
+settings		{on} to download: Sync now brings them, and every sync until they're in.	{on}下载：「立即同步」会取回它们，之后每次同步也会继续，直到全部下载完成。
+settings		On the card already.	已在卡上。
+settings		The download list can't be written: the card may be read-only.	无法写入下载列表：存储卡可能为只读。
+settings		Search every system	搜索所有系统
+settings		Search this system	搜索此系统
+settings		%.1f GB	%.1f GB
+settings		waiting, {value}	等待中，{value}
+settings		chosen, {value}	已选，{value}
+settings		A opens a system. Y searches every system. X gets the server's list again.	按 A 打开系统。按 Y 搜索所有系统。按 X 重新获取服务器的列表。
+settings		A downloads a game, or cancels one waiting. L and R jump a page. B clears the search.	按 A 下载游戏，或取消等待中的下载。L 和 R 翻页。按 B 清除搜索。
+settings		A downloads a game, or cancels one waiting. Y searches this system. L and R jump a page.	按 A 下载游戏，或取消等待中的下载。按 Y 搜索此系统。L 和 R 翻页。
+settings		{value} · didn't come	{value} · 未取回
+settings		{value} · waiting to download	{value} · 等待下载
+settings		{value} · on the card	{value} · 已在卡上
+settings		{value} · chosen	{value} · 已选
+settings		{failed}. The next sync tries again.	{failed}。下次同步会再试。
+settings		Every system	所有系统
+settings		Refreshing...	正在刷新…
+settings		Listed just now	刚刚列出
+settings		Listed {age} min ago	{age} 分钟前列出
+settings		Listed {age} h ago	{age} 小时前列出
+settings		Listed {age} days ago	{age} 天前列出
+settings		, {in} on card	，{in} 个在卡上
+settings		, {ch} waiting	，{ch} 个等待中
+settings		{ch} of {all}{b}	{ch} / {all}{b}
+settings		No games match "{pickQuery}".	没有与“{pickQuery}”匹配的游戏。
+settings		No games here.	这里没有游戏。
+settings		Waiting	等待中
+settings		On card	在卡上
+settings		Sync · on card	同步 · 在卡上
+settings		Refresh	刷新
+settings		All / none	全选 / 全不选
+settings		Tick	勾选
+settings		Refreshing	正在刷新
+settings		Get	获取
+settings		Home server: the games whose saves stay on this handheld (the game page's Save sync)	家庭服务器：存档保留在此掌机上的游戏（游戏页面的「存档同步」）
+settings		Save sync can't be changed: the card may be read-only.	无法更改存档同步：存储卡可能为只读。
+settings		On: this game's saves sync with RomM. Off: they stay on this handheld only, for a playthrough of its own here; the server's are left as they are.	开：本游戏的存档与 RomM 同步。关：存档仅保留在此掌机上，用于在此单独游玩；服务器上的存档保持不变。
+settings		Save sync	存档同步
+settings		Off: saves stay here	关：存档保留在此
+settings		This game's saves	本游戏的存档
+settings		A port is a number from 1 to 65535, or nothing for the usual one.	端口是 1 到 65535 之间的数字，留空则使用默认端口。
+settings		The name can't be empty.	名称不能为空。
+settings		No code typed: the QR code is still the way to pair.	未输入配对码：仍可通过 QR 码配对。
+settings		Checking {ra}...	正在检查 {ra}…
+settings		{value} conflict	{value} 个冲突
+settings		{value} conflicts	{value} 个冲突
+settings		{hsHeld} held	{hsHeld} 个暂缓
+settings		No Romhost answered. Its address	没有 Romhost 响应。其地址
+settings		Romhost	Romhost
+settings		No Romhost answers there. Check the address (and :port, when it isn't 8092) and that the handheld is on the same network as Homeport. For RomM, choose RomM instead: A on Server.	那里没有 Romhost 响应。请检查地址（非 8092 端口时还有 :port），以及掌机是否与 Homeport 在同一网络上。若使用 RomM，请改选 RomM：在「服务器」上按 A。
+settings		Paired with {ln}. Saves now sync as you leave a game (Auto sync). Sync now, below, gets the games and saves.	已与 {ln} 配对。现在退出游戏时会同步存档（自动同步）。下方的「立即同步」会获取游戏与存档。
+settings		Stopped.	已停止。
+settings		Protocol	协议
+settings		Address	地址
+settings		Port	端口
+settings		Its address	其地址
+settings		Type RomM's address first.	请先输入 RomM 的地址。
+settings		RomM {ver}	RomM {ver}
+settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}：升级到 5.4 或更新版本前，存档只会从服务器下载，不会上传。
+settings		banana-sync didn't answer.	banana-sync 没有响应。
+settings		Asking {hsName} for a code...	正在向 {hsName} 请求配对码…
+settings		Pairing with the code...	正在用配对码配对…
+settings		Paired with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	已与 {srv} 配对。现在退出游戏时会同步存档（自动同步）。「获取游戏」可获取游戏。
+settings		Paired with {srv}. Get games brings games over.	已与 {srv} 配对。「获取游戏」可获取游戏。
+settings		Paired as {dev} with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	已以 {dev} 的名称与 {srv} 配对。现在退出游戏时会同步存档（自动同步）。「获取游戏」可获取游戏。
+settings		Paired with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	已与 {srv} 配对。现在开始游戏前和退出游戏时都会同步存档。「获取游戏」可获取游戏。
+settings		Paired as {dev} with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	已以 {dev} 的名称与 {srv} 配对。现在开始游戏前和退出游戏时都会同步存档。「获取游戏」可获取游戏。
+settings		Paired as {dev} with {srv}. Get games brings games over.	已以 {dev} 的名称与 {srv} 配对。「获取游戏」可获取游戏。
+settings		Refused in RomM. A asks for a new code.	已在 RomM 中被拒绝。按 A 请求新的配对码。
+settings		The code ran out before it was approved. A asks for a new one.	配对码在获批前已过期。按 A 请求新的配对码。
+settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	找不到 {host}。请检查地址，以及此 Wi-Fi 能否访问 RomM 所在的网络。
+settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} 拒绝了连接。请检查端口，以及 HTTPS 或 HTTP。
+settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} 未及时响应。能否从此 Wi-Fi 访问它？请检查端口，以及 HTTPS 或 HTTP。
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	服务器的证书不受信任。若为自制证书，按 Y 关闭「检查证书」（或将你的 CA 证书以 homesync_ca 放到卡上）。
+settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	暂时无法检查证书：时钟尚未通过互联网校准。请连接 Wi-Fi 等待一分钟后重试。
+settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca 指定的文件无法读取：请在 banana/settings.conf 中检查。
+settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access 在那里要求登录。请放行 RomM 的 API：在 Access 中为 {host}/api 设置 Bypass 策略。你的手机仍需登录，以打开批准掌机的页面。
+settings		The server sends this address to {hsMoved}. Y uses that address.	服务器将此地址转到 {hsMoved}。按 Y 使用该地址。
+settings		The server sends this address elsewhere, not to RomM: {detail}	服务器将此地址转到别处，而不是 RomM：{detail}
+settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, Cloudflare's bot protection, a login page): let /api through.	{host} 拒绝访问（{detail}）。RomM 前面的某些东西可能在阻止掌机（防火墙、Cloudflare 的机器人防护、登录页面）：请放行 /api。
+settings		{host} answered {detail} where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).	{host} 在 RomM 的 API 应在的位置返回了 {detail}。请检查主机，以及 RomM 部署在子路径下时的路径（https://example.com/romm）。
+settings		Something answers at {url}, but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).	{url} 有响应，但不是 RomM 的 API。请检查主机，以及 RomM 部署在子路径下时的路径（https://example.com/romm）。
+settings		No answer from {host}.	{host} 没有响应。
+settings		No answer from {host} ({detail}).	{host} 没有响应（{detail}）。
+settings		RomM	RomM
+settings		Port (443 if empty)	端口（留空为 443）
+settings		Port (80 if empty)	端口（留空为 80）
+settings		Check certificate is off: Connect tries again.	「检查证书」已关闭：选择「连接」会再试一次。
+settings		Pairing code	配对码
+settings		Don't check	不检查
+settings		Use it	使用
+settings		Use a code	使用配对码
+settings		Home server > RomM	家庭服务器 > RomM
+settings		Pair with a server	与服务器配对
+settings		RomM, on this network or the internet. You approve this handheld by scanning a QR code with your phone.	RomM，在此网络或互联网上。用手机扫描 QR 码即可批准此掌机。
+settings		Romhost (Homeport), on this network: found by itself, then paired with the code Homeport shows.	Romhost（Homeport），在此网络上：自动发现，然后用 Homeport 显示的配对码配对。
+settings		This replaces the pairing with {homeServer}.	这将替换与 {homeServer} 的配对。
+settings		RomM's address	RomM 的地址
+settings		HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network.	HTTPS 用于互联网上或有证书的服务器。HTTP 用于此网络上的普通服务器。
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm.	与浏览器中一样：romm.example.com、192.168.1.20，或完整 URL，例如 https://example.com:8443/romm。
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP).	仅当 RomM 不在默认端口时填写（HTTPS 为 443，HTTP 为 80）。
+settings		On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once.	开：像浏览器一样检查服务器的证书。关：用于自签名证书。在不信任的网络上请保持开启。更改立即生效。
+settings		Asks {hsBase} for RomM, then shows a QR code to approve this handheld from your phone.	向 {hsBase} 请求 RomM，然后显示 QR 码，用手机批准此掌机。
+settings		the address	该地址
+settings		Scan the QR code below with your phone, or open:	用手机扫描下方的 QR 码，或打开：
+settings		Waiting for approval in RomM...	正在等待 RomM 中的批准…
+settings		Scan with your phone	用手机扫描
+settings		Asking RomM	正在请求 RomM
+settings		A: Sync now syncs the saves. B: back to Home server.	A：「立即同步」同步存档。B：返回家庭服务器。
+settings		A moment...	请稍候…
+settings		A asks RomM for a new code. X pairs with a code from RomM instead. B goes back to the address.	按 A 向 RomM 请求新的配对码。按 X 改用 RomM 的配对码配对。按 B 返回地址。
+settings		Which server?	哪种服务器？
+settings		Romhost (Homeport)	Romhost（Homeport）
+settings		Address and QR code	地址与 QR 码
+settings		On this network	在此网络上
+settings		HTTPS	HTTPS
+settings		HTTP	HTTP
+settings		Usual (443)	默认（443）
+settings		Usual (80)	默认（80）
+settings		Check certificate	检查证书
+settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	上次同步（获取游戏的下载）：游戏文件下载 {g}。存档未同步：“立即同步”会同步它们{er}

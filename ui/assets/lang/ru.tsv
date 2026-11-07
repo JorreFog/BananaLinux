@@ -1557,13 +1557,8 @@ menu		A: play this handheld's  B: back	A: играть с сохранением
 menu		The server's newer save didn't arrive	Более новое сохранение с сервера не пришло
 menu		A: play this handheld's (older)  B: back	A: играть с сохранением консоли (старее)  B: назад
 menu		Playing this handheld's save	Используется сохранение этой консоли
-settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Before a game too, on RomM (B skips the wait). Never while a game runs.	При выходе из игры: её сохранения отправляются на сервер, когда вы выходите (несколько секунд, в фоне). И при Wi-Fi: также игры и сохранения при каждом подключении Wi-Fi. Перед игрой тоже, на RomM (B пропускает ожидание). Никогда во время игры.
-settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). A state from RomM is kept in the vault, never put in place. Quick-resume states never sync.	Вкл.: состояния тоже синхронизируются, а не только собственные сохранения игр (RomM; на Romhost это решает его страница Devices). Состояние с RomM хранится в хранилище и никогда не ставится на место само. Состояния быстрого продолжения не синхронизируются.
 settings		Sync before playing	Синхронизация перед игрой
-settings		On: a game's save is brought up to date before it starts (RomM, with Auto sync on). B plays at once.	Вкл.: сохранение игры обновляется перед её запуском (RomM, при включённой автосинхронизации). B запускает сразу.
 settings		Saves	Сохранения
-settings		Conflicts to settle, saves held back, and the copies kept of every save the sync replaced: A opens them.	Конфликты, требующие решения, отложенные сохранения и копии каждого сохранения, заменённого синхронизацией: A открывает их.
-settings		; {cf} in conflict (on RomM both are kept and the save is held: choose on Saves; on Romhost, decide in Homeport)	; {cf} в конфликте (на RomM хранятся оба, а сохранение отложено: выберите в разделе Сохранения; на Romhost решите в Homeport)
 settings		Reading the card...	Чтение карты…
 settings		Nothing here: no conflicts, nothing held, and no kept copies.	Здесь пусто: нет конфликтов, ничего не отложено, копий нет.
 settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	A открывает игру. Конфликт остаётся как есть, пока вы его не разрешите: тем временем ничего не теряется.
@@ -1585,3 +1580,201 @@ settings		%lld bytes	%lld байт
 settings		Working...	Выполняется…
 settings		Done.	Готово.
 settings		Not done.	Не выполнено.
+# (the home server's rows below (RomM's address and pairing, Get games, Manage saves, Device name, the banner after a
+# game) are a machine-translated draft, not Vladislav's and Ruslan's: for them to check in the next round)
+menu		Syncing the save	Синхронизация сохранения
+menu		Save not synced	Сохранение не синхронизировано
+menu		its saves stay on this handheld	его сохранения остаются на этой консоли
+menu		{game}: settle it in Settings > Network > Home server > Manage saves.	{game}: разрешите в «Настройки > Сеть > Домашний сервер > Управление сохранениями».
+menu		Save synced	Сохранение синхронизировано
+menu		Save up to date	Сохранение актуально
+settings		Game Boy Advance	Game Boy Advance
+settings		Game Boy Color	Game Boy Color
+settings		Game Boy	Game Boy
+settings		Super Nintendo	Super Nintendo
+settings		Mega Drive	Mega Drive
+settings		Commodore 64	Commodore 64
+settings		ZX Spectrum	ZX Spectrum
+settings		PlayStation	PlayStation
+settings		Nintendo 64	Nintendo 64
+settings		Your saves synced, and your games, from your own RomM or Romhost server.	Ваши сохранения и игры синхронизируются с вашим собственным сервером RomM или Romhost.
+settings		Syncs the saves both ways, and downloads any games waiting in Get games. It carries on in the background.	Синхронизирует сохранения в обе стороны и скачивает игры, ожидающие в «Получить игры». Выполняется в фоне.
+settings		Get games	Получить игры
+settings		Downloads the server's games, one at a time. Once on the card a game is yours: nothing updates or removes it.	Скачивает игры с сервера по одной. Попав на карту, игра становится вашей: ничто её не обновляет и не удаляет.
+settings		Games go to	Куда скачивать игры
+settings		Where downloaded games go: this card or the second SD card. With the second card out, its games wait.	Куда попадают скачанные игры: на эту карту или на вторую карту памяти. Пока вторая карта извлечена, её игры ждут.
+settings		This card	Эта карта
+settings		Leaving a game: its save goes to the server as you leave it. And on Wi-Fi: every save and waiting game too, whenever Wi-Fi connects. Never while a game runs.	«При выходе из игры»: сохранение игры отправляется на сервер при выходе из неё. «И по Wi-Fi»: также все сохранения и ожидающие игры при каждом подключении к Wi-Fi. Никогда во время игры.
+settings		On: a game's save is updated from the server before it starts (with Auto sync on). B skips the wait.	«Вкл»: сохранение игры обновляется с сервера перед её запуском (при включённой «Автосинхронизации»). B пропускает ожидание.
+settings		On: save states sync too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	«Вкл»: быстрые сохранения тоже синхронизируются. Полученное с RomM хранится в «Управление сохранениями» и само не загружается. Состояния быстрого старта никогда не синхронизируются.
+settings		Manage saves	Управление сохранениями
+settings		Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.	Разрешите конфликты и отложенные сохранения или верните более старую копию любого сохранения, заменённого синхронизацией.
+settings		Systems	Системы
+settings		Which systems' saves sync. For one game: X on it in the library, then Save sync.	Сохранения каких систем синхронизируются. Для одной игры: X на ней в библиотеке, затем «Синхронизация сохранений».
+settings		Device name	Имя устройства
+settings		This handheld's name in RomM, shown on the saves it sends.	Имя этой консоли в RomM, отображается на отправленных ею сохранениях.
+settings		Games	Игры
+settings		Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.	Куда попадают скачанные игры. Вторая карта памяти: её папка roms (создаётся, если её нет), пока карта вставлена и «Вторая карта памяти» показывает её игры. Игра, уже лежащая на карте, остаётся там; пока вторая карта извлечена, её игры ждут следующей синхронизации.
+settings		Games to sync	Игры для синхронизации
+settings		All: every game of those systems. Chosen: only the games ticked in Choose games (one unticked later stays until you delete it).	«Все»: все игры этих систем. «Выбранные»: только игры, отмеченные в «Выбрать игры» (игра, с которой позже снята отметка, остаётся, пока вы её не удалите).
+settings		All	Все
+settings		Chosen	Выбранные
+settings		Choose games	Выбрать игры
+settings		Tick the games to sync, for Games to sync on Chosen.	Отметьте игры для синхронизации, для «Игры для синхронизации» в режиме «Выбранные».
+settings		Unpairs this handheld: nothing syncs until it is paired again. Games and saves stay on the card. Press A twice.	Отвязывает эту консоль: синхронизация прекратится до повторного сопряжения. Игры и сохранения останутся на карте памяти. Нажмите A дважды.
+settings		Sync: its games' saves sync with RomM. Skip: they stay on this handheld.	«Синхр.»: сохранения её игр синхронизируются с RomM. «Пропуск»: они остаются на этой консоли.
+settings		As RomM lists this handheld	Как RomM называет эту консоль
+settings		Unpaired. The games and saves stay on the card. A on Server pairs it again.	Сервер отвязан. Игры и сохранения остались на карте памяти. A на пункте «Сервер» снова выполняет сопряжение.
+settings		Not paired. A pairs this handheld with RomM or Romhost.	Не сопряжено. A сопрягает эту консоль с RomM или Romhost.
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again.	Сопряжено с {n} по адресу {hsPairedUrl}. A открывает его адрес и «Проверять сертификат». «Подключить» там сопрягает заново.
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again.	Сопряжено с {n} (Romhost) по адресу {hsPairedUrl}. A сопрягает заново.
+settings		{value} in conflict (decide in Homeport)	{value} в конфликте (решите в Homeport)
+settings		{value} in conflict (both are kept and the save is held: choose on Manage saves)	{value} в конфликте (обе версии сохранены, сохранение отложено: выберите в «Управление сохранениями»)
+settings		The last sync couldn't reach the server: {syncLine}. Check Wi-Fi, then Sync now again.	Последняя синхронизация не достучалась до сервера: {syncLine}. Проверьте Wi-Fi и снова нажмите «Синхронизировать сейчас».
+settings		Renaming	Переименование
+settings		{getWaiting} waiting	В очереди: {getWaiting}
+settings		Stop	Остановить
+settings		Set up	Настроить
+settings		Not renamed: {out}	Не переименовано: {out}
+settings		Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	Адрес Romhost: его имя или IP, и :порт, если он не 8092. A вводит символ, B удаляет, L: спецсимволы (точка и двоеточие), START: подтверждение ввода.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed.	Как в браузере: romm.example.com, 192.168.1.20 или полный URL. L: спецсимволы и клавиши для https://, .com и т. п. START: подтверждение ввода.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed.	Только если RomM работает не на стандартном порту (443 для HTTPS, 80 для HTTP); пусто для стандартного. START: подтверждение ввода.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM.	A вводит символ, B удаляет, X: заглавные, L: спецсимволы, Y: пробел, START переименовывает в RomM.
+settings		In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed.	В RomM: Settings > Client API Tokens > Pair device показывает код вида ABCD-1234, действующий 60 секунд. Подходит и токен клиента (rmm_...). START: подтверждение ввода.
+settings		The code Homeport shows under ROMs > Pair a device. START when it is typed.	Код, отображаемый Homeport в меню ROMs > Pair a device. START: подтверждение ввода.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START searches the server's games: part of a title or a file name is enough. Nothing typed: every game again.	A вводит символ, B удаляет, X: заглавные, L: спецсимволы, Y: пробел, START ищет среди игр сервера: достаточно части названия или имени файла. Пустой ввод: снова все игры.
+settings		{value} game	{value} игра
+settings		{value} games	Игр: {value}
+settings		{total} MB	{total} МБ
+settings		Stopped before it started.	Остановлено до начала.
+settings		The server doesn't know this handheld any more: pair it again.	Сервер больше не знает эту консоль: выполните сопряжение заново.
+settings		The server's list can't be read: {ln}.	Не удалось прочитать список сервера: {ln}.
+settings		The server listed no games.	Сервер не вернул ни одной игры.
+settings		Couldn't refresh. {reason}	Не удалось обновить. {reason}
+settings		Home server > Get games: the games to download, taken off as each comes	Домашний сервер > Получить игры: игры к скачиванию, убираются по мере загрузки
+settings		Home server > Get games: why a game still on the list didn't come last time	Домашний сервер > Получить игры: почему игра, оставшаяся в списке, не загрузилась в прошлый раз
+settings		{value} game waits	{value} игра в очереди
+settings		{value} games wait	Игр в очереди: {value}
+settings		{on} to download: Sync now brings them, and every sync until they're in.	{on} к скачиванию: их загрузит «Синхронизировать сейчас» и каждая синхронизация, пока они не скачаются.
+settings		On the card already.	Уже на карте.
+settings		The download list can't be written: the card may be read-only.	Не удалось записать список загрузок: возможно, карта доступна только для чтения.
+settings		Search every system	Искать во всех системах
+settings		Search this system	Искать в этой системе
+settings		%.1f GB	%.1f ГБ
+settings		waiting, {value}	в очереди, {value}
+settings		chosen, {value}	выбрано, {value}
+settings		A opens a system. Y searches every system. X gets the server's list again.	A открывает систему. Y ищет во всех системах. X снова получает список с сервера.
+settings		A downloads a game, or cancels one waiting. L and R jump a page. B clears the search.	A скачивает игру или отменяет ожидающую. L и R листают по странице. B сбрасывает поиск.
+settings		A downloads a game, or cancels one waiting. Y searches this system. L and R jump a page.	A скачивает игру или отменяет ожидающую. Y ищет в этой системе. L и R листают по странице.
+settings		{value} · didn't come	{value} · не загружено
+settings		{value} · waiting to download	{value} · ждёт загрузки
+settings		{value} · on the card	{value} · на карте
+settings		{value} · chosen	{value} · выбрано
+settings		{failed}. The next sync tries again.	{failed}. Следующая синхронизация попробует снова.
+settings		Every system	Все системы
+settings		Refreshing...	Обновление…
+settings		Listed just now	Список получен только что
+settings		Listed {age} min ago	Список получен {age} мин назад
+settings		Listed {age} h ago	Список получен {age} ч назад
+settings		Listed {age} days ago	Список получен {age} дн. назад
+settings		, {in} on card	, на карте: {in}
+settings		, {ch} waiting	, в очереди: {ch}
+settings		{ch} of {all}{b}	{ch} из {all}{b}
+settings		No games match "{pickQuery}".	Нет игр по запросу «{pickQuery}».
+settings		No games here.	Здесь нет игр.
+settings		Waiting	В очереди
+settings		On card	На карте
+settings		Sync · on card	Синхр. · на карте
+settings		Refresh	Обновить
+settings		All / none	Все / ничего
+settings		Tick	Отметить
+settings		Refreshing	Обновление
+settings		Get	Получить
+settings		Home server: the games whose saves stay on this handheld (the game page's Save sync)	Домашний сервер: игры, сохранения которых остаются на этой консоли («Синхронизация сохранений» на странице игры)
+settings		Save sync can't be changed: the card may be read-only.	Не удалось изменить «Синхронизация сохранений»: возможно, карта доступна только для чтения.
+settings		On: this game's saves sync with RomM. Off: they stay on this handheld only, for a playthrough of its own here; the server's are left as they are.	«Вкл»: сохранения этой игры синхронизируются с RomM. «Выкл»: они остаются только на этой консоли, для отдельного прохождения здесь; сохранения на сервере остаются как есть.
+settings		Save sync	Синхронизация сохранений
+settings		Off: saves stay here	Выкл: сохранения остаются здесь
+settings		This game's timing	Тайминги этой игры
+settings		This game's saves	Сохранения этой игры
+settings		A port is a number from 1 to 65535, or nothing for the usual one.	Порт: число от 1 до 65535 или пусто для стандартного.
+settings		The name can't be empty.	Имя не может быть пустым.
+settings		No code typed: the QR code is still the way to pair.	Код не введён: сопряжение по-прежнему выполняется по QR-коду.
+settings		Checking {ra}...	Проверка {ra}…
+settings		{value} conflict	{value} конфликт
+settings		{value} conflicts	Конфликтов: {value}
+settings		{hsHeld} held	отложено: {hsHeld}
+settings		No Romhost answered. Its address	Romhost не ответил. Его адрес
+settings		Romhost	Romhost
+settings		No Romhost answers there. Check the address (and :port, when it isn't 8092) and that the handheld is on the same network as Homeport. For RomM, choose RomM instead: A on Server.	Romhost по этому адресу не отвечает. Проверьте адрес (и :порт, если он не 8092), а также что консоль в той же сети, что и Homeport. Для RomM выберите RomM: A на пункте «Сервер».
+settings		Paired with {ln}. Saves now sync as you leave a game (Auto sync). Sync now, below, gets the games and saves.	Сопряжено с {ln}. Теперь сохранения синхронизируются при выходе из игры («Автосинхронизация»). «Синхронизировать сейчас» ниже загрузит игры и сохранения.
+settings		Stopped.	Остановлено.
+settings		Protocol	Протокол
+settings		Address	Адрес
+settings		Port	Порт
+settings		Its address	Его адрес
+settings		Type RomM's address first.	Сначала введите адрес RomM.
+settings		RomM {ver}	RomM {ver}
+settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}: пока версия ниже 5.4, сохранения только скачиваются с него, на сервер ничего не отправляется.
+settings		banana-sync didn't answer.	banana-sync не ответил.
+settings		Asking {hsName} for a code...	Запрос кода у {hsName}…
+settings		Pairing with the code...	Сопряжение по коду…
+settings		Paired with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Сопряжено с {srv}. Теперь сохранения синхронизируются при выходе из игры («Автосинхронизация»). «Получить игры» загружает игры.
+settings		Paired with {srv}. Get games brings games over.	Сопряжено с {srv}. «Получить игры» загружает игры.
+settings		Paired as {dev} with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Сопряжено с {srv} под именем {dev}. Теперь сохранения синхронизируются при выходе из игры («Автосинхронизация»). «Получить игры» загружает игры.
+settings		Paired with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Сопряжено с {srv}. Теперь сохранения синхронизируются перед игрой и при выходе из игры. «Получить игры» загружает игры.
+settings		Paired as {dev} with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Сопряжено с {srv} под именем {dev}. Теперь сохранения синхронизируются перед игрой и при выходе из игры. «Получить игры» загружает игры.
+settings		Paired as {dev} with {srv}. Get games brings games over.	Сопряжено с {srv} под именем {dev}. «Получить игры» загружает игры.
+settings		Refused in RomM. A asks for a new code.	Отклонено в RomM. A запрашивает новый код.
+settings		The code ran out before it was approved. A asks for a new one.	Срок действия кода истёк до подтверждения. A запрашивает новый.
+settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	Не удалось найти {host}. Проверьте адрес и что эта сеть Wi-Fi имеет доступ к сети, где находится RomM.
+settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} отклонил подключение. Проверьте порт и выбор HTTPS или HTTP.
+settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} не ответил вовремя. Доступен ли он из этой сети Wi-Fi? Проверьте порт и выбор HTTPS или HTTP.
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	Сертификат сервера не является доверенным. Для собственного сертификата Y отключает «Проверять сертификат» (или положите сертификат вашего CA на карту как homesync_ca).
+settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	Сертификат пока нельзя проверить: часы не установлены по интернету. Подождите минуту при подключении к Wi-Fi и попробуйте снова.
+settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca указывает на файл, который не читается: проверьте его в banana/settings.conf.
+settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access требует там входа. Пропустите API RomM: политика Bypass для {host}/api в Access. Телефон по-прежнему входит в аккаунт для страницы, где подтверждается консоль.
+settings		The server sends this address to {hsMoved}. Y uses that address.	Сервер перенаправляет этот адрес на {hsMoved}. Y использует этот адрес.
+settings		The server sends this address elsewhere, not to RomM: {detail}	Сервер перенаправляет этот адрес не на RomM: {detail}
+settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, Cloudflare's bot protection, a login page): let /api through.	{host} отказал в доступе ({detail}). Возможно, консоль блокирует что-то перед RomM (брандмауэр, защита от ботов Cloudflare, страница входа): пропустите /api.
+settings		{host} answered {detail} where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).	{host} ответил {detail} там, где должен быть API RomM. Проверьте хост и путь, если RomM работает по пути (https://example.com/romm).
+settings		Something answers at {url}, but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).	По адресу {url} что-то отвечает, но это не API RomM. Проверьте хост и путь, если RomM работает по пути (https://example.com/romm).
+settings		No answer from {host}.	Нет ответа от {host}.
+settings		No answer from {host} ({detail}).	Нет ответа от {host} ({detail}).
+settings		RomM	RomM
+settings		Port (443 if empty)	Порт (443, если пусто)
+settings		Port (80 if empty)	Порт (80, если пусто)
+settings		Check certificate is off: Connect tries again.	«Проверять сертификат» выключено: «Подключить» пробует снова.
+settings		Pairing code	Код сопряжения
+settings		Don't check	Не проверять
+settings		Use it	Использовать
+settings		Use a code	Ввести код
+settings		Home server > RomM	Домашний сервер > RomM
+settings		Pair with a server	Сопряжение с сервером
+settings		RomM, on this network or the internet. You approve this handheld by scanning a QR code with your phone.	RomM в этой сети или в интернете. Вы подтверждаете эту консоль, сканируя QR-код телефоном.
+settings		Romhost (Homeport), on this network: found by itself, then paired with the code Homeport shows.	Romhost (Homeport) в этой сети: находится автоматически, затем сопрягается по коду, который показывает Homeport.
+settings		This replaces the pairing with {homeServer}.	Это заменит сопряжение с {homeServer}.
+settings		RomM's address	Адрес RomM
+settings		HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network.	HTTPS для сервера в интернете или с сертификатом. HTTP для простого сервера в этой сети.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm.	Как в браузере: romm.example.com, 192.168.1.20 или полный URL, например https://example.com:8443/romm.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP).	Только если RomM работает не на стандартном порту (443 для HTTPS, 80 для HTTP).
+settings		On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once.	«Вкл»: сертификат сервера проверяется, как в браузере. «Выкл»: для самоподписанного сертификата. В сетях, которым вы не доверяете, оставьте «Вкл». Изменение действует сразу.
+settings		Asks {hsBase} for RomM, then shows a QR code to approve this handheld from your phone.	Запрашивает RomM по адресу {hsBase}, затем показывает QR-код для подтверждения консоли с телефона.
+settings		the address	адрес
+settings		Scan the QR code below with your phone, or open:	Отсканируйте QR-код ниже телефоном или откройте:
+settings		Waiting for approval in RomM...	Ожидание подтверждения в RomM…
+settings		Scan with your phone	Отсканируйте телефоном
+settings		Asking RomM	Запрос к RomM
+settings		A: Sync now syncs the saves. B: back to Home server.	A: «Синхронизировать сейчас» синхронизирует сохранения. B: назад к «Домашний сервер».
+settings		A moment...	Минутку…
+settings		A asks RomM for a new code. X pairs with a code from RomM instead. B goes back to the address.	A запрашивает у RomM новый код. X: сопряжение по коду из RomM. B: назад к адресу.
+settings		Which server?	Какой сервер?
+settings		Romhost (Homeport)	Romhost (Homeport)
+settings		Address and QR code	Адрес и QR-код
+settings		On this network	В этой сети
+settings		HTTPS	HTTPS
+settings		HTTP	HTTP
+settings		Usual (443)	Стандартный (443)
+settings		Usual (80)	Стандартный (80)
+settings		Check certificate	Проверять сертификат
+settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Посл. синхронизация (загрузки «Получить игры»): загружено файлов игр: {g}. Сохранения не синхронизированы: их синхронизирует «Синхронизировать сейчас»{er}
