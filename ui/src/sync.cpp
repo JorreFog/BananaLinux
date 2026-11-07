@@ -1077,6 +1077,7 @@ namespace
 	};
 
 	std::string settleKey;
+	bool gamesOnly = false;	// sync --games-only: Get games' own run, its downloads and not the saves
 	// the commands that change the card's saves with no server: the saves' lock held and no game running, as a sync's
 	// save phase; each says "ok", or "error <why>", on its one line, for the menu
 	int answer(const std::string& why) { printf("%s\n", why.empty() ? "ok" : ("error " + why).c_str()); return why.empty() ? 0 : 1; }
@@ -1366,7 +1367,9 @@ namespace
 			if (had && b->beforeGame) status(first);
 			return had;
 		};
-		if (gameRunning()) errors.push_back(running);
+		// (Get games' own run, --games-only: the games asked for and nothing else, the saves left to the syncs that are for them)
+		if (gamesOnly) say("saves: left to the syncs for them (--games-only)");
+		else if (gameRunning()) errors.push_back(running);
 		else if (!lock()) errors.push_back("saves: another sync is saving, next time");
 		else if (gameRunning()) errors.push_back(running);
 		else
@@ -1416,6 +1419,8 @@ namespace
 		// (one game's save left waiting, the server out of reach: said, for the menu's banner after a game)
 		std::string said = errors.empty() ? note : errors[0];
 		if (b->keptUnsent) said += "; kept to send with the next sync";
+		// (Get games' own run says so first, for Sync now's report: its saves weren't looked at)
+		if (gamesOnly) said = said.empty() ? "games only" : "games only: " + said;
 		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + said);
 		say("done: %d games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
 		return errors.empty() ? 0 : 1;
@@ -1442,6 +1447,7 @@ int main(int argc, char** argv)
 		else if (a == "--run") RUN = val();
 		else if (a == "--dry-run") dryRun = true;
 		else if (a == "--saves-only") savesOnly = true;
+		else if (a == "--games-only") gamesOnly = true;
 		else if (a == "--auto") autoWhy = val();
 		else if (a == "--rom") onlyRom = val();
 		else if (a == "--report") report = val();

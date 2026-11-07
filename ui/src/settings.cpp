@@ -930,7 +930,7 @@ namespace banana
 			// The most used first: syncing, getting games, when it syncs, then the saves' own pages and the rarer rows
 			add(HS, "phone", "Sync now", "Syncs saves both ways and downloads the games waiting in Get games.",
 				"", "hs_sync", {}, {}, Item::PAGE);
-			add(HS, "phone", "Get games", "The server's games, a system at a time. A downloads one, A again takes it back.",
+			add(HS, "phone", "Get games", "Downloads the server's games, one at a time. Once on the card a game is yours: nothing updates or removes it.",
 				"", "hs_get", {}, {}, Item::PAGE);
 			if (sd2Slot)
 			{
@@ -2398,7 +2398,12 @@ namespace banana
 			{
 				in >> g >> rm >> up >> dn >> cf >> er;
 				std::string why = syncLine.find('|') == std::string::npos ? "" : syncLine.substr(syncLine.find('|') + 1);
-				help = "Last sync: " + std::to_string(g) + " files of games down, " + std::to_string(rm) + " removed; saves " + std::to_string(up) + " up, " + std::to_string(dn) + " down" +
+				// (Get games' own run, sync --games-only, says so first: the saves weren't looked at)
+				const bool gamesOnly = why.compare(0, 10, "games only") == 0;
+				if (gamesOnly) why = why.size() > 12 ? why.substr(12) : "";
+				if (gamesOnly) help = "Last sync, Get games' downloads: " + std::to_string(g) + " files of games down. The saves weren't synced: Sync now syncs them" +
+					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : ".");
+				else help = "Last sync: " + std::to_string(g) + " files of games down, " + std::to_string(rm) + " removed; saves " + std::to_string(up) + " up, " + std::to_string(dn) + " down" +
 					(cf ? "; " + std::to_string(cf) + (hsBackend() == "romhost" ? " in conflict (decide in Homeport)" : " in conflict (both are kept and the save is held: choose on Manage saves)") : "") +
 					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : why.empty() ? "." : ". " + why + ".");
 			}
@@ -5018,7 +5023,7 @@ namespace banana
 		bool again = false;
 		for (auto& k : pickAsked)
 			if (q.count(k) && !failed.count(k) && pickRestarted.insert(k).second) again = true;
-		pickWasSync = again && startSync();
+		pickWasSync = again && startSync(true);
 		return again;
 	}
 
@@ -5144,17 +5149,18 @@ namespace banana
 		else if (k == Key::A && pickGet && pickLevel == 1)
 		{
 			// a game to download: on the list, and a sync started (one running takes it before it ends, or the next); A
-			// again while it waits takes it back
+			// again while it waits takes it back. One whose download failed: A tries it again now
 			auto v = pickList();
 			if (pickSel >= (int)v.size()) return NONE;
 			PickGame& g = pickGames[v[pickSel]];
 			if (g.there && !g.on) { pickError.clear(); message = "On the card already."; return MOVED; }
-			if (!editGetList(g.key, !g.on)) { message = "The download list can't be written: the card may be read-only."; return MOVED; }
-			g.on = !g.on;
+			const bool want = !g.on || !g.failed.empty();
+			if (!editGetList(g.key, want)) { message = "The download list can't be written: the card may be read-only."; return MOVED; }
+			g.on = want;
 			g.failed.clear();	// (asked for again: waiting, not the last try's failure)
 			if (g.on) pickAsked.insert(g.key); else { pickAsked.erase(g.key); pickRestarted.erase(g.key); }
 			message.clear();
-			if (g.on && !syncing() && startSync()) pickWasSync = true;	// (a quick one may be over before the status is read)
+			if (g.on && !syncing() && startSync(true)) pickWasSync = true;	// (a quick one may be over before the status is read)
 			pickPoll = now + 1000;
 			return MOVED;
 		}
@@ -5206,12 +5212,13 @@ namespace banana
 		icon("phone", 50, 56, 3);
 		text("Home server", true, 17, 170, 62, p.muted, true, 1.4f);
 		text(pickGet ? "Get games" : "Choose games", true, 30, 170, 88, p.ink);
-		text(fit(std::to_string(chosenN) + (chosenN == 1 ? " game " : " games ") + (pickGet ? "waiting, " : "chosen, ") + size(chosenBytes), true, 22, 420), true, 22, 170, 130, p.accent);
+		if (!pickGet || chosenN > 0)	// (Get games: said once a game waits)
+			text(fit(std::to_string(chosenN) + (chosenN == 1 ? " game " : " games ") + (pickGet ? "waiting, " : "chosen, ") + size(chosenBytes), true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help = pickLoading ? "Asking the server for its games..." : !pickError.empty() ? pickError
 			: pickGet && !message.empty() ? message
-			: pickGet ? (pickLevel == 0 ? "A opens a system. Y searches every system's games. X asks the server for its list again (it is kept on the card, and every sync brings it up to date). B goes back."
-				: !pickQuery.empty() ? "A downloads a game (A again, while it waits, takes it back). Y searches again. X asks the server for its list again. L and R jump a page. B clears the search."
-				: "A downloads a game (A again, while it waits, takes it back). Y searches this system's games. X asks the server for its list again. L and R jump a page. B goes back to the systems.")
+			: pickGet ? (pickLevel == 0 ? "A opens a system. Y searches every system. X gets the server's list again."
+				: !pickQuery.empty() ? "A downloads a game, or cancels one waiting. L and R jump a page. B clears the search."
+				: "A downloads a game, or cancels one waiting. Y searches this system. L and R jump a page.")
 			: pickLevel == 0 ? "A opens a system. X ticks all of its games, or unticks them when all are ticked. B saves and goes back."
 			: "A ticks or unticks a game. X: all of this system's, or none. L and R jump a page. Games already on the card say so. B goes back to the systems.";
 		// (while a sync runs, its bar in the help's place, the chips saying what A and X do; a message or an error still
@@ -5317,7 +5324,7 @@ namespace banana
 				auto v = pickList();
 				const PickGame* g = pickLevel == 1 && pickSel < (int)v.size() ? &pickGames[v[pickSel]] : nullptr;
 				xa = pickRefreshing ? "Refreshing" : "Refresh";
-				aa = pickLevel == 0 ? "Open" : !g ? "" : g->on ? "Take back" : g->there ? "" : "Get";
+				aa = pickLevel == 0 ? "Open" : !g ? "" : g->on && !g->failed.empty() ? "Try again" : g->on ? "Cancel" : g->there ? "" : "Get";
 			}
 
 			float xw = faceWidth("X", xa), aw = faceWidth("A", aa);
@@ -7561,9 +7568,10 @@ namespace banana
 		message = "Looking for a home server on the network...";
 		hsJob.start("'" + syncTool() + "' discover 2>/dev/null", sync);
 	}
-	bool Settings::startSync()
+	bool Settings::startSync(bool gamesOnly)
 	{
 		if (syncing() || syncWifiUntil > 0) return false;
+		syncGamesOnly = gamesOnly;
 		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return false; }
 		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return false; }
 		// (Wi-Fi coming back, as it is for a few seconds after a wake: waited for, up to 20 s as the sync before a game
@@ -7586,7 +7594,8 @@ namespace banana
 		std::ofstream(runDir + "/sync.status") << "running 0 0 |starting\n";
 		syncLine.clear();
 		syncNext = 0;
-		hsRun("sync");
+		// (Get games' own run brings the games asked for and leaves the saves to the syncs that are for them)
+		hsRun(syncGamesOnly ? "sync --games-only" : "sync");
 	}
 	// the sync waiting for Wi-Fi: started once it has an address, or at the 20 s (a sync that can't reach the server then
 	// says so)

@@ -669,12 +669,13 @@ namespace banana
 		wifi::Job hsJob;
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
-		bool startSync();	// (true: a sync was started, or waits for Wi-Fi coming back to start)
+		bool startSync(bool gamesOnly = false);	// (true: a sync was started, or waits for Wi-Fi coming back to start; gamesOnly: Get games' downloads alone)
 		void runSync();
 		// Sync now as Wi-Fi comes back (pressed as the lid opens, before it has an address): waited for until this time
 		// (the menu's clock, 0 not waiting), as the sync before a game waits; wifiFacts: wlan0's state, the headless
 		// tests' "wifi" in place of the device's
 		double syncWifiUntil = 0;
+		bool syncGamesOnly = false;	// the sync started (or waiting for Wi-Fi) is Get games' own, sync --games-only
 		std::function<gamesync::WifiFacts()> wifiFacts;
 		bool pollSyncWifi();
 		void startPairing();

@@ -260,8 +260,10 @@ check for an https server; none hedged for the other), made again when a pairing
 
 On RomM, games and saves are apart, as in Grout. Games come by Get games, a store's download: the server's games a
 system at a time (`banana-sync games`), A putting one on the download list (`banana/homesync-get.txt`, written under
-`/run/banana/get.lock`; `banana-sync get [--drop] <key>`) and starting a sync, since a RomM library can be hundreds of
-GB. Any sync of the games brings what the list holds, games asked for while it runs included (before its saves when
+`/run/banana/get.lock`; `banana-sync get [--drop] <key>`) and starting a sync of its own, `banana-sync sync
+--games-only`, which brings the games and leaves the saves alone, since a RomM library can be hundreds of GB and a
+download is no reason to move saves. A on a game whose download failed tries it again at once. Any sync of the games
+brings what the list holds, games asked for while it runs included (before its saves when
 it can, so a game's save comes with it; those asked for during the saves after them, with `save.lock` let go, so the
 sync after a game never waits on a download; one asked for as a sync is ending is brought by another the menu
 starts, once), and takes each off once its files are in place, or a file of the owner's

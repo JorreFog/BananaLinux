@@ -237,11 +237,17 @@ t=$(date +%s); bs rc sync --rom "gba/Banana Run (USA).gba" > "$OUT/pick-late-rom
 wait $_k
 has "rc/roms/nds/Peel Quest (USA).nds"
 # (a game asked for that is on the card already, copied by hand: adopted, nothing downloaded, and the gamelist entry
-# its owner gave it kept)
+# its owner gave it kept. Get games' own run, --games-only: the game and not the saves, a save new on the card left for
+# the next sync of the saves)
 cp "$L/gba/Old Game (USA).gba" "$OUT/rc/roms/gba/"
 sed -i 's|</gameList>|  <game><path>./Old Game (USA).gba</path><name>Mine</name></game>\n</gameList>|' "$OUT/rc/roms/gba/gamelist.xml"
+mkdir -p "$OUT/rc/saves/gba"; printf 'old game save' > "$OUT/rc/saves/gba/Old Game (USA).srm"
 bs rc get 'gba/Old Game (USA).gba' >/dev/null
-GETALL=0 bs rc sync > "$OUT/pick-adopt.log" 2>&1
+GETALL=0 bs rc sync --games-only > "$OUT/pick-adopt.log" 2>&1
+grep -q 'Old Game (USA).srm' "$OUT/rc/banana/romsync.json" && bad "sync --games-only synced a save: $(cat "$OUT/pick-adopt.log")"
+st rc | grep -q '^done .*|games only' || bad "sync --games-only's line doesn't say so: $(st rc)"
+GETALL=0 bs rc sync > "$OUT/pick-adopt2.log" 2>&1
+grep -q 'Old Game (USA).srm' "$OUT/rc/banana/romsync.json" || bad "the save --games-only left wasn't synced by the next sync: $(cat "$OUT/pick-adopt2.log")"
 grep -q '0 to download' "$OUT/pick-adopt.log" || bad "get: a game on the card already was downloaded: $(head -3 "$OUT/pick-adopt.log")"
 grep -q '<name>Mine</name>' "$OUT/rc/roms/gba/gamelist.xml" || bad "get: an adopted game's own gamelist entry was replaced: $(grep -A1 'Old Game' "$OUT/rc/roms/gba/gamelist.xml")"
 grep -q 'Old Game' "$OUT/rc/banana/homesync-get.txt" && bad "get: an adopted game stayed on the list"
@@ -790,23 +796,30 @@ if [ -x "$HERE/banana-ui" ]; then
     ug "$GET; shot hs-get0; press a; shot hs-get1; press a; wait 100; press down; press a; sleep 300; wait 1100; shot hs-get2"
     grep -qx 'gba/Pocket Hack.gba' "$GL" 2>/dev/null || bad "Get games: A didn't put the game on the list: $(cat "$GL" 2>&1)"
     grep -qx 'gba/Orchard Tactics.gba' "$GL" && bad "Get games: a game on the card was put on the list"
-    grep -q '^--root .* sync$\| sync$' "$SL" || bad "Get games: no sync started: $(cat "$SL")"
+    grep -q ' sync --games-only$' "$SL" || bad "Get games: no sync of its own started: $(cat "$SL")"
     for s in hs-getrow hs-get0 hs-get1 hs-get2; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
     cmp -s "$OUT/ui-hs-get0-bot.png" "$OUT/ui-hs-get1-bot.png" && bad "Get games: A didn't open the system"
     # (a download that failed: Failed on its row, why under its title)
     printf '# x\ngba/Pocket Hack.gba\tchecksum mismatch\n' > "$FX/data/homesync-get-failed.txt"
     ug "$GET; press a; press down; sleep 300; wait 1100; shot hs-get-failed"
     cmp -s "$OUT/ui-hs-get2-top.png" "$OUT/ui-hs-get-failed-top.png" && bad "Get games: a failed download not shown"
+    # (A on it tries it again: still on the list, its failure gone, Get games' own sync started; A then takes it back)
+    : > "$SL"
+    ug "$GET; press a; press down; press a; sleep 300; wait 1100"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: Try again took the game off the list: $(cat "$GL")"
+    grep -q 'Pocket Hack' "$FX/data/homesync-get-failed.txt" 2>/dev/null && bad "Get games: tried again, the game kept its last failure: $(cat "$FX/data/homesync-get-failed.txt")"
+    grep -q ' sync --games-only$' "$SL" || bad "Get games: Try again started no sync: $(cat "$SL")"
     ug "$GET; press a; press down; press a; sleep 300; wait 1100"
     grep -qx 'gba/Pocket Hack.gba' "$GL" && bad "Get games: A again didn't take the game back: $(cat "$GL")"
-    grep -q 'Pocket Hack' "$FX/data/homesync-get-failed.txt" 2>/dev/null && bad "Get games: taken back, the game kept its last failure: $(cat "$FX/data/homesync-get-failed.txt")"
     rm -f "$FX/data/homesync-get-failed.txt"
     # (a sync that ends without having taken a game asked for on this visit, or said why: started again, once, the
     # page left at once for the Home server page)
     : > "$SL"; rm -f "$BANANA_RUN/sync.status"
     FAKE_SYNC_DONE=1 ug "$GET; press a; press down; press a; press b; press b; sleep 1500; wait 1100; sleep 1500; wait 1100; sleep 1500; wait 1100"
-    n=$(grep -c ' sync$' "$SL")
+    n=$(grep -c ' sync --games-only$' "$SL")
     [ "$n" = 2 ] || bad "Get games: a sync ending with the game still waiting not started again once ($n syncs): $(cat "$SL")"
+    # (and its line says it was Get games' own, for Sync now's report: the saves weren't looked at)
+    grep -q '^done 0 0 0 0 0 0|games only$' "$BANANA_RUN/sync.status" || bad "Get games: its run's line doesn't say so: $(cat "$BANANA_RUN/sync.status")"
     : > "$GL"
     # (search, Y: from the systems every system's games, part of a title; B takes it away)
     ug "$GET; press y; type pock; press start; wait 300; shot hs-get-search; press a; sleep 300; wait 300; press b; press b; wait 100"

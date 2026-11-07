@@ -22,7 +22,7 @@ lines() {
         *) printf 'conflict\t5/autosave\tsaves/gba/Orchard Tactics.srm\t\taa\t8192\tbb\t8192\tOther Handheld\t2026-11-01T10:00:00\t/v/x.srm\tboth\tgba/Orchard Tactics.gba\tboth\nkept\tsaves/gba/Orchard Tactics.srm\t/v/20261101T100000Z-bb.srm\t8192\n' ;;
     esac
 }
-conf= run= when= status=
+conf= run= when= status= gonly=
 report=
 while [ $# -gt 0 ]; do
     case $1 in
@@ -32,6 +32,7 @@ while [ $# -gt 0 ]; do
     --status) status=$2; shift 2 ;;
     --report) report=$2; shift 2 ;;
     --root|--settings|--rom) shift 2 ;;
+    --games-only) gonly='games only'; shift ;;
     discover) [ "${FAKE_SYNC_FIND:-}" = romm ] && exit 0; printf 'ROMHOST\thttp://192.168.50.96:8092\tTest server\n'; exit 0 ;;
     saves) lines; exit 0 ;;
     # the server's games for Get games: one on the card, one not
@@ -67,8 +68,8 @@ while [ $# -gt 0 ]; do
 done
 # the sync before a game, as $FAKE_SYNC_LAUNCH says: done at once, a conflict held, failed, the first answer and then
 # nothing, nothing at all, or the saves held by another sync for 8 s (held) or for good (heldlong) and then nothing
-# (FAKE_SYNC_DONE: a sync run by hand says it's done a second later, as banana-sync's own would)
-[ -z "$when" ] && [ -n "${FAKE_SYNC_DONE:-}" ] && [ -n "$status" ] && { sleep 1; echo 'done 0 0 0 0 0 0|' > "$status.new"; mv "$status.new" "$status"; exit 0; }
+# (FAKE_SYNC_DONE: a sync run by hand says it's done a second later, as banana-sync's own would, Get games' own saying so)
+[ -z "$when" ] && [ -n "${FAKE_SYNC_DONE:-}" ] && [ -n "$status" ] && { sleep 1; echo "done 0 0 0 0 0 0|$gonly" > "$status.new"; mv "$status.new" "$status"; exit 0; }
 # the sync after a game, as $FAKE_SYNC_QUIT says: the save sent (a second's run with slow), nothing to send, a conflict
 # held, the server out of reach (the save kept to send later), a note with nothing sent, a game whose saves stay here,
 # or a run gone with its "running" line left (stuck: the line three minutes old); held: that line as old, but the run
