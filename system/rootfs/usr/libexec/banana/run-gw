@@ -73,7 +73,7 @@ cd $D
 /usr/bin/mame-gnw "$GAME" \
     -rompath "$ROMS" -artpath "$ART" -ctrlrpath /usr/share/banana/mame-gnw -ctrlr banana \
     -inipath $D/ini -cfg_directory $D/cfg -nvram_directory /data/saves/gameandwatch \
-    -state_directory /data/states/gameandwatch -snapshot_directory /data/screenshots -homepath $D \
+    -state_directory /data/states/gameandwatch -snapshot_directory /data/screenshots -snapname "%g-%i" -homepath $D \
     -skip_gameinfo -nowindow -video accel -view "$VIEW" -uifont /usr/share/banana/rnds/fonts/PixelifySans-Medium.ttf \
     -joystick -joystickprovider sdlgame -sound sdl &
 PID=$!

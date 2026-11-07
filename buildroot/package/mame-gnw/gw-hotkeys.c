@@ -4,6 +4,7 @@
  *   F + Start    quit: SIGTERM (MAME's patched SDL_QUIT saves and exits), SIGKILL if it's still there after 5 s
  *   F on its own pressed and released with no other key in between: SIGUSR1 (MAME's patch opens or closes its menu)
  *   L2           swap the panels: SIGUSR2 (MAME's patch draws the window's halves swapped)
+ *   F + L2       a screenshot, as in the DS emulators: SIGWINCH (MAME's patch saves the view on the panels)
  * Exits when PID does.
  */
 #include <fcntl.h>
@@ -90,7 +91,7 @@ int main(int argc, char **argv)
             if (ev.code == BTN_START) {
                 start_down = ev.value != 0;
             } else if (ev.code == BTN_TL2 && ev.value) {
-                kill(pid, SIGUSR2);
+                kill(pid, f_down ? SIGWINCH : SIGUSR2);
             }
         }
         if (f_down && start_down) {

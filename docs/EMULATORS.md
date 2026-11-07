@@ -301,7 +301,8 @@ as they are downloaded: nothing per game in BananaOS, no layouts of its own.
 - **Input**: SDL's game controller (the pad's line from SDL's database), `/usr/share/banana/mame-gnw/banana.cfg`:
   Start = Game A, Select = Game B, L = Time, R = Alarm, a right-hand pair (Mario Bros.) on X/B. MAME doesn't see F:
   `gw-hotkeys` (in the package) reads the pad beside it: F + Start quits (`SIGTERM`, `SIGKILL` after 5 s), F alone
-  opens the menu (`SIGUSR1`; the game paused), L2 swaps the panels (`SIGUSR2`).
+  opens the menu (`SIGUSR1`; the game paused), L2 swaps the panels (`SIGUSR2`), F + L2 saves a
+  screenshot of the view on the panels (`SIGWINCH`, patch 0009) as `/data/screenshots/<game>-<n>.png`.
 - **The launcher** (`run-gw`): ROMs in `roms/gameandwatch` on either card, the artwork beside them in `artwork/`;
   MAME's settings in `/data/mame-gnw`, the games' memory (high scores) in `saves/gameandwatch`, the log of the
   last game in `banana/logs/mame-gnw/last.log`.
