@@ -1301,7 +1301,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::string b;
 			cs >> b;
 			const int code = b == "f" ? BTN_MODE : b == "back" ? BTN_Z : b == "l2" ? BTN_TL2 : b == "r2" ? BTN_TR2 : b == "l3" ? BTN_THUMBL : b == "r3" ? BTN_THUMBR : 0;
-			const bool changed = settings.gameButton(code);
+			const bool changed = settings.gameButton(code, now);
 			logf("gbutton %s: %s view %s", b.c_str(), changed ? "switched" : "nothing", settings.gamePanelView().c_str());
 		}
 		else if (op == "gtouch")
@@ -2405,6 +2405,7 @@ int main(int argc, char** argv)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
+		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
@@ -2659,7 +2660,7 @@ int main(int argc, char** argv)
 						if (ev.type == InputEvent::PRESS)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
-							if (settingsView.gameButton(ev.code)) want = true;
+							if (settingsView.gameButton(ev.code, nowMs())) want = true;
 							return;
 						}
 						if (ev.type == InputEvent::RELEASE) return;

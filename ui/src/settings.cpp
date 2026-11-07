@@ -439,13 +439,11 @@ namespace banana
 		// L2, R2, L3 and R3, a row each (keys <prefix>l2<suffix>...: nds_btn_l2, ra_btn_r3.snes), R3's help saying the RG DS
 		// Plus has none. As INFO rows (a hotkeys page's) they show those keys' rows as they are now (mirror), key "hk"
 		auto buttonRows = [&](const char* section, const char* icon, const std::string& help, const std::string& file, const std::string& prefix,
-			const std::string& suffix, const std::vector<std::string>& names, const std::vector<std::string>& values, Item::Kind kind = Item::CHOICE, bool back = false)
+			const std::string& suffix, const std::vector<std::string>& names, const std::vector<std::string>& values, Item::Kind kind = Item::CHOICE)
 		{
-			for (const char* b : { "L2", "R2", "L3", "R3", "Back" })
+			for (const char* b : { "L2", "R2", "L3", "R3" })
 			{
-				if (b[0] == 'B' && !back) continue;	// (the back button beside F: the Game Boy Advance's Companion)
-				std::string key = prefix + b + suffix;
-				for (size_t i = prefix.size(); i < prefix.size() + strlen(b); i++) key[i] = (char)tolower((unsigned char)key[i]);
+				const std::string key = prefix + (char)tolower(b[0]) + b[1] + suffix;
 				const std::string h = help + (std::string(b) == "R3" ? " (The RG DS Plus has no R3.)" : "");
 				add(section, icon, b, h.c_str(), file, kind == Item::INFO ? "hk" : key.c_str(), names, values, kind);
 				if (kind == Item::INFO) items.back().mirror = key;
@@ -808,7 +806,10 @@ namespace banana
 					n.insert(n.end() - 1, "Companion");
 					v.insert(v.end() - 1, "companion");
 					buttonRows(sec.c_str(), "gamepad", std::string(help) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
-						menu, "ra_btn_", "." + id, n, v, Item::CHOICE, true);
+						menu, "ra_btn_", "." + id, n, v);
+					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
+					add(sec.c_str(), "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
+						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
 				}
 				else
 					buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);

@@ -339,12 +339,30 @@ namespace banana
 		gcView = gcLast = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
 		// the buttons that switch between the menu and the companion: a job of Companion (Settings > Other systems >
-		// Buttons > Game Boy Advance; run-retroarch takes them off the game). Back's by default
+		// Buttons > Game Boy Advance, the one system with the row; run-retroarch takes L2/R2/L3/R3 with it off the game,
+		// Back is no RetroPad button). Back's by default (the template's)
 		gCompKeys.clear();
+		if (system == "Game Boy Advance")
 		{
 			static const struct { const char* b; int code; } BTNS[] = { { "back", BTN_Z }, { "l2", BTN_TL2 }, { "r2", BTN_TR2 }, { "l3", BTN_THUMBL }, { "r3", BTN_THUMBR } };
+			std::map<std::string, std::string> conf;
+			{
+				std::ifstream f(data + "/settings.conf");
+				std::string ln;
+				while (std::getline(f, ln))
+				{
+					const size_t eq = ln.find('=');
+					if (ln.compare(0, 7, "ra_btn_") || eq == std::string::npos) continue;
+					auto trim = [](std::string t) { while (!t.empty() && isspace((unsigned char)t.back())) t.pop_back(); size_t a = 0; while (a < t.size() && isspace((unsigned char)t[a])) a++; return t.substr(a); };
+					conf[trim(ln.substr(0, eq))] = trim(ln.substr(eq + 1));	// (the last line counts, as getConfValue)
+				}
+			}
 			for (auto& b : BTNS)
-				if (getConfValue(data + "/settings.conf", std::string("ra_btn_") + b.b + ".gba", strcmp(b.b, "back") ? "" : "companion") == "companion") gCompKeys.push_back(b.code);
+			{
+				auto it = conf.find(std::string("ra_btn_") + b.b + ".gba");
+				const std::string v = it != conf.end() ? it->second : strcmp(b.b, "back") ? "" : "companion";
+				if (v == "companion") gCompKeys.push_back(b.code);
+			}
 		}
 		gIconTex = nullptr;
 		gIconBadge = -1;
@@ -506,6 +524,8 @@ namespace banana
 		if (gbaPanel.active()) { gbaPanel.showMenu(); return; }
 		if (!gameComp || !gameComp->active() || gcView == GC_GAME) return;
 		gcLast = gcView;
+		const gcomp::Def* d = gameComp->game();
+		gcFightAtMenu = d && d->pages[gcomp::P_BATTLE].when.set && gameComp->pageOn(gcomp::P_BATTLE);
 		gcView = GC_GAME; gcScreen = 0; gcList = gcRow = -1;
 		gameComp->want(-1);
 	}
@@ -517,17 +537,21 @@ namespace banana
 		if (gbaPanel.active()) { gbaPanel.toggle(now); return; }
 		if (!gameComp || !gameComp->active()) return;
 		if (gcView != GC_GAME) { compMenu(); return; }
-		// (back on the page the menu left; Battle when a fight started meanwhile)
+		// (back on the page the menu left - Status for a Battle page whose fight is over -, Battle when a fight started
+		// meanwhile)
 		gcView = gcLast;
 		const gcomp::Def* d = gameComp->game();
-		if (d && d->pages[gcomp::P_BATTLE].when.set && gameComp->pageOn(gcomp::P_BATTLE)) gcView = gcomp::P_BATTLE;
+		const bool fight = d && d->pages[gcomp::P_BATTLE].when.set && gameComp->pageOn(gcomp::P_BATTLE);
+		if (gcView == gcomp::P_BATTLE && d && d->pages[gcomp::P_BATTLE].when.set && !fight) gcView = gcomp::P_STATUS;
+		if (fight && !gcFightAtMenu) gcView = gcomp::P_BATTLE;
 		gcScreen = 0; gcList = gcRow = -1;
 		gameComp->want(gcView);
 	}
 
-	bool Settings::gameButton(int code)
+	bool Settings::gameButton(int code, double nowMs)
 	{
 		if (!compOn() || gKeysOpen) return false;
+		now = nowMs;	// (a press can come long after the last update: the pages' notices and animations from now)
 		const bool onComp = gbaPanel.active() ? gbaPanel.pagesShown() : gcView != GC_GAME;
 		if (code == BTN_MODE) { if (!onComp) return false; compMenu(); return true; }	// (F: the menu, where its combos are)
 		if (std::find(gCompKeys.begin(), gCompKeys.end(), code) == gCompKeys.end()) return false;

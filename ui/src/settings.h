@@ -126,7 +126,7 @@ namespace banana
 		// a button pressed while the game runs (its evdev code; the game has it too): F shows the menu (its tiles, where
 		// F's combos are printed), a button whose job is Companion (Settings > Other systems > Buttons > Game Boy
 		// Advance: Back's, by default) switches between the menu and the companion. True: the panel changed
-		bool gameButton(int code);
+		bool gameButton(int code, double nowMs);
 		void gameTouchMove(float x, float y);				// a press moving (the GBA companion's pages scroll by drag)
 		// the GBA Pokémon companion's pages (gba/panel.h) for the game the host runs one for: host, null none (after
 		// gameOpen, with companion set); gbaRelease before the host goes
@@ -709,6 +709,7 @@ namespace banana
 		// rows were drawn (for touch)
 		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };	// (GC_GAME: the menu)
 		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1, gcLast = 0;	// (gcLast: the page the menu left)
+		bool gcFightAtMenu = false;	// (a fight was on when the menu was shown: back to the page left, not Battle)
 		bool gcBattle = false;
 		float gcTabX[GC_TABS] = {}, gcTabW[GC_TABS] = {};
 		struct GcHit { float y0, y1; int list, row; };

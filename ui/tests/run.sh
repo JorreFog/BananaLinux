@@ -487,7 +487,7 @@ for size in 640x480 1024x768; do
     if [ -n "$UB" ]; then
         UL=$OUT/$size-gba-unbound.log
         "$HERE/banana-ui" --headless "$OUT/$size-ub-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 600 28; gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447; gshot ub-map" 2> "$UL" ||
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 600 28; gshot ub-again; gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447; gshot ub-map" 2> "$UL" ||
             { echo "FAIL $size: banana-ui (Unbound's pages) exited $?"; fail=1; }
         grep -q "gbahost: ready Unbound view pages:" "$UL" || { echo "FAIL $size: Unbound's pages: $(grep -E 'gbahost|gba companion' "$UL" | head -n 3 | tr '\n' ' ')"; fail=1; }
         grep -q "gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447: action 0 keys 0 view pages:Map" "$UL" || { echo "FAIL $size: Unbound's Map tab: $(grep "gtouch $((12 + 4 * 604 / 8 + 604 / 16)) 447" "$UL")"; fail=1; }

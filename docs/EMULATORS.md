@@ -113,9 +113,10 @@ load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by defaul
 with F held, so `run-retroarch` lists the jobs in `/run/banana/ra-buttons` and moves those buttons' RetroPad binds to
 joystick buttons no pad has (30-33; put back after the game), and bananad sends the job's command down RetroArch's
 stdin pipe when the button is pressed without F. PlayStation and N64 games keep the four buttons, which they use.
-The Game Boy Advance's page has a fifth row, **Back** (the button beside F, `ra_btn_back.gba`), and a job of its own,
-**Companion** (the template's for Back): banana-ui switches the second screen between its menu and the Pokémon or Game
-companion; `run-retroarch` takes an L2/R2/L3/R3 with that job off the game as it does for Nothing.
+The Game Boy Advance's page has a fifth row, **Back** (the button beside F, `ra_btn_back.gba`: Companion, the
+template's, or Nothing - it is no RetroPad button, so RetroArch's jobs aren't offered), and a job of its own for all
+five, **Companion**: banana-ui switches the second screen between its menu and the Pokémon or Game companion;
+`run-retroarch` takes an L2/R2/L3/R3 with that job off the game as it does for Nothing.
 The left stick works as the d-pad in every system but N64 (RetroArch's `input_player1_analog_dpad_mode = "1"`, for the
 run only); a PlayStation game with the core's DualShock pad keeps its analog stick.
 

@@ -111,8 +111,8 @@ namespace banana::nds
 		uint16_t dexSel = 1;
 		int partyIdx = 0;
 		int pickedSeason = -1;
-		int matchFoe = -1;
-		std::string backLabel;		// the Battle page: the foe whose type matchups show in place of the moves (-1 the moves)
+		int matchFoe = -1;			// the Battle page: the foe whose type matchups show in place of the moves (-1 the moves)
+		std::string backLabel;		// (setBackLabel)
 		friend struct Impl;
 	};
 

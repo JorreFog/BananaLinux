@@ -100,7 +100,7 @@ namespace banana
 			{
 				bool any = testBit(abs, ABS_HAT0X);
 				for (int k = KEY_ESC; k < KEY_MAX && !any; k++)
-					if (testBit(keys, k) && mapKey(k) != Key::NONE) any = true;
+					if (testBit(keys, k) && mapKey(k) != Key::NONE && mapKey(k) != Key::OTHER) any = true;
 				if (!any) { ::close(fd); continue; }
 				// a pad's left stick: moves the cursor as the d-pad does (its range from the driver)
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y))

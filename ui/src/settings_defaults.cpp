@@ -46,6 +46,7 @@ namespace banana
 		// Nintendo DS > Buttons: L2, R2, L3 and R3's job in both DS emulators (nds-buttons)
 		// Other systems > Buttons > a system: L2, R2, L3 and R3 in its RetroArch games (run-retroarch, bananad)
 		const char* const RA_BTN[] = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "companion", "none", nullptr };
+		const char* const RA_BTN_BACK[] = { "companion", "none", nullptr };
 		const char* const NDS_BTN[] = { "a", "b", "x", "y", "l", "r", "start", "select", "swap", "save", "load", "ff", "blow", "menu", "none", nullptr };
 		const char* const ASK[] = { "ask", "always", "never", nullptr };
 
@@ -85,7 +86,7 @@ namespace banana
 			{ "ra_btn_r2", "game", ENUM, RA_BTN, 0, 0, true, true },
 			{ "ra_btn_l3", "game", ENUM, RA_BTN, 0, 0, true, true },
 			{ "ra_btn_r3", "game", ENUM, RA_BTN, 0, 0, true, true },
-			{ "ra_btn_back", "none", ENUM, RA_BTN, 0, 0, true, true },	// (the Game Boy Advance's: companion, the template's)
+			{ "ra_btn_back", "companion", ENUM, RA_BTN_BACK, 0, 0, true, true },	// (the Game Boy Advance's row alone: banana-ui's)
 			{ "ra_swap_ab", "off", ENUM, ON_OFF, 0, 0, true, true },
 			{ "nds_emulator", "superdrastic", ENUM, NDS, 0, 0, true },
 			{ "nds_btn_l2", "swap", ENUM, NDS_BTN, 0, 0, true },
