@@ -1,0 +1,182 @@
+#!/bin/sh
+# The Game & Watch games' names, years, makers and covers, from MAME itself and the user's own artwork, with no
+# connection: written for the menu as the scraper writes them, into roms/gameandwatch/gamelist.xml (a game entry
+# added for each game it doesn't have yet; entries already there are left alone) and media/box/<game>.png (only where
+# there's no cover). Run in the background, at low priority, when the menu starts and when a Game & Watch folder
+# changes (systems.conf's "changed": the menu's watch on the games folders, once the copying has been quiet; a sync,
+# file sharing, the Files page, a card put in; what changed during a game, when it ends).
+#   gw-meta [<folder>...]      default: roms/gameandwatch on the card, and on the second card while it's in
+# The name: MAME's description without "Game & Watch: " ("Donkey Kong II"). The cover: MAME's picture of the game
+# after a second, MAME's least (its LCD as it starts), in the artwork's "Unit Only" view (the console), else its first
+# "Background" view; 480 pixels high. A game without artwork gets none (the bare LCD looked poor): the menu shows its
+# own picture until the artwork comes, and the cover is drawn then.
+MAME=${MAME:-/usr/bin/mame-gnw}
+# MAME draws the covers off screen: none of a game's display settings (run-gw starts this with them set, and SDL's
+# panel mode would try to take the panels from the menu), SDL's plain dummy display and no sound
+unset SDL_BANANA_PANELS SDL_BANANA_TOP SDL_GAMECONTROLLERCONFIG BANANA_TARGET_HEIGHT BANANA_SVG_MAXW
+export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
+LOCK=/run/banana/gw-meta.lock
+mkdir -p /run/banana
+if ! mkdir $LOCK 2>/dev/null; then
+    # one is running: it looks once more before it ends (the games copied while it drew its covers)
+    : > $LOCK/again 2>/dev/null
+    exit 0
+fi
+TMP=/run/banana/gw-meta.$$
+trap 'rm -rf $TMP $LOCK' EXIT INT TERM
+# its log (this run's), unless started with its output somewhere already (a terminal)
+if [ ! -t 1 ]; then
+    mkdir -p /data/banana/logs/mame-gnw 2>/dev/null
+    exec > /data/banana/logs/mame-gnw/meta.log 2>&1
+fi
+mkdir -p $TMP
+
+if [ $# -eq 0 ]; then
+    set -- /data/roms/gameandwatch
+    SD2=$(cat /run/banana/sd2/roms 2>/dev/null)
+    if [ -n "$SD2" ] && [ "$SD2" != /data/roms ]; then
+        set -- "$@" "$SD2/gameandwatch"
+    fi
+fi
+
+# anything to do: a game with no entry in its folder's gamelist.xml, or with its artwork and no cover (most menu
+# starts and folder changes have none: no MAME at all)
+todo() {
+    for dir in "$@"; do
+        for z in "$dir"/*.zip "$dir"/*.ZIP; do
+            [ -f "$z" ] || continue
+            f=$(basename "$z")
+            g=${f%.*}
+            if ! grep -q "<path>\./$f</path>" "$dir/gamelist.xml" 2>/dev/null; then
+                return 0
+            fi
+            if [ -f "$dir/artwork/$g.zip" ] && [ ! -f "$dir/media/box/$g.png" ] && [ ! -f "$dir/media/box/$g.jpg" ]; then
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+
+# every game MAME knows: short name TAB description TAB year TAB maker (as XML text, as -listxml writes them)
+machines() {
+$MAME -listxml 2>/dev/null | awk '
+    /<machine name="/ { n = $0; sub(/.*<machine name="/, "", n); sub(/".*/, "", n); d = ""; y = ""; m = "" }
+    /<description>/ { d = $0; sub(/.*<description>/, "", d); sub(/<\/description>.*/, "", d) }
+    /<year>/ { y = $0; sub(/.*<year>/, "", y); sub(/<\/year>.*/, "", y) }
+    /<manufacturer>/ { m = $0; sub(/.*<manufacturer>/, "", m); sub(/<\/manufacturer>.*/, "", m) }
+    /<\/machine>/ { if (n != "") print n "\t" d "\t" y "\t" m; n = "" }' > $TMP/machines.tsv
+if [ ! -s $TMP/machines.tsv ]; then
+    echo "gw-meta: no game list from MAME" >&2
+    exit 1
+fi
+}
+
+# while a game is playing (banana-ui's /run/banana/game.pid, its process still there), wait: no CPU taken from it
+wait_idle() {
+    while pid=$(cat /run/banana/game.pid 2>/dev/null) && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; do
+        sleep 10
+    done
+}
+
+# the cover of game $1 in folder $2, into $2/media/box/$1.png
+cover() {
+    wait_idle
+    g=$1
+    dir=$2
+    art=$dir/artwork/$g.zip
+    view=
+    size=
+    if unzip -l "$art" 2>/dev/null | grep -q 'default\.lay$'; then
+        unzip -p "$art" default.lay > $TMP/lay 2>/dev/null
+        # the view, and its bounds' width and height (the first <bounds> after its name)
+        view=$(awk '
+            function attr(s, a,   v) { v = s; if (!sub(".*" a "=\"", "", v)) return ""; sub(/".*/, "", v); return v }
+            /<view name="/ { v = attr($0, "name"); if (v ~ /^Unit Only/ && u == "") u = v; if (v ~ /^Background/ && b == "") b = v }
+            END { print (u != "" ? u : b) }' $TMP/lay)
+        if [ -n "$view" ]; then
+            # the view's own <bounds> where it has one, else (as MAME does) the area all its items cover
+            size=$(awk -v want="$view" '
+                function attr(s, a,   v) { v = s; if (!sub(".*[ <]" a "=\"", "", v)) return ""; sub(/".*/, "", v); return v }
+                /<view name="/ { inview = (attr($0, "name") == want); next }
+                inview && /<\/view>/ { inview = 0; done = 1 }
+                inview && /<bounds / {
+                    x = attr($0, "x") + 0; y = attr($0, "y") + 0; w = attr($0, "width") + 0; h = attr($0, "height") + 0
+                    if ($0 ~ /^[ \t]*<bounds /) { vw = w; vh = h; next }
+                    if (!n++ || x < x0) x0 = x; if (n == 1 || y < y0) y0 = y
+                    if (n == 1 || x + w > x1) x1 = x + w; if (n == 1 || y + h > y1) y1 = y + h
+                }
+                END {
+                    if (vw > 0 && vh > 0) { w = vw; h = vh } else { w = x1 - x0; h = y1 - y0 }
+                    if (w > 0 && h > 0) printf "%dx480", 480 * w / h
+                }' $TMP/lay)
+        fi
+    fi
+    rm -f $TMP/$g.png
+    if [ -z "$view" ] || [ -z "$size" ]; then
+        return
+    fi
+    nice -n 19 $MAME "$g" -rompath "$dir" -artpath "$dir/artwork" -video none -sound none -seconds_to_run 1 \
+        -snapview "$view" -snapsize "$size" -snapname "%g" -snapshot_directory $TMP \
+        -cfg_directory $TMP -nvram_directory $TMP -inipath $TMP -homepath $TMP -skip_gameinfo >$TMP/mame.log 2>&1
+    if [ -s $TMP/$g.png ]; then
+        mkdir -p "$dir/media/box"
+        mv -f $TMP/$g.png "$dir/media/box/$g.png.new" && mv -f "$dir/media/box/$g.png.new" "$dir/media/box/$g.png"
+        echo "gw-meta: cover for $g ($view)"
+    else
+        echo "gw-meta: no cover for $g: $(tail -n 3 $TMP/mame.log | tr '\n' ' ')" >&2
+    fi
+}
+
+run() {
+for dir in "$@"; do
+    [ -d "$dir" ] || continue
+    GL=$dir/gamelist.xml
+    : > $TMP/new
+    for z in "$dir"/*.zip "$dir"/*.ZIP; do
+        [ -f "$z" ] || continue
+        f=$(basename "$z")
+        g=${f%.*}
+        line=$(grep "^$g	" $TMP/machines.tsv)
+        [ -n "$line" ] || continue
+        # the entry, unless gamelist.xml has one for this file
+        if ! grep -q "<path>\./$f</path>" "$GL" 2>/dev/null; then
+            printf '%s\n' "$line" | awk -F'\t' -v f="$f" '{
+                d = $2; sub(/^Game &amp; Watch: /, "", d)
+                printf "\t<game>\n\t\t<path>./%s</path>\n\t\t<name>%s</name>\n", f, d
+                if ($3 ~ /^[0-9][0-9][0-9][0-9]$/) printf "\t\t<releasedate>%s0101T000000</releasedate>\n", $3
+                if ($4 != "") printf "\t\t<developer>%s</developer>\n\t\t<publisher>%s</publisher>\n", $4, $4
+                printf "\t</game>\n" }' >> $TMP/new
+        fi
+        # the cover, unless the folder has one (the user's, a scraper's or an earlier run's)
+        if [ ! -f "$dir/media/box/$g.png" ] && [ ! -f "$dir/media/box/$g.jpg" ]; then
+            cover "$g" "$dir"
+        fi
+    done
+    # the new entries into gamelist.xml (before its closing tag; a new file if there's none), written beside it and
+    # renamed over it
+    if [ -s $TMP/new ]; then
+        if [ -f "$GL" ] && grep -q '</gameList>' "$GL"; then
+            awk -v add="$TMP/new" '/<\/gameList>/ && !done { while ((getline l < add) > 0) print l; done = 1 } { print }' "$GL" > "$GL.new"
+        else
+            { printf '<?xml version="1.0"?>\n<gameList>\n'; cat $TMP/new; printf '</gameList>\n'; } > "$GL.new"
+        fi
+        mv -f "$GL.new" "$GL"
+        echo "gw-meta: $(grep -c '<game>' $TMP/new) name(s) added to $GL"
+    fi
+done
+}
+
+# again while another start asked for it during this run
+while :; do
+    rm -f $LOCK/again
+    if todo "$@"; then
+        if [ ! -s $TMP/machines.tsv ]; then
+            machines
+        fi
+        run "$@"
+        sync
+    fi
+    [ -e $LOCK/again ] || break
+done
+exit 0

@@ -41,6 +41,14 @@ A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.
 
+Game & Watch (MAME): the games' MAME ROM zips in roms/gameandwatch (gnw_dkong2.zip...), and their MAME artwork zips,
+as you downloaded them, in roms/gameandwatch/artwork (the same names: gnw_dkong2.zip). On the second SD card the same
+folders. Without artwork a game still plays, its plain LCD. Names and covers fill in by themselves (the covers drawn
+from the artwork). Start = Game A, Select = Game B, L = Time, R = Alarm; F opens the menu (views, controls, Quit),
+F + Start quits, L2 swaps the panels, F + L2 saves a screenshot (in screenshots). From a RomM server: its Game & Watch
+platform, the artwork in its artwork folder (not its covers: "covers =" under [gameandwatch] in banana/systems.conf
+brings them instead of the drawn ones).
+
 Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (the systems
 list, to add or change emulators: only what you change, e.g. "[psx]" and a "run = ..." line under it; it is merged over
 the built-in list, banana/systems.conf.default, so the rest keeps up with updates).

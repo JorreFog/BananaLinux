@@ -1,0 +1,49 @@
+BANANA_UI_HEIGHT: the menus and messages drawn in the window's top rows only. On the RG DS one window spans both
+panels; a two-screen game's menu was centred on the whole window, split across the two panels. Now it's on the top
+one, as a one-screen game's.
+
+diff --git a/src/emu/render.cpp b/src/emu/render.cpp
+index 2bc6ac84..d634c1dc 100644
+--- a/src/emu/render.cpp
++++ b/src/emu/render.cpp
+@@ -59,10 +59,19 @@
+ #include "corestr.h"
+ 
+ #include <algorithm>
++#include <cstdlib>
+ #include <limits>
+ 
+ 
+ 
++// Banana: BANANA_UI_HEIGHT, the menus and messages drawn in the window's top rows only (the RG DS's top panel of a
++// window that spans both: a two-screen game's menu on one panel, not split across the two)
++static int banana_ui_height(int height)
++{
++	static int const cap = []() { const char *const h = getenv("BANANA_UI_HEIGHT"); return h ? atoi(h) : 0; }();
++	return (cap > 0 && cap < height) ? cap : height;
++}
++
+ //**************************************************************************
+ //  CONSTANTS
+ //**************************************************************************
+@@ -1738,7 +1747,7 @@ render_primitive_list &render_target::get_primitives()
+ 		ui_xform.xoffs = 0;
+ 		ui_xform.yoffs = 0;
+ 		ui_xform.xscale = (float) m_width;
+-		ui_xform.yscale = (float) m_height;
++		ui_xform.yscale = (float) banana_ui_height(m_height);
+ 		ui_xform.color.r = ui_xform.color.g = ui_xform.color.b = ui_xform.color.a = 1.0f;
+ 		ui_xform.orientation = m_orientation;
+ 		ui_xform.no_center = false;
+@@ -3495,9 +3504,9 @@ float render_manager::ui_aspect(render_target &target)
+ 	int const orient = orientation_add(target.orientation(), target.ui_container()->orientation());
+ 	float aspect;
+ 	if (!(orient & ORIENTATION_SWAP_XY))
+-		aspect = float(target.height()) / float(target.width());
++		aspect = float(banana_ui_height(target.height())) / float(target.width());
+ 	else
+-		aspect = float(target.width()) / float(target.height());
++		aspect = float(target.width()) / float(banana_ui_height(target.height()));
+ 
+ 	// if we have a valid pixel aspect, apply that and return
+ 	if (target.pixel_aspect() != 0.0F)
