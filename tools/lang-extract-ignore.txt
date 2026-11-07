@@ -90,7 +90,14 @@ restore {f}
 drop {gamesync}
 --rom {f}
 rename {gamesync}
+probe {gamesync}
+@~\{syncTool\} --root .*
+# the status line the menu writes for its own Sync now, as banana-sync's are (running ...|...)
+@~(?s)\{runDir\}running .*
+@~(?s)\{runDir\}error .*
 
 # the save sync's sizes: pieces of a longer line, never on screen alone
 {folder} KB
 %lld KB
+# the URL keyboard's L chip: pieces of an address, typed the same in every language
+.com, https://

@@ -751,7 +751,7 @@ namespace banana
 			add(FS, "phone", "SSH", "A shell on the handheld from a computer, over Wi-Fi.", menu, "ssh", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Off.", "On: ssh root@<address>." };
 		}
-		add(W, "phone", "Home server", "Your games, box art and saves from your own server: RomM or Romhost.",
+		add(W, "phone", "Home server", "Your saves synced, and your games, from your own RomM or Romhost server.",
 			"", "homesync", {}, {}, Item::PAGE);
 		const char* S = "System";
 		{
@@ -947,9 +947,9 @@ namespace banana
 			items.back().hints = { "The game starts at once.", "With Auto sync on. B plays at once." };
 			add(HS, "phone", "Save states", "Whether save states sync too.",
 				menu, "homesync_states", { "Off", "On" }, { "off", "on" });
-			items.back().hints = { "Only the games' own saves.", "Save states too. A state from RomM goes to the vault. Quick-resume states never sync." };
-			add(HS, "phone", "Manage saves", "Conflicts to settle, held saves, and kept copies to put back.", "", "hs_saves", {}, {}, Item::PAGE);
-			add(HS, "phone", "Systems", "Which systems' saves sync. One game's can stay here: X on it, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
+			items.back().hints = { "Only the games' own saves.", "Save states too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync." };
+			add(HS, "phone", "Manage saves", "Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.", "", "hs_saves", {}, {}, Item::PAGE);
+			add(HS, "phone", "Systems", "Which systems' saves sync. For one game: X on it in the library, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
 			add(HS, "phone", "Device name", "This handheld's name in RomM, shown on the saves it sends.", "", "hs_name", {}, {}, Item::PAGE);
 			// (Check certificate is on Server's RomM form only, where the address is: changed there it holds at once)
 		}
@@ -976,7 +976,7 @@ namespace banana
 			add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 				menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 			items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects. Never while a game runs." };
-			add(HS, "phone", "Manage saves", "Conflicts to settle, held saves, and kept copies to put back.", "", "hs_saves", {}, {}, Item::PAGE);
+			add(HS, "phone", "Manage saves", "Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.", "", "hs_saves", {}, {}, Item::PAGE);
 		}
 		if (!hsRowsFor.empty())
 		{
@@ -2388,9 +2388,9 @@ namespace banana
 		if (cur.key == "hs_server")
 		{
 			std::string n = homeServer();
-			help = n.empty() ? "Not paired. A sets it up: RomM (its address, on this network or on the internet, then a QR code to approve this handheld from your phone) or Romhost (found on this network, then the code Homeport shows)."
-				: hsBackend() == "romm" ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate: a change to Check certificate holds at once, and Connect pairs again (another server, or after the handheld was removed there)."
-				: "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again (another server, or after the handheld was removed there).";
+			help = n.empty() ? "Not paired. A pairs this handheld with RomM or Romhost."
+				: hsBackend() == "romm" ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again."
+				: "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again.";
 		}
 		if (cur.key == "hs_sync" && !syncLine.empty() && !syncing())
 		{
@@ -3036,6 +3036,10 @@ namespace banana
 		{ "https://", "http://", "romm.", ".com", ".net" },
 		{ ".org", ".local", ".ts.net", ":", "/" },
 	};
+	// and under them the other characters an address can have, once each (the symbols' own last rows repeat a few, and
+	// ":" and "/" are keys above)
+	static const char* URLSYMS[2] = { "-_.~@#?&=%", "!$()*+,;[]" };
+	static char keyChar(bool url, int layer, int row, int col) { return url && row >= 2 ? URLSYMS[row - 2][col] : KEYS[layer][row][col]; }
 	static int fkeyAt(int col)
 	{
 		for (int i = 0; i < 5; i++) if (col >= FKEYS[i].c0 && col < FKEYS[i].c0 + FKEYS[i].span) return i;
@@ -3065,7 +3069,7 @@ namespace banana
 		}
 		if (row < 4)
 		{
-			if (pw.size() < entryMax) pw += KEYS[layer][row][col];
+			if (pw.size() < entryMax) pw += keyChar(urlKeys(), layer, row, col);
 			message.clear();
 			return MOVED;
 		}
@@ -3537,11 +3541,11 @@ namespace banana
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: entry == ENTRY_HS_ADDR ? "Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
-			: entry == ENTRY_HS_URL ? "RomM's host name or IP (romm.example.com, 192.168.1.20), with a path if RomM is served under one (example.com/romm). A full URL works too (https://romm.example.com:8443/romm): the scheme goes to Protocol and the port to Port. L: the symbols, and keys for https://, romm., .com and the like."
-			: entry == ENTRY_HS_PORT ? "The port, when RomM isn't on the protocol's usual one (443 for HTTPS, 80 for HTTP). Nothing: the usual. START when it is typed."
+			: entry == ENTRY_HS_URL ? "As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed."
+			: entry == ENTRY_HS_PORT ? "Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed."
 			: entry == ENTRY_HS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM."
 			: entry == ENTRY_BETA_PASS ? "The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only."
-			: entry == ENTRY_HS_CODE && hsKind == "romm" ? "In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234. It works for 60 seconds, so type it soon. A client token itself (rmm_...) works too. START when it is typed."
+			: entry == ENTRY_HS_CODE && hsKind == "romm" ? "In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed."
 			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device. START when it is typed."
 			: entry == ENTRY_DS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf)."
 			: entry == ENTRY_GAME_NAME || entry == ENTRY_GAME_SORT ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card."
@@ -3600,7 +3604,7 @@ namespace banana
 				float x = KX + c * KPITCH, y = KY + r * KROW;
 				bool on = r == krow && c == kcol;
 				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
-				std::string k(1, KEYS[layer][r][c]);
+				std::string k(1, keyChar(urlKeys(), layer, r, c));
 				float tw = text(k, true, 28, 0, 0, p.ink, false, 0, true);
 				text(k, true, 28, x + std::round((KPITCH - 6 - tw) / 2), y + 13, on ? p.onPick : p.ink);
 			}
@@ -3627,6 +3631,9 @@ namespace banana
 		// Files' names: SELECT leaves it as it was, in Y Space's place (five chips don't fit the 640 px row; Y still types
 		// a space, as the Space key and the help say)
 		if (entry == ENTRY_FOLDER || entry == ENTRY_RENAME) cs.push_back({ Key::SELECT, "SELECT", "Cancel" });
+		// a server's address: L's keys that type a piece of an address, named where the buttons are, since only the help
+		// said where they were, in Y Space's place (an address has no spaces)
+		else if (entry == ENTRY_HS_URL) cs.push_back({ Key::L, "L", layer == 2 ? "abc" : ".com, https://" });
 		else cs.push_back({ Key::Y, "Y", "Space" });
 		cs.push_back({ Key::START, "START", entry == ENTRY_WIFI ? "Join" : "Done", true });
 		return cs;
@@ -5422,9 +5429,14 @@ namespace banana
 				{
 					// (each piece named, so a translation can place each one; ", from <device>" translated on its own, since the value a
 					// placeholder captures never is)
+					// (both times in this handheld's time zone: the card's save by its file's time, the server's from its UTC stamp)
 					const std::string& device = f[8];
-					std::string here = bytes(f[5]), server = bytes(f[7]), from = device.empty() ? "" : lang::tr(", from " + device),
-						when = f[9].size() < 16 ? "" : ", " + f[9].substr(0, 10) + " " + f[9].substr(11, 5);
+					auto stamp = [](time_t t) { struct tm tm; char b[32]; localtime_r(&t, &tm); strftime(b, sizeof b, ", %Y-%m-%d %H:%M", &tm); return std::string(b); };
+					struct stat st;
+					struct tm sv = {};
+					std::string here = bytes(f[5]) + (::stat((data.substr(0, data.rfind('/')) + "/" + f[2]).c_str(), &st) == 0 ? stamp(st.st_mtime) : ""),
+						server = bytes(f[7]), from = device.empty() ? "" : lang::tr(", from " + device),
+						when = f[9].size() >= 19 && strptime(f[9].c_str(), "%Y-%m-%dT%H:%M:%S", &sv) ? stamp(timegm(&sv)) : "";
 					g.detail = "This handheld: " + here + ". The server: " + server + from + when + ". The one not chosen stays in the vault.";
 				}
 				else if (kind == "both") g.detail = "Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.";
@@ -6408,8 +6420,7 @@ namespace banana
 				: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
 				  "A types it; an empty one sorts by the name again."
 				: row == PG_SYNC && !message.empty() ? message
-				: row == PG_SYNC ? "On: this game's saves sync with RomM, as every game's on the card do. Off: they stay on this handheld, "
-				  "neither sent nor taken, for a playthrough of its own on this device. Its saves on the server are left as they are."
+				: row == PG_SYNC ? "On: this game's saves sync with RomM. Off: they stay on this handheld only, for a playthrough of its own here; the server's are left as they are."
 				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
 				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
 				  "game, no BIOS. A asks first; A again deletes.")
@@ -7644,7 +7655,7 @@ namespace banana
 	}
 	void Settings::runSync()
 	{
-		std::ofstream(runDir + "/sync.status") << "running 0 0 |starting\n";
+		std::ofstream(runDir + "/sync.status") << "running 0 0 |\n";
 		syncLine.clear();
 		syncNext = 0;
 		// (Get games' own run brings the games asked for and leaves the saves to the syncs that are for them)

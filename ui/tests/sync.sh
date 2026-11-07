@@ -756,6 +756,9 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -q 'probe --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the form's address not asked as one URL: $(cat "$SL")"
     grep -q 'pair --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the device flow not started at the address checked: $(cat "$SL")"
     grep -q 'discover' "$SL" && bad "RomM: looked on the LAN for Romhost"
+    # (the URL keyboard's L chip, tapped, opens the address keys as L does: http:// typed from them, over the form's https)
+    ur urlchip "press a; press a; touch 1 345 442; wait 100; shot hs-urlchip; press up; press right; press a; type romm.example.com; press start; press start; sleep 300; wait 300" FAKE_SYNC_PAIR=hang
+    grep -q 'probe --romm http://romm.example.com$' "$SL" || bad "RomM: the L chip's keys didn't type http://: $(cat "$SL")"
     rlog romm "home server: RomM 5.4.1 at https://romm.example.com:8443/romm"
     rlog romm "home server: code ABCD-EFGH, approve at https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH"
     rlog romm "home server: QR code"

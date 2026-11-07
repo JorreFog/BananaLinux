@@ -409,8 +409,8 @@ namespace banana
 		{
 			text("Pair with a server", true, 30, 170, 88, p.ink);
 			std::string help = hsSel == 0
-				? "RomM, the self-hosted game library: on this network or on the internet, by its address. You approve this handheld from your phone by scanning a QR code."
-				: "Romhost, Homeport's ROM library, on this network: found by itself, then paired with the code Homeport shows (ROMs > Pair a device).";
+				? "RomM, on this network or the internet. You approve this handheld by scanning a QR code with your phone."
+				: "Romhost (Homeport), on this network: found by itself, then paired with the code Homeport shows.";
 			if (paired) help += " This replaces the pairing with " + homeServer() + ".";
 			wrapped(help, 20, 50, 196, 540, 10, p.muted);
 		}
@@ -422,11 +422,11 @@ namespace banana
 			rawText = false;
 			int row = rows[hsSel];
 			std::string help = !hsMsg.empty() ? hsMsg
-				: row == F_PROTO ? "HTTPS for a server on the internet (a Cloudflare tunnel, a reverse proxy) or one with a certificate. HTTP for a plain one on this network."
-				: row == F_ADDR ? "Its name or IP, as in a browser (romm.example.com, 192.168.1.20), with a path if RomM is served under one (example.com/romm). A full URL works too: the scheme goes to Protocol and the port to Port."
-				: row == F_PORT ? "Only when RomM isn't on the protocol's usual port (443 for HTTPS, 80 for HTTP), such as 8080."
-				: row == F_TLS ? "On: the server's certificate is checked, as a browser does. Off: for a server with a certificate of its own making (a name on the LAN, no CA for it). Leave it On on a network you don't trust. With a server paired, a change holds at once, with no pairing again."
-				: "Asks " + (hsHost.empty() ? std::string("the address") : hsBase()) + " for RomM, then shows a code and a QR code to approve this handheld from your phone.";
+				: row == F_PROTO ? "HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network."
+				: row == F_ADDR ? "As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm."
+				: row == F_PORT ? "Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP)."
+				: row == F_TLS ? "On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once."
+				: "Asks " + (hsHost.empty() ? std::string("the address") : hsBase()) + " for RomM, then shows a QR code to approve this handheld from your phone.";
 			wrapped(help, 20, 50, 196, 540, 10, hsMsg.empty() ? p.muted : p.ink);
 		}
 		else
