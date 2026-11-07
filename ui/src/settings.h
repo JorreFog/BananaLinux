@@ -203,6 +203,7 @@ namespace banana
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
+			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
