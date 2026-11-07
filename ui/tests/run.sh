@@ -421,7 +421,8 @@ for size in 640x480 1024x768; do
     done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
     # decoder's test): its pages from the start - the made-up ROM is none of the games the pages read, so "Not
-    # supported" alone, as for a ROM hack not in the list -, Back to game (the tiles, no tabs of the pages), a battle;
+    # supported" alone, as for a ROM hack not in the list -, Back to game (the tiles, no tabs of the pages), a battle
+    # (the tiles stay);
     # then the same in the light theme and in Chinese
     klog=$OUT/$size-pokemon.log
     pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; gbahost; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 600 28; gshot pk-game; \
@@ -436,7 +437,7 @@ for size in 640x480 1024x768; do
     kcheck "pokefeed .*poke-party.txt: asked [0-9]*, party 4, battle 0, foes 0, view pages:Party"
     kcheck "gtouch 600 28: action 0 keys 0 view game"
     kcheck "gtouch 185 447: action 0 keys 0 view game"
-    kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle"
+    kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view game"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
     # the GBA companion's pages (gba/panel.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): its
     # data read, Back to game shows the tiles with the pages' own tabs, and each of those opens its page
@@ -450,9 +451,12 @@ for size in 640x480 1024x768; do
             gs="$gs; gtouch 600 28; gshot gba-game-$i; gtouch $((18 + i * 604 / 9 + 604 / 18)) 447; gshot gba-tab-$page"
             i=$((i + 1))
         done
+        # a battle starting shows the Battle page (the made-up battle's replies on the player's Emerald)
+        gs="$gs; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot gba-battle"
         "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
             --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
         grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
+        grep -q "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle" "$GL" || { echo "FAIL $size: a battle didn't show the Battle page: $(grep poke-battle "$GL" | tail -1)"; fail=1; }
         grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Back to game didn't show the tiles: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
         i=0
         for page in Battle Party Team Here Map Guide Dex Log; do
@@ -532,7 +536,8 @@ for size in 640x480 1024x768; do
     # the first-time setup's slides and the first boot's arrival
     . "$HERE/tests/setup.sh"
     # each view drew something of its own (not the same frame again)
-    for pair in "pk-party pk-game" "pk-game pk-team" "pk-game pk-battle" "pk-party zh-pk-party"; do
+    # (a ROM not supported: the tiles have no tabs and a battle leaves them be, so pk-game, pk-team and pk-battle match)
+    for pair in "pk-party pk-game" "pk-party zh-pk-party"; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
