@@ -840,6 +840,15 @@ if [ -x "$HERE/banana-ui" ]; then
     ug "$GET; wait 100"
     [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: another server's kept list was shown: $(cat "$SL")"
     rm -f "$GKF"
+    # (saves to settle: counted on Manage saves' row and on Network's Home server row, nothing said with none)
+    NET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; wait 100"
+    ug "$NET; shot net-settle0; press a; press down; press down; press down; press down; press down; press down; wait 100; shot hs-settle0"
+    cp "$FX/data/romsync.json" "$OUT/romsync-plain.json"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1", "conflicts": {"5/autosave": {"path": "saves/gba/Orchard Tactics.srm", "why": "both changed"}}, "held": {"6/autosave": {"path": "saves/gba/Aaa.srm", "why": "a format this handheld doesn'"'"'t read"}}}\n' > "$FX/data/romsync.json"
+    ug "$NET; shot net-settle1; press a; press down; press down; press down; press down; press down; press down; wait 100; shot hs-settle1"
+    cp "$OUT/romsync-plain.json" "$FX/data/romsync.json"
+    cmp -s "$OUT/ui-net-settle0-bot.png" "$OUT/ui-net-settle1-bot.png" && bad "Network's Home server row: saves to settle not counted"
+    cmp -s "$OUT/ui-hs-settle0-bot.png" "$OUT/ui-hs-settle1-bot.png" && bad "Manage saves' row: saves to settle not counted"
     # (Sync now as Wi-Fi comes back, pressed as the lid opens: it waits, and starts once Wi-Fi has an address)
     HSN="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a"
     rm -f "$BANANA_RUN/sync.status"; : > "$SL"

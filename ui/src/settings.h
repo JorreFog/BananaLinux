@@ -686,6 +686,8 @@ namespace banana
 		std::string homeServer() const;		// the paired server's name, "" when none
 		std::string hsBackend() const;		// the paired server's kind: "romm", "romhost", "" when none
 		mutable std::string hsPaired, hsPairedKind, hsPairedUrl;
+		mutable int hsConflicts = 0, hsHeld = 0;	// the paired server's saves to settle and held back (romsync.json)
+		std::string hsSettleShort() const;		// "1 conflict, 2 held", "" for none
 		mutable double hsPairedAt = -1e18;
 		std::string hsRowsFor = "?";		// the kind the Home server page's rows were made for (build())
 		void hsRebuild();					// the rows made again for the kind paired now, the cursor on the same row

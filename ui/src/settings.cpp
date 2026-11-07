@@ -947,7 +947,7 @@ namespace banana
 			add(HS, "phone", "Save states", "Whether save states sync too.",
 				menu, "homesync_states", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Only the games' own saves.", "Save states too. A state from RomM goes to the vault. Quick-resume states never sync." };
-			add(HS, "phone", "Saves", "Conflicts to settle, held saves, and kept copies.", "", "hs_saves", {}, {}, Item::PAGE);
+			add(HS, "phone", "Manage saves", "Conflicts to settle, held saves, and kept copies to put back.", "", "hs_saves", {}, {}, Item::PAGE);
 			add(HS, "phone", "Systems", "Which systems' saves sync. One game's can stay here: X on it, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
 			// (Check certificate is on Server's RomM form only, where the address is: changed there it holds at once)
 		}
@@ -974,7 +974,7 @@ namespace banana
 			add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 				menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 			items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects. Never while a game runs." };
-			add(HS, "phone", "Saves", "Conflicts to settle, held saves, and kept copies.", "", "hs_saves", {}, {}, Item::PAGE);
+			add(HS, "phone", "Manage saves", "Conflicts to settle, held saves, and kept copies to put back.", "", "hs_saves", {}, {}, Item::PAGE);
 		}
 		if (!hsRowsFor.empty())
 		{
@@ -2399,7 +2399,7 @@ namespace banana
 				in >> g >> rm >> up >> dn >> cf >> er;
 				std::string why = syncLine.find('|') == std::string::npos ? "" : syncLine.substr(syncLine.find('|') + 1);
 				help = "Last sync: " + std::to_string(g) + " files of games down, " + std::to_string(rm) + " removed; saves " + std::to_string(up) + " up, " + std::to_string(dn) + " down" +
-					(cf ? "; " + std::to_string(cf) + (hsBackend() == "romhost" ? " in conflict (decide in Homeport)" : " in conflict (both are kept and the save is held: choose on Saves)") : "") +
+					(cf ? "; " + std::to_string(cf) + (hsBackend() == "romhost" ? " in conflict (decide in Homeport)" : " in conflict (both are kept and the save is held: choose on Manage saves)") : "") +
 					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : why.empty() ? "." : ". " + why + ".");
 			}
 			else if (syncLine.compare(0, 16, "error noconnect ") == 0) help = "The last sync couldn't reach the server: " + syncLine.substr(16) + ". Check Wi-Fi, then Sync now again.";
@@ -2632,7 +2632,9 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
+			else if (it.kind == Item::PAGE && it.key == "homesync" && !hsStep && !homeServer().empty() && !hsSettleShort().empty()) v = hsSettleShort();	// (saves to settle: said a level up too)
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
+			else if (it.kind == Item::PAGE && it.key == "hs_saves") v = hsSettleShort();
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (it.kind == Item::PAGE && it.key == "hs_get") v = getWaiting > 0 ? std::to_string(getWaiting) + " waiting" : "";
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
@@ -7517,7 +7519,18 @@ namespace banana
 		hsPaired = !paired ? "" : j->str("serverName").empty() ? j->str("server") : j->str("serverName");
 		hsPairedKind = paired ? j->str("backend") : "";
 		hsPairedUrl = paired ? j->str("server") : "";
+		// (what Manage saves has to settle, counted for its row and the Home server row above it)
+		auto count = [&](const char* k) { const JVal* o = paired ? j->get(k) : nullptr; return o && o->isObj() ? (int)o->obj.size() : 0; };
+		hsConflicts = count("conflicts");
+		hsHeld = count("held");
 		return hsPaired;
+	}
+	std::string Settings::hsSettleShort() const
+	{
+		homeServer();
+		std::string s = hsConflicts ? std::to_string(hsConflicts) + (hsConflicts == 1 ? " conflict" : " conflicts") : "";
+		if (hsHeld) s += (s.empty() ? "" : ", ") + std::to_string(hsHeld) + " held";
+		return s;
 	}
 	std::string Settings::hsBackend() const
 	{

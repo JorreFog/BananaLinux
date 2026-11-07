@@ -290,7 +290,8 @@ by its members' CRCs against RomM's `archive_members`; any other file by its has
 
 The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on RomM
 what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses, before
-the game starts or on Settings > Network > Home server > Saves. That page also lists the kept copies, which it can put
+the game starts or on Settings > Network > Home server > Manage saves, whose row (and the Home server row a level up) counts
+the conflicts and the saves held back. That page also lists the kept copies, which it can put
 back; nothing on the handheld removes one. All of it goes through `banana-sync` (`saves`, `resolve`, `restore`),
 under `/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the
 vault. Keeping the card's is an ordinary sync that knows the choice, so a server that moved meanwhile is held again.
