@@ -3,13 +3,16 @@
  "kind": "nds-pokemon-guide",
  "game": "soulgold",
  "code": "BPEE",
- "title": "Pokemon SoulGold (v1.1.4)",
- "revision": 1,
+ "title": "Pokemon SoulGold (v1.1.4 to 1.2.1)",
+ "revision": 2,
  "sources": [
-  "The ROM itself (SoulGold 1.1.4, pokeemerald-expansion 1.15 build; its map sections are 16-bit): region map section names (each place resolves to a section with maps) and trainer names, teams and levels (Classic and Hard teams), read on the PC with throwaway tools",
+  "The ROM itself (SoulGold 1.1.4, 1.2 and 1.2.1, pokeemerald-expansion 1.15 builds; their map sections are 16-bit): region map section names (each place resolves to a section with maps), trainer names, teams and levels (Classic and Hard teams) and the item and move evolution methods, read on the PC with throwaway tools",
   "GitHub Eemeliri/soulgold: README (features, optional level caps) and release notes",
   "pokemonsoulgold.com: changelog, about page, gift Pokémon guide",
-  "soulgold.run (unofficial fan docs): FAQ, walkthrough, starters, legendaries; romhackguides.com (1.1.2)"
+  "soulgold.run (unofficial fan docs): FAQ, walkthrough, starters, legendaries; romhackguides.com (1.1.2)",
+  "SoulGold official docs (eemeliri.github.io/soulgold, v1.2.1): FAQ, legendary locations, gift and trade Pokémon, trophy milestones, hidden grottos, shiny hunting; the trainers and items data (locations)",
+  "soulgold.run: changelog (v1.2 of 3 Oct 2026, v1.2.1 of 25 Oct 2026) and FAQ; GitHub Eemeliri/soulgold release 1.2.1",
+  "Bulbapedia: Pokémon HeartGold and SoulSilver walkthrough (the story beats SoulGold keeps from HGSS)"
  ],
  "places": {
   "new-bark-town": {
@@ -197,6 +200,48 @@
   },
   "dream-garden": {
    "name": "Dream Garden"
+  },
+  "route-47": {
+   "name": "Route 47"
+  },
+  "route-48": {
+   "name": "Route 48"
+  },
+  "route-49": {
+   "name": "Route 49"
+  },
+  "route-50": {
+   "name": "Route 50"
+  },
+  "goldenrod-shore": {
+   "name": "Goldenrod Shore"
+  },
+  "safari-zone": {
+   "name": "Safari Zone"
+  },
+  "nameless-cave": {
+   "name": "Nameless Cave"
+  },
+  "faraway-island": {
+   "name": "Faraway Island"
+  },
+  "kitakami-mountain": {
+   "name": "Kitakami Mountain"
+  },
+  "lost-woods": {
+   "name": "Lost Woods"
+  },
+  "south-johto-sea": {
+   "name": "South Johto Sea"
+  },
+  "rocket-hideout": {
+   "name": "Rocket Hideout"
+  },
+  "battle-factory": {
+   "name": "Battle Factory"
+  },
+  "battle-tower": {
+   "name": "Battle Tower"
   }
  },
  "milestones": [
@@ -210,6 +255,10 @@
     {
      "name": "Gold",
      "ace_level": 4
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 4
     }
    ],
    "done_when": "party",
@@ -218,9 +267,66 @@
     "route-29",
     "cherrygrove-city"
    ],
-   "tips": "Nine starters: Chikorita, Chespin, Sprigatito; Cyndaquil, Fennekin, Torchic; Totodile, Froakie, Popplio. Gold, a second trainer from New Bark, battles you with a Lv 4 Marill. Cherrygrove gives an Alolan Rattata or a Galarian Zigzagoon.",
+   "tips": "Nine starters: Chikorita, Chespin, Sprigatito; Cyndaquil, Fennekin, Torchic; Totodile, Froakie, Popplio. Gold (or Crystal), a second trainer from New Bark, battles you with a Lv 4 Marill. Cherrygrove gives an Alolan Rattata or a Galarian Zigzagoon once you have Poké Balls.",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table; pokemonsoulgold.com (changelog, gift Pokémon)"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "rival-cherrygrove",
+   "name": "Rival: the passerby in Cherrygrove",
+   "kind": "rival",
+   "place": "cherrygrove-city",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "???",
+     "class": "PKMN Trainer",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "A passerby (the rival, shown as ??? until you learn his name) battles you with a lone Lv 5 Chikorita, Cyndaquil or Totodile. He also hands you the Exp. Share before you reach Violet City.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Cherrygrove City); SoulGold docs: items (Exp. Share)"
+  },
+  {
+   "id": "story-expert-nate",
+   "name": "Route Expert Nate",
+   "kind": "story",
+   "place": "route-31",
+   "level_cap": 8,
+   "foe": [
+    {
+     "name": "Nate",
+     "class": "Cooltrainer",
+     "ace_level": 8
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The first of five optional Route Experts: Alolan Geodude and Mareep (Lv 8). Water and Grass moves handle the Geodude.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: FAQ (Route Experts)"
+  },
+  {
+   "id": "story-sprout-li",
+   "name": "Elder Li in Sprout Tower",
+   "kind": "story",
+   "place": "sprout-tower",
+   "level_cap": 10,
+   "foe": [
+    {
+     "name": "Li",
+     "class": "Sage",
+     "ace_level": 10
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Natu, Ralts and Bellsprout (Lv 9-10) at the top of Sprout Tower. As in HGSS, beating him earns Flash. After the eighth badge he waits for you again; then the tower's basement holds Marshadow.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; Bulbapedia: HGSS walkthrough (Sprout Tower); SoulGold docs: legendary locations (Marshadow)"
   },
   {
    "id": "gym-1-falkner",
@@ -252,6 +358,25 @@
    "tips": "Flying types: Pidgey, Gligar, Pidgeotto (Lv 11-12). Electric, Ice and Rock moves. Hard mode has its own teams (often a level higher, gyms as double battles).",
    "quality": "reference-only",
    "source": "ROM SoulGold 1.1.4 trainer table; GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "team-eto-well",
+   "name": "Rocket Eto in Slowpoke Well",
+   "kind": "team",
+   "place": "slowpoke-well",
+   "level_cap": 17,
+   "foe": [
+    {
+     "name": "Eto",
+     "class": "Team Rocket",
+     "ace_level": 17
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "A named grunt with a Lv 17 Sandile on B1F; you meet him again in the Mahogany hideout and under Goldenrod. Water, Grass or Fighting moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Slowpoke Well B1F)"
   },
   {
    "id": "team-slowpoke-well",
@@ -316,21 +441,46 @@
   },
   {
    "id": "story-gold-route-34",
-   "name": "Gold on Route 34",
+   "name": "Gold or Crystal on Route 34",
    "kind": "story",
    "place": "route-34",
-   "level_cap": 22,
+   "level_cap": 23,
    "foe": [
     {
      "name": "Gold",
      "ace_level": 22
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 23
     }
    ],
    "done_when": "none",
    "opens": [],
-   "tips": "Gold again: Zorua, Oricorio, Azumarill (Lv 22).",
+   "tips": "Gold or Crystal again: Zorua, Oricorio, Azumarill (Lv 22-23).",
    "quality": "reference-only",
    "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "story-expert-kiana",
+   "name": "Route Expert Kiana",
+   "kind": "story",
+   "place": "goldenrod-shore",
+   "level_cap": 26,
+   "foe": [
+    {
+     "name": "Kiana",
+     "class": "Cooltrainer",
+     "ace_level": 26
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "goldenrod-shore"
+   ],
+   "tips": "Breloom, Lycanroc and Cinccino (Lv 26). Flying moves beat Breloom; Fighting and Steel handle the other two.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: FAQ (Route Experts)"
   },
   {
    "id": "gym-3-whitney",
@@ -359,6 +509,18 @@
    "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
   },
   {
+   "id": "rival-mid",
+   "name": "Rival: Burned Tower",
+   "kind": "rival",
+   "place": "burned-tower",
+   "level_cap": 33,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Floatzel or Haunter, Pawniard, Staravia, a Lampent/Weepinbell/Clodsire and his starter's middle stage at Lv 30-33. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Burned Tower 1F)"
+  },
+  {
    "id": "gym-4-morty",
    "name": "Gym 4: Morty",
    "kind": "gym",
@@ -383,18 +545,6 @@
    "tips": "Ghost types: Corsola, Doublade, Misdreavus, Gengar (Lv 33-34). Dark and Ghost moves. After the Burned Tower, Raikou, Entei and Suicune roam. Hard mode has its own teams (often a level higher, gyms as double battles).",
    "quality": "reference-only",
    "source": "ROM SoulGold 1.1.4 trainer table; GitHub Eemeliri/soulgold README and releases"
-  },
-  {
-   "id": "rival-mid",
-   "name": "Rival: middle battles",
-   "kind": "rival",
-   "place": "ecruteak-city",
-   "level_cap": 33,
-   "done_when": "later",
-   "opens": [],
-   "tips": "Floatzel or Haunter, Pawniard, Staravia, a Lampent/Weepinbell/Clodsire and his starter's middle stage at Lv 30-33. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
-   "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table"
   },
   {
    "id": "gym-5-chuck",
@@ -457,6 +607,28 @@
    "tips": "Golisopod, Wobbuffet, Magnezone (Lv 38-39).",
    "quality": "reference-only",
    "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "story-expert-vera",
+   "name": "Route Expert Vera",
+   "kind": "story",
+   "place": "route-47",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Vera",
+     "class": "Cooltrainer",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-47",
+    "route-48"
+   ],
+   "tips": "Galarian Obstagoon, Alolan Muk, Gliscor and Heracross (Lv 43-44). Fairy for Obstagoon, Ground for Muk, Ice for Gliscor, Flying for Heracross.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: FAQ (Route Experts)"
   },
   {
    "id": "gym-6-jasmine",
@@ -537,6 +709,65 @@
    "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
   },
   {
+   "id": "story-kiyo",
+   "name": "Karate King Kiyo in Mt. Mortar",
+   "kind": "story",
+   "place": "mt-mortar",
+   "level_cap": 42,
+   "foe": [
+    {
+     "name": "Kiyo",
+     "class": "Black Belt",
+     "ace_level": 42
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Hitmonlee, Hitmonchan and Hitmontop (Lv 42) on B1F. Beating him gives you a Tyrogue. Psychic, Flying and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Mt Mortar B1F); SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "story-expert-laurel",
+   "name": "Route Expert Laurel",
+   "kind": "story",
+   "place": "route-43",
+   "level_cap": 46,
+   "foe": [
+    {
+     "name": "Laurel",
+     "class": "Cooltrainer",
+     "ace_level": 46
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Sceptile, Cradily, Hawlucha and Cloyster (Lv 45-46). Ice and Flying moves for the Grass types, Electric for Cloyster.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: FAQ (Route Experts)"
+  },
+  {
+   "id": "team-eto-hideout",
+   "name": "Rocket Eto in the hideout",
+   "kind": "team",
+   "place": "rocket-hideout",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Eto",
+     "class": "Team Rocket",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "rocket-hideout"
+   ],
+   "tips": "Eto again on B3F with a Lv 44 Krookodile: Water, Grass, Ice, Bug and Fighting moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Rocket Hideout B3F)"
+  },
+  {
    "id": "team-rocket-hideout",
    "name": "Rocket hideout in Mahogany",
    "kind": "team",
@@ -557,6 +788,37 @@
    "tips": "Petrel (Scrafty, Persian, Pyroar, Weezing (Lv 47-48)) on B3F and Ariana (Arbok, Vileplume, Dragalge (Lv 48-49)) on B2F.",
    "quality": "reference-only",
    "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "rival-underground",
+   "name": "Rival: Goldenrod Underground",
+   "kind": "rival",
+   "place": "goldenrod-city",
+   "level_cap": 49,
+   "done_when": "later",
+   "opens": [],
+   "tips": "During the Radio Tower takeover he battles you at the underground switches: Gengar or Floatzel, Bisharp, Staraptor, a Clodsire/Victreebel/Chandelure and his starter's final stage (Lv 48-49; 49-51 on Hard). The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Goldenrod City Underground Switches)"
+  },
+  {
+   "id": "team-eto-underground",
+   "name": "Rocket Eto under Goldenrod",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 48,
+   "foe": [
+    {
+     "name": "Eto",
+     "class": "Team Rocket",
+     "ace_level": 48
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Eto's last stand in the underground storage: Krookodile and Rhyperior (Lv 48). Water and Grass moves hit both hard. The storage also holds Leftovers.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Goldenrod City Underground Storage); SoulGold docs: items"
   },
   {
    "id": "team-radio-tower",
@@ -590,7 +852,7 @@
   },
   {
    "id": "story-gold-ice-path",
-   "name": "Gold in the Ice Path",
+   "name": "Gold or Crystal in the Ice Path",
    "kind": "story",
    "place": "ice-path",
    "level_cap": 55,
@@ -598,6 +860,18 @@
     {
      "name": "Gold",
      "ace_level": 55
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 55
+    },
+    {
+     "name": "Gold",
+     "ace_level": 58
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 58
     }
    ],
    "done_when": "none",
@@ -605,9 +879,9 @@
     "route-44",
     "ice-path"
    ],
-   "tips": "Azumarill, Zoroark, Oricorio, Flygon, Ampharos (Lv 54-55). The Ice Path also holds Waterfall.",
+   "tips": "Azumarill, Zoroark, Oricorio, Flygon, Ampharos (Lv 54-55; Hard adds Gogoat, Lv 56-58). The Ice Path also holds Waterfall, and the second Safari Zone area opens before you enter it.",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: FAQ"
   },
   {
    "id": "gym-8-clair",
@@ -638,11 +912,93 @@
    "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
   },
   {
+   "id": "story-blaine-port",
+   "name": "Blaine at the Olivine port",
+   "kind": "story",
+   "place": "olivine-city",
+   "level_cap": 61,
+   "foe": [
+    {
+     "name": "Blaine",
+     "ace_level": 61
+    },
+    {
+     "name": "Blaine",
+     "ace_level": 62
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "faraway-island"
+   ],
+   "tips": "With eight badges, find Blaine inside the Olivine port: Ninetales, Cinderace, Ceruledge, Magmortar, Volcarona (Lv 60-61; Hard adds Emboar, Lv 62). Water, Rock and Ground moves. Beating him opens Faraway Island, home of Mew.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Olivine City Port); SoulGold docs: legendary locations (Mew)"
+  },
+  {
+   "id": "story-kimono-girls",
+   "name": "The Kimono Girls",
+   "kind": "story",
+   "place": "ecruteak-city",
+   "level_cap": 60,
+   "foe": [
+    {
+     "name": "Kuni",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Miki",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Naoko",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Sayo",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Zuki",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Five battles in the Ecruteak Dance Theater, each an Eevee and one Eeveelution (Vaporeon, Flareon, Espeon, Jolteon, Umbreon) at Lv 60. Bring answers to all five types; Fighting moves cover Umbreon, Ghost and Dark cover Espeon.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Ecruteak City Theater)"
+  },
+  {
+   "id": "story-expert-anton",
+   "name": "Route Expert Anton",
+   "kind": "story",
+   "place": "route-27",
+   "level_cap": 63,
+   "foe": [
+    {
+     "name": "Anton",
+     "class": "Cooltrainer",
+     "ace_level": 63
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Galarian Darmanitan, Tauros, Haxorus and Arcanine (Lv 63). Fire and Fairy cover most of it; Ice for Haxorus. Route 27 also gives a Choice Band.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: FAQ (Route Experts)"
+  },
+  {
    "id": "rival-late",
-   "name": "Rival: before the league",
+   "name": "Rival: Victory Road",
    "kind": "rival",
    "place": "victory-road",
-   "level_cap": 51,
+   "level_cap": 65,
    "done_when": "later",
    "opens": [
     "route-45",
@@ -653,9 +1009,9 @@
     "victory-road",
     "indigo-plateau"
    ],
-   "tips": "His full team at Lv 48-51 (Gengar or Floatzel, Bisharp, Staraptor and his starter's final stage). The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "tips": "His final team at Lv 65 (66-67 on Hard): Gengar or Floatzel, Kingambit, Staraptor, a Clodsire/Victreebel/Chandelure, his starter's final stage and Eelektross, Armarouge or Haxorus. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Victory Road 1F)"
   },
   {
    "id": "e4-will",
@@ -774,7 +1130,7 @@
   },
   {
    "id": "post-gold-mt-silver",
-   "name": "Gold on Mt. Silver",
+   "name": "Gold or Crystal on Mt. Silver",
    "kind": "postgame",
    "place": "mt-silver",
    "level_cap": 75,
@@ -782,6 +1138,18 @@
     {
      "name": "Gold",
      "ace_level": 75
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 75
+    },
+    {
+     "name": "Gold",
+     "ace_level": 76
+    },
+    {
+     "name": "Crystal",
+     "ace_level": 76
     }
    ],
    "done_when": "none",
@@ -789,41 +1157,85 @@
     "route-28",
     "mt-silver"
    ],
-   "tips": "Iron Treads, Zoroark, Baxcalibur, Azumarill, Ampharos, Tangrowth (Lv 73-75).",
+   "tips": "Iron Treads, Zoroark, Baxcalibur, Azumarill, Ampharos, Tangrowth (Lv 73-75; Hard has Iron Leaves, Lv 75-76) at the summit. Finishing this rival story gives Jirachi and starts the quest for Cresselia, Darkrai and HM Dive.",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: legendary locations"
   },
   {
    "id": "post-e4-rematch",
-   "name": "League rematch and Title Defense",
+   "name": "Elite Four rematch",
    "kind": "postgame",
    "place": "indigo-plateau",
-   "level_cap": 86,
+   "level_cap": 85,
+   "foe": [
+    {
+     "name": "Will",
+     "ace_level": 85
+    },
+    {
+     "name": "Koga",
+     "ace_level": 85
+    },
+    {
+     "name": "Bruno",
+     "ace_level": 85
+    },
+    {
+     "name": "Karen",
+     "ace_level": 85
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Elite Four return at Lv 85, each with two possible teams (Karen's second is Ghost-heavy: Sableye, Gengar, Chandelure, Mimikyu, Aegislash, Dragapult). After them comes a Title Defense instead of Lance alone.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; soulgold.run changelog (v1.2)"
+  },
+  {
+   "id": "post-title-defense",
+   "name": "Title Defense",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 87,
    "foe": [
     {
      "name": "Lance",
      "ace_level": 86
     },
     {
-     "name": "Will",
-     "ace_level": 85
-    }
-   ],
-   "done_when": "none",
-   "opens": [],
-   "tips": "The Elite Four return at Lv 85 and Lance at 86; then Title Defense, where the challenger changes (Lv 86 aces include Genesect, Zamazenta and Giratina).",
-   "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
-  },
-  {
-   "id": "post-gym-rematches",
-   "name": "Gym rematches",
-   "kind": "postgame",
-   "place": "kitakami-border",
-   "level_cap": 85,
-   "foe": [
+     "name": "Steven",
+     "ace_level": 86
+    },
+    {
+     "name": "Leaf",
+     "ace_level": 87
+    },
     {
      "name": "Falkner",
+     "ace_level": 85
+    },
+    {
+     "name": "Bugsy",
+     "ace_level": 85
+    },
+    {
+     "name": "Whitney",
+     "ace_level": 85
+    },
+    {
+     "name": "Morty",
+     "ace_level": 85
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 85
+    },
+    {
+     "name": "Jasmine",
+     "ace_level": 85
+    },
+    {
+     "name": "Pryce",
      "ace_level": 85
     },
     {
@@ -832,19 +1244,66 @@
     }
    ],
    "done_when": "none",
+   "opens": [],
+   "tips": "After the rematched Elite Four a challenger defends against you: Lance (Lv 86), Steven (86), Leaf (87) or a Johto leader at Lv 85 with a legend in the team (Falkner Landorus, Bugsy Genesect, Whitney Regigigas, Morty Giratina, Chuck Galarian Zapdos, Jasmine Dialga, Pryce Articuno, Clair Rayquaza). A round also respawns the Paradox legends (since 1.2).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Title Defense); soulgold.run changelog (v1.2)"
+  },
+  {
+   "id": "post-gym-rematches",
+   "name": "Gym rematches",
+   "kind": "postgame",
+   "place": "kitakami-border",
+   "level_cap": 81,
+   "foe": [
+    {
+     "name": "Falkner",
+     "ace_level": 76
+    },
+    {
+     "name": "Bugsy",
+     "ace_level": 76
+    },
+    {
+     "name": "Whitney",
+     "ace_level": 76
+    },
+    {
+     "name": "Morty",
+     "ace_level": 77
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 77
+    },
+    {
+     "name": "Jasmine",
+     "ace_level": 78
+    },
+    {
+     "name": "Pryce",
+     "ace_level": 80
+    },
+    {
+     "name": "Clair",
+     "ace_level": 81
+    }
+   ],
+   "done_when": "none",
    "opens": [
     "kitakami-border",
-    "kitakami-village"
+    "kitakami-village",
+    "route-47"
    ],
-   "tips": "The leaders rematch at new places with Lv 76-81 teams, and again with Lv 85 teams holding a legend each.",
+   "tips": "The leaders wait at new places with Lv 76-81 teams (78-84 on Hard): Falkner at the Violet school, Bugsy in the National Park, Whitney on Dept. Store 6F, Morty on the Bellchime Trail, Chuck on the Route 47 bridge, Jasmine in the Olivine café, Pryce at the Lake of Rage, Clair in the Dragon's Den. Beat them all for Victini (the old woman in the Kitakami Border house).",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: FAQ; SoulGold docs: legendary locations"
   },
   {
    "id": "post-steven",
    "name": "Steven",
    "kind": "postgame",
-   "place": "embedded-tower",
+   "place": "kitakami-village",
    "level_cap": 86,
    "foe": [
     {
@@ -860,27 +1319,90 @@
    "opens": [
     "embedded-tower"
    ],
-   "tips": "Skarmory, Aggron, Cradily, Excadrill, Archeops, Metagross (Lv 80-82); beating him opens Rayquaza at the Embedded Tower.",
+   "tips": "Skarmory, Aggron, Cradily, Excadrill, Archeops, Metagross (Lv 80-82; Hard Lv 84-86 with Gholdengo) in a Kitakami house after you become Champion. He gives a Beldum, and beating him opens Rayquaza at the Embedded Tower.",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers; SoulGold docs: legendary locations; SoulGold docs: gift and trade Pokémon"
   },
   {
    "id": "post-leaf",
-   "name": "Leaf",
+   "name": "Green in the Nameless Cave",
    "kind": "postgame",
-   "place": "mt-silver",
+   "place": "nameless-cave",
    "level_cap": 87,
    "foe": [
     {
-     "name": "Leaf",
+     "name": "Green",
      "ace_level": 87
     }
    ],
    "done_when": "none",
-   "opens": [],
-   "tips": "Chansey, Volcarona, Thundurus, Tapu Fini, Dragapult, Venusaur (Lv 85-87).",
+   "opens": [
+    "nameless-cave"
+   ],
+   "tips": "Chansey, Volcarona, Thundurus (Therian), Tapu Fini, Dragapult, Venusaur (Lv 85-87) on B2F of the Nameless Cave (the ROM stores her as Green; the same team, as Leaf, is a Title Defense challenger).",
    "quality": "reference-only",
-   "source": "ROM SoulGold 1.1.4 trainer table"
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Nameless Cave B2F)"
+  },
+  {
+   "id": "post-spirits",
+   "name": "The spirits of the Vajra Pyramid",
+   "kind": "postgame",
+   "place": "vajra-pyramid",
+   "level_cap": 79,
+   "foe": [
+    {
+     "name": "Gastly",
+     "class": "Spirit",
+     "ace_level": 77
+    },
+    {
+     "name": "Haunter",
+     "class": "Spirit",
+     "ace_level": 78
+    },
+    {
+     "name": "Gengar",
+     "class": "Spirit",
+     "ace_level": 79
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "On floor 4 three ghosts fight in turn (Lv 77, 78, 79; the last has Dragapult, Aegislash, Annihilape, Skeledirge, Gengar). This is the Hoopa quest: trade a Tinkaton in Rinto Village first, then explore the pyramid's depths as Champion.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Vajra Pyramid Floor 4); SoulGold docs: legendary locations (Hoopa)"
+  },
+  {
+   "id": "post-battle-cafe",
+   "name": "Battle Café bosses",
+   "kind": "postgame",
+   "place": "route-50",
+   "level_cap": 90,
+   "foe": [
+    {
+     "name": "Nem",
+     "ace_level": 90
+    },
+    {
+     "name": "Simpli",
+     "ace_level": 90
+    },
+    {
+     "name": "Nem",
+     "ace_level": 100
+    },
+    {
+     "name": "Simpli",
+     "ace_level": 100
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-50"
+   ],
+   "tips": "The Route 50 Battle Café's hardest opponents: Nem (Sableye, Flutter Mane, Annihilape, Gholdengo, Gengar, Marshadow) and Simpli (Grimmsnarl, Palafin, Kyogre, Swampert, Dragapult, Kingambit), Lv 90, Lv 100 on Hard. Beating every regular café opponent once earns Diancie.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; SoulGold docs: trainers (Battle Cafe); SoulGold docs: legendary locations (Diancie)"
   },
   {
    "id": "legend-wings",
@@ -981,6 +1503,292 @@
    "done_when": "later",
    "quality": "reference-only",
    "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "step-dexnav-gift",
+   "title": "Poké Balls, DexNav and a gift",
+   "text": "Once you have your first Poké Balls the DexNav unlocks, and Cherrygrove offers a choice of Alolan Rattata or Galarian Zigzagoon. The rival gives the Exp. Share before Violet City.",
+   "stage": "rival-cherrygrove",
+   "places": [
+    "cherrygrove-city",
+    "route-30"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "step-hard-mode",
+   "title": "Classic or Hard",
+   "text": "Hard mode turns gym battles into double battles (unless a setting forces singles) and gives trainers without set moves smarter movesets as you progress. The guide lists both modes' top levels.",
+   "stage": "gym-1-falkner",
+   "places": [
+    "violet-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-candy-jar",
+   "title": "Egg and Candy Jar",
+   "text": "After the first gym Elm's aide brings an egg and the Candy Jar, which banks surplus battle Exp. and turns it into Exp. Candy when used: handy to catch up without breaking a level cap.",
+   "stage": "team-slowpoke-well",
+   "places": [
+    "violet-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; soulgold.run walkthrough"
+  },
+  {
+   "id": "step-grottos",
+   "title": "Hidden Grottos",
+   "text": "Look for odd paths behind trees: Route 32 has the first grotto (Lv 10: Applin, Paldean Wooper, Mareep, Misdreavus). Grottos refill daily, or at once with a Beckoning Bell (one free in Ilex Forest).",
+   "stage": "team-slowpoke-well",
+   "places": [
+    "route-32",
+    "ilex-forest"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: hidden grottos"
+  },
+  {
+   "id": "step-fossils",
+   "title": "Fossils from the Ruins",
+   "text": "Smash rocks in the Ruins of Alph for fossils and have the scientist in the nearby building revive them. Solving all eight puzzles later leads to Celebi.",
+   "stage": "team-slowpoke-well",
+   "places": [
+    "ruins-of-alph"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "step-odd-egg",
+   "title": "The Odd Egg",
+   "text": "The rival's Odd Egg hatches into Bagon, Gible, Feebas, Riolu, Jangmo-o, Hisuian Zorua or Goomy.",
+   "stage": "rival-azalea",
+   "places": [
+    "azalea-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "step-radio-quiz",
+   "title": "Open Whitney's gym",
+   "text": "Her gym stays closed until you complete the quiz on the Radio Tower's first floor. Pick up the Coin Case in the Goldenrod Underground while you're there.",
+   "stage": "gym-3-whitney",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-squirtbottle",
+   "title": "The odd tree",
+   "text": "After the third badge, get the Squirtbottle from the flower shop next to the gym to wake the tree that blocks the way.",
+   "stage": "rival-mid",
+   "places": [
+    "goldenrod-city",
+    "route-36"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-battle-factory",
+   "title": "Battle Factory after gym 3",
+   "text": "The Battle Factory opens after Whitney: rounds there pay for ability changes, IV feathers and Beckoning Bells, and after eight badges it also stocks Nuggets and Big Nuggets.",
+   "stage": "rival-mid",
+   "places": [
+    "goldenrod-city",
+    "battle-factory"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-scaling-gyms",
+   "title": "Gyms 5-7 in any order",
+   "text": "Chuck, Jasmine and Pryce scale with your badges (Lv 42 at four, 45 at five, 48 at six); since 1.1.3 their Classic teams are slightly easier. The optional caps are 42, 45 and 48.",
+   "stage": "gym-5-chuck",
+   "places": [
+    "cianwood-city",
+    "olivine-city",
+    "mahogany-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 trainer table; soulgold.run changelog (1.1.3); SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-olivine-services",
+   "title": "Olivine's services",
+   "text": "Olivine's beach café sells nature mints; the top-right house's tutor master sells every tutor move for 44,444, then teachable from the summary screen.",
+   "stage": "gym-6-jasmine",
+   "places": [
+    "olivine-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-trophies",
+   "title": "Trophies",
+   "text": "Over 100 trophies. The gentleman in the Route 40 house tracks them and rewards 15 (Shiny Genome), 30 (Ash-Greninja), 45 (Poipole), 60 (Eternal Floette), 75 (Zarude) and 100 (original-colour Magearna).",
+   "stage": "gym-6-jasmine",
+   "places": [
+    "route-40"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: trophy milestones"
+  },
+  {
+   "id": "step-mega-ring",
+   "title": "After the takeover",
+   "text": "Clearing the Radio Tower gives the Mega Ring (press START on the move screen to Mega Evolve) and the choice of the Rainbow Wing (Ho-Oh) or the Silver Wing (Lugia). The cap is 55 for this event.",
+   "stage": "team-radio-tower",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: legendary locations"
+  },
+  {
+   "id": "step-safari",
+   "title": "Safari Zone areas",
+   "text": "Most regional forms live in Baoba's Safari Zone. Its second area opens before the Ice Path, the third after you leave Tohjo Falls.",
+   "stage": "story-gold-ice-path",
+   "places": [
+    "safari-zone"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-egg-moves",
+   "title": "Egg move master",
+   "text": "Blackthorn's egg move master sells access to every egg move for 88,888, taught from the summary screen afterwards.",
+   "stage": "gym-8-clair",
+   "places": [
+    "blackthorn-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-money",
+   "title": "Money",
+   "text": "A Pickup Pokémon sends finds to the bag even with a held item. Sell feathers and shards; from Goldenrod, Covet or Thief Route 35's Yanma for Wide Lenses (DexNav chains help). Nuggets at the Battle Factory after eight badges.",
+   "stage": "gym-8-clair",
+   "places": [
+    "route-35",
+    "battle-factory"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-league-mart",
+   "title": "Indigo Plateau mart",
+   "text": "The Pokémon Center mart at the Plateau sells every evolution stone, the Linking Cord, Peat Block and Black Augurite (since 1.2) and the two Charcadet armors: stock up on evolutions before the Elite Four.",
+   "stage": "rival-late",
+   "places": [
+    "indigo-plateau"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items; soulgold.run changelog (v1.2)"
+  },
+  {
+   "id": "step-e4-prep",
+   "title": "Before the Elite Four",
+   "text": "The optional cap is 70 until you become Champion. Will (Psychic), Koga (Poison), Bruno (Fighting) and Karen (Dark) are Lv 67-71, Lance's dragons up to 71; Ice and Fairy moves carry the final fight.",
+   "stage": "rival-late",
+   "places": [
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; ROM SoulGold 1.2.1 trainer table"
+  },
+  {
+   "id": "step-dive",
+   "title": "The Dive questline",
+   "text": "After the Mt. Silver rival story, talk to your rival in their house: Cresselia at the Lake of Rage, then Darkrai at the Cherrygrove inn, then HM Dive (Kyogre and Groudon dive spots).",
+   "stage": "post-gold-mt-silver",
+   "places": [
+    "lake-of-rage",
+    "cherrygrove-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: legendary locations"
+  },
+  {
+   "id": "step-exp-grind",
+   "title": "Training for the postgame",
+   "text": "Kitakami has an Audino/Blissey trainer for 10,000. IVs: feathers (+5 each) and Hyper Training with Bottle Caps in Rinto Village. EV items are buffed and sold in Goldenrod; vitamins go past 100 EVs.",
+   "stage": "post-e4-rematch",
+   "places": [
+    "kitakami-village",
+    "rinto-village"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "step-victini",
+   "title": "Victini",
+   "text": "After becoming Champion talk to the old woman in the Kitakami Border house, then beat every gym leader rematch for Victini.",
+   "stage": "post-gym-rematches",
+   "places": [
+    "kitakami-border"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "step-arceus",
+   "title": "Arceus",
+   "text": "Catch all 608 non-legendary, non-mythical Pokémon, then see Professor Oak on Radio Tower 2F. Since 1.2 the Paradox legends aren't needed for the Pokédex.",
+   "stage": "post-title-defense",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; soulgold.run changelog (v1.2)"
+  },
+  {
+   "id": "step-cafe-legends",
+   "title": "Battle Café points",
+   "text": "Route 50's Battle Café sells legends for points: Galarian birds, the forces of nature and the Tapus at 5 each (the first force also gives the Reveal Glass); Koraidon or Miraidon at 25 once every other Paradox is caught.",
+   "stage": "post-battle-cafe",
+   "places": [
+    "route-50"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
   }
  ],
  "secrets": [
@@ -1119,6 +1927,477 @@
    "place": "dream-garden",
    "quality": "reference-only",
    "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "gift-cherrygrove",
+   "kind": "gift",
+   "text": "A choice of Alolan Rattata or Galarian Zigzagoon.",
+   "place": "cherrygrove-city",
+   "condition": "after your first Poké Balls",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "gift-odd-egg",
+   "kind": "gift",
+   "text": "The rival's Odd Egg: Bagon, Gible, Feebas, Riolu, Jangmo-o, Hisuian Zorua or Goomy.",
+   "place": "azalea-town",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "gift-fossils",
+   "kind": "gift",
+   "text": "Hand fossils from smashed Ruins rocks to the scientist for the matching fossil Pokémon.",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "gift-beldum",
+   "kind": "gift",
+   "text": "Steven gives a Beldum.",
+   "place": "kitakami-village",
+   "condition": "postgame",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "gift-shiny-stone",
+   "kind": "gift",
+   "text": "Elm's lab gives a Shiny Stone.",
+   "place": "new-bark-town",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "gift-choice-band",
+   "kind": "gift",
+   "text": "A Choice Band on Route 27, where the last Route Expert waits.",
+   "place": "route-27",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items; SoulGold docs: trainers"
+  },
+  {
+   "id": "gift-beckoning-bell",
+   "kind": "gift",
+   "text": "Someone in Ilex Forest gives a Beckoning Bell, which refreshes the Hidden Grottos.",
+   "place": "ilex-forest",
+   "quality": "reference-only",
+   "source": "SoulGold docs: hidden grottos"
+  },
+  {
+   "id": "trade-pawmi",
+   "kind": "trade",
+   "text": "Trade a Cottonee for a Pawmi.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-galar-slowpoke",
+   "kind": "trade",
+   "text": "Trade a Slowpoke for a Galarian Slowpoke.",
+   "place": "azalea-town",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-honedge",
+   "kind": "trade",
+   "text": "Trade a Clefairy for a Honedge in the Dept. Store.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-rotom",
+   "kind": "trade",
+   "text": "Trade a Zorua for a Rotom in the Route 39-Route 49 gatehouse.",
+   "place": "route-49",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-hisui-voltorb",
+   "kind": "trade",
+   "text": "Trade a Mareanie for a Hisuian Voltorb.",
+   "place": "olivine-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-gabite",
+   "kind": "trade",
+   "text": "Trade a Dragonair for a Gabite.",
+   "place": "blackthorn-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "trade-meltan",
+   "kind": "trade",
+   "text": "Trade a Tinkaton for a Meltan (bottom house). This trade also starts the Hoopa quest.",
+   "place": "rinto-village",
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon; SoulGold docs: legendary locations"
+  },
+  {
+   "id": "shiny-trades",
+   "kind": "shiny",
+   "text": "NPC trades can be shiny, at 12 times the usual odds: save first and check the trade animation.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: shiny hunting"
+  },
+  {
+   "id": "shiny-starter",
+   "kind": "shiny",
+   "text": "A shiny starter shows a gold ball in Elm's case: save in front of it and soft reset.",
+   "place": "new-bark-town",
+   "quality": "reference-only",
+   "source": "SoulGold docs: shiny hunting"
+  },
+  {
+   "id": "tip-rotom-forms",
+   "kind": "tip",
+   "text": "Show a Rotom to the guard on the Goldenrod Apartment's first floor to open the basement with the form-changing appliances.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "tip-coin-case",
+   "kind": "tip",
+   "text": "The Coin Case lies in the Goldenrod Underground; the casino gachapon behind the prize counter gives any generation's starter (3,000 coins or more; more coins, fewer duplicates).",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: items"
+  },
+  {
+   "id": "legend-articuno",
+   "kind": "legendary",
+   "text": "Articuno on Snowtop Mountain.",
+   "place": "snowtop-mountain",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-mew",
+   "kind": "legendary",
+   "text": "Mew on Faraway Island, opened by beating Blaine at the Olivine port with eight badges.",
+   "place": "faraway-island",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-uxie",
+   "kind": "legendary",
+   "text": "Uxie at the Rock Climb spot near the Berry Man's house.",
+   "place": "route-30",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-mesprit",
+   "kind": "legendary",
+   "text": "Mesprit at the Rock Climb spot near the last bridge before Route 48.",
+   "place": "route-47",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-azelf",
+   "kind": "legendary",
+   "text": "Azelf at the Rock Climb spot in Mahogany Town.",
+   "place": "mahogany-town",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-rayquaza",
+   "kind": "legendary",
+   "text": "Rayquaza at the Embedded Tower once you've beaten Steven in Kitakami.",
+   "place": "embedded-tower",
+   "condition": "after becoming Champion",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-kyogre",
+   "kind": "legendary",
+   "text": "Kyogre: surf south from Route 33, take the first left and dive.",
+   "place": "south-johto-sea",
+   "condition": "HM Dive",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-groudon",
+   "kind": "legendary",
+   "text": "Groudon in a small cave below a Route 50 dive spot.",
+   "place": "route-50",
+   "condition": "HM Dive",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-cresselia",
+   "kind": "legendary",
+   "text": "Cresselia: after the Mt. Silver story see your rival, then the Hidden Power man at the lake, then its north-east corner.",
+   "place": "lake-of-rage",
+   "condition": "postgame",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-darkrai",
+   "kind": "legendary",
+   "text": "Darkrai: show Cresselia to your rival, then enter the Cherrygrove inn with it and solve the inn's puzzle.",
+   "place": "cherrygrove-city",
+   "condition": "postgame",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-jirachi",
+   "kind": "legendary",
+   "text": "Jirachi for finishing the rival story on Mt. Silver.",
+   "place": "mt-silver",
+   "condition": "postgame",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-shaymin",
+   "kind": "legendary",
+   "text": "Shaymin in the Dream Garden, reached from Tohjo Falls.",
+   "place": "dream-garden",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-marshadow",
+   "kind": "legendary",
+   "text": "Marshadow: with eight badges beat Elder Li again, then explore the Sprout Tower basement.",
+   "place": "sprout-tower",
+   "condition": "after the 8th badge",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-creation-trio",
+   "kind": "legendary",
+   "text": "Dialga, Palkia and Giratina: solve all eight Ruins puzzles, bring Hoopa to Celebi's secret room and touch the back wall for the portals.",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-swords",
+   "kind": "legendary",
+   "text": "Cobalion through the Railway Cave's Route 33 exit; Terrakion in Dark Cave North; Virizion on Route 50.",
+   "place": "railway-cave",
+   "condition": "Cobalion and Terrakion after becoming Champion",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-meloetta",
+   "kind": "legendary",
+   "text": "Meloetta in the Ecruteak Dance Theater.",
+   "place": "ecruteak-city",
+   "condition": "after becoming Champion",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-genesect",
+   "kind": "legendary",
+   "text": "Genesect in the Abandoned Rocket Warehouse south of Route 33.",
+   "place": "route-33",
+   "condition": "after becoming Champion",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-kubfu",
+   "kind": "legendary",
+   "text": "Kubfu in the Rock Climb cave in Blackthorn; its scrolls are sold at the Rocket Arcade.",
+   "place": "blackthorn-city",
+   "condition": "Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-bloodmoon",
+   "kind": "legendary",
+   "text": "Bloodmoon Ursaluna: find the Black Mirror on Kitakami Mountain, then follow the Murkrow in the Lost Woods.",
+   "place": "lost-woods",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-ogerpon",
+   "kind": "legendary",
+   "text": "Ogerpon on Kitakami Mountain; Fezandipiti elsewhere in Kitakami after Rock Climb.",
+   "place": "kitakami-mountain",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-chien-pao",
+   "kind": "legendary",
+   "text": "Chien-Pao deeper in the Ice Path.",
+   "place": "ice-path",
+   "condition": "Waterfall and Rock Climb",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-chi-yu",
+   "kind": "legendary",
+   "text": "Chi-Yu: fish in the Battle Café's fountain.",
+   "place": "route-50",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-zeraora",
+   "kind": "legendary",
+   "text": "Zeraora appears outside the Battle Tower after a 30-win streak.",
+   "place": "battle-tower",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-phione",
+   "kind": "legendary",
+   "text": "Phione: fish with a Good or Super Rod where only Shellos and Gastrodon appear; it becomes Manaphy.",
+   "place": "south-johto-sea",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "legend-paradox-walls",
+   "kind": "legendary",
+   "text": "Register every past Paradox for the Unown wall (Walking Wake, Gouging Fire, Raging Bolt; bring the beasts), every future one for Iron Leaves, Boulder and Crown (bring the Swords).",
+   "place": "meteor-island",
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "hidden-pp-up-ice-path",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up.",
+   "place": "ice-path",
+   "condition": "1F",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-pp-up-ilex",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up.",
+   "place": "ilex-forest",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-pp-up-route-47",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up.",
+   "place": "route-47",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-ability-patch",
+   "kind": "hidden-item",
+   "text": "A hidden Ability Patch.",
+   "place": "union-cave",
+   "condition": "B2F",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-hp-up",
+   "kind": "hidden-item",
+   "text": "A hidden HP Up.",
+   "place": "route-38",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-protein",
+   "kind": "hidden-item",
+   "text": "A hidden Protein.",
+   "place": "blackthorn-city",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-iron",
+   "kind": "hidden-item",
+   "text": "A hidden Iron.",
+   "place": "route-48",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-calcium",
+   "kind": "hidden-item",
+   "text": "A hidden Calcium.",
+   "place": "burned-tower",
+   "condition": "B1F",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-zinc",
+   "kind": "hidden-item",
+   "text": "A hidden Zinc.",
+   "place": "kitakami-border",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-carbos",
+   "kind": "hidden-item",
+   "text": "A hidden Carbos.",
+   "place": "route-36",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-never-melt-ice",
+   "kind": "hidden-item",
+   "text": "A hidden Never-Melt Ice in the snow.",
+   "place": "mt-silver",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-soul-dew",
+   "kind": "hidden-item",
+   "text": "The Soul Dew, hidden in the Lati temple.",
+   "place": "vajra-desert-east",
+   "condition": "postgame",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
+  },
+  {
+   "id": "hidden-orbs",
+   "kind": "hidden-item",
+   "text": "The Adamant, Lustrous and Griseous Orbs, hidden at the top of the Spear Pillar.",
+   "place": "spear-pillar",
+   "quality": "reference-only",
+   "source": "SoulGold docs: items"
   }
  ],
  "evolutions": [
@@ -1142,19 +2421,403 @@
    "id": "evo-trades",
    "species": 64,
    "name": "Kadabra",
-   "text": "SoulGold's way of evolving trade evolutions is not documented in the sources; in-game trade Pokémon get 12x shiny odds.",
+   "text": "No trading needed: Kadabra evolves into Alakazam with a Linking Cord, used like a stone. Linking Cords: an item ball on Route 38, the Indigo Plateau and Safari Zone Gate marts, and the Game Corner.",
    "quality": "reference-only",
-   "source": "soulgold.run (unofficial fan docs)"
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Use a Linking Cord for Machamp (no trade).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Use a Linking Cord for Golem; Alolan Graveler too (no trade).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Use a Linking Cord for Gengar (no trade).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-phantump",
+   "species": 708,
+   "name": "Phantump",
+   "text": "Use a Linking Cord for Trevenant (no trade).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Use a Metal Coat on it for Steelix (no trade). Metal Coats: Mahogany's shop after the Rocket hideout, or held by wild Magnemite, Skarmory, Beldum and others.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Use a Metal Coat for Scizor, or Black Augurite for Kleavor (an item ball at the Lake of Rage; the Indigo Plateau mart).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Use a Dragon Scale for Kingdra: Mt. Mortar 2F, Mahogany's shop after the hideout, or held by wild dragons.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Use an Upgrade (Safari Zone Gate mart) for Porygon2.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Use a Dubious Disc (Mahogany's shop after the Rocket hideout) for Porygon-Z.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Use an Electirizer for Electivire; only wild Elekid, Electabuzz and Electivire hold one.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Use a Magmarizer for Magmortar: an item ball in Rinto Village, or held by wild Magby and Magmar.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Use a Protector for Rhyperior: the Kitakami temple storage, or held by wild Rhyhorn and Rhydon.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Use a Reaper Cloth for Dusknoir: Kitakami Mountain 4F, or held by wild Duskull and Dusclops.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Use a Prism Scale for Milotic: an item ball on Route 47, the Game Corner, or held by wild Feebas.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "A Water Stone gives Poliwrath; using a King's Rock gives Politoed (no trade). King's Rocks: Slowpoke Well B2F, Mt. Mortar, Mahogany's shop.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Use a King's Rock for Slowking (no trade). Galarian Slowpoke (the Azalea trade) uses a Galarica Cuff (Slowbro) or Wreath (Slowking), sold in Azalea after four badges.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items; SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Use a Razor Fang, or level up holding one at night, for Gliscor. Razor Fang: Route 47, or held by wild Gligar.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Use a Razor Claw (or level up holding one at night) for Weavile; Hisuian Sneasel uses it for Sneasler. Razor Claw: Route 41.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-ursaring",
+   "species": 217,
+   "name": "Ursaring",
+   "text": "Use a Peat Block for Ursaluna: Dark Cave's north side, or the Indigo Plateau mart.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "A Thunder Stone evolves it into Magnezone; no special place needed.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "A Thunder Stone evolves it into Probopass.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-charjabug",
+   "species": 737,
+   "name": "Charjabug",
+   "text": "A Thunder Stone evolves it into Vikavolt.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-crabrawler",
+   "species": 739,
+   "name": "Crabrawler",
+   "text": "An Ice Stone evolves it into Crabominable.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-quilava",
+   "species": 156,
+   "name": "Quilava",
+   "text": "A Dusk Stone gives Hisuian Typhlosion (Fire/Ghost).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-petilil",
+   "species": 548,
+   "name": "Petilil",
+   "text": "A Sun Stone gives Lilligant; a Dusk Stone gives Hisuian Lilligant.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-exeggcute",
+   "species": 102,
+   "name": "Exeggcute",
+   "text": "A Leaf Stone gives Exeggutor; a Strange Souvenir (Olivine mart) gives Alolan Exeggutor.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-cubone",
+   "species": 104,
+   "name": "Cubone",
+   "text": "A Strange Souvenir (Olivine mart) gives Alolan Marowak.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-koffing",
+   "species": 109,
+   "name": "Koffing",
+   "text": "A Strange Souvenir (Olivine mart) gives Galarian Weezing.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "A Thunder Stone gives Raichu; a Strange Souvenir (Olivine mart) gives Alolan Raichu.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-mime-jr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Level up knowing Mimic for Mr. Mime, or use a Strange Souvenir for Galarian Mr. Mime.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Use an Oval Stone on it (or level it up holding one by day) for Chansey. Wild Chansey often hold one.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "A Dawn Stone turns a male into Gallade (Route 45 item ball; Indigo Plateau mart).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "A Dawn Stone turns a female into Froslass.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-duraludon",
+   "species": 884,
+   "name": "Duraludon",
+   "text": "Use a Metal Alloy for Archaludon; only wild Duraludon hold one.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-applin",
+   "species": 840,
+   "name": "Applin",
+   "text": "Tart Apple: Flapple; Sweet Apple: Appletun; Syrupy Apple: Dipplin. All three are sold in a Route 40 house.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-dipplin",
+   "species": 1011,
+   "name": "Dipplin",
+   "text": "Level it up knowing Dragon Cheer for Hydrapple.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-charcadet",
+   "species": 935,
+   "name": "Charcadet",
+   "text": "Auspicious Armor gives Armarouge (Mt. Mortar 1F north), Malicious Armor gives Ceruledge (Burned Tower B1F); both at the Indigo Plateau mart.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-poltchageist",
+   "species": 1012,
+   "name": "Poltchageist",
+   "text": "Use an Unremarkable Teacup (Olivine mart; Route 35 grotto) for Sinistcha.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-kubfu",
+   "species": 891,
+   "name": "Kubfu",
+   "text": "Use the Darkness Scroll or the Water Scroll for either Urshifu; both are sold at the Rocket Arcade.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-bisharp",
+   "species": 625,
+   "name": "Bisharp",
+   "text": "Level up holding a Leader's Crest by day for Kingambit (an item ball in Azalea; held by wild Bisharp).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-girafarig",
+   "species": 203,
+   "name": "Girafarig",
+   "text": "Level it up knowing Twin Beam for Farigiraf.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-dunsparce",
+   "species": 206,
+   "name": "Dunsparce",
+   "text": "Level it up knowing Hyper Drill for Dudunsparce.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-alolan-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "Alolan Vulpix (and Alolan Sandshrew) need an Ice Stone: Snowtop Mountain or the Indigo Plateau mart.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-hisuian-voltorb",
+   "species": 100,
+   "name": "Voltorb",
+   "text": "The Olivine trade's Hisuian Voltorb evolves with a Leaf Stone.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "evo-hisuian-qwilfish",
+   "species": 211,
+   "name": "Qwilfish",
+   "text": "Hisuian Qwilfish evolves into Overqwil when it levels up knowing Barb Barrage.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-galarian-darumaka",
+   "species": 554,
+   "name": "Darumaka",
+   "text": "Galarian Darumaka needs an Ice Stone for Galarian Darmanitan.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
+  },
+  {
+   "id": "evo-lampent",
+   "species": 608,
+   "name": "Lampent",
+   "text": "A Dusk Stone gives Chandelure (Dark Cave south side, Mt. Mortar B1F).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods); SoulGold docs: items"
+  },
+  {
+   "id": "evo-doublade",
+   "species": 680,
+   "name": "Doublade",
+   "text": "A Dusk Stone gives Aegislash.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.2.1 evolution table (item/move methods)"
   }
  ],
  "notes": [
   {
    "id": "note-version",
    "kind": "version",
-   "title": "SoulGold 1.1.4",
-   "text": "A Johto-only remake on pokeemerald-expansion 1.15 (no Kanto), using an unofficial port of Heart & Soul's assets. 132 areas and every generation's Pokémon, Paradox ones included; Classic and Hard modes. 1.1.4 added innates and night-lighting toggles and an earlier Safari Zone expansion.",
+   "title": "SoulGold 1.1.4 to 1.2.1",
+   "text": "A Johto-only remake on pokeemerald-expansion 1.15 (the official FAQ: no Kanto), using an unofficial port of Heart & Soul's assets. 132 areas and every generation's Pokémon; Classic and Hard modes. 1.1.4 added innate and night-lighting toggles; 1.2 (3 Oct 2026) and 1.2.1 (25 Oct 2026) are covered by the same guide.",
    "quality": "reference-only",
-   "source": "GitHub Eemeliri/soulgold README and releases; pokemonsoulgold.com (changelog, gift Pokémon)"
+   "source": "GitHub Eemeliri/soulgold README and releases; SoulGold docs: FAQ; soulgold.run changelog"
   },
   {
    "id": "note-megas",
@@ -1189,6 +2852,294 @@
    ],
    "quality": "reference-only",
    "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "note-no-kanto",
+   "kind": "version",
+   "title": "No Kanto",
+   "text": "The ROM still carries Kanto map names and Kanto leaders' teams (Lt. Surge, Erika, Misty, Janine, Brock, Sabrina, Blue), but the game has no Kanto: of them only Blaine appears, at the Olivine port. Eight badges.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: trainers; ROM SoulGold 1.2.1 trainer table"
+  },
+  {
+   "id": "note-1-2",
+   "kind": "version",
+   "title": "Version 1.2",
+   "text": "Elite Four rematch and Title Defense teams adjusted; Paradox legends respawn after a Title Defense and no longer count for the Pokédex; Peat Block and Black Augurite sold at the Plateau; shiny parents raise egg odds; Audino gives more Exp.",
+   "quality": "reference-only",
+   "source": "soulgold.run changelog (v1.2); SoulGold docs: FAQ"
+  },
+  {
+   "id": "note-1-2-1",
+   "kind": "version",
+   "title": "Version 1.2.1",
+   "text": "Grotto Pokémon can show as shiny when you enter; a battle status screen; box search by type; DexNav chains survive map changes; more Gen 8 egg moves at the egg tutor; Red and Blue Orbs added to the Plateau mart.",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold release 1.2.1; soulgold.run changelog (v1.2.1)"
+  },
+  {
+   "id": "note-hard-mode",
+   "kind": "tip",
+   "title": "Hard mode",
+   "text": "Gyms become double battles unless a setting forces singles, and trainers without set moves get smarter movesets as you progress. Most bosses have a separate Hard team, usually a level or two higher.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; ROM SoulGold 1.2.1 trainer table"
+  },
+  {
+   "id": "note-caps",
+   "kind": "tip",
+   "title": "Level caps",
+   "text": "Optional: 12, 19, 26, 34, 42, 45, 48, 55 (the Rocket takeover), 58, 62 (until you catch Ho-Oh or Lugia) and 70 (until you become Champion).",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
+  },
+  {
+   "id": "note-trades",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Pawmi for Cottonee (Violet), Galarian Slowpoke for Slowpoke (Azalea), Honedge for Clefairy (Goldenrod Dept. Store), Rotom for Zorua (Route 39/49 gate), Hisuian Voltorb for Mareanie (Olivine), Gabite for Dragonair (Blackthorn), Meltan for Tinkaton (Rinto). Traded Pokémon have 12x shiny odds.",
+   "species": [
+    921,
+    79,
+    679,
+    479,
+    100,
+    444,
+    808
+   ],
+   "names": [
+    "Pawmi",
+    "Slowpoke",
+    "Honedge",
+    "Rotom",
+    "Voltorb",
+    "Gabite",
+    "Meltan"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon; SoulGold docs: shiny hunting"
+  },
+  {
+   "id": "note-gifts",
+   "kind": "gift",
+   "title": "Gift Pokémon",
+   "text": "Alolan Rattata or Galarian Zigzagoon (Cherrygrove), the Odd Egg (rival), fossils (Ruins of Alph), Eevee or Pikachu (Bill), Gimmighoul (Cianwood), Tyrogue (Kiyo), Dratini (Blackthorn), Beldum (Steven), every starter (casino gachapon) and the trophy rewards (Route 40).",
+   "species": [
+    19,
+    263,
+    133,
+    25,
+    999,
+    236,
+    147,
+    374
+   ],
+   "names": [
+    "Rattata",
+    "Zigzagoon",
+    "Eevee",
+    "Pikachu",
+    "Gimmighoul",
+    "Tyrogue",
+    "Dratini",
+    "Beldum"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: gift and trade Pokémon"
+  },
+  {
+   "id": "note-trophies",
+   "kind": "gift",
+   "title": "Trophy rewards",
+   "text": "The Route 40 gentleman: 15 trophies Shiny Genome (makes one Pokémon shiny), 30 Ash-Greninja, 45 Poipole, 60 Eternal Floette, 75 Zarude, 100 original-colour Magearna. All can be shiny.",
+   "species": [
+    658,
+    803,
+    670,
+    893,
+    801
+   ],
+   "names": [
+    "Greninja",
+    "Poipole",
+    "Floette",
+    "Zarude",
+    "Magearna"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: trophy milestones"
+  },
+  {
+   "id": "note-grottos",
+   "kind": "tip",
+   "title": "Hidden Grottos",
+   "text": "A grotto holds a Pokémon 60% of the time (two perfect IVs and its Hidden Ability), a common item 32%, its special item 8%. They refill daily or with a Beckoning Bell. Grottos: Routes 32, 33, 35, 38, 44, 47, Ilex Forest, Goldenrod Shore, Vajra Desert, Lake of Rage.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: hidden grottos"
+  },
+  {
+   "id": "note-shiny",
+   "kind": "tip",
+   "title": "Shiny hunting",
+   "text": "Odds 1/256 by default (1/512 or 1/1024 in the options); no shiny locks. DexNav streaks of 50 and 100 help; shiny parents raise egg odds (no Masuda Method); the beasts' shininess is fixed when the Burned Tower releases them.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: shiny hunting; SoulGold docs: FAQ"
+  },
+  {
+   "id": "note-hms",
+   "kind": "tip",
+   "title": "HMs",
+   "text": "No HM moves to teach: owning the HM and its badge is enough, and Fly works from the Pokégear map. Strength comes from the Olivine café, Waterfall from the Ice Path, Rock Climb after badge 8, Dive late in the postgame.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ; SoulGold docs: legendary locations"
+  },
+  {
+   "id": "note-title-defense",
+   "kind": "tip",
+   "title": "Title Defense",
+   "text": "After the Elite Four rematch you defend the title against a changing challenger (Lance, Steven, Leaf, or a Johto leader with a legend) instead of the same Champion every time.",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README; SoulGold docs: trainers (Title Defense)"
+  },
+  {
+   "id": "note-paradox",
+   "kind": "legendary",
+   "title": "Paradox Pokémon",
+   "text": "Most Paradox Pokémon live on Meteor Island in South Johto; Chien-Pao is deep in the Ice Path and Chi-Yu in the Battle Café's fountain. Since 1.2 the Paradox legends respawn after a Title Defense.",
+   "species": [
+    1002,
+    1004
+   ],
+   "names": [
+    "Chien-Pao",
+    "Chi-Yu"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations; soulgold.run changelog (v1.2)"
+  },
+  {
+   "id": "note-cafe-legends",
+   "kind": "legendary",
+   "title": "Battle Café legends",
+   "text": "Route 50's Battle Café sells Galarian Articuno, Zapdos and Moltres, Tornadus, Thundurus, Landorus and Enamorus, and the four Tapus for 5 points each; Koraidon or Miraidon for 25 once you have every other Paradox. Clear every regular opponent once for Diancie.",
+   "species": [
+    641,
+    642,
+    645,
+    905,
+    785,
+    786,
+    787,
+    788,
+    1007,
+    1008,
+    719
+   ],
+   "names": [
+    "Tornadus",
+    "Thundurus",
+    "Landorus",
+    "Enamorus",
+    "Tapu Koko",
+    "Tapu Lele",
+    "Tapu Bulu",
+    "Tapu Fini",
+    "Koraidon",
+    "Miraidon",
+    "Diancie"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "note-lake-trio",
+   "kind": "legendary",
+   "title": "Uxie, Mesprit and Azelf",
+   "text": "Each sits at a Rock Climb spot: Uxie on Route 30 by the Berry Man, Mesprit on Route 47 by the last bridge, Azelf in Mahogany Town.",
+   "species": [
+    480,
+    481,
+    482
+   ],
+   "names": [
+    "Uxie",
+    "Mesprit",
+    "Azelf"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "note-regis",
+   "kind": "legendary",
+   "title": "The Regis",
+   "text": "Braille puzzles: Regirock in Vajra Desert West (bring Tyranitar), Regice on Snowtop Mountain (Baxcalibur), Registeel in the Railway Cave (Kommo-o). All three in the party open Regigigas on Mt. Silver.",
+   "species": [
+    377,
+    378,
+    379,
+    486
+   ],
+   "names": [
+    "Regirock",
+    "Regice",
+    "Registeel",
+    "Regigigas"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "note-rival-chain",
+   "kind": "legendary",
+   "title": "The postgame rival chain",
+   "text": "Finish the Mt. Silver rival story (Jirachi), visit your rival's house: Cresselia at the Lake of Rage, then Darkrai at the Cherrygrove inn, then HM Dive opens Kyogre (south of Route 33) and Groudon (Route 50).",
+   "species": [
+    385,
+    488,
+    491,
+    382,
+    383
+   ],
+   "names": [
+    "Jirachi",
+    "Cresselia",
+    "Darkrai",
+    "Kyogre",
+    "Groudon"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations; SoulGold docs: FAQ"
+  },
+  {
+   "id": "note-alph-legends",
+   "kind": "legendary",
+   "title": "Ruins of Alph legends",
+   "text": "All eight puzzles (four sliders, four walls: Escape Rope, Water Stone, Flash, Ho-Oh) lead to the GS Ball for Celebi via Kurt. With Hoopa in the party the same secret room opens portals to Dialga, Palkia and Giratina.",
+   "species": [
+    251,
+    483,
+    484,
+    487,
+    720
+   ],
+   "names": [
+    "Celebi",
+    "Dialga",
+    "Palkia",
+    "Giratina",
+    "Hoopa"
+   ],
+   "quality": "reference-only",
+   "source": "SoulGold docs: legendary locations"
+  },
+  {
+   "id": "note-time",
+   "kind": "tip",
+   "title": "Times of day",
+   "text": "Morning 06:00-10:00, day 10:00-19:00, evening 19:00-20:00, night 20:00-06:00 (in-game time): it decides day and night evolutions and encounters.",
+   "quality": "reference-only",
+   "source": "SoulGold docs: FAQ"
   }
  ]
 }
