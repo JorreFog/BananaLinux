@@ -1012,8 +1012,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	GameEndNotice gameEnd;
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
-	// the sync before a game as on the device, with its files under the output prefix and Wi-Fi as "wifi" says
-	auto conf = readSettings(o.data);
+	// the sync before a game as on the device, with its files under the output prefix and Wi-Fi as "wifi" says; its two
+	// settings read from the card at each game, as the device's are (a pairing turns Auto sync on)
+	auto homesync = [&](const char* key) { return getConfValue(o.data + "/settings.conf", key, "off"); };
 	gamesync::Wait gate;
 	gamesync::WifiFacts testWifi;
 	const std::string testRun = o.headless + "run";
@@ -1075,7 +1076,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "gameend")
 		{
 			if (gamesync::gamePlayed(gateSys, gateRom)) logf("game end: nds-saves told");
-			if (gamesync::syncsAfterGame(conf["homesync_auto"]))
+			if (gamesync::syncsAfterGame(homesync("homesync_auto")))
 			{
 				gameEnd.arm(testRun, gameTitle(lib, gateRom), now);
 				if (gamesync::syncAfterGame(gamesync::syncTool(), gateRom, testRun, gameEnd.file)) logf("game end: home server sync started");
@@ -1628,7 +1629,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 				gateRom = lib.gameAt(g).path; gateSys = lib.systemOf(g).id;
-				if (gamesync::wanted(conf["homesync_auto"], conf["homesync_launch"], o.data + "/romsync.json", o.roms, gateRom, testRun + "/resume-once", gamesync::sd2Roms(testRun)))
+				if (gamesync::wanted(homesync("homesync_auto"), homesync("homesync_launch"), o.data + "/romsync.json", o.roms, gateRom, testRun + "/resume-once", gamesync::sd2Roms(testRun)))
 					gate.begin(gamesync::syncTool(), gateRom, testRun, now);
 				unlink((testRun + "/resume-once").c_str());	// (its launcher's to remove)
 				gamePlays();
@@ -2254,6 +2255,9 @@ int main(int argc, char** argv)
 	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
 	normalizeSettings(o.data);
 	auto settings = readSettings(o.data);
+	// the home server's Auto sync and Sync before playing, read from the card at each game: a pairing turns Auto sync on
+	// without the settings above being read again
+	auto homesync = [&](const char* key) { return getConfValue(o.data + "/settings.conf", key, "off"); };
 	if (!o.theme.empty()) settings["theme"] = "file:" + o.theme;	// --theme: the theme being made (headless render)
 	// the menu's language (Settings > System > Language): every text laid out goes through its translations; the lines
 	// with none stay English and are listed in /run/banana/lang-missing.txt (for the translator's next round)
@@ -3299,7 +3303,7 @@ int main(int argc, char** argv)
 		// over the saves)
 		// (not when the game's end is a shutdown, Power off after sleeping: bananad named the game in resume-boot and
 		// turns the handheld off now, which would cut the sync; the game's next start, the resume, sends the save)
-		if (gamesync::syncsAfterGame(settings["homesync_auto"]) && access((o.data + "/resume-boot").c_str(), F_OK) != 0)
+		if (gamesync::syncsAfterGame(homesync("homesync_auto")) && access((o.data + "/resume-boot").c_str(), F_OK) != 0)
 		{
 			gameEnd.arm("/run/banana", gameTitle(lib, rom), nowMs());
 			if (gamesync::syncAfterGame(gamesync::syncTool(), rom, "/run/banana", gameEnd.file)) logf("game end: home server sync started");
@@ -3445,7 +3449,7 @@ int main(int argc, char** argv)
 			// the game's save first, while the menu still has the panels (the game waits, the menu goes on drawing)
 			gateGame = g;
 			const std::string& path = lib.gameAt(g).path;
-			if (gamesync::wanted(settings["homesync_auto"], settings["homesync_launch"], o.data + "/romsync.json", o.roms, path, "/run/banana/resume-once", gamesync::sd2Roms("/run/banana")))
+			if (gamesync::wanted(homesync("homesync_auto"), homesync("homesync_launch"), o.data + "/romsync.json", o.roms, path, "/run/banana/resume-once", gamesync::sd2Roms("/run/banana")))
 			{
 				rep.key = Key::NONE;
 				gate.begin(gamesync::syncTool(), path, "/run/banana", nowMs());

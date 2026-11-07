@@ -9,6 +9,7 @@
 #include "theme.h"
 #include "vkbd.h"
 #include "json.h"
+#include "sync_core.h"
 #include "gba/host.h"
 #include "nds/pages.h"
 #include <fcntl.h>
@@ -7544,6 +7545,30 @@ namespace banana
 		homeServer();
 		return hsPairedKind;
 	}
+	// a pairing turns Auto sync on (Leaving a game) when it is off: saves going to the server without a press is what the
+	// pairing is for. The Paired screen says so, and Auto sync turns it off again
+	bool Settings::hsTurnAutoOn()
+	{
+		const std::string f = data + "/settings.conf";
+		if (getConfValue(f, "homesync_auto", "off") != "off") return false;
+		setConfValue(f, "homesync_auto", "quit");
+		fprintf(stderr, "home server: Auto sync on (Leaving a game)\n");
+		return true;
+	}
+	// and Sync before playing, for a RomM that keeps save slots (5.4 and newer, as the pairing found it): the save from
+	// another handheld comes before the game rather than a conflict after it. A RomM before 5.4 has no sync before a
+	// game to turn on
+	bool Settings::hsTurnLaunchOn()
+	{
+		JPtr j = readJsonFile(data + "/romsync.json");
+		const std::string ver = j && j->isObj() ? j->str("serverVersion") : "";
+		if (ver.empty() || !bsync::versionAtLeast(ver, 5, 4, 0)) return false;
+		const std::string f = data + "/settings.conf";
+		if (getConfValue(f, "homesync_launch", "off") != "off") return false;
+		setConfValue(f, "homesync_launch", "on");
+		fprintf(stderr, "home server: Sync before playing on\n");
+		return true;
+	}
 	void Settings::hsRebuild()
 	{
 		std::string key = sel < (int)items.size() ? items[sel].key : "";
@@ -7691,7 +7716,13 @@ namespace banana
 				in >> code >> url;
 				message = "On " + hsName + ", open " + url + " (signed in) and approve this handheld (code " + code + "). Waiting...";
 			}
-			else if (ln.compare(0, 7, "paired ") == 0) { hsStep = 0; hsRebuild(); message = "Paired with " + ln.substr(7) + ". Sync now, below, gets the games and saves."; }
+			else if (ln.compare(0, 7, "paired ") == 0)
+			{
+				hsStep = 0;
+				message = hsTurnAutoOn() ? "Paired with " + ln.substr(7) + ". Saves now sync as you leave a game (Auto sync). Sync now, below, gets the games and saves."
+					: "Paired with " + ln.substr(7) + ". Sync now, below, gets the games and saves.";
+				hsRebuild();
+			}
 			else if (ln.compare(0, 6, "error ") == 0) { hsStep = 0; message = "Pairing didn't work: " + ln.substr(6) + "."; }
 		}
 		if (was && ln.compare(0, 5, "done ") == 0) libChanged = true;	// new games: the library again

@@ -213,7 +213,16 @@ namespace banana
 			JPtr j = readJsonFile(data + "/romsync.json");
 			std::string dev = j && j->isObj() ? j->str("name") : "";
 			std::string srv = ln.substr(7);
-			hsMsg = dev.empty() ? "Paired with " + srv + ". Sync now gets the games and saves." : "Paired as " + dev + " with " + srv + ". Sync now gets the games and saves.";
+			// (each case a whole line, so a translation has the sentence entire; the sync before a game named whenever it
+			// is on once something was turned on, since the save then comes both ways)
+			const bool autoOn = hsTurnAutoOn(), launchOn = hsTurnLaunchOn();
+			const bool both = (autoOn || launchOn) && getConfValue(data + "/settings.conf", "homesync_launch", "off") == "on";
+			hsMsg = dev.empty() ? (both ? "Paired with " + srv + ". Saves now sync before you play and as you leave a game. Get games brings games over."
+					: autoOn ? "Paired with " + srv + ". Saves now sync as you leave a game (Auto sync). Get games brings games over."
+					: "Paired with " + srv + ". Get games brings games over.")
+				: both ? "Paired as " + dev + " with " + srv + ". Saves now sync before you play and as you leave a game. Get games brings games over."
+				: autoOn ? "Paired as " + dev + " with " + srv + ". Saves now sync as you leave a game (Auto sync). Get games brings games over."
+				: "Paired as " + dev + " with " + srv + ". Get games brings games over.";
 			fprintf(stderr, "home server: paired with %s\n", ln.substr(7).c_str());
 			hsRebuild();
 		}
@@ -503,7 +512,7 @@ namespace banana
 			{
 				box("bubble", false, 18, 14, 604, 54);
 				text(hsDone ? "Paired" : hsStep == 3 ? "Asking RomM" : "Not paired", true, 22, 38, 28, p.ink);
-				std::string what = hsDone ? "A: Sync now gets the games and saves. B: back to Home server."
+				std::string what = hsDone ? "A: Sync now syncs the saves. B: back to Home server."
 					: hsStep == 3 ? "A moment..." : "A asks RomM for a new code. X pairs with a code from RomM instead. B goes back to the address.";
 				wrapped(what, 20, 38, 96, 564, 8, p.muted);
 			}

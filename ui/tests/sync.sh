@@ -666,6 +666,9 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -q '^discover' "$SL" || bad "the Server row didn't look on the LAN: $(cat "$SL")"
     grep -q 'pair http://192.168.50.96:8092 .' "$SL" || bad "the code wasn't sent to pair: $(cat "$SL")"
     grep -q '"token": "rh1_test"' "$FX/data/romsync.json" 2>/dev/null || bad "no pairing written"
+    # (a pairing turns Auto sync on, Leaving a game, when it is off, and says so)
+    grep -q '^homesync_auto = quit' "$FX/data/settings.conf" || bad "pairing didn't turn Auto sync on: $(grep homesync_auto "$FX/data/settings.conf")"
+    grep -q 'home server: Auto sync on' "$OUT/ui.log" || bad "Auto sync turned on not said: $(grep 'home server' "$OUT/ui.log")"
     for s in hs-row hs-page hs-choose hs-code hs-paired hs-sync; do
         [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"
     done
@@ -682,6 +685,7 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -q ' pair --romm http://' "$SL" || bad "RomM where Romhost's address was asked: no RomM pairing: $(cat "$SL")"
     grep -q '"token": "rmm_test"' "$FXR/data/romsync.json" 2>/dev/null || bad "RomM where Romhost's address was asked: not paired: $(grep 'home server' "$OUT/ui-rhromm.log")"
     grep -q 'home server: RomM 5.4.1 at http://' "$OUT/ui-rhromm.log" || bad "RomM where Romhost's address was asked: not taken as RomM's form takes it: $(grep 'home server' "$OUT/ui-rhromm.log")"
+    grep -q '^homesync_launch = on' "$FXR/data/settings.conf" || bad "RomM where Romhost's address was asked: Sync before playing not turned on"
     # Home server > Saves: a game's conflict settled, then a kept copy restored; X deletes nothing
     : > "$SL"
     BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
@@ -738,6 +742,7 @@ if [ -x "$HERE/banana-ui" ]; then
     # RomM, A: the form, on Address; its URL keyboard's https:// key (L, the symbols' first row), the rest typed with a
     # port and a folder: they go to their rows. START connects: the stand-in's RomM, then its code and QR code, approved
     # 2 s later; A then goes to Sync now on the paired page, with RomM's rows
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = off\n' >> "$FX/data/settings.conf"
     ur romm "shot hs-choose-romm; press a; shot hs-form0; press a; press l; press up; shot hs-urlkeys; press a; type romm.example.com:8443/romm; press start; shot hs-form; press start; sleep 400; wait 600; sleep 300; wait 600; shot hs-pair; sleep 2500; wait 600; wait 600; shot hs-paired-r; press a; shot hs-after"
     grep -q 'probe --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the form's address not asked as one URL: $(cat "$SL")"
     grep -q 'pair --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the device flow not started at the address checked: $(cat "$SL")"
@@ -746,6 +751,23 @@ if [ -x "$HERE/banana-ui" ]; then
     rlog romm "home server: code ABCD-EFGH, approve at https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH"
     rlog romm "home server: QR code"
     rlog romm "home server: paired with RomM 5.4.1"
+    rlog romm "home server: Auto sync on (Leaving a game)"
+    grep -q '^homesync_auto = quit' "$FX/data/settings.conf" || bad "RomM: pairing didn't turn Auto sync on: $(grep homesync_auto "$FX/data/settings.conf")"
+    rlog romm "home server: Sync before playing on"
+    grep -q '^homesync_launch = on' "$FX/data/settings.conf" || bad "RomM 5.4: pairing didn't turn Sync before playing on: $(grep homesync_launch "$FX/data/settings.conf")"
+    # (a RomM before 5.4 has no sync before a game: its pairing turns Auto sync on and leaves Sync before playing off)
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = off\n' >> "$FX/data/settings.conf"
+    ur romm-old "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 2500; wait 600; wait 600" FAKE_SYNC_PROBE=old
+    rlog romm-old "home server: paired with RomM 5.3.0"
+    rlog romm-old "home server: Auto sync on (Leaving a game)"
+    grep -q '^homesync_launch = off' "$FX/data/settings.conf" || bad "RomM 5.3: pairing turned Sync before playing on: $(grep homesync_launch "$FX/data/settings.conf")"
+    # (and the game started next, with Sync before playing on, has its sync before it: the setting read from the card at
+    # the game, not as the menu read it before the pairing)
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = on\n' >> "$FX/data/settings.conf"
+    ur romm-launch "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 2500; wait 600; wait 600; press start; wait 300; wifi online; launchpath $FX/roms/gba/Orchard Tactics.gba; sleep 300; wait 100"
+    rlog romm-launch "home server: Auto sync on (Leaving a game)"
+    grep -q 'sync --auto launch --rom' "$SL" || bad "RomM: the game after a pairing had no sync before it: $(cat "$SL")"
+    sed -i '/^homesync_launch/d' "$FX/data/settings.conf"
     grep -q '"backend": "romm"' "$FX/data/romsync.json" 2>/dev/null || bad "RomM: no pairing written"
     for s in hs-choose-romm hs-form0 hs-urlkeys hs-form hs-pair hs-paired-r hs-after; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
     cmp -s "$OUT/ui-hs-form-bot.png" "$OUT/ui-hs-pair-bot.png" && bad "RomM: the pairing screen shows no QR code"

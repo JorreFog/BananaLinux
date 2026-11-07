@@ -255,6 +255,11 @@ browser: the handheld talks to the API alone, so a server behind Cloudflare Acce
 probe, which guessed http on 8092, 8080 and 80 before https, followed redirects: Cloudflare answers 8080 with a
 redirect to https, so a bare name paired at `http://<name>:8080`, and the redirect then turned the device flow's POST
 into a GET (405). It is still Romhost's typed address, without following redirects, and no pairing POST follows one.
+A pairing turns Auto sync on (Leaving a game) when it was off, and the Paired screen says so: saves going to the server
+without a press is what pairing is for, and a pairing left on the image's default of off synced only by Sync now. A
+pairing with RomM 5.4 or newer (the version `romsync.json` keeps) turns Sync before playing on as well, so another
+handheld's newer save comes before the game rather than as a conflict after it; a RomM before 5.4 has no sync before a
+game to turn on.
 Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
 check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
 

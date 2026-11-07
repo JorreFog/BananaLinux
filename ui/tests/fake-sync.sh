@@ -53,7 +53,9 @@ while [ $# -gt 0 ]; do
     pair)
         st() { [ -n "$status" ] && { echo "$1" > "$status.new"; mv "$status.new" "$status"; }; }
         if [ "$2" = --romm ]; then
-            romm() { printf '{"backend": "romm", "server": "%s", "token": "rmm_test", "serverName": "RomM 5.4.1", "name": "RG DS"}\n' "$1" > "$conf"; st "paired RomM 5.4.1"; }
+            # (the version the probe gave, kept as banana-sync keeps it)
+            v=5.4.1; [ "${FAKE_SYNC_PROBE:-ok}" = old ] && v=5.3.0
+            romm() { printf '{"backend": "romm", "server": "%s", "token": "rmm_test", "serverName": "RomM %s", "serverVersion": "%s", "name": "RG DS"}\n' "$1" $v $v > "$conf"; st "paired RomM $v"; }
             [ -n "${4:-}" ] && { romm "$3"; exit 0; }
             st "pair ABCD-EFGH $3/pair/device?user_code=ABCD-EFGH 600"
             case ${FAKE_SYNC_PAIR:-approve} in

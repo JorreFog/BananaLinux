@@ -669,6 +669,8 @@ namespace banana
 		wifi::Job hsJob;
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
+		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
+		bool hsTurnLaunchOn();	// a RomM 5.4 pairing's: Sync before playing on when it was off (true: it was)
 		bool startSync(bool gamesOnly = false);	// (true: a sync was started, or waits for Wi-Fi coming back to start; gamesOnly: Get games' downloads alone)
 		void runSync();
 		// Sync now as Wi-Fi comes back (pressed as the lid opens, before it has an address): waited for until this time
