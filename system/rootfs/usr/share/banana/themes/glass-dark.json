@@ -1,0 +1,242 @@
+{
+  // Glass dark: frosted panels over a still picture, iPhone-like icons (Canvas's consoles, CC0). Glass light is the
+  // same with white glass. The panels' frost is baked into the pictures (tools/glass-theme/bake.py: your own picture
+  // there, run it), so the handheld draws no blur at all.
+  "name": "Glass dark",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": "#ff9f0a",
+  "colors": { "screenBg": "#0a0c18", "ink": "#ffffff", "muted": "#b8bccc" },
+  "font": "inter",
+  "icons": {
+    "nds": "glass/icons/nds.png", "gba": "glass/icons/gba.png", "gbc": "glass/icons/gbc.png", "gb": "glass/icons/gb.png",
+    "nes": "glass/icons/nes.png", "snes": "glass/icons/snes.png", "megadrive": "glass/icons/megadrive.png",
+    "psx": "glass/icons/psx.png", "n64": "glass/icons/n64.png", "ports": "glass/icons/ports.png",
+    "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
+    "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
+    "bshare": "glass/icons/bshare.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
+    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png"
+  },
+
+  "vars": {
+    "pics": "glass/dark-",      // the baked pictures: <pics><view>-<top|bottom>.jpg
+    "base": "#0a0c18",          // shown while a picture loads
+    "ink": "#ffffff",
+    "soft": "#ffffffa0",
+    "pane": "#14161e8c",        // a hint's capsule: the band under it is blurred, this tints it
+    "paneHi": "#ffffff38",      // a lit row inside a panel
+    "edge": "#ffffff30",        // the glass's hairline edge
+    "chip": "#ffffff",          // a button's key
+    "chipInk": "#1e1e24",
+    "shade": "#00000059",
+    "hi": "=accent"
+  },
+
+  "behavior": { "launchMs": 650, "scrollMs": 110, "settleMs": 380 },
+
+  "components": {
+    // a screen's picture, its panels' frost baked in
+    "backdrop": { "type": "image", "src": "=pic", "fit": "fill", "w": 640, "h": 480, "placeholder": "=base" },
+    // an iPhone-like tile: the system's colour as a gradient, its icon on it
+    "tile": {
+      "type": "group", "radius": "=r",
+      "gradient": { "angle": 180, "stops": [ "=lighten(c, 0.12)", "=darken(c, 0.22)" ] },
+      "children": [
+        { "type": "image", "src": "=src", "fit": "contain", "x": "=8 * z", "y": "=8 * z", "right": "=8 * z", "bottom": "=8 * z" }
+      ]
+    },
+    // a button: its key in a chip and what it does, in a glass capsule (tapping it presses the button)
+    "hint": {
+      "type": "group", "layout": "row", "gap": 8, "align": "center", "padding": 9, "h": 42, "radius": 21,
+      "fill": "=pane", "border": 1, "borderColor": "=edge", "onTap": "=tap",
+      "children": [
+        { "type": "group", "layout": "row", "padding": 6, "h": 20, "radius": 10, "fill": "=chip",
+          "children": [ { "type": "text", "y": -2, "text": "=key", "font": "inter-bold", "size": 10, "color": "=chipInk" } ] },
+        { "type": "text", "text": "=label", "font": "inter-medium", "size": 14, "color": "=ink", "y": 2 }
+      ]
+    },
+    // the buttons: B on the left, A on the right, the others together in the middle, as far from one as the other.
+    // An empty slot (no B at home) is a spacer, so the middle stays centred between the edge and A.
+    "hints": {
+      "type": "group", "x": 18, "y": 418, "w": 604, "h": 42, "layout": "row", "justify": "between", "align": "center",
+      "children": [
+        { "use": "hint", "visible": "=view != 'home'", "with": { "key": "B", "label": "Back", "tap": "b" } },
+        { "type": "rect", "w": 0, "h": 42, "visible": "=view == 'home'" },
+        { "type": "group", "layout": "row", "gap": 11, "align": "center",
+          "children": [
+            { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
+            { "use": "hint", "visible": "=view != 'home' && !empty", "with": { "key": "X", "label": "Options", "tap": "x" } },
+            { "use": "hint", "visible": "=view == 'home'", "with": { "key": "START", "label": "Settings", "tap": "" } },
+            { "use": "hint", "with": { "key": "SELECT", "label": "Search", "tap": "" } }
+          ] },
+        { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' ? 'Open' : 'Play'", "tap": "a" } },
+        { "type": "rect", "w": 0, "h": 42, "visible": "=view != 'home' && empty" }
+      ]
+    },
+    // the top screen's corners: the date and time on the left, Wi-Fi and the battery on the right (their glass is baked)
+    "status": {
+      "type": "group", "x": 0, "y": 0, "w": "100%", "h": 50,
+      "children": [
+        { "type": "text", "x": 15, "y": 20, "w": 170, "align": "center", "text": "{date}  {clock}", "font": "inter-medium",
+          "size": 15, "color": "=ink" },
+        { "type": "group", "x": 517, "y": 11, "w": 108, "h": 35,
+          "children": [
+            { "type": "image", "src": "glass/wifi.png", "x": 16, "y": 11, "w": 18, "h": 13, "fit": "contain", "tint": "=ink",
+              "opacity": "=online ? 1 : 0.35" },
+            { "type": "rect", "x": 42, "y": 11, "w": 25, "h": 13, "radius": 3.5, "border": 1.4, "borderColor": "=ink",
+              "visible": "=battery >= 0" },
+            { "type": "rect", "x": 44.5, "y": 13.5, "w": "=20 * battery / 100", "h": 8, "radius": 1.5,
+              "fill": "=charging ? '#34c759' : battery < 20 ? '#ff453a' : ink", "visible": "=battery >= 0" },
+            { "type": "rect", "x": 68, "y": 15, "w": 2, "h": 5, "radius": 1, "fill": "=ink", "visible": "=battery >= 0" },
+            // charging: a bolt over the battery, outlined by the glass's colour so it shows on the green
+            { "type": "image", "src": "glass/bolt.png", "x": 49.5, "y": 9, "w": 11, "h": 17, "fit": "contain", "tint": "=base",
+              "visible": "=charging && battery >= 0" },
+            { "type": "image", "src": "glass/bolt.png", "x": 50.5, "y": 10.5, "w": 9, "h": 14, "fit": "contain", "tint": "#ffffff",
+              "visible": "=charging && battery >= 0" },
+            { "type": "text", "x": 74, "y": 9, "w": 24, "align": "right", "text": "=battery < 0 ? '' : battery",
+              "font": "inter-semibold", "size": 12.5, "color": "=ink" }
+          ] }
+      ]
+    },
+    // the neighbours at the top of the bottom screen: L and the one before, the one after and R (clear of the middle)
+    "sides": {
+      "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 0, "w": 640, "h": 40, "range": 1,
+      "item": {
+        "type": "group", "visible": "=rel == -1 || rel == 1", "w": 640, "h": 40,
+        "children": [
+          { "type": "text", "x": 28, "y": 12, "w": 172, "text": "‹  {item.name}", "font": "inter-medium", "size": 13.5,
+            "color": "=soft", "visible": "=rel == -1" },
+          { "type": "text", "x": 425, "y": 12, "w": 172, "align": "right", "text": "{item.name}  ›", "font": "inter-medium",
+            "size": 13.5, "color": "=soft", "visible": "=rel == 1" }
+        ]
+      }
+    }
+  },
+
+  "screens": {
+    "all": { "top": { "use": "status" } },
+
+    "home": {
+      "top": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'home-top.jpg'" } },
+        // the system's card (its panel is in the picture)
+        { "use": "tile", "w": 76, "h": 76, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 18, "z": 1 },
+          "shadow": { "y": 4, "blur": 9, "color": "=shade" },
+          "opacity": "=easeOut(progress(moved, 220))", "scale": "=0.9 + 0.1 * easeOutBack(progress(moved, 280))", "anchor": "center",
+          "x": 320, "y": 136 },
+        { "type": "text", "x": 132, "w": 375, "y": 186, "align": "center", "text": "{sys.name}", "font": "inter-bold", "size": 25, "color": "=ink" },
+        { "type": "group", "x": 152, "y": 228, "w": 335, "h": 50, "layout": "row", "justify": "between",
+          "children": [
+            { "type": "group", "w": 105, "h": 50, "children": [
+              { "type": "text", "w": 105, "align": "center", "text": "=sys.app ? '—' : sys.games", "font": "inter-semibold", "size": 23, "color": "=ink" },
+              { "type": "text", "w": 105, "y": 30, "align": "center", "text": "=sys.games == 1 ? 'Game' : 'Games'", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] },
+            { "type": "group", "w": 105, "h": 50, "children": [
+              { "type": "text", "w": 105, "align": "center", "text": "=either(sys.played, '0')", "font": "inter-semibold", "size": 23, "color": "=ink" },
+              { "type": "text", "w": 105, "y": 30, "align": "center", "text": "Played", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] },
+            { "type": "group", "w": 105, "h": 50, "children": [
+              { "type": "text", "w": 105, "align": "center", "text": "=either(sys.time, '0m')", "font": "inter-semibold", "size": 23, "color": "=ink" },
+              { "type": "text", "w": 105, "y": 30, "align": "center", "text": "Time", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] }
+          ] },
+        // the last game: a lit row inside the card
+        { "type": "group", "x": 157, "y": 297, "w": 325, "h": 58, "radius": 14, "fill": "=paneHi", "visible": "=sys.hasResume",
+          "children": [
+            { "type": "image", "src": "{sys.resumeArt}", "fallback": "{sys.icon}", "fit": "cover", "x": 9, "y": 8, "w": 42, "h": 42,
+              "radius": 8, "placeholder": "=alpha(sys.color, 0.8)" },
+            { "type": "text", "x": 62, "y": 10, "text": "{upper(either(sys.resumeEyebrow, 'Last played'))}", "font": "inter-semibold",
+              "size": 10, "spacing": 0.5, "color": "=soft" },
+            { "type": "text", "x": 62, "y": 25, "w": 250, "text": "{sys.resumeTitle}", "font": "inter-semibold", "size": 17.5, "color": "=ink" }
+          ] }
+      ],
+      "bottom": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'home-bottom.jpg'" } },
+        // the bar: the neighbours either side, where you are in the middle
+        { "type": "group", "x": 220, "y": 16, "w": 200, "h": 30, "radius": 15, "fill": "=paneHi",
+          "children": [ { "type": "text", "w": 200, "y": 6, "align": "center", "text": "{cursor + 1} of {count}", "font": "inter-semibold",
+                          "size": 14, "color": "=ink" } ] },
+        { "use": "sides", "x": 15, "y": 11, "w": 610 },
+        // the shelf: a glass tray as iOS's dock, the selection raised and lit in its colour
+        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 156, "w": 640, "h": 138, "range": 3,
+          "item": {
+            "type": "group", "w": 640, "h": 138, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
+            "children": [
+              { "type": "rect", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18", "y": 54, "w": 92, "h": 92, "anchor": "center", "radius": 28,
+                "fill": "=alpha(item.color, 0.0)", "visible": "=sel",
+                "shadow": { "blur": 34, "spread": 6, "color": "=alpha(item.color, 0.75)" } },
+              { "use": "tile", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18", "y": "=sel ? 54 : 69", "w": "=sel ? 105 : 70", "h": "=sel ? 105 : 70",
+                "anchor": "center", "smooth": { "w": 110, "h": 110, "y": 110 },
+                "shadow": { "y": 4, "blur": 8, "color": "=shade" },
+                "with": { "c": "=item.color", "src": "=item.icon", "r": "=sel ? 24 : 16", "z": "=sel ? 1.5 : 1" } },
+              { "type": "text", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18 + 22", "y": "=sel ? 6 : 36", "text": "★", "size": 13, "color": "=hi",
+                "visible": "=item.fav" }
+            ]
+          } },
+        { "type": "text", "x": 0, "w": 640, "y": 304, "align": "center", "text": "{sys.name}", "font": "inter-semibold", "size": 19, "color": "=ink" },
+        { "type": "text", "x": 0, "w": 640, "y": 330, "align": "center", "text": "=sys.app ? 'App' : plural(sys.games, 'game')",
+          "font": "inter-medium", "size": 12.5, "color": "=soft" },
+        // one dot a system, as iOS's pages
+        { "type": "list", "source": "range", "count": "=count", "direction": "free", "x": 0, "y": 362, "w": 640, "h": 14,
+          "visible": "=count <= 30", "range": 40,
+          "item": { "type": "rect", "x": "=320 + (i - (n - 1) / 2) * 11", "y": 7, "w": 6.5, "h": 6.5, "anchor": "center",
+                    "radius": "50%", "fill": "=i == cursor ? ink : soft" } },
+        { "use": "hints" }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'library-top.jpg'" } },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 65, "y": 100, "w": 206, "h": 206,
+          "radius": 10, "placeholder": "=alpha(sys.color, 0.6)",
+          "opacity": "=easeOut(progress(moved, 200))" },
+        // the game: its title, the system, a rule and its numbers, one under the other
+        { "type": "group", "x": 300, "y": 105, "w": 273, "layout": "column", "gap": 8,
+          "children": [
+            { "type": "text", "w": 273, "text": "{game.title}", "font": "inter-bold", "size": 25, "color": "=ink",
+              "wrap": true, "maxLines": 2, "lineHeight": 30 },
+            { "type": "text", "w": 273, "text": "{sys.name}", "font": "inter-medium", "size": 15, "color": "=soft" },
+            { "type": "rect", "w": 273, "h": 10 },
+            { "type": "rect", "w": 273, "h": 1.2, "fill": "=edge" },
+            { "type": "group", "w": 273, "h": 52, "layout": "row", "justify": "between",
+              "children": [
+                { "type": "group", "w": 60, "h": 50, "children": [
+                  { "type": "text", "y": 8, "text": "=either(game.plays, '0')", "font": "inter-semibold", "size": 19, "color": "=ink" },
+                  { "type": "text", "y": 33, "text": "Plays", "font": "inter-medium", "size": 11.5, "color": "=soft" } ] },
+                { "type": "group", "w": 110, "h": 50, "children": [
+                  { "type": "text", "y": 8, "w": 110, "text": "=either(game.last, 'Never')", "font": "inter-semibold", "size": 19, "color": "=ink" },
+                  { "type": "text", "y": 33, "text": "Last played", "font": "inter-medium", "size": 11.5, "color": "=soft" } ] },
+                { "type": "group", "w": 80, "h": 50, "children": [
+                  { "type": "text", "y": 8, "w": 80, "text": "=either(game.time, '0m')", "font": "inter-semibold", "size": 19, "color": "=ink" },
+                  { "type": "text", "y": 33, "text": "Time", "font": "inter-medium", "size": 11.5, "color": "=soft" } ] }
+              ] },
+            { "type": "text", "w": 273, "text": "{game.achLabel}", "font": "inter-medium", "size": 14, "color": "=hi",
+              "visible": "=game.achB > 0" }
+          ] }
+      ],
+      "bottom": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'library-bottom.jpg'" } },
+        { "type": "group", "x": 200, "y": 15, "w": 240, "h": 32, "layout": "row", "gap": 9, "justify": "center", "align": "center",
+          "children": [
+            { "use": "tile", "w": 30, "h": 30, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 8, "z": 0.3 } },
+            { "type": "text", "text": "{sys.name}", "font": "inter-semibold", "size": 16, "color": "=ink", "y": 1 }
+          ] },
+        { "use": "sides", "x": 15, "y": 11, "w": 610 },
+        { "type": "list", "source": "games", "direction": "free", "x": 0, "y": 125, "w": 640, "h": 200, "range": 3,
+          "item": {
+            "type": "group", "w": 640, "h": 200, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
+            "children": [
+              { "type": "image", "src": "{item.art}", "fallback": "{item.box}", "fit": "cover",
+                "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1)", "y": "=sel ? 88 : 100",
+                "w": 94, "h": 94, "anchor": "center", "radius": 7, "placeholder": "=alpha(sys.color, 0.7)",
+                "scale": "=sel ? 1.66 : 1", "smooth": { "scale": 110, "y": 110 } },
+              { "type": "text", "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1) + 28",
+                "y": "=sel ? 6 : 42", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }
+            ]
+          } },
+        { "type": "text", "x": 40, "w": 560, "y": 342, "align": "center", "text": "{game.title}", "font": "inter-semibold", "size": 19, "color": "=ink" },
+        { "type": "text", "x": 0, "w": 640, "y": 368, "align": "center", "text": "{cursor + 1} of {count}", "font": "inter-medium",
+          "size": 12.5, "color": "=soft" },
+        { "use": "hints" }
+      ]
+    }
+  }
+}
