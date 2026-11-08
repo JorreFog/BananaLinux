@@ -29,10 +29,15 @@
     "chip": "#14141c",          // a button's key
     "chipInk": "#ffffff",
     "shade": "#00000033",
-    "hi": "=accent"
+    "hi": "=accent",
+    // motion and light, all started by a press so they play once and stop (Motion off in Settings: none of them)
+    "lit": "=motion ? 1 - easeOut(progress(moved, 420)) : 0",                       // a selection lighting up, 1 to 0
+    "slide": "=motion ? dir * 22 * (1 - easeOut(progress(moved, 260))) : 0",       // the card coming in from the move's side
+    "rise": "=motion && view != 'launch' ? 26 * (1 - easeOut(progress(entered, 340))) : 0",   // a shelf rising into a view
+    "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0"           // a game starting
   },
 
-  "behavior": { "launchMs": 650, "scrollMs": 110, "settleMs": 380 },
+  "behavior": { "launchMs": 650, "scrollMs": 110, "settleMs": 520 },
 
   "components": {
     // a screen's picture, its panels' frost baked in
@@ -40,8 +45,10 @@
     // an iPhone-like tile: the system's colour as a gradient, its icon on it
     "tile": {
       "type": "group", "radius": "=r",
-      "gradient": { "angle": 180, "stops": [ "=lighten(c, 0.12)", "=darken(c, 0.22)" ] },
+      "gradient": { "angle": 180, "stops": [ "=lighten(c, 0.12 + 0.22 * f)", "=darken(c, 0.22 - 0.12 * f)" ] },
       "children": [
+        // light on the glass: its top half brighter
+        { "type": "rect", "radius": "=r", "gradient": { "angle": 180, "stops": [ "#ffffff3d", "#ffffff00 52%" ] } },
         { "type": "image", "src": "=src", "fit": "contain", "x": "=8 * z", "y": "=8 * z", "right": "=8 * z", "bottom": "=8 * z" }
       ]
     },
@@ -119,9 +126,13 @@
     "home": {
       "top": [
         { "use": "backdrop", "with": { "pic": "=pics + 'home-top.jpg'" } },
+        // the system's colour, a light behind the glass
+        { "type": "rect", "x": 320, "y": 225, "w": 250, "h": 190, "anchor": "center", "radius": 95, "fill": "=alpha(sys.color, 0)",
+          "shadow": { "blur": 80, "spread": 14, "color": "=alpha(sys.color, 0.5)" }, "opacity": "=motion ? easeOut(progress(moved, 360)) : 1" },
         // the system's card (its panel is in the picture)
-        { "use": "tile", "w": 76, "h": 76, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 18, "z": 1 },
-          "shadow": { "y": 4, "blur": 9, "color": "=shade" },
+        { "type": "group", "x": "=slide", "children": [
+        { "use": "tile", "w": 76, "h": 76, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 18, "z": 1, "f": "=lit" },
+          "shadow": { "y": 4, "blur": "=9 + 14 * lit", "color": "=lit > 0.05 ? alpha(sys.color, 0.3 + 0.6 * lit) : shade" },
           "opacity": "=easeOut(progress(moved, 220))", "scale": "=0.9 + 0.1 * easeOutBack(progress(moved, 280))", "anchor": "center",
           "x": 320, "y": 136 },
         { "type": "text", "x": 132, "w": 375, "y": 186, "align": "center", "text": "{sys.name}", "font": "inter-bold", "size": 25, "color": "=ink" },
@@ -146,6 +157,7 @@
               "size": 10, "spacing": 0.5, "color": "=soft" },
             { "type": "text", "x": 62, "y": 25, "w": 250, "text": "{sys.resumeTitle}", "font": "inter-semibold", "size": 17.5, "color": "=ink" }
           ] }
+        ] }
       ],
       "bottom": [
         { "use": "backdrop", "with": { "pic": "=pics + 'home-bottom.jpg'" } },
@@ -155,17 +167,17 @@
                           "size": 14, "color": "=ink" } ] },
         { "use": "sides", "x": 15, "y": 11, "w": 610 },
         // the shelf: a glass tray as iOS's dock, the selection raised and lit in its colour
-        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 156, "w": 640, "h": 138, "range": 3,
+        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": "=156 + rise", "w": 640, "h": 138, "range": 3,
           "item": {
             "type": "group", "w": 640, "h": 138, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
             "children": [
               { "type": "rect", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18", "y": 54, "w": 92, "h": 92, "anchor": "center", "radius": 28,
                 "fill": "=alpha(item.color, 0.0)", "visible": "=sel",
-                "shadow": { "blur": 34, "spread": 6, "color": "=alpha(item.color, 0.75)" } },
+                "shadow": { "blur": "=34 + 12 * lit", "spread": "=6 + 10 * lit", "color": "=alpha(item.color, 0.7 + 0.3 * lit)" } },
               { "use": "tile", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18", "y": "=sel ? 54 : 69", "w": "=sel ? 105 : 70", "h": "=sel ? 105 : 70",
                 "anchor": "center", "smooth": { "w": 110, "h": 110, "y": 110 },
                 "shadow": { "y": 4, "blur": 8, "color": "=shade" },
-                "with": { "c": "=item.color", "src": "=item.icon", "r": "=sel ? 24 : 16", "z": "=sel ? 1.5 : 1" } },
+                "with": { "c": "=item.color", "src": "=item.icon", "r": "=sel ? 24 : 16", "z": "=sel ? 1.5 : 1", "f": "=sel ? lit : 0" } },
               { "type": "text", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18 + 22", "y": "=sel ? 6 : 36", "text": "★", "size": 13, "color": "=hi",
                 "visible": "=item.fav" }
             ]
@@ -185,11 +197,13 @@
     "library": {
       "top": [
         { "use": "backdrop", "with": { "pic": "=pics + 'library-top.jpg'" } },
-        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 65, "y": 100, "w": 206, "h": 206,
+        { "type": "rect", "x": "=168 + slide", "y": 203, "w": 180, "h": 180, "anchor": "center", "radius": 14, "fill": "=alpha(sys.color, 0)",
+          "shadow": { "blur": "=34 + 20 * lit", "spread": "=2 + 8 * lit", "color": "=alpha(sys.color, 0.3 + 0.45 * lit)" } },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": "=65 + slide", "y": 100, "w": 206, "h": 206,
           "radius": 10, "placeholder": "=alpha(sys.color, 0.6)",
           "opacity": "=easeOut(progress(moved, 200))" },
         // the game: its title, the system, a rule and its numbers, one under the other
-        { "type": "group", "x": 300, "y": 105, "w": 273, "layout": "column", "gap": 8,
+        { "type": "group", "x": "=300 + slide * 0.6", "y": 105, "w": 273, "layout": "column", "gap": 8,
           "children": [
             { "type": "text", "w": 273, "text": "{game.title}", "font": "inter-bold", "size": 25, "color": "=ink",
               "wrap": true, "maxLines": 2, "lineHeight": 30 },
@@ -216,18 +230,21 @@
         { "use": "backdrop", "with": { "pic": "=pics + 'library-bottom.jpg'" } },
         { "type": "group", "x": 200, "y": 15, "w": 240, "h": 32, "layout": "row", "gap": 9, "justify": "center", "align": "center",
           "children": [
-            { "use": "tile", "w": 30, "h": 30, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 8, "z": 0.3 } },
+            { "use": "tile", "w": 30, "h": 30, "with": { "c": "=sys.color", "src": "=sys.icon", "r": 8, "z": 0.3, "f": 0 } },
             { "type": "text", "text": "{sys.name}", "font": "inter-semibold", "size": 16, "color": "=ink", "y": 1 }
           ] },
         { "use": "sides", "x": 15, "y": 11, "w": 610 },
-        { "type": "list", "source": "games", "direction": "free", "x": 0, "y": 125, "w": 640, "h": 200, "range": 3,
+        { "type": "list", "source": "games", "direction": "free", "x": 0, "y": "=125 + rise", "w": 640, "h": 200, "range": 3,
           "item": {
-            "type": "group", "w": 640, "h": 200, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
+            "type": "group", "w": 640, "h": 200, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1) * (sel ? 1 : 1 - go)",
             "children": [
+              { "type": "rect", "x": "=320 + pos * 106", "y": 88, "w": 150, "h": 150, "anchor": "center", "radius": 12,
+                "fill": "=alpha(sys.color, 0)", "visible": "=sel", "scale": "=1 + 0.18 * go",
+                "shadow": { "blur": "=26 + 16 * lit + 30 * go", "spread": "=3 + 8 * lit + 10 * go", "color": "=alpha(sys.color, 0.55 + 0.45 * max(lit, go))" } },
               { "type": "image", "src": "{item.art}", "fallback": "{item.box}", "fit": "cover",
                 "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1)", "y": "=sel ? 88 : 100",
                 "w": 94, "h": 94, "anchor": "center", "radius": 7, "placeholder": "=alpha(sys.color, 0.7)",
-                "scale": "=sel ? 1.66 : 1", "smooth": { "scale": 110, "y": 110 } },
+                "scale": "=sel ? 1.66 + 0.3 * go : 1", "smooth": { "scale": 110, "y": 110 } },
               { "type": "text", "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1) + 28",
                 "y": "=sel ? 6 : 42", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }
             ]
