@@ -63,12 +63,12 @@
       ]
     },
     // the buttons: B on the left, A on the right, the others together in the middle, as far from one as the other.
-    // An empty slot (no B at home) is a spacer, so the middle stays centred between the edge and A.
+    // A missing B or A leaves an invisible copy of the other one in its place, so the middle stays in the screen's centre.
     "hints": {
       "type": "group", "x": 18, "y": 418, "w": 604, "h": 42, "layout": "row", "justify": "between", "align": "center",
       "children": [
         { "use": "hint", "visible": "=view != 'home'", "with": { "key": "B", "label": "Back", "tap": "b" } },
-        { "type": "rect", "w": 0, "h": 42, "visible": "=view == 'home'" },
+        { "use": "hint", "opacity": 0, "visible": "=view == 'home'", "with": { "key": "A", "label": "Open", "tap": "" } },
         { "type": "group", "layout": "row", "gap": 11, "align": "center",
           "children": [
             { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
@@ -77,7 +77,7 @@
             { "use": "hint", "with": { "key": "SELECT", "label": "Search", "tap": "" } }
           ] },
         { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' ? 'Open' : 'Play'", "tap": "a" } },
-        { "type": "rect", "w": 0, "h": 42, "visible": "=view != 'home' && empty" }
+        { "use": "hint", "opacity": 0, "visible": "=view != 'home' && empty", "with": { "key": "B", "label": "Back", "tap": "" } }
       ]
     },
     // the top screen's corners: the date and time on the left, Wi-Fi and the battery on the right (their glass is baked)
