@@ -1725,7 +1725,11 @@ namespace banana
 		if (down) { mDown = true; downX = x; downY = y; downScreen = screen; return false; }
 		if (!mDown) return false;
 		mDown = false;
-		if (screen != downScreen || std::fabs(x - downX) > 24 * d->s || std::fabs(y - downY) > 24 * d->s) return false;
+		// a swipe across the bottom screen: one step the other way, as Banana's own themes (the games, or the systems)
+		float dx = x - downX, dy = y - downY;
+		if (screen == 1 && downScreen == 1 && x >= 0 && std::fabs(dx) > 56 * d->s && std::fabs(dx) > std::fabs(dy) * 1.2f)
+			return press(dx < 0 ? rnds::UI::RIGHT : rnds::UI::LEFT);
+		if (screen != downScreen || std::fabs(dx) > 24 * d->s || std::fabs(dy) > 24 * d->s) return false;
 		// the topmost thing under the finger: the last drawn
 		for (auto it = d->hits.rbegin(); it != d->hits.rend(); ++it)
 		{

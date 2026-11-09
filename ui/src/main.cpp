@@ -1416,11 +1416,17 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "swipe")
 		{
-			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the settings' bottom panel
+			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the bottom panel (the settings',
+			// else the menu's)
 			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 			cs >> x1 >> y1 >> x2 >> y2;
 			float k = o.h / 480.0f;
-			if (!settings.isOpen()) { logf("swipe: the settings aren't open"); return 2; }
+			if (!settings.isOpen())
+			{
+				ui.touch(1, x1 * k, y1 * k, true);
+				logf("swipe %.0f %.0f -> %.0f %.0f: %s", x1, y1, x2, y2, ui.touch(1, x2 * k, y2 * k, false) ? "used" : "unused");
+				continue;
+			}
 			settings.touch(x1 * k, y1 * k, true);
 			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
 		}
