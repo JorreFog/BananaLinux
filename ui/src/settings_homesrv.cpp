@@ -21,6 +21,8 @@
 #include "qr/qrcodegen.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <dirent.h>
 #include <fstream>
 #include <signal.h>
 #include <sstream>
@@ -174,6 +176,31 @@ namespace banana
 		return pid > 0 && comm == "banana-sync" && kill(pid, 0) == 0 ? pid : 0;
 	}
 
+	// a process stopped, or one in its group (a pairing stopped before its pid was written), still running. A zombie is
+	// gone: one whose parent has gone is reaped by init, and until then kill() still finds it (in a container whose
+	// first process reaps nothing, for good)
+	static bool stillThere(pid_t p)
+	{
+		if (p <= 0 || (kill(p, 0) != 0 && kill(-p, 0) != 0)) return false;
+		DIR* d = opendir("/proc");
+		if (!d) return true;
+		bool there = false;
+		while (struct dirent* e = readdir(d))
+		{
+			if (e->d_name[0] < '0' || e->d_name[0] > '9') continue;
+			// "<pid> (<comm>) <state> <ppid> <pgrp> ...", the name maybe holding spaces or parentheses
+			std::string st = firstLine(std::string("/proc/") + e->d_name + "/stat");
+			size_t r = st.rfind(')');
+			if (r == std::string::npos) continue;
+			char state = 0;
+			int ppid = 0, pgrp = 0;
+			if (sscanf(st.c_str() + r + 1, " %c %d %d", &state, &ppid, &pgrp) != 3 || state == 'Z') continue;
+			if (atoi(e->d_name) == p || pgrp == p) { there = true; break; }
+		}
+		closedir(d);
+		return there;
+	}
+
 	void Settings::hsStartPair(const std::string& code)
 	{
 		hsKind = "romm";
@@ -184,7 +211,7 @@ namespace banana
 		hsExpires = 0;
 		// (the pairing stopped a moment ago still ending: this one once it has, hsPollStopped. Only for those 3 s: the pid
 		// may be another process's later)
-		if (hsStopPid > 0 && now - hsStopAt < 3000 && kill(hsStopPid, 0) == 0)
+		if (now - hsStopAt < 3000 && stillThere(hsStopPid))
 		{
 			hsStep = 0;
 			hsStopping = true;
@@ -208,7 +235,7 @@ namespace banana
 		std::ofstream(runDir + "/sync.status") << "pairing\n";
 		syncLine.clear();	// (the status read again even when its line is the one before)
 		auto q = gamesync::shellQuote;
-		hsRun("pair --romm " + q(hsUrl) + (code.empty() ? "" : " " + q(code)));
+		hsPairGroup = hsRun("pair --romm " + q(hsUrl) + (code.empty() ? "" : " " + q(code)));
 	}
 
 	void Settings::hsPairLine(const std::string& ln)
@@ -228,6 +255,7 @@ namespace banana
 		else if (ln.compare(0, 7, "paired ") == 0)
 		{
 			hsStep = 0;
+			hsPairGroup = 0;
 			hsDone = true;
 			JPtr j = readJsonFile(data + "/romsync.json");
 			std::string dev = j && j->isObj() ? j->str("name") : "";
@@ -248,6 +276,7 @@ namespace banana
 		else if (ln.compare(0, 6, "error ") == 0)
 		{
 			hsStep = 0;
+			hsPairGroup = 0;
 			std::string rest = ln.substr(6), cause = rest.substr(0, rest.find(' ')), detail = rest.find(' ') == std::string::npos ? "" : rest.substr(rest.find(' ') + 1);
 			hsCause = cause;
 			// (the device flow's own words first: "refused in RomM" isn't probe's refused)
@@ -278,15 +307,24 @@ namespace banana
 		hsStopping = false;
 		int pid = runningSync(runDir);
 		if (pid > 0 && kill(pid, SIGTERM) == 0) { hsStopPid = pid; hsStopAt = now; }
+		// (B a moment after the start, before banana-sync has written sync.pid: its process group stopped instead, the
+		// sh and banana-sync in it, whose "error stopped" the menu says for it if it went before it could)
+		else if (pid <= 0 && hsPairGroup > 0 && kill(-hsPairGroup, SIGTERM) == 0)
+		{
+			hsStopPid = hsPairGroup; hsStopAt = now;
+			if (bsync::trim(firstLine(runDir + "/sync.status")) == "pairing") std::ofstream(runDir + "/sync.status") << "error stopped\n";
+		}
+		hsPairGroup = 0;
 	}
+
 
 	// the pairing asked for while the one stopped was ending: started once it has gone, or after 3 s said as a sync
 	// still running (true: the screen changed)
 	bool Settings::hsPollStopped()
 	{
 		if (!hsStopping) return false;
-		if (hsStopPid > 0 && kill(hsStopPid, 0) == 0 && now - hsStopAt < 3000) return false;
-		const bool gone = hsStopPid <= 0 || kill(hsStopPid, 0) != 0;
+		if (now - hsStopAt < 3000 && stillThere(hsStopPid)) return false;
+		const bool gone = !stillThere(hsStopPid);
 		hsStopping = false;
 		if (gone) { hsStopPid = 0; hsStartPair(hsStopCode); }
 		else { hsCause = "busy"; hsMsg = hsWhy("busy", ""); }

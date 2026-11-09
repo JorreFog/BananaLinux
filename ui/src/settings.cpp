@@ -7533,17 +7533,28 @@ namespace banana
 		return q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") +
 			" --run " + q(runDir) + " --status " + q(runDir + "/sync.status") + " " + args;
 	}
-	void Settings::hsRun(const std::string& args)
+	pid_t Settings::hsRun(const std::string& args)
 	{
 		// the card's root is the folder above banana/ (/data); the pairing and the settings are banana/'s
+		// (the run's own session, so its process group's id is the pid handed back through the pipe: a pairing stopped
+		// before banana-sync has written sync.pid is stopped through that group)
 		std::string cmd = syncCmd(args) + " >/dev/null 2>&1";
+		int fd[2];
+		if (pipe2(fd, O_CLOEXEC) != 0) fd[0] = fd[1] = -1;
 		pid_t p = fork();
 		if (p == 0)
 		{
-			if (fork() == 0) { setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+			pid_t g = fork();
+			if (g == 0) { setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+			if (fd[1] >= 0 && write(fd[1], &g, sizeof g) != (ssize_t)sizeof g) {}
 			_exit(0);
 		}
+		if (fd[1] >= 0) ::close(fd[1]);
+		pid_t g = 0;
+		if (p > 0 && fd[0] >= 0 && read(fd[0], &g, sizeof g) != (ssize_t)sizeof g) g = 0;
+		if (fd[0] >= 0) ::close(fd[0]);
 		if (p > 0) waitpid(p, nullptr, 0);
+		return g > 0 ? g : 0;
 	}
 	std::string Settings::homeServer() const
 	{

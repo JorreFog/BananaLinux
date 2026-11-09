@@ -3,7 +3,7 @@
 # pairs, a sync is done at once. RomM at any address: probe --romm answers as $FAKE_SYNC_PROBE says (ok, old, or a
 # failure: redirect, for an http:// address only, access, tls, dns), and pair --romm shows a code and is approved 2 s
 # later (FAKE_SYNC_PAIR=deny: refused; hang: no answer; tls, redirect: the pairing's own probe failing; slowstop: a
-# second to end once stopped), a code given pairs at once (FAKE_SYNC_FIND=romm: no Romhost
+# second to end once stopped; latepid: its sync.pid a second late), a code given pairs at once (FAKE_SYNC_FIND=romm: no Romhost
 # found, and RomM at the address typed instead); games lists two GBA games, one on the card; a sync run by hand leaves
 # its status as it is, or with FAKE_SYNC_DONE says it is done a second later. Each call's arguments go to $FAKE_SYNC_LOG
 echo "$*" >> "$FAKE_SYNC_LOG"
@@ -71,6 +71,8 @@ while [ $# -gt 0 ]; do
             # waiting on a slow server takes; gone by itself after 10 s)
             slowstop) echo $$ > "$run/sync.pid"; trap 'sleep 1; st "error stopped"; exit 1' TERM
                 for i in $(seq 100); do sleep 0.1; done; exit 1 ;;
+            # (sync.pid written only a second in, as a banana-sync slow to start; approved a second after that)
+            latepid) sleep 1; echo $$ > "$run/sync.pid"; sleep 1; romm "$3"; rm -f "$run/sync.pid"; exit 0 ;;
             deny) sleep 2; st "error refused in RomM"; exit 1 ;;
             esac
             sleep 2; romm "$3"; exit 0

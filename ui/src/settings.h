@@ -671,6 +671,7 @@ namespace banana
 		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
 		int hsStopPid = 0;		// a pairing stopped (SIGTERM), not gone yet: the next one waits for it
 		double hsStopAt = 0;
+		pid_t hsPairGroup = 0;	// the pairing started last: its process group, stopped by B before it has written sync.pid
 		bool hsStopping = false;	// a pairing asked for while that one ends: started once it has
 		std::string hsStopCode;	// (its code, "" for the device flow)
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
@@ -687,7 +688,7 @@ namespace banana
 		std::function<gamesync::WifiFacts()> wifiFacts;
 		bool pollSyncWifi();
 		void startPairing();
-		void hsRun(const std::string& args);	// banana-sync <args> in the background
+		pid_t hsRun(const std::string& args);	// banana-sync <args> in the background (its process group, 0 if unknown)
 		// banana-sync with this card's root, pairing and settings, then args, as one sh command line (the Sync row's
 		// runs, the Saves page's and the games to choose from all start it so)
 		std::string syncCmd(const std::string& args) const;

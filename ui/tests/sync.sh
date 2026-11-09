@@ -861,6 +861,11 @@ if [ -x "$HERE/banana-ui" ]; then
     [ "$(grep -c 'pair --romm' "$SL")" = 2 ] || bad "RomM: a pairing asked for while the stopped one ended wasn't started after it: $(cat "$SL")"
     grep -q 'pairing not started: a sync is running' "$OUT/ui-slowstop.log" && bad "RomM: the pairing being stopped was said as a sync running"
     sleep 1; pkill -f "$OUT/slow-bin/banana-sync" 2>/dev/null
+    # (B the moment the pairing starts, before banana-sync has written sync.pid: stopped all the same, not approved
+    # behind the menu's back two seconds later)
+    ur latepid "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 400; press b; wait 100; sleep 2500; wait 100" BANANA_SYNC="$OUT/slow-bin/banana-sync" FAKE_SYNC_PAIR=latepid
+    grep -q 'pair --romm' "$SL" || bad "RomM: B before sync.pid: no pairing started: $(cat "$SL")"
+    [ -e "$FX/data/romsync.json" ] && bad "RomM: a pairing stopped before its sync.pid was written went on and paired"
     # paired with RomM: Get games (the third row, after Server and Sync now) lists the server's games; A on one on the
     # card does nothing, A on one that isn't puts it on the download list and starts a sync, A again takes it back
     printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
