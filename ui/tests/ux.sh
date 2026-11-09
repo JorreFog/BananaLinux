@@ -161,12 +161,12 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
-# first language after English (fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
+# languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
 # starts again: settings result 9, LANGUAGE)
-ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langlist; press down; press a; shot ux-langask; press a"
+ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langlist; press down; press down; press a; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
-ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press a; press down; press a"
+ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press down; press a; press down; press a"
 grep -q '^language = fi' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
