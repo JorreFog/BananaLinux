@@ -1,0 +1,85 @@
+Build without fontconfig, which BananaOS doesn't have: MAME_NO_FONTCONFIG leaves out FcInit/FcFini and the SDL font
+provider's fontconfig lookups. The provider stays (SDL_ttf): a font given by file path (-uifont /path/font.ttf) is drawn
+sharp at any size, where the built-in bitmap font scaled up came out soft.
+
+diff --git a/src/osd/modules/font/font_sdl.cpp b/src/osd/modules/font/font_sdl.cpp
+index 9767f5d3..d676c5dd 100644
+--- a/src/osd/modules/font/font_sdl.cpp
++++ b/src/osd/modules/font/font_sdl.cpp
+@@ -17,7 +17,8 @@
+ 
+ #include <SDL2/SDL_ttf.h>
+ 
+-#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN)
++// Banana: MAME_NO_FONTCONFIG, no fontconfig (BananaOS has none): fonts by file path only (-uifont /path/font.ttf)
++#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN) && !defined(MAME_NO_FONTCONFIG)
+ #include <fontconfig/fontconfig.h>
+ #endif
+ 
+@@ -53,7 +54,7 @@ private:
+ 
+ 	static constexpr double POINT_SIZE = 144.0;
+ 
+-#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN)
++#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN) && !defined(MAME_NO_FONTCONFIG)
+ 	TTF_Font_ptr search_font_config(std::string const &family, std::string const &style, bool &bakedstyles);
+ #endif
+ 	bool BDF_Check_Magic(std::string const &name);
+@@ -98,7 +99,7 @@ bool osd_font_sdl::open(std::string const &font_path, std::string const &_name,
+ 	}
+ 
+ 	// if that didn't work, crank up the FontConfig database
+-#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN)
++#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN) && !defined(MAME_NO_FONTCONFIG)
+ 	if (!font)
+ 	{
+ 		font = search_font_config(family, style, bakedstyles);
+@@ -221,7 +222,7 @@ bool osd_font_sdl::BDF_Check_Magic(std::string const &name)
+ 	return false;
+ }
+ 
+-#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN)
++#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN) && !defined(MAME_NO_FONTCONFIG)
+ osd_font_sdl::TTF_Font_ptr osd_font_sdl::search_font_config(std::string const &family, std::string const &style, bool &bakedstyles)
+ {
+ 	TTF_Font_ptr font(nullptr, &TTF_CloseFont);
+@@ -325,7 +326,7 @@ bool font_sdl::get_font_families(std::string const &font_path, std::vector<std::
+ 
+ 	// TODO: enumerate TTF files in font path, since we can load them, too
+ 
+-#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN)
++#if !defined(SDLMAME_HAIKU) && !defined(SDLMAME_EMSCRIPTEN) && !defined(MAME_NO_FONTCONFIG)
+ 	FcConfig *const config = FcConfigGetCurrent();
+ 	std::unique_ptr<FcPattern, void (*)(FcPattern *)> pat(FcPatternCreate(), &FcPatternDestroy);
+ 	FcPatternAddString(pat.get(), FC_FONTFORMAT, (const FcChar8 *)"TrueType");
+diff --git a/src/osd/sdl/sdlmain.cpp b/src/osd/sdl/sdlmain.cpp
+index 1933bde1..6e098740 100644
+--- a/src/osd/sdl/sdlmain.cpp
++++ b/src/osd/sdl/sdlmain.cpp
+@@ -31,7 +31,7 @@
+ 
+ #ifdef SDLMAME_UNIX
+ #if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
+-#ifndef SDLMAME_HAIKU
++#if !defined(SDLMAME_HAIKU) && !defined(MAME_NO_FONTCONFIG)
+ #include <fontconfig/fontconfig.h>
+ #endif
+ #endif
+@@ -88,7 +88,7 @@ int main(int argc, char** argv)
+ 
+ #ifdef SDLMAME_UNIX
+ 	sdl_entered_debugger = 0;
+-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
++#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(MAME_NO_FONTCONFIG))
+ 	FcInit();
+ #endif
+ #endif
+@@ -101,7 +101,7 @@ int main(int argc, char** argv)
+ 	}
+ 
+ #ifdef SDLMAME_UNIX
+-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
++#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(MAME_NO_FONTCONFIG))
+ 	if (!sdl_entered_debugger)
+ 	{
+ 		FcFini();

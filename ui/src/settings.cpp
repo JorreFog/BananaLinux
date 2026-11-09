@@ -909,7 +909,7 @@ namespace banana
 		{
 			const char* HSS = "Home server systems";
 			struct { const char* id; const char* name; } sy[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
 			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
 		}
 		addShelfRows();
@@ -4779,7 +4779,7 @@ namespace banana
 		auto size = [](long long b) { char t[32]; if (b >= (1LL << 30)) snprintf(t, sizeof t, "%.1f GB", b / 1073741824.0); else snprintf(t, sizeof t, "%lld MB", (b + 524288) >> 20); return std::string(t); };
 		auto sysName = [](const std::string& f) -> std::string {
 			static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
 			auto it = N.find(f); return it == N.end() ? f : it->second; };
 		long long chosenBytes = 0; int chosenN = 0;
 		for (auto& g : pickGames) if (g.on) { chosenBytes += g.bytes; chosenN++; }
@@ -5442,7 +5442,9 @@ namespace banana
 	static std::string baseOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
 
 	// the ROM, and with all its saves, states and art: in the saves and states folders (RetroArch's, the DS
-	// emulators' and DraStic's), beside the game, and in its folder's media/*; a file belongs to the game when its
+	// emulators' and DraStic's), beside the game, in its folder's media/* and artwork/ (Game & Watch: its MAME artwork
+	// zip), and its own folder of saves where an emulator keeps one (MAME's saves/<system>/<game>/, the Game & Watch
+	// high scores); a file belongs to the game when its
 	// name is the game's name and a dot ("Peel Quest.sav", "Peel Quest.state1", "Peel Quest.resume.dss"), and not to
 	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay)
 	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all)
@@ -5461,7 +5463,34 @@ namespace banana
 			closedir(d);
 		}
 		std::vector<std::string> dirs = { root + "/saves", root + "/saves/" + sys, root + "/states", root + "/states/" + sys,
-			root + "/drastic/backup", root + "/drastic/savestates", dir };
+			root + "/drastic/backup", root + "/drastic/savestates", dir, dir + "/artwork" };
+		// a folder of saves named after the game (MAME's NVRAM): its files, then the folder
+		for (const std::string& sd : { root + "/saves/" + sys + "/" + base, root + "/states/" + sys + "/" + base })
+		{
+			DIR* d = opendir(sd.c_str());
+			if (!d)
+			{
+				continue;
+			}
+			std::vector<std::string> files;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] != '.')
+				{
+					files.push_back(sd + "/" + e->d_name);
+				}
+			}
+			closedir(d);
+			for (auto& f : files)
+			{
+				struct stat st;
+				if (stat(f.c_str(), &st) == 0 && S_ISREG(st.st_mode) && unlink(f.c_str()) == 0)
+				{
+					gone.push_back(f);
+				}
+			}
+			rmdir(sd.c_str());
+		}
 		if (DIR* d = opendir((dir + "/media").c_str()))
 		{
 			while (dirent* e = readdir(d)) if (e->d_name[0] != '.') dirs.push_back(dir + "/media/" + e->d_name);
