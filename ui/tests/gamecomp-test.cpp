@@ -5,6 +5,7 @@
 // $1 for tests/run.sh's game panel run. The companion idea is PokeDaisy's (Lidor Itzhari).
 #include "gamecomp.h"
 #include "json.h"
+#include "lang.h"
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -397,6 +398,93 @@ int main(int argc, char** argv)
 		CHECK(f == nd + "/nes/test-nes.json", "the NES definition is found: %s (%s)", f.c_str(), why.c_str());
 		Engine ne;
 		CHECK(ne.open(out + "/gc-test.nes", nd, "nes") && ne.game()->title == "NES Test", "the engine opens it");
+	}
+	// ---- a translation of a definition (lang/<code>/ under the companions folder; the English file still matches)
+	{
+		std::string dir = out + "/gc-lang", tsv = out + "/gc-lang-tsv";
+		CHECK(system(("rm -rf '" + dir + "' '" + tsv + "' && mkdir -p '" + dir + "/lang/es/nes' '" + dir + "/nes' '" + tsv + "'").c_str()) == 0, "the translation test folder");
+		auto mini = [](const std::string& title, const std::string& code, const std::string& title12)
+		{
+			std::string pages;
+			const char* ids[] = { "status", "detail", "battle", "map", "bag", "collection", "progress" };
+			for (int i = 0; i < 7; i++)
+			{
+				if (i) pages += ",";
+				pages += std::string("{\"id\":\"") + ids[i] + "\",\"title\":\"" + ids[i] + "\",\"widgets\":[{\"type\":\"static\",\"text\":\"Hello\"}]}";
+			}
+			return std::string("{\"schema\":1,\"title\":\"") + title + "\",\"match\":{\"code\":\"" + code + "\",\"title12\":\"" + title12 +
+				"\"},\"accent\":\"#112233\",\"quality\":\"reference-only\",\"sources\":[],\"vars\":{},\"pages\":[" + pages + "]}";
+		};
+		writeText(dir + "/gcomp-lang-probe.json", mini("Probe English", "Z9PE", "LANGPROBE"));
+		writeText(dir + "/lang/es/gcomp-lang-probe.json", mini("Probe Español", "NOPE", "NOT THE GAME"));
+		writeText(tsv + "/es.tsv", "#: language = Español\n#: language-en = Spanish\n#: translated-by = test\nsettings\t\tHello\tHola\n");
+		writeText(tsv + "/de.tsv", "#: language = Deutsch\n#: language-en = German\n#: translated-by = test\nsettings\t\tHello\tHallo\n");
+		std::string rom = out + "/gc-lang.gba";
+		writeFile(rom, makeRom("LANGPROBE", "Z9PE"));
+		writeText(dir + "/index.tsv", makeIndex(dir));
+		CHECK(makeIndex(dir).find("lang/") == std::string::npos, "index.tsv lists the English files only");
+		CHECK(translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "English (the default): no translation lookup");
+		CHECK(lang::load(tsv, "es", { "settings" }) && lang::current().code == "es", "Spanish loads");
+		auto ps = translationPaths(dir, dir + "/gcomp-lang-probe.json");
+		CHECK(ps.size() == 3, "card, image, then this folder: %zu", ps.size());
+		if (ps.size() == 3)
+		{
+			CHECK(ps[0] == "/data/banana/companions/lang/es/gcomp-lang-probe.json", "the card first: %s", ps[0].c_str());
+			CHECK(ps[1] == "/usr/share/banana/companions/lang/es/gcomp-lang-probe.json", "then the image: %s", ps[1].c_str());
+			CHECK(ps[2] == dir + "/lang/es/gcomp-lang-probe.json", "then the folder the game was found in: %s", ps[2].c_str());
+		}
+		auto card = translationPaths("/data/banana/companions", "/data/banana/companions/nes/gcomp-lang-probe.json");
+		CHECK(card.size() == 2 && card[0] == "/data/banana/companions/lang/es/nes/gcomp-lang-probe.json" &&
+			card[1] == "/usr/share/banana/companions/lang/es/nes/gcomp-lang-probe.json",
+			"a system subfolder is mirrored, and the card is not listed twice");
+		CHECK(findDef(dir, rom) == dir + "/gcomp-lang-probe.json", "matching stays on the English file");
+		Engine e;
+		CHECK(e.open(rom, dir) && e.game()->title == "Probe Español" && e.game()->file == dir + "/lang/es/gcomp-lang-probe.json",
+			"the translation is shown: %s", e.game() ? e.game()->title.c_str() : "");
+		writeText(dir + "/lang/es/gcomp-lang-probe.json", "{");
+		Engine bad;
+		CHECK(bad.open(rom, dir) && bad.game()->title == "Probe English" && bad.game()->file == dir + "/gcomp-lang-probe.json",
+			"a translation that does not parse: the English definition (%s)", bad.game() ? bad.game()->title.c_str() : "");
+		writeText(dir + "/lang/es/gcomp-lang-probe.json", mini("Probe Español", "NOPE", "NOT THE GAME"));
+		CHECK(lang::load(tsv, "de", { "settings" }) && lang::current().code == "de", "German loads");
+		Engine miss;
+		CHECK(miss.open(rom, dir) && miss.game()->title == "Probe English", "no translation for this language: English");
+		CHECK(lang::load(tsv, "en", {}) && lang::current().code == "en", "back to English");
+		CHECK(translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "en: no lookup, even when a translation is there");
+		Engine en;
+		CHECK(en.open(rom, dir) && en.game()->title == "Probe English", "en shows the English definition");
+		CHECK(lang::load(tsv, "", {}) && translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "no language set: no lookup");
+		// another system's file: companions/<system>/<file>.json -> companions/lang/<code>/<system>/<file>.json
+		std::string sys = argc > 3 ? std::string(argv[3]) + "/systems" : "../system/rootfs/usr/share/banana/companions/systems";
+		setSystemsDir(sys);
+		std::vector<uint8_t> nrom(0x4010, 0x11);
+		memcpy(nrom.data(), "NES\x1a", 4);
+		std::string npath = out + "/gc-lang.nes";
+		writeFile(npath, nrom);
+		uLong ncrc = crc32(crc32(0L, Z_NULL, 0), nrom.data(), (uInt)nrom.size());
+		char ncs[16];
+		snprintf(ncs, sizeof ncs, "%08lx", ncrc);
+		std::string nesEn = std::string("{\"schema\":2,\"system\":\"nes\",\"title\":\"NES English\",\"match\":{\"crc32\":[\"") + ncs +
+			"\"]},\"accent\":\"#c04040\",\"quality\":\"reference-only\",\"sources\":[],\"vars\":{},\"pages\":[{\"id\":\"status\",\"title\":\"S\",\"widgets\":[{\"type\":\"static\",\"text\":\"Hi\"}]}]}";
+		std::string nesEs = nesEn;
+		nesEs.replace(nesEs.find("NES English"), 11, "NES Español");
+		writeText(dir + "/nes/gcomp-lang-nes.json", nesEn);
+		writeText(dir + "/lang/es/nes/gcomp-lang-nes.json", nesEs);
+		CHECK(lang::load(tsv, "es", { "settings" }), "Spanish again");
+		auto ns = translationPaths(dir, dir + "/nes/gcomp-lang-nes.json");
+		CHECK(!ns.empty() && ns.back() == dir + "/lang/es/nes/gcomp-lang-nes.json", "the NES path is mirrored under lang/es/: %s",
+			ns.empty() ? "" : ns.back().c_str());
+		CHECK(findDef(dir, npath, &why, "nes") == dir + "/nes/gcomp-lang-nes.json", "the NES match is the English file: %s", why.c_str());
+		Engine ne2;
+		CHECK(ne2.open(npath, dir, "nes") && ne2.game()->title == "NES Español" && ne2.game()->file == dir + "/lang/es/nes/gcomp-lang-nes.json",
+			"the NES translation is shown: %s", ne2.game() ? ne2.game()->file.c_str() : why.c_str());
+		writeText(dir + "/lang/es/nes/gcomp-lang-nes.json", "{\"schema\":9}");
+		Engine ne3;
+		CHECK(ne3.open(npath, dir, "nes") && ne3.game()->title == "NES English", "a NES translation that does not parse: English");
+		unlink((dir + "/lang/es/nes/gcomp-lang-nes.json").c_str());
+		Engine ne4;
+		CHECK(ne4.open(npath, dir, "nes") && ne4.game()->title == "NES English", "a NES translation that is missing: English");
+		lang::load(tsv, "en", {});
 	}
 	if (fails) { fprintf(stderr, "%d checks failed\n", fails); return 1; }
 	fprintf(stderr, "gamecomp-test: all passed\n");
