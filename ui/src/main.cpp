@@ -14,6 +14,7 @@
 
 #include "../rnds/RndsUI.h"
 #include "input.h"
+#include <linux/input.h>
 #include "kms.h"
 #include "library.h"
 #include "soft.h"
@@ -410,6 +411,10 @@ struct RomWatch
 			{
 				auto* e = (inotify_event*)p;
 				auto it = dirOf.find(e->wd);
+				if (it != dirOf.end())
+				{
+					changed.insert(it->second);
+				}
 				if ((e->mask & IN_ISDIR) && (e->mask & (IN_CREATE | IN_MOVED_TO)) && e->len && it != dirOf.end() && e->name[0] != '.')
 					add(it->second + "/" + e->name);
 				// what started a new wait, in the log (the owner saw "Looking for games" after every game and
@@ -425,6 +430,16 @@ struct RomWatch
 		if (any) due = now + 2000;
 	}
 	bool logged = false;	// this wait's first change logged
+	std::set<std::string> changed;	// the folders changed since the last rescan (systems.conf's "changed" commands)
+	// systems.conf's "changed" commands: in the background, detached from the menu
+	static void run(const std::vector<std::string>& cmds, const char* why)
+	{
+		for (auto& cmd : cmds)
+		{
+			logf("%s: %s", why, cmd.c_str());
+			if (system(("( " + cmd + " ) </dev/null >/dev/null 2>&1 &").c_str()) != 0) {}
+		}
+	}
 };
 
 // ---- boot timing: seconds since the kernel started, for logs/boot.txt (rcS gathers /run/banana/boot-times) ------
@@ -1099,22 +1114,33 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "gamepanel")
 		{
 			// gamepanel <screen> <rom>: the game panel for a RetroArch game on the other screen, with the Pokémon
-			// companion when the ROM is a game it knows (its tables read before going on)
+			// companion and its pages when the ROM is a game it knows (its tables read before going on), as gamePanel
+			// runs them for a real game
 			int scr = 1; std::string rom;
 			cs >> scr;
 			std::getline(cs >> std::ws, rom);
 			static pkmn::Companion comp;
+			static std::unique_ptr<gba::Host> host;
+			settings.gbaRelease();
+			host.reset();
 			bool pk = comp.open(rom);
 			for (int i = 0; pk && i < 300 && !comp.tables(); i++) usleep(10000);
 			settings.companion = pk ? &comp : nullptr;
+			if (pk)
+			{
+				mkdir((o.headless + "gba-state").c_str(), 0755);
+				host = std::make_unique<gba::Host>(comp, o.headless + "gba-state", false);
+			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
+			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
 		}
 		else if (op == "pokefeed")
 		{
-			// pokefeed <file>: the companion's requests, then the file as RetroArch's answers to them
+			// pokefeed <file>: the companion's requests, then the file as RetroArch's answers to them; a read the file has
+			// no answer for (the save's, which the pages ask for) answered with zeros: nothing there
 			std::string path;
 			std::getline(cs >> std::ws, path);
 			if (!settings.companion) { logf("pokefeed: no companion"); return 2; }
@@ -1123,11 +1149,21 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::stringstream b;
 			b << f.rdbuf();
 			std::string d = b.str();
+			std::istringstream asked(r);
+			for (std::string line; std::getline(asked, line);)
+			{
+				std::istringstream w(line);
+				std::string cmd, addr; int len = 0;
+				if (!(w >> cmd >> addr >> len) || cmd != "READ_CORE_MEMORY" || d.find("READ_CORE_MEMORY " + addr + " ") != std::string::npos) continue;
+				d += "READ_CORE_MEMORY " + addr;
+				for (int i = 0; i < len; i++) d += " 00";
+				d += "\n";
+			}
 			settings.companion->feed(d.data(), d.size());
 			settings.gameUpdate(now);
 			const pkmn::Snapshot& sn = settings.companion->snapshot();
-			logf("pokefeed %s: asked %d, party %zu, battle %d, foes %zu", path.c_str(), (int)std::count(r.begin(), r.end(), '\n'),
-				sn.party.size(), (int)sn.inBattle, sn.foes.size());
+			logf("pokefeed %s: asked %d, party %zu, battle %d, foes %zu, view %s", path.c_str(), (int)std::count(r.begin(), r.end(), '\n'),
+				sn.party.size(), (int)sn.inBattle, sn.foes.size(), settings.gamePanelView().c_str());
 		}
 		else if (op == "gcpanel")
 		{
@@ -1272,6 +1308,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::replace(one.begin(), one.end(), '\n', ';');
 			logf("gcfeed %s: asked %d (%s) seen %d", path.c_str(), settings.gameComp->reads(), one.c_str(), (int)settings.gameComp->snapshot().seen);
 		}
+		else if (op == "gbutton")
+		{
+			// gbutton <f|back|l2|r2|l3|r3>: that button pressed while the game runs (F: the menu; a Companion button
+			// switches between the menu and the companion)
+			std::string b;
+			cs >> b;
+			const int code = b == "f" ? BTN_MODE : b == "back" ? BTN_Z : b == "l2" ? BTN_TL2 : b == "r2" ? BTN_TR2 : b == "l3" ? BTN_THUMBL : b == "r3" ? BTN_THUMBR : 0;
+			const bool changed = settings.gameButton(code, now);
+			logf("gbutton %s: %s view %s", b.c_str(), changed ? "switched" : "nothing", settings.gamePanelView().c_str());
+		}
 		else if (op == "gtouch")
 		{
 			// gtouch <x> <y>: a tap on the game panel, in px of a 640x480 panel
@@ -1280,7 +1326,22 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			float k = o.h / 480.0f;
 			settings.gameTouch(x * k, y * k, true);
 			const Settings::GameAction act = settings.gameTouch(x * k, y * k, false);
-			logf("gtouch %.0f %.0f: action %d keys %d", x, y, (int)act, settings.gameKeysOpen() ? 1 : 0);
+			settings.gameUpdate(now);
+			logf("gtouch %.0f %.0f: action %d keys %d view %s", x, y, (int)act, settings.gameKeysOpen() ? 1 : 0, settings.gamePanelView().c_str());
+		}
+		else if (op == "gbahost")
+		{
+			// gbahost: waits (up to 10 s) for the GBA companion's ROM data (gamepanel's host)
+			if (!settings.companion) { logf("gbahost: no companion"); return 2; }
+			for (int i = 0; i < 1000; i++)
+			{
+				settings.gameUpdate(now);
+				if (settings.gbaReady() != 0) break;
+				usleep(10000);
+			}
+			settings.gameUpdate(now);
+			logf("gbahost: %s %s view %s", settings.gbaReady() > 0 ? "ready" : settings.gbaReady() < -1 ? "unsupported" : settings.gbaReady() < 0 ? "failed" : "timeout",
+				settings.gbaTitle().c_str(), settings.gamePanelView().c_str());
 		}
 		else if (op == "gshot")
 		{
@@ -2094,6 +2155,10 @@ int main(int argc, char** argv)
 		else if (!c.neutral()) logf("screen colours (%s): the %s screen corrected", when, c.screen == 0 ? "top" : "bottom");
 	};
 	applyColors("start");
+	// the speaker EQ (Settings > Display & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
+	// settings.conf, before any game starts (/run is empty after a boot)
+	if (!speakereq::applySaved(o.data, speakereq::shareDir(o.assets)))
+		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());
 
 	Sound sound(o.assets + "/sounds");
 	FrameStats fstat;
@@ -2239,6 +2304,9 @@ int main(int argc, char** argv)
 	bool batteryDue = true;
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
+	// the systems' "changed" commands once at the start, now that the folders are watched: what was copied while the
+	// menu wasn't running, and the second card when it was mounted before this (one mounted after is a change)
+	roms.run(lib.changedCommands(), "the menu started");
 	// the volume and brightness keys' level card, 1.5 s from the last key (bananad changes the level and says so)
 	std::string osdLabel;
 	int osdPercent = 0;
@@ -2358,6 +2426,7 @@ int main(int argc, char** argv)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
+		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
@@ -2483,26 +2552,24 @@ int main(int argc, char** argv)
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
-		// the GBA Pokémon companion in the DS companion's pages (gba/host.h; settings.conf gba_companion_pages, on unless
-		// "off"): the retail games once their ROM data is read; ROM hacks and the rest keep today's views
+		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
-		if (outFd >= 0 && companion.active() && getConfValue(o.data + "/settings.conf", "gba_companion_pages", "on") != "off")
+		if (outFd >= 0 && companion.active())
 		{
 			mkdir((o.data + "/cache").c_str(), 0755);
 			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
-			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
+			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion",
 				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
 		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
-			settingsView.gbaHost = nullptr;
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
-			settingsView.gbaHost = gbaHost.get();
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
+			settingsView.gbaAttach(gbaHost.get());
 		}
 		be.invalidate();
 		bool want = true;
@@ -2609,7 +2676,16 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
-						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
+						// the buttons are the game's; F and a Companion button (the back button's job by default) also
+						// switch the panel between its menu and the companion
+						if (ev.type == InputEvent::PRESS)
+						{
+							std::lock_guard<std::mutex> l(worker.uiLock);
+							if (settingsView.gameButton(ev.code, nowMs())) want = true;
+							return;
+						}
+						if (ev.type == InputEvent::RELEASE) return;
+						if (ev.screen != panelScreen) return;	// touch only on the panel
 						if (ev.type == InputEvent::TOUCH_MOVE)	// (the GBA companion's pages scroll by drag)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2774,7 +2850,8 @@ int main(int argc, char** argv)
 				g = nds::detectGame(ndsHdr, sizeof ndsHdr);
 			}
 			nds::setAssets(o.assets);
-			if ((ndsMode == "test" || g.id != nds::GameId::NONE) && ndsOverlay.create(disp.width(), disp.height()))
+			const bool known = g.id != nds::GameId::NONE || (ndsMode == "on" && nds::maybeRomHack(ndsHdr, sizeof ndsHdr));	// (the reader decides)
+			if ((ndsMode == "test" || known) && ndsOverlay.create(disp.width(), disp.height()))
 			{
 				if (ndsMode == "test") ndsPage = nds::makeTestPage(ndsOverlay);
 				else
@@ -2806,6 +2883,7 @@ int main(int argc, char** argv)
 						d.rom = r;
 						if (r)
 						{
+							nds::useModernTypeChart(r->game.modern);	// (an hg-engine hack: Fairy and Generation VI's chart)
 							auto gd = std::make_shared<nds::GuideData>();
 							const nds::GuideResolver res = nds::guideResolver(*r);
 							std::string why;
@@ -2823,7 +2901,7 @@ int main(int argc, char** argv)
 					});
 				}
 			}
-			if (!ndsPage) { if (ndsMode == "test" || g.id != nds::GameId::NONE) logf("nds companion: no overlay file: %s", strerror(errno)); ndsOverlay.close(); }
+			if (!ndsPage) { if (ndsMode == "test" || known) logf("nds companion: no overlay file: %s", strerror(errno)); ndsOverlay.close(); }
 			else
 			{
 				logf("nds companion: %s (%dx%d)", ndsMode == "test" ? "the overlay's test page" : g.title.c_str(), disp.width(), disp.height());
@@ -3188,6 +3266,9 @@ int main(int argc, char** argv)
 				ui->setHome(at);
 				roms.watch(lib.watchDirs());
 				logf("the games on the card changed: %d systems", lib.systemCount());
+				// a system's "changed" command (systems.conf), for a change in its folder
+				roms.run(lib.changedRuns(roms.changed), "a system's folder changed");
+				roms.changed.clear();
 				dirty = true;
 			}
 		}

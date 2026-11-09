@@ -9,7 +9,13 @@
   "The ROM itself (Pokemon Glazed Unofficial (v9.1.0)): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
   "Glazed fan wiki (fanmadepokemonglazed.fandom.com): Tunod, Johto, Rankor, gym, league and legendary pages, read through search-engine extracts (the wiki blocks direct reads)",
   "nuzlocketracker.pages.dev/guides/glazed and nuzlocked.vercel.app/guides/glazed: encounter order, rival and gym list",
-  "PokéHarbor (pokeharbor.com ?p=1815, ?p=55306), PokeHostel, emulatorhacks.com (Glazed, Golden Glazed and Blazed Glazed change lists), The RPG Spotlight review (2020)"
+  "PokéHarbor (pokeharbor.com ?p=1815, ?p=55306), PokeHostel, emulatorhacks.com (Glazed, Golden Glazed and Blazed Glazed change lists), The RPG Spotlight review (2020)",
+  "nuzlocked.vercel.app/guides/glazed: the boss list in order (rivals, Team Fusion/Alpha, mini bosses: Cameron, Lucbui, the Cianwood Dojo, Wattson, Will, PokéFan X)",
+  "vizzed.com boards: 'Glazed Guide' (Livid Pain, beta 5, 2014) and 'Legends of Glazed' (beta 6) - older betas, used for story order, HMs, gifts, trades and legendaries where nothing newer says otherwise",
+  "emulatorhacks.com (Pokemon Glazed GBA page): the 9.0 and 9.1 change lists and the legendary table",
+  "PokéCommunity Blazed Glazed thread and YouTube comments: where Trade Stones come from (Northcoast ski race, Goldenrod store)",
+  "The ROM itself (Glazed 9.2.0 as the companion reads it): hidden items from the map events, evolution methods (items, friendship) and the Trainer Isle / rematch teams",
+  "No 9.2.0 changelog was found; facts that may differ are taken from the 9.2.0 ROM dump"
  ],
  "places": {
   "forest-pass": {
@@ -260,6 +266,78 @@
   },
   "trainer-isle": {
    "name": "Trainer Isle"
+  },
+  "chocco-town": {
+   "name": "Chocco Town"
+  },
+  "milkshake-swamp": {
+   "name": "Milkshake Swamp"
+  },
+  "waterfall-gorge": {
+   "name": "Waterfall Gorge"
+  },
+  "tunod-sea-floor": {
+   "name": "Tunod Sea Floor"
+  },
+  "johto-sea-floor": {
+   "name": "Johto Sea Floor"
+  },
+  "mt-stratus": {
+   "name": "Mt. Stratus"
+  },
+  "mt-tritorch": {
+   "name": "Mt. Tritorch"
+  },
+  "route-43": {
+   "name": "Route 43"
+  },
+  "lake-of-rage": {
+   "name": "Lake Of Rage"
+  },
+  "new-port-ritchey": {
+   "name": "New Port Ritchey"
+  },
+  "mt-frozon": {
+   "name": "Mt. Frozon"
+  },
+  "mt-dyno": {
+   "name": "Mt. Dyno"
+  },
+  "mt-furnace": {
+   "name": "Mt. Furnace"
+  },
+  "cianwood-city": {
+   "name": "Cianwood City"
+  },
+  "route-40": {
+   "name": "Route 40"
+  },
+  "route-44": {
+   "name": "Route 44"
+  },
+  "new-bark-town": {
+   "name": "New Bark Town"
+  },
+  "cherrygrove-city": {
+   "name": "Cherrygrove City"
+  },
+  "espo-forest": {
+   "name": "Espo Forest"
+  },
+  "wish-island": {
+   "name": "Wish Island"
+  },
+  "spatial-sea": {
+   "name": "Spatial Sea"
+  },
+  "mt-stratus-peak": {
+   "name": "Mt. Stratus Peak"
+  },
+  "blackwhite-ruins": {
+   "name": "Blackwhite Ruins"
+  },
+  "cape-azure": {
+   "name": "Cape Azure"
   }
  },
  "milestones": [
@@ -434,6 +512,25 @@
    "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
   },
   {
+   "id": "rival-cato-seaspray-gym",
+   "name": "Rival: masked trainer (Seaspray Town Gym)",
+   "kind": "rival",
+   "place": "seaspray-town",
+   "level_cap": 30,
+   "foe": [
+    {
+     "name": "???",
+     "class": "Pkmn Trainer",
+     "ace_level": 30
+    }
+   ],
+   "tips": "Cato's first fight, at the Seaspray gym; the ROM names him '???' here: Houndour 28, Croconaw 30, Porygon 28. Electric or Grass moves for Croconaw, Water or Ground for Houndour.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Cato at Seaspray Town Gym)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
+  },
+  {
    "id": "rival-percy-northcoast",
    "name": "Rival: Percy (Northcoast Town)",
    "kind": "rival",
@@ -497,9 +594,9 @@
   },
   {
    "id": "rival-cato-1",
-   "name": "Rival: Cato",
+   "name": "Rival: Cato (Southerly City)",
    "kind": "rival",
-   "place": "seaspray-town",
+   "place": "southerly-city",
    "level_cap": 35,
    "foe": [
     {
@@ -509,9 +606,28 @@
    ],
    "done_when": "later",
    "opens": [],
-   "tips": "Cato (Feraligatr) first fights you near the Seaspray gym: Houndoom, Feraligatr, Porygon2, Espeon (Lv 31-35). Electric and Grass moves on Feraligatr; Fighting on Houndoom and Porygon2.",
+   "tips": "Cato (Feraligatr) fights you in Southerly City: Houndoom, Feraligatr, Porygon2, Espeon (Lv 31-35). Electric and Grass moves on Feraligatr; Fighting on Houndoom and Porygon2.",
    "quality": "reference-only",
-   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (where: tracker; order by level)"
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Cato: Seaspray Town Gym, then Southerly City)"
+  },
+  {
+   "id": "team-henri-trainer-isle",
+   "name": "Team Fusion: Henri (Trainer Isle)",
+   "kind": "team",
+   "place": "trainer-isle",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "Henri",
+     "class": "Team Fusion",
+     "ace_level": 34
+    }
+   ],
+   "tips": "Henri's pair of Water types: Huntail and Gorebyss (Lv 34). Electric and Grass moves end it quickly.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Henri, Trainer Isle)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
   },
   {
    "id": "team-michael-temporal-tower",
@@ -691,6 +807,25 @@
    "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
   },
   {
+   "id": "mini-lucbui-path-of-victory",
+   "name": "Mini boss: Lucbui (Path of Victory)",
+   "kind": "story",
+   "place": "path-of-victory",
+   "level_cap": 55,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Lucbui",
+     "class": "Pkmn Trainer",
+     "ace_level": 55
+    }
+   ],
+   "tips": "Optional and over the league's levels: Quilava 55, Jolteon, Breloom, Porygon-Z, Manectric, Metagross (Lv 50). Ground moves hit three of them; come back later if needed.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (mini boss list)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
    "id": "rival-cato-league",
    "name": "Rival: Cato (Tunod League)",
    "kind": "rival",
@@ -810,6 +945,25 @@
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts)"
   },
   {
+   "id": "mini-cameron-dojo",
+   "name": "Mini boss: Cameron (Cameron's Dojo)",
+   "kind": "story",
+   "place": "darkwood-town",
+   "level_cap": 50,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Cameron",
+     "class": "Gentleman",
+     "ace_level": 50
+    }
+   ],
+   "tips": "An optional Fighting-heavy six at Lv 50: Gallade, Heracross, Breloom, Scrafty, Machamp, Infernape. Flying and Psychic moves. The old guide says the Darkwood dojo ends with a Blaziken for you.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (optional); vizzed.com Glazed Guide (Livid Pain) (Darkwood dojo)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
    "id": "rival-chelle-route-39",
    "name": "Rival: Chelle (Route 39)",
    "kind": "rival",
@@ -878,6 +1032,45 @@
    "tips": "Johto gym 2: Froslass, Sableye, Mismagius, Gengar, Gengar (Lv 60-62). Dark and Ghost moves; Sableye has one weakness (Fairy).",
    "quality": "reference-only",
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "story-kimono-girls",
+   "name": "Kimono Girls (Ecruteak City)",
+   "kind": "story",
+   "place": "ecruteak-city",
+   "level_cap": 60,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Zuki",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Naoko",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Miki",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Sayo",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    },
+    {
+     "name": "Kuni",
+     "class": "Kimono Girl",
+     "ace_level": 60
+    }
+   ],
+   "tips": "Five single-Pokemon fights, one Eevee form each: Umbreon, Espeon, Flareon, Jolteon, Vaporeon (Lv 60). The old guide calls them repeatable for money.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); vizzed.com Glazed Guide (Livid Pain) (repeatable, money)",
+   "quality": "reference-only",
+   "opens": []
   },
   {
    "id": "team-regina-ruins",
@@ -1062,6 +1255,103 @@
    "tips": "Johto gym 7: Honchkrow, Weavile, Absol, Umbreon, Hydreigon (Lv 65-68). Fighting, Bug and Fairy moves; Hydreigon takes four times from Fairy.",
    "quality": "reference-only",
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "mini-cianwood-tunod-leaders",
+   "name": "Cianwood Dojo: the Tunod leaders",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 68,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Sparky",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Terry",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Flo",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Lief",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Irene",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Ernest",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Nicole",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Tyson",
+     "class": "Leader",
+     "ace_level": 68
+    }
+   ],
+   "tips": "The eight Tunod leaders wait in the Cianwood Dojo with full six-member teams at Lv 66-68 (Sparky's Jolteon, Terry's Donphan, Flo's Kingdra, Lief's Venusaur, Irene's Weavile, Ernest's Blaziken, Nicole's Aggron, Tyson's Conkeldurr lead the top level).",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed and nuzlocked.vercel.app (Cianwood Dojo mini bosses)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "mini-cianwood-lucbui",
+   "name": "Cianwood Dojo: Lucbui",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 68,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Lucbui",
+     "class": "Pkmn Trainer",
+     "ace_level": 68
+    }
+   ],
+   "tips": "Lucbui again: Porygon-Z, Breloom, Aggron, Magnezone, Latias, Typhlosion (Lv 66-68). Ground moves cover Aggron, Magnezone and Typhlosion.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Lucbui, Cianwood Dojo)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "mini-cianwood-alexa",
+   "name": "Cianwood Dojo: Alexa",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 69,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Alexa",
+     "class": "Pkmn Trainer",
+     "ace_level": 69
+    },
+    {
+     "name": "Brant",
+     "class": "Pkmn Trainer",
+     "ace_level": 69
+    }
+   ],
+   "tips": "Alexa: Alakazam, Nidoking, Espeon, Dragonite, Lucario, Swampert (Lv 67-69). Brant and Alexa are the default hero names; the ROM holds a matching Lv 69 Brant team too (Poliwrath, Nidoqueen, Umbreon, Dragonite, Zoroark, Blaziken).",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Alexa, Cianwood); emulatorhacks.com Glazed page",
+   "quality": "reference-only",
+   "opens": []
   },
   {
    "id": "rival-chelle-evergreen",
@@ -1261,6 +1551,112 @@
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts)"
   },
   {
+   "id": "post-tunod-e4-rematch",
+   "name": "Tunod League rematch: Elite Four",
+   "kind": "postgame",
+   "place": "tunod-league",
+   "level_cap": 80,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Rosaline",
+     "class": "Elite Four",
+     "ace_level": 77
+    },
+    {
+     "name": "Magnus",
+     "class": "Elite Four",
+     "ace_level": 78
+    },
+    {
+     "name": "Tanya",
+     "class": "Elite Four",
+     "ace_level": 79
+    },
+    {
+     "name": "Gray",
+     "class": "Elite Four",
+     "ace_level": 80
+    }
+   ],
+   "tips": "The ROM holds a second Tunod league: Rosaline 77, Magnus 78, Tanya 79 and Gray 80 (Gray adds Registeel).",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); PokéHarbor ?p=1815 (rematches with trainers and leaders)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "post-tunod-champion-percy",
+   "name": "Tunod League rematch: Champion Percy",
+   "kind": "postgame",
+   "place": "tunod-league",
+   "level_cap": 87,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Percy",
+     "class": "Champion",
+     "ace_level": 87
+    }
+   ],
+   "tips": "Percy took Blake's seat after your first win: Gardevoir, Manectric, Quilava 87, Scrafty, Kingdra, Steelix (Lv 80-87). Ground moves hit Manectric, Quilava and Steelix.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); vizzed.com Glazed Guide (Livid Pain) (Percy becomes the new champion)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "post-johto-e4-rematch",
+   "name": "Johto League rematch: Elite Four",
+   "kind": "postgame",
+   "place": "johto-league",
+   "level_cap": 99,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Ivan",
+     "class": "Elite Four",
+     "ace_level": 95
+    },
+    {
+     "name": "Whitney",
+     "class": "Elite Four",
+     "ace_level": 96
+    },
+    {
+     "name": "Powell",
+     "class": "Elite Four",
+     "ace_level": 97
+    },
+    {
+     "name": "Eusine",
+     "class": "Elite Four",
+     "ace_level": 99
+    }
+   ],
+   "tips": "Six-member rematch teams: Ivan 95 (Poison), Whitney 96 (Normal), Powell 97 (Electric), Eusine 99 (Water, Suicune).",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); PokéHarbor ?p=1815 (rematches)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "post-johto-champion-kris",
+   "name": "Johto League rematch: Champion Kris",
+   "kind": "postgame",
+   "place": "johto-league",
+   "level_cap": 100,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Kris",
+     "class": "Champion",
+     "ace_level": 100
+    }
+   ],
+   "tips": "Kris's same six, all at Lv 100: Heracross, Garchomp, Sceptile, Metagross, Arcanine, Feraligatr. Ice and Fire moves cover most of it.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); PokéHarbor ?p=1815 (rematches)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
    "id": "post-rankor-thor",
    "name": "Rankor: Thor (Nitro Isle)",
    "kind": "postgame",
@@ -1289,6 +1685,25 @@
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts)"
   },
   {
+   "id": "mini-wattson-nitro",
+   "name": "Mini boss: Wattson (Nitro Isle)",
+   "kind": "postgame",
+   "place": "nitro-isle",
+   "level_cap": 78,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Wattson",
+     "class": "Leader",
+     "ace_level": 78
+    }
+   ],
+   "tips": "Wattson's Electric five: Electabuzz, Raichu, Electrode, Magnezone, Manectric (Lv 78). Ground moves; Magnezone also fears Fire and Fighting.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Wattson, Nitro Isle)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
    "id": "post-rankor-ricky",
    "name": "Rankor: Ricky (Kolo Isle)",
    "kind": "postgame",
@@ -1307,6 +1722,63 @@
    "tips": "Dragon types: Salamence, Haxorus, Kingdra, Dragonite, Flygon and 1 more (Lv 80-82). Ice and Fairy moves.",
    "quality": "reference-only",
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "team-regina-frozon",
+   "name": "Team Fusion: Regina (Mt. Frozon)",
+   "kind": "team",
+   "place": "mt-frozon",
+   "level_cap": 81,
+   "foe": [
+    {
+     "name": "Regina",
+     "class": "Fusion Boss",
+     "ace_level": 81
+    }
+   ],
+   "tips": "Regina stops you as you go for Articuno: Zoroark, Absol, Ho-Oh, Moltres (Lv 80-81). Rock moves hit both birds hard; Fighting for Zoroark and Absol.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Regina, Mt. Frozon); Glazed fan wiki walkthrough (search extract)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
+  },
+  {
+   "id": "mini-pokefan-x",
+   "name": "Mini boss: PokéFan X (Mt. Frozon)",
+   "kind": "postgame",
+   "place": "mt-frozon",
+   "level_cap": 82,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Trainer X",
+     "class": "Pokéfan",
+     "ace_level": 82
+    }
+   ],
+   "tips": "'Trainer X': Feraligatr, Drapion, Granbull, Porygon-Z, Pikachu, Arceus (Lv 82). Fighting moves are the broadest answer.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (PokéFan X, Mt. Frozon)",
+   "quality": "reference-only",
+   "opens": []
+  },
+  {
+   "id": "mini-will-alpha",
+   "name": "Mini boss: Gym Guardian Will (Alpha Isle)",
+   "kind": "postgame",
+   "place": "alpha-isle",
+   "level_cap": 78,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Will",
+     "class": "Gym Guardian",
+     "ace_level": 78
+    }
+   ],
+   "tips": "Will guards Sora's isle: Politoed, Gyarados, Galvantula, Zapdos, Empoleon (Lv 78). Electric moves hit four of the five.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Gym Guardian Will, Alpha Isle)",
+   "quality": "reference-only",
+   "opens": []
   },
   {
    "id": "post-rankor-sora",
@@ -1347,6 +1819,68 @@
    "tips": "Fighting types: Blaziken, Conkeldurr, Infernape, Gliscor, Greninja, Machamp (Lv 85-87). Psychic, Flying and Fairy moves.",
    "quality": "reference-only",
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "team-alpha-peaks-sexton",
+   "name": "Alpha: Sexton (Peaks of Alpha)",
+   "kind": "team",
+   "place": "peaks-of-alpha",
+   "level_cap": 83,
+   "foe": [
+    {
+     "name": "Sexton",
+     "class": "Alpha",
+     "ace_level": 81
+    },
+    {
+     "name": "Sexton",
+     "class": "Alpha",
+     "ace_level": 83
+    }
+   ],
+   "tips": "Sexton blocks the climb twice: Togekiss and Breloom (Lv 81), then a lone Lucario (Lv 83). Fire and Flying moves; Ground or Fighting for Lucario.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Alpha Sexton twice, Peaks of Alpha)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
+  },
+  {
+   "id": "team-alpha-peaks-pius",
+   "name": "Alpha Leader Pius (Peaks of Alpha)",
+   "kind": "team",
+   "place": "peaks-of-alpha",
+   "level_cap": 83,
+   "foe": [
+    {
+     "name": "Pius",
+     "class": "Alpha Leader",
+     "ace_level": 83
+    }
+   ],
+   "tips": "Pius brings Lugia: Absol, Noctowl, Lucario, Lugia 83, Gallade, Torterra (Lv 82-83). Dark and Ghost moves for Lugia; Fire for Torterra.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Alpha Leader Pius, Peaks of Alpha)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
+  },
+  {
+   "id": "team-regina-peaks",
+   "name": "Team Fusion: Regina (Peaks of Alpha)",
+   "kind": "team",
+   "place": "peaks-of-alpha",
+   "level_cap": 83,
+   "foe": [
+    {
+     "name": "Regina",
+     "class": "Fusion Boss",
+     "ace_level": 83
+    }
+   ],
+   "tips": "Regina's last stand: Zoroark, Ditto, Moltres, Banette, Roserade, Ho-Oh 83 (Lv 82-83). Rock moves for the birds; Ditto copies your lead, so lead with something it can't use well.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (Regina, Peaks of Alpha)",
+   "quality": "reference-only",
+   "done_when": "later",
+   "opens": []
   },
   {
    "id": "post-rankor-tye",
@@ -1410,6 +1944,40 @@
    "tips": "Four punches on the Rankor Ticket open the stadium and its champion Soul: Heracross, Houndoom, Gliscor, Roserade, Empoleon and 1 more (Lv 91-94). Expect a final rival round there first (Chelle at 87).",
    "quality": "reference-only",
    "source": "ROM glazed-unofficial trainer table (levels, teams); Glazed fan wiki (search extracts) (the stadium's section: not confirmed)"
+  },
+  {
+   "id": "post-trainer-isle-rankor-leaders",
+   "name": "Trainer Isle: Rankor leaders rematch",
+   "kind": "postgame",
+   "place": "trainer-isle",
+   "level_cap": 90,
+   "done_when": "none",
+   "foe": [
+    {
+     "name": "Thor",
+     "class": "Leader",
+     "ace_level": 90
+    },
+    {
+     "name": "Ricky",
+     "class": "Leader",
+     "ace_level": 90
+    },
+    {
+     "name": "Sora",
+     "class": "Leader",
+     "ace_level": 90
+    },
+    {
+     "name": "Makunouchi",
+     "class": "Leader",
+     "ace_level": 90
+    }
+   ],
+   "tips": "After the Rankor league, Trainer Isle offers the Rankor leaders again with Lv 90 sixes; Ricky adds Rayquaza and Makunouchi Deoxys.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); PokéHarbor ?p=1815 (Trainer Isle: Rankor Gym Leaders after the Rankor league)",
+   "quality": "reference-only",
+   "opens": []
   },
   {
    "id": "post-red",
@@ -1675,6 +2243,267 @@
    "done_when": "later",
    "quality": "reference-only",
    "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "step-chocco-pokedex",
+   "title": "Pokédex from the Inventor",
+   "text": "Willow sends you to the Inventor in Chocco Town for the Pokédex, then you escort him through Milkshake Swamp. Lead with a spare Pokemon there: a Pineco explodes. Since 9.1 poison stops at 1 HP outside battle.",
+   "stage": "rival-chelle-oceanview",
+   "places": [
+    "chocco-town",
+    "milkshake-swamp"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain); emulatorhacks.com Glazed page (9.1 poison)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-haunted-rock",
+   "title": "Shipwrecked on Haunted Isle",
+   "text": "The boat to Serenity Isle crashes on Haunted Isle. Haunted Rock holds a Moon Stone, a Lantern and TM02 Dragon Claw before Michael waits at the end.",
+   "stage": "team-michael-haunted-rock",
+   "places": [
+    "haunted-isle",
+    "haunted-rock"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-geminite",
+   "title": "Shards and Strength in Geminite",
+   "text": "Geminite Village trades fossils for shards and gives a Shovel to dig more; the Mt. Stratus foreman hands over Strength (HM04). 9.1 adds a Rock Slide tutor in the village.",
+   "stage": "rival-percy-geminite",
+   "places": [
+    "geminite-village",
+    "mt-stratus"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain); emulatorhacks.com Glazed page (9.1)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-surf",
+   "title": "Surf from Percy",
+   "text": "Percy gives you Surf around Northcoast Town, which opens the sea routes and the Icicle Tunnel side of the north.",
+   "stage": "rival-percy-northcoast",
+   "places": [
+    "northcoast-town"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-fly",
+   "title": "Fly from Blake at Temporal Tower",
+   "text": "Blake hands over Fly at Temporal Tower; Surfing into the Temporal Sea from Chocco Town was a known freeze in the betas, so fly there instead.",
+   "stage": "team-michael-temporal-tower",
+   "places": [
+    "temporal-tower",
+    "temporal-sea"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-stamina",
+   "title": "Stamina Challenge in Southerly City",
+   "text": "The Stamina Challenge in Southerly City is a run of battles that pays well; the old guide used it to train to about Lv 55.",
+   "stage": "gym-6-ernest",
+   "places": [
+    "southerly-city"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-fusion-items",
+   "title": "Fusion Labs loot",
+   "text": "The Fusion Labs hold a Master Ball and a Timburr; Blake gives Dive there, and the labs are entered by diving.",
+   "stage": "team-fusion-labs",
+   "places": [
+    "fusion-labs"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-waterfall",
+   "title": "Waterfall from Percy",
+   "text": "Percy gives the Waterfall move in Darkwood Town; with it you can later reach the Regi caves off Mt. Stratus.",
+   "stage": "rival-percy-darkwood",
+   "places": [
+    "darkwood-town"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain); emulatorhacks.com Glazed page",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-rock-climb",
+   "title": "Rock Climb from Blake",
+   "text": "After the Core Badge, Blake teaches Rock Climb. Several post-league areas (Mt. Furnace, the Icicle Tunnel's secret part) need it.",
+   "stage": "gym-8-tyson",
+   "places": [
+    "palmtree-resort"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain); vizzed.com Legends of Glazed",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-tunod-postgame",
+   "title": "What the Tunod league opens",
+   "text": "Beating Blake opens Mew (top of the Fusion Labs, free party slot), Zekrom (Oceanview power plant roof), Reshiram (back of Mt. Furnace), Kyurem (Icicle Tunnel), Soheal's Victini, and Latios/Latias roaming Tunod.",
+   "stage": "rival-chelle-route-39",
+   "places": [
+    "fusion-labs",
+    "oceanview-city",
+    "mt-furnace",
+    "icicle-tunnel",
+    "soheals-strait"
+   ],
+   "source": "emulatorhacks.com Glazed page (legendary table)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-johto-start",
+   "title": "Johto starter and Badge Case",
+   "text": "Elm in New Bark Town offers a Johto starter and the Badge Case; Cherrygrove has a Mystic Water. Since 9.1 Bill waits in the first Johto town for the teleport system.",
+   "stage": "rival-chelle-route-39",
+   "places": [
+    "new-bark-town",
+    "cherrygrove-city"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain); emulatorhacks.com Glazed page (9.1 Bill)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-jasmine",
+   "title": "Jasmine's gym is interrupted",
+   "text": "Jasmine's fight in Olivine is cut short; she is freed in Whitewood City after the Church of Alpha and gives the Mineral Badge there.",
+   "stage": "gym-11-jasmine",
+   "places": [
+    "olivine-city",
+    "whitewood-city",
+    "church-of-alpha"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-whirlpool",
+   "title": "Whirlpool in Whitewood",
+   "text": "A man in Whitewood City gives Whirlpool; it works outside battle once you have Clair's badge.",
+   "stage": "gym-14-brian",
+   "places": [
+    "whitewood-city"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-bell-tower",
+   "title": "Ho-Oh and the beasts",
+   "text": "Regina takes Ho-Oh at the Bell Tower. Afterwards Entei, Raikou and Suicune can be met at the Bell Tower and then roam.",
+   "stage": "team-regina-bell-tower",
+   "places": [
+    "bell-tower"
+   ],
+   "source": "emulatorhacks.com Glazed page; vizzed.com Legends of Glazed",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-cianwood",
+   "title": "Cianwood: Silver, Bridgette and the dojo",
+   "text": "Silver is found in the Cianwood dojo and returns to his gym when you talk to him. On Route 40 Bridgette's challenge (beat her five friends) gives a Lucky Egg.",
+   "stage": "gym-15-silver",
+   "places": [
+    "cianwood-city",
+    "route-40"
+   ],
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-sea-jewel",
+   "title": "Evergreen surf race",
+   "text": "Win the surfing race in Evergreen Town for the Sea Jewel; it lets Manaphy appear in the Spatial Sea.",
+   "stage": "gym-15-silver",
+   "places": [
+    "evergreen-town",
+    "spatial-sea"
+   ],
+   "source": "emulatorhacks.com Glazed page; vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-mewtwo",
+   "title": "Seven badges: New Island",
+   "text": "With seven Johto badges, a Dragonite on Route 44 points you to New Island: dive at the Olivine dock and use the Blank CD to face the clones before Mewtwo.",
+   "stage": "gym-16-clair",
+   "places": [
+    "route-44",
+    "olivine-city",
+    "new-island"
+   ],
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-lance-alph",
+   "title": "Lance and the Ruins of Alph",
+   "text": "After the Johto league, Lance at the peak of Johto Victory Road starts the quest that leads to Heatran in Mt. Silver and to Red (the Ruby). The Ruins of Alph subquest opens the Sapphire (Slowpoke Well) and Emerald (Dragon's Den).",
+   "stage": "post-rankor-thor",
+   "places": [
+    "victory-road",
+    "mt-silver",
+    "ruins-of-alph",
+    "slowpoke-well",
+    "dragons-den"
+   ],
+   "source": "emulatorhacks.com Glazed page; vizzed.com Legends of Glazed",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-plumes",
+   "title": "Plumes for the birds",
+   "text": "Kyurem, Reshiram and Zekrom drop the Ice Plume, Fire Plume and Thunderplume; take them to Mt. Frozon (Articuno), Mt. Tritorch (Moltres) and Mt. Dyno (Zapdos).",
+   "stage": "post-rankor-ricky",
+   "places": [
+    "mt-frozon",
+    "mt-tritorch",
+    "mt-dyno"
+   ],
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only",
+   "done_when": "later"
+  },
+  {
+   "id": "step-trainer-isle-post",
+   "title": "Trainer Isle after the Rankor league",
+   "text": "Beating Soul opens Trainer Isle's Rankor Gym Leaders, Mixed Gym Leaders, Tough Doubles and Special Singles; its Power Shack sells type-boosting held items.",
+   "stage": "post-trainer-isle-rankor-leaders",
+   "places": [
+    "trainer-isle"
+   ],
+   "source": "PokéHarbor ?p=1815",
+   "quality": "reference-only",
+   "done_when": "later"
   }
  ],
  "secrets": [
@@ -1813,6 +2642,466 @@
    "place": "brass-tower",
    "quality": "reference-only",
    "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "hid-ultra-ball-geminite-river",
+   "kind": "hidden-item",
+   "text": "A hidden Ultra Ball lies here.",
+   "place": "geminite-river",
+   "x": 3,
+   "y": 9,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-tm50-geminite-river",
+   "kind": "hidden-item",
+   "text": "A hidden TM50 lies here.",
+   "place": "geminite-river",
+   "x": 12,
+   "y": 51,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-rare-candy-temporal-sea",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here.",
+   "place": "temporal-sea",
+   "x": 44,
+   "y": 13,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Surf",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-repel-new-port-ritchey",
+   "kind": "hidden-item",
+   "text": "A hidden Repel lies here.",
+   "place": "new-port-ritchey",
+   "x": 3,
+   "y": 18,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-iron-seaspray-bay",
+   "kind": "hidden-item",
+   "text": "A hidden Iron lies here.",
+   "place": "seaspray-bay",
+   "x": 51,
+   "y": 8,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Surf",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-heart-scale-seaspray-bay",
+   "kind": "hidden-item",
+   "text": "A hidden Heart Scale lies here.",
+   "place": "seaspray-bay",
+   "x": 47,
+   "y": 12,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Surf",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-hp-up-blizzard-slopes",
+   "kind": "hidden-item",
+   "text": "A hidden HP Up lies here.",
+   "place": "blizzard-slopes",
+   "x": 8,
+   "y": 8,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-nugget-blizzard-slopes",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies here.",
+   "place": "blizzard-slopes",
+   "x": 58,
+   "y": 3,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-full-heal-blizzard-slopes",
+   "kind": "hidden-item",
+   "text": "A hidden Full Heal lies here.",
+   "place": "blizzard-slopes",
+   "x": 72,
+   "y": 5,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-max-revive-blizzard-slopes",
+   "kind": "hidden-item",
+   "text": "A hidden Max Revive lies here.",
+   "place": "blizzard-slopes",
+   "x": 68,
+   "y": 8,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-full-restore-waterfall-gorge",
+   "kind": "hidden-item",
+   "text": "A hidden Full Restore lies here.",
+   "place": "waterfall-gorge",
+   "x": 56,
+   "y": 14,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-charcoal-waterfall-gorge",
+   "kind": "hidden-item",
+   "text": "A hidden Charcoal lies here.",
+   "place": "waterfall-gorge",
+   "x": 22,
+   "y": 12,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-rare-candy-waterfall-gorge",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here.",
+   "place": "waterfall-gorge",
+   "x": 106,
+   "y": 16,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-blue-shard-tunod-sea-floor",
+   "kind": "hidden-item",
+   "text": "A hidden Blue Shard lies here.",
+   "place": "tunod-sea-floor",
+   "x": 16,
+   "y": 8,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Dive",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-heart-scale-tunod-sea-floor",
+   "kind": "hidden-item",
+   "text": "A hidden Heart Scale lies here.",
+   "place": "tunod-sea-floor",
+   "x": 54,
+   "y": 7,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Dive",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-pearl-tunod-sea-floor",
+   "kind": "hidden-item",
+   "text": "A hidden Pearl lies here.",
+   "place": "tunod-sea-floor",
+   "x": 8,
+   "y": 9,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Dive",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-rare-candy-route-43",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here.",
+   "place": "route-43",
+   "x": 15,
+   "y": 20,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-shiny-stone-route-43",
+   "kind": "hidden-item",
+   "text": "A hidden Shiny Stone lies here (evolves Togetic).",
+   "place": "route-43",
+   "x": 18,
+   "y": 34,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-dire-hit-lake-of-rage",
+   "kind": "hidden-item",
+   "text": "A hidden Dire Hit lies here.",
+   "place": "lake-of-rage",
+   "x": 9,
+   "y": 10,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-full-restore-lake-of-rage",
+   "kind": "hidden-item",
+   "text": "A hidden Full Restore lies here.",
+   "place": "lake-of-rage",
+   "x": 6,
+   "y": 4,
+   "grid": "map",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-stormy-city",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): PP Up.",
+   "place": "stormy-city",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-geminite-village",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Blue Shard.",
+   "place": "geminite-village",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-soheals-strait",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Revive, Great Ball, Poké Ball and Full Heal.",
+   "place": "soheals-strait",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Surf",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-johto-sea-floor",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Heart Scale (x2), Ultra Ball, Stardust, Pearl, Iron, Yellow Shard, Big Pearl, Blue Shard, Star Piece, HP Up and Red Shard.",
+   "place": "johto-sea-floor",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "condition": "needs Dive",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-mt-stratus",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Escape Rope and Hard Stone.",
+   "place": "mt-stratus",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-victory-road",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Elixir and Max Repel.",
+   "place": "victory-road",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-mt-tritorch",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): PP Max, Sun Stone, Max Revive and Rawst Berry.",
+   "place": "mt-tritorch",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-route-36",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Pomeg Berry.",
+   "place": "route-36",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "hid-group-whirl-islands",
+   "kind": "hidden-item",
+   "text": "Hidden somewhere in this area (several maps): Sacred Ash.",
+   "place": "whirl-islands",
+   "source": "ROM glazed-unofficial hidden items (map events)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "gift-timburr",
+   "kind": "gift",
+   "text": "A Timburr is given in the Fusion Labs.",
+   "place": "fusion-labs",
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "gift-lucky-egg-bridgette",
+   "kind": "gift",
+   "text": "Bridgette on Route 40 gives a Lucky Egg once you beat her five friends.",
+   "place": "route-40",
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "event-master-ball",
+   "kind": "event",
+   "text": "A Master Ball is in the Fusion Labs.",
+   "place": "fusion-labs",
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "trade-kirlia",
+   "kind": "trade",
+   "text": "Southerly City trades a Kirlia for a Ninetales.",
+   "place": "southerly-city",
+   "source": "vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "trade-ampharos",
+   "kind": "trade",
+   "text": "Blackthorn City trades an Ampharos for a Dragonair.",
+   "place": "blackthorn-city",
+   "source": "vizzed.com Glazed Guide (Livid Pain) (beta 5; check in game)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-victini",
+   "kind": "legendary",
+   "text": "Beat Soheal (six Lv 50s) past Seaspray Town and he gives you a Victini (Lv 20).",
+   "place": "soheals-strait",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-jirachi",
+   "kind": "legendary",
+   "text": "Finish the errands for the girl in the Fusion Resort for the Wish Ticket; the sailor at Oceanview harbour takes you to Wish Island (Jirachi Lv 15).",
+   "place": "wish-island",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-shaymin",
+   "kind": "legendary",
+   "text": "In Espo Forest (west of Southerly City, by Surf) take the left path and write THANK YOU at the shrine, then chase Shaymin (Lv 30).",
+   "place": "espo-forest",
+   "source": "vizzed.com Legends of Glazed",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-keldeo",
+   "kind": "legendary",
+   "text": "At the fountain in Darkwood Town enter JUSTICE! and a cave opens with Keldeo (Lv 40).",
+   "place": "darkwood-town",
+   "source": "vizzed.com Legends of Glazed; vizzed.com Glazed Guide (Livid Pain)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-cresselia",
+   "kind": "legendary",
+   "text": "Use Roar on the sleeping man outside Violet City and beat his Fearow for the Lunar Wing; trade it at the Azure Inn for a bed that leads to Dreamspace and Cresselia. Darkrai follows at the Palmtree VIP villa.",
+   "place": "cape-azure",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-manaphy",
+   "kind": "legendary",
+   "text": "With the Sea Jewel from the Evergreen surf race, Manaphy appears in the Spatial Sea; chase it as it dives.",
+   "place": "spatial-sea",
+   "source": "emulatorhacks.com Glazed page; vizzed.com Legends of Glazed",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-swords",
+   "kind": "legendary",
+   "text": "Once Cobalion, Terrakion and Virizion have shown themselves at the Peaks of Alpha, the chamber through Darkwood Grotto opens: Virizion, Terrakion, then Cobalion.",
+   "place": "darkwood-grotto",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-reshiram",
+   "kind": "legendary",
+   "text": "After the Tunod league, the back of Mt. Furnace (Rock Climb) holds Reshiram; it drops the Fire Plume.",
+   "place": "mt-furnace",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-zekrom",
+   "kind": "legendary",
+   "text": "After the Tunod league, a lighter floor tile on the roof of Oceanview's power plant leads to Zekrom; it drops the Thunderplume.",
+   "place": "oceanview-city",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-kyurem",
+   "kind": "legendary",
+   "text": "After the Tunod league, the secret part of Icicle Tunnel (Rock Climb) holds Kyurem; it drops the Ice Plume.",
+   "place": "icicle-tunnel",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "event-kyurem-forms",
+   "kind": "event",
+   "text": "The Blackwhite Ruins, reached through Mt. Mortar east of Ecruteak, fuse Kyurem: the black cave or the white cave; repeat in the same cave to undo.",
+   "place": "blackwhite-ruins",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-heatran",
+   "kind": "legendary",
+   "text": "Lance's quest ends in the lava cave inside Mt. Silver (by the mine cart from Goldenrod's station) with Heatran.",
+   "place": "mt-silver",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-birds",
+   "kind": "legendary",
+   "text": "Articuno on Mt. Frozon (Kolo Isle), Zapdos on Mt. Dyno (Nitro Isle), Moltres on Mt. Tritorch (Olcan Isle), each after its plume.",
+   "place": "mt-frozon",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-arceus",
+   "kind": "legendary",
+   "text": "Once every other legendary has been met (the roamers excepted), the long route up Mt. Stratus to the cloud temple leads to Arceus.",
+   "place": "mt-stratus-peak",
+   "source": "vizzed.com Legends of Glazed; emulatorhacks.com Glazed page; Glazed fan wiki (search extract)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-deoxys",
+   "kind": "legendary",
+   "text": "At the Peaks of Alpha, type NOT ALONE... on the ancient keyboard; a long cave of ladders and pitfalls leads to Deoxys. Bring Repels.",
+   "place": "peaks-of-alpha",
+   "source": "vizzed.com Legends of Glazed (beta 6)",
+   "quality": "reference-only"
   }
  ],
  "evolutions": [
@@ -1828,73 +3117,225 @@
    "id": "evo-poliwhirl",
    "species": 61,
    "name": "Poliwhirl",
-   "text": "The Oceanview trade gives a ready Politoed; the hack documents no other way.",
+   "text": "Water Stone gives Poliwrath. Politoed: trade holding a King's Rock, or a Trade Stone (the ROM's alternative); Oceanview's trade also gives a ready Politoed.",
    "quality": "reference-only",
-   "source": "Glazed fan wiki (search extracts)"
+   "source": "Glazed fan wiki (search extracts); ROM evolution table"
   },
   {
    "id": "evo-onix",
    "species": 95,
    "name": "Onix",
-   "text": "Violet City's trade Onix becomes Steelix; no other method is documented.",
+   "text": "Steelix by trade holding a Metal Coat or with a Trade Stone (ROM); Violet City's trade Onix is another route.",
    "quality": "reference-only",
-   "source": "Glazed fan wiki (search extracts)"
+   "source": "Glazed fan wiki (search extracts); ROM evolution table"
   },
   {
    "id": "evo-scyther",
    "species": 123,
    "name": "Scyther",
-   "text": "Reefen Isle's trade gives Scizor.",
+   "text": "Scizor by trade holding a Metal Coat or with a Trade Stone (ROM); Reefen Isle's trade gives one.",
    "quality": "reference-only",
-   "source": "Glazed fan wiki (search extracts)"
+   "source": "Glazed fan wiki (search extracts); ROM evolution table"
   },
   {
    "id": "evo-seadra",
    "species": 117,
    "name": "Seadra",
-   "text": "A Seadra-for-Fraxure trade gives Kingdra.",
+   "text": "Kingdra by trade holding a Dragon Scale or with a Trade Stone (ROM); a Seadra-for-Fraxure trade also gives Kingdra.",
    "quality": "reference-only",
-   "source": "Glazed fan wiki (search extracts)"
+   "source": "Glazed fan wiki (search extracts); ROM evolution table"
   },
   {
    "id": "evo-slowpoke",
    "species": 79,
    "name": "Slowpoke",
-   "text": "Level 37 still gives Slowbro; Olivine's trade gives Slowking.",
+   "text": "Level 37 gives Slowbro. Slowking: trade holding a King's Rock or a Trade Stone (ROM); Olivine's trade also gives one.",
    "quality": "reference-only",
-   "source": "Glazed fan wiki (search extracts)"
+   "source": "Glazed fan wiki (search extracts); ROM evolution table"
   },
   {
    "id": "evo-lickitung",
    "species": 108,
    "name": "Lickitung",
-   "text": "Level 33 gives Lickilicky (9.0 change; no move needed).",
+   "text": "Level 33 gives Lickilicky (9.0 change); the ROM also lets high friendship do it.",
    "quality": "reference-only",
-   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts)"
+   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts); ROM evolution table"
   },
   {
    "id": "evo-tangela",
    "species": 114,
    "name": "Tangela",
-   "text": "Level 24 gives Tangrowth (9.0 change).",
+   "text": "Level 24 gives Tangrowth (9.0 change); a Sun Stone also works (ROM).",
    "quality": "reference-only",
-   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts)"
+   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts); ROM evolution table"
   },
   {
    "id": "evo-yanma",
    "species": 193,
    "name": "Yanma",
-   "text": "Level 33 gives Yanmega (9.0 change).",
+   "text": "Level 33 gives Yanmega (9.0 change); a Sun Stone also works (ROM).",
    "quality": "reference-only",
-   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts)"
+   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts); ROM evolution table"
   },
   {
    "id": "evo-piloswine",
    "species": 221,
    "name": "Piloswine",
-   "text": "Level 40 gives Mamoswine (9.0 change).",
+   "text": "Level 40 gives Mamoswine (9.0 change); the ROM also lets high friendship do it.",
    "quality": "reference-only",
-   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts)"
+   "source": "Glazed 9.0/9.1 change list (fan wiki, via search extracts); ROM evolution table"
+  },
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Alakazam by link trade or, without one, a Trade Stone (the ROM's in-game alternative).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Machamp by link trade or, without one, a Trade Stone (the ROM's in-game alternative).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Golem by link trade or, without one, a Trade Stone (the ROM's in-game alternative).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Gengar by link trade or, without one, a Trade Stone (the ROM's in-game alternative).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-gurdurr",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "Conkeldurr by link trade or, without one, a Trade Stone (the ROM's in-game alternative).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Rhyperior with a Trade Stone (the ROM has no Protector method).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Electivire with a Trade Stone (no Electirizer method in the ROM).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Magmortar with a Trade Stone (no Magmarizer method in the ROM).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Porygon2 by trade holding an Up-Grade, or a Trade Stone.",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Porygon-Z with a Trade Stone (no Dubious Disc method in the ROM).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Milotic by levelling with high Beauty, or with a Trade Stone (ROM).",
+   "quality": "reference-only",
+   "source": "ROM evolution table; Trade Stone: player reports (PokéCommunity, YouTube)"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Trade holding a DeepSeaTooth (Huntail) or DeepSeaScale (Gorebyss); the ROM also evolves it by level into one of the two, set by its personality.",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Gliscor by levelling at night with high friendship, or a Dusk Stone (no Razor Fang needed).",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Weavile by levelling at night with high friendship, or a Dusk Stone (no Razor Claw needed).",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Ambipom by levelling with high friendship during the day (not by learning Double Hit).",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Magnezone with a Thunderstone (no special magnetic place needed).",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Gallade with a Dawn Stone; Gardevoir by level as usual.",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Froslass with a Dawn Stone; Glalie by level.",
+   "quality": "reference-only",
+   "source": "ROM evolution table"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Espeon (friendship by day), Umbreon (friendship at night), Flareon, Jolteon, Vaporeon by stone. No Leafeon or Glaceon evolution: Glaceon is a Northcoast gift, Leafeon is wild in Espo Clearing.",
+   "quality": "reference-only",
+   "source": "ROM evolution and wild tables; Glazed fan wiki (Glaceon gift)"
   }
  ],
  "notes": [
@@ -1945,6 +3386,136 @@
    "text": "Known bug: Hidden Power shows its type only after it is learned.",
    "quality": "reference-only",
    "source": "Glazed 9.1 change list (fan wiki)"
+  },
+  {
+   "id": "note-latis",
+   "kind": "roamer",
+   "title": "Latios and Latias roam Tunod",
+   "text": "After the Tunod league they wander Tunod, changing place daily and staying around after being knocked out. Lars at the Legendary Research Lab near Violet City says where one is (one per day).",
+   "names": [
+    "Latios",
+    "Latias"
+   ],
+   "species": [
+    381,
+    380
+   ],
+   "source": "emulatorhacks.com Glazed page; vizzed.com Legends of Glazed",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-beasts",
+   "kind": "roamer",
+   "title": "The legendary beasts",
+   "text": "After Regina takes Ho-Oh, Entei, Raikou and Suicune appear at the Bell Tower and then roam. Arceus's requirement leaves them (and the Latis) out.",
+   "names": [
+    "Entei",
+    "Raikou",
+    "Suicune"
+   ],
+   "species": [
+    244,
+    243,
+    245
+   ],
+   "source": "emulatorhacks.com Glazed page; Glazed fan wiki (search extract)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-trade-stone",
+   "kind": "tip",
+   "title": "Trade Stone",
+   "text": "The ROM lets a Trade Stone do every trade evolution (Kadabra, Machoke, Graveler, Haunter, Onix, Scyther, Seadra, Slowpoke, Poliwhirl, Porygon, Gurdurr, and Rhydon, Electabuzz, Magmar, Porygon2, Feebas). Players report it as a Northcoast ski race prize and in the Goldenrod store.",
+   "source": "ROM evolution table; PokéCommunity Blazed Glazed thread, YouTube comments (where)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-starters",
+   "kind": "gift",
+   "title": "Every starter",
+   "text": "Five Tunod starters from Willow (all five catchable later), a Johto one from Elm, Kanto ones in Goldenrod (Oak), Unova ones on Reefen Isle and Kalos ones on Reign Isle.",
+   "source": "vizzed.com Glazed Guide (Livid Pain); PokéHarbor ?p=1815; Glazed fan wiki (search extracts)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-real-world",
+   "kind": "version",
+   "title": "Two worlds",
+   "text": "The story moves between the Pokemon world and the real world; the Pokédex holds Sinnoh, Unova and Kalos Pokemon in place of many Hoenn ones.",
+   "source": "PokéHarbor ?p=1815; ROM species table",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-trainer-isle-rom",
+   "kind": "tip",
+   "title": "Trainer Isle teams in the ROM",
+   "text": "Besides the Rankor leaders (Lv 90), the ROM holds Lv 90 teams for all eight Johto leaders and Lv 100 teams for Lance, Steven, Wallace and Cynthia; the sources name Mixed Gym Leaders and Special Singles at Trainer Isle but not which is which.",
+   "source": "ROM glazed-unofficial trainer table (levels, teams); PokéHarbor ?p=1815",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-91-more",
+   "kind": "version",
+   "title": "More 9.1 changes",
+   "text": "Wild Wingull and Pelipper hold a Lucky Egg half the time; catching gives EXP; natures show their stats; underwater movement is twice as fast; late-game starters come at higher levels.",
+   "source": "emulatorhacks.com Glazed page (9.1 change list)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-90",
+   "kind": "version",
+   "title": "9.0 changes",
+   "text": "9.0 (TrainerX493, Lucbui, Datudou) rebuilt every move pool from the newest games and gave important trainers the new moves; Lickitung, Tangela, Yanma and Piloswine evolve at set levels.",
+   "source": "emulatorhacks.com Glazed page (9.0 change list)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-92",
+   "kind": "version",
+   "title": "9.2.0",
+   "text": "No 9.2.0 change list was found. Every boss team this guide names is checked against the 9.2.0 ROM, and all of the 9.1 guide's fights are still there.",
+   "source": "ROM glazed-unofficial (9.2.0) trainer table",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-kyurem-forms",
+   "kind": "tip",
+   "title": "Kyurem forms cost moves",
+   "text": "Fusing or splitting Kyurem keeps only its level: taught moves are lost and EVs reset.",
+   "source": "emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-hm",
+   "kind": "tip",
+   "title": "HMs can be forgotten",
+   "text": "HM moves can be forgotten at any time, so a field-move slave is optional.",
+   "source": "emulatorhacks.com Glazed page (8.7 features carried into 9.x)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-lucky-egg",
+   "kind": "tip",
+   "title": "Lucky Eggs",
+   "text": "Chansey in Palmtree Park and (since 9.1) Wingull and Pelipper carry Lucky Eggs; Bridgette on Route 40 gives one.",
+   "source": "vizzed.com Glazed Guide (Livid Pain); emulatorhacks.com Glazed page",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-trades",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Oceanview: Ninetales and Politoed. Violet: Onix. Olivine: Slowpoke. Southerly: Kirlia for Ninetales. Blackthorn: Ampharos for Dragonair. Reefen Isle: Scyther. A Seadra trade gives Kingdra.",
+   "source": "vizzed.com Glazed Guide (Livid Pain); Glazed fan wiki (search extracts)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "note-arceus",
+   "kind": "legendary",
+   "title": "Arceus's condition",
+   "text": "Arceus wants every other legendary encountered (battled, caught or fled), event ones included, but not Latios, Latias, Entei, Raikou or Suicune.",
+   "source": "Glazed fan wiki Legendary Pokémon Guide (search extract); vizzed.com Legends of Glazed",
+   "quality": "reference-only"
   }
  ]
 }

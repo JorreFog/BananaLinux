@@ -37,7 +37,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 
 BananaOS is a complete Linux system built specifically for the RG DS and RG DS Plus. It uses Buildroot, a Linux kernel with [ROCKNIX](https://rocknix.org) hardware support, BusyBox init and a dedicated interface for both screens. The system image is read-only; games, saves and settings live on a separate exFAT partition.
 
-It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)). Italian (Italiano, translated by Olympicus) and Finnish (Suomi, translated by HANHITSI) arrive in 0.5.3.
+It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)). Italian (Italiano, translated by Olympicus) and Finnish (Suomi, translated by HANHITSI) arrive in 0.5.3, and Spanish (Español, translated by Pixelado Dev) after it.
 
 <p align="center">
   <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, BananaDS 12.6% faster, 10 built-in layout themes, 2 DS emulators">
@@ -236,6 +236,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 
 - Other systems: Game Boy, Game Boy Color, GBA, Mega Drive, NES, SNES and PICO-8 in BananaFront, BananaOS's own player; Commodore 64 and ZX Spectrum through it too, with a touch keyboard on the second screen (or F + B over the game); PlayStation and N64 in RetroArch; each on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
 - Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, game companions for 500+ GBA games (off by default), and the DS Pokémon companion (alpha) for Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2 in BananaDS (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
+- Game & Watch on both screens, in MAME: the MAME ROM zips and artwork zips as you download them (`roms/gameandwatch` and `roms/gameandwatch/artwork`), Multi Screen games one screen a panel, the unit's artwork around the LCD. Names and covers fill in by themselves (the covers drawn from your artwork). F opens MAME's menu, L2 swaps the panels, F + L2 takes a screenshot.
 - Ports and PICO-8: PortMaster (from the App Store) with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
 - App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster and eReaderDS from the menu.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
@@ -363,7 +364,7 @@ make test          # renders the menu from a test library into ui/tests/out
 The people who make BananaOS (also in Settings › System › Credits):
 
 - **Development:** JorreFog (maintainer) · jesussaves-ai · marlupatrocinio
-- **Translation:** Majirefy (简体中文, Simplified Chinese) · Vladislav (LVD) and Ruslan (Nestrahoff) (Русский, Russian) · Olympicus (Italiano, Italian) · HANHITSI (Suomi, Finnish)
+- **Translation:** Majirefy (简体中文, Simplified Chinese) · Vladislav (LVD) and Ruslan (Nestrahoff) (Русский, Russian) · Olympicus (Italiano, Italian) · HANHITSI (Suomi, Finnish) · Pixelado Dev (Español, Spanish)
 - **QA:** Duncan · Majirefy · Smizzle · nigel777 · v (QA and mod)
 - **UI/UX:** Numberjerry
 
@@ -372,6 +373,7 @@ Thanks to:
 - Vladislav (LVD) and Ruslan (Nestrahoff) for the Russian (Русский) translation.
 - Olympicus for the Italian (Italiano) translation.
 - HANHITSI for the Finnish (Suomi) translation.
+- Pixelado Dev for the Spanish (Español) translation.
 - Majirefy for the Simplified Chinese (简体中文) translation. The characters are drawn with [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into `ui/assets/lang/<language>.tsv`.
 - jesussaves-ai: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS, and in BananaOS the PS1 game panel, the game panel's idle dimming, the microphone routing and the Reset rows.
 - casualducko: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).

@@ -6,7 +6,10 @@
 #include "gba/gen3live.h"
 #include "gba/gen3rom.h"
 #include "gba/hacks.h"
+#include "nds/guide.h"
 #include "nds/rom.h"
+#include "pokemon.h"
+#include <thread>
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -35,7 +38,7 @@ static double msSince(std::chrono::steady_clock::time_point t0)
 	return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
-// the header alone: the five codes, anything else NONE
+// the header alone: the five codes, anything else NONE (and a FireRed header with no tables behind it)
 static void testHeaders()
 {
 	std::vector<uint8_t> h(0x200, 0);
@@ -108,7 +111,8 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ(gba::detectGame(rom->data(), rom->size()).romHash, g.romHash);
 	if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
 	{
-		// a CFRU-style hack: its species names moved to a longer table, or the Fairy type in the base stats
+		// a ROM hack the list doesn't know isn't supported: its species names moved to a longer table (a CFRU FireRed, a
+		// patched Emerald), or a type past Dark in the base stats
 		std::vector<uint8_t> h(*rom);
 		uint32_t sp; memcpy(&sp, h.data() + 0x144, 4); sp += 11 * 100; memcpy(h.data() + 0x144, &sp, 4);
 		EQ((int)gba::detectGame(h.data(), h.size()).id, (int)GameId::NONE);
@@ -322,10 +326,12 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	const uint32_t crc = gba::romCrc32(rom->data(), rom->size());
 	const double crcMs = msSince(t0);
 	const gba::HackInfo* hi = gba::hackByCrc(crc);
-	if (!hi) return;
+	// (a hack the owner plays that the pages must read - 2026-11-04: Pokémon Unbound had only the old views)
+	if (!hi) { CHECK(path.find("Unbound") == std::string::npos); if (path.find("Unbound") != std::string::npos) fprintf(stderr, "FAIL %s: not a hack the companion knows\n", path.c_str()); return; }
 	const std::string key = hi->key;
 	const bool glazed = key == "glazed", golden = key == "golden-glazed", unoff = key == "glazed-unofficial", gaia = key == "gaia";
-	if (!glazed && !golden && !unoff && !gaia) { fprintf(stderr, "gba-rom-test: %s: %s is read elsewhere (its engine), skipped\n", path.c_str(), hi->title); return; }
+	const bool unbound = key == "unbound";
+	if (!glazed && !golden && !unoff && !gaia && !unbound) { fprintf(stderr, "gba-rom-test: %s: %s is read elsewhere (its engine), skipped\n", path.c_str(), hi->title); return; }
 	t0 = std::chrono::steady_clock::now();
 	Game g = gba::detectGame(rom->data(), rom->size(), crc);
 	const double detectMs = msSince(t0);
@@ -334,13 +340,14 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	EQ(g.title, std::string(hi->title));
 	EQ((int)g.gen, (int)Gen::III);
 	CHECK(g.modern);
-	EQ(g.dexSize, gaia ? 721 : 386);
+	if (!unbound) EQ(g.dexSize, gaia ? 721 : 386);
+	else CHECK(g.dexSize > 721);	// (Unbound: Pokémon up to Generation VIII)
 	EQ(gba::detectGame(rom->data(), rom->size()).hack, key);	// (the CRC-32 worked out there)
 	t0 = std::chrono::steady_clock::now();
 	pkmn::RomTables t = pkmn::findTables(rom->data(), rom->size(), pkmn::detectGame(rom->data(), rom->size()));
 	t.rom = rom; t.crc = crc;
 	const double tablesMs = msSince(t0);
-	EQ(t.has.fairyType, gaia ? (int)pkmn::FAIRY : (int)pkmn::MYSTERY);
+	EQ(t.has.fairyType, gaia || unbound ? (int)pkmn::FAIRY : (int)pkmn::MYSTERY);
 	t0 = std::chrono::steady_clock::now();
 	auto r = gba::readRomData(t, g, "");
 	const double readMs = msSince(t0);
@@ -359,7 +366,26 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	EQ(r->natures.size(), (size_t)25);
 	if (!r->natures.empty()) EQ(r->natures[0], std::string("Hardy"));
 	uint16_t at = 0;
-	if (gaia)
+	if (unbound)
+	{
+		// Pokémon Unbound (CFRU, the Borrius region): Fairy, the newer generations, the split, its first town and gym
+		CHECK(types(named(*r, "Clefairy"), FAIRY, FAIRY));
+		CHECK(types(named(*r, "Sylveon"), FAIRY, FAIRY));
+		CHECK(types(named(*r, "Deino"), DARK, DRAGON));
+		CHECK(named(*r, "Grookey") != nullptr);			// (Generation VIII)
+		CHECK(r->moves.size() > 355);
+		EQ((int)r->moves[242].cat, (int)MoveCategory::PHYSICAL);	// Crunch
+		EQ((int)r->moves[52].cat, (int)MoveCategory::SPECIAL);		// Ember
+		bool dresco = false;
+		for (auto& z : r->zones) dresco |= z.second.name == "Dresco Town";
+		CHECK(dresco);
+		bool mirskle = false;
+		for (auto& tr : r->trainers) mirskle |= tr.second.name == "Mirskle" && !tr.second.team.empty();
+		CHECK(mirskle);
+		uint16_t nat = 0; uint8_t form = 0;
+		CHECK(gba::speciesOf(*r, 1, nat, form) && nat == 1 && form == 0);
+	}
+	else if (gaia)
 	{
 		EQ(r->species[387].name, std::string("Turtwig"));
 		CHECK(types(&r->species[387], GRASS, GRASS));
@@ -435,7 +461,8 @@ static void testHack(const std::string& path, const std::string& pngDir)
 		{
 			auto x = r->sprite((uint16_t)d);
 			// (a form past the Pokédex may share its palettes: Glazed's second Pikachu)
-			if (!x || x->frames.empty() || (x->normal == x->shiny && d <= (size_t)r->game.dexSize)) { bad++; fprintf(stderr, "  %s: %s's picture: %s\n", hi->title, r->species[d].name.c_str(), x ? "its shiny palette is its normal one" : "none"); }
+			// (Minior's Meteor Form is the same shiny: its core differs, which the games show only out of the shell)
+			if (!x || x->frames.empty() || (x->normal == x->shiny && d <= (size_t)r->game.dexSize && r->species[d].name != "Minior")) { bad++; fprintf(stderr, "  %s: %s's picture: %s\n", hi->title, r->species[d].name.c_str(), x ? "its shiny palette is its normal one" : "none"); }
 		}
 	EQ(bad, 0);
 	auto deino = named(*r, "Deino", &at) ? r->sprite(at) : nullptr;
@@ -457,6 +484,65 @@ static void testHack(const std::string& path, const std::string& pngDir)
 		r->moves.size() - 1, r->trainers.size(), r->zones.size(), r->items.size());
 }
 
+// every game the companion supports (the five, the hacks gba/hacks.h lists) is read by the pages; another release of a
+// listed hack isn't supported (the panel says so, nothing more: 2026-11-06, the owner)
+static void testPagesRead(const std::string& path)
+{
+	pkmn::Companion c;
+	if (!c.open(path)) return;
+	std::shared_ptr<const pkmn::RomTables> t;
+	for (int i = 0; i < 600 && !(t = c.tables()); i++) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	CHECK(t && t->rom);
+	if (!t || !t->rom) return;
+	Game g;
+	bool unsupported = true;
+	auto r = gba::readGame(*t, &g, &unsupported);
+	CHECK(g.id != GameId::NONE);
+	CHECK(!unsupported);
+	CHECK(!g.title.empty());
+	CHECK(r != nullptr);
+	if (!r) { fprintf(stderr, "FAIL %s: the companion opens it (%s), the pages don't read it\n", path.c_str(), c.game()->name); return; }
+	CHECK(r->species.size() > 386);
+	if (g.id == GameId::HACK)
+	{
+		// (another release of it - a CRC-32 not in the list: not supported)
+		pkmn::RomTables other = *t;
+		other.crc ^= 1;
+		Game none;
+		bool no = false;
+		CHECK(gba::readGame(other, &none, &no) == nullptr);
+		CHECK(no);
+		EQ((int)none.id, (int)GameId::NONE);
+	}
+	fprintf(stderr, "gba-rom-test: %s: the pages read it as %s (%s, %zu species)\n", path.c_str(), g.title.c_str(), g.hack.c_str(), r->species.size());
+	// its guide (the repository's, BANANA_GBA_GUIDE): every place a zone of this ROM, every milestone's foe a trainer
+	// in it (the save's trainer flags tick a milestone off by them)
+	if (!getenv("BANANA_GBA_GUIDE")) return;
+	GuideData gd;
+	const GuideResolver res = guideResolver(*r);
+	std::string why;
+	if (!loadGuide(r->game, gd, &why, &res))
+	{
+		fprintf(stderr, "FAIL %s: no guide (%s)\n", g.title.c_str(), why.c_str());
+		CHECK(!"every supported game has a guide");
+		return;
+	}
+	int foes = 0, found = 0;
+	std::string missing;
+	for (auto& m : gd.milestones)
+	{
+		if (m.foeName.empty()) continue;
+		foes++;
+		if (!m.trainerIds.empty()) found++;
+		else missing += " " + m.id;
+	}
+	fprintf(stderr, "gba-rom-test: %s guide: %zu milestones, %d foes found in the ROM of %d,%s %zu steps, %zu secrets, %zu notes, %zu unresolved places%s\n",
+		g.title.c_str(), gd.milestones.size(), found, foes, missing.empty() ? "" : (" not:" + missing + ",").c_str(), gd.steps.size(), gd.secrets.size(),
+		gd.notes.size(), gd.unresolved.size(), why.empty() ? "" : (" (" + why + ")").c_str());
+	CHECK(found == foes);
+	CHECK(gd.unresolved.empty());
+}
+
 int main(int argc, char** argv)
 {
 	testHeaders();
@@ -474,7 +560,7 @@ int main(int argc, char** argv)
 			}
 			closedir(d);
 			std::sort(files.begin(), files.end());
-			for (auto& fl : files) { testRom(fl, pngDir); roms++; }
+			for (auto& fl : files) { testRom(fl, pngDir); testPagesRead(fl); roms++; }
 		}
 	if (!roms) fprintf(stderr, "gba-rom-test: no ROMs (GBA_ROMS or the first argument: a folder of .gba files): header checks only\n");
 	// the ROM hacks: a folder of them, each .gba in it or one folder down
@@ -497,7 +583,7 @@ int main(int argc, char** argv)
 	};
 	if (!hacks.empty()) scan(hacks, 1);
 	std::sort(hf.begin(), hf.end());
-	for (auto& fl : hf) { const int before = checks; testHack(fl, pngDir); hackRoms += checks > before; }
+	for (auto& fl : hf) { const int before = checks; testHack(fl, pngDir); testPagesRead(fl); hackRoms += checks > before; }
 	if (!hackRoms) fprintf(stderr, "gba-rom-test: no ROM hacks (GBA_HACKS or the third argument): skipped\n");
 	fprintf(stderr, "gba-rom-test: %d checks, %d failed\n", checks, fails);
 	return fails ? 1 : 0;

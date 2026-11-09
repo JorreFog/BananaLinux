@@ -12,6 +12,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <sys/stat.h>
 
 using namespace banana;
@@ -80,6 +82,18 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 	ndsfx::Fixture pt = ndsfx::platinum(), b2 = ndsfx::black2();
 	pg.setData(pt.data());
 	pg.show(Page::BATTLE); shot("pt-battle");
+	// a tap on the foe's card: its type matchups (weak to, resists, immune) where the moves were; again: the moves
+	auto tapAt = [&](float x, float y) { pg.touchDown((int)(w * x / 640), (int)(h * y / 480), 0); pg.touchUp((int)(w * x / 640), (int)(h * y / 480), 0); };
+	auto same = [&](const std::string& a, const std::string& b)
+	{
+		std::ifstream fa(pre + a + ".png", std::ios::binary), fb(pre + b + ".png", std::ios::binary);
+		std::string da((std::istreambuf_iterator<char>(fa)), {}), db((std::istreambuf_iterator<char>(fb)), {});
+		return !da.empty() && da == db;
+	};
+	tapAt(470, 110); shot("pt-battle-matchups");
+	CHECK(!same("pt-battle", "pt-battle-matchups"), "a tap on the foe's card changed nothing");
+	tapAt(320, 300); shot("pt-battle-again");
+	CHECK(same("pt-battle", "pt-battle-again"), "a tap on the matchups didn't bring the moves back");
 	pg.show(Page::PARTY); shot("pt-party");
 	pg.show(Page::TEAM); shot("pt-team");
 	pg.show(Page::GUIDE); shot("pt-guide");
@@ -123,6 +137,7 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 	// Black 2: a wild battle with the catch helper, challenge mode
 	pg.setData(b2.data());
 	pg.show(Page::BATTLE); shot("b2-battle-wild");
+	if (all) { tapAt(470, 110); shot("b2-battle-wild-matchups"); tapAt(470, 110); }
 	pg.show(Page::HERE); shot("b2-here");
 	scrolled("b2-here-end", 320, false);
 	pg.show(Page::LOG); shot("b2-log");
@@ -140,6 +155,9 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 		f.live = lv;
 		pg.setData(f.data());
 		pg.show(Page::BATTLE); shot("pt-battle-double");
+		tapAt(470, 150); shot("pt-battle-double-matchups");	// (the second foe's)
+		CHECK(!same("pt-battle-double", "pt-battle-double-matchups"), "a tap on the second foe's card changed nothing");
+		tapAt(470, 150);
 	}
 	// the states before the pages: reading the game, waiting for a save, no data
 	{

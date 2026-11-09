@@ -197,6 +197,10 @@ namespace banana::gba
 				natures = -1, classes = -1, trainers = -1, front = -1, pals = -1, shiny = -1;
 			int numClasses = 0, numTrainers = 0, numItems = 0;
 			int evoStride = 40, shinyTag = 500;
+			// (CFRU's expanded moves and TMs - Pokémon Unbound -: level-up lists of 3-byte entries (move, level; level 0xff
+			// ends one), TM/HM bits 16 bytes a species, tmCount TMs then 8 HMs; -1 / 8 / 50: FireRed's)
+			long learn3 = -1;
+			int tmStride = 8, tmCount = 50;
 			size_t moveDescs = 354;				// (the move descriptions' table: its pointers)	// (CFRU: 16 evolutions a species; the shiny palettes tagged species + 1024)
 		};
 
@@ -241,7 +245,7 @@ namespace banana::gba
 				if (e >= 0 && (size_t)e + 80 + 8 <= n && !memcmp(rom + e + 40, E, 8)) x.evo = e;
 				if (src.cfru)
 				{
-					a = each(rom, n, E, 8, [&](size_t a) { return a >= 128 && a % 4 == 0 && a + 128 * 412 <= n &&
+					a = each(rom, n, E, 8, [&](size_t a) { return a >= 128 && a % 2 == 0 && a + 128 * 412 <= n &&	// (Unbound's: 2-aligned)
 						le16(rom + a + 128) == 4 && le16(rom + a + 130) == 32 && le16(rom + a + 132) == 3; });
 					if (a >= 0) { x.evo = a - 128; x.evoStride = 128; }
 				}
@@ -294,6 +298,48 @@ namespace banana::gba
 					size_t best = run((size_t)x.moveDesc);
 					each(rom, n, pat, 4, [&](size_t a) { if (a % 4 == 0 && run(a) > best) { best = run(a); x.moveDesc = (long)a; } return false; });
 					x.moveDescs = best;
+				}
+			}
+			// CFRU's expanded moves and TMs (FireRed 1.0's code: its literal pools still point at them - gLevelUpLearnsets
+			// at 0x3ea7c, gTMHMLearnsets at 0x43c68 -), each checked by its shape; a patched FireRed of FireRed's own
+			// formats (Gaia) fails the checks and keeps them
+			if (src.cfru && n > 0x43c70 && rom[0xbc] == 0)
+			{
+				// level-up lists: Bulbasaur's begins with Tackle at 1; twenty species' lists end within 80 entries, levels 0-101
+				const long ls = ptr(rom, n, 0x3ea7c, 4 * 412);
+				auto list3 = [&](long tab, int sp) -> bool
+				{
+					long a = ptr(rom, n, (size_t)tab + 4 * sp, 3);
+					for (int k = 0; a >= 0 && k < 80 && (size_t)a + 3 * k + 3 <= n; k++)
+					{
+						const uint8_t lv = rom[a + 3 * k + 2];
+						if (lv == 0xff) return k > 0 || sp == 0;
+						if (lv > 101 || le16(rom + a + 3 * k) >= 2048) return false;
+					}
+					return false;
+				};
+				bool ok = ls >= 0;
+				for (int sp = 1; ok && sp <= 20; sp++) ok = list3(ls, sp);
+				if (ok) { const long b = ptr(rom, n, (size_t)ls + 4, 3); ok = b >= 0 && le16(rom + b) == 33 && rom[b + 2] == 1; }
+				if (ok) x.learn3 = ls;
+				// TM/HM bits: species 0 none, Mew all of the first 120
+				const long tc = ptr(rom, n, 0x43c68, 16 * 412);
+				static const uint8_t Z16[16] = {};
+				bool all = tc >= 0 && !memcmp(rom + tc, Z16, 16);
+				for (int i = 0; all && i < 15; i++) all = rom[tc + 16 * 151 + i] == 0xff;
+				if (all)
+				{
+					// the TM/HM moves: FireRed's first four TMs, then (after the TMs) Cut, Fly, Surf, Strength
+					static const uint8_t T[8] = { 0x08, 0x01, 0x51, 0x01, 0x60, 0x01, 0x5b, 0x01 };
+					int count = 0;
+					const long tm = each(rom, n, T, 8, [&](size_t a)
+					{
+						for (int k = 50; a % 2 == 0 && k <= 120 && a + 2 * k + 8 <= n; k++)
+							if (le16(rom + a + 2 * k) == 15 && le16(rom + a + 2 * k + 2) == 19 && le16(rom + a + 2 * k + 4) == 57 &&
+								le16(rom + a + 2 * k + 6) == 70 && k > 50) { count = k; return true; }
+						return false;
+					});
+					if (tm >= 0) { x.tmCompat = tc; x.tmStride = 16; x.tmMoves = tm; x.tmCount = count; }
 				}
 			}
 			x.abilityDesc = textTable(rom, n, { "No special ability." }, 78);
@@ -521,7 +567,8 @@ namespace banana::gba
 	{
 		// the hacks read here: their Pokédex's size (the national numbers past it are their forms and extra slots)
 		struct HackDex { const char* key; int dexSize; };
-		const HackDex HACK_DEX[] = { { "glazed", 386 }, { "golden-glazed", 386 }, { "glazed-unofficial", 386 }, { "gaia", 721 } };
+		const HackDex HACK_DEX[] = { { "glazed", 386 }, { "golden-glazed", 386 }, { "glazed-unofficial", 386 }, { "gaia", 721 },
+			{ "unbound", 905 } };
 
 		// a patched Emerald that renamed ??? (type 9) its Fairy type
 		bool fairyAt9(const uint8_t* rom, size_t n)
@@ -542,7 +589,11 @@ namespace banana::gba
 		g.revision = rom[0xbc];
 		static const struct { const char* c; GameId id; const char* t; } G[] = {
 			{ "AXVE", GameId::RUBY, "Ruby" }, { "AXPE", GameId::SAPPHIRE, "Sapphire" }, { "BPEE", GameId::EMERALD, "Emerald" },
-			{ "BPRE", GameId::FIRERED, "FireRed" }, { "BPGE", GameId::LEAFGREEN, "LeafGreen" } };
+			{ "BPRE", GameId::FIRERED, "FireRed" }, { "BPGE", GameId::LEAFGREEN, "LeafGreen" },
+			// the Spanish releases (#181: pkmn's tables read them, checked with tests/nds-rom-test's GBA side): the same
+			// game to the pages, their own name
+			{ "AXVS", GameId::RUBY, "Rubí" }, { "AXPS", GameId::SAPPHIRE, "Zafiro" }, { "BPES", GameId::EMERALD, "Esmeralda" },
+			{ "BPRS", GameId::FIRERED, "Rojo Fuego" }, { "BPGS", GameId::LEAFGREEN, "Verde Hoja" } };
 		for (auto& e : G)
 			if (g.code == e.c) { g.id = e.id; g.title = e.t; }
 		if (g.id == GameId::NONE) return g;
@@ -559,7 +610,8 @@ namespace banana::gba
 			h.add(len, 4);
 			g.romHash = h.hex();
 		};
-		// a ROM hack the companion knows (its base game's code, its whole ROM's CRC-32): who it is, its Pokédex, its chart
+		// a ROM hack (its base game's code) the companion knows, by its whole ROM's CRC-32: who it is, its Pokédex, its
+		// chart
 		if ((g.id == GameId::EMERALD || g.id == GameId::FIRERED) && n >= 0x1000000)
 		{
 			if (!crc) crc = romCrc32(rom, n);
@@ -579,18 +631,37 @@ namespace banana::gba
 				return g;
 			}
 		}
-		// a CFRU hack (and others built the same way) moves the species names to a longer table and adds the Fairy
-		// type: the header's species names no longer end where its move names start (412 x 11 bytes), or a base stat
-		// record has type 23
+		// any other ROM hack isn't supported: a pokeemerald-expansion build ("RHHEXP" in its header), or tables grown
+		// past the base game's (a CFRU hack moves the species names to a longer table - they no longer end where the
+		// move names start, 412 x 11 bytes - or a base stat record has a type past Dark: Fairy)
 		if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
 		{
+			int maj, min, pat;
 			long sp = ptr(rom, n, 0x144), mv = ptr(rom, n, 0x148), bs = ptr(rom, n, 0x1bc, 28 * 412);
-			bool hack = sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
+			bool hack = expansionVersion(rom, n, maj, min, pat) || sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
 			for (int i = 0; !hack && i < 412; i++) hack = rom[bs + 28 * i + 6] > 17 || rom[bs + 28 * i + 7] > 17;
-			if (hack) { g.id = GameId::NONE; g.gen = Gen::IV; g.dexSize = 493; return g; }
+			if (hack) { g.id = GameId::NONE; return g; }
 		}
 		hash();
 		return g;
+	}
+
+	std::shared_ptr<const RomData> readGame(const pkmn::RomTables& t, Game* out, bool* unsupported)
+	{
+		std::shared_ptr<const RomData> r;
+		Game g;
+		if (t.rom)
+		{
+			g = detectGame(t.rom->data(), t.rom->size(), t.crc);
+			if (g.id != GameId::NONE) r = readRomData(t, g, "");
+		}
+		// (a ROM with one of the five games' codes that isn't one of them, or one the list knows: a hack not
+		// supported - one whose header still points at its base game's tables too, Glazed 9.2.0 before it was listed)
+		// (a patched hack not listed has its base game's header, so one of the five games read and failed counts as one
+		// too: the five's own releases are read - tests/gba-rom-test)
+		if (unsupported) *unsupported = !r && t.rom && t.rom->size() >= 0xb0 && pkmn::detectGame(t.rom->data(), t.rom->size()) != nullptr;
+		if (out) *out = r ? r->game : Game();
+		return r;
 	}
 
 	namespace
@@ -634,7 +705,7 @@ namespace banana::gba
 			src.binary = hi->engine == Engine::BINARY && src.emerald;
 			src.fairy = t.has.fairyType >= 0 ? t.has.fairyType : src.cfru ? pkmn::FAIRY : -1;
 		}
-		else if (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412) return nullptr;
+		else if (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412) return nullptr;	// (detectGame(t) calls it a hack)
 		src.emerald = src.emerald || game.id == GameId::EMERALD;
 		const GameId base = !hi ? game.id : src.emerald ? GameId::EMERALD : GameId::FIRERED;	// (the base game's rules)
 		const uint8_t* rom = t.rom->data();
@@ -649,9 +720,18 @@ namespace banana::gba
 		// (the items: as many as today's tables found - some records' own index isn't theirs)
 		x.numItems = x.items >= 0 ? (int)std::min<size_t>(t.items.size(), (n - (size_t)x.items) / 44) : 0;
 		const int nsp = t.numSpecies;
-		if (x.base < 0 || x.moves < 0 || x.items < 0 || x.evo < 0 || x.tmCompat < 0 || x.tmMoves < 0 || (int)t.natDex.size() < nsp ||
-			t.dexSpecies.size() < 387 || t.moves.size() < 355 || t.learnsets < 0 || (size_t)x.base + 28 * (size_t)nsp > n ||
-			(size_t)x.evo + (size_t)x.evoStride * (size_t)nsp > n || (size_t)x.tmCompat + 8 * (size_t)nsp > n)
+		// (a CFRU hack may keep its level-up and TM lists in layouts of its own - Unbound's: 930 moves, 3-byte entries -:
+		// its species then have none, the rest of its data is read)
+		const bool noLists = src.cfru && ((t.learnsets < 0 && x.learn3 < 0) || x.tmCompat < 0 || (size_t)x.tmCompat + (size_t)x.tmStride * (size_t)nsp > n);
+		if (noLists)
+		{
+			fprintf(stderr, "gba companion: %s: no level-up or TM lists in a layout read here (learnsets %ld, TMs %ld): left out\n",
+				game.title.c_str(), t.learnsets, x.tmCompat);
+			x.tmCompat = -1;
+		}
+		if (x.base < 0 || x.moves < 0 || x.items < 0 || x.evo < 0 || (!noLists && (x.tmCompat < 0 || x.tmMoves < 0 || (t.learnsets < 0 && x.learn3 < 0))) ||
+			(int)t.natDex.size() < nsp || t.dexSpecies.size() < 387 || t.moves.size() < 355 || (size_t)x.base + 28 * (size_t)nsp > n ||
+			(size_t)x.evo + (size_t)x.evoStride * (size_t)nsp > n || (!noLists && (size_t)x.tmCompat + (size_t)x.tmStride * (size_t)nsp > n))
 		{
 			fprintf(stderr, "gba companion: %s: a table not found (base %ld moves %ld items %ld evolutions %ld TMs %ld/%ld, %zu national numbers, "
 				"%zu moves, learnsets %ld)\n", game.title.c_str(), x.base, x.moves, x.items, x.evo, x.tmCompat, x.tmMoves, t.natDex.size(),
@@ -786,7 +866,10 @@ namespace banana::gba
 
 		// moves (a hack's beyond the 354: as many as it names; the physical/special split, when its moves keep it in
 		// byte 10 - 0 physical, 1 special, 2 status: the Glazed releases, CFRU)
-		const int numMoves = src.hack ? (int)std::min<size_t>(t.moves.size(), (n - (size_t)x.moves) / 12) : 355;
+		int numMoves = src.hack ? (int)std::min<size_t>(t.moves.size(), (n - (size_t)x.moves) / 12) : 355;
+		// (a hack naming more moves than it keeps records for - Unbound: 7 names past them -: the records' byte 10, padding
+		// or the category, is never above 2, so a run of such at the end is past the table)
+		while (src.hack && numMoves > 355 && rom[x.moves + 12 * (numMoves - 1) + 10] > 2) numMoves--;
 		bool split = false;
 		if (src.hack)
 		{
@@ -822,9 +905,10 @@ namespace banana::gba
 		}
 
 		// TMs: Gen IV's numbers (TM01-50 = 1-50, HM01-08 = 93-100: tmNumber() in logic.cpp on Gen IV item ids)
-		auto tmNumber = [](int k) { return k < 50 ? k + 1 : 93 + (k - 50); };
+		// (a CFRU hack's TMs past 92 have no Gen IV number: left out)
+		auto tmNumber = [&x](int k) { return k < x.tmCount ? (k < 92 ? k + 1 : 0) : 93 + (k - x.tmCount); };
 		out->tmMoves.assign(100, 0);
-		for (int k = 0; k < 58; k++) out->tmMoves[(size_t)tmNumber(k) - 1] = le16(rom + x.tmMoves + 2 * k);
+		for (int k = 0; x.tmMoves >= 0 && k < x.tmCount + 8; k++) if (tmNumber(k)) out->tmMoves[(size_t)tmNumber(k) - 1] = le16(rom + x.tmMoves + 2 * k);
 
 		// species
 		for (size_t d = 1; d < out->species.size(); d++)
@@ -861,7 +945,16 @@ namespace banana::gba
 			}
 			// level-up moves: (move | level << 9), 0xffff at the end (a hack's: in any order - sorted here -, level 0 on
 			// evolving, a filler of no move at 101)
-			long l = ptr(rom, n, (size_t)t.learnsets + 4 * s, 2);
+			// (CFRU's expanded moves: 3-byte entries, move then level, level 0xff at the end)
+			const long l3 = x.learn3 < 0 ? -1 : ptr(rom, n, (size_t)x.learn3 + 4 * s, 3);
+			for (int k = 0; l3 >= 0 && k < 80 && (size_t)l3 + 3 * k + 3 <= n; k++)
+			{
+				const uint16_t mv = le16(rom + l3 + 3 * k);
+				const uint8_t lv = rom[l3 + 3 * k + 2];
+				if (lv == 0xff) break;
+				if (mv && lv <= 100) sp.learnset.push_back({ lv, mv });
+			}
+			long l = t.learnsets < 0 || x.learn3 >= 0 ? -1 : ptr(rom, n, (size_t)t.learnsets + 4 * s, 2);
 			for (int k = 0; l >= 0 && k < 64 && (size_t)l + 2 * k + 2 <= n; k++)
 			{
 				uint16_t e = le16(rom + l + 2 * k);
@@ -871,9 +964,12 @@ namespace banana::gba
 			}
 			if (src.hack) std::stable_sort(sp.learnset.begin(), sp.learnset.end(), [](const LevelMove& p, const LevelMove& q) { return p.level < q.level; });
 			// TMs and HMs
-			const uint8_t* tm = rom + x.tmCompat + 8 * s;
-			for (int k = 0; k < 58; k++)
-				if (tm[k / 8] >> (k % 8) & 1) sp.tms.push_back((uint16_t)tmNumber(k));
+			if (x.tmCompat >= 0)
+			{
+				const uint8_t* tm = rom + x.tmCompat + (size_t)x.tmStride * s;
+				for (int k = 0; k < x.tmCount + 8; k++)
+					if (tm[k / 8] >> (k % 8) & 1 && tmNumber(k)) sp.tms.push_back((uint16_t)tmNumber(k));
+			}
 		}
 		// evolutions (after all species and items: their names). Gen III's methods 1-6 are Gen V's, from 7 one lower
 		// (as Gen IV's: Gen V added a trade for a species at 7); item parameters as Gen IV ids. CFRU's own methods (16 a

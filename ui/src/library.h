@@ -19,6 +19,7 @@ namespace banana
 		std::vector<std::string> exts;	// lower case, no dot
 		bool always = false;			// on the shelf with no games (the DS: a fresh card shows where games go)
 		bool flat = false;				// games only in the folder itself (ports: their own folders hold scripts too)
+		std::string changed;			// a command run when its folder changes (Game & Watch: names and covers)
 	};
 
 	struct Game
@@ -55,6 +56,10 @@ namespace banana
 		const std::vector<SystemDef>& systemDefs() const { return defs; }
 		// the folders whose changes change the library: the ROM root, each system's folder and its media folders
 		std::vector<std::string> watchDirs() const;
+		// the systems' "changed" commands whose folder (on either card) or a folder in it is among dirs, once each
+		std::vector<std::string> changedRuns(const std::set<std::string>& dirs) const;
+		// every system's "changed" command, once each (the menu's start)
+		std::vector<std::string> changedCommands() const;
 		// the folders with system folders in them: romRoot, then the second SD card's roms folder while it's in and
 		// Settings lets it be read (bananad's sd2 script names it in /run/banana/sd2/roms); its games' rel is "@sd2/..."
 		std::vector<std::string> roots() const;

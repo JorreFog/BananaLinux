@@ -17,6 +17,7 @@ namespace banana
 			{ "c64", "c64,commodore 64,commodore64,cbm64" },
 			{ "zxspectrum", "zxspectrum,zx spectrum,spectrum,zx,zxs" }, { "psx", "psx,ps,ps1,playstation" },
 			{ "n64", "n64,nintendo 64" }, { "pico-8", "pico,pico8,pico-8" }, { "ports", "ports" },
+			{ "gameandwatch", "gw,gnw,game and watch,game & watch,gameandwatch" },
 		};
 
 		static void addNames(std::vector<std::string>& to, const std::string& list)

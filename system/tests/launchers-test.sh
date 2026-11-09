@@ -12,6 +12,22 @@ check() { if [ "$1" = "$2" ]; then passed=$((passed + 1)); echo "  ok: $3"; else
 # fn <file> <name>...: those shell functions out of a launcher, defined here
 fn() { f=$1; shift; for n; do eval "$(sed -n "/^$n() {/,/^}/p" "$f")"; done; }
 
+echo "run-bananads: the dsi timing and Settings' DS CPU speed"
+fn "$L/run-bananads" dsi_arm9
+ARM9T=$(mktemp)
+arm9() { (unset BANANADS_CORE_ARM9_MHZ; dsi_arm9 "$1"; echo "${BANANADS_CORE_ARM9_MHZ:-conf}"); }
+check "$(arm9 /nonexistent)" "133" "no bananads.conf: the DSi's 133"
+: > "$ARM9T"; check "$(arm9 "$ARM9T")" "133" "no line: 133"
+echo "core.arm9_mhz = 67" > "$ARM9T"; check "$(arm9 "$ARM9T")" "133" "Settings' 67 under the game's dsi timing: 133"
+echo "core.arm9_mhz = 133" > "$ARM9T"; check "$(arm9 "$ARM9T")" "conf" "Settings' 133: its own"
+printf 'render.scale = 3\ncore.arm9_mhz = 1066\n' > "$ARM9T"; check "$(arm9 "$ARM9T")" "conf" "Settings' 1066 wins over dsi's 133"
+fn "$L/run-bananads" own_arm9
+own() { (export BANANADS_CORE_ARM9_MHZ=$1; own_arm9 "$2"; echo "$BANANADS_CORE_ARM9_MHZ"); }
+check "$(own 133 1066)" "1066" "the game's own speed wins over its dsi timing's 133"
+check "$(own 133 67)" "67" "... also when it is lower"
+check "$(own 133 '')" "133" "no own speed: as it was"
+rm -f "$ARM9T"
+
 echo "run-drastic: a game's own 3D resolution (hires_3d) and Threaded 3D"
 fn "$L/run-drastic" cfg_game cfg_back hires_of
 check "$(hires_of 1) $(hires_of 2) $(hires_of 3) $(hires_of 4) [$(hires_of '')] [$(hires_of 5)]" "0 1 1 1 [] []" "1x is 0, 2x 3x 4x are 1, nothing else"

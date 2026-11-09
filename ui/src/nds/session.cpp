@@ -111,6 +111,23 @@ namespace banana::nds
 			c->season = (uint8_t)seasonPick;
 			l = c;
 		}
+		// (an hg-engine hack - a DS game with game.hack - keeps a Pokémon's ability slot, 0 or 1 - 2 its hidden one -, not
+		// the ability, where Gen IV keeps the ability: Origin HeartGold's party, 2026-11-04. The battle's own copies hold
+		// the ability)
+		if (!rom->game.hack.empty() && rom->game.gen == Gen::IV)
+		{
+			auto c = std::make_shared<Live>(*l);
+			auto fix = [&](Mon& m)
+			{
+				if (m.species >= rom->species.size() || m.ability > 2) return;
+				const uint16_t* a = rom->species[m.species].abilities;
+				m.ability = a[m.ability] ? a[m.ability] : a[0];
+			};
+			for (auto& m : c->party) fix(m);
+			for (auto& m : c->daycare) fix(m);
+			for (auto& m : c->battle.foeParty) fix(m);
+			l = c;
+		}
 		cur = l;
 		// (the playthrough named by its trainer: not before the trainer id is read)
 		if (file.empty() && l->valid && l->trainerKnown)

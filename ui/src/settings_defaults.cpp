@@ -45,7 +45,8 @@ namespace banana
 		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
 		// Nintendo DS > Buttons: L2, R2, L3 and R3's job in both DS emulators (nds-buttons)
 		// Other systems > Buttons > a system: L2, R2, L3 and R3 in its RetroArch games (run-retroarch, bananad)
-		const char* const RA_BTN[] = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none", nullptr };
+		const char* const RA_BTN[] = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "companion", "none", nullptr };
+		const char* const RA_BTN_BACK[] = { "companion", "none", nullptr };
 		const char* const NDS_BTN[] = { "a", "b", "x", "y", "l", "r", "start", "select", "swap", "save", "load", "ff", "blow", "menu", "none", nullptr };
 		const char* const ASK[] = { "ask", "always", "never", nullptr };
 
@@ -60,6 +61,9 @@ namespace banana
 			{ "ds_cart_art", "box", ENUM, DS_CART_ART, 0, 0 },
 			{ "homesync_games", "all", ENUM, ALL_CHOSEN, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
+			{ "speaker_eq", "on", ENUM, ON_OFF, 0, 0 },
+			{ "speaker_eq_profile", "tuned", TEXT, nullptr, 0, 0 },
+			{ "speaker_eq_bands", "0,0,0,0,0,0,0", TEXT, nullptr, 0, 0 },
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
@@ -85,6 +89,7 @@ namespace banana
 			{ "ra_btn_r2", "game", ENUM, RA_BTN, 0, 0, true, true },
 			{ "ra_btn_l3", "game", ENUM, RA_BTN, 0, 0, true, true },
 			{ "ra_btn_r3", "game", ENUM, RA_BTN, 0, 0, true, true },
+			{ "ra_btn_back", "companion", ENUM, RA_BTN_BACK, 0, 0, true, true },	// (the Game Boy Advance's row alone: banana-ui's)
 			{ "ra_swap_ab", "off", ENUM, ON_OFF, 0, 0, true, true },
 			{ "nds_emulator", "superdrastic", ENUM, NDS, 0, 0, true },
 			{ "nds_btn_l2", "swap", ENUM, NDS_BTN, 0, 0, true },

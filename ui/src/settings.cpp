@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "settings_draw.h"
+#include "settings_curl.h"
 #include "recorder.h"
 #include "lang.h"
 #include "settings_defaults.h"
@@ -10,10 +11,8 @@
 #include "gba/host.h"
 #include "nds/pages.h"
 #include <fcntl.h>
-#include <linux/input.h>
 #include <sys/file.h>
 #include <algorithm>
-#include <dlfcn.h>
 #include <thread>
 #include <cctype>
 #include <arpa/inet.h>
@@ -455,63 +454,76 @@ namespace banana
 			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
 			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
 			for (auto& t : userThemes()) { names.push_back(t.name); values.push_back(t.value); }
-			add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).",
+			add(D, "picture", "Theme", "How the menu looks. Your own themes go in banana/themes on the card.",
 				menu, "theme", names, values);
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Text on accent", "The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.", menu, "accent_text",
+		add(D, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
 			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
+		items.back().hints = { "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." };
 		// each panel its own backlight (N2); F + volume steps both
-		add(D, "picture", "Top brightness", "The top screen's backlight. F + volume changes both screens anywhere, in games too.", "", "top",
+		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens anywhere, in games too.", "", "top",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Bottom brightness", "The bottom screen's backlight. F + volume changes both screens anywhere, in games too.", "", "bottom",
+		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
-		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
-		add(D, "picture", "Shown systems", "Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).", "", "shelves", {}, {}, Item::PAGE);
-		add(D, "picture", "Menu look", "The menu's smaller looks: the top screen's motion, battery and clock, the boot animation, and what the DS cartridges show.", "", "menu_look", {}, {}, Item::PAGE);
+		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
+		items.back().hints = { "The menu plays its sounds.", "The menu is silent. Games keep their sound." };
+		add(D, "music", "Speaker EQ", "", "", "speaker_eq_page", {}, {}, Item::PAGE);
+		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
+		add(D, "picture", "Menu look", "The top screen's motion, battery and clock, the boot animation, and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
 		// the Menu look page (Display & sound > Menu look)
 		{
 			const char* ML = "Menu look";
-			add(ML, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
-			add(ML, "picture", "Battery", "The battery on the top screen: its icon, or its icon and how full it is.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
-			add(ML, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
-			add(ML, "picture", "Boot animation", "The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.", menu, "splash", { "On", "Off" }, { "on", "off" });
-			add(ML, "picture", "DS cartridges", "What the Nintendo DS cartridges on the bottom screen show. Box art: the covers fetched by Box art (a game without one shows its own icon). Game icon: every game's own icon from the cartridge, as the DSi menu shows it. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
+			add(ML, "picture", "Motion", "The top screen's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "The top screen moves and shines.", "The top screen holds still, and saves a little battery." };
+			add(ML, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
+			items.back().hints = { "Just the battery icon.", "The icon, and how full it is in percent." };
+			add(ML, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
+			items.back().hints = { "Like 14:30.", "Like 2:30 PM." };
+			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
+			add(ML, "picture", "DS cartridges", "What the DS cartridges on the bottom screen show. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
+			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
 		}
 		const char* P = "Sleep & power";
-		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
+		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
-		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		items.back().hints = { "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." };
 		add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.",
 			power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
-		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
+		add(P, "moon", "Waking up", "How the handheld wakes from sleep.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
-		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
+		items.back().hints = { "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." };
+		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
 		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
-		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on F; each keeps its own settings on its page below. X on a game in the library picks one for that game alone.",
+		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game in the library picks one for that game alone.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
+		items.back().hints = { "DraStic: the fastest. Its own settings are on its page below.", "Banana's own, built on melonDS: the most accurate. Its own settings are on its page below." };
+		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." };
 		// the DS's own language (its firmware's), in both emulators at once: a game that has several picks it (#22)
-		add(N, "nds", "DS language", "The language the DS itself is set to: a game that has several starts in it. Both emulators.",
+		add(N, "nds", "DS language", "The language the DS itself is set to. A game with several languages starts in this one.",
 			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
 		// L2, R2, L3 and R3's jobs, the same in both emulators (the DS buttons page below; nds-buttons)
-		add(N, "nds", "Buttons", "What L2, R2, L3 and R3 do in a DS game, the same in both emulators: swap the screens, fast-forward, blow on the mic, save or load a state, the menu, one of the DS's buttons, or nothing. F + R saves and F + L loads a state in both.", "", "ds_buttons", {}, {}, Item::PAGE);
+		add(N, "nds", "Buttons", "What L2, R2, L3 and R3 do in DS games, the same in both emulators.", "", "ds_buttons", {}, {}, Item::PAGE);
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
-		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.",
+		add(N, "nds", "DS name", "The name the DS itself is set to: what games call you. 10 characters at most.",
 			"", "ds_name", {}, {}, Item::PAGE);
-		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: its shader, 3D, CPU clock, frame pacing, microphone and low latency, its hotkeys, and its resets.", "", "nds_superdrastic", {}, {}, Item::PAGE);
-		add(N, "nds", "BananaDS", "BananaDS's own settings: its shader, 3D, edge marking and fog, frame pacing, CPU clock, timing, microphone and low latency, its hotkeys, and its reset.", "", "nds_bananads", {}, {}, Item::PAGE);
+		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: picture, speed, sound and its hotkeys.", "", "nds_superdrastic", {}, {}, Item::PAGE);
+		add(N, "nds", "BananaDS", "BananaDS's own settings: picture, speed, sound and its hotkeys.", "", "nds_bananads", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).";
@@ -522,32 +534,48 @@ namespace banana
 			const char* BD = "BananaDS";
 			const std::string bds = "/data/bananads/bananads.conf";
 			add(BD, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
-			add(BD, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x and 4x (experimental): three or four times (4x is the RG DS Plus panels' own size), the sharpest and the heaviest: a busy 3D scene can drop below full speed.",
+			add(BD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.",
 				bds, "render.scale", { "2x", "1x", "3x (experimental)", "4x (experimental)" }, { "2", "1", "3", "4" });
-			add(BD, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
+			items.back().hints = { "Twice the DS's size: sharper 3D.", "The DS's own size: the lightest.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
+			add(BD, "nds", "Edge marking", "The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
-			add(BD, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
-			add(BD, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+			items.back().hints = { "Outlines drawn, as on a DS.", "Outlines left out." };
+			add(BD, "nds", "Fog", "The distance fog some games draw in 3D.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "Fog drawn, as on a DS.", "Fog left out." };
+			add(BD, "nds", "Frame pacing", "How DS frames line up with the screens.",
 				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
+			items.back().hints = { "A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.", "The DS's own speed. A frame shows twice about every 6 seconds." };
 			// experimental: BananaDS's kms.lowlat (its docs/SETTINGS.md): no queue, frames aimed at the vblank
 			// (run-ahead left out in 0.5.0: it never fit a refresh on these handhelds, agent-qa LL2; run-bananads turns a card's into on)
-			add(BD, "nds", "Low latency (experimental)", "Experimental. On: no frame queue, each frame started as late as the panels allow: a press shows about two refreshes (35-40 ms) sooner, with the same sound.",
+			add(BD, "nds", "Low latency (experimental)", "How soon a press shows on the screens. Experimental.",
 				bds, "kms.lowlat", { "Off", "On" }, { "off", "on" });
-			add(BD, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+			items.back().hints = { "Frames queued as usual: the steadiest.", "No frame queue: a press shows about two refreshes sooner." };
+			add(BD, "nds", "CPU clock", "How fast the processor runs in DS games.",
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
-			add(BD, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
+			items.back().hints = { "Finds the lowest speed each game runs at full speed, and remembers it.", "Always the top speed. Uses more battery." };
+			add(BD, "nds", "Timing", "How closely the DS's two processors keep in step.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(BD, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+			items.back().hints = { "As melonDS does it. Works with every game.", "About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world." };
+			// BananaDS's core.arm9_mhz (2026-11-04, the owner): how fast the DS's own CPU runs, past a DS's and a DSi's: a game
+			// that loses its own frames in busy places keeps them (Origin HeartGold's towns: 2.8% lost at 133 MHz, none at 1066)
+			add(BD, "nds", "DS CPU speed", "How fast the DS's own CPU runs. DSi games keep their own.",
+				bds, "core.arm9_mhz", { "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" }, { "67", "133", "266", "533", "1066", "2133" });
+			items.back().hints = { "A DS's real speed.", "A DSi's speed.", "Faster than a DS: a game may behave differently.", "Faster than a DS: a game may behave differently.", "Stops a game's own slowdown in busy places (Origin HeartGold's towns). A game may behave differently.", "The fastest. A game may behave differently." };
+			add(BD, "nds", "Microphone", "Whether games hear the real microphone.",
 				bds, "mic.source", { "On", "Off" }, { "device", "none" });
-			add(BD, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
+			items.back().hints = { "Games hear the microphone: blow or speak when a game asks.", "Games hear nothing. The in-game menu's Blow still works." };
+			add(BD, "nds", "Mic sensitivity", "How loud a sound must be to reach the game.",
 				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
+			items.back().hints = { "Words and blows get through, the room's noise doesn't.", "Even quiet sounds get through.", "Only loud sounds get through.", "Everything the microphone hears, the speaker's sound too." };
 			// the DS Pokémon companion (ui/src/nds, docs/superpowers/specs/2026-11-02-nds-pokemon-companion-design.md): the
 			// owner's name for it, "(alpha)" until the owner drops it. BananaDS only: SuperDrastic has no memory export
-			add(BD, "nds", "NDS Pokémon companion (alpha)", "An early version. In Pokémon Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2, a small icon in the touch screen's corner opens a companion: your battle, party, team score, what to catch here, a guide and the Pokédex. The game keeps running and keeps its buttons. BananaDS only.",
+			add(BD, "nds", "NDS Pokémon companion (alpha)", "A companion for the DS Pokémon games, on the touch screen. An early version. BananaDS only.",
 				menu, "nds_companion", { "Off", "On" }, { "off", "on" });
-			add(BD, "nds", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter on each route and the Pokémon you lost. Needs the NDS Pokémon companion on.",
+			items.back().hints = { "No companion.", "A small icon in the touch screen's corner opens your battle, party, what to catch here, a guide and the Pokédex. The game keeps running." };
+			add(BD, "nds", "Challenge mode", "For a Nuzlocke-style run. Needs the NDS Pokémon companion on.",
 				menu, "nds_challenge", { "Off", "On" }, { "off", "on" });
-			add(BD, "nds", "Hotkeys", "The buttons that do something in a DS game in BananaDS: its menu, quitting, swapping the screens, save states, and L2, R2, L3 and R3 as Buttons has them.", "", "hotkeys_bds", {}, {}, Item::PAGE);
+			items.back().hints = { "The companion shows everything as usual.", "The companion keeps your first encounter on each route and the Pokémon you lost." };
+			add(BD, "nds", "Hotkeys", "The buttons that do something in BananaDS's games.", "", "hotkeys_bds", {}, {}, Item::PAGE);
 			add(BD, "nds", "Reset BananaDS", "BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.",
 				"", "nds-reset-bananads", { "" }, { "" }, Item::ACTION);
 		}
@@ -555,66 +583,82 @@ namespace banana
 		{
 			const char* SD = "SuperDrastic";
 			add(SD, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
-			add(SD, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-			add(SD, "nds", "Threaded 3D", "On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).",
+			add(SD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+			items.back().hints = { "Twice the DS's size: sharper 3D, at full speed.", "The DS's own size: the lightest." };
+			add(SD, "nds", "Threaded 3D", "How the DS's 3D is drawn alongside the game.",
 				dcfg, "threaded_3d", { "On", "Off" }, { "1", "0" });
-			add(SD, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+			items.back().hints = { "Drawn beside the game: the faster way.", "Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games)." };
+			add(SD, "nds", "CPU clock", "How fast the processor runs in DS games.",
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
-			add(SD, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+			items.back().hints = { "Finds the lowest speed each game runs at full speed, and remembers it.", "Always the top speed. Uses more battery." };
+			add(SD, "nds", "Frame pacing", "How DS frames line up with the screens.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+			items.back().hints = { "A new frame every screen refresh: the smoothest. Games run 0.3% fast, the sound matched.", "The DS's own speed. A frame shows twice about every 6 seconds." };
 			// (Off first: SuperDrastic's own default, as in 0.4.2; its scale is not BananaDS's)
-			add(SD, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+			add(SD, "nds", "Microphone", "Whether games hear the real microphone, and how loud a sound must be.",
 				sd, "DSHOOK_MIC_THRESH", { "Off", "Medium", "High", "Low" }, { "0", "0.15", "0.03", "0.3" });
+			items.back().hints = { "Games hear nothing. The in-game menu's Blow still works.", "Words and blows get through, the room's noise doesn't.", "Even quiet sounds get through.", "Only loud sounds get through." };
 			// experimental: SuperDrastic's DSFLIP_LOWLAT (run-drastic): no queue, each frame at the next vblank, DraStic held
-			add(SD, "nds", "Low latency (experimental)", "Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, so a press shows about a refresh and a half (20-25 ms) sooner, the sound a little sooner too. Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide, more on the RG DS Plus.",
+			add(SD, "nds", "Low latency (experimental)", "How soon a press shows on the screens. Experimental.",
 				sd, "DSFLIP_LOWLAT", { "Off", "On" }, { "0", "1" });
-			add(SD, "nds", "Hotkeys", "The buttons that do something in a DS game in SuperDrastic: its menu, quitting, swapping the screens, save states, and L2, R2, L3 and R3 as Buttons has them.", "", "hotkeys_sd", {}, {}, Item::PAGE);
-			add(SD, "nds", "Reset buttons", "DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F the menu, and L2, R2, L3 and R3 as Nintendo DS > Buttons has them. (HOME always opens the menu.) Press A twice.",
+			items.back().hints = { "Frames queued as usual: the steadiest.", "No frame queue: a press shows about a refresh and a half sooner. Heavy scenes can stutter a little." };
+			add(SD, "nds", "Hotkeys", "The buttons that do something in SuperDrastic's games.", "", "hotkeys_sd", {}, {}, Item::PAGE);
+			add(SD, "nds", "Reset buttons", "Puts DraStic's buttons back as printed, F opening its menu. Press A twice.",
 				"", "nds-reset-buttons", { "" }, { "" }, Item::ACTION);
-			add(SD, "nds", "Reset DraStic", "All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.",
+			add(SD, "nds", "Reset DraStic", "Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.",
 				"", "nds-reset-drastic", { "" }, { "" }, Item::ACTION);
 		}
 		// Other systems (RetroArch): what every game shares, then pages: Second screen (the game panel and its companions),
 		// Picture & sound, Emulators (each system's core, when it has a choice) and Buttons (a page for each system)
 		const char* O = "Other systems";
-		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
+		add(O, "gamepad", "Screen", "Which screen other systems' games play on.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
-		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
+		items.back().hints = { "Games play on the top screen.", "Games play on the bottom screen." };
+		add(O, "gamepad", "RetroAchievements", "How strict achievements are.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
-		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
-		add(O, "gamepad", "Frontend", "What runs the systems other than the DS, N64 and PlayStation. BananaFront: BananaOS's own, lighter on the battery and quicker to start, with the same saves, states and settings as RetroArch. Auto: BananaFront for the systems tested on it, RetroArch for the rest. RetroArch: always RetroArch (its own menu, its Core Downloader).",
+		items.back().hints = { "Save states, rewind and cheats still work.", "Those are locked, and unlocks count as hardcore on retroachievements.org." };
+		add(O, "gamepad", "Quick resume", "What quitting a game does.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
+		items.back().hints = { "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place. Next time the game carries on from there (not in Hardcore)." };
+		add(O, "gamepad", "Frontend", "What runs the systems other than the DS, N64 and PlayStation.",
 			menu, "ra_frontend", { "Auto", "BananaFront", "RetroArch" }, { "auto", "bananafront", "retroarch" });
-		add(O, "gamepad", "Second screen", "The other screen while a game plays: the game panel (achievements and tiles to save, load, open RetroArch's menu, fast forward and quit), when it dims or turns off, and the Pokémon and game companions.", "", "ra_second", {}, {}, Item::PAGE);
+		items.back().hints = { "BananaFront for the systems tested on it, RetroArch for the rest.", "BananaOS's own: lighter on the battery and quicker to start, with RetroArch's saves and settings.", "Always RetroArch, with its own menu and Core Downloader." };
+		add(O, "gamepad", "Second screen", "What the other screen shows while a game plays.", "", "ra_second", {}, {}, Item::PAGE);
 		add(O, "picture", "Picture & sound", "How RetroArch's games look and sound: a shader, a screen border, VSync and the audio latency.", "", "ra_picture", {}, {}, Item::PAGE);
 		{
 			const char* SS = "Second screen";
-			add(SS, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark. A Commodore 64 or ZX Spectrum game's tiles also have Keys: the panel becomes a touch keyboard (a virtual USB keyboard the emulator reads), which needs the panel on the bottom screen — put the game on the top.",
+			add(SS, "gamepad", "Second screen", "What the other screen shows while a game plays. A Commodore 64 or ZX Spectrum game also gets a touch keyboard there: put the game on the top screen.",
 				menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
-			add(SS, "picture", "Game panel when idle", "With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.",
+			items.back().hints = { "Achievements and tiles to save, load, open the menu, fast-forward and quit (by touch on the bottom screen).", "The other screen stays dark." };
+			add(SS, "picture", "Game panel when idle", "What the game panel does when you leave it alone.",
 				menu, "bottom_idle_mode", { "Dims", "Turns off", "Stays on" }, { "dim", "off", "on" });
-			add(SS, "picture", "Game panel idle time", "How long the game panel waits, with no touch and no button, before it dims or turns off (Game panel when idle).",
+			items.back().hints = { "It dims. A touch or a button lights it again.", "It turns off. A touch or a button lights it again.", "It stays on." };
+			add(SS, "picture", "Game panel idle time", "How long the game panel waits before it dims or turns off.",
 				menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute" }, { "10", "30", "60" });
-			add(SS, "gamepad", "Pokémon companion", "Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
+			add(SS, "gamepad", "Pokémon companion", "The GBA Pokémon games' pages on the second screen, as on the DS. Inspired by PokeDaisy by Lidor Itzhari.",
 				menu, "pokemon_companion", { "Off", "On" }, { "off", "on" });
-			// (gba/host.h: the DS companion's pages for the GBA games, main.cpp reads it at each game's start)
-			add(SS, "gamepad", "Detailed Pokémon pages", "On: the Pokémon companion shows the same pages as the DS one: battle, party, team score, what to catch here, a guide, the map, the Pokédex and a journey log. In Ruby, Sapphire, Emerald, FireRed and LeafGreen and the ROM hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass and SoulGold. Off: the simpler party and battle views. Needs the Pokémon companion on.",
-				menu, "gba_companion_pages", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "No companion.", "Battle, party, a guide, the map and more, in Ruby, Sapphire, Emerald, FireRed, LeafGreen and the ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass and SoulGold. Needs Second screen on." };
 			// (the DS companion's challenge mode for the GBA games: gba/host.h's Session, read at each game's start)
-			add(SS, "gamepad", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter in each area and the Pokémon you lost, as the DS one does (Here and Log pages). Needs Detailed Pokémon pages on.",
+			add(SS, "gamepad", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter in each area and the Pokémon you lost, as the DS one does (Here and Log pages). Needs the Pokémon companion on.",
 				menu, "gba_challenge", { "Off", "On" }, { "off", "on" });
-			add(SS, "gamepad", "Game companion", "Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
+			items.back().hints = { "The companion shows everything as usual.", "It keeps your first encounter in each area and the Pokémon you lost (Here and Log pages). Needs the Pokémon companion on." };
+			add(SS, "gamepad", "Game companion", "Pages about other GBA games on the second screen, as they play. Inspired by PokeDaisy.",
 				menu, "game_companion", { "Off", "On" }, { "off", "on" });
+			items.back().hints = { "No companion.", "Status, the fight, the map, the bag and your progress. Needs Second screen on." };
 		}
 		{
 			const char* PS = "Picture & sound";
-			add(PS, "picture", "Shader", "A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.",
+			add(PS, "picture", "Shader", "A look for RetroArch's games.",
 				menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
-			add(PS, "picture", "Screen border", "On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.",
+			items.back().hints = { "The picture as it is.", "A handheld's LCD grid.", "A CRT's scanlines.", "Sharp pixels at any size." };
+			add(PS, "picture", "Screen border", "What fills the space around a game's picture.",
 				menu, "ra_border", { "Off", "On" }, { "off", "on" });
-			add(PS, "music", "Audio latency", "RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).",
+			items.back().hints = { "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." };
+			add(PS, "music", "Audio latency", "How soon the sound follows the game.",
 				menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
-			add(PS, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
+			items.back().hints = { "The quickest. A busy game can crackle.", "The usual balance.", "The safest: no crackle, a little more delay." };
+			add(PS, "picture", "VSync", "Whether frames wait for the screen's refresh.",
 				menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
+			items.back().hints = { "Nothing tears.", "Games run as fast as they can. The screen can show a half-drawn frame." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -633,36 +677,42 @@ namespace banana
 				add(EM, "gamepad", sys.label, help, menu, (std::string("core.") + sys.id).c_str(), names, values);
 			}
 			if (items.size() > before)
-				add(O, "gamepad", "Emulators", "Each system's emulator (RetroArch core), for the systems that have more than one: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed too.", "", "ra_cores", {}, {}, Item::PAGE);
+				add(O, "gamepad", "Emulators", "Which emulator each system uses, where there is more than one.", "", "ra_cores", {}, {}, Item::PAGE);
 		}
 		// L2, R2, L3 and R3 alone in RetroArch's games (the page below; run-retroarch, bananad)
-		add(O, "gamepad", "Buttons", "Each system's own buttons: what L2, R2, L3 and R3 do alone in its games (the game's own button, or fast-forward, save or load a state, RetroArch's menu, pause, a screenshot, nothing), and A/B and X/Y swapped or not. F + R saves and F + L loads a state, as on the DS.", "", "ra_buttons", {}, {}, Item::PAGE);
-		add(O, "gamepad", "Reset RetroArch", "RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.",
+		add(O, "gamepad", "Buttons", "Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.", "", "ra_buttons", {}, {}, Item::PAGE);
+		add(O, "gamepad", "Reset RetroArch", "Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
-		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
+		add(W, "phone", "Wi-Fi", "The wireless network.", menu, "wifi", { "On", "Off" }, { "on", "off" });
+		items.back().hints = { "Wi-Fi on. A on Networks joins one.", "Wi-Fi off. Saves battery." };
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
-		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers: Bluetooth on or off, the devices paired and around, and how the sound plays on headphones.", "", "net_bt", {}, {}, Item::PAGE);
+		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers.", "", "net_bt", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "The card on your network: file sharing on or off, its login and name and password, and SSH.", "", "net_share", {}, {}, Item::PAGE);
 		// the Bluetooth page (Network > Bluetooth)
 		{
 			const char* BT = "Bluetooth";
-			add(BT, "phone", "Bluetooth", "Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.",
+			add(BT, "phone", "Bluetooth", "Controllers, headphones and speakers.",
 				menu, "bluetooth", { "Off", "On" }, { "off", "on" });
-			add(BT, "phone", "Bluetooth devices", "The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.", "", "bt_devices", {}, {}, Item::PAGE);
-			add(BT, "phone", "Bluetooth audio", "Low latency: aptX, or SBC on headphones without it: the sound as close to the picture as Bluetooth gets, for games. Best quality: LDAC, aptX HD or a richer SBC when the headphones have them, a little later (tens of ms) and a little more battery. Headphones connected now reconnect to take the change.",
+			items.back().hints = { "Off: the radio unpowered, saving battery.", "On. Bluetooth devices, below, pairs them." };
+			add(BT, "phone", "Bluetooth devices", "The devices paired and around. A pairs, connects or disconnects one.", "", "bt_devices", {}, {}, Item::PAGE);
+			add(BT, "phone", "Bluetooth audio", "How sound plays on Bluetooth headphones.",
 				menu, "bt_audio", { "Low latency", "Best quality" }, { "latency", "quality" });
+			items.back().hints = { "The sound as close to the picture as Bluetooth gets: for games.", "The best sound the headphones have, a little later and a little more battery." };
 		}
 		// the File sharing page (Network > File sharing), SSH with it
 		{
 			const char* FS = "File sharing";
-			add(FS, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
-			add(FS, "phone", "Sharing login", "Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.",
+			add(FS, "phone", "File sharing", "The card as a shared folder on your network, over Wi-Fi.", menu, "share", { "Off", "On" }, { "off", "on" });
+			items.back().hints = { "Not shared.", "A computer opens it as \\\\<address>\\banana." };
+			add(FS, "phone", "Sharing login", "Who can open the shared card.",
 				menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
+			items.back().hints = { "The name and password below. Windows needs one.", "Anyone on the network. Only on a network you trust." };
 			add(FS, "phone", "Sharing name and password", "", "", "share_account", {}, {}, Item::PAGE);
-			add(FS, "phone", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
+			add(FS, "phone", "SSH", "A shell on the handheld from a computer, over Wi-Fi.", menu, "ssh", { "Off", "On" }, { "off", "on" });
+			items.back().hints = { "Off.", "On: ssh root@<address>." };
 		}
-		add(W, "phone", "Home server", "Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.",
+		add(W, "phone", "Home server", "Your games, box art and saves from a server at home: Romhost or RomM.",
 			"", "homesync", {}, {}, Item::PAGE);
 		const char* S = "System";
 		{
@@ -687,47 +737,52 @@ namespace banana
 		{
 			std::vector<std::string> names, tzs;
 			for (auto& z : ZONES) { names.push_back(z.name); tzs.push_back(z.tz); }
-			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
+			add(S, "gear", "Time zone", "Your time zone, for the clock and your games. Summer time is included.",
 				menu, "timezone", names, tzs);
 		}
-		add(S, "gear", "Updates", "A new version of Banana: checking for it, downloading and installing it, test versions, a daily check, and going back to the version before.", "", "sys_updates", {}, {}, Item::PAGE);
+		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games: fetching them, and where they come from.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
-			add(UP, "gear", "Update", "A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
-			add(UP, "gear", "Test versions", "Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.",
+			add(UP, "gear", "Update", "A new version, from GitHub or a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
+			add(UP, "gear", "Test versions", "Whether the update check counts test versions.",
 				menu, "update_prerelease", { "Included", "Left out" }, { "on", "off" });
-			add(UP, "gear", "Update check", "When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.",
+			items.back().hints = { "Test versions count. Every release so far is one.", "Only stable versions." };
+			add(UP, "gear", "Update check", "When Banana looks for a new version. Nothing downloads without you.",
 				menu, "update_daily", { "When asked", "Daily" }, { "off", "on" });
+			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
 			add(UP, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
 		// the Box art page (System > Box art)
 		{
 			const char* BA = "Box art";
-			add(BA, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
+			add(BA, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.",
 				"", "scrape", {}, {}, Item::PAGE);
-			add(BA, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
+			add(BA, "picture", "Box art from", "Where covers come from.",
 				menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
+			items.back().hints = { "libretro's collections.", "libretro, then TwilightBoxart for the covers it lacks.", "TwilightBoxart first, where it has them." };
 		}
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
-		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
-		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.", "", "setup", {}, {}, Item::PAGE);
-		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.",
+		add(S, "gear", "Second SD card", "Games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
+		items.back().hints = { "Its games show with the others while it's in. exFAT or FAT32.", "Its games stay hidden." };
+		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
-		add(S, "gear", "Hotkeys", "The buttons that do something everywhere and in the menu. Each DS emulator's own: Nintendo DS > SuperDrastic > Hotkeys and BananaDS > Hotkeys.", "", "hotkeys", {}, {}, Item::PAGE);
+		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, and in the menu.", "", "hotkeys", {}, {}, Item::PAGE);
 		// (PR #94, swouapiy) last in System, and there only once unlocked: A seven times on About (settings.conf's
 		// developer); groupEnd leaves it out until then
 		add(S, "gear", "Developer options", "Tools for finding what went wrong: a recording of everything the handheld does, on the card.",
 			"", "developer", {}, {}, Item::PAGE);
 		// the Developer options list: opened from that row, not a tile
-		add("Developer options", "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi, in banana/logs/sessions on the card, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice).", power, "recorder",
+		add("Developer options", "gear", "Flight recorder", "Records what the handheld does, in banana/logs/sessions on the card.", power, "recorder",
 			{ "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Not recording.", "Recording. Hold Select for 2 seconds to mark a moment." };
 		add("Developer options", "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		// the hotkey pages: System > Hotkeys (everywhere and the menu) and one for each emulator (from Nintendo DS and
@@ -779,9 +834,10 @@ namespace banana
 			const std::vector<std::string> values = { "swap", "ff", "blow", "save", "load", "menu", "a", "b", "x", "y", "l", "r", "start", "select", "none" };
 			const char* help = "In a DS game, in both emulators. Swap screens: as F + SELECT. Fast-forward: on, and off again. Blow on the mic: the game hears a blow while it is held, the microphone on or off. Save and load state: as F + R and F + L. F + a button and HOME keep their own (the Hotkeys page).";
 			buttonRows(DB, "nds", help, menu, "nds_btn_", "", names, values);
-			add(DB, "nds", "Swap A/B and X/Y", "On: the A button presses the DS's B and B its A, X its Y and Y its X, in both emulators: for hands used to the other layout. L2, R2, L3 and R3 keep their jobs; F + a button and the emulators' menus are as printed.",
+			add(DB, "nds", "Swap A/B and X/Y", "Swaps the face buttons in both DS emulators, for hands used to the other layout.",
 				menu, "nds_swap_ab", { "Off", "On" }, { "off", "on" });
-			add(DB, "nds", "Reset buttons", "L2, R2, L3 and R3 back to Banana's: L2 swaps the screens, R2 fast-forwards, L3 blows on the mic, R3 does nothing; A, B, X and Y as printed. Press A twice.",
+			items.back().hints = { "The buttons as printed.", "A presses B, B presses A, X presses Y, Y presses X." };
+			add(DB, "nds", "Reset buttons", "Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.",
 				"", "nds-reset-ds-buttons", { "" }, { "" }, Item::ACTION);
 		}
 		// the other systems' buttons (Other systems > Buttons): a page for each system, its L2, R2, L3 and R3's jobs and
@@ -798,42 +854,62 @@ namespace banana
 			{
 				const std::string sec = raButtonsSection(sys), id = sys.id;
 				const char* help = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
-				buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
+				if (id == "gba")
+				{
+					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
+					// button does; Back, beside F, by default)
+					std::vector<std::string> n = names, v = values;
+					n.insert(n.end() - 1, "Companion");
+					v.insert(v.end() - 1, "companion");
+					buttonRows(sec.c_str(), "gamepad", std::string(help) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
+						menu, "ra_btn_", "." + id, n, v);
+					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
+					add(sec.c_str(), "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
+						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
+				}
+				else
+					buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
 				add(sec.c_str(), "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
 					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
 		}
 		const char* PW = "Power";
-		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it. Press A twice.", "", "sleep", { "" }, { "" }, Item::ACTION);
+		add(PW, "moon", "Sleep", "Puts the handheld to sleep, as a press of the power button does. Your game pauses. Press A twice.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// the Home server page (Network > Home server)
 		const char* HS = "Home server";
 		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
-		add(HS, "phone", "Sync now", "Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.",
+		add(HS, "phone", "Sync now", "Copies the server's games to the card and syncs saves both ways. Your own files stay.",
 			"", "hs_sync", {}, {}, Item::PAGE);
-		add(HS, "phone", "Games", "Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.",
+		add(HS, "phone", "Games", "What comes from the server.",
 			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
+		items.back().hints = { "Games and their saves.", "Only the saves." };
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot: the RG DS Plus
 		{
-			add(HS, "phone", "Games go to", "Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.",
+			add(HS, "phone", "Games go to", "Where downloaded games go.",
 				menu, "homesync_roms_to", { "This card", "Second SD card" }, { "card", "sd2" });
+			items.back().hints = { "This card's roms folder.", "The second card's roms folder, while it's in." };
 		}
-		add(HS, "phone", "Save states", "On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.",
+		add(HS, "phone", "Save states", "Whether save states sync too.",
 			menu, "homesync_states", { "Off", "On" }, { "off", "on" });
-		add(HS, "phone", "Auto sync", "Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.",
+		items.back().hints = { "Only the games' own saves.", "Save states too (RomM). Quick-resume states never sync." };
+		add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
+		items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects." };
 		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
-		add(HS, "phone", "Games to sync", "All: every game of the systems above comes to the card. Chosen: only the games ticked in Choose games (a game unticked later stays on the card until you delete it).",
+		add(HS, "phone", "Games to sync", "Which of the server's games come to the card.",
 			menu, "homesync_games", { "All", "Chosen" }, { "all", "chosen" });
-		add(HS, "phone", "Choose games", "The server's games, a system at a time: A ticks a game to sync, X ticks or unticks all of the system's. With Games to sync on Chosen, only the ticked ones come to the card.", "", "hs_pick", {}, {}, Item::PAGE);
-		add(HS, "phone", "Check certificate", "On: an https server's certificate is checked, as a browser does. Off: for a server with a certificate of its own making (a name on the LAN, no CA for it). Leave it On on a network you don't trust.",
+		items.back().hints = { "Every game of the systems above.", "Only the games ticked in Choose games." };
+		add(HS, "phone", "Choose games", "The server's games, a system at a time. A ticks one, X ticks them all.", "", "hs_pick", {}, {}, Item::PAGE);
+		add(HS, "phone", "Check certificate", "Whether an https server's certificate is checked.",
 			menu, "homesync_tls", { "On", "Off" }, { "on", "off" });
-		add(HS, "phone", "Forget this server", "Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
+		items.back().hints = { "Checked, as a browser does.", "Not checked: for a server with its own certificate. Only on a network you trust." };
+		add(HS, "phone", "Forget this server", "Unpairs the handheld. Games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
 		{
 			const char* HSS = "Home server systems";
 			struct { const char* id; const char* name; } sy[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
 			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
 		}
 		addShelfRows();
@@ -845,12 +921,12 @@ namespace banana
 			{ "", { "Nintendo DS", "Other systems", "Display & sound", "Network", "Sleep & power", "System" } },	// the tiles
 			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name" } },
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
-			{ "Display & sound", { "Volume", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
+			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
-			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
+			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
@@ -1234,6 +1310,7 @@ namespace banana
 			if (it.key == "developer") { recordEvent("settings", "Developer options"); openSection("Developer options"); return MOVED; }
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
+			if (it.key == "speaker_eq_page") { openEq(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
@@ -1370,6 +1447,7 @@ namespace banana
 		std::string beforeAccent = getConfValue(menu, "accent", "yellow");
 
 		resetSettings(data, emulator ? ResetScope::Emulator : ResetScope::System);
+		if (!emulator) speakereq::applySaved(data, eqShare());	// (its keys are back to theirs)
 
 		if (!emulator)
 		{
@@ -1435,6 +1513,7 @@ namespace banana
 		if (page == GAME) return pressGame(k);
 		if (page == ARTPICK) return pressArt(k);
 		if (page == COLORS) return pressColors(k);
+		if (page == SPEAKEREQ) return pressEq(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (page == THEMES) return pressThemes(k);
@@ -1623,6 +1702,7 @@ namespace banana
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
+		if (page == SPEAKEREQ) return touchEq(cx, cy);
 		if (page == THEMES) return touchThemes(cx, cy);
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
@@ -2247,6 +2327,14 @@ namespace banana
 				"and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: ") +
 				(c.neutral() ? "no correction." : c.screen == 0 ? "the top screen corrected." : "the bottom screen corrected.");
 		}
+		if (cur.key == "speaker_eq_page")
+		{
+			// (drawn every frame: settings.conf and one access(), not the card's folder listed)
+			const speakereq::State s = speakereq::load(data);
+			const std::string now = !s.on ? "Off." : speakereq::profileName(s.profile, data, eqShare()) + (speakereq::adjusted(s) ? " (adjusted)." : ".");
+			help = "Evens out the speakers: the peaks that make them shrill or boxy taken down, in every game and the menu (never the headphones). "
+				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders to adjust it by ear. Now: " + now;
+		}
 		if (cur.key == "share_account")
 			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
 		if (cur.key == "share")
@@ -2300,6 +2388,23 @@ namespace banana
 			n++;
 		};
 		for (int i = 0; i < (int)items.size(); i++) one(items[i].section + " > " + items[i].label, helpOf(i));
+		// a choice's hint under its row's sentence: each has the half below HINT_TOP, and the sentence the rest
+		auto half = [&](const std::string& where, const std::string& t, float top, float bottom)
+		{
+			float z; int lines;
+			bool ok = helpFit(t, top, bottom, z, lines);
+			char b[64];
+			snprintf(b, sizeof b, ": %s at %.0f px, %d lines", ok ? "fits" : "OVERFLOW", z, lines);
+			log("helpcheck " + where + b);
+			n++;
+		};
+		for (int i = 0; i < (int)items.size(); i++)
+			if (!items[i].hints.empty())
+			{
+				half(items[i].section + " > " + items[i].label + " (with a hint)", helpOf(i), HELP_TOP, HINT_TOP - 12);
+				for (size_t h = 0; h < items[i].hints.size(); h++)
+					half(items[i].section + " > " + items[i].label + " > " + (h < items[i].names.size() ? items[i].names[h] : "?"), items[i].hints[h], HINT_TOP, HELP_BOTTOM);
+			}
 		// a game page's rows (Delete's with a long file name, as a card can have)
 		std::string rom = pgRom;
 		pgRom = "Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds";
@@ -2327,6 +2432,7 @@ namespace banana
 		if (page == GAME) { renderGame(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
 		if (page == COLORS) { renderColors(); return; }
+		if (page == SPEAKEREQ) { renderEq(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == THEMES) { renderThemes(); return; }
@@ -2362,6 +2468,12 @@ namespace banana
 		{
 			wrapped("Syncing with " + (homeServer().empty() ? std::string("the server") : homeServer()) + ". It carries on if you leave this screen; the library shows the new games when it's done.", 20, HELP_X, HELP_TOP, HELP_W, 4, p.muted);
 			syncBar(50, 330, 540);
+		}
+		else if (cur.kind == Item::CHOICE && cur.at < (int)cur.hints.size() && !cur.hints[cur.at].empty())
+		{
+			// the row in a sentence, then what the chosen option does, brighter (it changes as the option does)
+			helpText(help, HELP_TOP, HINT_TOP - 12, p.muted);
+			helpText(cur.hints[cur.at], HINT_TOP, HELP_BOTTOM, p.ink);
 		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
@@ -3883,6 +3995,230 @@ namespace banana
 		be->endScreen();
 	}
 
+	// ---- Speaker EQ ------------------------------------------------------------------------------------------------
+	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
+	// curve's level at its frequency, the profile's to begin with (Tuned's 1 kHz starts at -10 dB), and a step moves
+	// the curve there by 1 dB: what is kept is the change (settings.conf's speaker_eq_bands, a peak filter an octave
+	// wide at each slider's frequency, after the profile's own filters), so a profile's narrow cuts stay as they are.
+	// Every change is written to the plugin's file at once (speakereq::apply), so it is heard in whatever plays (a game
+	// paused under the menu, its sound going on); A keeps it, B puts back what was kept. The top screen draws the curve.
+	namespace
+	{
+		const int EQ_ROWS = 2 + speakereq::BANDS;	// On, Profile, the sliders
+		const float EQ_Y = 52, EQ_PITCH = 40, EQ_H = 36;
+		// the curve's frequencies: 100 Hz to 20 kHz, evenly on a log scale, one every 2 units of the graph's width
+		const float EQ_GX = 70, EQ_GW = 540, EQ_GY = 70, EQ_GH = 330, EQ_DB = 20;	// (a tuned cut and a slider's on top: -17 dB)
+		const std::vector<double>& eqFreqs()
+		{
+			static std::vector<double> f;
+			if (f.empty())
+				for (int i = 0; i <= (int)(EQ_GW / 2); i++) f.push_back(100 * std::pow(200.0, i / (EQ_GW / 2)));
+			return f;
+		}
+		float eqX(double hz) { return EQ_GX + (float)(std::log(hz / 100) / std::log(200.0)) * EQ_GW; }
+		float eqY(double db) { return EQ_GY + EQ_GH / 2 - (float)(std::max(-(double)EQ_DB, std::min((double)EQ_DB, db)) / EQ_DB) * EQ_GH / 2; }
+		std::string bandName(int hz) { return hz >= 1000 ? std::to_string(hz / 1000) + " kHz" : std::to_string(hz) + " Hz"; }
+	}
+
+	void Settings::eqLive(const speakereq::State& s)
+	{
+		const std::string own = speakereq::profileText(s, data, eqShare());	// (its file read once)
+		eqText = speakereq::compose(s, own);
+		if (!speakereq::apply(eqText)) message = "The speaker EQ can't be written now (" + speakereq::livePath() + ").";
+		speakereq::curve(eqText, eqFreqs(), eqCurve);
+		// the sliders: the curve with the EQ on (Off shows what On would play, dimmed), and the profile's own
+		speakereq::State on = s, prof;
+		on.on = true;
+		prof = on;
+		for (int& g : prof.gain) g = 0;
+		const std::string shown = speakereq::compose(on, own), profText = speakereq::compose(prof, own);
+		std::vector<double> bands(speakereq::BAND_HZ, speakereq::BAND_HZ + speakereq::BANDS), now, its;
+		speakereq::curve(shown, bands, now);
+		speakereq::curve(profText, bands, its);
+		for (int i = 0; i < speakereq::BANDS; i++) { eqBand[i] = now[i]; eqBandProfile[i] = its[i]; }
+		speakereq::curve(profText, eqFreqs(), eqProfCurve);
+	}
+
+	void Settings::openEq()
+	{
+		eqSaved = eqEdit = speakereq::load(data);
+		eqChoices = speakereq::profiles(data, eqShare(), eqEdit.profile);
+		eqRow = 0;
+		message.clear();
+		eqLive(eqEdit);	// (what was kept, in case the file was lost: a reboot is the menu's start, which writes it too)
+		page = SPEAKEREQ;
+	}
+
+	Settings::Result Settings::pressEq(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: eqRow = (eqRow + EQ_ROWS - 1) % EQ_ROWS; return MOVED;
+		case Key::DOWN: eqRow = (eqRow + 1) % EQ_ROWS; return MOVED;
+		case Key::LEFT: case Key::RIGHT:
+		{
+			const int d = k == Key::LEFT ? -1 : 1;
+			if (eqRow == 0) eqEdit.on = !eqEdit.on;
+			else if (eqRow == 1)
+			{
+				const int n = (int)eqChoices.size();
+				int i = -1, none = 0;
+				for (int j = 0; j < n; j++)
+				{
+					if (eqChoices[j].value == eqEdit.profile) i = j;
+					if (eqChoices[j].value == "none") none = j;
+				}
+				if (!n) return NONE;
+				if (i < 0) i = none;	// (one not offered, Tuned on a board with none, is shown as None: a step goes on from there)
+				eqEdit.profile = eqChoices[(i + d + n) % n].value;
+				eqEdit.on = true;	// (a profile picked is one to hear)
+				for (int& g : eqEdit.gain) g = 0;	// (and as it is: the sliders show its own curve; B brings the changes back)
+			}
+			else
+			{
+				int& g = eqEdit.gain[eqRow - 2];
+				int v = std::max(-speakereq::BAND_MAX_DB, std::min(speakereq::BAND_MAX_DB, g + d));
+				if (v == g) return NONE;
+				g = v;
+				eqEdit.on = true;
+			}
+			message.clear();
+			eqLive(eqEdit);
+			return MOVED;
+		}
+		case Key::X:
+			for (int& g : eqEdit.gain) g = 0;
+			message = "The sliders back to the profile as it is. A keeps that, B goes back to what was kept.";
+			eqLive(eqEdit);
+			return MOVED;
+		case Key::A:
+		{
+			speakereq::save(data, eqEdit);
+			eqSaved = eqEdit;
+			message.clear();
+			eqLive(eqEdit);
+			if (!message.empty())	// (kept, but not heard: say so on the page rather than a toast that it's done)
+			{
+				message = "Kept, and heard from the next start: " + speakereq::livePath() + " can't be written now.";
+				return CHANGED;
+			}
+			page = LIST;
+			toast("Speaker EQ", eqEdit.on ? speakereq::profileName(eqEdit.profile, data, eqShare()) + (speakereq::adjusted(eqEdit) ? " (adjusted)" : "") : "Off",
+				0x6ad07a, 1, 3000);
+			return CHANGED;
+		}
+		case Key::B: case Key::START:
+			eqEdit = eqSaved;
+			eqLive(eqSaved);	// (what was kept, heard again)
+			page = LIST; message.clear();
+			if (k == Key::START) { mOpen = false; return CLOSED; }
+			return MOVED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchEq(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 422) return pressEq(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < EQ_ROWS; r++)
+		{
+			float ry = EQ_Y + r * EQ_PITCH;
+			if (downY < ry || downY > ry + EQ_H) continue;
+			if (r != eqRow) { eqRow = r; return MOVED; }
+			return pressEq(downX < 320 ? Key::LEFT : Key::RIGHT);
+		}
+		return NONE;
+	}
+
+	void Settings::renderEq()
+	{
+		SPal p = pal(light);
+		std::string profileName = "None";
+		for (auto& c : eqChoices) if (c.value == eqEdit.profile) profileName = c.name;
+
+		// the top screen: the curve the speakers play through now, 100 Hz to 20 kHz, -20 to +20 dB
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		text("Speaker EQ", true, 20, 24, 18, p.ink, true, 1.2f);
+		std::string state = eqEdit.on ? profileName : "Off";
+		float sw = text(state, true, 18, 0, 0, p.accent, false, 0, true);
+		text(state, true, 18, 616 - sw, 20, p.accent);
+		for (int db = -15; db <= 15; db += 5)
+		{
+			be->fill(X(EQ_GX), X(eqY(db)), X(EQ_GW), std::max(1.0f, X(db ? 1 : 2)), db ? p.line : p.muted);
+			if (db % 10) continue;	// (a line every 5 dB, a number every 10)
+			char l[8];
+			snprintf(l, sizeof l, db > 0 ? "+%d" : "%d", db);
+			float lw = text(l, false, 13, 0, 0, p.muted, false, 0, true);
+			text(l, false, 13, EQ_GX - 10 - lw, eqY(db) - 8, p.muted);
+		}
+		for (int hz : { 100, 1000, 10000 })
+		{
+			be->fill(X(eqX(hz)), X(EQ_GY), std::max(1.0f, X(1)), X(EQ_GH), p.line);
+			text(bandName(hz), false, 13, eqX(hz) + 4, EQ_GY + EQ_GH + 6, p.muted);
+		}
+		for (int i = 0; i < speakereq::BANDS; i++)	// (the sliders' places, under the graph)
+			be->fill(X(eqX(speakereq::BAND_HZ[i]) - 1), X(EQ_GY + EQ_GH - 8), X(3), X(8), eqRow == i + 2 ? p.accent : p.muted);
+		const auto& f = eqFreqs();
+		bool changed = false;
+		for (int g : eqEdit.gain) changed = changed || g;
+		if (eqEdit.on && changed)	// (the profile as it is, under the curve the sliders made of it)
+			for (size_t i = 0; i < f.size() && i < eqProfCurve.size(); i++)
+				be->fill(X(EQ_GX + i * 2.0f), X(eqY(eqProfCurve[i]) - 1), std::max(1.0f, X(2)), std::max(1.0f, X(2)), p.muted);
+		const Color& cc = eqEdit.on ? p.accent : p.muted;
+		for (size_t i = 0; i < f.size(); i++)
+		{
+			float y = eqY(eqEdit.on && i < eqCurve.size() ? eqCurve[i] : 0);
+			float y0 = i ? eqY(eqEdit.on && i - 1 < eqCurve.size() ? eqCurve[i - 1] : 0) : y;
+			float top = std::min(y, y0) - 1.5f, bottom = std::max(y, y0) + 1.5f;
+			be->fill(X(EQ_GX + i * 2.0f), X(top), std::max(1.0f, X(2.5f)), std::max(1.0f, X(bottom - top)), cc);
+		}
+		std::string hint = !message.empty() ? message : eqEdit.on ? "Heard at once in what's playing, on the speakers only. X: back to the profile as it is."
+			: "Off: the speakers play the sound as it is.";
+		text(fit(hint, true, 14, 592), true, 14, 24, 446, p.muted);
+		be->endScreen();
+
+		// the bottom screen: the rows, the sliders as bars from their 0 dB
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int r = 0; r < EQ_ROWS; r++)
+		{
+			bool on = r == eqRow;
+			float y = EQ_Y + r * EQ_PITCH;
+			if (on) box("pick", true, 18, y, 604, EQ_H);
+			Color c = on ? p.onPick : p.ink;
+			std::string v;
+			if (r == 0) { text("Speaker EQ", true, 17, 38, y + 9, c); v = eqEdit.on ? "On" : "Off"; }
+			else if (r == 1) { text("Profile", true, 17, 38, y + 9, c); v = profileName; }
+			else
+			{
+				const int b = r - 2;
+				text(bandName(speakereq::BAND_HZ[b]), true, 17, 38, y + 9, c);
+				// the bar: the curve's level at this frequency, from 0 dB (-20 to +20 dB, as the graph)
+				const float mid = 330, half = 110;
+				auto at = [&](double db) { return mid + half * (float)(std::max(-(double)EQ_DB, std::min((double)EQ_DB, db)) / EQ_DB); };
+				const int lvl = (int)std::lround(eqBand[b]);
+				be->fill(X(mid - half), X(y + EQ_H / 2 - 1), X(2 * half), std::max(1.0f, X(2)), on ? p.onPick : p.line);
+				be->fill(X(mid - 1), X(y + 8), X(2), X(EQ_H - 16), on ? p.onPick : p.muted);
+				if (lvl) be->fill(X(std::min(mid, at(eqBand[b]))), X(y + EQ_H / 2 - 5), X(std::fabs(at(eqBand[b]) - mid)), X(10), on ? p.onPick : (eqEdit.on ? p.accent : p.muted));
+				if (eqEdit.gain[b])	// (where the profile itself is: a tick on the track)
+					be->fill(X(at(eqBandProfile[b]) - 1.5f), X(y + 6), X(3), X(EQ_H - 12), on ? p.onPick : p.muted);
+				v = (lvl > 0 ? "+" : "") + std::to_string(lvl) + " dB";
+			}
+			v = fit(v, true, 17, r == 1 ? 330 : 100);
+			float vw = text(v, true, 17, 0, 0, c, false, 0, true);
+			arrow(true, 576, y + 13, c);
+			text(v, true, 17, 566 - vw, y + 9, c);
+			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 13, c);
+		}
+		float bw = faceWidth("B", "Cancel");
+		face("B", "Cancel", 18, bw);
+		float aw = faceWidth("A", "Keep");
+		face("A", "Keep", 622 - aw, aw);
+		be->endScreen();
+	}
+
 	// ---- the game page's Box art (#28): libretro's names for the words typed, one picked ---------------------------
 	std::string Settings::scrapeTool() const
 	{
@@ -4443,7 +4779,7 @@ namespace banana
 		auto size = [](long long b) { char t[32]; if (b >= (1LL << 30)) snprintf(t, sizeof t, "%.1f GB", b / 1073741824.0); else snprintf(t, sizeof t, "%lld MB", (b + 524288) >> 20); return std::string(t); };
 		auto sysName = [](const std::string& f) -> std::string {
 			static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
 			auto it = N.find(f); return it == N.end() ? f : it->second; };
 		long long chosenBytes = 0; int chosenN = 0;
 		for (auto& g : pickGames) if (g.on) { chosenBytes += g.bytes; chosenN++; }
@@ -5082,6 +5418,9 @@ namespace banana
 	// Dark Dawn) stays Accurate
 	static const char* const GAME_TIMING_VALUES[] = { "", "accurate", "fast", "dsi" };
 	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast", "Fast, DSi CPU" };
+	// a DS game's own BananaDS DS CPU speed (core.arm9_mhz; nds-per-game-cpu.conf, run-bananads): over Settings' and its timing's
+	static const char* const GAME_CPU_VALUES[] = { "", "67", "133", "266", "533", "1066", "2133" };
+	static const char* const GAME_CPU_NAMES[] = { "", "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
 	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
@@ -5103,7 +5442,9 @@ namespace banana
 	static std::string baseOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
 
 	// the ROM, and with all its saves, states and art: in the saves and states folders (RetroArch's, the DS
-	// emulators' and DraStic's), beside the game, and in its folder's media/*; a file belongs to the game when its
+	// emulators' and DraStic's), beside the game, in its folder's media/* and artwork/ (Game & Watch: its MAME artwork
+	// zip), and its own folder of saves where an emulator keeps one (MAME's saves/<system>/<game>/, the Game & Watch
+	// high scores); a file belongs to the game when its
 	// name is the game's name and a dot ("Peel Quest.sav", "Peel Quest.state1", "Peel Quest.resume.dss"), and not to
 	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay)
 	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all)
@@ -5122,7 +5463,34 @@ namespace banana
 			closedir(d);
 		}
 		std::vector<std::string> dirs = { root + "/saves", root + "/saves/" + sys, root + "/states", root + "/states/" + sys,
-			root + "/drastic/backup", root + "/drastic/savestates", dir };
+			root + "/drastic/backup", root + "/drastic/savestates", dir, dir + "/artwork" };
+		// a folder of saves named after the game (MAME's NVRAM): its files, then the folder
+		for (const std::string& sd : { root + "/saves/" + sys + "/" + base, root + "/states/" + sys + "/" + base })
+		{
+			DIR* d = opendir(sd.c_str());
+			if (!d)
+			{
+				continue;
+			}
+			std::vector<std::string> files;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] != '.')
+				{
+					files.push_back(sd + "/" + e->d_name);
+				}
+			}
+			closedir(d);
+			for (auto& f : files)
+			{
+				struct stat st;
+				if (stat(f.c_str(), &st) == 0 && S_ISREG(st.st_mode) && unlink(f.c_str()) == 0)
+				{
+					gone.push_back(f);
+				}
+			}
+			rmdir(sd.c_str());
+		}
 		if (DIR* d = opendir((dir + "/media").c_str()))
 		{
 			while (dirent* e = readdir(d)) if (e->d_name[0] != '.') dirs.push_back(dir + "/media/" + e->d_name);
@@ -5164,12 +5532,14 @@ namespace banana
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
-		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING };
-		pg3d = pgMic = pgRes = pgTiming = 0;
+		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
+		pg3d = pgMic = pgRes = pgTiming = pgCpu = 0;
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
 			std::string r = perGame("nds-per-game-res.conf", romName), t = perGame("nds-per-game-timing.conf", romName);
 			for (int i = 1; i < 4; i++) if (t == GAME_TIMING_VALUES[i]) pgTiming = i;
+			const std::string c = perGame("nds-per-game-cpu.conf", romName);
+			for (int i = 1; i < 7; i++) if (c == GAME_CPU_VALUES[i]) pgCpu = i;
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
@@ -5212,6 +5582,7 @@ namespace banana
 		put("nds-per-game-res.conf", GAME_RES_VALUES[pgRes]);
 		put("nds-per-game-mic.conf", GAME_MIC_VALUES[pgMic]);
 		put("nds-per-game-timing.conf", GAME_TIMING_VALUES[pgTiming]);
+		put("nds-per-game-cpu.conf", GAME_CPU_VALUES[pgCpu]);
 	}
 
 	Settings::Result Settings::pressGame(Key k)
@@ -5248,6 +5619,7 @@ namespace banana
 			}
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 4) % 4;
+			else if (row == PG_CPU) pgCpu = (pgCpu + d + 7) % 7;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
@@ -5325,6 +5697,7 @@ namespace banana
 				  "The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic)."
 				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
+				: row == PG_CPU ? "BananaDS only. How fast the DS's own CPU runs for this game, over Settings' and its Timing's. Faster stops a game's own slowdown in busy places (Origin HeartGold's towns). Above 67 MHz isn't a DS's speed: if this game hangs or goes wrong, set it back."
 				: row == PG_TIMING ? "BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in "
 				  "HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn "
 				  "loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's "
@@ -5372,14 +5745,16 @@ namespace banana
 		const std::string vres = pgRes ? std::string(GAME_RES_NAMES[pgRes]) : "As in Settings (" + gresName + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 		const std::string gslice = getConfValue("/data/bananads/bananads.conf", "core.slice", "64");
+		const std::string gcpu = getConfValue("/data/bananads/bananads.conf", "core.arm9_mhz", "67");
+		const std::string vcpu = pgCpu ? std::string(GAME_CPU_NAMES[pgCpu]) : "As in Settings (" + gcpu + " MHz)";
 		const std::string vtiming = pgTiming ? std::string(GAME_TIMING_NAMES[pgTiming]) : "As in Settings (" + std::string(gslice == "64" ? "Accurate" : "Fast") + ")";
 
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing"
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
 			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
 			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
@@ -5388,7 +5763,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5655,53 +6030,7 @@ namespace banana
 
 	// ---- the RetroAchievements account check --------------------------------------------------------------------
 	// The server's own login (dorequest.php r=login2, what rcheevos sends) with the name and password just typed: a
-	// pop-up says whether they work before the first game does. libcurl is dlopen()ed (busybox's wget has no HTTPS).
-	namespace
-	{
-		struct Curl
-		{
-			void* (*init)(void) = nullptr;
-			int (*setopt)(void*, int, ...) = nullptr;
-			int (*perform)(void*) = nullptr;
-			int (*getinfo)(void*, int, ...) = nullptr;
-			void (*cleanup)(void*) = nullptr;
-			char* (*escape)(void*, const char*, int) = nullptr;
-			void (*freep)(void*) = nullptr;
-			bool load()
-			{
-				void* l = dlopen("libcurl.so.4", RTLD_NOW | RTLD_LOCAL);
-				if (!l) return false;
-				init = (void* (*)(void))dlsym(l, "curl_easy_init");
-				setopt = (int (*)(void*, int, ...))dlsym(l, "curl_easy_setopt");
-				perform = (int (*)(void*))dlsym(l, "curl_easy_perform");
-				getinfo = (int (*)(void*, int, ...))dlsym(l, "curl_easy_getinfo");
-				cleanup = (void (*)(void*))dlsym(l, "curl_easy_cleanup");
-				escape = (char* (*)(void*, const char*, int))dlsym(l, "curl_easy_escape");
-				freep = (void (*)(void*))dlsym(l, "curl_free");
-				return init && setopt && perform && getinfo && cleanup && escape && freep;
-			}
-		};
-		size_t onBody(char* p, size_t sz, size_t n, void* u) { ((std::string*)u)->append(p, sz * n); return sz * n; }
-		// "Key":"value" or "Key":123 in the server's JSON (enough for its flat login reply)
-		std::string jsonField(const std::string& j, const std::string& key)
-		{
-			size_t at = j.find("\"" + key + "\"");
-			if (at == std::string::npos) return "";
-			at = j.find(':', at);
-			if (at == std::string::npos) return "";
-			at++;
-			while (at < j.size() && j[at] == ' ') at++;
-			if (at < j.size() && j[at] == '"')
-			{
-				std::string v;
-				for (size_t i = at + 1; i < j.size() && j[i] != '"'; i++) v += j[i] == '\\' && i + 1 < j.size() ? j[++i] : j[i];
-				return v;
-			}
-			size_t e = at;
-			while (e < j.size() && j[e] != ',' && j[e] != '}') e++;
-			return j.substr(at, e - at);
-		}
-	}
+	// pop-up says whether they work before the first game does. libcurl as settings_curl.h has it.
 
 	void Settings::startRaCheck(const std::string& user, const std::string& pass, const std::string& token)
 	{
@@ -6595,2462 +6924,5 @@ namespace banana
 		if (b > 0) be->fill(X(x + 2), X(y + 2), X((w - 4) * std::min(a, b) / b), X(10), p.accent);
 		text(fit(what.empty() ? "Starting" : what, true, 17, w), true, 17, x, y + 26, p.ink);
 		text(fit(item, false, 16, w), false, 16, x, y + 52, p.muted);
-	}
-
-	// ---- the game panel -----------------------------------------------------------------------------------------
-	// RetroArch logs (--verbose, run-retroarch's game panel mode) what its RetroAchievements client does: the hash it
-	// made, the game it identified ("Identified game: 264 "EarthBound" (hash)") and each unlock ("Awarding achievement
-	// 1234: Title"). The game's list, the account's unlocks and the badges come from the server on a thread, with
-	// the account RetroArch keeps in its retroarch.cfg (cheevos_username, cheevos_token).
-	namespace
-	{
-		struct RaAch { uint32_t id = 0; std::string title, desc, badge; unsigned points = 0; };
-		// the objects of an array in the server's JSON ("Achievements":[{...},{...}]), as text
-		std::vector<std::string> jsonObjects(const std::string& j, const std::string& key)
-		{
-			std::vector<std::string> out;
-			size_t at = j.find("\"" + key + "\"");
-			if (at == std::string::npos) return out;
-			at = j.find('[', at);
-			if (at == std::string::npos) return out;
-			int depth = 0;
-			bool str = false;
-			size_t start = 0;
-			for (size_t i = at + 1; i < j.size(); i++)
-			{
-				char c = j[i];
-				if (str) { if (c == '\\') i++; else if (c == '"') str = false; continue; }
-				if (c == '"') str = true;
-				else if (c == '{') { if (depth++ == 0) start = i; }
-				else if (c == '}') { if (--depth == 0) out.push_back(j.substr(start, i - start + 1)); }
-				else if (c == ']' && depth == 0) break;
-			}
-			return out;
-		}
-		std::string cfgValue(const std::string& path, const std::string& key)
-		{
-			std::string v = getConfValue(path, key, "");
-			return v;
-		}
-		// a POST to the server's dorequest.php; "" when it can't be reached
-		std::string raPost(const std::string& fields)
-		{
-			Curl cu;
-			if (!cu.load()) return "";
-			void* h = cu.init();
-			if (!h) return "";
-			enum { WRITEDATA = 10001, URL = 10002, POSTFIELDS = 10015, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99 };
-			std::string body;
-			cu.setopt(h, URL, "https://retroachievements.org/dorequest.php");
-			cu.setopt(h, POSTFIELDS, fields.c_str());
-			cu.setopt(h, USERAGENT, "BananaOS/0.2 rcheevos");
-			cu.setopt(h, NOSIGNAL, 1L);
-			cu.setopt(h, TIMEOUT, 20L);
-			cu.setopt(h, WRITEFUNCTION, onBody);
-			cu.setopt(h, WRITEDATA, &body);
-			bool ok = cu.perform(h) == 0;
-			cu.cleanup(h);
-			return ok ? body : "";
-		}
-		bool fetchFile(const std::string& url, const std::string& path)
-		{
-			Curl cu;
-			if (!cu.load()) return false;
-			void* h = cu.init();
-			if (!h) return false;
-			enum { WRITEDATA = 10001, URL = 10002, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99, RESPONSE_CODE = 0x200002 };
-			std::string body;
-			long status = 0;
-			cu.setopt(h, URL, url.c_str());
-			cu.setopt(h, USERAGENT, "BananaOS/0.2 rcheevos");
-			cu.setopt(h, NOSIGNAL, 1L);
-			cu.setopt(h, TIMEOUT, 20L);
-			cu.setopt(h, WRITEFUNCTION, onBody);
-			cu.setopt(h, WRITEDATA, &body);
-			bool ok = cu.perform(h) == 0;
-			if (ok) cu.getinfo(h, RESPONSE_CODE, &status);
-			cu.cleanup(h);
-			if (!ok || status != 200 || body.size() < 8) return false;
-			std::string tmp = path + ".part";
-			FILE* f = fopen(tmp.c_str(), "wb");
-			if (!f) return false;
-			bool wrote = fwrite(body.data(), 1, body.size(), f) == body.size();
-			wrote &= fflush(f) == 0;
-			wrote &= fsync(fileno(f)) == 0;
-			wrote &= fclose(f) == 0;
-			if (!wrote || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
-			return true;
-		}
-		const char* const BADGES = "/data/banana/cache/ra-badges";
-		const char* const IC_SAVE[12] = { "##########..", "#..#####.##.", "#..#####..##", "#..#####...#", "#..........#", "#..........#",
-			"#.########.#", "#.#......#.#", "#.#......#.#", "#.#......#.#", "#.########.#", "############" };
-		const char* const IC_LOAD[12] = { "............", ".####.......", "#....#......", "#.....######", "#..........#", "#....##....#",
-			"#....##....#", "#..######..#", "#...####...#", "#....##....#", "#..........#", "############" };
-		const char* const IC_LIST[12] = { "............", "##.#########", "##.#########", "............", "............", "##.#########",
-			"##.#########", "............", "............", "##.#########", "##.#########", "............" };
-		const char* const IC_FFWD[12] = { "............", "#.....#.....", "##....##....", "###...###...", "####..####..", "#####.#####.",
-			"#####.#####.", "####..####..", "###...###...", "##....##....", "#.....#.....", "............" };
-		const char* const IC_EXIT[12] = { "######......", "#....#......", "#....#...#..", "#....#...##.", "#....#######", "#....#######",
-			"#....#...##.", "#....#...#..", "#....#......", "#....#......", "######......", "............" };
-		const char* const IC_KEY[12] = { "............", "...######...", "..#......#..", ".##########.", ".#........#.",
-			".#.#....#.#.", ".#........#.", ".##########.", "............", "............", "............", "............" };
-		struct GTile { const char* label; const char* keys; const char* const* icon; };
-		const GTile GTILES[6] = { { "Save", "F + R", IC_SAVE }, { "Load", "F + L", IC_LOAD }, { "Menu", "F + X", IC_LIST },
-			{ "Fast", "F + R2", IC_FFWD }, { "Quit", "F + START", IC_EXIT }, { "Keys", "Tap", IC_KEY } };
-
-		// ---- the panel's keyboard (gameKeysFrame, gameTouch): a computer's keys with a finger -------------------
-		// 640x480 design coordinates (X() scales them): 10 columns, 4 rows, then a bar of pages and the keys a game
-		// uses; the whole panel, while the game runs on the other screen
-		const float VK_X = 12, VK_Y = 64, VK_CW = 61.6f, VK_CH = 56, VK_RGAP = 6, VK_BAR_Y = 328, VK_BAR_H = 44;
-		struct VKey { const char* label; int code; bool shift; };	// code -1: the shift toggle; no label: an empty cell
-		const VKey VK_ABC[40] = {
-			{ "1", KEY_1 }, { "2", KEY_2 }, { "3", KEY_3 }, { "4", KEY_4 }, { "5", KEY_5 },
-			{ "6", KEY_6 }, { "7", KEY_7 }, { "8", KEY_8 }, { "9", KEY_9 }, { "0", KEY_0 },
-			{ "Q", KEY_Q }, { "W", KEY_W }, { "E", KEY_E }, { "R", KEY_R }, { "T", KEY_T },
-			{ "Y", KEY_Y }, { "U", KEY_U }, { "I", KEY_I }, { "O", KEY_O }, { "P", KEY_P },
-			{ "A", KEY_A }, { "S", KEY_S }, { "D", KEY_D }, { "F", KEY_F }, { "G", KEY_G },
-			{ "H", KEY_H }, { "J", KEY_J }, { "K", KEY_K }, { "L", KEY_L }, { ";", KEY_SEMICOLON },
-			{ "Z", KEY_Z }, { "X", KEY_X }, { "C", KEY_C }, { "V", KEY_V }, { "B", KEY_B },
-			{ "N", KEY_N }, { "M", KEY_M }, { ",", KEY_COMMA }, { ".", KEY_DOT }, { "/", KEY_SLASH },
-		};
-		const VKey VK_SYM[40] = {
-			{ "!", KEY_1, true }, { "\"", KEY_APOSTROPHE, true }, { "#", KEY_3, true }, { "$", KEY_4, true }, { "%", KEY_5, true },
-			{ "&", KEY_7, true }, { "'", KEY_APOSTROPHE }, { "(", KEY_9, true }, { ")", KEY_0, true }, { "*", KEY_8, true },
-			{ "+", KEY_EQUAL, true }, { ",", KEY_COMMA }, { "-", KEY_MINUS }, { ".", KEY_DOT }, { "/", KEY_SLASH },
-			{ ":", KEY_SEMICOLON, true }, { ";", KEY_SEMICOLON }, { "<", KEY_COMMA, true }, { "=", KEY_EQUAL }, { ">", KEY_DOT, true },
-			{ "?", KEY_SLASH, true }, { "@", KEY_2, true }, { "[", KEY_LEFTBRACE }, { "\\", KEY_BACKSLASH }, { "]", KEY_RIGHTBRACE },
-			{ "^", KEY_6, true }, { "_", KEY_MINUS, true }, { "`", KEY_GRAVE }, { "{", KEY_LEFTBRACE, true }, { "}", KEY_RIGHTBRACE, true },
-			{ "|", KEY_BACKSLASH, true }, { "~", KEY_GRAVE, true },
-			{ nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr },
-		};
-		const VKey VK_KEYS[40] = {
-			{ "F1", KEY_F1 }, { "F2", KEY_F2 }, { "F3", KEY_F3 }, { "F4", KEY_F4 }, { "F5", KEY_F5 },
-			{ "F6", KEY_F6 }, { "F7", KEY_F7 }, { "F8", KEY_F8 }, { "F9", KEY_F9 }, { "F10", KEY_F10 },
-			{ "F11", KEY_F11 }, { "F12", KEY_F12 }, { "RUN", KEY_ESC }, { "CLR", KEY_HOME }, { "RET", KEY_ENTER },
-			{ "SPACE", KEY_SPACE }, { "DEL", KEY_BACKSPACE }, { "ESC", KEY_ESC }, { "TAB", KEY_TAB }, { "CAPS", KEY_CAPSLOCK },
-			{ "LEFT", KEY_LEFT }, { "RIGHT", KEY_RIGHT }, { "UP", KEY_UP }, { "DOWN", KEY_DOWN }, { "HOME", KEY_HOME },
-			{ "END", KEY_END }, { "INS", KEY_INSERT }, { "CTRL", KEY_LEFTCTRL }, { "SHIFT", -1 }, { nullptr },
-			{ nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr },
-		};
-		const VKey* const VK_PAGES[3] = { VK_ABC, VK_SYM, VK_KEYS };
-		const char* const VK_PAGE_NAMES[3] = { "abc", "sym", "keys" };
-	}
-
-	struct Settings::RaWatch
-	{
-		std::mutex mu;
-		// 0 waiting for RetroArch's client, 1 looking the game up, 2 ready, 3 no achievements for this game, 4 no
-		// account, 5 no connection
-		int state = 0;
-		std::string game, hash;
-		uint32_t gameId = 0;
-		std::vector<RaAch> all;
-		std::map<uint32_t, long long> unlocked;		// id -> when (unix time)
-		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
-		int gen = 0;
-		int awards = 0;		// achievements unlocked while the game runs (each one wakes a dimmed bottom panel)
-		std::string user, token;
-		std::string rp;		// the game's rich presence ("Lv 23, Viridian Forest"), from the emulator's RA block
-		struct Near { uint32_t id; unsigned percent; std::string measured, title; };
-		std::vector<Near> nearest;	// the locked achievements closest to done (measured progress)
-		uint32_t evSeen = 0;		// the block's events read so far
-		bool fromBlock = false;		// the emulator's block is the source (not RetroArch's log)
-		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
-		long long pos = 0;
-		std::string part;
-		double since = 0;
-		// the badge's file, fetched on a thread when it isn't cached yet
-		void wantBadge(const std::shared_ptr<RaWatch>& self, const std::string& name)
-		{
-			if (name.empty() || badgeReady.count(name)) return;
-			std::string path = std::string(BADGES) + "/" + name + ".png";
-			if (access(path.c_str(), R_OK) == 0) { badgeReady[name] = true; return; }
-			badgeReady[name] = false;
-			std::thread([self, name, path]
-			{
-				if (system((std::string("mkdir -p ") + BADGES).c_str()) != 0) {}
-				bool ok = fetchFile("https://media.retroachievements.org/Badge/" + name + ".png", path);
-				std::lock_guard<std::mutex> l(self->mu);
-				if (ok) { self->badgeReady[name] = true; self->gen++; }
-			}).detach();
-		}
-		static void fetch(std::shared_ptr<RaWatch> w)
-		{
-			std::string user, token, hash;
-			uint32_t id;
-			{
-				std::lock_guard<std::mutex> l(w->mu);
-				user = w->user; token = w->token; hash = w->hash; id = w->gameId;
-			}
-			Curl cu;
-			std::string g = std::to_string(id);
-			std::string patch = raPost("r=patch&u=" + user + "&t=" + token + "&g=" + g);
-			fprintf(stderr, "game panel: game %s: the server sent %zu bytes (%s)\n", g.c_str(), patch.size(),
-				patch.empty() ? "no reply" : jsonField(patch, "Success") == "true" ? "ok" : jsonField(patch, "Error").c_str());
-			if (patch.empty() || jsonField(patch, "Success") != "true")
-			{
-				std::lock_guard<std::mutex> l(w->mu);
-				w->state = patch.empty() ? 5 : 3;
-				w->gen++;
-				return;
-			}
-			std::vector<RaAch> all;
-			for (auto& o : jsonObjects(patch, "Achievements"))
-			{
-				if (jsonField(o, "Flags") != "3") continue;	// core achievements only (5: unofficial)
-				RaAch a;
-				a.id = (uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10);
-				if (a.id == 101000001) continue;	// the server's "Warning: Unknown Emulator", not one of the game's
-				a.title = jsonField(o, "Title");
-				a.desc = jsonField(o, "Description");
-				a.badge = jsonField(o, "BadgeName");
-				a.points = (unsigned)atoi(jsonField(o, "Points").c_str());
-				all.push_back(a);
-			}
-			// (softcore: the panel only reads; RetroArch keeps its own session, and a hardcore one from a client the
-			// server doesn't know gets its warning)
-			std::string sess = raPost("r=startsession&u=" + user + "&t=" + token + "&g=" + g + "&h=0" + (hash.empty() ? "" : "&m=" + hash));
-			std::map<uint32_t, long long> un;
-			for (const char* k : { "Unlocks", "HardcoreUnlocks" })
-				for (auto& o : jsonObjects(sess, k))
-					un[(uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10)] = atoll(jsonField(o, "When").c_str());
-			std::lock_guard<std::mutex> l(w->mu);
-			w->all = all;
-			for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
-			w->state = all.empty() ? 3 : 2;
-			w->gen++;
-		}
-		// the emulator's RetroAchievements block (bcomp.h, COMPANION-SPEC section 4): its client (rcheevos) identified the
-		// game and unlocks; the list and the badges still come from the server, as for RetroArch's log
-		void block(const std::shared_ptr<RaWatch>& self, const bcomp_ra& ra)
-		{
-			std::lock_guard<std::mutex> l(mu);
-			fromBlock = true;
-			int st = ra.state == BCOMP_RA_LOGIN || ra.state == BCOMP_RA_LOADING ? 0 : ra.state == BCOMP_RA_NO_SET || ra.state == BCOMP_RA_UNKNOWN_GAME ? 3 :
-				ra.state == BCOMP_RA_LOGIN_FAILED ? 4 : -1;
-			if (st >= 0 && st != state && gameId == 0) { state = st; gen++; }
-			if (ra.game_id && ra.game_id != gameId && (ra.state == BCOMP_RA_ACTIVE || ra.state == BCOMP_RA_OFFLINE))
-			{
-				gameId = ra.game_id;
-				state = 1; gen++;
-				fprintf(stderr, "game panel: the emulator identified game %u\n", gameId);
-				std::thread(fetch, self).detach();
-			}
-			std::string r(ra.rp, strnlen(ra.rp, sizeof ra.rp));
-			if (r != rp) { rp = r; gen++; }
-			std::vector<Near> nn;
-			for (auto& n : ra.near_)
-				if (n.id) nn.push_back({ n.id, n.percent, std::string(n.measured, strnlen(n.measured, sizeof n.measured)), std::string(n.title, strnlen(n.title, sizeof n.title)) });
-			bool same = nn.size() == nearest.size();
-			for (size_t i = 0; same && i < nn.size(); i++) same = nn[i].id == nearest[i].id && nn[i].measured == nearest[i].measured;
-			if (!same) { nearest = nn; gen++; }
-			uint32_t from = ra.ev_head > BCOMP_RA_EVENTS && evSeen < ra.ev_head - BCOMP_RA_EVENTS ? ra.ev_head - BCOMP_RA_EVENTS : evSeen;
-			for (uint32_t i = from; i < ra.ev_head; i++)
-			{
-				const bcomp_ra_event& e = ra.ev[i % BCOMP_RA_EVENTS];
-				if (e.type == BCOMP_EV_UNLOCK) { unlocked[e.id] = (long long)time(nullptr); gen++; awards++; }
-			}
-			evSeen = ra.ev_head;
-		}
-		// RetroArch's log since the last look
-		void poll(const std::shared_ptr<RaWatch>& self, double nowMs)
-		{
-			FILE* f = fopen("/run/banana/retroarch.log", "r");
-			if (!f) return;
-			// a new log (shorter than what was read): from its start
-			if (fseek(f, 0, SEEK_END) == 0 && ftell(f) < (long)pos) { pos = 0; part.clear(); }
-			if (fseek(f, (long)pos, SEEK_SET) != 0) { fclose(f); return; }
-			char buf[8192];
-			size_t n;
-			while ((n = fread(buf, 1, sizeof buf, f)) > 0) { part.append(buf, n); pos += (long long)n; }
-			fclose(f);
-			size_t nl;
-			while ((nl = part.find('\n')) != std::string::npos)
-			{
-				std::string ln = part.substr(0, nl);
-				part.erase(0, nl + 1);
-				if (ln.find("[RCHEEVOS]") == std::string::npos) continue;
-				std::lock_guard<std::mutex> l(mu);
-				size_t at;
-				if ((at = ln.find("Generated hash ")) != std::string::npos) hash = ln.substr(at + 15, 32);
-				else if ((at = ln.find("Identified game: ")) != std::string::npos)
-				{
-					gameId = (uint32_t)strtoul(ln.c_str() + at + 17, nullptr, 10);
-					size_t q0 = ln.find('"', at), q1 = ln.rfind('"');
-					if (q0 != std::string::npos && q1 > q0) game = ln.substr(q0 + 1, q1 - q0 - 1);
-					if (!gameId) { state = 3; gen++; continue; }
-					fprintf(stderr, "game panel: RetroArch identified game %u (%s)\n", gameId, game.c_str());
-					state = 1; gen++;
-					std::thread(fetch, self).detach();
-				}
-				else if (ln.find("Unknown game") != std::string::npos || ln.find("not recognized") != std::string::npos) { state = 3; gen++; }
-				else if (ln.find("Login failed") != std::string::npos && state < 2) { state = ln.find("No response") != std::string::npos ? 5 : 4; gen++; }
-				else if ((at = ln.find("Awarding achievement ")) != std::string::npos)
-				{
-					uint32_t id = (uint32_t)strtoul(ln.c_str() + at + 21, nullptr, 10);
-					if (id == 101000001) continue;	// (the server's warning)
-					unlocked[id] = (long long)time(nullptr);
-					gen++; awards++;
-				}
-			}
-			std::lock_guard<std::mutex> l(mu);
-			if (state == 0 && since > 0 && nowMs - since > 30000) { state = 5; gen++; fprintf(stderr, "game panel: no game from RetroArch's log in 30 s\n"); }	// RetroArch's client never got the game
-		}
-	};
-
-	void Settings::gameOpen(const std::string& title, const std::string& system, int screen, bool touch)
-	{
-		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
-		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
-		gKeysOpen = false; gKeyPage = 0; gKeyShift = 0; gKeyTyped.clear();
-		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear(); pkWildPage = 0; pkWildKey = -1;
-		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
-		if (gameComp) gameComp->want(gcView);
-		raw = std::make_shared<RaWatch>();
-		raw->since = now;
-		std::string cfg = "/data/retroarch/retroarch.cfg";
-		raw->user = cfgValue(cfg, "cheevos_username");
-		raw->token = cfgValue(cfg, "cheevos_token");
-		// since 0.4.2 ra-secrets moves RetroArch's token out of retroarch.cfg (file sharing shows it) into
-		// accounts.conf, for the same account: read from there, or every request got "Invalid user/token combination"
-		// and the panel showed no achievements
-		if (raw->token.empty() && !raw->user.empty() && account("ra_user") == raw->user) raw->token = account("ra_retroarch_token");
-		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
-	}
-
-	void Settings::gameRom(const std::string& rom, const std::string& stateDir)
-	{
-		// RetroArch's (and BananaFront's) state names: the content's file name without its extension
-		std::string b = rom.substr(rom.find_last_of('/') + 1);
-		size_t dot = b.find_last_of('.');
-		if (dot != std::string::npos && dot > 0) b.erase(dot);
-		gStateRoot = stateDir;
-		gStateName = b;
-		gStateBase = stateDir + "/" + b;
-	}
-
-	void Settings::gameStatesScan()
-	{
-		gStatesScan = now;
-		// the folder: BananaFront names it in /run/banana/game-id (state_dir); RetroArch keeps a folder a core
-		// (/data/states/mGBA, gpSP...): the one holding this game's newest state; else the folder itself
-		if (!gStateName.empty())
-		{
-			std::string dir;
-			std::ifstream gid("/run/banana/game-id");
-			std::string ln, sdir, base;
-			while (std::getline(gid, ln))
-			{
-				if (ln.compare(0, 10, "state_dir=") == 0) sdir = ln.substr(10);
-				else if (ln.compare(0, 9, "rom_base=") == 0) base = ln.substr(9);
-			}
-			if (!sdir.empty() && base == gStateName) dir = sdir;
-			if (dir.empty())
-			{
-				long long best = -1;
-				std::vector<std::string> dirs = { gStateRoot };
-				if (DIR* d = opendir(gStateRoot.c_str()))
-				{
-					while (dirent* e = readdir(d))
-						if (e->d_name[0] != '.') dirs.push_back(gStateRoot + "/" + e->d_name);
-					closedir(d);
-				}
-				for (auto& c : dirs)
-					for (int i = 0; i < 10; i++)
-					{
-						struct stat st;
-						std::string f = c + "/" + gStateName + ".state" + (i ? std::to_string(i) : "");
-						if (stat(f.c_str(), &st) == 0 && S_ISREG(st.st_mode) && (long long)st.st_mtime > best) { best = st.st_mtime; dir = c; }
-					}
-			}
-			if (dir.empty()) dir = gStateRoot;
-			if (gStateBase != dir + "/" + gStateName)
-			{
-				gStateBase = dir + "/" + gStateName;
-				for (auto& f : gStateFiles) f = StateFile();
-			}
-		}
-		for (int i = 0; i < 10; i++)
-		{
-			std::string f = gStateBase + ".state" + (i ? std::to_string(i) : "");
-			struct stat st;
-			long long m = stat(f.c_str(), &st) == 0 ? (long long)st.st_mtime : 0;
-			if (m == gStateFiles[i].mtime) continue;
-			gStateFiles[i].mtime = m;
-			gStateFiles[i].tex.reset();
-			if (!m) continue;
-			rnds::Bitmap b = rnds::decodeFile(f + ".png");
-			if (!b.empty()) gStateFiles[i].tex = be->upload(b, true);
-		}
-	}
-
-	// the States view in the achievements box: ten slots, a picture and the time each was saved
-	void Settings::gameStatesFrame(const SPal& p)
-	{
-		if (gStateBase.empty()) return;
-		if (now - gStatesScan > 2000) gameStatesScan();
-		box("slot", false, 18, 80, 604, 206);
-		text("Save states", true, 15, 40, 96, p.muted, true, 1.2f);
-		std::string hint = gSlotSel >= 0 ? "Tap it again to load" : "Tap a slot twice to load it";
-		float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
-		text(hint, false, 14, 600 - hw, 97, gSlotSel >= 0 ? p.accent : p.muted);
-		for (int i = 0; i < 10; i++)
-		{
-			float x = 30 + (i % 5) * 117, y = 120 + (i / 5) * 82;
-			bool sel = i == gSlotSel;
-			box(sel ? "pick" : "bubble", sel, x, y, 109, 76);
-			const StateFile& f = gStateFiles[i];
-			Color fg = sel ? p.onPick : p.ink;
-			std::string n = i ? std::to_string(i) : "0";
-			if (!f.mtime)
-			{
-				text(n, true, 15, x + 8, y + 6, p.muted);
-				text("Empty", false, 14, x + 30, y + 30, p.muted);
-				continue;
-			}
-			if (f.tex) be->draw(f.tex, X(x + 31), X(y + 5), X(72), X(48), Color(1, 1, 1, 1));
-			text(n, true, 15, x + 8, y + 6, fg);
-			char w[24];
-			time_t tt = (time_t)f.mtime, nt = time(nullptr);
-			struct tm a, b;
-			localtime_r(&tt, &a); localtime_r(&nt, &b);
-			strftime(w, sizeof w, a.tm_yday == b.tm_yday && a.tm_year == b.tm_year ? "%H:%M" : "%d %b", &a);
-			float ww = text(w, false, 13, 0, 0, fg, false, 0, true);
-			text(w, false, 13, x + 55 - ww / 2, y + 56, sel ? p.onPickAccent : p.muted);
-		}
-	}
-
-	void Settings::gameClose()
-	{
-		raw.reset();
-		gStates = false; gSlotSel = gSlotPick = -1;
-		for (auto& f : gStateFiles) f = StateFile();
-		gStateBase.clear();
-		gStateRoot.clear();
-		gStateName.clear();
-		gBadges.clear();
-		pkIcons.clear();
-		pkTables.reset();
-		gbaRelease();
-	}
-
-	void Settings::gbaRelease()
-	{
-		gbaPages.reset();
-		gbaHost = nullptr;
-		if (pkView == PK_NDS) pkView = PK_PARTY;
-	}
-
-	bool Settings::gbaOn() const { return gbaHost && gbaHost->ready() && companion && companion->active(); }
-
-	void Settings::gbaShow(int view)
-	{
-		static const nds::Page PAGE[] = { nds::Page::PARTY, nds::Page::BATTLE };
-		const bool mine = view == PK_PARTY || view == PK_BATTLE || view == PK_MON || view == PK_DEX || view == PK_DEXMON || view == PK_GUIDE;
-		if (!gbaOn() || !mine) { pkView = view; return; }
-		if (!gbaPages)
-		{
-			gbaPages = std::make_unique<nds::Pages>(be, gScreen, (int)std::lround(640 * s), (int)std::lround(480 * s), assets, light);
-			gbaPages->setDecoderThread(true);	// (the panel never waits on a picture's decode)
-			nds::PageData d;
-			if (gbaHost->takeData(d)) gbaPages->setData(d);
-		}
-		pkView = PK_NDS;
-		companion->wantExt(true);	// (the pages need the save's data from the start: the place, the bag, the Pokédex)
-		gbaPages->show(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
-			view == PK_BATTLE ? PAGE[1] : PAGE[0]);
-	}
-
-	void Settings::gameTouchMove(float x, float y)
-	{
-		if (pkView == PK_NDS && gbaPages) gbaPages->touchMove((int)x, (int)y, now);
-	}
-
-	bool Settings::gameUpdate(double t)
-	{
-		now = t;
-		bool changed = false;
-		if (raw)
-		{
-			if (raw->since == 0) raw->since = t;
-			bcomp_ra ra;
-			if (link && link->attached() && link->ra(ra)) raw->block(raw, ra);
-			else if (!raw->fromBlock) raw->poll(raw, t);
-			std::lock_guard<std::mutex> l(raw->mu);
-			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
-			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
-			struct stat st;
-			if (raw->token.empty() && raw->state != 4 && stat("/data/retroarch/retroarch.cfg", &st) == 0 && st.st_mtime != raw->cfgSeen)
-			{
-				raw->cfgSeen = st.st_mtime;
-				raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
-			}
-			if (raw->gen != gSeen) changed = true;
-			if (raw->awards != awardsSeen) { awardsSeen = raw->awards; wake = true; }
-		}
-		if (gbaHost)
-		{
-			// the GBA companion in the DS companion's pages: its data once read, then the Session's newest
-			const bool was = gbaOn();
-			if (gbaHost->tick(t))
-			{
-				nds::PageData d;
-				if (gbaPages && gbaHost->takeData(d)) gbaPages->setData(d);
-				changed = true;
-			}
-			if (!was && gbaOn() && pkView != PK_GAME && pkView != PK_MAP && pkView != PK_BAG) gbaShow(pkView);	// (its pages take over)
-			if (gbaPages)
-			{
-				gbaHost->markSeen(gbaPages->takeSeen());
-				if (gbaPages->update(t)) changed = true;
-			}
-		}
-		if (companion && companion->takeChanged())
-		{
-			changed = true;
-			// a battle starting shows the battle, its end the party (unless another tab was picked meanwhile)
-			bool b = companion->snapshot().inBattle;
-			if (pkView == PK_NDS && gbaPages)
-			{
-				if (b && !pkBattle) gbaPages->show(nds::Page::BATTLE);
-				if (!b && pkBattle && gbaPages->page() == nds::Page::BATTLE) gbaPages->show(nds::Page::PARTY);
-			}
-			else
-			{
-				if (b && !pkBattle && pkView != PK_GAME) gbaShow(PK_BATTLE);
-				if (!b && pkBattle && pkView == PK_BATTLE) pkView = PK_PARTY;
-			}
-			pkBattle = b;
-		}
-		if (gameComp && gameComp->takeChanged())
-		{
-			changed = true;
-			// a fight starting shows the Battle page, its end Status (unless another tab was picked meanwhile); a page
-			// with no "when" for Battle is just a page
-			const gcomp::Def* d = gameComp->game();
-			if (d && d->pages[gcomp::P_BATTLE].when.set)
-			{
-				bool b = gameComp->pageOn(gcomp::P_BATTLE);
-				if (b && !gcBattle && gcView != GC_GAME) { gcView = gcomp::P_BATTLE; gcScreen = 0; gcList = gcRow = -1; }
-				if (!b && gcBattle && gcView == gcomp::P_BATTLE) { gcView = gcomp::P_STATUS; gcScreen = 0; gcList = gcRow = -1; }
-				gcBattle = b;
-				gameComp->want(gcView == GC_GAME ? -1 : gcView, gcList);
-			}
-		}
-		if (gFlash >= 0 && t >= gFlashUntil && gDown < 0) { gFlash = -1; changed = true; }
-		return changed;
-	}
-
-	bool Settings::gameProgress(int& unlocked, int& total)
-	{
-		if (!raw) return false;
-		std::lock_guard<std::mutex> l(raw->mu);
-		if (raw->state != 2 || raw->all.empty()) return false;
-		total = (int)raw->all.size();
-		unlocked = 0;
-		for (auto& a : raw->all) if (raw->unlocked.count(a.id)) unlocked++;
-		return true;
-	}
-
-	Settings::GameAction Settings::gameTouch(float x, float y, bool down)
-	{
-		float lx = x / s, ly = y / s;
-		int hit = -1;
-		// the on-screen keyboard (the Keys tile): a key types on the press, the bar's pages and Done on the release
-		if (gKeysOpen)
-		{
-			if (down)
-			{
-				if (ly >= VK_BAR_Y && ly < VK_BAR_Y + VK_BAR_H)
-				{
-					const int i = (int)((lx - 12) / 77);
-					if (lx >= 12 && i >= 0 && i < 8 && lx < 12 + i * 77 + 73)
-						switch (i)
-						{
-						case 0: case 1: case 2: gKeyPage = i; break;
-						case 3: gKeyShift ^= 1; break;
-						case 4: gameKeyTap(KEY_SPACE, false, nullptr); break;
-						case 5: gameKeyTap(KEY_ENTER, false, nullptr); break;
-						case 6: gameKeyTap(KEY_BACKSPACE, false, nullptr); break;
-						case 7: gKeysOpen = false; break;
-						}
-					return G_NONE;
-				}
-				if (ly >= VK_Y && ly < VK_Y + 4 * (VK_CH + VK_RGAP))
-				{
-					const int c = (int)((lx - VK_X) / VK_CW), r = (int)((ly - VK_Y) / (VK_CH + VK_RGAP));
-					const float ry = ly - VK_Y - r * (VK_CH + VK_RGAP);
-					if (c >= 0 && c < 10 && r >= 0 && r < 4 && ry < VK_CH)
-					{
-						const VKey& k = VK_PAGES[gKeyPage < 0 || gKeyPage > 2 ? 0 : gKeyPage][r * 10 + c];
-						if (k.label) gameKeyTap(k.code, k.shift, k.label);
-					}
-				}
-			}
-			return G_NONE;
-		}
-		if (pkView == PK_NDS && gbaPages && companion && companion->active())
-		{
-			// the GBA companion's pages: theirs, all of the panel; their Back to game shows the tiles (and today's tab bar,
-			// which comes back to them)
-			const nds::Pages::Action a = down ? gbaPages->touchDown((int)x, (int)y, now) : gbaPages->touchUp((int)x, (int)y, now);
-			if (a == nds::Pages::Action::CLOSE) pkView = PK_GAME;
-			return G_NONE;
-		}
-		bool gamePage = !((gameComp && gameComp->active() && gcView != GC_GAME) || (companion && companion->active() && pkView != PK_GAME));
-		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
-		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
-		{
-			if (!gStates && ly >= 80 && ly < 286) { gStates = true; gSlotSel = -1; gameStatesScan(); return G_NONE; }
-			if (gStates && ly < 80) { gStates = false; return G_NONE; }
-			if (gStates && ly >= 120 && ly < 284)
-			{
-				int c = (int)((lx - 30) / 117), r = (int)((ly - 120) / 82);
-				if (c < 0 || c > 4 || r < 0 || r > 1) return G_NONE;
-				int i = r * 5 + c;
-				if (!gStateFiles[i].mtime) { gSlotSel = -1; return G_NONE; }
-				if (i != gSlotSel) { gSlotSel = i; return G_NONE; }
-				gSlotPick = i; gSlotSel = -1; gStates = false;
-				return G_LOADSLOT;
-			}
-		}
-		const int ntiles = vkbd && gTouch ? 6 : 5;
-		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
-		for (int i = 0; i < ntiles; i++)
-		{
-			float tx = 18 + i * tstep;
-			if (lx >= tx && lx < tx + tw && ly >= 300 && ly < 420) hit = i;
-		}
-		// the game companion: the tab bar, a page's screens (the pager), a list's row opened or closed; the Game tab is
-		// the panel's own (its tiles, below)
-		if (gameComp && gameComp->active())
-		{
-			if (ly >= 424)
-			{
-				if (!down)
-					for (int i = 0; i < GC_TABS; i++)
-						if (gcTabW[i] > 0 && lx >= gcTabX[i] && lx < gcTabX[i] + gcTabW[i] && i != gcView) { gcView = i; gcScreen = 0; gcList = gcRow = -1; }
-				gameComp->want(gcView == GC_GAME ? -1 : gcView, gcList);
-				gDown = gFlash = -1;
-				return G_NONE;
-			}
-			if (gcView != GC_GAME)
-			{
-				if (!down)
-				{
-					if (gcRow >= 0) { gcList = gcRow = -1; }	// (a row's view: a tap goes back to the list)
-					else if (gcScreens > 1 && ly >= 372 && ly < 418)	// (the pager: its buttons, its page count)
-						gcScreen = std::min(gcScreens - 1, std::max(0, gcScreen + pagerStep(lx, ly, PAGER)));
-					else
-						for (auto& h : gcHits)
-							if (ly >= h.y0 && ly < h.y1) { gcList = h.list; gcRow = h.row; break; }
-					gameComp->want(gcView, gcList);
-				}
-				return G_NONE;
-			}
-		}
-		// the companion: the tab bar, a party member (its summary), another member or back from it; the Game tab is the
-		// panel's own (its tiles, below)
-		if (companion && companion->active())
-		{
-			static const int TAB_VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
-			if (ly >= 424)
-			{
-				if (!down)
-					for (int i = 0; i < PK_TABS; i++)
-						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) gbaShow(TAB_VIEW[i]);
-				companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
-				gDown = gFlash = -1;
-				return G_NONE;
-			}
-			if (pkView != PK_GAME)
-			{
-				const auto& party = companion->snapshot().party;
-				if (!down && pkView == PK_PARTY && ly < 410)
-				{
-					int i = (int)((ly - 14) / 134) * 2 + (lx < 322 ? 0 : 1);
-					if (i >= 0 && i < (int)party.size()) { pkMon = i; pkView = PK_MON; }
-				}
-				else if (!down && pkView == PK_MON && ly >= 344 && ly < 418)
-				{
-					if (lx >= 526) pkView = PK_PARTY;
-					else if (lx >= 18 && (int)((lx - 18) / 80) < (int)party.size()) pkMon = (int)((lx - 18) / 80);
-				}
-				else if (!down && pkView == PK_MON && lx >= 326 && ly >= 14 && ly < 336) pkMonPage ^= 1;	// (the right column: moves, stats)
-				else if (!down && (pkView == PK_BAG || pkView == PK_DEX) && ly >= 372 && ly < 418)
-				{
-					// the pager: its back and on buttons
-					int& pg = pkView == PK_BAG ? pkBagPage : pkDexPage;
-					pg = std::min(pkPages - 1, std::max(0, pg + pagerStep(lx, ly, PAGER)));
-				}
-				else if (!down && pkView == PK_BAG && ly >= 14 && ly < 60)
-				{
-					int i = (int)((lx - 18) / (604.0f / 5));
-					if (i >= 0 && i < 5 && i != pkPocket) { pkPocket = i; pkBagPage = 0; }
-				}
-				else if (!down && pkView == PK_DEX && ly >= 68 && ly < 368)
-				{
-					int i = (int)((ly - 68) / 60) * 3 + (int)((lx - 18) / (604.0f / 3));
-					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
-				}
-				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
-				else if (int st = !down && pkView == PK_GUIDE && pkWildPages > 1 ? pagerStep(lx, ly, GUIDE_PAGER) : 0)	// (the wild list's pages)
-					pkWildPage = std::min(pkWildPages - 1, std::max(0, pkWildPage + st));
-				else if (!down && pkView == PK_MAP && pkMapW > 0 && pkMapCell > 0)
-				{
-					// a square of the region map: its section named under the map (tapped again, or off the map: the legend)
-					int cx = (int)std::floor((lx - pkMapX) / pkMapCell), cy = (int)std::floor((ly - pkMapY) / pkMapCell);
-					int v = cx >= 0 && cy >= 0 && cx < pkMapW && cy < pkMapH ? pkMapCells[cy * pkMapW + cx] : -1;
-					auto tb = companion->tables();
-					if (tb && v == tb->mapsecNone) v = -1;
-					pkMapPick = v < 0 || v == 0xff || v == pkMapPick ? -1 : v;
-				}
-				companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
-				return G_NONE;
-			}
-		}
-		if (down) { gDown = gFlash = hit; gFlashUntil = now + 10000; return G_NONE; }
-		int was = gDown;
-		gDown = -1;
-		gFlashUntil = now + 220;
-		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
-		static const GameAction acts[6] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_NONE };
-		if (hit == 5)	// the panel's keyboard
-		{
-			gKeysOpen = true; gKeyPage = 0; gKeyTyped.clear();
-			fprintf(stderr, "game panel: keyboard open (%s)\n", vkbd && vkbd->ready() ? "the virtual keyboard is there" : "no virtual keyboard");
-			return G_NONE;
-		}
-		return acts[hit];
-	}
-
-	void Settings::gameKeyTap(int code, bool shift, const char* label)
-	{
-		if (code == -1) { gKeyShift ^= 1; return; }	// the shift toggle (sticky: shift then the letters)
-		if (getenv("BANANA_LOG_KEYS")) fprintf(stderr, "game panel: key %d%s\n", code, shift ? " (shift)" : "");
-		if (vkbd && vkbd->ready()) vkbd->tap(code, shift || (gKeyShift != 0 && gKeyPage == 0));
-		// what the key typed, in the line at the panel's top (the game's own screen shows it as it arrives)
-		if (code == KEY_BACKSPACE) { if (!gKeyTyped.empty()) gKeyTyped.pop_back(); }
-		else if (code == KEY_ENTER) gKeyTyped.clear();
-		else if (label && label[0] && !label[1] && label[0] > ' ' && label[0] < 127)
-		{
-			gKeyTyped += label;
-			if (gKeyTyped.size() > 46) gKeyTyped.erase(0, gKeyTyped.size() - 46);
-		}
-	}
-
-	void Settings::gameKeysFrame(const SPal& p)
-	{
-		const VKey* pg = VK_PAGES[gKeyPage < 0 || gKeyPage > 2 ? 0 : gKeyPage];
-		text("Keyboard", true, 24, 16, 6, p.ink);
-		const std::string typed = gKeyTyped.empty() ? "Tap a key: the game hears it on the other screen" : gKeyTyped;
-		text(fit(typed, false, 18, 440), false, 18, 170, 12, gKeyTyped.empty() ? p.muted : p.accent);
-		for (int r = 0; r < 4; r++)
-			for (int c = 0; c < 10; c++)
-			{
-				const VKey& k = pg[r * 10 + c];
-				if (!k.label) continue;
-				const float x = VK_X + c * VK_CW, y = VK_Y + r * (VK_CH + VK_RGAP), w = VK_CW - 4;
-				const bool shiftOn = k.code == -1 && gKeyShift;
-				box(shiftOn ? "pick" : "slot", shiftOn, x, y, w, VK_CH);
-				const Color& fg = shiftOn ? p.onPick : p.ink;
-				const float tw = text(k.label, true, 20, 0, 0, fg, false, 0, true);
-				text(k.label, true, 20, x + (w - tw) / 2, y + VK_CH / 2 - 11, fg);
-			}
-		// the bar: the pages, shift, and the keys typed the most
-		const char* bar[8] = { VK_PAGE_NAMES[0], VK_PAGE_NAMES[1], VK_PAGE_NAMES[2], "SHIFT", "SPACE", "RET", "DEL", "DONE" };
-		for (int i = 0; i < 8; i++)
-		{
-			const float x = 12 + i * 77, w = 73;
-			const bool on = (i < 3 && gKeyPage == i) || (i == 3 && gKeyShift);
-			box(on ? "pick" : "slot", on, x, VK_BAR_Y, w, VK_BAR_H);
-			const Color& fg = on ? p.onPick : p.ink;
-			const float tw = text(bar[i], true, 18, 0, 0, fg, false, 0, true);
-			text(bar[i], true, 18, x + (w - tw) / 2, VK_BAR_Y + 13, fg);
-		}
-		text("The game keeps running on the other screen. Done brings the tiles back.", false, 15, 12, 384, p.muted);
-	}
-
-	void Settings::gameRender()
-	{
-		frame++;	// (a frame of the cache's, as render()'s: evict() after it)
-		gameFrame();
-		evict();
-	}
-
-	void Settings::gameFrame()
-	{
-		SPal p = pal(light);
-		int state;
-		std::string game;
-		unsigned total = 0, got = 0;
-		struct Row { std::string title, desc, badge; long long when; unsigned points; };
-		std::vector<Row> rows;
-		std::string rpText;
-		std::vector<RaWatch::Near> nearList;
-		{
-			std::lock_guard<std::mutex> l(raw->mu);
-			gSeen = raw->gen;
-			state = raw->state;
-			game = raw->game;
-			total = (unsigned)raw->all.size();
-			for (auto& a : raw->all)
-			{
-				auto u = raw->unlocked.find(a.id);
-				if (u == raw->unlocked.end()) continue;
-				got++;
-				rows.push_back({ a.title, a.desc, a.badge, u->second, a.points });
-			}
-			std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.when > b.when; });
-			rpText = raw->rp;
-			nearList = raw->nearest;
-			// with achievements close to done (the emulator's measured progress): the latest unlock, then the closest
-			if (rows.size() > (nearList.empty() ? 2u : 1u)) rows.resize(nearList.empty() ? 2 : 1);
-			for (auto& r : rows) raw->wantBadge(raw, r.badge);
-		}
-		be->beginScreen(gScreen);
-		box("screen", false, 0, 0, 640, 480);
-		if (gKeysOpen) { gameKeysFrame(p); be->endScreen(); return; }	// (the panel is the keyboard while it is open)
-		bool pk = companion && companion->active();
-		if (pk && pkView == PK_NDS && gbaPages)
-		{
-			gbaPages->draw();
-			be->endScreen();
-			return;
-		}
-		if (pk && pkView != PK_GAME)
-		{
-			pokeRender(p);
-			be->endScreen();
-			return;
-		}
-		bool gc = !pk && gameComp && gameComp->active();
-		if (gc && gcView != GC_GAME)
-		{
-			gcRender(p);
-			gcTabs(p);
-			be->endScreen();
-			return;
-		}
-		// ---- the header: the game, the system
-		box("bubble", false, 18, 14, 604, 54);
-		std::string sys = fit(gSystem, true, 17, 200);
-		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
-		if (rpText.empty())
-		{
-			text(sys, true, 17, 602 - sw, 31, p.muted);
-			text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
-		}
-		else
-		{
-			// the game's rich presence under its name (RetroAchievements, any game with a script: "Lv 23, Viridian Forest")
-			text(sys, true, 15, 602 - sw * 15 / 17, 20, p.muted);
-			text(fit(gTitle, true, 19, 540 - sw), true, 19, 38, 18, p.ink);
-			text(fit(rpText, false, 15, 564), false, 15, 38, 44, p.accent);
-		}
-		// ---- the achievements (or, after a tap on them, the save states)
-		if (gStates) gameStatesFrame(p);
-		else {
-		box("slot", false, 18, 80, 604, 206);
-		if (!gStateBase.empty() && gTouch)
-		{
-			float hw = text("Tap: save states", false, 13, 0, 0, p.muted, false, 0, true);
-			text("Tap: save states", false, 13, 600 - hw, 264, p.muted);
-		}
-		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
-		if (state == 2 && total)
-		{
-			std::string v = std::to_string(got) + " / " + std::to_string(total);
-			float vw = text(v, true, 15, 0, 0, p.muted, false, 0, true);
-			text(v, true, 15, 600 - vw, 96, p.accent);
-			float bx = 40, bw = 560, by = 122;
-			be->fill(X(bx), X(by), X(bw), X(10), p.line);
-			be->fill(X(bx + 2), X(by + 2), X((bw - 4) * got / total), X(6), p.accent);
-			if (rows.empty() && nearList.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
-			for (size_t i = 0; i < rows.size(); i++)
-			{
-				float y = 146 + i * 66;
-				auto& r = rows[i];
-				// the badge: its picture when cached, else a tile with a star
-				rnds::TexPtr tex;
-				auto bi = gBadges.find(r.badge);
-				if (bi != gBadges.end()) tex = bi->second;
-				else
-				{
-					bool ready = false;
-					{ std::lock_guard<std::mutex> l(raw->mu); auto b = raw->badgeReady.find(r.badge); ready = b != raw->badgeReady.end() && b->second; }
-					if (ready)
-					{
-						rnds::Bitmap b = rnds::decodeFile(std::string(BADGES) + "/" + r.badge + ".png");
-						if (!b.empty()) { tex = be->upload(b, true); gBadges[r.badge] = tex; }
-					}
-				}
-				box("bubble", false, 40, y, 56, 56);
-				if (tex) be->draw(tex, X(43), X(y + 3), X(50), X(50), Color(1, 1, 1, 1));
-				else text("*", true, 30, 58, y + 10, p.accent);
-				// when: "just now", "12 min ago", today's time, or the date
-				char w[40];
-				long long age = (long long)time(nullptr) - r.when;
-				if (age < 60) snprintf(w, sizeof w, "just now");
-				else if (age < 3600) snprintf(w, sizeof w, "%lld min ago", age / 60);
-				else
-				{
-					time_t tt = (time_t)r.when, nt = time(nullptr);
-					struct tm a, b;
-					localtime_r(&tt, &a); localtime_r(&nt, &b);
-					if (a.tm_yday == b.tm_yday && a.tm_year == b.tm_year) strftime(w, sizeof w, "today %H:%M", &a);
-					else strftime(w, sizeof w, "%d %b %Y", &a);
-				}
-				float ww = text(w, false, 15, 0, 0, p.muted, false, 0, true);
-				text(w, false, 15, 600 - ww, y + 6, p.muted);
-				text(fit(r.title, true, 19, 480 - ww), true, 19, 110, y + 4, p.ink);
-				text(fit(r.desc, false, 15, 490), false, 15, 110, y + 32, p.muted);
-			}
-		}
-		// the achievements closest to done, with their progress ("34/50"), under the latest unlock
-		if ((state == 2 && total) || !nearList.empty())
-		{
-			float y0 = state == 2 && total ? 146 + rows.size() * 66 : 112;
-			for (size_t i = 0; i < nearList.size() && y0 + 56 <= 286; i++, y0 += 58)
-			{
-				auto& n = nearList[i];
-				text(lang::tr("Second screen (RetroArch games)", "Next"), true, 15, 40, y0 + 4, p.muted);
-				float mw = text(n.measured, true, 17, 0, 0, p.accent, false, 0, true);
-				text(n.measured, true, 17, 600 - mw, y0 + 2, p.accent);
-				text(fit(n.title, true, 19, 470 - mw), true, 19, 110, y0 + 2, p.ink);
-				be->fill(X(110), X(y0 + 32), X(490), X(8), p.line);
-				be->fill(X(111), X(y0 + 33), X(488.0f * std::min(100u, n.percent) / 100), X(6), p.accent);
-			}
-		}
-		if (!(state == 2 && total) && nearList.empty())
-		{
-			const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." :
-				state == 3 ? "This game has no achievements." :
-				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
-				"No connection to RetroAchievements: check Wi-Fi.";
-			wrapped(msg, 18, 40, 130, 560, 3, p.muted);
-		}
-		}
-		// ---- the tiles: RetroArch's commands by touch, and their buttons
-		const int ntiles = vkbd && gTouch ? 6 : 5;
-		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
-		for (int i = 0; i < ntiles; i++)
-		{
-			float x = 18 + i * tstep, y = 300;
-			bool on = gFlash == i;
-			box(on ? "pick" : "slot", on, x, y, tw, 120);
-			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
-			int k = std::max(1, (int)std::lround(3 * s));
-			float ix = std::round(X(x + tw / 2) - 6 * k), iy = std::round(X(y + 16));
-			for (int r = 0; r < 12; r++)
-				for (int c = 0; c < 12; c++)
-					if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
-			// (the document's own translation for this panel: its "Fast" is fast-forward, the settings' is speed)
-			std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
-			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
-			text(lb, true, 19, x + tw / 2 - lw / 2, y + 60, fg);
-			std::string kk = GTILES[i].keys;
-			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
-			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
-		}
-		if (pk) { pokeTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
-		if (gc) { gcTabs(p); be->endScreen(); return; }
-		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
-		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
-		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
-		be->endScreen();
-	}
-
-	// ---- the Pokémon companion (pokemon.h): the whole panel, the party, a member's summary, the battle, and the tab
-	// bar along the bottom. Banana's look: the game panel's boxes, Pixelify Sans, the theme's colours; the pixel
-	// pictures (balls, gender signs) drawn here, the Pokémon's own icons read from the player's ROM.
-	namespace
-	{
-		const char* const PX_BALL[12] = { "....####....", "..##RRRR##..", ".#RRRRRRRR#.", ".#RRRRRRRR#.", "#RRRR##RRRR#", "####WWWW####",
-			"####WWWW####", "#WWWW##WWWW#", ".#WWWWWWWW#.", ".#WWWWWWWW#.", "..##WWWW##..", "....####...." };
-		const char* const PX_RING[12] = { "....####....", "..##....##..", ".#........#.", ".#........#.", "#..........#", "#..........#",
-			"#..........#", "#..........#", ".#........#.", ".#........#.", "..##....##..", "....####...." };
-		const char* const PX_MALE[9] = { ".....####", "......###", ".....##.#", "..####...", ".##..##..", "##....##.", "##....##.",
-			".##..##..", "..####..." };
-		const char* const PX_FEMALE[9] = { "..###..", ".##.##.", "##...##", "##...##", ".##.##.", "..###..", "...#...", ".#####.", "...#..." };
-		const char* const PX_ITEM[7] = { "...#...", "..###..", ".##o##.", "##ooo##", ".##o##.", "..###..", "...#..." };
-		const char* const PX_UP[3] = { "..#..", ".###.", "#####" }, * const PX_DOWN[3] = { "#####", ".###.", "..#.." };
-		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8;
-		uint32_t statusColour(const std::string& st)
-		{
-			return st == "SLP" ? 0x8890a0 : st == "PSN" ? 0xa050c0 : st == "BRN" ? 0xe07040 : st == "FRZ" ? 0x58b0d8 : st == "PAR" ? 0xc8a020 : 0x707070;
-		}
-		std::string times(int q)	// a multiplier in quarters, as the games write it
-		{
-			return q == 0 ? "0×" : q == 1 ? "¼×" : q == 2 ? "½×" : q == 4 ? "1×" : q == 8 ? "2×" : "4×";
-		}
-	}
-
-	// numbers a character at a time (HP and PP change all the time: one cached texture for each digit, not each value)
-	float Settings::num(const std::string& t, float size, float x, float top, const Color& c, bool measureOnly)
-	{
-		float w = 0;
-		for (char ch : t)
-		{
-			std::string one(1, ch);
-			if (ch == ' ') { w += size * 0.3f; continue; }
-			w += text(one, true, size, x + w, top, c, false, 0, measureOnly);
-		}
-		return w;
-	}
-
-	void Settings::sprite(const char* const* rows, int h, float x, float y, int k, const std::function<Color(char)>& colour)
-	{
-		float x0 = std::round(X(x)), y0 = std::round(X(y));
-		for (int r = 0; r < h; r++)
-			for (int c = 0; rows[r][c]; c++)
-				if (rows[r][c] != '.') be->fill(x0 + c * k, y0 + r * k, (float)k, (float)k, colour(rows[r][c]));
-	}
-
-	float Settings::chip(const std::string& label, uint32_t rgb, float x, float y, bool measureOnly)
-	{
-		float w = text(label, true, 12, 0, 0, Color(1, 1, 1, 1), true, 0.5f, true) + 14;
-		if (measureOnly) return w;
-		be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(20)), Color::hex(rgb));
-		be->fill(std::round(X(x)), std::round(X(y + 18)), std::round(X(w)), std::round(X(2)), Color(0, 0, 0, 0.25f));	// (its pixel shadow)
-		text(label, true, 12, x + 7, y + 4, Color(1, 1, 1, 1), true, 0.5f);
-		return w;
-	}
-
-	void Settings::typeChip(int type, float x, float y)
-	{
-		const char* n = pkmn::typeName(type);
-		if (!*n) return;
-		chip(lang::tr("Pokémon types", n), pkmn::typeColor(type), x, y);	// (its own context: "Dark" is a theme too)
-	}
-
-	void Settings::hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb)
-	{
-		SPal p = pal(light);
-		be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(10)), p.line);
-		if (maxHp <= 0 || hp <= 0) return;
-		float f = std::min(1.0f, (float)hp / maxHp);
-		if (!rgb) rgb = f > 0.5f ? HP_GREEN : f > 0.2f ? HP_YELLOW : HP_RED;
-		be->fill(std::round(X(x + 2)), std::round(X(y + 2)), std::max(1.0f, std::round(X((w - 4) * f))), std::round(X(6)), Color::hex(rgb));
-	}
-
-	void Settings::monIcon(uint16_t species, bool egg, float x, float y, int k)
-	{
-		auto t = companion ? companion->tables() : nullptr;
-		if (t != pkTables) { pkIcons.clear(); pkTables = t; }	// (the tables arrived, or another game's)
-		int key = egg ? 1000 : species;
-		auto it = pkIcons.find(key);
-		if (it == pkIcons.end())
-		{
-			rnds::TexPtr tex;
-			std::vector<uint8_t> rgba;
-			if (t && t->iconRGBA(species, egg, rgba))
-			{
-				rnds::Bitmap b;
-				b.w = b.h = 32; b.px = rgba;
-				tex = be->upload(b, false);
-			}
-			it = pkIcons.emplace(key, tex).first;	// (none: not looked for again)
-		}
-		if (it->second) { be->draw(it->second, std::round(X(x)), std::round(X(y)), 32.0f * k, 32.0f * k, Color(1, 1, 1, 1)); return; }
-		// no icon in the ROM's tables: a ball in its place
-		SPal p = pal(light);
-		sprite(PX_BALL, 12, x + 16.0f * k / s - 6.0f * k / s, y + 16.0f * k / s - 6.0f * k / s, k, [&](char c)
-			{ return c == '#' ? p.muted : c == 'R' ? p.line : p.screenBand; });
-	}
-
-	float Settings::pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const Color& c)
-	{
-		// (the species with a sign in its name: the sign drawn, the font has none)
-		std::string n = name;
-		for (const char* sg : { "♂", "♀" })
-		{
-			size_t l = strlen(sg);
-			if (n.size() > l && n.compare(n.size() - l, l, sg) == 0) { n.erase(n.size() - l); if (gender == 2) gender = sg[2] == '\x82' ? 0 : 1; }
-		}
-		int k = std::max(1, (int)std::lround(2 * s * size / 20));
-		float gw = gender < 2 ? 10.0f * k / s : 0;
-		n = fit(n, medium, size, width - gw);
-		float w = text(n, medium, size, x, y, c);
-		if (gender == 0) sprite(PX_MALE, 9, x + w + 4, y + size * 0.15f, k, [](char) { return Color::hex(0x58a8f8); });
-		if (gender == 1) sprite(PX_FEMALE, 9, x + w + 4, y + size * 0.15f, k, [](char) { return Color::hex(0xf07890); });
-		return w + gw;
-	}
-
-	float Settings::pokeMatchups(const SPal& p, int t1, int t2, float x, float y, float w, float bottom)
-	{
-		// what the types take from each attacking type: weak to (2x, 4x), resists (1/2x, 1/4x), immune (0x)
-		struct G { const char* label; std::vector<std::pair<int, int>> list; };
-		G g[3] = { { "Weak to", {} }, { "Resists", {} }, { "Immune to", {} } };
-		for (int a = 0; a < pkmn::NUM_TYPES; a++)
-		{
-			bool modern = companion && companion->tables() && companion->tables()->has.modernTypes;
-			if (!pkmn::typeInGame(a, modern)) continue;
-			int q = pkmn::effect(a, t1, t2, modern);
-			if (q >= 8) g[0].list.push_back({ a, q });
-			else if (q == 0) g[2].list.push_back({ a, q });
-			else if (q < 4) g[1].list.push_back({ a, q });
-		}
-		for (auto& gr : g) std::stable_sort(gr.list.begin(), gr.list.end(), [](auto& a, auto& b) { return a.second > b.second; });
-		std::stable_sort(g[1].list.begin(), g[1].list.end(), [](auto& a, auto& b) { return a.second < b.second; });
-		for (auto& gr : g)
-		{
-			if (gr.list.empty() || y + 44 > bottom) continue;
-			text(gr.label, true, 14, x, y, p.muted, true, 1.0f);
-			y += 22;
-			float cx = x;
-			for (auto& e : gr.list)
-			{
-				std::string l = lang::tr("Pokémon types", pkmn::typeName(e.first)) + " " + times(e.second);
-				float cw = chip(l, pkmn::typeColor(e.first), 0, 0, true);
-				if (cx > x && cx + cw > x + w) { cx = x; y += 24; if (y + 20 > bottom) break; }
-				chip(l, pkmn::typeColor(e.first), cx, y);
-				cx += cw + 6;
-			}
-			y += 30;
-		}
-		return y;
-	}
-
-	void Settings::pokeTabs(const SPal& p)
-	{
-		// the tab bar: Party, Battle (in a battle), Map, Bag, Dex, Guide, Game (the panel's tiles and achievements)
-		const pkmn::Snapshot& sn = companion->snapshot();
-		box("bubble", false, 18, 424, 604, 46);
-		static const char* const tabs[PK_TABS] = { "Party", "Battle", "Map", "Bag", "Dex", "Guide", "Game" };
-		static const int VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
-		int n = 0;
-		for (int i = 0; i < PK_TABS; i++) n += i != 1 || sn.inBattle;
-		float cell = 604.0f / n, cx = 18;
-		for (int i = 0; i < PK_TABS; i++)
-		{
-			pkTabW[i] = 0;
-			if (i == 1 && !sn.inBattle) continue;
-			bool on = pkView == VIEW[i] || (VIEW[i] == PK_PARTY && pkView == PK_MON) || (VIEW[i] == PK_DEX && pkView == PK_DEXMON);
-			float size = n > 6 ? 14 : 16;
-			float w = text(tabs[i], true, size, 0, 0, p.ink, true, 1.0f, true);
-			float tx = std::round(cx + cell / 2 - w / 2);
-			text(tabs[i], true, size, tx, 438, on ? p.accent : p.muted, true, 1.0f);
-			if (on) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
-			pkTabX[i] = cx; pkTabW[i] = cell;
-			cx += cell;
-		}
-	}
-
-	void Settings::pokeRender(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		if (pkView == PK_BATTLE && !sn.inBattle) pkView = PK_PARTY;
-		if (pkView == PK_MON && pkMon >= (int)sn.party.size()) pkView = PK_PARTY;
-		// the save's data is read only while a page that shows it is open
-		companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
-		if (!sn.seen)
-		{
-			box("bubble", false, 18, 14, 604, 398);
-			std::string why = sn.unknownRelease ? "This release of the game isn't one the companion knows." :
-				!sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
-			text(fit(gTitle, true, 22, 560), true, 22, 40, 34, p.ink);
-			wrapped(why, 18, 40, 80, 560, 4, p.muted);
-		}
-		else if (pkView == PK_MON) pokeSummary(p);
-		else if (pkView == PK_BATTLE) pokeBattle(p);
-		else if (pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE)
-		{
-			if (!sn.ext)
-			{
-				box("bubble", false, 18, 14, 604, 398);
-				wrapped("Reading the save...", 18, 40, 40, 560, 2, p.muted);
-			}
-			else if (pkView == PK_MAP) pokeMap(p);
-			else if (pkView == PK_BAG) pokeBag(p);
-			else if (pkView == PK_DEX) pokeDex(p);
-			else if (pkView == PK_DEXMON) pokeDexMon(p);
-			else pokeGuide(p);
-		}
-		else pokeParty(p);
-		pokeTabs(p);
-	}
-
-	void Settings::pokeParty(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		int k = std::max(1, (int)std::lround(2 * s));	// the icons' pixels: 2 (640x480), 3 (1024x768)
-		for (int i = 0; i < 6; i++)
-		{
-			float x = 18 + (i % 2) * 308, y = 14 + (i / 2) * 134, w = 296, h = 126;
-			if (i >= (int)sn.party.size())
-			{
-				// an empty place: a flat card, its edge only
-				float o = std::max(1.0f, std::round(X(2)));
-				be->fill(std::round(X(x + 4)), std::round(X(y + 4)), std::round(X(w - 8)), std::round(X(h - 8)), p.line);
-				be->fill(std::round(X(x + 4)) + o, std::round(X(y + 4)) + o, std::round(X(w - 8)) - 2 * o, std::round(X(h - 8)) - 2 * o, p.screenBg);
-				continue;
-			}
-			const pkmn::Mon& m = sn.party[i];
-			box("bubble", false, x, y, w, h);
-			if (i == pkMon)	// the one whose summary was last open: outlined in the accent inside its edge
-			{
-				float o = std::max(1.0f, std::round(X(2))), x0 = std::round(X(x + 6)), y0 = std::round(X(y + 6));
-				float x1 = std::round(X(x + w - 6)), y1 = std::round(X(y + h - 5));
-				be->fill(x0, y0, x1 - x0, o, p.accent); be->fill(x0, y1 - o, x1 - x0, o, p.accent);
-				be->fill(x0, y0, o, y1 - y0, p.accent); be->fill(x1 - o, y0, o, y1 - y0, p.accent);
-			}
-			bool down = !m.egg && m.hp == 0;
-			// the ball, the icon over it, a marker for a held item
-			sprite(PX_BALL, 12, x + 10, y + 10, k, [&](char c)
-				{ return c == '#' ? Color::hex(0x2a2830) : c == 'R' ? Color::hex(down ? 0x8a8890 : 0xe8504a) : Color::hex(0xf4f0e8); });
-			monIcon(m.species, m.egg, x + 14, y + 16, k);
-			if (m.item && !m.egg) sprite(PX_ITEM, 7, x + 64, y + 66, k, [](char c) { return c == '#' ? Color::hex(0x6a4a10) : Color::hex(0xf8c030); });
-			std::string name = m.egg ? std::string("EGG") : !m.nick.empty() ? m.nick : t.speciesName(m.species);
-			pokeName(name, m.egg ? 2 : t.gender(m.species, m.pid), true, 20, x + 88, y + 16, w - 100, down ? p.muted : p.ink);
-			if (m.egg) continue;
-			// Lv, the status
-			float lw = text("Lv", false, 15, x + 88, y + 50, p.muted);
-			float nw = num(std::to_string(m.level), 19, x + 88 + lw + 4, y + 47, p.ink);
-			std::string st = down ? "FNT" : pkmn::statusName(m.status);
-			if (!st.empty()) chip(st, statusColour(st), x + 88 + lw + nw + 16, y + 48);
-			// HP
-			text("HP", true, 13, x + 16, y + 89, p.accent);
-			hpBar(m.hp, m.maxHp, x + 44, y + 90, w - 60);
-			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
-			float hw = num(hp, 15, 0, 0, p.muted, true);
-			num(hp, 15, x + w - 16 - hw, y + 100, p.ink);
-		}
-	}
-
-	void Settings::pokeSummary(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		const pkmn::Mon& m = sn.party[pkMon];
-		int k = std::max(1, (int)std::lround(2 * s));
-		box("bubble", false, 18, 14, 604, 322);
-		be->fill(std::round(X(318)), std::round(X(30)), std::max(1.0f, std::round(X(2))), std::round(X(290)), p.line);	// the columns' line
-		// ---- left: the name, the icon, Lv, types, HP, experience, then what it is weak to and resists
-		std::string name = m.egg ? std::string("EGG") : !m.nick.empty() ? m.nick : t.speciesName(m.species);
-		pokeName(name, m.egg ? 2 : t.gender(m.species, m.pid), true, 22, 36, 28, 270, p.ink);
-		box("slot", false, 36, 60, 76, 76);
-		monIcon(m.species, m.egg, 74 - 16.0f * k / s, 98 - 16.0f * k / s, k);
-		if (m.egg) { wrapped("It's still an egg.", 16, 126, 74, 180, 2, p.muted); }
-		else
-		{
-			float lw = text("Lv", false, 16, 126, 68, p.muted);
-			num(std::to_string(m.level), 24, 126 + lw + 6, 62, p.accent);
-			std::string sp = t.speciesName(m.species);
-			if (sp != name && sp[0] != '#') text(fit(sp, false, 14, 120), false, 14, 190, 70, p.muted);
-			float cx = 126;
-			for (int i = 0; i < 2; i++)
-				if (m.types[i] < pkmn::NUM_TYPES && (i == 0 || m.types[1] != m.types[0]))
-				{
-					typeChip(m.types[i], cx, 104);
-					cx += chip(lang::tr("Pokémon types", pkmn::typeName(m.types[i])), 0, 0, 0, true) + 6;
-				}
-			// HP, then the experience to the next level
-			text("HP", true, 14, 36, 150, p.accent);
-			hpBar(m.hp, m.maxHp, 72, 152, 150);
-			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
-			float hw = num(hp, 16, 0, 0, p.ink, true);
-			num(hp, 16, 304 - hw, 148, p.ink);
-			long long a = t.expFor(m.species, m.level), b = m.level < 100 ? t.expFor(m.species, m.level + 1) : -1;
-			text("Exp", true, 14, 36, 174, p.accent, true);
-			if (a >= 0 && b > a)
-			{
-				long long into = std::max(0LL, std::min<long long>(b - a, (long long)m.exp - a));
-				hpBar((int)(into * 1000 / (b - a)), 1000, 72, 176, 120, EXP_BLUE);
-				std::string nx = std::to_string(std::max(0LL, b - (long long)m.exp));
-				float xw = num(nx, 16, 0, 0, p.ink, true), lw2 = text("Next", true, 13, 0, 0, p.muted, true, 0, true);
-				num(nx, 16, 304 - xw, 172, p.ink);
-				text("Next", true, 13, 304 - xw - lw2 - 6, 175, p.muted, true);
-			}
-			else hpBar(m.level >= 100 ? 1 : 0, 1, 72, 176, 232, EXP_BLUE);
-			// the next move it learns by levelling up (the ROM's level-up lists; the PokeDaisy idea, its LEARN page)
-			int nlv = 0;
-			uint16_t nmv = t.nextMove(m.species, m.level, nlv);
-			float my = 200;
-			if (nmv)
-			{
-				text("Learns", true, 13, 36, 205, p.muted, true);
-				std::string lvs = "Lv " + std::to_string(nlv);
-				float lw3 = text(lvs, true, 15, 0, 0, p.ink, false, 0, true);
-				text(lvs, true, 15, 304 - lw3, 203, p.accent);
-				text(fit(t.moveName(nmv), true, 16, 200 - lw3), true, 16, 98, 202, p.ink);
-				my = 228;
-			}
-			be->fill(std::round(X(36)), std::round(X(my)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			pokeMatchups(p, m.types[0], m.types[1], 36, my + 10, 270, 328);
-		}
-		// ---- right: the moves or the stats, named at the column's top (a tap on the column changes which)
-		static const char* const SIDE[2] = { "Moves", "Stats" };
-		for (int i = 0; i < 2; i++)
-		{
-			float w = text(SIDE[i], true, 15, 0, 0, p.ink, true, 1.0f, true);
-			float tx = std::round(403 + i * 134 - w / 2);
-			text(SIDE[i], true, 15, tx, 22, i == pkMonPage ? p.accent : p.muted, true, 1.0f);
-			if (i == pkMonPage) be->fill(std::round(X(tx)), std::round(X(42)), std::round(X(w)), std::round(X(3)), p.accent);
-		}
-		if (pkMonPage == 0)
-			// the four moves, each with its type, power and PP
-			for (int i = 0; i < 4; i++)
-			{
-				float y = 58 + i * 69;
-				if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-				uint16_t mv = m.moves[i];
-				if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
-				bool known = mv < t.moveInfo.size();
-				uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
-				be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(56)), Color::hex(tc));
-				bool out = m.pp[i] == 0;
-				text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
-				if (known) typeChip(t.moveInfo[mv].type, 348, y + 32);
-				// PWR n  PP a/b (right-aligned)
-				int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
-				std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
-				float r = 604;
-				float pw = num(pp, 16, 0, 0, p.ink, true);
-				num(pp, 16, r - pw, y + 32, out ? Color::hex(0xff8a96) : p.ink);
-				r -= pw + 5;
-				r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
-				text("PP", true, 13, r, y + 35, p.muted, true);
-				if (known)
-				{
-					std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
-					r -= 12;
-					float ww = num(pwr, 16, 0, 0, p.ink, true);
-					num(pwr, 16, r - ww, y + 32, p.accent);
-					r -= ww + 5;
-					r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
-					text("Pwr", true, 13, r, y + 35, p.muted, true);
-				}
-			}
-		else if (m.egg) wrapped("Nothing to see until it hatches.", 16, 336, 60, 268, 3, p.muted);
-		else
-		{
-			// the nature, the ability, the held item, friendship
-			std::string ab = t.abilityName(m);
-			const std::string about[4][2] = { { "Nature", pkmn::natureName(m.nature()) }, { "Ability", ab.empty() ? "-" : ab },
-				{ "Item", m.item ? t.itemName(m.item) : "None" }, { "Friendship", std::to_string(m.friendship) } };
-			for (int i = 0; i < 4; i++)
-			{
-				float y = 58 + i * 26;
-				float lw = text(about[i][0], true, 13, 336, y + 3, p.muted, true, 1.0f);
-				std::string v = fit(about[i][1], true, 16, 268 - lw - 12);
-				float vw = text(v, true, 16, 0, 0, p.ink, false, 0, true);
-				text(v, true, 16, 604 - vw, y, p.ink);
-			}
-			be->fill(std::round(X(336)), std::round(X(164)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			// the stats in the summary's order, each with its IV (31 the best: in the accent) and EVs; the one the nature
-			// raises in red with a mark up, the one it lowers in blue with a mark down (as the games colour them)
-			static const char* const STAT[6] = { "HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed" };
-			static const int IV[6] = { 0, 1, 2, 4, 5, 3 };	// (Mon::ivs and evs: HP, Attack, Defense, Speed, Sp. Atk, Sp. Def)
-			int up, down;
-			pkmn::natureStats(m.nature(), up, down);
-			auto right = [&](const std::string& v, float size, float r, float y, const Color& c) { num(v, size, r - num(v, size, 0, 0, c, true), y, c); };
-			int evTotal = 0;
-			for (int e : m.evs) evTotal += e;
-			text("EVs " + std::to_string(evTotal) + "/510", true, 12, 336, 174, p.muted, true, 1.0f);
-			for (int i = 0; i < 2; i++)
-			{
-				const char* h = i ? "EV" : "IV";
-				float r = i ? 604 : 534;
-				text(h, true, 12, r - text(h, true, 12, 0, 0, p.muted, true, 1.0f, true), 174, p.muted, true, 1.0f);
-			}
-			int ka = std::max(1, (int)std::lround(2 * s));
-			for (int i = 0; i < 6; i++)
-			{
-				float y = 196 + i * 22;
-				int st = IV[i] - 1;	// (Mon::stats: no HP)
-				bool raised = i && st == up, lowered = i && st == down;
-				Color c = raised ? Color::hex(HP_RED) : lowered ? Color::hex(EXP_BLUE) : p.ink;
-				float lw = text(STAT[i], true, 15, 336, y, c);
-				if (raised || lowered) sprite(raised ? PX_UP : PX_DOWN, 3, 336 + lw + 6, y + 6, ka, [&](char) { return c; });
-				right(std::to_string(i ? m.stats[st] : m.maxHp), 16, 466, y - 1, p.ink);
-				int iv = m.ivs[IV[i]], ev = m.evs[IV[i]];
-				right(std::to_string(iv), 15, 534, y, iv == 31 ? p.accent : p.ink);
-				right(std::to_string(ev), 15, 604, y, ev ? p.ink : p.muted);
-			}
-		}
-		// ---- the members to switch to, and back to the party
-		int ks = std::max(1, (int)std::lround(1.5f * s));
-		for (int i = 0; i < (int)sn.party.size() && i < 6; i++)
-		{
-			float x = 18 + i * 80;
-			box(i == pkMon ? "pick" : "slot", i == pkMon, x, 344, 72, 72);
-			monIcon(sn.party[i].species, sn.party[i].egg, x + 36 - 16.0f * ks / s, 378 - 16.0f * ks / s, ks);
-		}
-		box("slot", false, 526, 344, 96, 72);
-		arrow(false, 548, 372, p.ink);
-		text("Back", true, 15, 564, 372, p.ink, true);
-	}
-
-	void Settings::pokeBattle(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		int k = std::max(1, (int)std::lround(2 * s)), kb = std::max(1, (int)std::lround(2 * s));
-		// ---- the balls: the party on the left, the other side's on the right (a ring for an empty place, grey: fainted)
-		auto ball = [&](float x, int state)	// 0 empty, 1 standing, 2 fainted
-		{
-			if (state == 0) { sprite(PX_RING, 12, x, 16, kb, [&](char) { return p.line; }); return; }
-			sprite(PX_BALL, 12, x, 16, kb, [&](char c)
-				{ return c == '#' ? Color::hex(0x2a2830) : c == 'R' ? Color::hex(state == 2 ? 0x8a8890 : 0xe8504a) : Color::hex(state == 2 ? 0xb8b4b0 : 0xf4f0e8); });
-		};
-		float step = 12.0f * kb / s + 6;
-		for (int i = 0; i < 6; i++)
-			ball(22 + i * step, i < (int)sn.party.size() ? (sn.party[i].hp == 0 && !sn.party[i].egg ? 2 : 1) : 0);
-		int foes = std::min<int>(6, (int)sn.foeParty.size());
-		for (int i = 0; i < foes; i++)
-			ball(618 - 12.0f * kb / s - (foes - 1 - i) * step, sn.foeParty[i].hp == 0 ? 2 : 1);
-		if (sn.foes.empty()) { box("bubble", false, 18, 48, 604, 364); wrapped("Waiting for the battle...", 18, 40, 70, 560, 2, p.muted); return; }
-		// ---- you and the foe: a card each (a double battle: the two foes in half a card each)
-		auto card = [&](const pkmn::Mon& m, const char* who, float x, float y, float w, float h, bool icon)
-		{
-			box("bubble", false, x, y, w, h);
-			float tx = x + 14;
-			if (icon)
-			{
-				text(who, true, 13, x + 14, y + 10, p.accent, true, 1.0f);
-				box("slot", false, x + 12, y + 30, 72, 72);
-				monIcon(m.species, m.egg, x + 48 - 16.0f * k / s, y + 66 - 16.0f * k / s, k);
-				tx = x + 96;
-			}
-			float lw = text("Lv", false, 14, 0, 0, p.muted, false, 0, true), nw = num(std::to_string(m.level), 17, 0, 0, p.ink, true);
-			text("Lv", false, 14, x + w - 14 - nw - lw - 4, y + 12, p.muted);
-			num(std::to_string(m.level), 17, x + w - 14 - nw, y + 9, p.ink);
-			pokeName(m.nick.empty() ? t.speciesName(m.species) : m.nick, t.gender(m.species, m.pid), true, 18, tx, y + 10, x + w - tx - nw - lw - 26, p.ink);
-			float cx = tx, cy = icon ? y + 40 : y + 34;
-			for (int i = 0; i < 2; i++)
-				if (m.types[i] < pkmn::NUM_TYPES && (i == 0 || m.types[1] != m.types[0]))
-				{
-					typeChip(m.types[i], cx, cy);
-					cx += chip(lang::tr("Pokémon types", pkmn::typeName(m.types[i])), 0, 0, 0, true) + 6;
-				}
-			std::string st = pkmn::statusName(m.status);
-			if (!st.empty() && m.hp) chip(st, statusColour(st), cx + 4, cy);
-			float by = icon ? y + 74 : cy + 4, bx = icon ? tx : cx + (st.empty() ? 6 : 50);
-			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
-			float hw = num(hp, 15, 0, 0, p.ink, true);
-			if (icon)
-			{
-				hpBar(m.hp, m.maxHp, bx, by, x + w - 14 - bx);
-				num(hp, 15, x + w - 14 - hw, by + 14, p.ink);
-			}
-			else
-			{
-				hpBar(m.hp, m.maxHp, bx, by, x + w - 22 - hw - bx);
-				num(hp, 15, x + w - 14 - hw, by - 4, p.ink);
-			}
-		};
-		card(sn.lead, "You", 18, 48, 298, 124, true);
-		if (sn.foes.size() == 1) card(sn.foes[0], "Foe", 326, 48, 296, 124, true);
-		else for (size_t i = 0; i < 2 && i < sn.foes.size(); i++) card(sn.foes[i], "Foe", 326, 48 + i * 64, 296, 60, false);
-		// ---- your lead's moves, rated against the foe(s); the best one marked (pkmn::adviseBattle)
-		pkmn::BattleAdvice adv = pkmn::adviseBattle(sn.lead, sn.party, sn.foes[0], t, t.has.modernTypes);
-		box("bubble", false, 18, 180, 298, 236);
-		for (int i = 0; i < 4; i++)
-		{
-			float y = 190 + i * 56;
-			if (i) be->fill(std::round(X(30)), std::round(X(y - 5)), std::round(X(274)), std::max(1.0f, std::round(X(2))), p.line);
-			uint16_t mv = sn.lead.moves[i];
-			if (!mv) { text("-", true, 17, 32, y + 4, p.muted); continue; }
-			bool known = mv < t.moveInfo.size();
-			bool out = sn.lead.pp[i] == 0;
-			// the rating: the multiplier against each foe, coloured by the first
-			float r = 304;
-			if (known)
-			{
-				std::string e;
-				int q0 = 4;
-				if (t.moveInfo[mv].power == 0) e = "-";
-				else
-					for (size_t f = 0; f < sn.foes.size(); f++)
-					{
-						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.has.modernTypes);
-						if (f == 0) q0 = q;
-						e += (f ? " / " : "") + times(q);
-					}
-				uint32_t c = out ? 0x8a8a8a : e == "-" ? 0x8a8a8a : q0 >= 8 ? 0x3c9c4c : q0 == 4 ? 0x7a7a88 : q0 == 0 ? 0x484850 : 0xc84848;
-				r -= chip(e, c, 0, 0, true);
-				chip(e, c, r, y + 2);
-				typeChip(t.moveInfo[mv].type, 32, y + 28);
-				int mx = pkmn::maxPP(t.moveInfo[mv].pp, sn.lead.ppBonuses, i);
-				std::string pp = std::to_string(sn.lead.pp[i]) + "/" + std::to_string(mx);
-				float pw = num(pp, 15, 0, 0, p.ink, true);
-				num(pp, 15, 304 - pw, y + 29, out ? Color::hex(0xff8a96) : p.ink);
-				float lw = text("PP", true, 12, 0, 0, p.muted, true, 0, true);
-				text("PP", true, 12, 304 - pw - lw - 5, y + 32, p.muted, true);
-			}
-			if (i == adv.move) be->fill(std::round(X(22)), std::round(X(y + 2)), std::max(2.0f, std::round(X(4))), std::round(X(44)), p.accent);
-			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : i == adv.move ? p.accent : p.ink);
-		}
-		// ---- the foe: what it is weak to and resists
-		box("bubble", false, 326, 180, 296, 236);
-		const pkmn::Mon& f = sn.foes[0];
-		std::string fn = f.nick.empty() ? t.speciesName(f.species) : f.nick;
-		text(fit(fn, true, 17, 268), true, 17, 342, 192, p.accent);
-		if (adv.switchTo >= 0 && adv.switchTo < (int)sn.party.size())
-		{
-			// a better pick in the party: its name and the move it would use
-			const pkmn::Mon& m = sn.party[adv.switchTo];
-			pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 372);
-			be->fill(std::round(X(338)), std::round(X(378)), std::round(X(272)), std::max(1.0f, std::round(X(2))), p.line);
-			std::string who = m.nick.empty() ? t.speciesName(m.species) : m.nick;
-			float lw = text("Switch to", true, 13, 0, 0, p.muted, true, 0, true);
-			text("Switch to", true, 13, 342, 386, p.muted, true);
-			text(fit(who + "  " + t.moveName(m.moves[adv.switchMove]), true, 16, 262 - lw), true, 16, 350 + lw, 384, p.accent);
-		}
-		else pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
-	}
-
-	// ---- the pages that read the save: Map, Bag, Dex, Guide
-
-	namespace
-	{
-		const char* const PX_PREV[9] = { "....#", "...##", "..###", ".####", "#####", ".####", "..###", "...##", "....#" };
-		const char* const PX_NEXT[9] = { "#....", "##...", "###..", "####.", "#####", "####.", "###..", "##...", "#...." };
-	}
-
-	void Settings::pager(const SPal& p, int page, int pages, const std::string& left)
-	{
-		// the left text and the page in a box; back and on as two buttons at its right, each its whole box to tap
-		// (pagerStep), greyed at the first and the last page
-		bool paged = pages > 1;
-		box("slot", false, 18, 372, paged ? 392 : 604, 40);
-		if (!left.empty()) text(fit(left, false, 15, paged ? 280 : 560), false, 15, 34, 384, p.muted);
-		if (!paged) return;
-		std::string pg = std::to_string(page + 1) + " / " + std::to_string(pages);
-		num(pg, 16, 394 - num(pg, 16, 0, 0, p.ink, true), 382, p.ink);
-		pagerButtons(p, page, pages, PAGER);
-	}
-
-	const Settings::PagerButtons Settings::PAGER = { 418, 372, 98, 40, 8 }, Settings::GUIDE_PAGER = { 526, 374, 44, 32, 2 };
-
-	void Settings::pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b)
-	{
-		int k = std::max(1, (int)std::lround(2 * s));
-		for (int i = 0; i < 2; i++)
-		{
-			bool on = i ? page < pages - 1 : page > 0;
-			float bx = b.x + i * (b.w + b.gap);
-			box("slot", false, bx, b.y, b.w, b.h);
-			Color c = on ? p.accent : p.line;
-			sprite(i ? PX_NEXT : PX_PREV, 9, bx + b.w / 2 - 2.5f * k / s, b.y + b.h / 2 - 4.5f * k / s, k, [&](char) { return c; });
-		}
-	}
-
-	int Settings::pagerStep(float lx, float ly, const PagerButtons& b) const
-	{
-		if (ly < b.y - 4 || ly >= b.y + b.h + 6 || lx < b.x - 4) return 0;
-		return lx < b.x + b.w + b.gap / 2 ? -1 : 1;
-	}
-
-	void Settings::pokeMap(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		// ---- one box: the area's name along its top (the player's at the right), the region map as large as the box
-		// takes, a legend (or a tapped place's name) along its bottom
-		box("bubble", false, 18, 14, 604, 398);
-		std::string area = t.mapName(sn.mapsec);
-		if (area.empty()) area = sn.mapsec >= 0 ? "Somewhere unnamed" : "Unknown place";
-		float nw = sn.player.empty() ? 0 : text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
-		if (nw > 0) text(sn.player, true, 17, 604 - nw, 24, p.accent);
-		text(fit(area, true, 20, 560 - nw), true, 20, 36, 22, p.ink);
-		const float MX = 22, MY = 52, MW = 596, MH = 322;	// (where the map goes)
-		// ---- the region map from the ROM's own layout: a square a section (towns brighter), the area in the accent, the
-		// player a dot
-		pkMapW = pkMapH = 0;
-		const pkmn::RomTables::Grid* g = nullptr;
-		int best = 0;
-		for (auto& gr : t.grids)
-		{
-			int c = 0;
-			for (uint8_t v : gr.cells) c += v == sn.mapsec;
-			if (c > best) { best = c; g = &gr; }
-		}
-		if (!g && !t.grids.empty()) g = &t.grids[0];
-		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 64, 560, 2, p.muted); return; }
-		// the game's own region map picture under the sections when the ROM has one (pokemap.cpp), else squares
-		int gi = (int)(g - t.grids.data());
-		const pkmn::RomTables::MapImage* im = gi >= 0 && gi < (int)t.gridImage.size() && t.gridImage[gi] >= 0 &&
-			t.gridImage[gi] < (int)t.mapImages.size() ? &t.mapImages[t.gridImage[gi]] : nullptr;
-		float cell, ox, oy;
-		if (im)
-		{
-			// as large as the box takes, k panel pixels a picture pixel: a whole number of them in the texture (each a
-			// square), smoothed down to k (crisp, without the uneven columns of a nearest scale by 2.4)
-			if (tb != pkMapTables) { pkMapTex.clear(); pkMapTables = tb; }
-			float k = std::min(MW * s / im->w, MH * s / im->h);
-			int up = std::max(1, (int)std::ceil(k - 0.01f));
-			int key = t.gridImage[gi] * 16 + std::min(up, 15);
-			auto it = pkMapTex.find(key);
-			if (it == pkMapTex.end())
-			{
-				rnds::Bitmap bm;
-				bm.w = im->w * up; bm.h = im->h * up;
-				bm.px.resize((size_t)bm.w * bm.h * 4);
-				for (int y = 0; y < bm.h; y++)
-					for (int x = 0; x < bm.w; x++)
-						memcpy(&bm.px[((size_t)y * bm.w + x) * 4], &im->rgba[((size_t)(y / up) * im->w + x / up) * 4], 4);
-				it = pkMapTex.emplace(key, be->upload(bm, true)).first;
-			}
-			float pw = std::round(im->w * k), ph = std::round(im->h * k);
-			k = pw / im->w;
-			float px0 = std::round(X(MX + MW / 2) - pw / 2), py0 = std::round(X(MY) + (X(MH) - ph) / 2);
-			if (it->second) be->draw(it->second, px0, py0, pw, ph, Color(1, 1, 1, 1));
-			cell = 8.0f * k / s; ox = (px0 + im->cellX * k) / s; oy = (py0 + im->cellY * k) / s;
-		}
-		else
-		{
-			cell = std::floor(std::min((MW - 12) / g->w, (MH - 6) / g->h));
-			ox = MX + (MW - cell * g->w) / 2; oy = MY + (MH - cell * g->h) / 2;
-		}
-		pkMapX = ox; pkMapY = oy; pkMapCell = cell; pkMapW = g->w; pkMapH = g->h; pkMapCells = g->cells;
-		std::map<int, int> size;
-		for (uint8_t v : g->cells) size[v]++;
-		int x0 = 99, y0 = 99, x1 = -1, y1 = -1;
-		float th = std::max(2.0f, std::round(X(2.5f)));	// (an outline's thickness, panel pixels)
-		for (int y = 0; y < g->h; y++)
-			for (int x = 0; x < g->w; x++)
-			{
-				int v = g->cells[y * g->w + x];
-				if (v == t.mapsecNone || v == 0xff) continue;
-				bool here = v == sn.mapsec;
-				if (here) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
-				if (im)
-				{
-					// on the picture: the area and the section tapped outlined (their outer edges), nothing else drawn
-					if (!here && v != pkMapPick) continue;
-					// (a dark line outside, the colour inside it: seen on the map's own yellows and greens)
-					Color c = here ? p.accent : Color::hex(0xffffff), dark = Color::hex(0x101018);
-					float cx = std::round(X(ox + x * cell)), cy = std::round(X(oy + y * cell)), cw = std::round(X(ox + (x + 1) * cell)) - cx;
-					auto other = [&](int nx, int ny) { return nx < 0 || ny < 0 || nx >= g->w || ny >= g->h || g->cells[ny * g->w + nx] != v; };
-					for (int pass = 0; pass < 2; pass++)
-					{
-						float o = pass ? 0 : th, w = pass ? th : th;	// (pass 0: the dark line just outside)
-						Color cc = pass ? c : dark;
-						if (other(x, y - 1)) be->fill(cx - o, cy - o, cw + 2 * o, w, cc);
-						if (other(x, y + 1)) be->fill(cx - o, cy + cw - th + o, cw + 2 * o, w, cc);
-						if (other(x - 1, y)) be->fill(cx - o, cy - o, w, cw + 2 * o, cc);
-						if (other(x + 1, y)) be->fill(cx + cw - th + o, cy - o, w, cw + 2 * o, cc);
-					}
-					continue;
-				}
-				Color c = here ? p.accent : size[v] <= 2 ? p.ink : p.line;	// (a town: one or two squares)
-				if (v == pkMapPick && !here)	// (the square tapped: a frame in the accent)
-					be->fill(std::round(X(ox + x * cell - 1)), std::round(X(oy + y * cell - 1)), std::round(X(cell + 2)), std::round(X(cell + 2)), p.accent);
-				be->fill(std::round(X(ox + x * cell + 1)), std::round(X(oy + y * cell + 1)), std::round(X(cell - 2)), std::round(X(cell - 2)), c);
-			}
-		// the legend (or the name of the place tapped)
-		{
-			float ly = 384, lx = 36, sq = 12;
-			auto key = [&](Color c, const char* what, bool frame)
-			{
-				if (frame)
-				{
-					float fx = std::round(X(lx)), fy = std::round(X(ly + 3)), fw = std::round(X(sq));
-					be->fill(fx, fy, fw, th, c); be->fill(fx, fy + fw - th, fw, th, c); be->fill(fx, fy, th, fw, c); be->fill(fx + fw - th, fy, th, fw, c);
-				}
-				else be->fill(std::round(X(lx)), std::round(X(ly + 3)), std::round(X(sq)), std::round(X(sq)), c);
-				lx += sq + 6;
-				lx += text(what, false, 13, lx, ly, p.muted) + 16;
-			};
-			if (pkMapPick >= 0)
-			{
-				std::string nm = t.mapName(pkMapPick);
-				text(fit("Tapped: " + (nm.empty() ? std::string("(no name)") : nm), true, 15, 560), true, 15, 36, ly - 1, p.accent);
-			}
-			else if (im)
-			{
-				if (x1 >= 0) key(p.accent, "You are here", true);
-				else lx += text("Not on the region map here", false, 13, lx, ly, p.muted) + 16;
-				if (x1 >= 0)
-				{
-					be->fill(std::round(X(lx + 1)), std::round(X(ly + 4)), std::round(X(10)), std::round(X(10)), Color::hex(0xe8504a));
-					lx += 18;
-					lx += text("You", false, 13, lx, ly, p.muted) + 16;
-				}
-				text(fit("Tap the map: a place's name", false, 13, 600 - lx), false, 13, lx, ly, p.muted);
-			}
-			else
-			{
-				key(p.accent, "You are here", false);
-				key(p.ink, "Town", false);
-				key(p.line, "Route or area", false);
-				be->fill(std::round(X(lx + 1)), std::round(X(ly + 4)), std::round(X(10)), std::round(X(10)), Color::hex(0xe8504a));
-				lx += 18;
-				lx += text("You", false, 13, lx, ly, p.muted) + 16;
-				text(fit("Tap a square: its name", false, 13, 600 - lx), false, 13, lx, ly, p.muted);
-			}
-		}
-		if (x1 < 0)
-		{
-			if (!im) text("Not on the region map here", false, 14, 36, 358, p.muted);
-			return;
-		}
-		// the player: inside the area's squares by the place on its map (a route several squares long)
-		int w = 0, h = 0;
-		float fx = 0.5f, fy = 0.5f;
-		if (t.layoutSize(sn.layout, w, h)) { fx = std::min(1.0f, std::max(0.0f, (sn.x + 0.5f) / w)); fy = std::min(1.0f, std::max(0.0f, (sn.y + 0.5f) / h)); }
-		float px = ox + (x0 + fx * (x1 - x0 + 1)) * cell, py = oy + (y0 + fy * (y1 - y0 + 1)) * cell;
-		float r = std::max(6.0f, cell * 0.35f);
-		be->fill(std::round(X(px - r - 2)), std::round(X(py - r - 2)), std::round(X(2 * r + 4)), std::round(X(2 * r + 4)), p.ink);
-		be->fill(std::round(X(px - r)), std::round(X(py - r)), std::round(X(2 * r)), std::round(X(2 * r)), Color::hex(0xe8504a));
-	}
-
-	void Settings::pokeBag(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		static const char* const POCKETS[5] = { "Items", "Key items", "Balls", "TMs & HMs", "Berries" };
-		box("bubble", false, 18, 14, 604, 46);
-		float cw = 604.0f / 5;
-		for (int i = 0; i < 5; i++)
-		{
-			bool on = i == pkPocket;
-			float w = text(POCKETS[i], true, 15, 0, 0, p.ink, false, 0, true);
-			float tx = std::round(18 + i * cw + cw / 2 - w / 2);
-			text(POCKETS[i], true, 15, tx, 27, on ? p.accent : p.muted);
-			if (on) be->fill(std::round(X(tx)), std::round(X(48)), std::round(X(w)), std::round(X(3)), p.accent);
-		}
-		box("bubble", false, 18, 68, 604, 298);
-		const auto& list = sn.pockets[pkPocket];
-		const int PER = 18;	// two columns of nine
-		pkPages = std::max(1, (int)((list.size() + PER - 1) / PER));
-		pkBagPage = std::min(pkBagPage, pkPages - 1);
-		if (list.empty()) wrapped(t.has.bagUnsure ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
-			17, 40, 90, 560, 3, p.muted);
-		for (int i = 0; i < PER && pkBagPage * PER + i < (int)list.size(); i++)
-		{
-			const auto& e = list[pkBagPage * PER + i];
-			float x = 36 + (i / 9) * 296, y = 80 + (i % 9) * 31;
-			std::string c = "×" + std::to_string(e.count);
-			float w = num(c, 16, 0, 0, p.ink, true);
-			bool key = pkPocket == 1;	// (key items: one each, no count)
-			if (!key) num(c, 16, x + 268 - w, y + 2, p.ink);
-			text(fit(t.itemName(e.item), false, 17, key ? 268 : 260 - w), false, 17, x, y + 2, p.ink);
-		}
-		std::string money = sn.money >= 0 ? "Money " + std::to_string(sn.money) : "";
-		pager(p, pkBagPage, pkPages, money);
-	}
-
-	namespace
-	{
-		bool dexBit(const std::vector<uint8_t>& v, int nat) { int i = nat - 1; return i >= 0 && i / 8 < (int)v.size() && (v[i / 8] >> (i % 8) & 1); }
-	}
-
-	void Settings::pokeDex(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		// the list: the national numbers the save has seen (a CFRU hack's own flags where it keeps them; a hack whose
-		// flags weren't found: all of them)
-		bool known = !sn.dexSeen.empty();
-		std::vector<int> nats;
-		int maxNat = (int)t.dexSpecies.size() - 1;
-		if (!t.has.ownDex) maxNat = std::min(maxNat, 386);
-		int seen = 0, caught = 0;
-		for (int n = 1; n <= maxNat; n++)
-		{
-			if (!t.dexSpecies[n]) continue;
-			bool s = dexBit(sn.dexSeen, n), c = dexBit(sn.dexOwned, n);
-			seen += s || c; caught += c;
-			if (!known || s || c) nats.push_back(n);
-		}
-		box("bubble", false, 18, 14, 604, 46);
-		if (known)
-		{
-			float x = 36;
-			x += text("Seen", true, 15, x, 28, p.muted, true, 1.0f) + 8;
-			x += num(std::to_string(seen), 19, x, 25, p.ink) + 24;
-			x += text("Caught", true, 15, x, 28, p.muted, true, 1.0f) + 8;
-			num(std::to_string(caught), 19, x, 25, p.accent);
-		}
-		else text(fit(t.has.ownDex ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
-		box("bubble", false, 18, 68, 604, 298);
-		const int PER = 15;	// three columns of five
-		pkPages = std::max(1, (int)((nats.size() + PER - 1) / PER));
-		pkDexPage = std::min(pkDexPage, pkPages - 1);
-		pkDexShown.clear();
-		if (nats.empty()) wrapped("Nothing seen yet.", 17, 40, 90, 560, 2, p.muted);
-		int k = std::max(1, (int)std::lround(1 * s));
-		float cw = 604.0f / 3;
-		for (int i = 0; i < PER && pkDexPage * PER + i < (int)nats.size(); i++)
-		{
-			int n = nats[pkDexPage * PER + i];
-			pkDexShown.push_back(n);
-			float x = 18 + (i % 3) * cw, y = 68 + (i / 3) * 60;
-			uint16_t sp = t.dexSpecies[n];
-			bool c = dexBit(sn.dexOwned, n);
-			monIcon(sp, false, x + 10, y + 14, k * 1);
-			char nb[16];
-			snprintf(nb, sizeof nb, "%03d", n);
-			num(nb, 14, x + 50, y + 12, c || !known ? p.accent : p.muted);
-			text(fit(t.speciesName(sp), true, 16, cw - 60), true, 16, x + 50, y + 30, c || !known ? p.ink : p.muted);
-		}
-		pager(p, pkDexPage, pkPages, known ? "Tap one for its entry" : "");
-	}
-
-	void Settings::pokeDexMon(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		int n = pkDexNat;
-		uint16_t sp = n > 0 && n < (int)t.dexSpecies.size() ? t.dexSpecies[n] : 0;
-		bool known = !sn.dexSeen.empty(), caught = dexBit(sn.dexOwned, n);
-		box("bubble", false, 18, 14, 604, 398);
-		int k = std::max(1, (int)std::lround(2 * s));
-		box("slot", false, 36, 32, 76, 76);
-		monIcon(sp, false, 74 - 16.0f * k / s, 70 - 16.0f * k / s, k);
-		char nb[16];
-		snprintf(nb, sizeof nb, "%03d", n);
-		num(nb, 16, 128, 34, p.accent);
-		text(fit(t.speciesName(sp), true, 24, 300), true, 24, 128, 56, p.ink);
-		float cx = 128;
-		if (sp < t.speciesTypes.size())
-			for (int i = 0; i < 2; i++)
-			{
-				int ty = t.speciesTypes[sp][i];
-				if (i == 1 && ty == t.speciesTypes[sp][0]) break;
-				if (!pkmn::typeInGame(ty, t.has.modernTypes)) continue;
-				typeChip(ty, cx, 90);
-				cx += chip(lang::tr("Pokémon types", pkmn::typeName(ty)), 0, 0, 0, true) + 6;
-			}
-		if (known) text(caught ? "Caught" : "Seen", true, 15, 520, 40, caught ? p.accent : p.muted, true, 1.0f);
-		pkmn::RomTables::DexEntry e;
-		if (!t.dexEntry(n, e)) { wrapped("No entry in this game.", 17, 36, 130, 560, 2, p.muted); return; }
-		char size[96];
-		snprintf(size, sizeof size, "%s Pokémon  ·  %d.%d m  ·  %d.%d kg", e.category.c_str(), e.height / 10, e.height % 10, e.weight / 10, e.weight % 10);
-		text(fit(size, false, 17, 560), false, 17, 36, 130, p.ink);
-		be->fill(std::round(X(36)), std::round(X(160)), std::round(X(568)), std::max(1.0f, std::round(X(2))), p.line);
-		// where it lives (the wild tables, by region map section; the PokeDaisy idea): once it has been seen
-		std::vector<pkmn::RomTables::Where> wh;
-		if (!known || caught || dexBit(sn.dexSeen, n)) wh = t.where(sp);
-		int textLines = wh.empty() ? 8 : 5;
-		if (known && !caught) wrapped("Seen, not caught yet: the entry opens once one is caught.", 18, 36, 176, 568, 3, p.muted);
-		else wrapped(e.text, 18, 36, 176, 568, textLines, p.ink);
-		if (!wh.empty())
-		{
-			static const char* const HOW[6] = { "grass", "water", "rock smash", "old rod", "good rod", "super rod" };
-			text("Where", true, 14, 36, 290, p.muted, true, 1.0f);
-			for (size_t i = 0; i < wh.size() && i < 3; i++)
-			{
-				const auto& w = wh[i];
-				std::string place = w.mapsec >= 0 ? t.mapName(w.mapsec) : "";
-				if (place.empty()) place = "?";
-				char d[64];
-				if (w.minLv == w.maxLv) snprintf(d, sizeof d, "%s  ·  Lv %d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.percent);
-				else snprintf(d, sizeof d, "%s  ·  Lv %d-%d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.maxLv, w.percent);
-				float dw = text(d, false, 15, 0, 0, p.muted, false, 0, true);
-				text(d, false, 15, 604 - dw, 314 + i * 22, p.muted);
-				text(fit(place, true, 16, 560 - dw), true, 16, 36, 312 + i * 22, p.ink);
-			}
-		}
-		text("Tap to go back", false, 14, 36, 386, p.muted);
-	}
-
-	void Settings::pokeGuide(const SPal& p)
-	{
-		const pkmn::Snapshot& sn = companion->snapshot();
-		auto tb = companion->tables();
-		pkmn::RomTables none;
-		const pkmn::RomTables& t = tb ? *tb : none;
-		const pkmn::GameProfile* gi = companion->game();
-		int kk = std::max(1, (int)std::lround(1 * s));
-		// ---- left: the next goal, its team, how the party does against its type
-		box("bubble", false, 18, 14, 298, 398);
-		int got = 0;
-		for (int i = 0; i < 8; i++) got += sn.badges >= 0 && (sn.badges >> i & 1);
-		int next = -1;
-		for (int i = 0; i < 8 && sn.badges >= 0; i++) if (!(sn.badges >> i & 1)) { next = i; break; }
-		std::string line, who;
-		int type = -1;
-		if (t.has.leadersFromTrainers)
-		{
-			if (next >= 0 && next < (int)t.leaders.size())
-			{
-				who = t.leaders[next];
-				type = next < (int)t.leaderTypes.size() ? t.leaderTypes[next] : -1;
-				line = "Next: " + who + ", gym " + std::to_string(next + 1) + " of 8";
-				if (pkmn::typeInGame(type, true)) line += " (" + lang::tr("Pokémon types", pkmn::typeName(type)) + ")";
-			}
-			else if (next < 0 && sn.badges >= 0) line = "All eight badges: on to the league.";
-		}
-		else if (gi)
-		{
-			int count = 0;
-			const pkmn::Goal* goals = pkmn::goalsFor(gi->family, count);
-			int at = next >= 0 ? next : 8;
-			if (sn.champion) line = "Champion! The story is done; the post-game is yours.";
-			else if (at < count)
-			{
-				who = goals[at].rom; type = goals[at].type;
-				line = "Next: " + std::string(goals[at].who) + ", " + goals[at].where + " (" + lang::tr("Pokémon types", pkmn::typeName(type)) + ")";
-				if (at >= 8) line = "Next: the Pokémon League. First, " + std::string(goals[8].who) + " (" + lang::tr("Pokémon types", pkmn::typeName(goals[8].type)) + ")";
-			}
-		}
-		text("Badges", true, 14, 34, 28, p.muted, true, 1.0f);
-		for (int i = 0; i < 8; i++)
-		{
-			float bx = 120 + i * 22;
-			bool on = sn.badges >= 0 && (sn.badges >> i & 1);
-			be->fill(std::round(X(bx)), std::round(X(28)), std::round(X(16)), std::round(X(16)), on ? p.accent : p.line);
-		}
-		wrapped(line.empty() ? "No goal read from the save." : line, 17, 34, 54, 266, 3, p.ink);
-		// the team (a search of the ROM, kept while the goal is the same)
-		std::string key = who + "/" + std::to_string(sn.badges) + "/" + std::to_string((uintptr_t)tb.get());	// (the tables read since: again)
-		if (key != pkGoalKey)
-		{
-			pkGoalKey = key;
-			pkGoalTeam.clear();
-			if (!who.empty())
-			{
-				// (a gym's leader by the Leader class in FireRed, LeafGreen and their hacks: Giovanni's Rocket Hideout and Silph
-				// battles are a Boss's)
-				int cls = t.has.leadersFromTrainers || (gi && gi->family == pkmn::FIRERED && next >= 0) ? 0x54 : -1;
-				for (auto& m : t.team(who, &cls)) pkGoalTeam.push_back({ m.species, m.level });
-			}
-		}
-		if (type < 0 && !pkGoalTeam.empty())	// (a hack's leader: the type most of the team has)
-		{
-			std::map<int, int> c;
-			for (auto& m : pkGoalTeam) if (m.first < t.speciesTypes.size()) { c[t.speciesTypes[m.first][0]]++; if (t.speciesTypes[m.first][1] != t.speciesTypes[m.first][0]) c[t.speciesTypes[m.first][1]]++; }
-			int bestN = 0;
-			for (auto& e : c) if (e.second > bestN) { bestN = e.second; type = e.first; }
-		}
-		float y = 130;
-		if (!pkGoalTeam.empty())
-		{
-			text("Their team", true, 14, 34, y, p.muted, true, 1.0f);
-			y += 22;
-			for (size_t i = 0; i < pkGoalTeam.size() && i < 6; i++)
-			{
-				float x = 34 + (i % 2) * 134, yy = y + (i / 2) * 38;
-				monIcon(pkGoalTeam[i].first, false, x - 4, yy - 6, kk);
-				text(fit(t.speciesName(pkGoalTeam[i].first), true, 14, 92), true, 14, x + 32, yy, p.ink);
-				std::string lv = "Lv" + std::to_string(pkGoalTeam[i].second);
-				text(lv, false, 12, x + 32, yy + 17, p.muted);
-			}
-			y += ((std::min<size_t>(pkGoalTeam.size(), 6) + 1) / 2) * 38 + 6;
-		}
-		if (type >= 0 && pkmn::typeInGame(type, t.has.modernTypes) && y < 330)
-		{
-			// the party against that type: its best move's multiplier, and what it takes from that type
-			std::string h = "Against " + lang::tr("Pokémon types", pkmn::typeName(type));
-			text(h, true, 14, 34, y, p.muted, true, 1.0f);
-			y += 22;
-			for (size_t i = 0; i < sn.party.size() && y < 392; i++)
-			{
-				const pkmn::Mon& m = sn.party[i];
-				if (m.egg) continue;
-				int bestQ = -1;
-				for (int k = 0; k < 4; k++)
-				{
-					uint16_t mv = m.moves[k];
-					if (!mv || mv >= t.moveInfo.size() || t.moveInfo[mv].power <= 1) continue;
-					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.has.modernTypes));
-				}
-				int takes = pkmn::effect(type, m.types[0], m.types[1], t.has.modernTypes);
-				text(fit(!m.nick.empty() ? m.nick : t.speciesName(m.species), false, 15, 110), false, 15, 34, y, p.ink);
-				if (bestQ >= 0)
-				{
-					uint32_t c = bestQ >= 8 ? 0x3c9c4c : bestQ == 4 ? 0x7a7a88 : 0xc84848;
-					chip("hits " + times(bestQ), c, 150, y - 2);
-				}
-				uint32_t c2 = takes >= 8 ? 0xc84848 : takes == 4 ? 0x7a7a88 : 0x3c9c4c;
-				chip("takes " + times(takes), c2, 228, y - 2);
-				y += 26;
-			}
-		}
-		// ---- right: the wild Pokémon here (the ROM's encounter table), caught ones marked from the Pokédex
-		box("bubble", false, 326, 14, 296, 398);
-		static const char* const METHOD[6] = { "Grass", "Water", "Rock Smash", "Old Rod", "Good Rod", "Super Rod" };
-		std::string area = t.mapName(sn.mapsec);
-		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
-		// laid out in pages first: a row a species, as high as its icon takes (32 at 640x480; a whole number of panel
-		// pixels a pixel of it, so larger on a larger panel), a method's name over its first row on each page; the rows
-		// (their icons too) stop above the bottom line (the legend, the page and its buttons)
-		float ic = 32.0f * kk / s, step = std::max(28.0f, ic - 4), head = std::max(20.0f, ic / 2 + 2), last = 361 - ic / 2;
-		struct Row { int mth; pkmn::RomTables::Wild w; float y; bool head; };
-		std::vector<std::vector<Row>> pages(1);
-		float wy = 54;
-		for (int mth = 0; mth < 6; mth++)
-			for (auto& w : t.wild(sn.group, sn.num, mth))
-			{
-				bool first = pages.back().empty() || pages.back().back().mth != mth;
-				float at = wy + (first && !pages.back().empty() ? 4 : 0) + (first ? head : 0);
-				if (at > last && !pages.back().empty()) { pages.emplace_back(); first = true; at = 54 + head; }
-				pages.back().push_back({ mth, w, at, first });
-				wy = at + step;
-			}
-		int mapKey = sn.group * 1000 + sn.num;
-		if (mapKey != pkWildKey) { pkWildKey = mapKey; pkWildPage = 0; }	// (another map: its first page)
-		pkWildPages = (int)pages.size();
-		pkWildPage = std::min(pkWildPage, pkWildPages - 1);
-		bool dexKnown = !sn.dexSeen.empty();
-		for (auto& r : pages[pkWildPage])
-		{
-			if (r.head) text(METHOD[r.mth], true, 13, 342, r.y - head, p.accent, true, 1.0f);
-			const auto& w = r.w;
-			monIcon(w.species, false, 340, r.y + 9 - ic / 2, kk);	// (centred on the name)
-			float tx = 342 + ic;
-			int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
-			bool c = dexKnown && dexBit(sn.dexOwned, nat);
-			Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
-			text(fit(t.speciesName(w.species), true, 15, 490 - tx), true, 15, tx, r.y, nc);
-			std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
-			text(lv, false, 13, 496, r.y + 2, p.muted);
-			std::string pc = std::to_string(w.percent) + "%";
-			float pw = num(pc, 14, 0, 0, p.ink, true);
-			num(pc, 14, 606 - pw, r.y, p.ink);
-		}
-		bool paged = pkWildPages > 1;
-		if (pages[0].empty()) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
-		else if (dexKnown) text(fit("Accent: not caught yet", false, paged ? 12 : 13, paged ? 146 : 264), false, paged ? 12 : 13, 342, 384, p.muted);
-		if (paged)
-		{
-			// the page and the pager's two buttons, smaller
-			std::string pg = std::to_string(pkWildPage + 1) + "/" + std::to_string(pkWildPages);
-			num(pg, 14, 520 - num(pg, 14, 0, 0, p.ink, true), 383, p.ink);
-			pagerButtons(p, pkWildPage, pkWildPages, GUIDE_PAGER);
-		}
-	}
-
-	// ---- the game companion (gamecomp.h): the Pokémon companion's look for any GBA game with a definition. The whole
-	// panel: the page's header (its title, "Reference" on a page of notes), its widgets in a box (paged when they don't
-	// fit), the tab bar along the bottom (Battle only while the game is in a fight, when its definition can tell; a page
-	// whose "when" is false greyed). The game's own colour marks what the theme's accent marks elsewhere. The companion
-	// idea is PokeDaisy's (Lidor Itzhari).
-	namespace
-	{
-		const float GC_X = 36, GC_W = 568, GC_TOP = 88;
-		std::string gcLower(std::string t) { for (auto& c : t) c = (char)tolower((unsigned char)c); return t; }
-		bool gcHpLike(const std::string& l)
-		{
-			std::string t = gcLower(l);
-			return t == "hp" || t.find("health") != std::string::npos || t.find("life") != std::string::npos || t.compare(0, 3, "hp ") == 0;
-		}
-		std::string gcNum(double v)
-		{
-			char b[48];
-			if (std::fabs(v - std::round(v)) < 1e-9 && std::fabs(v) < 1e15) snprintf(b, sizeof b, "%lld", (long long)std::llround(v));
-			else snprintf(b, sizeof b, "%.1f", v);
-			return b;
-		}
-		// the game's colour where it marks text on the panel's dark boxes: lightened when it is too dark to read there
-		uint32_t gcInk(uint32_t rgb, bool lightTheme)
-		{
-			float r = (rgb >> 16 & 255) / 255.0f, g = (rgb >> 8 & 255) / 255.0f, b = (rgb & 255) / 255.0f;
-			float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-			float k = lightTheme ? (l > 0.6f ? -0.45f : 0) : (l < 0.45f ? 0.45f - l : 0);
-			auto ch = [&](float c) { float v = k >= 0 ? c + (1 - c) * k : c * (1 + k); return (uint32_t)std::lround(std::min(1.0f, std::max(0.0f, v)) * 255); };
-			return ch(r) << 16 | ch(g) << 8 | ch(b);
-		}
-		std::vector<std::string> gcParas(const std::string& t)
-		{
-			std::vector<std::string> r;
-			size_t a = 0, b;
-			while ((b = t.find('\n', a)) != std::string::npos) { if (b > a) r.push_back(t.substr(a, b - a)); a = b + 1; }
-			if (a < t.size()) r.push_back(t.substr(a));
-			return r;
-		}
-	}
-
-	int Settings::wrapLines(const std::string& t, float size, float width)
-	{
-		if (!R || t.empty()) return 0;
-		rnds::TextStyle st;
-		st.font = R; st.size = size;
-		return std::max(1, (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)width).size());
-	}
-
-	std::string Settings::gcValue(const gcomp::Val& v, const std::string& enumName, const std::string& format) const
-	{
-		if (!v.ok) return "-";
-		if (v.v.isStr) return v.v.s;
-		double n = v.v.n;
-		long long i = std::llround(n);
-		const gcomp::Def* d = gameComp ? gameComp->game() : nullptr;
-		if (!enumName.empty() && d) return d->enumLabel(enumName, (long)i);
-		char b[64];
-		if (format == "time60" || format == "secs")
-		{
-			long long sec = format == "time60" ? i / 60 : i;
-			if (sec >= 3600) snprintf(b, sizeof b, "%lld:%02lld:%02lld", sec / 3600, sec / 60 % 60, sec % 60);
-			else snprintf(b, sizeof b, "%lld:%02lld", sec / 60, sec % 60);
-			return b;
-		}
-		if (format == "hex") { snprintf(b, sizeof b, "0x%llX", (unsigned long long)i); return b; }
-		if (format == "pad2" || format == "pad3" || format == "pad6") { snprintf(b, sizeof b, "%0*lld", format[3] - '0', i); return b; }
-		std::string t = gcNum(n);
-		if (format == "thousands")
-		{
-			std::string r;
-			bool neg = !t.empty() && t[0] == '-';
-			std::string digits = neg ? t.substr(1) : t;
-			for (size_t k = 0; k < digits.size(); k++) { if (k && (digits.size() - k) % 3 == 0) r += ','; r += digits[k]; }
-			return (neg ? "-" : "") + r;
-		}
-		size_t at = format.find("{}");
-		if (at != std::string::npos) return format.substr(0, at) + t + format.substr(at + 2);
-		return t;
-	}
-
-	std::vector<Settings::GcBlock> Settings::gcBlocks(const gcomp::Page& pg, float width)
-	{
-		std::vector<GcBlock> out;
-		const gcomp::Snapshot& sn = gameComp->snapshot();
-		for (auto& w : pg.widgets)
-		{
-			if (w.when.set)
-			{
-				gcomp::Val on = gameComp->eval(w.when);
-				if (!on.ok || !on.v.truthy()) continue;
-			}
-			switch (w.type)
-			{
-			case gcomp::Widget::NUMBER: case gcomp::Widget::TEXT_W: out.push_back({ &w, 0, 32 }); break;
-			case gcomp::Widget::BAR: case gcomp::Widget::COUNT: out.push_back({ &w, 0, 48 }); break;
-			case gcomp::Widget::FLAGS:
-			{
-				// chips in rows across the width
-				float cx = 0, h = 26;
-				for (auto& it : w.items)
-				{
-					if (it.empty()) continue;
-					float cw = chip(it, 0, 0, 0, true);
-					if (cx > 0 && cx + cw > width) { cx = 0; h += 26; }
-					cx += cw + 6;
-				}
-				out.push_back({ &w, 0, h + (w.label.empty() ? 6 : 28) });
-				break;
-			}
-			case gcomp::Widget::GRID:
-			{
-				int n = 0;
-				for (auto& it : w.items) n += !it.empty();
-				out.push_back({ &w, 0, (float)((n + 3) / 4) * 26 + (w.label.empty() ? 6 : 28) });
-				break;
-			}
-			case gcomp::Widget::STATIC:
-			{
-				auto paras = gcParas(w.text);
-				for (size_t i = 0; i < paras.size(); i++)
-					out.push_back({ &w, (int)i, wrapLines(paras[i], 17, width) * 24.0f + 6 + (i == 0 && !w.label.empty() ? 24 : 0) });
-				break;
-			}
-			case gcomp::Widget::KV:
-				for (size_t i = 0; i < w.rows.size(); i++)
-					out.push_back({ &w, (int)i, std::max(1, wrapLines(w.rows[i].second, 16, width * 0.6f)) * 22.0f + 8 + (i == 0 && !w.label.empty() ? 24 : 0) });
-				break;
-			case gcomp::Widget::LIST:
-			{
-				const auto& rows = w.listId < (int)sn.lists.size() ? sn.lists[w.listId] : std::vector<std::vector<gcomp::Val>>();
-				out.push_back({ &w, -1, w.label.empty() ? (rows.empty() ? 30.0f : 4.0f) : (rows.empty() ? 54.0f : 26.0f) });
-				for (size_t i = 0; i < rows.size(); i++) out.push_back({ &w, (int)i, 34 });
-				break;
-			}
-			}
-		}
-		return out;
-	}
-
-	void Settings::gcBlock(const SPal& p, const GcBlock& b, float x, float y, float w)
-	{
-		const gcomp::Widget& wd = *b.w;
-		const gcomp::Def& d = *gameComp->game();
-		const gcomp::Snapshot& sn = gameComp->snapshot();
-		Color acc = Color::hex(gcInk(d.accent, light));
-		auto heading = [&](const std::string& l) { text(fit(l, true, 14, w), true, 14, x, y + 2, p.muted, true, 1.0f); };
-		switch (wd.type)
-		{
-		case gcomp::Widget::NUMBER: case gcomp::Widget::TEXT_W:
-		{
-			gcomp::Val v = gameComp->eval(wd.value);
-			std::string t = gcValue(v, wd.enumName, wd.format);
-			bool digits = v.ok && !v.v.isStr && wd.enumName.empty();
-			float vw = digits ? num(t, 19, 0, 0, p.ink, true) : text(fit(t, true, 19, w * 0.6f), true, 19, 0, 0, p.ink, false, 0, true);
-			if (digits) num(t, 19, x + w - vw, y + 4, v.ok ? p.ink : p.muted);
-			else text(fit(t, true, 19, w * 0.6f), true, 19, x + w - vw, y + 4, v.ok ? p.ink : p.muted);
-			text(fit(wd.label, false, 17, w - vw - 16), false, 17, x, y + 6, p.muted);
-			be->fill(std::round(X(x)), std::round(X(y + 30)), std::round(X(w)), std::max(1.0f, std::round(X(1))), p.line);
-			break;
-		}
-		case gcomp::Widget::BAR: case gcomp::Widget::COUNT:
-		{
-			gcomp::Val v = gameComp->eval(wd.value);
-			gcomp::Val m = gameComp->eval(wd.type == gcomp::Widget::BAR ? wd.max : wd.total);
-			double a = v.ok ? v.v.num() : 0, z = m.ok ? m.v.num() : 0;
-			if (wd.type == gcomp::Widget::COUNT && wd.bits && v.ok) a = __builtin_popcount((uint32_t)(int64_t)a);
-			std::string t = (v.ok ? gcNum(a) : "-") + " / " + (m.ok ? gcNum(z) : "-");
-			float vw = num(t, 16, 0, 0, p.ink, true);
-			num(t, 16, x + w - vw, y + 2, v.ok ? p.ink : p.muted);
-			text(fit(wd.label, false, 17, w - vw - 16), false, 17, x, y + 2, p.muted);
-			uint32_t rgb = wd.color ? wd.color : wd.type == gcomp::Widget::BAR && gcHpLike(wd.label) ? 0 : d.accent;
-			if (wd.type == gcomp::Widget::COUNT) rgb = wd.color ? wd.color : d.accent;
-			hpBar(v.ok ? (int)std::lround(std::min(a, 1e9)) : 0, m.ok ? (int)std::lround(std::min(z, 1e9)) : 0, x, y + 28, w, rgb);
-			break;
-		}
-		case gcomp::Widget::FLAGS: case gcomp::Widget::GRID:
-		{
-			float yy = y;
-			if (!wd.label.empty()) { heading(wd.label); yy += 24; }
-			gcomp::Val v = gameComp->eval(wd.value);
-			uint32_t bits = v.ok ? (uint32_t)(int64_t)v.v.num() : 0;
-			if (wd.invert) bits = ~bits;
-			float cx = 0;
-			int k = 0;
-			int sq = std::max(1, (int)std::lround(12 * s));
-			for (size_t i = 0; i < wd.items.size() && i < 32; i++)
-			{
-				const std::string& it = wd.items[i];
-				if (it.empty()) continue;
-				bool on = v.ok && (bits >> i & 1);
-				if (wd.type == gcomp::Widget::GRID)
-				{
-					float gx = x + (k % 4) * (w / 4), gy = yy + (k / 4) * 26;
-					be->fill(std::round(X(gx)), std::round(X(gy + 4)), (float)sq, (float)sq, on ? acc : p.line);
-					text(fit(it, false, 15, w / 4 - 24), false, 15, gx + 18, gy + 2, on ? p.ink : p.muted);
-					k++;
-					continue;
-				}
-				float cw = chip(it, 0, 0, 0, true);
-				if (cx > 0 && cx + cw > w) { cx = 0; yy += 26; }
-				chip(it, on ? d.accent : 0x4a4a52, x + cx, yy);
-				cx += cw + 6;
-			}
-			break;
-		}
-		case gcomp::Widget::STATIC:
-		{
-			auto paras = gcParas(wd.text);
-			float yy = y;
-			if (b.part == 0 && !wd.label.empty()) { heading(wd.label); yy += 24; }
-			if (b.part >= 0 && b.part < (int)paras.size()) wrapped(paras[b.part], 17, x, yy, w, 0, p.ink);
-			break;
-		}
-		case gcomp::Widget::KV:
-		{
-			float yy = y;
-			if (b.part == 0 && !wd.label.empty()) { heading(wd.label); yy += 24; }
-			if (b.part >= 0 && b.part < (int)wd.rows.size())
-			{
-				text(fit(wd.rows[b.part].first, true, 16, w * 0.38f), true, 16, x, yy + 2, acc);
-				wrapped(wd.rows[b.part].second, 16, x + w * 0.4f, yy, w * 0.6f, 0, p.ink);
-			}
-			break;
-		}
-		case gcomp::Widget::LIST:
-		{
-			const auto& rows = wd.listId < (int)sn.lists.size() ? sn.lists[wd.listId] : std::vector<std::vector<gcomp::Val>>();
-			if (b.part < 0)
-			{
-				float yy = y;
-				if (!wd.label.empty()) { heading(wd.label); yy += 24; }
-				if (rows.empty()) text(sn.seen ? "None right now." : "-", false, 16, x, yy + 4, p.muted);
-				break;
-			}
-			if (b.part >= (int)rows.size()) break;
-			const auto& row = rows[b.part];
-			be->fill(std::round(X(x)), std::round(X(y + 5)), std::round(X(3)), std::round(X(20)), acc);	// (a row to open)
-			be->fill(std::round(X(x)), std::round(X(y + 31)), std::round(X(w)), std::max(1.0f, std::round(X(1))), p.line);
-			x += 12; w -= 12;
-			// the name (the first field), then up to three others at the right, each "label value"
-			float right = x + w - 4;
-			for (int f = std::min((int)wd.fields.size(), 4) - 1; f >= 1; f--)
-			{
-				const gcomp::Field& fd = wd.fields[f];
-				std::string v = gcValue(row[f], fd.enumName, fd.format);
-				bool digits = row[f].ok && !row[f].v.isStr && fd.enumName.empty();
-				float vw = digits ? num(v, 16, 0, 0, p.ink, true) : text(fit(v, true, 16, 120), true, 16, 0, 0, p.ink, false, 0, true);
-				if (digits) num(v, 16, right - vw, y + 6, p.ink); else text(fit(v, true, 16, 120), true, 16, right - vw, y + 6, p.ink);
-				std::string l = fit(fd.label, false, 14, 90);
-				float lw = text(l, false, 14, 0, 0, p.muted, false, 0, true);
-				text(l, false, 14, right - vw - 6 - lw, y + 8, p.muted);
-				right -= vw + lw + 22;
-			}
-			std::string nm = gcValue(row[0], wd.fields[0].enumName, wd.fields[0].format);
-			text(fit(nm, true, 17, std::max(40.0f, right - x - 8)), true, 17, x + 2, y + 6, p.ink);
-			gcHits.push_back({ y, y + 32, wd.listId, b.part });
-			break;
-		}
-		}
-	}
-
-	void Settings::gcRowView(const SPal& p)
-	{
-		// a list's row in full: every field, one a line
-		const gcomp::Def& d = *gameComp->game();
-		const gcomp::Snapshot& sn = gameComp->snapshot();
-		const gcomp::Widget* lw = nullptr;
-		for (auto& w : d.pages[gcView].widgets) if (w.type == gcomp::Widget::LIST && w.listId == gcList) lw = &w;
-		if (!lw || gcList >= (int)sn.lists.size() || gcRow >= (int)sn.lists[gcList].size()) { gcList = gcRow = -1; return; }
-		const auto& row = sn.lists[gcList][gcRow];
-		box("bubble", false, 18, 14, 604, 54);
-		std::string nm = gcValue(row[0], lw->fields[0].enumName, lw->fields[0].format);
-		text(fit(nm, true, 22, 420), true, 22, 36, 28, p.ink);
-		std::string back = "Tap: back";
-		float bw = text(back, false, 15, 0, 0, p.muted, false, 0, true);
-		text(back, false, 15, 604 - bw, 32, p.muted);
-		box("bubble", false, 18, 76, 604, 336);
-		float y = GC_TOP;
-		for (size_t f = lw->fields.size() > 1 ? 1 : 0; f < lw->fields.size() && y + 32 <= 404; f++)
-		{
-			const gcomp::Field& fd = lw->fields[f];
-			std::string v = gcValue(row[f], fd.enumName, fd.format);
-			bool digits = row[f].ok && !row[f].v.isStr && fd.enumName.empty();
-			float vw = digits ? num(v, 19, 0, 0, p.ink, true) : text(fit(v, true, 19, GC_W * 0.6f), true, 19, 0, 0, p.ink, false, 0, true);
-			if (digits) num(v, 19, GC_X + GC_W - vw, y + 4, p.ink); else text(fit(v, true, 19, GC_W * 0.6f), true, 19, GC_X + GC_W - vw, y + 4, p.ink);
-			text(fit(fd.label, false, 17, GC_W - vw - 16), false, 17, GC_X, y + 6, p.muted);
-			be->fill(std::round(X(GC_X)), std::round(X(y + 30)), std::round(X(GC_W)), std::max(1.0f, std::round(X(1))), p.line);
-			y += 34;
-		}
-	}
-
-	void Settings::gcRender(const SPal& p)
-	{
-		const gcomp::Def& d = *gameComp->game();
-		const gcomp::Snapshot& sn = gameComp->snapshot();
-		gcHits.clear();
-		if (gcView < 0 || gcView >= gcomp::NUM_PAGES) gcView = gcomp::P_STATUS;
-		if (gcView == gcomp::P_BATTLE && d.pages[gcView].when.set && !gameComp->pageOn(gcView)) { gcView = gcomp::P_STATUS; gcList = gcRow = -1; }
-		gameComp->want(gcView, gcList);
-		const gcomp::Page& pg = d.pages[gcView];
-		if (gcRow >= 0) { gcRowView(p); if (gcRow >= 0) return; }
-		// ---- the header: the page, the game; "Reference" on a page of notes
-		box("bubble", false, 18, 14, 604, 54);
-		float rw = 0;
-		if (pg.reference)
-		{
-			rw = chip("Reference", 0x6a6a74, 0, 0, true);
-			chip("Reference", 0x6a6a74, 604 - rw, 30);
-			rw += 12;
-		}
-		else
-		{
-			std::string g = fit(d.title, true, 15, 260);
-			rw = text(g, true, 15, 0, 0, p.muted, false, 0, true);
-			text(g, true, 15, 604 - rw, 32, Color::hex(gcInk(d.accent, light)));
-			rw += 12;
-		}
-		text(fit(pg.title, true, 22, 568 - rw), true, 22, 36, 28, p.ink);
-		// ---- the page
-		bool live = !pg.reference;
-		if (live && !sn.seen)
-		{
-			box("bubble", false, 18, 76, 604, 336);
-			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
-			wrapped(why, 18, 40, 96, 560, 4, p.muted);
-			return;
-		}
-		if (pg.when.set && !gameComp->pageOn(gcView))
-		{
-			box("bubble", false, 18, 76, 604, 336);
-			wrapped("Nothing here right now: this page fills in when the game gets to it.", 18, 40, 96, 560, 3, p.muted);
-			return;
-		}
-		std::vector<GcBlock> blocks = gcBlocks(pg, GC_W);
-		// in screens: all of it when it fits the box, else as much as fits above the pager each time
-		const float full = 404 - GC_TOP, paged = 360 - GC_TOP;
-		float total = 0;
-		for (auto& b : blocks) total += b.h + 6;
-		std::vector<int> starts = { 0 };
-		if (total > full)
-		{
-			float h = 0;
-			for (size_t i = 0; i < blocks.size(); i++)
-			{
-				if (h > 0 && h + blocks[i].h > paged) { starts.push_back((int)i); h = 0; }
-				h += blocks[i].h + 6;
-			}
-		}
-		gcScreens = (int)starts.size();
-		gcScreen = std::max(0, std::min(gcScreen, gcScreens - 1));
-		box("bubble", false, 18, 76, 604, gcScreens > 1 ? 290 : 336);
-		size_t from = starts[gcScreen], to = gcScreen + 1 < gcScreens ? starts[gcScreen + 1] : blocks.size();
-		float y = GC_TOP, bottom = (gcScreens > 1 ? 360 : 404);
-		for (size_t i = from; i < to; i++)
-		{
-			if (y + std::min(blocks[i].h, 24.0f) > bottom) break;
-			gcBlock(p, blocks[i], GC_X, y, GC_W);
-			y += blocks[i].h + 6;
-		}
-		if (gcScreens > 1) pager(p, gcScreen, gcScreens, "");
-	}
-
-	int Settings::gcAudit(const std::function<void(const std::string&)>& log)
-	{
-		if (!gameComp || !gameComp->active()) return 0;
-		const gcomp::Def& d = *gameComp->game();
-		std::string f = d.file.substr(d.file.find_last_of('/') + 1);
-		int issues = 0;
-		SPal p = pal(light);
-		for (int i = 0; i < gcomp::NUM_PAGES; i++)
-		{
-			gcView = i; gcScreen = 0; gcList = gcRow = -1;
-			be->beginScreen(gScreen);
-			gcRender(p);
-			gcTabs(p);
-			be->endScreen();
-			const gcomp::Page& pg = d.pages[i];
-			char b[256];
-			if (gcScreens > 2) { snprintf(b, sizeof b, "%s %s: %d screens", f.c_str(), gcomp::pageIdName(i), gcScreens); log(b); issues++; }
-			if (pg.tab.empty() && text(pg.title, true, 13, 0, 0, Color(1, 1, 1, 1), true, 0.5f, true) > 604.0f / 8 - 6)
-			{ snprintf(b, sizeof b, "%s %s: the title \"%s\" is too long for its tab (give \"tab\")", f.c_str(), gcomp::pageIdName(i), pg.title.c_str()); log(b); issues++; }
-			size_t chars = 0;
-			for (auto& w : pg.widgets) { chars += w.text.size(); for (auto& r : w.rows) chars += r.second.size(); for (auto& it : w.items) chars += it.size(); }
-			if (pg.reference && chars < 60) { snprintf(b, sizeof b, "%s %s: a reference page with %zu characters", f.c_str(), gcomp::pageIdName(i), chars); log(b); issues++; }
-		}
-		gcView = gcomp::P_STATUS;
-		return issues;
-	}
-
-	void Settings::gcTabs(const SPal& p)
-	{
-		// the tab bar: the seven pages (Battle only in a fight when the game can tell), then Game (the panel's tiles)
-		const gcomp::Def& d = *gameComp->game();
-		box("bubble", false, 18, 424, 604, 46);
-		bool show[GC_TABS];
-		int n = 0;
-		for (int i = 0; i < GC_TABS; i++)
-		{
-			show[i] = (i >= gcomp::NUM_PAGES || d.pages[i].present) && (i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i));
-			n += show[i];
-		}
-		float cell = 604.0f / n, cx = 18;
-		Color acc = Color::hex(gcInk(d.accent, light));
-		static const char* const GENERIC[gcomp::NUM_PAGES] = { "Status", "Detail", "Battle", "Map", "Bag", "Collect", "Progress" };
-		for (int i = 0; i < GC_TABS; i++)
-		{
-			gcTabW[i] = 0;
-			if (!show[i]) continue;
-			bool on = gcView == i;
-			bool grey = i < gcomp::NUM_PAGES && d.pages[i].when.set && !gameComp->pageOn(i);
-			float size = n > 7 ? 13 : n > 6 ? 14 : 16;
-			// the tab's own name, else the page's title when it fits, else what the page is
-			std::string l = i == GC_GAME ? "Game" : !d.pages[i].tab.empty() ? d.pages[i].tab : d.pages[i].title;
-			if (i < gcomp::NUM_PAGES && d.pages[i].tab.empty() && text(l, true, size, 0, 0, p.ink, true, 0.5f, true) > cell - 6) l = GENERIC[i];
-			l = fit(l, true, size, cell - 6);
-			float w = text(l, true, size, 0, 0, p.ink, true, 0.5f, true);
-			float tx = std::round(cx + cell / 2 - w / 2);
-			text(l, true, size, tx, 438, on ? acc : grey ? p.line : p.muted, true, 0.5f);
-			if (on) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), acc);
-			gcTabX[i] = cx; gcTabW[i] = cell;
-			cx += cell;
-		}
 	}
 }

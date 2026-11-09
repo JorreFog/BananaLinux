@@ -17,8 +17,10 @@
 #include "wifi.h"
 #include "bluetooth.h"
 #include "colors.h"
+#include "speaker_eq.h"
 #include "pokemon.h"
 #include "gamecomp.h"
+#include "gba/panel.h"
 #include "lang.h"
 #include <map>
 #include <memory>
@@ -28,7 +30,6 @@
 #include <string>
 #include <vector>
 
-namespace banana::nds { class Pages; }
 namespace banana::gba { class Host; }
 
 namespace banana
@@ -120,12 +121,20 @@ namespace banana
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameKeysOpen() const { return gKeysOpen; }	// (tests: the panel's keyboard page is up)
+		// (tests: what the GBA Pokémon companion's panel shows: "game" (the tiles), "pages:<page>", "" without one; the
+		// game companion's: "game" or "gc:<page>")
+		std::string gamePanelView() const;
+		// a button pressed while the game runs (its evdev code; the game has it too): F shows the menu (its tiles, where
+		// F's combos are printed), a button whose job is Companion (Settings > Other systems > Buttons > Game Boy
+		// Advance: Back's, by default) switches between the menu and the companion. True: the panel changed
+		bool gameButton(int code, double nowMs);
 		void gameTouchMove(float x, float y);				// a press moving (the GBA companion's pages scroll by drag)
-		// the GBA Pokémon companion in the DS companion's pages (gba/host.h), when the host runs one for this game:
-		// shown in place of the Party, Battle, Dex and Guide views once its data is read (Map, Bag and Game stay
-		// today's). Set before gameOpen, null after gameClose
-		gba::Host* gbaHost = nullptr;
-		void gbaRelease();	// gbaHost is going: its pages let go of it (before it does)
+		// the GBA Pokémon companion's pages (gba/panel.h) for the game the host runs one for: host, null none (after
+		// gameOpen, with companion set); gbaRelease before the host goes
+		void gbaAttach(gba::Host* host);
+		void gbaRelease();
+		int gbaReady() const { return gbaPanel.ready(); }			// (tests: 1 its data read, -1 none, 0 not yet)
+		std::string gbaTitle() const { return gbaPanel.title(); }
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
 		// the Pokémon companion (pokemon.h), when the host runs one for this game: the party, the battle and the
 		// achievements as tabs in the panel's middle box (set before gameOpen, null after gameClose)
@@ -203,6 +212,7 @@ namespace banana
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
+			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
@@ -234,7 +244,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -280,9 +290,9 @@ namespace banana
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
 		std::string pgTitle, pgRom;
-		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0;	// (pg3d, pgMic, pgRes, pgTiming: 0 as in Settings)
+		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU };
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
@@ -381,6 +391,22 @@ namespace banana
 		Result touchColors(float cx, float cy);
 		void renderColors();
 		void colorsPattern(int screen, float y0, float h);
+		// Speaker EQ: what is being tried (playing already: the plugin follows the file) and what was kept; the
+		// profiles Profile offers, read when the page opens
+		speakereq::State eqEdit, eqSaved;
+		std::vector<speakereq::Choice> eqChoices;
+		int eqRow = 0;
+		std::string eqText;				// what the plugin was given last (the curve drawn is its)
+		std::vector<double> eqCurve, eqProfCurve;	// eqText's curve and the profile's own, at the graph's frequencies (dB)
+		// what each slider shows: the curve's level at its frequency (the profile with the changes made to it), and the
+		// profile's own there (the tick on its track)
+		double eqBand[speakereq::BANDS] = {}, eqBandProfile[speakereq::BANDS] = {};
+		std::string eqShare() const { return speakereq::shareDir(assets); }	// (/usr/share/banana/speaker-eq)
+		void openEq();
+		void eqLive(const speakereq::State& s);
+		Result pressEq(Key k);
+		Result touchEq(float cx, float cy);
+		void renderEq();
 		std::vector<wifi::Network> nets;
 		wifi::Status wstat;
 		bool scanning = false, scannedOnce = false, wifiEnabled = true;
@@ -688,48 +714,29 @@ namespace banana
 		int gSeen = -1;						// the watch's generation last drawn
 		int awardsSeen = 0; bool wake = false;	// (gameWake)
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
-		// the companion's tabs: what the middle box shows, the party member opened, the battle last seen; where the
-		// tabs were drawn (for touch)
-		// the companion's views: it has the whole panel, with a tab bar along the bottom (Party, Battle in a battle,
-		// Game: the panel as without it, achievements and tiles); the member whose summary is open; the battle last
-		// seen; where the tabs were drawn (for touch); the party icons as textures, by species (+1000 the egg)
-		// Map, Bag, Dex and Guide read the save's own data (pokemon.h: Snapshot ext); the bag's pocket and page, the
-		// Pokédex's page and the entry open; the guide's look-ups (a trainer's team: a ROM search) kept by goal
-		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE, PK_NDS };
-		// PK_NDS: gbaHost's pages (their own tabs; their Back to game goes to PK_GAME, whose tab bar comes back to them)
-		std::unique_ptr<nds::Pages> gbaPages;
-		bool gbaOn() const;					// gbaHost's pages can show (its data read)
-		void gbaShow(int view);				// a tab of today's bar: its page in gbaHost's pages, or today's view
-		enum { PK_TABS = 7 };
-		int pkView = PK_PARTY, pkMon = 0, pkMonPage = 0;	// (the summary's right column: 0 the moves, 1 the stats)
-		bool pkBattle = false;
-		float pkTabX[PK_TABS] = {}, pkTabW[PK_TABS] = {};
-		int pkPocket = 0, pkBagPage = 0, pkDexPage = 0, pkDexNat = 0, pkPages = 1;
-		std::vector<int> pkDexShown;	// the national numbers on the Pokédex page drawn (for touch)
-		// the Map page's grid as drawn (for touch: a tapped square's section named under the map), the section tapped
-		float pkMapX = 0, pkMapY = 0, pkMapCell = 0;
-		int pkMapW = 0, pkMapH = 0, pkMapPick = -1;
-		std::vector<uint8_t> pkMapCells;
-		std::string pkGoalKey;
-		std::vector<std::pair<uint16_t, uint8_t>> pkGoalTeam;
-		int pkWildPage = 0, pkWildPages = 1, pkWildKey = -1;	// the guide's wild Pokémon: the page shown, how many, its map
-		void pokeMap(const SPal& p);
-		void pokeBag(const SPal& p);
-		void pokeDex(const SPal& p);
-		void pokeDexMon(const SPal& p);
-		void pokeGuide(const SPal& p);
+		gba::Panel gbaPanel;		// the GBA Pokémon companion's pages
+		// the companion's switch (either companion): the icon on the menu's header, the button that switches
+		std::vector<int> gCompKeys;	// (the buttons whose job is Companion: evdev codes, read at gameOpen)
+		rnds::TexPtr gIconTex;
+		int gIconBadge = -1;
+		bool compOn() const;
+		bool compCorner(float lx, float ly) const;	// (CSS px: the top-right corner, the icon's and Menu's place)
+		void compIcon();
+		void compToggle();
+		void compMenu();
 		void pager(const SPal& p, int page, int pages, const std::string& left);
 		// a pager's back and on buttons, side by side (w x h each, gap between): drawn, greyed at the first and the
 		// last page; a tap on them: -1 back, 1 on, 0 neither (each button's whole box and a little around it)
 		struct PagerButtons { float x, y, w, h, gap; };
-		static const PagerButtons PAGER, GUIDE_PAGER;	// the pages' own (Bag, Pokédex, the game companion), the Guide's
+		static const PagerButtons PAGER;	// (the game companion's pages)
 		void pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b);
 		int pagerStep(float lx, float ly, const PagerButtons& b) const;
 		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
 		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
 		// rows were drawn (for touch)
-		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };
-		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1;
+		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };	// (GC_GAME: the menu)
+		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1, gcLast = 0;	// (gcLast: the page the menu left)
+		bool gcFightAtMenu = false;	// (a fight was on when the menu was shown: back to the page left, not Battle)
 		bool gcBattle = false;
 		float gcTabX[GC_TABS] = {}, gcTabW[GC_TABS] = {};
 		struct GcHit { float y0, y1; int list, row; };
@@ -737,28 +744,16 @@ namespace banana
 		struct GcBlock { const gcomp::Widget* w; int part; float h; };	// a widget, or one of its rows/paragraphs
 		void gcRender(const SPal& p);
 		void gcTabs(const SPal& p);
+		void gcMenuButton(const SPal& p);
 		void gcRowView(const SPal& p);
 		std::vector<GcBlock> gcBlocks(const gcomp::Page& pg, float width);
 		void gcBlock(const SPal& p, const GcBlock& b, float x, float y, float w);
 		std::string gcValue(const gcomp::Val& v, const std::string& enumName, const std::string& format) const;
 		int wrapLines(const std::string& t, float size, float width);
-		std::map<int, rnds::TexPtr> pkIcons;
-		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
-		std::map<int, rnds::TexPtr> pkMapTex;				// the region map pictures uploaded (by picture and scale), and their tables
-		std::shared_ptr<const pkmn::RomTables> pkMapTables;
-		void pokeRender(const SPal& p);
-		void pokeParty(const SPal& p);
-		void pokeSummary(const SPal& p);
-		void pokeBattle(const SPal& p);
-		void pokeTabs(const SPal& p);
-		float pokeMatchups(const SPal& p, int t1, int t2, float x, float y, float w, float bottom);
 		float num(const std::string& t, float size, float x, float top, const rnds::Color& c, bool measureOnly = false);
-		void typeChip(int type, float x, float y);
 		float chip(const std::string& label, uint32_t rgb, float x, float y, bool measureOnly = false);
 		void hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb = 0);
-		void monIcon(uint16_t species, bool egg, float x, float y, int k);	// at x, y (CSS px), k device px a pixel
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
-		float pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const rnds::Color& c);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);

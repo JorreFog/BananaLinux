@@ -11,6 +11,8 @@
 /ui/tests/lang-test
 /ui/tests/input-test
 /ui/tests/lang-raw-test
+/ui/tests/wav-test
+/ui/tests/gba-hidden-items
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
 /system/bananad/bananad
@@ -34,3 +36,5 @@ __pycache__/
 ui/tests/nds-logic-test
 ui/tests/nds-ram-test
 ui/tests/nds-romfile-test
+/ui/tests/eq-test
+/ui/libasound_module_pcm_banana_eq.so

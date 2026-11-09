@@ -4,12 +4,16 @@
  "game": "seaglass",
  "code": "BPEE",
  "title": "Pokemon Emerald Seaglass (v3.0)",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "The ROM itself (Emerald Seaglass 3.0, pokeemerald-expansion based): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
   "pret/pokeemerald: Emerald's story order and fight places, which Seaglass keeps",
   "pokemonemeraldseaglass.com, PokéHarbor (2024-08) and poke-hack-hub: features, retypes, evolution items",
-  "A fan 'Professor Oak Challenge' guide for Seaglass 3.0 (Google Docs): legendary locations"
+  "A fan 'Professor Oak Challenge' guide for Seaglass 3.0 (Google Docs): legendary locations",
+  "Seaglass 3.0 official documentation by Nemo622 (PDF, mirrored at pokeporto.com/wp-content/uploads/2024/09/Pokemon-Emerald-Seaglass-Documentation-v3.0.pdf): items, legendaries, minigames",
+  "Mewlax's Professor Oak Challenge guide for Seaglass 3.0 (docs.google.com/document/d/1sqlBgI44MwvRo13Osqk5DmJ7oosxmg05CSC0ALs1ZAI): route-by-route walkthrough",
+  "PokéHarbor's Seaglass page (pokeharbor.com/?p=52602): the v2.0-v3.0 changelogs",
+  "The ROM's event scripts (Seaglass 3.0): the legendary encounters' species and levels (setvar/setwildbattle), read on the PC"
  ],
  "places": {
   "route-103": {
@@ -206,9 +210,50 @@
   },
   "new-mauville": {
    "name": "New Mauville"
+  },
+  "route-115": {
+   "name": "Route 115"
+  },
+  "sealed-chamber": {
+   "name": "Sealed Chamber"
+  },
+  "desert-ruins": {
+   "name": "Desert Ruins"
+  },
+  "island-cave": {
+   "name": "Island Cave"
+  },
+  "ancient-tomb": {
+   "name": "Ancient Tomb"
+  },
+  "abandoned-ship": {
+   "name": "Abandoned Ship"
+  },
+  "terra-cave": {
+   "name": "Terra Cave"
+  },
+  "marine-cave": {
+   "name": "Marine Cave"
+  },
+  "route-134": {
+   "name": "Route 134"
   }
  },
  "milestones": [
+  {
+   "id": "story-birch",
+   "name": "Choose a starter (Route 101)",
+   "kind": "story",
+   "place": "route-101",
+   "done_when": "party",
+   "opens": [
+    "littleroot-town",
+    "route-101"
+   ],
+   "tips": "Save Professor Birch from a Zigzagoon with a starter from his bag. All three are wild in the Safari Zone later (Mudkip south-west, Torchic north-west, Treecko south-east).",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
   {
    "id": "rival-route-103",
    "name": "Rival: first battle (Route 103)",
@@ -217,11 +262,13 @@
    "level_cap": 5,
    "foe": [
     {
-     "name": "MAY",
+     "name": "May",
+     "class": "Pkmn Trainer",
      "ace_level": 5
     },
     {
-     "name": "BRENDAN",
+     "name": "Brendan",
+     "class": "Pkmn Trainer",
      "ace_level": 5
     }
    ],
@@ -244,7 +291,8 @@
    "level_cap": 9,
    "foe": [
     {
-     "name": "GRUNT",
+     "name": "Grunt",
+     "class": "Team Aqua",
      "ace_level": 9
     }
    ],
@@ -268,7 +316,8 @@
    "theme": "rock",
    "level_cap": 15,
    "foe": {
-    "name": "ROXANNE",
+    "name": "Roxanne",
+    "class": "Leader",
     "ace_level": 15
    },
    "done_when": "badge:1",
@@ -288,7 +337,8 @@
    "level_cap": 11,
    "foe": [
     {
-     "name": "GRUNT",
+     "name": "Grunt",
+     "class": "Team Aqua",
      "ace_level": 11
     }
    ],
@@ -309,11 +359,13 @@
    "level_cap": 15,
    "foe": [
     {
-     "name": "MAY",
+     "name": "May",
+     "class": "Pkmn Trainer",
      "ace_level": 15
     },
     {
-     "name": "BRENDAN",
+     "name": "Brendan",
+     "class": "Pkmn Trainer",
      "ace_level": 15
     }
    ],
@@ -332,7 +384,8 @@
    "theme": "fighting",
    "level_cap": 19,
    "foe": {
-    "name": "BRAWLY",
+    "name": "Brawly",
+    "class": "Leader",
     "ace_level": 19
    },
    "done_when": "badge:2",
@@ -347,6 +400,21 @@
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
+   "id": "story-granite-cave",
+   "name": "Letter for Steven (Granite Cave)",
+   "kind": "story",
+   "place": "granite-cave",
+   "done_when": "later",
+   "opens": [
+    "dewford-town",
+    "route-106",
+    "granite-cave"
+   ],
+   "tips": "Mr. Briney sails you from Route 104 to Dewford. A hiker on the first floor gives HM05 Flash; Steven waits in the last room. A King's Rock lies on the shore above the cave's entrance.",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
    "id": "team-museum",
    "name": "Team Aqua at the Oceanic Museum",
    "kind": "team",
@@ -354,11 +422,13 @@
    "level_cap": 15,
    "foe": [
     {
-     "name": "GRUNT",
+     "name": "Grunt",
+     "class": "Team Aqua",
      "ace_level": 14
     },
     {
-     "name": "GRUNT",
+     "name": "Grunt",
+     "class": "Team Aqua",
      "ace_level": 15
     }
    ],
@@ -381,11 +451,13 @@
    "level_cap": 20,
    "foe": [
     {
-     "name": "MAY",
+     "name": "May",
+     "class": "Pkmn Trainer",
      "ace_level": 20
     },
     {
-     "name": "BRENDAN",
+     "name": "Brendan",
+     "class": "Pkmn Trainer",
      "ace_level": 20
     }
    ],
@@ -399,6 +471,25 @@
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
+   "id": "rival-wally-mauville",
+   "name": "Wally in Mauville",
+   "kind": "rival",
+   "place": "mauville-city",
+   "level_cap": 16,
+   "foe": [
+    {
+     "name": "Wally",
+     "class": "Pkmn Trainer",
+     "ace_level": 16
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wally challenges you outside the gym with his Lv 16 Ralts.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
    "id": "gym-3-wattson",
    "name": "Gym 3: Wattson",
    "kind": "gym",
@@ -407,7 +498,8 @@
    "theme": "electric",
    "level_cap": 24,
    "foe": {
-    "name": "WATTSON",
+    "name": "Wattson",
+    "class": "Leader",
     "ace_level": 24
    },
    "done_when": "badge:3",
@@ -422,6 +514,84 @@
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
+   "id": "story-winstrates",
+   "name": "The Winstrate family (Route 111)",
+   "kind": "story",
+   "place": "route-111",
+   "level_cap": 18,
+   "foe": [
+    {
+     "name": "Victor",
+     "class": "Winstrate",
+     "ace_level": 16
+    },
+    {
+     "name": "Victoria",
+     "class": "Winstrate",
+     "ace_level": 17
+    },
+    {
+     "name": "Vivi",
+     "class": "Winstrate",
+     "ace_level": 15
+    },
+    {
+     "name": "Vicky",
+     "class": "Winstrate",
+     "ace_level": 18
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Four battles in a row in their house south of the desert: Victor (Pidgeotto, Zigzagoon, Lv 16), Victoria (Sunflora 17), Vivi (Marill, Tangela, Numel, Lv 15), Vicky (Meditite 18).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (Route111_WinstrateFamilysHouse)"
+  },
+  {
+   "id": "story-gabby-ty",
+   "name": "Gabby & Ty (interview double battles)",
+   "kind": "story",
+   "place": "route-111",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 17
+    },
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 27
+    },
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 30
+    },
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 33
+    },
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 36
+    },
+    {
+     "name": "Gabby & Ty",
+     "class": "Interviewer",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The TV crew double-battles you on Hoenn's routes as in Emerald; their team grows each time: Magnemite and Whismur at 17, up to Magnezone and Exploud at 39.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (Gabby & Ty scripts)"
+  },
+  {
    "id": "team-mt-chimney",
    "name": "Team Magma at Mt. Chimney",
    "kind": "team",
@@ -429,12 +599,19 @@
    "level_cap": 25,
    "foe": [
     {
-     "name": "TABITHA",
+     "name": "Tabitha",
+     "class": "Magma Admin",
      "ace_level": 22
     },
     {
-     "name": "MAXIE",
+     "name": "Maxie",
+     "class": "Magma Leader",
      "ace_level": 25
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Magma",
+     "ace_level": 20
     }
    ],
    "done_when": "later",
@@ -448,7 +625,7 @@
     "meteor-falls",
     "mt-chimney"
    ],
-   "tips": "Tabitha (Numel, Poochyena, Dunsparce, Houndour (Lv 18-22)) and Maxie (Mightyena, Gligar, Camerupt (Lv 24-25)) at the summit. Water and Ground moves.",
+   "tips": "Tabitha (Numel, Poochyena, Dunsparce, Houndour (Lv 18-22)) and Maxie (Mightyena, Gligar, Camerupt (Lv 24-25)) at the summit. Water and Ground moves. Two grunts (Dunsparce or Gligar, Lv 20) guard the way.",
    "quality": "reference-only",
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
@@ -461,7 +638,8 @@
    "theme": "fire",
    "level_cap": 29,
    "foe": {
-    "name": "FLANNERY",
+    "name": "Flannery",
+    "class": "Leader",
     "ace_level": 29
    },
    "done_when": "badge:4",
@@ -483,7 +661,8 @@
    "theme": "normal",
    "level_cap": 31,
    "foe": {
-    "name": "NORMAN",
+    "name": "Norman",
+    "class": "Leader",
     "ace_level": 31
    },
    "done_when": "badge:5",
@@ -496,24 +675,6 @@
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
-   "id": "rival-wally-mauville",
-   "name": "Wally in Mauville",
-   "kind": "rival",
-   "place": "mauville-city",
-   "level_cap": 16,
-   "foe": [
-    {
-     "name": "WALLY",
-     "ace_level": 16
-    }
-   ],
-   "done_when": "later",
-   "opens": [],
-   "tips": "Wally challenges you outside the gym with his Lv 16 Ralts.",
-   "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
-  },
-  {
    "id": "team-weather-institute",
    "name": "Team Aqua at the Weather Institute",
    "kind": "team",
@@ -521,7 +682,23 @@
    "level_cap": 28,
    "foe": [
     {
-     "name": "SHELLY",
+     "name": "Shelly",
+     "class": "Aqua Admin",
+     "ace_level": 28
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
+     "ace_level": 26
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
+     "ace_level": 27
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
      "ace_level": 28
     }
    ],
@@ -530,9 +707,9 @@
     "route-118",
     "route-119"
    ],
-   "tips": "Shelly: Ludicolo, Mightyena (Lv 28). Flying or Poison moves for Ludicolo, Fighting or Fairy for Mightyena.",
+   "tips": "Grunts at Lv 26-28 (Murkrow, Masquerain, Electabuzz, Persian and Carvanha among them), then Shelly: Ludicolo, Mightyena (Lv 28). Flying or Poison moves for Ludicolo, Fighting or Fairy for Mightyena. You get a Castform afterwards.",
    "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+   "source": "ROM Seaglass 3.0 trainer table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); pret/pokeemerald story order"
   },
   {
    "id": "rival-route-119",
@@ -542,11 +719,13 @@
    "level_cap": 31,
    "foe": [
     {
-     "name": "MAY",
+     "name": "May",
+     "class": "Pkmn Trainer",
      "ace_level": 31
     },
     {
-     "name": "BRENDAN",
+     "name": "Brendan",
+     "class": "Pkmn Trainer",
      "ace_level": 31
     }
    ],
@@ -565,7 +744,8 @@
    "theme": "flying",
    "level_cap": 33,
    "foe": {
-    "name": "WINONA",
+    "name": "Winona",
+    "class": "Leader",
     "ace_level": 33
    },
    "done_when": "badge:6",
@@ -586,11 +766,13 @@
    "level_cap": 36,
    "foe": [
     {
-     "name": "MAY",
+     "name": "May",
+     "class": "Pkmn Trainer",
      "ace_level": 36
     },
     {
-     "name": "BRENDAN",
+     "name": "Brendan",
+     "class": "Pkmn Trainer",
      "ace_level": 36
     }
    ],
@@ -605,19 +787,54 @@
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
+   "id": "team-mt-pyre-summit",
+   "name": "Team Aqua at Mt. Pyre",
+   "kind": "team",
+   "place": "mt-pyre",
+   "level_cap": 32,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
+     "ace_level": 32
+    }
+   ],
+   "trainer_ids": [
+    22,
+    23,
+    24,
+    568
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-122",
+    "mt-pyre"
+   ],
+   "tips": "Aqua grunts on the way up: Arbok, Tentacruel (Lv 32), Mightyena and Carvanha, Wailmer and Cradily (Lv 30). Team Aqua leaves with the orb and you are given the Magma Emblem. Unown grow outside, Ditto at the foggy summit.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table (ids 22-24, 568); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
    "id": "team-mt-pyre",
-   "name": "Mt. Pyre and the Magma Hideout",
+   "name": "Team Magma Hideout (Jagged Pass)",
    "kind": "team",
    "place": "magma-hideout",
    "level_cap": 39,
    "foe": [
     {
-     "name": "TABITHA",
+     "name": "Tabitha",
+     "class": "Magma Admin",
      "ace_level": 33
     },
     {
-     "name": "MAXIE",
+     "name": "Maxie",
+     "class": "Magma Leader",
      "ace_level": 39
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Magma",
+     "ace_level": 22
     }
    ],
    "done_when": "later",
@@ -627,9 +844,9 @@
     "jagged-pass",
     "magma-hideout"
    ],
-   "tips": "The orb is taken from Mt. Pyre; in the Magma Hideout Tabitha (Numel, Dodrio, Murkrow, Camerupt (Lv 26-33)) and Maxie (Gliscor, Crobat, Ursaring, Camerupt (Lv 37-39)) wake Groudon. Water moves.",
+   "tips": "The Magma Emblem opens the hideout on Jagged Pass; a grunt (Gligar, Shiftry, Lv 22) guards the door. Inside, Tabitha (Numel, Dodrio, Murkrow, Camerupt (Lv 26-33)) and Maxie (Gliscor, Crobat, Ursaring, Camerupt (Lv 37-39)) wake Groudon. Water moves.",
    "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+   "source": "ROM Seaglass 3.0 trainer table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); pret/pokeemerald (JaggedPass scripts)"
   },
   {
    "id": "team-aqua-hideout",
@@ -639,7 +856,8 @@
    "level_cap": 34,
    "foe": [
     {
-     "name": "MATT",
+     "name": "Matt",
+     "class": "Aqua Admin",
      "ace_level": 34
     }
    ],
@@ -647,9 +865,9 @@
    "opens": [
     "aqua-hideout"
    ],
-   "tips": "Matt: Mightyena, Golbat (Lv 34). Electric moves.",
+   "tips": "Surf from Lilycove's north-east to the hideout; a Dubious Disc lies in the entrance room and the Master Ball in a side room (take the right warp pads). Matt: Mightyena, Golbat (Lv 34). Electric moves.",
    "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+   "source": "ROM Seaglass 3.0 trainer table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "gym-7-tate-liza",
@@ -660,7 +878,8 @@
    "theme": "psychic",
    "level_cap": 42,
    "foe": {
-    "name": "TATE&LIZA",
+    "name": "Tate&liza",
+    "class": "Leader",
     "ace_level": 42
    },
    "done_when": "badge:7",
@@ -678,12 +897,19 @@
    "level_cap": 44,
    "foe": [
     {
-     "name": "MAXIE",
+     "name": "Maxie",
+     "class": "Magma Leader",
      "ace_level": 44
     },
     {
-     "name": "TABITHA",
-     "ace_level": 40
+     "name": "Grunt",
+     "class": "Team Magma",
+     "ace_level": 30
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Magma",
+     "ace_level": 32
     }
    ],
    "done_when": "later",
@@ -691,9 +917,9 @@
     "route-124",
     "mossdeep-city"
    ],
-   "tips": "A double battle beside Steven (Metang, Skarmory, Aggron (Lv 42-44)) against Tabitha (Camerupt, Dodrio, Honchkrow (Lv 36-40)) and Maxie (Gliscor, Crobat, Shiftry, Ursaluna, Dodrio, Camerupt (Lv 42-44)).",
+   "tips": "Grunts (Lv 30-32) fill the Space Center. Seaglass dropped Emerald's multi battle beside Steven: Maxie fights you in a double battle with six Pokémon: Gliscor, Crobat, Shiftry, Ursaluna, Dodrio, Camerupt (Lv 42-44). Water and Ice moves.",
    "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+   "source": "ROM Seaglass 3.0 trainer table; PokéHarbor: Seaglass changelog v2.0-3.0 (v2.0 fixes)"
   },
   {
    "id": "team-seafloor-cavern",
@@ -703,8 +929,24 @@
    "level_cap": 43,
    "foe": [
     {
-     "name": "ARCHIE",
+     "name": "Archie",
+     "class": "Aqua Leader",
      "ace_level": 43
+    },
+    {
+     "name": "Shelly",
+     "class": "Aqua Admin",
+     "ace_level": 37
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
+     "ace_level": 35
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Aqua",
+     "ace_level": 36
     }
    ],
    "done_when": "later",
@@ -716,7 +958,7 @@
     "shoal-cave",
     "seafloor-cavern"
    ],
-   "tips": "Archie: Wailord, Breloom, Crobat, Sharpedo (Lv 41-43). Electric moves for Wailord, Sharpedo and Crobat; Flying or Psychic for Breloom. Shelly's later team in the ROM is Sharpedo, Whiscash (Lv 37).",
+   "tips": "Dive on Route 128. Grunts at Lv 35-36 and Shelly (Sharpedo, Whiscash, Lv 37) on the way, then Archie: Wailord, Breloom, Crobat, Sharpedo (Lv 41-43). Electric moves for Wailord, Sharpedo and Crobat; Flying or Psychic for Breloom.",
    "quality": "reference-only",
    "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
@@ -737,6 +979,18 @@
    "source": "pret/pokeemerald story order (Seaglass keeps Emerald's)"
   },
   {
+   "id": "legend-rayquaza",
+   "name": "Rayquaza (Sky Pillar)",
+   "kind": "legendary",
+   "place": "sky-pillar",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Once it has calmed Sootopolis, Wallace gives you a second Master Ball; go back to the top of Sky Pillar with the Mach Bike. Lv 70.",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
+  },
+  {
    "id": "gym-8-juan",
    "name": "Gym 8: Juan",
    "kind": "gym",
@@ -745,15 +999,16 @@
    "theme": "water",
    "level_cap": 46,
    "foe": {
-    "name": "JUAN",
+    "name": "Juan",
+    "class": "Leader",
     "ace_level": 46
    },
    "done_when": "badge:8",
    "opens": [],
-   "badge_note": "Rain Badge: Waterfall.",
+   "badge_note": "Rain Badge: Waterfall (the HM itself is the Scuba Safari's first prize). Juan gives TM Ice Beam instead of Water Pulse.",
    "tips": "Water types: Starmie, Whiscash, Sealeo, Octillery, Kingdra (Lv 41-46). Electric and Grass moves; Kingdra is Water/Dragon (Dragon, Fairy).",
    "quality": "reference-only",
-   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+   "source": "ROM Seaglass 3.0 trainer table; PokéHarbor: Seaglass changelog v2.0-3.0; Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "rival-wally",
@@ -763,7 +1018,8 @@
    "level_cap": 45,
    "foe": [
     {
-     "name": "WALLY",
+     "name": "Wally",
+     "class": "Pkmn Trainer",
      "ace_level": 45
     }
    ],
@@ -787,7 +1043,8 @@
    "level_cap": 49,
    "foe": [
     {
-     "name": "SIDNEY",
+     "name": "Sidney",
+     "class": "Elite Four",
      "ace_level": 49
     }
    ],
@@ -807,7 +1064,8 @@
    "level_cap": 51,
    "foe": [
     {
-     "name": "PHOEBE",
+     "name": "Phoebe",
+     "class": "Elite Four",
      "ace_level": 51
     }
    ],
@@ -827,7 +1085,8 @@
    "level_cap": 53,
    "foe": [
     {
-     "name": "GLACIA",
+     "name": "Glacia",
+     "class": "Elite Four",
      "ace_level": 53
     }
    ],
@@ -847,7 +1106,8 @@
    "level_cap": 55,
    "foe": [
     {
-     "name": "DRAKE",
+     "name": "Drake",
+     "class": "Elite Four",
      "ace_level": 55
     }
    ],
@@ -866,7 +1126,8 @@
    "level_cap": 58,
    "foe": [
     {
-     "name": "WALLACE",
+     "name": "Wallace",
+     "class": "Champion",
      "ace_level": 58
     }
    ],
@@ -884,7 +1145,23 @@
    "level_cap": 57,
    "foe": [
     {
-     "name": "WALLY",
+     "name": "Wally",
+     "class": "Pkmn Trainer",
+     "ace_level": 48
+    },
+    {
+     "name": "Wally",
+     "class": "Pkmn Trainer",
+     "ace_level": 51
+    },
+    {
+     "name": "Wally",
+     "class": "Pkmn Trainer",
+     "ace_level": 54
+    },
+    {
+     "name": "Wally",
+     "class": "Pkmn Trainer",
      "ace_level": 57
     }
    ],
@@ -902,7 +1179,8 @@
    "level_cap": 78,
    "foe": [
     {
-     "name": "STEVEN",
+     "name": "Steven",
+     "class": "Pkmn Trainer",
      "ace_level": 78
     }
    ],
@@ -924,9 +1202,407 @@
    "opens": [
     "battle-frontier"
    ],
-   "tips": "A fully working Battle Frontier; an NPC at its entrance edits EVs and IVs.",
+   "tips": "A fully working Battle Frontier (Battle Tent and Factory restored in 2.0). An NPC running laps at its entrance opens the EV/IV editor.",
    "quality": "reference-only",
-   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "post-rematch-roxanne",
+   "name": "Rematch: Roxanne",
+   "kind": "postgame",
+   "place": "rustboro-city",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Roxanne",
+     "class": "Leader",
+     "ace_level": 37
+    },
+    {
+     "name": "Roxanne",
+     "class": "Leader",
+     "ace_level": 42
+    },
+    {
+     "name": "Roxanne",
+     "class": "Leader",
+     "ace_level": 47
+    },
+    {
+     "name": "Roxanne",
+     "class": "Leader",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Roxanne (aces at Lv 37, 42, 47 and 52), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-brawly",
+   "name": "Rematch: Brawly",
+   "kind": "postgame",
+   "place": "dewford-town",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Brawly",
+     "class": "Leader",
+     "ace_level": 37
+    },
+    {
+     "name": "Brawly",
+     "class": "Leader",
+     "ace_level": 42
+    },
+    {
+     "name": "Brawly",
+     "class": "Leader",
+     "ace_level": 48
+    },
+    {
+     "name": "Brawly",
+     "class": "Leader",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Brawly (aces at Lv 37, 42, 48 and 52), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-wattson",
+   "name": "Rematch: Wattson",
+   "kind": "postgame",
+   "place": "mauville-city",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Wattson",
+     "class": "Leader",
+     "ace_level": 40
+    },
+    {
+     "name": "Wattson",
+     "class": "Leader",
+     "ace_level": 45
+    },
+    {
+     "name": "Wattson",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Wattson",
+     "class": "Leader",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Wattson (aces at Lv 40, 45, 50 and 55), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-flannery",
+   "name": "Rematch: Flannery",
+   "kind": "postgame",
+   "place": "lavaridge-town",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Flannery",
+     "class": "Leader",
+     "ace_level": 40
+    },
+    {
+     "name": "Flannery",
+     "class": "Leader",
+     "ace_level": 45
+    },
+    {
+     "name": "Flannery",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Flannery",
+     "class": "Leader",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Flannery (aces at Lv 40, 45, 50 and 55), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-norman",
+   "name": "Rematch: Norman",
+   "kind": "postgame",
+   "place": "petalburg-city",
+   "level_cap": 60,
+   "foe": [
+    {
+     "name": "Norman",
+     "class": "Leader",
+     "ace_level": 45
+    },
+    {
+     "name": "Norman",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Norman",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Norman",
+     "class": "Leader",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Norman (aces at Lv 45, 50, 55 and 60), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-winona",
+   "name": "Rematch: Winona",
+   "kind": "postgame",
+   "place": "fortree-city",
+   "level_cap": 60,
+   "foe": [
+    {
+     "name": "Winona",
+     "class": "Leader",
+     "ace_level": 45
+    },
+    {
+     "name": "Winona",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Winona",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Winona",
+     "class": "Leader",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Winona (aces at Lv 45, 50, 55 and 60), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-tate-liza",
+   "name": "Rematch: Tate & Liza",
+   "kind": "postgame",
+   "place": "mossdeep-city",
+   "level_cap": 65,
+   "foe": [
+    {
+     "name": "Tate&liza",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Tate&liza",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Tate&liza",
+     "class": "Leader",
+     "ace_level": 60
+    },
+    {
+     "name": "Tate&liza",
+     "class": "Leader",
+     "ace_level": 65
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Tate & Liza (aces at Lv 50, 55, 60 and 65), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "post-rematch-juan",
+   "name": "Rematch: Juan",
+   "kind": "postgame",
+   "place": "sootopolis-city",
+   "level_cap": 66,
+   "foe": [
+    {
+     "name": "Juan",
+     "class": "Leader",
+     "ace_level": 51
+    },
+    {
+     "name": "Juan",
+     "class": "Leader",
+     "ace_level": 56
+    },
+    {
+     "name": "Juan",
+     "class": "Leader",
+     "ace_level": 61
+    },
+    {
+     "name": "Juan",
+     "class": "Leader",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The ROM keeps four stronger teams for Juan (aces at Lv 51, 56, 61 and 66), Emerald's Match Call rematches.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald (leader rematches)"
+  },
+  {
+   "id": "brain-anabel",
+   "name": "Salon Maiden Anabel (Battle Tower)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Anabel",
+     "class": "Salon Maiden"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Tower's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-tucker",
+   "name": "Dome Ace Tucker (Battle Dome)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Tucker",
+     "class": "Dome Ace"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Dome's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-spenser",
+   "name": "Palace Maven Spenser (Battle Palace)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Spenser",
+     "class": "Palace Maven"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Palace's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-greta",
+   "name": "Arena Tycoon Greta (Battle Arena)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Greta",
+     "class": "Arena Tycoon"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Arena's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-noland",
+   "name": "Factory Head Noland (Battle Factory)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Noland",
+     "class": "Factory Head"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Factory's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-lucy",
+   "name": "Pike Queen Lucy (Battle Pike)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Lucy",
+     "class": "Pike Queen"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Pike's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
+  },
+  {
+   "id": "brain-brandon",
+   "name": "Pyramid King Brandon (Battle Pyramid)",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Brandon",
+     "class": "Pyramid King"
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Battle Pyramid's Frontier Brain; Seaglass 2.0 made every facility work. Pokémon are set to Lv 50 (or Open Level); a silver symbol at the first meeting, gold at the second.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; pret/pokeemerald (src/frontier_util.c)"
   },
   {
    "id": "legend-mewtwo",
@@ -936,21 +1612,69 @@
    "level_cap": 80,
    "done_when": "none",
    "opens": [],
-   "tips": "Lv 80 in Steven's room in Granite Cave.",
+   "tips": "After the sailor's first three quests, talk to him in Steven's room at the end of Granite Cave: Mewtwo, Lv 80. A good use of a Master Ball.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
+  },
+  {
+   "id": "legend-lati",
+   "name": "Latios or Latias (Southern Island)",
+   "kind": "legendary",
+   "place": "southern-island",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the 7th badge the eyepatch sailor in Mossdeep gives the S.S. Ticket and the Eon Ticket. One Lati, at random, at Lv 50; run and re-enter for the other one. The other comes after the League (also roaming).",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
+  },
+  {
+   "id": "legend-mew-faraway",
+   "name": "Mew (Faraway Island)",
+   "kind": "legendary",
+   "place": "faraway-island",
+   "level_cap": 30,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The sailor gives the Old Sea Map once you have Rhydon's Pokédex entry. Corner Mew in the grass; Lv 30.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
+  },
+  {
+   "id": "legend-jirachi-white-rock",
+   "name": "Jirachi (Mossdeep's White Rock)",
+   "kind": "legendary",
+   "place": "mossdeep-city",
+   "level_cap": 10,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Talk to the woman beside Mossdeep's White Rock, then check the rock with a Wishing Star in the bag. Lv 10.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); ROM 3.0 event scripts"
+  },
+  {
+   "id": "legend-deoxys-birth-island",
+   "name": "Deoxys (Birth Island)",
+   "kind": "legendary",
+   "place": "birth-island",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The sailor gives the Aurora Ticket once you have Rayquaza's Pokédex entry. Solve the triangle puzzle; Deoxys is Lv 70 and knows Recover.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
   },
   {
    "id": "legend-navel-rock",
    "name": "Lugia and Ho-Oh (Navel Rock)",
    "kind": "legendary",
    "place": "navel-rock",
-   "level_cap": 70,
+   "level_cap": 50,
    "done_when": "none",
    "opens": [],
-   "tips": "Lugia on the bottom floor, Ho-Oh on the top; reachable before the Champion. (No level given: cap shown is a guess.)",
+   "tips": "Show the eyepatch sailor in Mossdeep Octillery's Pokédex entry for the Mystic Ticket; sail from Lilycove. Lugia (bottom floor) and Ho-Oh (top), both Lv 50, both catchable before the Champion.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); ROM 3.0 event scripts; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
   },
   {
    "id": "legend-beasts",
@@ -960,9 +1684,9 @@
    "level_cap": 50,
    "done_when": "none",
    "opens": [],
-   "tips": "One at random at high tide; set the clock to 3-8 AM or PM. They reset after the League. (No level given.)",
+   "tips": "After the sailor's first three quests he waits in Shoal Cave's ice room (lowest floor; reach it at low tide, clock 3-8 AM or PM) and summons one at random at Lv 50. The other two come after beating the Elite Four again.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); ROM 3.0 event scripts; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
   },
   {
    "id": "legend-birds",
@@ -972,36 +1696,41 @@
    "level_cap": 50,
    "done_when": "none",
    "opens": [],
-   "tips": "One at a time at the summit; reset after the League. (No level given.)",
+   "tips": "After the sailor's first three quests he summons one at random at Mt. Pyre's summit, Lv 50. Beat the Elite Four again for the next.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); ROM 3.0 event scripts"
   },
   {
    "id": "legend-regis",
    "name": "Regirock, Regice, Registeel",
    "kind": "legendary",
-   "place": "route-111",
-   "level_cap": 50,
+   "place": "sealed-chamber",
+   "level_cap": 40,
    "done_when": "none",
    "opens": [
+    "route-134",
+    "sealed-chamber",
+    "desert-ruins",
+    "island-cave",
+    "ancient-tomb",
     "route-105",
     "route-120"
    ],
-   "tips": "Regirock on Route 111, Regice on Route 105, Registeel on Route 120. (No level given.)",
+   "tips": "As in Emerald: dive on Route 134 to the Sealed Chamber, use Dig on the back wall, then read the inner wall with Wailord first and Relicanth last. Regirock (Desert Ruins, Route 111), Regice (Island Cave, Route 105), Registeel (Ancient Tomb, Route 120), each Lv 40.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
   },
   {
    "id": "legend-celebi",
    "name": "Celebi (Route 119)",
    "kind": "legendary",
    "place": "route-119",
-   "level_cap": 50,
+   "level_cap": 40,
    "done_when": "none",
    "opens": [],
-   "tips": "A shrine on Route 119, reached with the Acro Bike and a sailor. (No level given.)",
+   "tips": "After the sailor's first three quests: take the Acro Bike up behind the Weather Institute to the shrine north of it and talk to the sailor there. Lv 40.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM 3.0 event scripts"
   },
   {
    "id": "legend-weather",
@@ -1010,10 +1739,13 @@
    "place": "route-119",
    "level_cap": 70,
    "done_when": "none",
-   "opens": [],
-   "tips": "After the League, follow the Weather Institute's reports. (No level given.)",
+   "opens": [
+    "terra-cave",
+    "marine-cave"
+   ],
+   "tips": "After the League, the scientist upstairs in the Weather Institute names a route with heavy rain (Kyogre, Marine Cave, Dive) or drought (Groudon, Terra Cave); both Lv 70. Their mist blocks sleep: paralyse instead.",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF); ROM 3.0 event scripts"
   }
  ],
  "steps": [
@@ -1076,40 +1808,348 @@
    "done_when": "later",
    "quality": "reference-only",
    "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "step-dexnav",
+   "title": "DexNav from Mom",
+   "text": "After Birch gives the Pokédex, your mother installs the DexNav as you leave Littleroot. Every ~200 steps it finds a nearby Pokémon, half the time a 'hidden' one; chaining raises shiny odds, IVs and egg-move chances.",
+   "stage": "rival-route-103",
+   "places": [
+    "littleroot-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "step-exp-share",
+   "title": "Exp. Share from Scott",
+   "text": "Just after Wally's catching lesson, Scott stops you outside Petalburg with the Exp. Share: the whole party gains EXP, held back by the soft level cap.",
+   "stage": "team-petalburg-woods",
+   "places": [
+    "petalburg-city",
+    "route-104"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-petalburg-stand",
+   "title": "Petalburg merchant stand",
+   "text": "The Happy Trainer stand in Petalburg sells EXP Candies, Ability Capsules, stat feathers, Choice items and vitamins; more stock unlocks with each badge. Pedro there adds Eviolite and Flame Orb after Gym 6, Loaded Dice and Toxic Orb after Gym 7.",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "petalburg-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "step-mints",
+   "title": "Nature mints on Route 104",
+   "text": "The Pretty Petal flower shop on Route 104 sells nature mints (and the Wailmer Pail for berries).",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "route-104"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-cut",
+   "title": "HM01 Cut in Rustboro",
+   "text": "The house next to Rustboro's Pokémon Center gives HM01 Cut; with the Stone Badge any Pokémon that can learn it cuts trees, no move slot needed.",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "rustboro-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "step-littleroot-grass",
+   "title": "Littleroot's new grass",
+   "text": "After the Stone Badge, cut into the grass in Littleroot Town: Eevee, Mareep, Natu, Drowzee and the Applin line's Applin.",
+   "stage": "team-rusturf",
+   "places": [
+    "littleroot-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "step-timer-balls",
+   "title": "Timer Balls",
+   "text": "A man on the Rustboro side of Rusturf Tunnel gives you a ball, and Rustboro's Mart then sells Timer Balls.",
+   "stage": "team-rusturf",
+   "places": [
+    "rusturf-tunnel",
+    "rustboro-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-old-rod",
+   "title": "Old Rod in Dewford",
+   "text": "A fisherman wandering Dewford gives the Old Rod. Horsea fished on Route 106 can hold a Dragon Scale.",
+   "stage": "story-granite-cave",
+   "places": [
+    "dewford-town",
+    "route-106"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-slateport-market",
+   "title": "Stones at Slateport's market",
+   "text": "A stall in the market sells Water, Thunder, Fire, Sun and Moon Stones (no Leaf Stone yet). The Fan Club gives a Soothe Bell for a friendly lead.",
+   "stage": "team-museum",
+   "places": [
+    "slateport-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-pacifidlog-early",
+   "title": "Fly to Pacifidlog early",
+   "text": "After the museum fight, an NPC by Slateport's Pokémon Center takes you to Pacifidlog: grass with Scyther and Heracross, the apple seller and the Scuba Safari.",
+   "stage": "team-museum",
+   "places": [
+    "slateport-city",
+    "pacifidlog-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-scuba-safari",
+   "title": "Scuba Safari",
+   "text": "The sailor on Pacifidlog's east platform runs it: 200 tiles and 5 encounters underwater, no Dive needed. Score = rarity + 3x level + IVs + HP left. The first high score gives HM07 Waterfall; also a cheap training spot (Lapras, Relicanth).",
+   "stage": "rival-route-110",
+   "places": [
+    "pacifidlog-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-route-110",
+   "title": "Route 110 without Cycling Road",
+   "text": "Cycling Road is gone in Seaglass. The Trick House is still here; the rival gives the Itemfinder after the fight.",
+   "stage": "rival-route-110",
+   "places": [
+    "route-110"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "step-mauville",
+   "title": "Bike, Rock Smash and pinball",
+   "text": "Mauville gives a free bike and HM06 Rock Smash. Its Game Corner's pinball wins Pinball Points for apricorn balls and Alolan-form eggs.",
+   "stage": "gym-3-wattson",
+   "places": [
+    "mauville-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-good-rod",
+   "title": "Good Rod on Route 118",
+   "text": "The Good Rod fisherman now stands on the near bank of Route 118, so you can get it before Surf.",
+   "stage": "gym-3-wattson",
+   "places": [
+    "route-118"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-contests",
+   "title": "Contests in Verdanturf",
+   "text": "The Contest Hall moved to Verdanturf (an NPC there resets Sheen); the Battle Tent moved to Lilycove. A Metal Coat lies in Rusturf Tunnel's Verdanturf end.",
+   "stage": "gym-3-wattson",
+   "places": [
+    "verdanturf-town",
+    "rusturf-tunnel"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-box-link",
+   "title": "Pokémon Box Link",
+   "text": "After Wattson, a scientist in Slateport's Pokémon Center gives the Box Link: the PC from anywhere. Clear Rusturf Tunnel's rocks for HM04 Strength.",
+   "stage": "team-mt-chimney",
+   "places": [
+    "slateport-city",
+    "rusturf-tunnel"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-route-112-north",
+   "title": "North of Mauville",
+   "text": "The cable car stays shut until the Meteor Falls scene: walk Fiery Path, Route 113, Fallarbor and Route 114 first. Route 115's grass, south of Meteor Falls, is reachable too.",
+   "stage": "team-mt-chimney",
+   "places": [
+    "route-112",
+    "fiery-path",
+    "route-113",
+    "fallarbor-town",
+    "route-114",
+    "meteor-falls",
+    "route-115"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-surf",
+   "title": "HM03 Surf",
+   "text": "Norman's win opens Surf: Squirtle in Petalburg's water, Staryu on Route 107, a Metal Coat at the Abandoned Ship and Wattson's key to New Mauville.",
+   "stage": "gym-5-norman",
+   "places": [
+    "petalburg-city",
+    "route-107",
+    "abandoned-ship",
+    "new-mauville"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-devon-scope",
+   "title": "Devon Scope and the Fortree shrines",
+   "text": "Steven gives the Devon Scope on Route 120's bridge. In Fortree, check every shrine from east to west; the last one (left of the Pokémon Center) holds a second Shiny Charm.",
+   "stage": "gym-6-winona",
+   "places": [
+    "route-120",
+    "fortree-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-magma-emblem",
+   "title": "Magma Emblem",
+   "text": "At Mt. Pyre's summit you receive the Magma Emblem; take it back to Jagged Pass to open the Magma Hideout. Then Team Aqua steals the submarine in Slateport.",
+   "stage": "team-mt-pyre",
+   "places": [
+    "mt-pyre",
+    "jagged-pass"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-mossdeep-items",
+   "title": "Mossdeep gifts",
+   "text": "The pinball hall gives a Lucky Egg; an NPC on the left side of town gives a King's Rock. Mossdeep pinball points trade for random rare items (Linking Cords among them).",
+   "stage": "gym-7-tate-liza",
+   "places": [
+    "mossdeep-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "step-sootopolis-stand",
+   "title": "Sootopolis evolution stand",
+   "text": "With Dive from Steven, go straight to Sootopolis: the stand north of the Pokémon Center sells every evolution item (Protector, Reaper Cloth...). The story then blocks it until the next badge.",
+   "stage": "team-space-center",
+   "places": [
+    "sootopolis-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-sailor",
+   "title": "The eyepatch sailor",
+   "text": "After the 7th badge, a sailor with an eyepatch by Mossdeep's telescope gives the S.S. Ticket and Eon Ticket, then quests for the other legends. Stock Ultra and Timer Balls and a sleep or False Swipe user.",
+   "stage": "team-space-center",
+   "places": [
+    "mossdeep-city",
+    "lilycove-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "step-league-reset",
+   "title": "After the League",
+   "text": "Beating the Elite Four resets the random Lati, beast and bird encounters; beat them again to reach the rest of each trio.",
+   "stage": "champion-wallace",
+   "places": [
+    "southern-island",
+    "shoal-cave",
+    "mt-pyre"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
   }
  ],
  "secrets": [
   {
    "id": "legend-latis",
    "kind": "legendary",
-   "text": "With the Eon Ticket: Latias or Latios on Southern Island.",
+   "text": "Eon Ticket from the eyepatch sailor in Mossdeep (after the 7th badge): Latias or Latios at random, Lv 50, on Southern Island.",
    "place": "southern-island",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "legend-mew",
    "kind": "legendary",
-   "text": "With the Old Sea Map: Mew on Faraway Island.",
+   "text": "Old Sea Map from the eyepatch sailor (needs Rhydon's Pokédex entry): Mew, Lv 30, on Faraway Island.",
    "place": "faraway-island",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "legend-deoxys",
    "kind": "legendary",
-   "text": "With the Aurora Ticket: Deoxys on Birth Island.",
+   "text": "Aurora Ticket from the eyepatch sailor (needs Rayquaza's Pokédex entry): Deoxys, Lv 70, on Birth Island.",
    "place": "birth-island",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "legend-jirachi",
    "kind": "legendary",
-   "text": "Hold a Wishing Star at the white rock in Mossdeep for Jirachi.",
+   "text": "Talk to the woman by Mossdeep's White Rock, then check the rock with a Wishing Star in the bag: Jirachi.",
    "place": "mossdeep-city",
    "quality": "reference-only",
-   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
   },
   {
    "id": "tip-safari",
@@ -1142,6 +2182,338 @@
    "place": "new-mauville",
    "quality": "reference-only",
    "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "gift-shiny-charm-pc",
+   "kind": "gift",
+   "text": "A Shiny Charm waits in your bedroom PC from the start (shiny odds 1/4096 without it).",
+   "place": "littleroot-town",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "gift-z-ring",
+   "kind": "gift",
+   "text": "After Steven gets the letter, Devon gives the Z-Power Ring; Z-Crystals are sold on the floor below. Entirely optional.",
+   "place": "rustboro-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "tip-wishing-stars",
+   "kind": "tip",
+   "text": "Wishing Stars: one on the ground by the Rustboro well, more from a girl in Rustboro and a hiker in Granite Cave, and sold on Mt. Chimney once the teams are gone.",
+   "place": "rustboro-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "gift-flash",
+   "kind": "gift",
+   "text": "A hiker on Granite Cave's first floor gives HM05 Flash.",
+   "place": "granite-cave",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-kings-rock-106",
+   "kind": "tip",
+   "text": "A King's Rock lies on Route 106 just above Granite Cave's entrance; used like a stone it evolves Slowpoke or Poliwhirl.",
+   "place": "route-106",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-soothe-bell",
+   "kind": "gift",
+   "text": "The Pokémon Fan Club gives a Soothe Bell when your lead is friendly enough.",
+   "place": "slateport-city",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-box-link",
+   "kind": "gift",
+   "text": "Pokémon Box Link from the scientist in the Pokémon Center, after Wattson.",
+   "place": "slateport-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "item-metal-coat-rusturf",
+   "kind": "tip",
+   "text": "A Metal Coat lies at Rusturf Tunnel's Verdanturf end (Onix or Scyther).",
+   "place": "rusturf-tunnel",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-metal-coat-ship",
+   "kind": "tip",
+   "text": "A second Metal Coat sits at the Abandoned Ship's entrance (needs Surf).",
+   "place": "abandoned-ship",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-dragon-scale",
+   "kind": "tip",
+   "text": "A Dragon Scale lies on Route 118 (Seadra to Kingdra).",
+   "place": "route-118",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "item-magmarizer",
+   "kind": "tip",
+   "text": "The Magmarizer lies on Jagged Pass where Emerald had a Burn Heal.",
+   "place": "jagged-pass",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "item-electirizer",
+   "kind": "tip",
+   "text": "The Electirizer lies in New Mauville in place of Emerald's Ultra Ball.",
+   "place": "new-mauville",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "item-razor-fang",
+   "kind": "tip",
+   "text": "A Razor Fang lies in the west side of Route 119's tall grass (Gligar).",
+   "place": "route-119",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-black-augurite",
+   "kind": "tip",
+   "text": "Black Augurite lies in the grass up and right after Route 119's bridge (Scyther to Kleavor).",
+   "place": "route-119",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-upgrade",
+   "kind": "tip",
+   "text": "The Weather Institute holds an Upgrade (Porygon) and, upstairs, a Linking Cord.",
+   "place": "route-119",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-castform",
+   "kind": "gift",
+   "text": "The Weather Institute gives a Castform once Team Aqua is gone.",
+   "place": "route-119",
+   "condition": "after the Weather Institute fight",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-wide-lens",
+   "kind": "tip",
+   "text": "A Wide Lens lies by the water near Fortree, on Route 120 (it replaced a Net Ball in 2.1).",
+   "place": "route-120",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "tip-aerodactyl",
+   "kind": "tip",
+   "text": "Past the invisible Kecleon (Devon Scope), surf into the cave below Route 120's steps: wild Aerodactyl.",
+   "place": "route-120",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-razor-claw",
+   "kind": "tip",
+   "text": "A Razor Claw lies near the end of Route 121 (Sneasel to Weavile).",
+   "place": "route-121",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-peat-block",
+   "kind": "tip",
+   "text": "A Peat Block lies on Lilycove's southern peninsula, south then east of the Pokémon Center (Ursaring to Ursaluna).",
+   "place": "lilycove-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-dubious-disc",
+   "kind": "tip",
+   "text": "A Dubious Disc lies in the Aqua Hideout's entrance room; the Master Ball is deeper in.",
+   "place": "aqua-hideout",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "item-prism-scale",
+   "kind": "tip",
+   "text": "On Route 127 a side opening on the right leads to an islet; the Prism Scale lies in its grass (Feebas also evolves with 140 Beauty).",
+   "place": "route-127",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "tip-feebas",
+   "kind": "tip",
+   "text": "Feebas bites on the Good Rod in Route 119's water, with none of Emerald's hidden tiles.",
+   "place": "route-119",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "gift-spiky-pichu",
+   "kind": "gift",
+   "text": "Professor Elm in Fallarbor gives a Spiky-eared Pichu once you have 50 species.",
+   "place": "fallarbor-town",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "gift-tinkatink",
+   "kind": "gift",
+   "text": "A Team Aqua grunt on Route 115's beach gives an Egg that hatches into Tinkatink.",
+   "place": "route-115",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-linking-cord",
+   "kind": "gift",
+   "text": "Lanette's house on Route 114 holds a Linking Cord.",
+   "place": "route-114",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-wynaut-egg",
+   "kind": "gift",
+   "text": "The woman by Lavaridge's hot springs still gives the Wynaut Egg.",
+   "place": "lavaridge-town",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "tip-apple-seller",
+   "kind": "tip",
+   "text": "The apple seller in Pacifidlog sells the Tart, Sweet and Syrupy Apples for Applin.",
+   "place": "pacifidlog-town",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "tip-scuba-dusk-stone",
+   "kind": "tip",
+   "text": "In the Scuba Safari's east area an item sometimes appears by a gravestone-like rock: a Dusk Stone.",
+   "place": "pacifidlog-town",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "event-alolan-eggs",
+   "kind": "event",
+   "text": "Mauville's pinball prize man trades Pinball Points for apricorn balls and eggs of random Alolan forms (Grimer, Raichu, Marowak, Exeggutor among them).",
+   "place": "mauville-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-lucky-egg",
+   "kind": "gift",
+   "text": "An NPC in Mossdeep's pinball hall gives a Lucky Egg.",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-kings-rock-mossdeep",
+   "kind": "gift",
+   "text": "An NPC on Mossdeep's west side gives a second King's Rock.",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-master-ball-wallace",
+   "kind": "gift",
+   "text": "Wallace gives a second Master Ball after Rayquaza calms Sootopolis.",
+   "place": "sootopolis-city",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "gift-ice-beam",
+   "kind": "gift",
+   "text": "Juan's prize TM is Ice Beam (Water Pulse in Emerald).",
+   "place": "sootopolis-city",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "gift-beldum",
+   "kind": "gift",
+   "text": "Steven leaves a Beldum for you (wild ones live in New Mauville).",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "event-ev-iv-editor",
+   "kind": "event",
+   "text": "An NPC running laps at the Battle Frontier's entrance edits EVs and IVs.",
+   "place": "battle-frontier",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "tip-sheen-reset",
+   "kind": "tip",
+   "text": "An NPC in Verdanturf's Contest Hall resets a Pokémon's Sheen.",
+   "place": "verdanturf-town",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "legend-regi-chamber",
+   "kind": "legendary",
+   "text": "Dive on Route 134; Dig at the first chamber's back wall, then Wailord first and Relicanth last in the party at the inner wall to open the Regi caves.",
+   "place": "sealed-chamber",
+   "condition": "needs Dive and Dig",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "legend-regirock",
+   "kind": "legendary",
+   "text": "Regirock (Lv 40): read the wall, two steps left, two down, Rock Smash.",
+   "place": "desert-ruins",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-regice",
+   "kind": "legendary",
+   "text": "Regice (Lv 40): after reading the wall, walk once round the room clockwise along the walls.",
+   "place": "island-cave",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-registeel",
+   "kind": "legendary",
+   "text": "Registeel (Lv 40): use Flash in the middle of the room.",
+   "place": "ancient-tomb",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
   }
  ],
  "evolutions": [
@@ -1205,17 +2577,345 @@
    "id": "evo-happiny",
    "species": 440,
    "name": "Happiny",
-   "text": "Friendship gives Chansey from Lv 15.",
+   "text": "Evolves into Chansey at Level 15; no Oval Stone.",
    "quality": "reference-only",
-   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; ROM Seaglass 3.0 species table"
   },
   {
    "id": "evo-pichu",
    "species": 172,
    "name": "Pichu",
-   "text": "Since 3.0 a Light Ball works for the Pichu line.",
+   "text": "Since 3.0 a Light Ball powers Pichu, Raichu and Spiky-eared Pichu, and wild Pichu may hold one.",
    "quality": "reference-only",
-   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Linking Cord (Lanette's house, Weather Institute, Mossdeep pinball prizes) instead of a trade.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Linking Cord instead of a trade; Alolan Graveler too.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Linking Cord instead of a trade.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Water Stone gives Poliwrath; a King's Rock used like a stone gives Politoed.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Metal Coat (used) gives Scizor; Black Augurite (Route 119) gives Kleavor.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Thunder Stone, or level up in New Mauville, gives Magnezone.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Dragon Scale used like a stone (Route 118, or held by wild Horsea).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Deep Sea Tooth gives Huntail (Water/Dragon), Deep Sea Scale Gorebyss (Water/Fairy), used as items.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Upgrade (Weather Institute) used as an item.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Dubious Disc (Aqua Hideout) used as an item.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Electirizer (New Mauville, or held by wild Elekid) gives Electivire.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Magmarizer (Jagged Pass, or held by wild Magby) gives Magmortar.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Protector (Sootopolis stand) gives Rhyperior.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Reaper Cloth (Sootopolis stand) gives Dusknoir.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Razor Fang used as an item, any time of day.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Razor Claw (Route 121) used as an item.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-ursaring",
+   "species": 217,
+   "name": "Ursaring",
+   "text": "Peat Block (Lilycove peninsula) gives Ursaluna.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "All eight by stone: Water, Thunder, Fire, Sun (Espeon), Moon (Umbreon), Leaf, Ice and Shiny (Sylveon).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Dawn Stone (a male) gives Gallade.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Dawn Stone (a female) gives Froslass.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Shiny Stone (Lavaridge herb shop).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Shiny Stone gives Togekiss.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Dusk Stone gives Honchkrow.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-primeape",
+   "species": 57,
+   "name": "Primeape",
+   "text": "Annihilape after using Rage Fist 20 times (learned at Lv 35).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-stantler",
+   "species": 234,
+   "name": "Stantler",
+   "text": "Wyrdeer after using Psyshield Bash 20 times (learned at Lv 30).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-girafarig",
+   "species": 203,
+   "name": "Girafarig",
+   "text": "Farigiraf when levelled knowing Twin Beam (learned at Lv 32).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-dunsparce",
+   "species": 206,
+   "name": "Dunsparce",
+   "text": "Dudunsparce when levelled knowing Hyper Drill (learned at Lv 32).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-applin",
+   "species": 840,
+   "name": "Applin",
+   "text": "Tart Apple: Flapple; Sweet Apple: Appletun; Syrupy Apple: Dipplin, then Hydrapple at Lv 40. Apples from Pacifidlog's seller.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-tinkatink",
+   "species": 957,
+   "name": "Tinkatink",
+   "text": "Tinkatuff at Lv 24, Tinkaton at Lv 38.",
+   "quality": "reference-only",
+   "source": "Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-lickitung",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Lickilicky when levelled knowing Rollout (Lv 33, or the Mauville tutor).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-tangela",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Tangrowth when levelled knowing Ancient Power.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Yanmega when levelled knowing Ancient Power (Bug/Dragon here).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Mamoswine when levelled knowing Ancient Power; DexNav Swinub can already know it.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Ambipom when levelled knowing Double Hit (Lv 32).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-mime-jr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Mr. Mime when levelled knowing Mimic (learned at Lv 15).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-bonsly",
+   "species": 438,
+   "name": "Bonsly",
+   "text": "Sudowoodo when levelled knowing Mimic.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-mantyke",
+   "species": 458,
+   "name": "Mantyke",
+   "text": "Mantine on level-up with a Remoraid in the party.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-meowth",
+   "species": 52,
+   "name": "Meowth",
+   "text": "Alolan Meowth (pinball egg) evolves by friendship.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table"
+  },
+  {
+   "id": "evo-sandshrew",
+   "species": 27,
+   "name": "Sandshrew",
+   "text": "Alolan Sandshrew (pinball egg): Ice Stone.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table"
+  },
+  {
+   "id": "evo-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "Fire Stone gives Ninetales; Alolan Vulpix (pinball egg) uses an Ice Stone.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "evo-exeggcute",
+   "species": 102,
+   "name": "Exeggcute",
+   "text": "Leaf Stone gives Exeggutor; Alolan Exeggutor only hatches from pinball eggs.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 species table; Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
   }
  ],
  "notes": [
@@ -1242,6 +2942,196 @@
    "text": "Followers (can be turned off), DexNav, Box Link (the PC anywhere), HMs without move slots, party Exp. Share, Z-Moves, a shiny charm and a type-effectiveness display.",
    "quality": "reference-only",
    "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "note-retypes-2",
+   "kind": "version",
+   "title": "More retypes and abilities",
+   "text": "Ekans and Arbok are Poison/Dark. Hypno's new ability Nasty Surprise confuses poisoned foes; the Meganium line's hidden ability is Triage; Ninjask gets Sharpness; Ho-Oh has Soul Heart, Lugia Water Power, Tyranitar's hidden ability is Earth Eater.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; ROM Seaglass 3.0 species table"
+  },
+  {
+   "id": "note-new-species",
+   "kind": "version",
+   "title": "Newer Pokémon",
+   "text": "Cross-generation evolutions up to Gen 9 (Annihilape, Farigiraf, Dudunsparce, Kleavor, Ursaluna, Wyrdeer, Roserade, Mamoswine...), Spiky-eared Pichu, the Applin line (Littleroot) and the Tinkatink line (Route 115 Egg).",
+   "species": [
+    172,
+    840,
+    957
+   ],
+   "names": [
+    "Pichu",
+    "Applin",
+    "Tinkatink"
+   ],
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-alolan",
+   "kind": "gift",
+   "title": "Alolan forms",
+   "text": "Alolan forms come from Mauville's pinball eggs. The ROM has Alolan Rattata, Raichu, Sandshrew, Vulpix, Diglett, Meowth, Geodude, Grimer, Exeggutor and Marowak; hatched evolved forms count as single-stage.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs); ROM Seaglass 3.0 species table"
+  },
+  {
+   "id": "note-options",
+   "kind": "tip",
+   "title": "The book on your desk",
+   "text": "Toggles Hard Mode (Set style, no Bag in trainer battles), the soft level cap (EXP halves past the next leader's top level, then drops more), K.O. animations and battle backgrounds. R toggles auto-run.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-cheats",
+   "kind": "tip",
+   "title": "GameCube codes",
+   "text": "The GameCube in your room takes codes from the documentation: Rare Candies, Master Balls, Wishing Stars, Nuggets, every starter trio, Applin and Tinkatink, DexNav reveal, and MONO codes that give a random first-stage Pokémon of one type.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "note-followers",
+   "kind": "tip",
+   "title": "Following Pokémon",
+   "text": "Every Pokémon can follow you. The party menu's FOLLOWER option sets a preferred follower or returns it to its ball.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-hm",
+   "kind": "tip",
+   "title": "HMs without move slots",
+   "text": "With the HM in the bag and the right badge, any party Pokémon able to learn it uses the field move. Disobedience is gone too.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-sailor",
+   "kind": "legendary",
+   "title": "The Mossdeep sailor's legends",
+   "text": "The eyepatch sailor (after Gym 7) unlocks the Eon Ticket, Old Sea Map (Rhydon seen), Mystic Ticket (Octillery seen) and Aurora Ticket (Rayquaza seen); then Celebi, Mewtwo, a beast and a bird.",
+   "species": [
+    380,
+    381,
+    151,
+    249,
+    250,
+    386,
+    251,
+    150
+   ],
+   "names": [
+    "Latias",
+    "Latios",
+    "Mew",
+    "Lugia",
+    "Ho-Oh",
+    "Deoxys",
+    "Celebi",
+    "Mewtwo"
+   ],
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "note-trios",
+   "kind": "legendary",
+   "title": "One of each trio per League",
+   "text": "The beasts (Shoal Cave) and birds (Mt. Pyre) are summoned one at random at Lv 50; each Elite Four win resets them. Latias/Latios also roam after the League.",
+   "species": [
+    243,
+    244,
+    245,
+    144,
+    145,
+    146
+   ],
+   "names": [
+    "Raikou",
+    "Entei",
+    "Suicune",
+    "Articuno",
+    "Zapdos",
+    "Moltres"
+   ],
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "note-emerald-legends",
+   "kind": "legendary",
+   "title": "Emerald's own legends",
+   "text": "Kyogre, Groudon, Rayquaza (Lv 70) and the Regis (Lv 40) are found the way Emerald does it.",
+   "species": [
+    382,
+    383,
+    384,
+    377,
+    378,
+    379
+   ],
+   "names": [
+    "Kyogre",
+    "Groudon",
+    "Rayquaza",
+    "Regirock",
+    "Regice",
+    "Registeel"
+   ],
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); ROM Seaglass 3.0 event scripts"
+  },
+  {
+   "id": "note-scuba",
+   "kind": "tip",
+   "title": "Scuba Safari scoring",
+   "text": "Rarity + level x3 + the six IVs + HP left. After the first prize (HM07 Waterfall) rewards are random treasures and items; a new high score is meant to add 5 Heart Scales and a good TM (the Oak guide never got these).",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); Mewlax's Professor Oak Challenge guide, Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "note-pinball",
+   "kind": "tip",
+   "title": "Pinball",
+   "text": "Meowth, Gengar, Seel and Diglett tables in Mauville and Mossdeep; a win is 1 Pinball Point. Mossdeep sells points for money and pays random rare items. Start quits a stuck game.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-wishing-well",
+   "kind": "tip",
+   "title": "Rustboro Wishing Well",
+   "text": "A Wishing Star thrown in the well on Rustboro's east side gives a random Lv 1 Pokémon.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-battle-changes",
+   "kind": "version",
+   "title": "Battle changes",
+   "text": "Absorb 30 and Mega Drain 50 power; Bubble 30 and always lowers Speed; Eviolite blocks evolution like an Everstone; every Pokémon has at least two perfect IVs (A on the summary shows IVs/EVs).",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0; Seaglass 3.0 documentation (Nemo622, PDF)"
+  },
+  {
+   "id": "note-3-0-balance",
+   "kind": "version",
+   "title": "3.0 balance",
+   "text": "Light Ball works for Pichu, Raichu and Spiky-eared Pichu (wild Pichu may hold one); Spinda learns Fiery Dance and Superpower; Aggron Dragon Dance; Farfetch'd Victory Dance; Drowzee and Hypno get Dark moves.",
+   "quality": "reference-only",
+   "source": "PokéHarbor: Seaglass changelog v2.0-3.0"
+  },
+  {
+   "id": "note-known-issues",
+   "kind": "tip",
+   "title": "Known issues",
+   "text": "Save before DexNav chaining (it can freeze, mostly in caves). Safari Zone battles act as normal battles and its UI is buggy; an NPC warns you at the gate.",
+   "quality": "reference-only",
+   "source": "Seaglass 3.0 documentation (Nemo622, PDF); PokéHarbor: Seaglass changelog v2.0-3.0"
   }
  ]
 }

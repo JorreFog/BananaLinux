@@ -1,0 +1,90 @@
+#!/bin/sh
+# Game & Watch: MAME's Game & Watch-only build (mame-gnw) with the games' MAME ROM zips in roms/gameandwatch and their
+# artwork zips, as downloaded, in roms/gameandwatch/artwork (optional: without one, MAME's own plain view).
+#   run-gw <rom zip>
+# The screens, by MAME's own description of the game (no layouts of ours, nothing per game):
+#   one screen                       the top panel (the bottom stays black)
+#   two screens side by side         both on the top panel, as the artwork draws them (Mario Bros....)
+#   two screens one above the other  the view over both panels, one screen on each (Donkey Kong II...)
+# With artwork, its "Background(s) Only" view (the screens with their scenery). The F button through gw-hotkeys:
+# F + Start quits, F on its own opens MAME's menu. MAME's settings in /data/mame-gnw, the games' saved memory (high
+# scores) in saves/gameandwatch, its save states in states/gameandwatch; the log of the last game in
+# banana/logs/mame-gnw.
+ROM="$1"
+GAME=$(basename "$ROM" .zip)
+ROMS=$(dirname "$ROM")
+ART=$ROMS/artwork
+D=/data/mame-gnw
+LOGS=/data/banana/logs/mame-gnw
+mkdir -p $D/cfg $D/ini /data/saves/gameandwatch /data/states/gameandwatch $LOGS
+# the game paused while MAME's menu is open (a menu setting, in ui.ini: kept, MAME writes the file back with any
+# change made in the menu)
+if ! grep -q '^menu_pause' $D/ini/ui.ini 2>/dev/null; then
+    echo "menu_pause                1" >> $D/ini/ui.ini
+fi
+exec >$LOGS/last.log 2>&1
+echo "run-gw: $GAME"
+
+# the game's screens, from MAME itself; one panel's size (1024x768 on the Plus, 640x480 on the RG DS)
+DISPLAYS=$(/usr/bin/mame-gnw "$GAME" -rompath "$ROMS" -listxml 2>/dev/null | grep '<display ')
+SCREENS=$(echo "$DISPLAYS" | grep -c '<display ')
+SIDE=0
+if echo "$DISPLAYS" | grep -q 'tag="screen_left"'; then
+    SIDE=1
+fi
+MODE=$(cat /sys/class/drm/card0-DSI-*/modes 2>/dev/null | head -n 1)
+PW=${MODE%x*}
+PH=${MODE#*x}
+if [ -z "$PW" ] || [ -z "$PH" ]; then
+    PW=1024
+    PH=768
+fi
+if [ "$SCREENS" -lt 1 ]; then
+    echo "run-gw: MAME doesn't know $GAME (not a Game & Watch ROM set?)"
+    exit 1
+fi
+
+# the panels as one SDL display, the top one above (SDL's offscreen GLES driver, scanned out straight to them)
+export SDL_VIDEODRIVER=offscreen SDL_BANANA_PANELS=stack SDL_BANANA_TOP=${BANANA_TOP:-DSI-2}
+# no MAME warning screen before the game (patch 0005): "requires external artwork", "ROM needs redump"; still logged.
+# MAME's menu (F) with only what a player here uses, and Quit (patch 0006)
+# The menu and MAME's messages on the top panel only, in a two-screen game too (patch 0007), in larger text: 16 lines
+# a panel instead of MAME's 30 (patch 0008)
+export BANANA_NO_WARNINGS=1 BANANA_SHORT_MENU=1 BANANA_UI_HEIGHT=$PH BANANA_FONT_ROWS=16
+# Mesa's shader cache on the card, not the read-only /
+export HOME=$D
+# the pad as an SDL game controller (its line in SDL's community database)
+export SDL_GAMECONTROLLERCONFIG="190000004b4800000111000000010000,RetroGame Joypad,a:b1,b:b0,back:b8,dpdown:b14,dpleft:b15,dpright:b16,dpup:b13,leftshoulder:b4,leftstick:b11,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b2,y:b3,platform:Linux,"
+# the LCDs drawn at most as wide as they are shown (a panel; half of one side by side): the SVG is drawn on the CPU
+export BANANA_SVG_MAXW=$PW
+VIEW="Background"
+if ! unzip -l "$ART/$GAME.zip" 2>/dev/null | grep -q '\.lay$'; then
+    VIEW="auto"
+fi
+if [ $SIDE = 1 ]; then
+    export BANANA_SVG_MAXW=$((PW / 2))
+fi
+if [ "$SCREENS" -lt 2 ] || [ $SIDE = 1 ]; then
+    export BANANA_TARGET_HEIGHT=$PH
+fi
+echo "run-gw: $SCREENS screen(s), side by side $SIDE, panel ${PW}x${PH}, view $VIEW"
+
+cd $D
+/usr/bin/mame-gnw "$GAME" \
+    -rompath "$ROMS" -artpath "$ART" -ctrlrpath /usr/share/banana/mame-gnw -ctrlr banana \
+    -inipath $D/ini -cfg_directory $D/cfg -nvram_directory /data/saves/gameandwatch \
+    -state_directory /data/states/gameandwatch -snapshot_directory /data/screenshots -snapname "%g-%i" -homepath $D \
+    -skip_gameinfo -nowindow -video accel -view "$VIEW" -uifont /usr/share/banana/rnds/fonts/PixelifySans-Medium.ttf \
+    -joystick -joystickprovider sdlgame -sound sdl &
+PID=$!
+# a quit (the menu, a shutdown: TERM to this launcher, game.pid) reaches MAME, and the launcher waits for it: MAME
+# writes the game's NVRAM (its high scores) as it ends, before the menu takes the panels back (as run-retroarch)
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+/usr/libexec/banana/gw-hotkeys $PID &
+HK=$!
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+kill $HK 2>/dev/null
+echo "run-gw: exit $RC"
+exit $RC
