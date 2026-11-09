@@ -99,6 +99,7 @@ for a, b in [
     ('"edge": "#ffffff30"', '"edge": "#ffffff80"'),
     ('"chip": "#ffffff"', '"chip": "#14141c"'),
     ('"chipInk": "#1e1e24"', '"chipInk": "#ffffff"'),
+    ('"card": "#1c1e28"', '"card": "#f7f7fb"'),
     ('"shade": "#00000059"', '"shade": "#00000033"'),
 ]:
     assert s.count(a) == 1, a

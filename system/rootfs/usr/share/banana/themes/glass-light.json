@@ -49,6 +49,7 @@
     "edge": "#ffffff80",        // the glass's hairline edge
     "chip": "#14141c",          // a button's key
     "chipInk": "#ffffff",
+    "card": "#f7f7fb",          // a game's card in the tray
     "shade": "#00000033",
     "hi": "=accent",
     // motion and light, all started by a press so they play once and stop (Motion off in Settings: none of them)
@@ -255,19 +256,23 @@
             { "type": "text", "text": "{sys.name}", "font": "inter-semibold", "size": 16, "color": "=ink", "y": 1 }
           ] },
         { "use": "sides", "x": 15, "y": 11, "w": 610 },
-        { "type": "list", "source": "games", "direction": "free", "x": 0, "y": "=125 + rise", "w": 640, "h": 200, "range": 3,
+        // the games as cards in the tray: three whole, half of the next ones at its edges (cut there); each its logo
+        // (a DS game its own icon) on the card's colour, else its box art filling the card
+        { "type": "list", "source": "games", "direction": "free", "x": 25, "y": "=125 + rise", "w": 590, "h": 200, "range": 3, "clip": true,
           "item": {
-            "type": "group", "w": 640, "h": 200, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1) * (sel ? 1 : 1 - go)",
+            "type": "group", "w": 590, "h": 200, "visible": "=abs(pos) < 3", "opacity": "=clamp(3 - abs(pos), 0, 1) * (sel ? 1 : 1 - go)",
             "children": [
-              { "type": "rect", "x": "=320 + pos * 106", "y": 88, "w": 150, "h": 150, "anchor": "center", "radius": 12,
+              { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 155, "h": 110, "anchor": "center", "radius": 15,
                 "fill": "=alpha(sys.color, 0)", "visible": "=sel", "scale": "=1 + 0.18 * go",
                 "shadow": { "blur": "=26 + 16 * lit + 30 * go", "spread": "=3 + 8 * lit + 10 * go", "color": "=alpha(sys.color, 0.55 + 0.45 * max(lit, go))" } },
-              { "type": "image", "src": "{item.art}", "fallback": "{item.box}", "fit": "cover",
-                "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1)", "y": "=sel ? 88 : 100",
-                "w": 94, "h": 94, "anchor": "center", "radius": 7, "placeholder": "=alpha(sys.color, 0.7)",
-                "scale": "=sel ? 1.66 + 0.3 * go : 1", "smooth": { "scale": 110, "y": 110 } },
-              { "type": "text", "x": "=320 + pos * 106 + (pos > 0 ? 26 : pos < 0 ? -26 : 0) * min(abs(pos), 1) + 28",
-                "y": "=sel ? 6 : 42", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }
+              { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 124, "h": 88, "anchor": "center", "radius": 12, "fill": "=card",
+                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 110 } },
+              { "type": "image", "src": "{item.marquee}", "fallback": "{item.art}", "fit": "=item.marquee != '' ? 'contain' : 'cover'",
+                "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": "=item.marquee != '' ? 104 : 124", "h": "=item.marquee != '' ? 68 : 88", "anchor": "center", "radius": "=item.marquee != '' ? 0 : 12",
+                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 110 } },
+              { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) - 56", "w": 112, "y": 88, "align": "center", "text": "{item.title}", "font": "inter-semibold",
+                "size": 13, "color": "=ink", "visible": "=item.marquee == '' && item.art == ''", "scale": "=sel ? 1.25 : 1" },
+              { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) + (sel ? 64 : 50)", "y": "=sel ? 40 : 52", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }
             ]
           } },
         { "type": "text", "x": 40, "w": 560, "y": 342, "align": "center", "text": "{game.title}", "font": "inter-semibold", "size": 19, "color": "=ink" },
