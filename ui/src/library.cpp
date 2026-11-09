@@ -989,7 +989,9 @@ namespace banana
 		r.time = fmtTime(g.seconds);
 		r.box = g.box; r.cart = g.cart; r.label = g.label;
 		if (r.box.empty() && isDsRom(g.path, systemOf(i).id)) r.box = romIconCover(dataDir, g.path);	// its own icon
-		r.marquee = isDsRom(g.path, systemOf(i).id) ? romIconCover(dataDir, g.path) : g.marquee;	// (a DS game: its icon)
+		// the card's picture (the Glass themes'), by Settings' DS cartridges: Game icon, a game's logo (a DS game its own
+		// icon), the box art where it has none; Box art, the box art for every game
+		r.marquee = !dsCartIcons ? "" : isDsRom(g.path, systemOf(i).id) ? romIconCover(dataDir, g.path) : g.marquee;
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
 		// the DS ROM's own icon on the cartridge: when there is no art (from inside a .zip too), or on every one when the
 		// owner picked the icons (DS cartridges: Game icon)

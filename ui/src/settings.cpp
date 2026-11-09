@@ -499,8 +499,9 @@ namespace banana
 			items.back().hints = { "Like 14:30.", "Like 2:30 PM." };
 			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
-			add(ML, "picture", "DS cartridges", "What the DS cartridges on the bottom screen show. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
-			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
+			add(ML, "picture", "DS cartridges", "What the cartridges on the bottom screen show (in Glass, every game's card).", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
+			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.",
+				"A DS game's own icon, as the DSi menu shows it. In Glass, other games show their logo, or their box art without one." };
 		}
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
