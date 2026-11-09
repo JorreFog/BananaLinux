@@ -634,9 +634,9 @@ namespace banana
 			items.back().hints = { "It dims. A touch or a button lights it again.", "It turns off. A touch or a button lights it again.", "It stays on." };
 			add(SS, "picture", "Game panel idle time", "How long the game panel waits before it dims or turns off.",
 				menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute" }, { "10", "30", "60" });
-			add(SS, "gamepad", "Pokémon companion", "Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) and the ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass and SoulGold on the second screen, with the same pages as the DS one: battle, party, team score, what to catch here, a guide, the map, the Pokédex and a journey log. Read from the game as it plays; another ROM hack shows that it isn't supported. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
+			add(SS, "gamepad", "Pokémon companion", "The GBA Pokémon games' pages on the second screen, as on the DS. Inspired by PokeDaisy by Lidor Itzhari.",
 				menu, "pokemon_companion", { "Off", "On" }, { "off", "on" });
-			items.back().hints = { "No companion.", "Your party, and in a battle the foe and how each move does against it. Needs Second screen on." };
+			items.back().hints = { "No companion.", "Battle, party, a guide, the map and more, in Ruby, Sapphire, Emerald, FireRed, LeafGreen and the ROM hacks Unbound, Gaia, Glazed, Heart & Soul, Lazarus, Seaglass and SoulGold. Needs Second screen on." };
 			// (the DS companion's challenge mode for the GBA games: gba/host.h's Session, read at each game's start)
 			add(SS, "gamepad", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter in each area and the Pokémon you lost, as the DS one does (Here and Log pages). Needs the Pokémon companion on.",
 				menu, "gba_challenge", { "Off", "On" }, { "off", "on" });
