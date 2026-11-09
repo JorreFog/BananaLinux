@@ -589,7 +589,11 @@ namespace banana::gba
 		g.revision = rom[0xbc];
 		static const struct { const char* c; GameId id; const char* t; } G[] = {
 			{ "AXVE", GameId::RUBY, "Ruby" }, { "AXPE", GameId::SAPPHIRE, "Sapphire" }, { "BPEE", GameId::EMERALD, "Emerald" },
-			{ "BPRE", GameId::FIRERED, "FireRed" }, { "BPGE", GameId::LEAFGREEN, "LeafGreen" } };
+			{ "BPRE", GameId::FIRERED, "FireRed" }, { "BPGE", GameId::LEAFGREEN, "LeafGreen" },
+			// the Spanish releases (#181: pkmn's tables read them, checked with tests/nds-rom-test's GBA side): the same
+			// game to the pages, their own name
+			{ "AXVS", GameId::RUBY, "Rubí" }, { "AXPS", GameId::SAPPHIRE, "Zafiro" }, { "BPES", GameId::EMERALD, "Esmeralda" },
+			{ "BPRS", GameId::FIRERED, "Rojo Fuego" }, { "BPGS", GameId::LEAFGREEN, "Verde Hoja" } };
 		for (auto& e : G)
 			if (g.code == e.c) { g.id = e.id; g.title = e.t; }
 		if (g.id == GameId::NONE) return g;
