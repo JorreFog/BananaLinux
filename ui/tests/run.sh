@@ -46,6 +46,8 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the translations: a line's %d takes a number only, not a game's or a file's name
+make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
@@ -944,6 +946,73 @@ PY
         grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
     done
 fi
+# search: a word with a genre's spelling of its own ("rpg": role playing) finds the genre and a game with the word in its name
+SX=$OUT/search-fx; "$HERE/tests/fixture.sh" "$SX" >/dev/null
+cp "$SX/roms/snes/Super Smoothie World.sfc" "$SX/roms/snes/Super Mario RPG (USA).sfc"
+printf '<gameList><game><path>./Super Smoothie World.sfc</path><name>Super Smoothie World</name><genre>Role Playing Game</genre></game></gameList>\n' > "$SX/roms/snes/gamelist.xml"
+for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; do
+    q=${qn%:*}
+    "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
+    grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
+done
+# a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
+# under its name gets its own again
+IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null
+mkdir -p "$IX/roms/nds/A" "$IX/roms/nds/B"
+python3 -I -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); open(sys.argv[2], "wb").write(z.read([n for n in z.namelist() if n.endswith(".nds")][0]))' \
+    "$IX/roms/nds/Yellow Planet [!].zip" "$IX/roms/nds/B/Game.nds"
+mv "$IX/roms/nds/Peel Quest.nds" "$IX/roms/nds/A/Game.nds"
+irun() { "$HERE/banana-ui" --headless "$OUT/icons-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$IX/roms" --data "$IX/data" --script "$1" 2>> "$OUT/icons.log" || { echo "FAIL: banana-ui (icons) exited $?"; fail=1; }; }
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+icn() { find "$IX/data/cache/icons" -name "Game.nds*" $1 | wc -l; }
+[ "$(icn)" = 2 ] && [ "$(icn -empty)" = 1 ] || { echo "FAIL: icons: A/Game.nds and B/Game.nds share a cached icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+cp "$IX/roms/nds/B/Game.nds" "$IX/roms/nds/A/Game.nds"; touch -d '2001-01-01' "$IX/roms/nds/A/Game.nds"
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+[ "$(icn '! -empty')" = 2 ] || { echo "FAIL: icons: a ROM replaced under its name kept the old one's (no) icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+# a layout theme's absurd numbers (a text's size and spacing, its lines, a shadow's blur, a list's count) draw
+# nothing much, and never take the menu down (a 1e6 px text asked for terabytes)
+BT2=$OUT/bad-theme.json
+sed -e 's/"text": "{sys.played}", "font": "inter-bold", "size": 20/"text": "{sys.played}", "font": "inter-bold", "size": 1e6/' \
+    -e 's/"text": "{upper(sys.maker)}", "size": 13, "spacing": 2/"text": "{upper(sys.maker)}", "size": "=1e308", "spacing": 1e6, "maxLines": 1e300, "wrap": true/' \
+    -e 's/"blur": 14/"blur": 1e300/' -e 's/"fit": "pixelContain", "x": 320, "y": 150, "w": 128, "h": 128/"fit": "pixelContain", "x": 320, "y": 150, "w": 1e6, "h": 1e6/' \
+    -e 's/"text": "{clock}", "font": "inter-semibold", "size": 15/"text": "{clock}", "font": "inter-semibold", "size": -5/' "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" > "$BT2"
+[ "$(grep -c '1e6\|1e300' "$BT2")" -ge 3 ] || { echo "FAIL: bad theme: the sed didn't apply"; fail=1; }
+"$HERE/banana-ui" --headless "$OUT/badtheme-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT2" \
+    --script "home 0; wait 300; shot home; press a; wait 300; shot lib; wait 1" 2> "$OUT/badtheme.log" ||
+    { echo "FAIL: a theme's absurd numbers took the menu down (exit $?): $(grep -m1 -i 'terminate\|error' "$OUT/badtheme.log")"; fail=1; }
+BT3=$OUT/bad-range.json
+sed -e 's/"count": 12,/"count": 1e300, "loop": true,/' -e 's/"range": 64/"range": 1e9/' "$HERE/../system/rootfs/usr/share/banana/themes/swiss-poster.json" > "$BT3"
+timeout 60 "$HERE/banana-ui" --headless "$OUT/badrange-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT3" \
+    --script "home 0; wait 300; shot home; wait 1" 2> "$OUT/badrange.log" || { echo "FAIL: a theme's list of 1e300 items took the menu down (exit $?)"; fail=1; }
+# what the player named is drawn as it is: a language whose lines match the fixture's game titles, file names, a
+# network's and a Bluetooth device's names ("Peel %s", "Split %s", "Office", "Cafe Free", "Wireless Controller") must
+# draw every one of these screens exactly as English does (the translator once made "Keep Calm" "Säilytä Calm")
+VX=$OUT/verbatim; rm -rf "$VX"; mkdir -p "$VX/assets/lang" "$VX/assets/rnds"; ln -s "$HERE/assets/rnds/"* "$VX/assets/rnds/"	# (rnds/../lang: the test's)
+printf '#: language = Test\n#: translated-by = nobody\nmenu\t\tPeel %%s\tZZ %%s\nmenu\t\tSplit %%s\tZZ %%s\nsettings\t\tPeel %%s\tZZ %%s\nsettings\t\tOffice\tZZ\nsettings\t\tCafe Free\tZZ\nsettings\t\tWireless Controller\tZZ\n' > "$VX/assets/lang/xx.tsv"
+for l in en xx; do
+    "$HERE/tests/fixture.sh" "$VX/fx-$l" >/dev/null
+    printf 'language = %s\n' $l >> "$VX/fx-$l/data/settings.conf"
+    vrun() { BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
+        "$HERE/banana-ui" --headless "$VX/$l-" --size 640x480 --assets "$VX/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$VX/fx-$l/roms" --data "$VX/fx-$l/data" "$@" 2>> "$VX/$l.log" ||
+        { echo "FAIL: banana-ui (verbatim, $l) exited $?"; fail=1; }; }
+    vrun --script "homeid nds; press a; wait 2400; press right; press right; wait 2400; shot lib; press right; wait 2400; shot lib2; press x; shot page"
+    vrun --theme "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" --script "homeid nds; press a; wait 1000; press down; press down; wait 1000; shot llib"
+    vrun --script "homeid files; press a; press a; press down; press a; press down; press down; press a; shot folder"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press a; wait 2500; shot wifi"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press down; press a; press right; wait 300; press down; press a; shot bt"
+done
+grep -q "language: Test (xx)" "$VX/xx.log" || { echo "FAIL: verbatim: the test language wasn't loaded"; fail=1; }
+for s in lib lib2 page llib folder wifi bt; do
+    for p in top bot; do
+        d=$(compare -metric AE "$VX/en-$s-$p.png" "$VX/xx-$s-$p.png" null: 2>&1) || true; d=${d%% *}
+        [ "$d" = 0 ] || { echo "FAIL: verbatim: $s-$p differs from English ($d px): a name went through the translator"; fail=1; }
+    done
+done
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png

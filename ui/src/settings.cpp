@@ -1833,10 +1833,11 @@ namespace banana
 		// (a line measured is laid out, no more: its bitmap is made the first time it is drawn)
 		if (fresh || (!measureOnly && !cc.drawn))
 		{
-			rnds::Translator tf = rnds::translator();
-			if (rawText) rnds::setTranslator(nullptr);
-			rnds::TextLine l = rnds::layoutLine(rnds::utf8to32(t), st);
-			rnds::setTranslator(tf);
+			rnds::TextLine l;
+			{
+				rnds::Verbatim vb(rawText);
+				l = rnds::layoutLine(rnds::utf8to32(t), st);
+			}
 			cc.w = l.width;
 			if (!measureOnly)
 			{
@@ -2410,6 +2411,7 @@ namespace banana
 			bool on = std::fabs(i - aPick) < 0.5f;
 			float y = 82 + (i - aTop) * 64;
 			std::string v;
+			bool nameValue = false;	// (the value is a network's or the DS's name: as it is)
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
 			else if (it.kind == Item::INFO && !it.mirror.empty())	// (a hotkeys page's L2 to R3: its Buttons row's job now)
@@ -2423,11 +2425,11 @@ namespace banana
 				const Item* e = itemByKey("nds_emulator");
 				if (e && e->at < (int)e->values.size() && "nds_" + e->values[e->at] == it.key) v = "In use";
 			}
-			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
+			else if (it.kind == Item::PAGE && it.key == "network") { AsNamed named(*this, wstat.connected); v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : ""); nameValue = wstat.connected; }
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
-			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
+			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
@@ -2440,12 +2442,13 @@ namespace banana
 			// (no arrows on Language: A opens its list, nothing steps left or right)
 			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO) && it.key != "language";
 			const float vmax = 260, vright = arrows ? 566 : 586;
-			float vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true));
+			float vw;
+			{ AsNamed named(*this, nameValue); vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true)); }
 			float vleft = vright - vw - (arrows ? 2 + std::round(13 / 2.0f + 1) + 10 : 0);
 			textFit(it.label, true, 20, 38, y + 16, (v.empty() ? 590 : vleft - 16) - 38, on ? p.onPick : p.muted, on);
 			if (v.empty()) continue;
 			Color vc = on ? (armed == i ? p.onPickAccent : p.onPick) : p.muted;
-			textFit(v, true, 19, vright - vw, y + 17, vw, vc, on);
+			{ AsNamed named(*this, nameValue); textFit(v, true, 19, vright - vw, y + 17, vw, vc, on); }
 			if (!arrows) continue;
 			arrow(true, 576, y + 21, vc);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, vc);
@@ -2901,7 +2904,8 @@ namespace banana
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
 		if (!st.font) return "...";
-		std::u32string u = rnds::utf8to32(lang::active() ? lang::tr(t) : t);
+		rnds::Verbatim vb(rawText);
+		std::u32string u = rnds::utf8to32(lang::active() && !rawText ? lang::tr(t) : t);
 		size_t fits = 0, over = u.size();	// (the first fits characters fit, the first over don't)
 		while (over - fits > 1)
 		{
@@ -2918,6 +2922,7 @@ namespace banana
 	std::string Settings::fitEnd(const std::string& t, bool medium, float size, float width, bool upper, float ls)
 	{
 		if (text(t, medium, size, 0, 0, Color(), upper, ls, true) <= width) return t;
+		rnds::Verbatim vb(rawText);
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
 		std::u32string u = rnds::utf8to32(t);
@@ -2999,7 +3004,7 @@ namespace banana
 				text(tag, true, 17, right, y + 18, n.current ? (on ? p.onPickAccent : p.accent) : c);
 				right -= 14;
 			}
-			text(fit(n.ssid, true, 20, right - 38), true, 20, 38, y + 16, c);
+			{ AsNamed named(*this); text(fit(n.ssid, true, 20, right - 38), true, 20, 38, y + 16, c); }
 		}
 		if (nets.empty() && wifiEnabled && !scanning && scannedOnce) text("No networks found. X searches again.", true, 20, 38, 98, p.muted);
 		float bw = faceWidth("B", "Back");
@@ -3219,7 +3224,7 @@ namespace banana
 				text(tag, true, 17, right, y + 18, d.connected ? (on ? p.onPickAccent : p.accent) : c);
 				right -= 14;
 			}
-			text(fit(d.name, true, 20, right - 38), true, 20, 38, y + 16, c);
+			{ AsNamed named(*this); text(fit(d.name, true, 20, right - 38), true, 20, 38, y + 16, c); }
 		}
 		if (btDevs.empty() && btEnabled && !btScanning && btScanned) text("No devices found. X searches again.", true, 20, 38, 98, p.muted);
 		float bw = faceWidth("B", "Back");
@@ -3244,9 +3249,14 @@ namespace banana
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
 		// the end of the password when it is longer than the field
-		std::string shown = fitEnd(pw, true, 22, 480);
-		float w = pw.empty() ? 0 : text(shown, true, 22, 0, 0, p.ink, false, 0, true);
-		if (!pw.empty()) text(shown, true, 22, 70, 165, p.ink);
+		float w = 0;
+		if (!pw.empty())	// (what was typed, as it is)
+		{
+			AsNamed named(*this);
+			std::string shown = fitEnd(pw, true, 22, 480);
+			w = text(shown, true, 22, 0, 0, p.ink, false, 0, true);
+			text(shown, true, 22, 70, 165, p.ink);
+		}
 		be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
 		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
 		if (entry == ENTRY_SEARCH && searchCount)
@@ -3284,11 +3294,16 @@ namespace banana
 			}
 			float nw = text(n, true, 17, 0, 0, p.muted, false, 0, true);
 			const float room = std::min(500.f, 600 - nw - 16 - 40);	// the text stops short of it
-			std::string t = fitEnd(pw, true, 24, room);
-			float tw = text(t, true, 24, 0, 0, p.ink, false, 0, true);
+			float tw = 0;
 			// (empty: the hint after the cursor, which is drawn at 40..50 and hid its first letter: "0 characters at most")
-			if (pw.empty()) { tw = 0; text(entrySub.empty() ? "Type here" : entrySub, true, 22, 58, 28, p.muted); }
-			else text(t, true, 24, 38, 27, p.ink);
+			if (pw.empty()) text(entrySub.empty() ? "Type here" : entrySub, true, 22, 58, 28, p.muted);
+			else
+			{
+				AsNamed named(*this);	// (what was typed, as it is)
+				std::string t = fitEnd(pw, true, 24, room);
+				tw = text(t, true, 24, 0, 0, p.ink, false, 0, true);
+				text(t, true, 24, 38, 27, p.ink);
+			}
 			be->fill(std::round(X(40 + tw)), std::round(X(26)), std::round(X(10)), std::round(X(28)), p.accent);	// the cursor
 			text(n, true, 17, 600 - nw, 31, p.muted);
 		}
@@ -3936,7 +3951,7 @@ namespace banana
 		box("hero", false, 18, 20, 604, 436);
 		icon("picture", 50, 56, 3);
 		text("Box art for", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		{ AsNamed named(*this); text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink); }
 		text(fit(artNames.empty() ? "\"" + artWords + "\"" : artNames[asel], true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help = !message.empty() ? message + (busy && !artMatching ? " (B works once it has answered.)" : "")
 			: "libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one "
@@ -5375,7 +5390,7 @@ namespace banana
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
 		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
-		textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
+		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
 		std::string help = gameHelpOf(row);
 		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);

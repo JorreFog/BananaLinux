@@ -61,6 +61,8 @@ namespace banana
 		static Prop parse(const std::string& text);
 		static Prop number(double v) { Prop p; p.lit = EV(v); return p; }
 		EV eval(const Scope& sc) const;
+		// whether one of its expressions reads a name that names() says yes to (a literal: never)
+		bool reads(bool (*names)(const std::string&)) const;
 	};
 
 	// "#rgb", "#rgba", "#rrggbb", "#rrggbbaa", "rgb(r,g,b)", "rgba(r,g,b,a)", "transparent", or a few names -> 0xAARRGGBB

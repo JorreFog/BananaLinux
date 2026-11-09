@@ -1106,7 +1106,7 @@ namespace banana
 				if (row.glyph >= 0) { glyph(row.glyph, lx, y + 19, c); lx += 30; }
 				std::string v = row.value.empty() ? "" : ui->fit(row.value, true, 19, 300);
 				float vw = v.empty() ? 0 : ui->text(v, true, 19, 0, 0, vc, false, 0, true);
-				ui->text(ui->fit(row.label, true, 20, 586 - vw - 16 - lx), true, 20, lx, y + 16, c);
+				{ Settings::AsNamed named(*ui, row.kind == R_ENTRY || row.kind == R_SERVER); ui->text(ui->fit(row.label, true, 20, 586 - vw - 16 - lx), true, 20, lx, y + 16, c); }	// (names as they are)
 				if (!v.empty()) ui->text(v, true, 19, 586 - vw, y + 17, vc);
 			}
 			if (r.empty() && sub == FOLDER) ui->text(dir.empty() ? "Nothing to show." : "An empty folder.", true, 20, 38, 98, p.muted);
