@@ -77,10 +77,14 @@ cd $D
     -skip_gameinfo -nowindow -video accel -view "$VIEW" -uifont /usr/share/banana/rnds/fonts/PixelifySans-Medium.ttf \
     -joystick -joystickprovider sdlgame -sound sdl &
 PID=$!
+# a quit (the menu, a shutdown: TERM to this launcher, game.pid) reaches MAME, and the launcher waits for it: MAME
+# writes the game's NVRAM (its high scores) as it ends, before the menu takes the panels back (as run-retroarch)
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
 /usr/libexec/banana/gw-hotkeys $PID &
 HK=$!
 wait $PID
 RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
 kill $HK 2>/dev/null
 echo "run-gw: exit $RC"
 exit $RC
