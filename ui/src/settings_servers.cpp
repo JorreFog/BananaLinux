@@ -1756,7 +1756,7 @@ namespace banana
 				std::string v = row.value.empty() ? "" : ui->fit(row.value, true, 19, row.choice ? 300 : 330);
 				float vw = v.empty() ? 0 : ui->text(v, true, 19, 0, 0, vc, false, 0, true);
 				float room = (row.choice ? 556 - vw - 16 : 586 - vw) - lx - 16;
-				ui->text(ui->fit(row.label, true, 20, room), true, 20, lx, y + 16, c);
+				{ Settings::AsNamed named(*ui, row.kind == B_ITEM || row.kind == S_ITEM); ui->text(ui->fit(row.label, true, 20, room), true, 20, lx, y + 16, c); }	// (names as they are)
 				if (v.empty()) continue;
 				if (row.choice)
 				{
