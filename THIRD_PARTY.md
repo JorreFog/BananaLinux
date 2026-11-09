@@ -11,6 +11,7 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | The Russian translation | ui/assets/lang/ru.tsv | by Vladislav (LVD) and Ruslan (Nestrahoff) | given to BananaOS by its translator |
 | The Italian translation | ui/assets/lang/it.tsv | by Olympicus | given to BananaOS by its translator |
 | The Finnish translation | ui/assets/lang/fi.tsv | by HANHITSI | given to BananaOS by its translator |
+| The Spanish translation | ui/assets/lang/es.tsv | by Pixelado Dev | given to BananaOS by its translator |
 | The BananaUI banana mark (redrawn as pixel art by tools/make-pixel-banana.py) | ui/assets/banana, the logo and boot animation | [JorreFog/helios](https://github.com/JorreFog/helios) app/src/main/res/drawable-nodpi/banana_mark.png | the same author's |
 | DraStic settings and button map for the RG DS | buildroot/board/rgds/drastic.cfg | ROCKNIX drastic-sa (config/RK3566/drastic.cfg.rgds) | GPL-2.0 (ROCKNIX) |
 | stb_image, stb_image_write | ui/third_party | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
