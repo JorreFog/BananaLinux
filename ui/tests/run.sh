@@ -50,6 +50,7 @@ make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
 awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg" | while read -r ic; do
     [ -f "$HERE/assets/rnds/icons/$ic" ] || { echo "FAIL systems.cfg: no icons/$ic"; exit 1; }
@@ -918,6 +919,7 @@ PY
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
+OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
 # home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
 # the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket

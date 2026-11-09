@@ -840,7 +840,12 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
 			if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
 			if (ok) ra_command("QUIT\n");
-			else sleep_log("RetroArch's command pipe closed: no resume state saved");
+			else {
+				/* no state asked for (RetroArch gone, or not reading its pipe): nothing of this save to come back to,
+				 * and a resume-boot would load an older automatic state once at the next boot as if it were this one */
+				sleep_log("RetroArch's command pipe closed: no resume state saved");
+				emu = NULL;
+			}
 		} else {
 			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
 			kill(grp, SIGCONT);
@@ -892,6 +897,9 @@ static void suspend_now(const char *why)
 	double asleep = 0, dark_from = 0, led_at = 0;
 	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
 	const char *woke = "?";
+	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
+	 * before each suspend, below */
+	int by_lid = !strncmp(why, "lid", 3);
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
 	for (;;) {
@@ -941,6 +949,18 @@ static void suspend_now(const char *why)
 			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
+		}
+		/* a sleep the lid started: the lid as it is now, just before the suspend. Opened again while the hooks took
+		 * Wi-Fi down (a second or more), its edge has gone by when the SoC suspends, and nothing but the power button
+		 * would wake it, the panels going dark under the user's eyes; its event is drained after the wake, so it is
+		 * read here. Open: awake as from a sleep (the game goes on, the post hooks bring Wi-Fi back) */
+		if (by_lid) {
+			read_lid();
+			if (!lid_closed) {
+				sleep_log("lid opened again before the suspend (%s): awake", why);
+				woke = "lid opened before the suspend";
+				break;
+			}
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
 		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
@@ -2069,8 +2089,9 @@ int main(int argc, char **argv)
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
 		/* recording: the touchscreen read every 0.2 s, before its buffer of motion can overflow (a touch's own time is
-		 * in its event, so it's recorded when it happened) */
-		if (recst.on && nquiet && wait > 0.2) wait = 0.2;
+		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
+		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
+		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
@@ -2137,7 +2158,10 @@ int main(int argc, char **argv)
 
 		/* idle in the menu (no game running): the panels dim, then it sleeps */
 		game = pid_of("/run/banana/game.pid") != 0;
-		if (recst.on && quiet_scan()) undim();	/* (recording: touches and sticks read, in games too) */
+		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
+		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
+		 * changed what it recorded); quiet_scan records them only while the recorder is on */
+		if (quiet_scan()) undim();
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */

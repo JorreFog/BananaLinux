@@ -85,6 +85,10 @@ tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 tests/wav-test: tests/wav-test.cpp src/sound.cpp src/sound.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/wav-test.cpp -lpthread
 
+# the menu's language lookup on the shipped translations (tests/run.sh runs it)
+tests/lang-test: tests/lang-test.cpp src/lang.cpp src/lang.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/lang-test.cpp src/lang.cpp -lpthread
+
 install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
@@ -109,7 +113,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/lang-raw-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
 
 .PHONY: host install clean
 

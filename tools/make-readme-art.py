@@ -491,6 +491,7 @@ def video_card(thumb, channel, title):
 VIDEOS = [  # (YouTube id, channel, title)
     ("yW6LavgyhL4", "Retro Game Corps", "Custom Firmware on the Anbernic RG DS Plus"),
     ("KPENdDlkI5M", "forthenext", "ANBERNIC RG DS Plus, BananaOS and your games tested"),
+    ("8eFy3ZvNbbg", "Trenton Faykus", "I tested 4 firmwares on RG DS Plus. here's why BananaOS wins"),
 ]
 
 # ---- the numbers, as the home screen shows a system's -------------------------------------------------------------
@@ -700,7 +701,8 @@ SHOTS = ["home", "library", "options", "settings", "nds", "zh-home", "zh-setting
          "light", "carts"]
 HEADERS = [  # (file, title, icon, subtitle)
     ("what", "What it is", "banana", "Lightweight Linux for two handhelds"),
-    ("new", "New in 0.5.0", "store", "Faster, cooler, Bluetooth and updates over Wi-Fi"),
+    ("videos", "Seen on YouTube", "video", "See BananaOS in action"),
+    ("new", "New in 0.5.2.2", "store", "BananaFront, new cores and the DS Pokémon companion"),
     ("install", "Get it", "cart", "Install, update and move your saves"),
     ("tour", "A tour", "picture", "Captured on an RG DS Plus running 0.4.2"),
     ("emulators", "Nintendo DS", "nds", "Two emulators. Your choice."),
@@ -709,7 +711,6 @@ HEADERS = [  # (file, title, icon, subtitle)
     ("hardware", "Built for it", "handheld", "Built for two screens and a lid"),
     ("status", "Status", "tools", "Known issues and what comes next"),
     ("build", "Build", "computer", "Build from source and work on the menu"),
-    ("videos", "Seen on YouTube", "video", "See BananaOS in action"),
     ("credits", "Credits", "fav", "Built on community work"),
 ]
 

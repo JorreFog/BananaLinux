@@ -72,10 +72,12 @@ open(conf, "w", encoding="utf-8").write(re.sub(r"(?m)^folder = /usr/share/banana
 PY
 mkdir -p "$STAGE/rnds" "$STAGE/banana/fonts"
 (cd "$UI/assets/rnds" && cp -r fonts icons systems.cfg ./*.png "$STAGE/rnds/")
+# the Chinese font (7 MB) is only loaded when a language needs it, and the Studio has no language setting
+rm -f "$STAGE"/rnds/fonts/fusion-pixel-*.ttf
 cp "$UI"/assets/banana/fonts/*.ttf "$STAGE/banana/fonts/"
 cp "$UI"/assets/banana/*.png "$STAGE/banana/"
 
-SRC="src/layout.cpp src/expr.cpp src/json.cpp src/library.cpp src/theme.cpp src/soft.cpp src/zip.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp"
+SRC="src/layout.cpp src/expr.cpp src/json.cpp src/library.cpp src/theme.cpp src/soft.cpp src/zip.cpp src/zipdir.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp"
 HASH=$(sh "$HERE/sources.sh")
 STAMP=$(date -u +%Y-%m-%dT%H:%MZ)
 COMMIT=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
