@@ -351,6 +351,14 @@ settings		Update check	更新检查
 settings		When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.	按需：仅在你选择「检查更新」时才会询问 GitHub。每日：在 Wi-Fi 连接时也会检查，每天最多一次，使「更新」一行能显示是否有新版本。任何内容都不会在未经你同意的情况下下载。
 settings		When asked	按需
 settings		Daily	每日
+settings		New versions of Banana: checking, installing, and going back.	Banana 的新版本：检查、安装和退回。
+settings		A new version, from GitHub or a package on the card. It runs from the next restart.	新版本，来自 GitHub 或卡上的更新包。下次重启后运行。
+settings		Whether the update check counts test versions.	更新检查是否计入测试版本。
+settings		Test versions count. Every release so far is one.	计入测试版本。迄今为止的每个版本都是测试版。
+settings		Only stable versions.	仅稳定版本。
+settings		When Banana looks for a new version. Nothing downloads without you.	Banana 何时查找新版本。未经你同意不会下载任何内容。
+settings		Only when you choose Check for updates.	仅在你选择「检查更新」时。
+settings		Also once a day, when Wi-Fi connects.	另外每天一次，在 Wi-Fi 连接时。
 settings		Downloading {n}%	正在下载 {n}%
 settings		{version} available	{version} 可用
 settings		Checking for updates...	正在检查更新…
