@@ -83,7 +83,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
-| `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's) |
+| `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's; a theme's `"accents": { "green": "#30d158", ... }` gives its own shade of each name Settings offers) |
 | `palette.<name>` | a colour of the palette (`palette.ink`, ...) |
 | `cursor`, `count`, `scroll` | the selection's index and the count in the current list (systems at home, games in a library); `scroll` is the selection's eased position, a fraction while it moves |
 | `moved`, `entered`, `dir` | ms since the selection last moved, ms since the view changed, the last move's direction (1 / -1) |

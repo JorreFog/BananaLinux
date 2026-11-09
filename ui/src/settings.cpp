@@ -465,7 +465,7 @@ namespace banana
 				menu, "theme", names, values);
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
-			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
+			{ "Yellow", "Orange", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "orange", "blue", "red", "green", "purple", "pink" });
 		add(D, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
 			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
 		items.back().hints = { "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." };
@@ -989,11 +989,14 @@ namespace banana
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
 			// changes: the Theme row loads it again)
-			static const std::vector<std::string> NAMES = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" },
-				VALUES = { "yellow", "blue", "red", "green", "purple", "pink" };
-			bool own = themeSetsAccent(getConfValue(data + "/settings.conf", "theme", "dark"));
-			it.names = own ? std::vector<std::string>{ "From the theme" } : NAMES;
-			it.values = own ? std::vector<std::string>{ getConfValue(it.file, "accent", "yellow") } : VALUES;
+			// a theme with its own shades of some ("accents"): those
+			std::string theme = getConfValue(data + "/settings.conf", "theme", "dark");
+			bool own = themeSetsAccent(theme);
+			std::vector<AccentName> list = themeAccents(theme);
+			if (list.empty()) list = ACCENT_NAMES;
+			it.names.clear(); it.values.clear();
+			for (auto& a : list) { it.names.push_back(a.name); it.values.push_back(a.value); }
+			if (own) { it.names = { "From the theme" }; it.values = { getConfValue(it.file, "accent", "yellow") }; }
 			it.help = own ? "This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here."
 				: "The colour of the selection, the logo and the boot animation's banana.";
 		}

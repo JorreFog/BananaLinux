@@ -6,6 +6,8 @@
   "author": "BananaOS",
   "base": "light",
   "accent": "#ff9f0a",
+  // Settings > Display & sound > Accent colour picks one of these (Apple's system colours); the one above for any other
+  "accents": { "yellow": "#f59300", "orange": "#f2600f", "green": "#28b14c", "blue": "#007aff", "pink": "#ff2d55", "purple": "#af52de" },
   "colors": { "screenBg": "#f2eef6", "ink": "#14141c", "muted": "#5a5a68" },
   "font": "inter",
   "switches": true,
@@ -49,7 +51,7 @@
     "edge": "#ffffff80",        // the glass's hairline edge
     "chip": "#14141c",          // a button's key
     "chipInk": "#ffffff",
-    "card": "#f7f7fb",          // a game's card in the tray
+    "card": "#b4ac9f",          // a game's card in the tray
     "shade": "#00000033",
     "hi": "=accent",
     // motion and light, all started by a press so they play once and stop (Motion off in Settings: none of them)

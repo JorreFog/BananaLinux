@@ -198,8 +198,23 @@ namespace banana
 		if (path.empty()) return false;
 		std::map<std::string, std::string> kv;
 		if (!readTheme(path, kv, nullptr)) return false;
+		for (auto& e : kv) if (e.first.compare(0, 8, "accents.") == 0) return false;
 		uint32_t c;
 		return parseColor(kv["accent"], c) || parseColor(kv["accent.base"], c) || !kv["accent"].empty();
+	}
+
+	const std::vector<AccentName> ACCENT_NAMES = { { "yellow", "Yellow" }, { "orange", "Orange" }, { "blue", "Blue" },
+		{ "red", "Red" }, { "green", "Green" }, { "purple", "Purple" }, { "pink", "Pink" } };
+
+	std::vector<AccentName> themeAccents(const std::string& value)
+	{
+		std::vector<AccentName> r;
+		std::string path = themePath(value);
+		std::map<std::string, std::string> kv;
+		if (path.empty() || !readTheme(path, kv, nullptr)) return r;
+		uint32_t c;
+		for (auto& a : ACCENT_NAMES) if (parseColor(kv[std::string("accents.") + a.value], c)) r.push_back(a);
+		return r;
 	}
 
 	GlassLook glassLook;
@@ -238,6 +253,15 @@ namespace banana
 			rnds::setAccent(a);
 		}
 		else if (!kv["accent"].empty()) rnds::setAccent(kv["accent"]);	// one of Banana's (yellow, blue, ...)
+		// the accent picked in Settings, in the theme's own shade of it ("accents"); one it has none of: the above
+		if (parseColor(kv["accents." + accentName], c))
+		{
+			rnds::Accent a;
+			a.base = c & 0xffffff;
+			a.light = mix(a.base, 0xffffff, 0.6f); a.dark = mix(a.base, 0, 0.62f);
+			a.band = mix(a.base, 0xffffff, 0.3f); a.low = mix(a.base, 0, 0.2f);
+			rnds::setAccent(a);
+		}
 		// the palette's colours by name
 		for (auto& e : kv)
 			if (e.first.compare(0, 7, "colors.") == 0 && parseColor(e.second, c)) rnds::themeColors[e.first.substr(7)] = c;

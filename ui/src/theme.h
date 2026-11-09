@@ -21,7 +21,14 @@ namespace banana
 	// A theme that can't be read falls back to dark, its reason in *why
 	std::string applyTheme(const std::string& value, const std::string& accentName, std::string* why = nullptr);
 	// a user theme ("user:<name>") that sets its own accent: Settings' Accent colour row has nothing to change then
+	// (one with "accents" too lets it pick among those)
 	bool themeSetsAccent(const std::string& value);
+	// Banana's accent names, in Settings' order, each with its name as shown
+	struct AccentName { const char* value; const char* name; };
+	extern const std::vector<AccentName> ACCENT_NAMES;
+	// the accents a theme gives its own shade of ("accents": { "green": "#30d158", ... }), in Banana's order: those are
+	// the Accent colour row's choices with it. None: Banana's own (or, with its "accent", just that one)
+	std::vector<AccentName> themeAccents(const std::string& value);
 	// a theme's own picture of itself ("preview": "<file>.png" beside its .json, the top panel's home at 640x480), else ""
 	std::string themePreview(const std::string& value);
 	// a system's icon: the theme's own for it (themeFiles.icons by system id), else def

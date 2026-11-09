@@ -16,9 +16,12 @@ phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio t
       "author": "you",             (shown nowhere yet)
       "base": "dark",              the palette it starts from: "dark" or "light"
       "accent": "#3cc6e8",         the selection, the logo, the boot banana: one colour (its lighter and darker
-                                   shades are worked out), one of Banana's names ("yellow", "blue", "red",
-                                   "green", "purple", "pink"), or all five: { "base": "#...", "light": "#...",
+                                   shades are worked out), one of Banana's names ("yellow", "orange", "blue",
+                                   "red", "green", "purple", "pink"), or all five: { "base": "#...", "light": "#...",
                                    "dark": "#...", "band": "#...", "low": "#..." }
+      "accents": { "green": "#30d158", "blue": "#0a84ff" }
+                                   the theme's own shade of some of Banana's accent names: Settings' Accent colour
+                                   then picks among these (an accent picked that isn't here: "accent" above)
       "colors": {                  any of the colours below; the ones not named keep the base palette's
         "screenBg": "#0b1d2a",
         "ink": "#e4f6ff"
