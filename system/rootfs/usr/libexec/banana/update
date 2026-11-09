@@ -205,6 +205,12 @@ apply)
     SIZE=$(wc -c < "$DIR/rootfs.squashfs")
     LIMIT=$(( $(cat /sys/class/block/${PART##*/}/size) * 512 ))
     [ "$SIZE" -le "$LIMIT" ] || fail "the system ($SIZE bytes) doesn't fit the slot ($LIMIT bytes)"
+    # the slot about to be written isn't a system until its root, kernel and device tree are whole again: not the
+    # default (a second apply before the restart writes the slot the first one made the default: cut off, the next
+    # boot ran half a system, with no menu to pick another) and no kernel (Previous version, update switch, only goes to
+    # a slot with one: after a cut-off write it went to the half-written root)
+    [ "$(default_slot)" = "$TO" ] && set_default $SLOT
+    boot_rw; rm -f /boot/$TO/Image; boot_ro
     # the root, in 16 MB pieces so the progress can be told
     CHUNK=16
     pieces=$(( (SIZE + CHUNK * 1048576 - 1) / (CHUNK * 1048576) ))
