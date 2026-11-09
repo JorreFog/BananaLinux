@@ -150,7 +150,9 @@ namespace banana::lang
 			// all in capitals, with no line of its own: the line in any case, when that is one translation
 			bool upper = false, lowerSeen = false;
 			for (unsigned char c : s) { if (c >= 'A' && c <= 'Z') upper = true; if (c >= 'a' && c <= 'z') lowerSeen = true; }
-			if (upper && !lowerSeen)
+			// (not a button's name as printed on the handheld, a key cap's "START" / "SELECT": "Start" is a label's
+			// line, and in Finnish the START key turned into "Käynnistä" and pushed SELECT's hint off the bar)
+			if (upper && !lowerSeen && s != "START" && s != "SELECT")
 			{
 				auto f = folded.find(lower(s));
 				if (f != folded.end() && !f->second.empty()) return f->second;
