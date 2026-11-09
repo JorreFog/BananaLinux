@@ -15,23 +15,90 @@ MARK=$RUN/saves-flat
 [ -d "$DATA/saves" ] || exit 0
 IDS=$(sed -n 's/^\[\(.*\)\]$/\1/p' "$SYSTEMS" 2>/dev/null)
 FAIL=0
+# blank <file>: no save in it, only 0xff or only 0x00 bytes (a core that made the file and never wrote it; counted, not
+# compared: the shell drops a NUL from $(...)), or nothing at all; as run-retroarch tells a GBA core's blank one
+blank() {
+    [ "$(tr -d '\377' < "$1" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$1" | head -c 1 | wc -c)" = 0 ]
+}
+# where each system's games are (its "folder", or its id: "<id> <folder>" lines), on this card and on the second one
+# (sd2 names its roms folder in $RUN/sd2/roms while it is in)
+FOLDERS=$(awk '/^\[/{if(id!="")print id "\t" (f!=""?f:id); id=substr($0,2,length($0)-2); f=""} /^folder *=/{sub(/^folder *= */,""); f=$0}
+    END{if(id!="")print id "\t" (f!=""?f:id)}' "$SYSTEMS" 2>/dev/null)
+ROOTS=$DATA/roms
+r=$(cat "$RUN/sd2/roms" 2>/dev/null); [ -n "$r" ] && [ -d "$r" ] && ROOTS="$ROOTS
+$r"
+# systems_of <name>: the systems that have a game called <name> (any extension: a .zip too), in their folder or one
+# folder down, a line each (the name quoted: brackets and the like in it are the name's, not a pattern)
+systems_of() {
+    printf '%s\n' "$FOLDERS" | while IFS='	' read -r _id _fo; do
+        case $_fo in ''|/*) continue ;; esac
+        printf '%s\n' "$ROOTS" | while read -r _r; do
+            for _g in "$_r/$_fo/$1".* "$_r/$_fo"/*/"$1".*; do [ -e "$_g" ] && { echo "$_id"; exit; }; done
+        done
+    done
+}
+# dest_of <core folder> <save>: the folder the save belongs in. Every GBA core's save is in the one GBA folder, anything
+# else is a RetroArch system save, flat. A core that runs more than one system (mGBA and VBA-M: the GBA, Game Boy and
+# Game Boy Color) has each system's saves in its one folder, so the game's own folder decides: a Game Boy (Color) game's
+# save is flat. With no game found it goes where it always did, the GBA's: a GB save and a GBA save can't be told apart
+# by their bytes or size (both 8, 32 or 128 KB), and the game can be put back in its folder to find it again.
+dest_of() {
+    case $1 in
+    mGBA|"VBA-M")
+        _s=$(systems_of "${2%.*}")
+        if echo "$_s" | grep -qx gba; then echo "$DATA/saves/gba"
+        elif echo "$_s" | grep -qxE 'gbc?'; then echo "$DATA/saves"
+        else echo "$DATA/saves/gba"; fi ;;
+    gpSP|"VBA Next"|Meteor) echo "$DATA/saves/gba" ;;
+    *) echo "$DATA/saves" ;;
+    esac
+}
+# core <folder name>: whether saves/<folder> is a core's save folder
+core() {
+    echo "$IDS" | grep -Fxq "$1" && return 1	# (gba, nds, psx... are systems, not cores)
+    # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
+    # moved flat, a PICO-8 game would start without it)
+    case $1 in cdata) return 1 ;; esac
+    return 0
+}
+SEEN=	# the core folders done, a line each
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
-    echo "$IDS" | grep -Fxq "$d" && continue	# (gba, nds, psx... are systems, not cores)
-    # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
-    # moved flat, a PICO-8 game would start without it)
-    case $d in cdata) continue ;; esac
-    # every GBA core's save belongs in the one GBA folder; anything else is a RetroArch system save, flat
-    case $d in
-    gpSP|mGBA|"VBA Next"|"VBA-M"|Meteor) dest=$DATA/saves/gba ;;
-    *) dest=$DATA/saves ;;
-    esac
-    mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
+    core "$d" || continue
     for f in "$dir"*; do
         [ -f "$f" ] || continue
         n=${f##*/}
-        if [ ! -e "$dest/$n" ] || [ "$f" -nt "$dest/$n" ]; then
+        dest=$(dest_of "$d" "$n")
+        # another core folder with a save of this name for the same flat folder: one game played in two cores (a
+        # system that has a game of that name, and only one: the newer save is taken, as below), or two games of
+        # different systems (FCEUmm's NES Pac-Man and Gambatte's Game Boy one) that a flat folder can't keep apart, or
+        # no game found to tell. Those stay in their core folders, as RetroArch had them, said once in banana-ui's log;
+        # no marker, so a later boot tries again (the game put back, or one of the saves taken away). (Not for
+        # saves/gba: its cores are all one system's.)
+        if [ "$dest" = "$DATA/saves" ]; then
+            others= first=1
+            for o in "$DATA"/saves/*/; do
+                o=${o%/}; o=${o##*/}
+                [ "$o" != "$d" ] && [ -f "$DATA/saves/$o/$n" ] && core "$o" && [ "$(dest_of "$o" "$n")" = "$dest" ] || continue
+                others="$others, $o"
+                printf '%s\n' "$SEEN" | grep -Fxq "$o" && first=
+            done
+            if [ -n "$others" ] && [ "$(systems_of "${n%.*}" | wc -l)" != 1 ]; then
+                [ -n "$first" ] && echo "saves-flat: $n is in saves/$d$others: not one game's (two systems have a game of that name, or none does), so they stay where they are" >&2
+                FAIL=1
+                continue
+            fi
+        fi
+        mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
+        # the core's save goes flat when there is none there, when it is newer, and always over a blank one; never a
+        # blank one over a save with data in it (gpSP's real save, then mGBA's empty file of it a day later)
+        take=
+        if [ ! -e "$dest/$n" ]; then take=1
+        elif blank "$f"; then blank "$dest/$n" && [ "$f" -nt "$dest/$n" ] && take=1
+        elif blank "$dest/$n" || [ "$f" -nt "$dest/$n" ]; then take=1
+        fi
+        if [ -n "$take" ]; then
             # (the flat save it replaces is kept too: saves-legacy/replaced/, never overwritten)
             if [ -e "$dest/$n" ]; then
                 r="$DATA/banana/saves-legacy/replaced/${dest#$DATA/saves}/$n"
@@ -52,6 +119,8 @@ for dir in "$DATA"/saves/*/; do
         mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null &&
             mv -f "$f" "$b" || FAIL=1
     done
+    SEEN="$SEEN
+$d"
 done
 if [ $FAIL = 0 ]; then
     touch "$MARK"
