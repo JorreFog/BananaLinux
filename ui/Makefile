@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
@@ -62,6 +62,12 @@ CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -shared -fPIC -o $@ $< -ldl
 
+# the speaker EQ (Settings > Display & sound > Speaker EQ): an ALSA filter plugin, in alsa-lib's plugin folder where
+# bananad's `type banana_eq` finds it. -DPIC: alsa-lib's plugin macros only skip their static-build symbol with it
+libasound_module_pcm_banana_eq.so: src/eq/pcm_banana_eq.c src/eq/eq.h
+	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -shared -fPIC -DPIC \
+		$(shell $(PKG_CONFIG) --cflags alsa) -o $@ $< $(shell $(PKG_CONFIG) --libs alsa) -lm
+
 host:
 	$(MAKE) ALSA=0 banana-ui
 
@@ -81,6 +87,10 @@ tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
 
+# the speaker EQ's arithmetic: the profile parser, the filters against reference curves, headroom, stability (tests/run.sh runs it)
+tests/eq-test: tests/eq-test.c src/eq/eq.h
+	$(CC) $(CFLAGS) -O2 -Wall -Wextra -Wno-unused-function -Isrc -o $@ tests/eq-test.c -lm
+
 # the menu's WAV reader on theme sounds (tests/run.sh runs it)
 tests/wav-test: tests/wav-test.cpp src/sound.cpp src/sound.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/wav-test.cpp -lpthread
@@ -92,6 +102,10 @@ tests/lang-test: tests/lang-test.cpp src/lang.cpp src/lang.h
 install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
+	install -D -m 755 libasound_module_pcm_banana_eq.so $(DESTDIR)/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so
+	# (the speaker EQ's profiles measured for a handheld: <board>.txt, /etc/banana/board's name)
+	mkdir -p $(DESTDIR)/usr/share/banana/speaker-eq
+	cp -r assets/speaker-eq/. $(DESTDIR)/usr/share/banana/speaker-eq/
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
 	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
 	install -D -m 755 banana-bshare $(DESTDIR)/usr/bin/banana-bshare
@@ -113,7 +127,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
 
 .PHONY: host install clean
 

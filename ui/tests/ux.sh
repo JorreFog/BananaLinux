@@ -149,10 +149,10 @@ ux_check noports-link "press a: used, view 1 sys 5"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice to the last row,
-# Menu look, then up) hides one (Game Boy Advance), then Ports (the row before Files, the last)
+# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R, a page down, then Down:
+# the seventh row, under Speaker EQ) hides one (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home 0; press left; press start; press r; press r; press a; press r; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
+ux_run shelves "home 0; press left; press start; press r; press r; press a; press r; press down; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
