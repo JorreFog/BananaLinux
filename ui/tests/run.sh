@@ -917,6 +917,7 @@ PY
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
+OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
 # home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
 # the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket
