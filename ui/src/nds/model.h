@@ -192,6 +192,9 @@ namespace banana::nds
 		TimeOfDay timeOfDay = TimeOfDay::DAY; uint8_t season = 0, weekday = 0;
 		uint16_t repelSteps = 0;
 		std::vector<uint8_t> flags;				// story/event flags (for the guide's progress), as the game keeps them
+		// the trainers beaten, by the ROM's trainer id (bit n of byte n / 8; empty: not known): a milestone's foe beaten
+		// is that milestone done (the GBA games' save keeps one flag a trainer)
+		std::vector<uint8_t> trainersBeaten;
 	};
 
 	// ---- guide data (ours, per game: /usr/share/banana/companions/nds-pokemon/<game>.json) ----------------------

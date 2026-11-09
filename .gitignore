@@ -11,6 +11,8 @@
 /ui/tests/lang-test
 /ui/tests/input-test
 /ui/tests/lang-raw-test
+/ui/tests/wav-test
+/ui/tests/gba-hidden-items
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
 /system/bananad/bananad

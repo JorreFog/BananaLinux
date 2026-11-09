@@ -8,9 +8,9 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
-SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
+SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/panel.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
@@ -127,7 +127,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
 
 .PHONY: host install clean
 
@@ -154,9 +154,13 @@ tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/r
 # the GBA Pokémon games' ROM data for the DS companion (src/gba/gen3rom.*): tests/gba-rom-test [roms dir [png dir]]
 # (or GBA_ROMS=<dir>: the player's own ROMs; without them the header checks only). tests/gba-items-gen remakes
 # src/gba/gen3items.inc from an Emerald, a FireRed and a HeartGold ROM
-GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/gen3live.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp
+GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/gen3live.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp src/nds/guide.cpp src/json.cpp
 tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3live.h src/gba/hacks.h src/gba/gen3items.inc src/gba/gen4names.inc src/pokemon.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-rom-test.cpp $(GBA_ROM_SRC) -lz -lpthread
+
+# the hidden items of a GBA Pokémon ROM, for its guide's secrets: tests/gba-hidden-items <rom.gba>
+tests/gba-hidden-items: tests/gba-hidden-items.cpp src/pokemon.cpp src/pokemap.cpp src/pokemon.h src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-hidden-items.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 
 tests/gba-items-gen: tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread

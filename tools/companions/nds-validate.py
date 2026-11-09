@@ -25,7 +25,8 @@ Top level
   game          diamond | pearl | platinum | heartgold | soulsilver | black | white | black2 | white2 (nds-pokemon/)
                 ruby | sapphire | emerald | firered | leafgreen (gba-pokemon/, Gen III: national numbers up to 386)
                 the GBA ROM hacks (gba-pokemon/, ui/src/gba/hacks.cpp's keys): glazed | golden-glazed | glazed-unofficial |
-                gaia | heart-and-soul | lazarus | seaglass | soulgold (national numbers up to 1500; names checked to 649)
+                gaia | heart-and-soul | lazarus | seaglass | soulgold | unbound (national numbers up to 1500; names checked
+                to 649)
   code          the header's game code: ADAE APAE CPUE IPKE IPGE IRBO IRAO IREO IRDO; AXVE AXPE BPEE BPRE BPGE (must fit game);
                 a hack: its base game's (BPEE, Gaia BPRE)
   title         the game's English name ("Pokemon Platinum")
@@ -100,9 +101,9 @@ GAMES = {
     # "game", the code their base game's; their Pokédex can be far bigger (Generation IX species), "top" 1500 as the loader's
     "glazed": ("BPEE", 1500), "golden-glazed": ("BPEE", 1500), "glazed-unofficial": ("BPEE", 1500),
     "gaia": ("BPRE", 1500), "heart-and-soul": ("BPEE", 1500), "lazarus": ("BPEE", 1500),
-    "seaglass": ("BPEE", 1500), "soulgold": ("BPEE", 1500),
+    "seaglass": ("BPEE", 1500), "soulgold": ("BPEE", 1500), "unbound": ("BPRE", 1500),
 }
-HACKS = {"glazed", "golden-glazed", "glazed-unofficial", "gaia", "heart-and-soul", "lazarus", "seaglass", "soulgold"}
+HACKS = {"glazed", "golden-glazed", "glazed-unofficial", "gaia", "heart-and-soul", "lazarus", "seaglass", "soulgold", "unbound"}
 GBA_GAMES = {"ruby", "sapphire", "emerald", "firered", "leafgreen"} | HACKS
 # the games with two regions' gyms: badges 1-16 (Johto's, then Kanto's)
 SIXTEEN_BADGES = {"heartgold", "soulsilver", "glazed", "golden-glazed", "glazed-unofficial", "heart-and-soul"}

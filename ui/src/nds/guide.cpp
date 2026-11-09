@@ -25,6 +25,7 @@ namespace banana::nds
 			{ GameId::HACK, "glazed-unofficial", "BPEE", 1500 }, { GameId::HACK, "gaia", "BPRE", 1500 },
 			{ GameId::HACK, "heart-and-soul", "BPEE", 1500 }, { GameId::HACK, "lazarus", "BPEE", 1500 },
 			{ GameId::HACK, "seaglass", "BPEE", 1500 }, { GameId::HACK, "soulgold", "BPEE", 1500 },
+			{ GameId::HACK, "unbound", "BPRE", 1500 },
 		};
 		const GameRow* rowFor(GameId id)
 		{
@@ -152,12 +153,14 @@ namespace banana::nds
 		};
 		r.trainers = [rd](const std::string& name, const std::string& cls, int ace) {
 			std::vector<uint16_t> o;
+			// (a name of no letters - "???", a rival the player names in some hacks - as it is)
 			std::string fn = fold(name), fc = fold(cls);
-			if (fn.empty()) return o;
+			const bool raw = fn.empty();
+			if (raw && name.empty()) return o;
 			for (auto& kv : rd->trainers)
 			{
 				const Trainer& t = kv.second;
-				if (fold(t.name) != fn || t.team.empty()) continue;
+				if ((raw ? t.name != name : fold(t.name) != fn) || t.team.empty()) continue;
 				if (!fc.empty() && fold(t.cls).find(fc) == std::string::npos) continue;
 				int top = 0;
 				for (const TrainerMon& m : t.team) top = std::max<int>(top, m.level);

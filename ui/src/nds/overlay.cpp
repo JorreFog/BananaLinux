@@ -133,19 +133,13 @@ namespace banana::nds
 		return tb.bmp;
 	}
 
-	void Overlay::setIcon(bool on, int badge)
+	Bitmap iconPicture(float k, int badge, uint32_t corner)
 	{
-		if (!shm) return;
-		badge = std::max(0, badge);
-		if (on == iconOn && badge == iconBadge && iconW) return;
-		iconOn = on;
-		iconBadge = badge;
-		const float k = scale();
 		const int S = (int)std::lround(44 * k), O = (int)std::lround(9 * k), D = (int)std::lround(3 * k);
 		// the plate in the corner itself, the badge over its inner corner (towards the middle of the screen), so the badge
 		// never hangs off the panel: up and left of the plate in the bottom-right corner, down and left in the top-right
-		const bool right = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_TR;
-		const bool bottom = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_BL;
+		const bool right = corner == BOVL_CORNER_BR || corner == BOVL_CORNER_TR;
+		const bool bottom = corner == BOVL_CORNER_BR || corner == BOVL_CORNER_BL;
 		const int plateX = right ? O : 0, plateY = bottom ? O : 0;
 		Bitmap pic;
 		pic.w = O + S;
@@ -188,6 +182,18 @@ namespace banana::nds
 				rnds::blit(pic, tint(t, 0xffffff), bx + (int)std::lround((B - tw) / 2) - px, by + (int)std::lround((B - (asc + desc)) / 2) - py);
 			}
 		}
+		return pic;
+	}
+
+	void Overlay::setIcon(bool on, int badge)
+	{
+		if (!shm) return;
+		badge = std::max(0, badge);
+		if (on == iconOn && badge == iconBadge && iconW) return;
+		iconOn = on;
+		iconBadge = badge;
+		const float k = scale();
+		const Bitmap pic = iconPicture(k, badge);
 		// premultiplied 0xAARRGGBB for the file
 		std::vector<uint32_t> px((size_t)pic.w * pic.h);
 		for (size_t i = 0; i < px.size(); i++)

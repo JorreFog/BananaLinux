@@ -606,7 +606,8 @@ namespace banana::gba
 			h.add(len, 4);
 			g.romHash = h.hex();
 		};
-		// a ROM hack the companion knows (its base game's code, its whole ROM's CRC-32): who it is, its Pokédex, its chart
+		// a ROM hack (its base game's code) the companion knows, by its whole ROM's CRC-32: who it is, its Pokédex, its
+		// chart
 		if ((g.id == GameId::EMERALD || g.id == GameId::FIRERED) && n >= 0x1000000)
 		{
 			if (!crc) crc = romCrc32(rom, n);
@@ -626,18 +627,37 @@ namespace banana::gba
 				return g;
 			}
 		}
-		// a CFRU hack (and others built the same way) moves the species names to a longer table and adds the Fairy
-		// type: the header's species names no longer end where its move names start (412 x 11 bytes), or a base stat
-		// record has type 23
+		// any other ROM hack isn't supported: a pokeemerald-expansion build ("RHHEXP" in its header), or tables grown
+		// past the base game's (a CFRU hack moves the species names to a longer table - they no longer end where the
+		// move names start, 412 x 11 bytes - or a base stat record has a type past Dark: Fairy)
 		if (g.id != GameId::RUBY && g.id != GameId::SAPPHIRE)
 		{
+			int maj, min, pat;
 			long sp = ptr(rom, n, 0x144), mv = ptr(rom, n, 0x148), bs = ptr(rom, n, 0x1bc, 28 * 412);
-			bool hack = sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
+			bool hack = expansionVersion(rom, n, maj, min, pat) || sp < 0 || mv < 0 || bs < 0 || mv - sp != 412 * 11;
 			for (int i = 0; !hack && i < 412; i++) hack = rom[bs + 28 * i + 6] > 17 || rom[bs + 28 * i + 7] > 17;
-			if (hack) { g.id = GameId::NONE; g.gen = Gen::IV; g.dexSize = 493; return g; }
+			if (hack) { g.id = GameId::NONE; return g; }
 		}
 		hash();
 		return g;
+	}
+
+	std::shared_ptr<const RomData> readGame(const pkmn::RomTables& t, Game* out, bool* unsupported)
+	{
+		std::shared_ptr<const RomData> r;
+		Game g;
+		if (t.rom)
+		{
+			g = detectGame(t.rom->data(), t.rom->size(), t.crc);
+			if (g.id != GameId::NONE) r = readRomData(t, g, "");
+		}
+		// (a ROM with one of the five games' codes that isn't one of them, or one the list knows: a hack not
+		// supported - one whose header still points at its base game's tables too, Glazed 9.2.0 before it was listed)
+		// (a patched hack not listed has its base game's header, so one of the five games read and failed counts as one
+		// too: the five's own releases are read - tests/gba-rom-test)
+		if (unsupported) *unsupported = !r && t.rom && t.rom->size() >= 0xb0 && pkmn::detectGame(t.rom->data(), t.rom->size()) != nullptr;
+		if (out) *out = r ? r->game : Game();
+		return r;
 	}
 
 	namespace
@@ -681,7 +701,7 @@ namespace banana::gba
 			src.binary = hi->engine == Engine::BINARY && src.emerald;
 			src.fairy = t.has.fairyType >= 0 ? t.has.fairyType : src.cfru ? pkmn::FAIRY : -1;
 		}
-		else if (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412) return nullptr;
+		else if (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412) return nullptr;	// (detectGame(t) calls it a hack)
 		src.emerald = src.emerald || game.id == GameId::EMERALD;
 		const GameId base = !hi ? game.id : src.emerald ? GameId::EMERALD : GameId::FIRERED;	// (the base game's rules)
 		const uint8_t* rom = t.rom->data();
