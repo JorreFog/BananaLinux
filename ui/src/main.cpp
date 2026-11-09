@@ -2813,7 +2813,8 @@ int main(int argc, char** argv)
 		gameComp.close();
 		// Settings > Other systems > Second screen > Game companion: the same for another GBA game with a definition in
 		// /data/banana/companions (the card's own, written or tried out there) or /usr/share/banana/companions
-		// (gamecomp.h; the Pokémon games are the Pokémon companion's)
+		// (gamecomp.h; the Pokémon games are the Pokémon companion's). A translation is lang/<code>/ under either
+		// folder; matching stays on the English definition.
 		bool pkOn = panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom);
 		// (any system with a definition: the GBA's in the folder itself, another system's in <folder>/<system>/, schema 2)
 		bool gcOn = !pkOn && panel && settings["game_companion"] == "on" &&

@@ -76,8 +76,8 @@ tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/p
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 
 # the game companion's engine (tests/run.sh runs it)
-tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
+tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp src/lang.cpp src/lang.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp src/lang.cpp -lz -lpthread
 
 # the translations' number placeholders (tests/run.sh runs it)
 tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h

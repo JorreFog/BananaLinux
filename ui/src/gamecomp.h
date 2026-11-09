@@ -9,7 +9,8 @@
 // A game's definition is a JSON file in /usr/share/banana/companions/ (the format: docs/COMPANIONS.md): how to find the
 // game (its ROM header's code and title, or the ROM's CRC-32 for hacks and translations), the values to read (address,
 // type, post-processing, pointers, expressions over other values) and the pages' widgets. index.tsv in that folder
-// lists every file's match keys, so a game's start reads one small file, not every definition.
+// lists every file's match keys, so a game's start reads one small file, not every definition. A translation of a
+// definition (the menu's language) is lang/<code>/<the same path> beside it; matching stays on the English file.
 //
 // Reading: the values a page needs (the page shown, and every page's "when") are gathered into as few reads as
 // possible (addresses within 512 bytes share one, up to 4 KB each), a set every 250 ms, the next only once the last
@@ -121,6 +122,10 @@ namespace banana::gcomp
 	// a definition from its JSON (null and why in *why when it isn't one)
 	std::shared_ptr<Def> parseDef(const JVal& j, std::string* why = nullptr);
 	std::shared_ptr<Def> loadDef(const std::string& path, std::string* why = nullptr);
+	// translations of englishPath (the file findDef returns, under companionsDir) for the menu's language, in the order
+	// they are tried: the card's folder, the image's, then companionsDir when that is neither. Empty for English or no
+	// language (docs/COMPANIONS.md). The path under lang/<code>/ mirrors the English file's path under its folder.
+	std::vector<std::string> translationPaths(const std::string& companionsDir, const std::string& englishPath);
 
 	// the running ROM: its header's code and title, its CRC-32 (from the zip's directory, or worked out for a .gba
 	// when asked), its file name without folder and extension
