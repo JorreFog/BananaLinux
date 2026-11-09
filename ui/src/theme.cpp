@@ -246,6 +246,7 @@ namespace banana
 		f.wallTop = themeImage(dir, kv["background.top"]);
 		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
+		f.switches = kv["switches"] == "true";
 		for (auto& e : kv)
 		{
 			if (e.first.compare(0, 6, "icons.") == 0) { std::string p = themeImage(dir, e.second); if (!p.empty()) f.icons[e.first.substr(6)] = p; }

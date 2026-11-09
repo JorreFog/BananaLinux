@@ -40,7 +40,9 @@ phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio t
       "sounds": {                  the menu's sounds (WAV): scroll, select, back, fav, ready, insert; "off"
         "scroll": "mine/tick.wav", for none (they change at the next start of the menu)
         "fav": "off"
-      }
+      },
+      "switches": true             Settings: a switch on the off/on rows, a slider on Brightness and Volume (left
+                                   and right change them as before); without it, the value between arrows
     }
 
 File names are relative to the theme's .json (keep a theme's files in a folder of their own next to it), or full

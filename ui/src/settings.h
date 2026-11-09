@@ -825,6 +825,11 @@ namespace banana
 		void icon(const std::string& name, float x, float y, int scale);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
+		// a theme's "switches": an off/on row's switch (its state 0 or 1; -1 not such a row), Brightness and Volume's slider
+		int switchOf(const Item& it) const;
+		void pill(float x, float y, float w, float h, const rnds::Color& c);
+		void drawSwitch(float x, float y, bool state, bool picked);
+		void drawSlider(float x, float y, float w, float frac, bool picked);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the

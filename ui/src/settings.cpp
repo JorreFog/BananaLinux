@@ -244,7 +244,7 @@ namespace banana
 			for (uint32_t c : { a.base, a.light, a.dark, a.band, a.low }) look += "|" + std::to_string(c);
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
-			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + (f.switches ? "|s" : "|-");
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
@@ -1839,6 +1839,58 @@ namespace banana
 		return st;
 	}
 
+	int Settings::switchOf(const Item& it) const
+	{
+		if (it.kind != Item::CHOICE || it.values.size() != 2) return -1;
+		static const std::pair<const char*, const char*> PAIRS[] = { { "off", "on" }, { "no", "yes" }, { "false", "true" } };
+		for (auto& pr : PAIRS)
+		{
+			if (it.values[0] == pr.first && it.values[1] == pr.second) return it.at == 1 ? 1 : 0;
+			if (it.values[0] == pr.second && it.values[1] == pr.first) return it.at == 0 ? 1 : 0;
+		}
+		return -1;
+	}
+
+	// a rounded bar or a circle (h each side: radius h/2) in one colour
+	void Settings::pill(float x, float y, float w, float h, const Color& c)
+	{
+		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
+		if (dw <= 0 || dh <= 0) return;
+		std::string key = "pill:" + std::to_string(dw) + "x" + std::to_string(dh);
+		auto it = cache.find(key);
+		if (it == cache.end())
+		{
+			rnds::Bitmap m = rnds::paintMask(dw, dh, dh / 2.0f);
+			Cached cc;
+			cc.tex = be->upload(m, true);
+			it = put(key, cc, m);
+		}
+		const Cached& cc = keep(it);
+		be->draw(cc.tex, std::round(X(x)), std::round(X(y)), (float)cc.tex->w, (float)cc.tex->h, c);
+	}
+
+	// iOS's switch: green when on, grey when off, its white knob at that side (52 x 30)
+	void Settings::drawSwitch(float x, float y, bool state, bool picked)
+	{
+		Color off = picked ? Color(0, 0, 0, 0.22f) : Color(0.47f, 0.47f, 0.5f, light ? 0.45f : 0.55f);
+		pill(x, y, 52, 30, state ? Color::hex(0x34c759) : off);
+		float kx = state ? x + 24 : x + 2;
+		pill(kx, y + 3, 26, 26, Color(0, 0, 0, 0.18f));	// (its shadow)
+		pill(kx, y + 2, 26, 26, Color(1, 1, 1, 1));
+	}
+
+	// iOS's slider: a thin track, filled to frac in the accent (the picked row's text colour on the accent), a knob
+	void Settings::drawSlider(float x, float y, float w, float frac, bool picked)
+	{
+		SPal p = pal(light);
+		frac = std::max(0.0f, std::min(1.0f, frac));
+		pill(x, y - 3, w, 6, picked ? Color(0, 0, 0, 0.2f) : Color(0.47f, 0.47f, 0.5f, 0.5f));
+		if (frac > 0) pill(x, y - 3, std::max(6.0f, w * frac), 6, picked ? p.onPick : p.pick);
+		float kx = x + w * frac - 12;
+		pill(kx, y - 11, 24, 24, Color(0, 0, 0, 0.18f));
+		pill(kx, y - 12, 24, 24, Color(1, 1, 1, 1));
+	}
+
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
 		SPal p = pal(light);
@@ -2567,6 +2619,28 @@ namespace banana
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
 			{
 				if (const Item* r = itemByKey(s->summary); r && r->kind == Item::CHOICE && r->at < (int)r->names.size()) v = r->names[r->at];
+			}
+			// a theme with "switches": a switch or a slider in place of the value and its arrows (left and right as before)
+			if (rnds::themeFiles.switches)
+			{
+				int sw = switchOf(it);
+				bool level = (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.names.size() > 1;
+				if (sw >= 0)
+				{
+					textFit(it.label, true, 20, 38, y + 16, 586 - 52 - 16 - 38, on ? p.onPick : p.muted, on);
+					drawSwitch(586 - 52, y + 13, sw == 1, on);
+					continue;
+				}
+				if (level)
+				{
+					Color vc = on ? p.onPick : p.muted;
+					float vw = text(v, true, 19, 0, 0, vc, false, 0, true);
+					text(v, true, 19, 586 - vw, y + 17, vc);
+					float tw = 150, tx = 586 - 58 - 14 - tw;
+					textFit(it.label, true, 20, 38, y + 16, tx - 16 - 38, on ? p.onPick : p.muted, on);
+					drawSlider(tx, y + 28, tw, (float)it.at / (it.names.size() - 1), on);
+					continue;
+				}
 			}
 			// the name on the left and the value on the right, each in its own box: a long one (a translation) ends in
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest

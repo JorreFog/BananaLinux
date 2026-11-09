@@ -8,6 +8,7 @@
   "accent": "#ff9f0a",
   "colors": { "screenBg": "#0a0c18", "ink": "#ffffff", "muted": "#b8bccc" },
   "font": "inter",
+  "switches": true,
   "icons": {
     "nds": "glass/icons/nds.png", "gba": "glass/icons/gba.png", "gbc": "glass/icons/gbc.png", "gb": "glass/icons/gb.png",
     "nes": "glass/icons/nes.png", "snes": "glass/icons/snes.png", "megadrive": "glass/icons/megadrive.png",

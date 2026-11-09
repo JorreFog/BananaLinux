@@ -149,6 +149,7 @@ namespace rnds
 		std::map<std::string, std::string> icons;	// system id -> .png
 		std::map<std::string, std::string> sounds;	// scroll, select, back, fav, ready, insert -> .wav, or "off"
 		bool dither = true;							// the screens' dot pattern
+		bool switches = false;						// Settings: a switch on an off/on row, a slider on Brightness and Volume
 	};
 	extern ThemeFiles themeFiles;
 	bool themeColor(const char* name, Color& c);	// c replaced by the theme's colour of that name: true
