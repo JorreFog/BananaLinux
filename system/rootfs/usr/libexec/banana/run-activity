@@ -1,0 +1,8 @@
+#!/bin/sh
+# Activity (systems.conf's [activity], store/apps/activity): the program on both panels, its log kept small (it
+# appends a few lines each start; past 256 KB the old one moves to activity.log.1)
+#   run-activity <Activity.app>
+L=/data/banana/logs/activity.log
+mkdir -p /data/banana/logs
+[ -f $L ] && [ "$(wc -c < $L)" -gt 262144 ] && mv -f $L $L.1
+exec /usr/bin/banana-activity >> $L 2>&1
