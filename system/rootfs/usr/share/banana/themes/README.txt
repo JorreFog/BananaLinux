@@ -50,8 +50,9 @@ phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio t
       "settings": {                Settings' panels as frosted glass over the "background" pictures (blurred
         "glass": 14,               once, by this many units), tinted "pane" with a hairline "edge", in Inter;
         "pane": "#14161e6b",       only with a background
-        "edge": "#ffffff30"
-      },
+        "edge": "#ffffff30",
+        "frost": { "top": "...", "bottom": "..." }   optional: the pictures already blurred (faster: the
+      },                                             handheld blurs nothing; Glass's bake.py makes them)
       "switches": true             Settings: a switch on the off/on rows, a slider on Brightness and Volume (left
                                    and right change them as before); without it, the value between arrows
     }

@@ -76,12 +76,21 @@ for variant, (tint, edge, shade) in VARIANTS.items():
         dst = os.path.join(OUT, variant + "-" + view + "-" + side + ".jpg")
         bake(src, panes, tint, edge, shade, BAND if side == "bottom" else None).save(dst, quality=88, optimize=True)
         print(os.path.relpath(dst, os.path.join(HERE, "../..")))
+    # Settings' panels: each screen's picture blurred whole, as the handheld's three box passes of radius r would
+    # (sigma sqrt(r(r + 1))), so it reads this instead of blurring the picture itself (half a second on the RG DS)
+    for side in ("top", "bottom"):
+        r = round(BLUR)
+        img = Image.open(os.path.join(HERE, variant + "-" + side + ".jpg")).convert("RGB").resize((1024, 768), Image.LANCZOS)
+        dst = os.path.join(OUT, variant + "-" + side + "-frost.jpg")
+        img.filter(ImageFilter.GaussianBlur((r * (r + 1)) ** 0.5)).save(dst, quality=85, optimize=True)
+        print(os.path.relpath(dst, os.path.join(HERE, "../..")))
 
 # Glass light: Glass dark's file with white glass and dark ink
 THEMES = os.path.join(OUT, "..")
 s = open(os.path.join(THEMES, "glass-dark.json"), encoding="utf-8").read()
 for a, b in [
-    ('"settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30" }', '"settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80" }'),
+    ('"settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30",', '"settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80",'),
+    ('"frost": { "top": "glass/dark-top-frost.jpg", "bottom": "glass/dark-bottom-frost.jpg" }', '"frost": { "top": "glass/light-top-frost.jpg", "bottom": "glass/light-bottom-frost.jpg" }'),
     ('"top": "glass/dark-top.jpg", "bottom": "glass/dark-bottom.jpg"', '"top": "glass/light-top.jpg", "bottom": "glass/light-bottom.jpg"'),
     ("// Glass dark: frosted panels over a still picture, iPhone-like icons (Canvas's consoles, CC0). Glass light is the\n"
      "  // same with white glass.",

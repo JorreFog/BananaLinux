@@ -11,8 +11,9 @@
   "colors": { "screenBg": "#f2eef6", "ink": "#14141c", "muted": "#5a5a68" },
   "font": "inter",
   "switches": true,
-  // Settings: its panels frosted glass over these pictures (blurred on the handheld, once), in Inter
-  "settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80" },
+  // Settings: its panels frosted glass over these pictures, in Inter; "frost": the pictures already blurred by 14 (bake.py)
+  "settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80",
+    "frost": { "top": "glass/light-top-frost.jpg", "bottom": "glass/light-bottom-frost.jpg" } },
   "background": { "top": "glass/light-top.jpg", "bottom": "glass/light-bottom.jpg", "dither": false },
   "icons": {
     "nds": "glass/icons/nds.png", "gba": "glass/icons/gba.png", "gbc": "glass/icons/gbc.png", "gb": "glass/icons/gb.png",

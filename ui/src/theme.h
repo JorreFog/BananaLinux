@@ -35,7 +35,8 @@ namespace banana
 	std::string themedIcon(const std::string& systemId, const std::string& def);
 
 	// a theme's "settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30" }: Settings' panels frosted glass
-	// over the theme's pictures (glass.h), with that tint and hairline edge (ARGB), in Inter. blur 0: as before
-	struct GlassLook { float blur = 0; uint32_t pane = 0x6b14161e, edge = 0x30ffffff; };
+	// over the theme's pictures (glass.h), with that tint and hairline edge (ARGB), in Inter. blur 0: as before.
+	// "frost": { "top": ..., "bottom": ... }: those pictures already blurred (no blur on the handheld then)
+	struct GlassLook { float blur = 0; uint32_t pane = 0x6b14161e, edge = 0x30ffffff; std::string frostTop, frostBottom; };
 	extern GlassLook glassLook;
 }

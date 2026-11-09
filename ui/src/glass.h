@@ -3,6 +3,7 @@
 // blurred once, and a glass box shows its piece of the blurred picture inside its corners, its tint drawn over it.
 // Settings' panels under a theme's "settings.glass" (settings.cpp) use it; the layout themes bake theirs into their pictures.
 #include "../rnds/RndsRaster.h"
+#include <memory>
 
 namespace banana
 {
@@ -15,7 +16,10 @@ namespace banana
 
 	// the screen's picture (0 top, 1 bottom) filled to w x h, as the theme's pictures are drawn, and blurred by r device
 	// px (0: sharp): made once and kept (the last few). Null when the theme has no picture
-	const rnds::Bitmap* glassBackdrop(int screen, int w, int h, int r);
+	std::shared_ptr<const rnds::Bitmap> glassBackdrop(int screen, int w, int h, int r);
+	// the theme's pictures made ahead, sharp and blurred by r, on a thread of their own: the first Settings open
+	// waited for them (two pictures read, filled and blurred, ~half a second on the RG DS)
+	void glassPrewarm(int w, int h, int r);
 
 	// a box's piece of a blurred picture: the part under it (at x, y device px, w x h), its corners rounded
 	rnds::Bitmap glassPiece(const rnds::Bitmap& backdrop, int x, int y, int w, int h, const float rad[4]);

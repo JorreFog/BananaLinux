@@ -281,6 +281,8 @@ namespace banana
 			uint32_t gc;
 			if (parseColor(kv["settings.pane"], gc)) glassLook.pane = gc;
 			if (parseColor(kv["settings.edge"], gc)) glassLook.edge = gc;
+			glassLook.frostTop = themeImage(dir, kv["settings.frost.top"]);
+			glassLook.frostBottom = themeImage(dir, kv["settings.frost.bottom"]);
 		}
 		for (auto& e : kv)
 		{

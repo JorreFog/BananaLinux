@@ -1,9 +1,13 @@
 #include "glass.h"
+#include "theme.h"
 #include "../rnds/RndsUI.h"
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace banana
@@ -49,26 +53,57 @@ namespace banana
 		}
 	}
 
-	const rnds::Bitmap* glassBackdrop(int screen, int w, int h, int r)
+	// (a few kept: each screen's picture sharp and blurred, for the menu and Settings. Never destroyed: a prewarm still
+	// at work when the program ends would find them gone)
+	struct Made { int screen; std::string path; int w, h, r; std::shared_ptr<const rnds::Bitmap> b; };
+	static std::mutex& madeLock = *new std::mutex;
+	static std::deque<Made>& made = *new std::deque<Made>;
+
+	static std::shared_ptr<const rnds::Bitmap> backdrop(int screen, const std::string& p, int w, int h, int r)
 	{
-		// (a few kept: each screen's picture sharp and blurred, for the menu and Settings)
-		struct Made { int screen; std::string path; int w, h, r; rnds::Bitmap b; };
-		static std::deque<Made> made;
-		if (screen < 0 || screen > 1) return nullptr;
-		const std::string& p = screen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom;
-		if (rnds::themeFiles.wallTop.empty() && rnds::themeFiles.wallBottom.empty()) made.clear();	// (another theme now: let them go)
+		std::lock_guard<std::mutex> l(madeLock);
 		for (const Made& m : made)
-			if (m.screen == screen && m.path == p && m.w == w && m.h == h && m.r == r) return m.b.empty() ? nullptr : &m.b;
+			if (m.screen == screen && m.path == p && m.w == w && m.h == h && m.r == r) return m.b;
 		rnds::Bitmap b = p.empty() || w <= 0 || h <= 0 ? rnds::Bitmap() : rnds::decodeFile(p);
+		std::shared_ptr<const rnds::Bitmap> out;
 		if (!b.empty() && !b.alpha)
 		{
 			b = rnds::resize(b, w, h);
 			boxBlur(b, r);
+			out = std::make_shared<const rnds::Bitmap>(std::move(b));
 		}
-		else b = rnds::Bitmap();
 		if (made.size() >= 6) made.pop_front();
-		made.push_back(Made{ screen, p, w, h, r, std::move(b) });
-		return made.back().b.empty() ? nullptr : &made.back().b;
+		made.push_back(Made{ screen, p, w, h, r, out });
+		return out;
+	}
+
+	std::shared_ptr<const rnds::Bitmap> glassBackdrop(int screen, int w, int h, int r)
+	{
+		if (screen < 0 || screen > 1) return nullptr;
+		if (rnds::themeFiles.wallTop.empty() && rnds::themeFiles.wallBottom.empty())	// (another theme now: let them go)
+		{
+			std::lock_guard<std::mutex> l(madeLock);
+			made.clear();
+			return nullptr;
+		}
+		// (blurred: the theme's own frosted picture when it has one, only filled to the screen)
+		const std::string& frost = screen == 0 ? glassLook.frostTop : glassLook.frostBottom;
+		if (r > 0 && !frost.empty()) return backdrop(screen, frost, w, h, 0);
+		return backdrop(screen, screen == 0 ? rnds::themeFiles.wallTop : rnds::themeFiles.wallBottom, w, h, r);
+	}
+
+	void glassPrewarm(int w, int h, int r)
+	{
+		// (read here, on the menu's thread)
+		std::string top = rnds::themeFiles.wallTop, bottom = rnds::themeFiles.wallBottom, ft = glassLook.frostTop, fb = glassLook.frostBottom;
+		if (top.empty() && bottom.empty()) return;
+		std::thread([=]
+		{
+			backdrop(0, top, w, h, 0);
+			backdrop(1, bottom, w, h, 0);
+			if (ft.empty()) backdrop(0, top, w, h, r); else backdrop(0, ft, w, h, 0);
+			if (fb.empty()) backdrop(1, bottom, w, h, r); else backdrop(1, fb, w, h, 0);
+		}).detach();
 	}
 
 	rnds::Bitmap glassPiece(const rnds::Bitmap& bd, int x, int y, int w, int h, const float rad[4])

@@ -246,13 +246,19 @@ namespace banana
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
 			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + (f.switches ? "|s" : "|-");
-			look += "|g" + std::to_string(glassLook.blur) + "," + std::to_string(glassLook.pane) + "," + std::to_string(glassLook.edge);
+			look += "|g" + std::to_string(glassLook.blur) + "," + std::to_string(glassLook.pane) + "," + std::to_string(glassLook.edge) + "," + glassLook.frostTop + "," + glassLook.frostBottom;
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
 		}
 		// (and now and then anyway: texts that came and went, a clock's minutes, a scan's networks, would pile up)
-		if (look != drawnLook || cache.size() > 1000) { cache.clear(); cacheBytes = 0; drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
+		if (look != drawnLook || cache.size() > 1000)	// (also for a new accent: the boxes are drawn again)
+		{
+			// a Glass theme new here (the boot, or just picked): its frosted pictures made now, beside the menu
+			if (look != drawnLook && glassLook.blur > 0)
+				glassPrewarm((int)std::lround(X(640)), (int)std::lround(X(480)), (int)std::lround(X(glassLook.blur)));
+			cache.clear(); cacheBytes = 0; drawnLook = look;
+		}
 		// the Carts and Glass themes write in Inter (a clean typeface), the others in the theme's Pixelify Sans
 		bool clean = (v == "carts" || glassLook.blur > 0) && !fontDir.empty();
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
@@ -1916,7 +1922,7 @@ namespace banana
 			auto it = cache.find(kb);
 			if (it == cache.end())
 			{
-				const rnds::Bitmap* wall = glassBackdrop(scr, sw, sh, 0);
+				auto wall = glassBackdrop(scr, sw, sh, 0);
 				Cached c;
 				if (wall) c.tex = be->upload(*wall, false);
 				it = put(kb, c, wall ? *wall : rnds::Bitmap());
@@ -1953,7 +1959,7 @@ namespace banana
 		auto it = cache.find(kb);
 		if (it == cache.end())
 		{
-			const rnds::Bitmap* bd = glassBackdrop(scr, sw, sh, r);
+			auto bd = glassBackdrop(scr, sw, sh, r);
 			rnds::Bitmap b = bd ? glassPiece(*bd, dx, dy, dw, dh, rad) : rnds::Bitmap();
 			Cached c;
 			if (!b.empty()) c.tex = be->upload(b, false);
