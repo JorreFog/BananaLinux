@@ -211,7 +211,7 @@ for size in 640x480 1024x768; do
     # touch, START; up to Name, one letter deleted, START: both in game-titles.tsv, and the game first on the shelf
     tlog=$OUT/$size-titles.log; T="$FX/data/game-titles.tsv"; rm -f "$T"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
             press up; press a; press b; press start; wait 300; shot titles-done" 2> "$tlog" || { echo "FAIL $size: banana-ui (titles) exited $?"; fail=1; }
     [ "$(cat "$T" 2>/dev/null)" = "$(printf 'nds/Yellow Planet [!].zip\tYellow Plane\ta')" ] || { echo "FAIL $size: game-titles.tsv: $(cat "$T" 2>/dev/null)"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
@@ -336,6 +336,17 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press left; press left; press a" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (game timing 2) exited $?"; fail=1; }
     [ -e "$FT" ] && { echo "FAIL $size: timing back to As in Settings left $(cat "$FT")"; fail=1; }
+    # a DS game's own DS CPU speed (Origin HeartGold's 1066 MHz while another stays as in Settings): down to the row after
+    # Timing, right to 67 MHz, right to 133: kept at once; left twice back to "As in Settings": no file left
+    FC="$FX/data/nds-per-game-cpu.conf"; rm -f "$FC"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press down; press right; press right; shot pergame-cpu; press b" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game CPU speed) exited $?"; fail=1; }
+    [ "$(cat "$FC" 2>/dev/null)" = "Banana Kart DS.nds = 133" ] || { echo "FAIL $size: game CPU speed: $(cat "$FC" 2>&1)"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press down; press left; press left; press a" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game CPU speed 2) exited $?"; fail=1; }
+    [ -e "$FC" ] && { echo "FAIL $size: CPU speed back to As in Settings left $(cat "$FC")"; fail=1; }
     # review fixes on the game page and the keyboard: m7 a pre-filled "Café" loses its whole é to one B (not half of it);
     # m4 a name of its own deleted, then the scraped one typed again: no name of its own; m6 a sharing name with the
     # password step left by B: nothing written
@@ -343,10 +354,10 @@ for size in 640x480 1024x768; do
     printf 'nds/Yellow Planet [!].zip\tCafé\t\n' > "$TT"
     run_r() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" || { echo "FAIL $size: banana-ui (review) exited $?"; fail=1; }; }
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press a; press b; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
     [ "$(cat "$TT")" = "$(printf 'nds/Yellow Planet [!].zip\tCaf\t')" ] || { echo "FAIL $size: m7 UTF-8 delete: $(od -c "$TT" | head -2 | tr -s ' ')"; fail=1; }
     printf 'nds/Yellow Planet [!].zip\tCustom\t\n' > "$TT"
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
     [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
     rm -f "$TT" "$FX/data/accounts.conf"
     run_r "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; press b; press start; press b"
@@ -454,6 +465,48 @@ for size in 640x480 1024x768; do
     kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
     kcheck "pokefeed .*poke-battle.txt: asked 6, party 4, battle 1, foes 1"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
+    # the GBA companion's pages (gba/host.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): once
+    # they show, the panel has no way back to the views they replace. Back to game shows the tiles with the pages' own
+    # tabs, and each of those opens its page (2026-11-04: Map and Bag there opened today's views)
+    EM=$(ls "${GBA_ROMS:-$HOME/gba-companion/roms}"/*Emerald*.gba 2>/dev/null | head -n 1)
+    if [ -n "$EM" ]; then
+        GL=$OUT/$size-gba-pages.log
+        gs="home 0; gamepanel 1 $EM; pokefeed $OUT/poke-party.txt; gbahost; gshot gba-pages"
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            # (the tiles' tab bar: the pages' eight tabs and Game, in nine cells across x 18..622)
+            gs="$gs; gtouch 600 28; gshot gba-game-$i; gtouch $((18 + i * 604 / 9 + 604 / 18)) 447; gshot gba-tab-$page"
+            i=$((i + 1))
+        done
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
+        grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Back to game didn't show the tiles: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
+        grep "gtouch" "$GL" | grep -q "view views:" && { echo "FAIL $size: a tab opened the views the pages replace: $(grep 'view views:' "$GL" | head -n 3 | tr '\n' ' ')"; fail=1; }
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            # (Battle: dimmed outside a battle, the tap leaves the tiles)
+            want="pages:$page"; [ $page = Battle ] && want=game
+            grep -q "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447: action 0 keys 0 view $want\$" "$GL" ||
+                { echo "FAIL $size: the tiles' $page tab: $(grep "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447" "$GL")"; fail=1; }
+            i=$((i + 1))
+        done
+    else
+        echo "the GBA pages' panel test skipped (no Emerald ROM in GBA_ROMS)"
+    fi
+    # Pokémon Unbound (CFRU; GBA_HACKS, default ~/gba-companion/hacks): its pages take the panel too (2026-11-04: it
+    # had only the old views)
+    UB=$(find "${GBA_HACKS:-$HOME/gba-companion/hacks}" -maxdepth 2 -name '*Unbound*.gba' 2>/dev/null | head -n 1)
+    if [ -n "$UB" ]; then
+        UL=$OUT/$size-gba-unbound.log
+        "$HERE/banana-ui" --headless "$OUT/$size-ub-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 319 447; gshot ub-map" 2> "$UL" ||
+            { echo "FAIL $size: banana-ui (Unbound's pages) exited $?"; fail=1; }
+        grep -q "gbahost: ready Unbound view pages:" "$UL" || { echo "FAIL $size: Unbound's pages: $(grep -E 'gbahost|gba companion' "$UL" | head -n 3 | tr '\n' ' ')"; fail=1; }
+        grep -q "gtouch 319 447: action 0 keys 0 view pages:Map" "$UL" || { echo "FAIL $size: Unbound's Map tab: $(grep 'gtouch 319' "$UL")"; fail=1; }
+    else
+        echo "the Unbound panel test skipped (no Unbound ROM in GBA_HACKS)"
+    fi
     # the game panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the Keys tile opens it, a key types,
     # Done brings the tiles back (BANANA_TEST_VKBD: the tile without a /dev/uinput device)
     KK=$OUT/$size-keys.log

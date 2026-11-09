@@ -557,6 +557,11 @@ namespace banana
 			add(BD, "nds", "Timing", "How closely the DS's two processors keep in step.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
 			items.back().hints = { "As melonDS does it. Works with every game.", "About 10% faster, but it can break a game: Golden Sun: Dark Dawn loses its 3D world." };
+			// BananaDS's core.arm9_mhz (2026-11-04, the owner): how fast the DS's own CPU runs, past a DS's and a DSi's: a game
+			// that loses its own frames in busy places keeps them (Origin HeartGold's towns: 2.8% lost at 133 MHz, none at 1066)
+			add(BD, "nds", "DS CPU speed", "How fast the DS's own CPU runs. DSi games keep their own.",
+				bds, "core.arm9_mhz", { "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" }, { "67", "133", "266", "533", "1066", "2133" });
+			items.back().hints = { "A DS's real speed.", "A DSi's speed.", "Faster than a DS: a game may behave differently.", "Faster than a DS: a game may behave differently.", "Stops a game's own slowdown in busy places (Origin HeartGold's towns). A game may behave differently.", "The fastest. A game may behave differently." };
 			add(BD, "nds", "Microphone", "Whether games hear the real microphone.",
 				bds, "mic.source", { "On", "Off" }, { "device", "none" });
 			items.back().hints = { "Games hear the microphone: blow or speak when a game asks.", "Games hear nothing. The in-game menu's Blow still works." };
@@ -913,7 +918,7 @@ namespace banana
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
-			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
+			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
@@ -5405,6 +5410,9 @@ namespace banana
 	// Dark Dawn) stays Accurate
 	static const char* const GAME_TIMING_VALUES[] = { "", "accurate", "fast", "dsi" };
 	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast", "Fast, DSi CPU" };
+	// a DS game's own BananaDS DS CPU speed (core.arm9_mhz; nds-per-game-cpu.conf, run-bananads): over Settings' and its timing's
+	static const char* const GAME_CPU_VALUES[] = { "", "67", "133", "266", "533", "1066", "2133" };
+	static const char* const GAME_CPU_NAMES[] = { "", "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
 	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
@@ -5487,12 +5495,14 @@ namespace banana
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
-		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING };
-		pg3d = pgMic = pgRes = pgTiming = 0;
+		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
+		pg3d = pgMic = pgRes = pgTiming = pgCpu = 0;
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
 			std::string r = perGame("nds-per-game-res.conf", romName), t = perGame("nds-per-game-timing.conf", romName);
 			for (int i = 1; i < 4; i++) if (t == GAME_TIMING_VALUES[i]) pgTiming = i;
+			const std::string c = perGame("nds-per-game-cpu.conf", romName);
+			for (int i = 1; i < 7; i++) if (c == GAME_CPU_VALUES[i]) pgCpu = i;
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
@@ -5535,6 +5545,7 @@ namespace banana
 		put("nds-per-game-res.conf", GAME_RES_VALUES[pgRes]);
 		put("nds-per-game-mic.conf", GAME_MIC_VALUES[pgMic]);
 		put("nds-per-game-timing.conf", GAME_TIMING_VALUES[pgTiming]);
+		put("nds-per-game-cpu.conf", GAME_CPU_VALUES[pgCpu]);
 	}
 
 	Settings::Result Settings::pressGame(Key k)
@@ -5571,6 +5582,7 @@ namespace banana
 			}
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 4) % 4;
+			else if (row == PG_CPU) pgCpu = (pgCpu + d + 7) % 7;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
@@ -5648,6 +5660,7 @@ namespace banana
 				  "The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic)."
 				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
+				: row == PG_CPU ? "BananaDS only. How fast the DS's own CPU runs for this game, over Settings' and its Timing's. Faster stops a game's own slowdown in busy places (Origin HeartGold's towns). Above 67 MHz isn't a DS's speed: if this game hangs or goes wrong, set it back."
 				: row == PG_TIMING ? "BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in "
 				  "HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn "
 				  "loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's "
@@ -5695,14 +5708,16 @@ namespace banana
 		const std::string vres = pgRes ? std::string(GAME_RES_NAMES[pgRes]) : "As in Settings (" + gresName + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 		const std::string gslice = getConfValue("/data/bananads/bananads.conf", "core.slice", "64");
+		const std::string gcpu = getConfValue("/data/bananads/bananads.conf", "core.arm9_mhz", "67");
+		const std::string vcpu = pgCpu ? std::string(GAME_CPU_NAMES[pgCpu]) : "As in Settings (" + gcpu + " MHz)";
 		const std::string vtiming = pgTiming ? std::string(GAME_TIMING_NAMES[pgTiming]) : "As in Settings (" + std::string(gslice == "64" ? "Accurate" : "Fast") + ")";
 
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing"
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
 			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
 			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
@@ -5711,7 +5726,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -7366,11 +7381,27 @@ namespace banana
 
 	bool Settings::gbaOn() const { return gbaHost && gbaHost->ready() && companion && companion->active(); }
 
+	std::string Settings::gamePanelView() const
+	{
+		if (!companion || !companion->active()) return "";
+		if (pkView == PK_NDS && gbaPages) return std::string("pages:") + nds::pageName(gbaPages->page());
+		if (pkView == PK_GAME) return "game";
+		return "views:" + std::to_string(pkView);
+	}
+
 	void Settings::gbaShow(int view)
 	{
-		static const nds::Page PAGE[] = { nds::Page::PARTY, nds::Page::BATTLE };
-		const bool mine = view == PK_PARTY || view == PK_BATTLE || view == PK_MON || view == PK_DEX || view == PK_DEXMON || view == PK_GUIDE;
-		if (!gbaOn() || !mine) { pkView = view; return; }
+		// every view of today's has its page (the bag: the party's page, where each member's held item is); only the
+		// tiles (PK_GAME) stay the panel's own
+		if (!gbaOn() || view == PK_GAME) { pkView = view; return; }
+		gbaOpen(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
+			view == PK_MAP ? nds::Page::MAP : view == PK_BATTLE ? nds::Page::BATTLE : nds::Page::PARTY);
+	}
+
+	void Settings::gbaOpen(nds::Page page)
+	{
+		static_assert(GBA_TABS == (int)nds::Page::COUNT + 1, "the tiles' bar: the pages' tabs and Game");
+		if (!gbaOn()) return;
 		if (!gbaPages)
 		{
 			gbaPages = std::make_unique<nds::Pages>(be, gScreen, (int)std::lround(640 * s), (int)std::lround(480 * s), assets, light);
@@ -7380,8 +7411,7 @@ namespace banana
 		}
 		pkView = PK_NDS;
 		companion->wantExt(true);	// (the pages need the save's data from the start: the place, the bag, the Pokédex)
-		gbaPages->show(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
-			view == PK_BATTLE ? PAGE[1] : PAGE[0]);
+		gbaPages->show(page);
 	}
 
 	void Settings::gameTouchMove(float x, float y)
@@ -7421,7 +7451,7 @@ namespace banana
 				if (gbaPages && gbaHost->takeData(d)) gbaPages->setData(d);
 				changed = true;
 			}
-			if (!was && gbaOn() && pkView != PK_GAME && pkView != PK_MAP && pkView != PK_BAG) gbaShow(pkView);	// (its pages take over)
+			if (!was && gbaOn() && pkView != PK_GAME) gbaShow(pkView);	// (its pages take over, from any of today's views)
 			if (gbaPages)
 			{
 				gbaHost->markSeen(gbaPages->takeSeen());
@@ -7577,6 +7607,15 @@ namespace banana
 		if (companion && companion->active())
 		{
 			static const int TAB_VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
+			if (ly >= 424 && gbaOn())
+			{
+				// the tiles' bar with gbaHost's pages: theirs (pokeTabs), each opening its page; Battle only in a battle
+				const int i = (int)std::floor((lx - 18) / (604.0f / GBA_TABS));
+				if (!down && i >= 0 && i < (int)nds::Page::COUNT && ((nds::Page)i != nds::Page::BATTLE || companion->snapshot().inBattle))
+					gbaOpen((nds::Page)i);
+				gDown = gFlash = -1;
+				return G_NONE;
+			}
 			if (ly >= 424)
 			{
 				if (!down)
@@ -8040,6 +8079,23 @@ namespace banana
 		// the tab bar: Party, Battle (in a battle), Map, Bag, Dex, Guide, Game (the panel's tiles and achievements)
 		const pkmn::Snapshot& sn = companion->snapshot();
 		box("bubble", false, 18, 424, 604, 46);
+		if (gbaOn())
+		{
+			// with gbaHost's pages: their tabs (Battle dimmed outside a battle), then Game, this one; today's views have
+			// no way back
+			const float cell = 604.0f / GBA_TABS;
+			for (int i = 0; i < GBA_TABS; i++)
+			{
+				const bool game = i == (int)nds::Page::COUNT, dim = i == (int)nds::Page::BATTLE && !sn.inBattle;
+				const std::string label = game ? "Game" : nds::pageName((nds::Page)i);
+				const float w = text(label, true, 14, 0, 0, p.ink, true, 1.0f, true);
+				const float tx = std::round(18 + i * cell + cell / 2 - w / 2);
+				text(label, true, 14, tx, 438, game ? p.accent : dim ? p.muted : p.ink, true, 1.0f);
+				if (game) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
+			}
+			for (int i = 0; i < PK_TABS; i++) pkTabW[i] = 0;
+			return;
+		}
 		static const char* const tabs[PK_TABS] = { "Party", "Battle", "Map", "Bag", "Dex", "Guide", "Game" };
 		static const int VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
 		int n = 0;

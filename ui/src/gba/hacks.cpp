@@ -18,6 +18,7 @@ namespace banana::gba
 		{ "lazarus", "Lazarus", "BPEE", 0x558ae42fu, Engine::EXPANSION },				// v2
 		{ "seaglass", "Seaglass", "BPEE", 0x14465a33u, Engine::EXPANSION },				// v3.0
 		{ "soulgold", "SoulGold", "BPEE", 0xba7394a6u, Engine::EXPANSION },				// v1.1.4
+		{ "unbound", "Unbound", "BPRE", 0x4b3d4957u, Engine::CFRU },					// v2.1.1.1
 	};
 
 	const HackInfo* hackByCrc(uint32_t crc)

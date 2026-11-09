@@ -42,6 +42,11 @@ namespace banana::nds
 		return g;
 	}
 
+	bool maybeRomHack(const uint8_t* h, size_t n)
+	{
+		return h && n >= 0x200 && detectGame(h, n).id == GameId::NONE && (!memcmp(h + 0x0c, "IPK", 3) || !memcmp(h + 0x0c, "IPG", 3));
+	}
+
 	// attacker x defender in quarters (4 = normal); only the cells that differ from 4 are listed
 	static const struct { Type a, d; uint8_t q; } CHART[] = {
 		{ NORMAL, ROCK, 2 }, { NORMAL, GHOST, 0 }, { NORMAL, STEEL, 2 },

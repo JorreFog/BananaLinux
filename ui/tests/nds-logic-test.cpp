@@ -494,6 +494,34 @@ static void testAreas()
 	CHECK(!sameArea(nullptr, 0x1807, 0x1808));
 }
 
+// an hg-engine hack's party keeps each Pokémon's ability slot where Gen IV keeps the ability (Origin HeartGold's,
+// 2026-11-04: its Party page showed no ability): the Session hands on the species' ability in that slot; a retail
+// game's ability number stays as read
+static void testHackAbilities(const char* tmp)
+{
+	for (bool hack : { false, true })
+	{
+		auto r = std::make_shared<FakeRom>(rom(Gen::IV));
+		r->game.code = hack ? "IPKJ" : "IPKE";
+		if (hack) r->game.hack = "origin-heartgold";
+		r->species[25].abilities[0] = 9; r->species[25].abilities[1] = 0; r->species[25].abilities[2] = 31;	// Static / - / Lightning Rod
+		r->species[74].abilities[0] = 69; r->species[74].abilities[1] = 5;									// Rock Head / Sturdy
+		Session s(r, std::make_shared<GuideData>(), tmp);
+		auto l = std::make_shared<Live>();
+		l->valid = true; l->tid = 1; l->sid = 2; l->zone = 1;
+		Mon a; a.species = 25; a.level = 5; a.ability = 1;	// (slot 1 empty: the first)
+		Mon b; b.species = 74; b.level = 5; b.ability = 1;
+		Mon c; c.species = 25; c.level = 5; c.ability = 2;	// (the hidden one)
+		l->party = { a, b, c };
+		s.feed(l, 1000, 1762000000);
+		auto o = s.live();
+		CHECK(o && o->party.size() == 3);
+		if (!o || o->party.size() != 3) continue;
+		if (hack) CHECK(o->party[0].ability == 9 && o->party[1].ability == 5 && o->party[2].ability == 31);
+		else CHECK(o->party[0].ability == 1 && o->party[1].ability == 1 && o->party[2].ability == 2);
+	}
+}
+
 int main()
 {
 	testAreas();
@@ -507,6 +535,8 @@ int main()
 		if (mkdtemp(tmp)) { testSession(tmp); rmdir(tmp); }
 		char tmp2[] = "/tmp/nds-logic-test-XXXXXX";
 		if (mkdtemp(tmp2)) { testFedSession(tmp2); std::system((std::string("rm -rf ") + tmp2).c_str()); }
+		char tmp3[] = "/tmp/nds-logic-test-XXXXXX";
+		if (mkdtemp(tmp3)) { testHackAbilities(tmp3); std::system((std::string("rm -rf ") + tmp3).c_str()); }
 	}
 	if (fails) { fprintf(stderr, "%d failed\n", fails); return 1; }
 	fprintf(stderr, "nds-logic-test: all passed\n");

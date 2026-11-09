@@ -35,6 +35,9 @@ namespace banana::nds
 	};
 	// the game in a ROM header (the first 0x200 bytes); NONE: not one of the nine
 	Game detectGame(const uint8_t* header, size_t n);
+	// a header detectGame doesn't know that may still be a game the ROM reader reads: HeartGold or SoulSilver in a language
+	// not checked here, which an hg-engine ROM hack is built on (Origin HeartGold: the Japanese; rom.cpp hgEngine)
+	bool maybeRomHack(const uint8_t* header, size_t n);
 
 	// ---- types and moves -------------------------------------------------------------------------------------
 	enum Type : uint8_t { NORMAL, FIGHTING, FLYING, POISON, GROUND, ROCK, BUG, GHOST, STEEL, FIRE, WATER, GRASS,
