@@ -14,7 +14,7 @@ SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nd
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
 # (Home server's pairing pages, and the QR code library they draw RomM's approval page with)
-SRC += src/settings_homesrv.cpp src/qr/qrcodegen.cpp
+SRC += src/settings_homesrv.cpp src/qr/qrcodegen.cpp src/get_list.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib
@@ -35,8 +35,8 @@ banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
 # home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
-banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_adapt.h src/save_paths.cpp src/save_paths.h src/save_vault.cpp src/save_vault.h src/sync_core.h src/sync_romm.h src/sync_util.h src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_paths.cpp src/save_vault.cpp src/json.cpp -ldl
+banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_adapt.h src/save_paths.cpp src/save_paths.h src/save_vault.cpp src/save_vault.h src/sync_core.h src/sync_romm.h src/sync_util.h src/get_list.cpp src/get_list.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_paths.cpp src/save_vault.cpp src/get_list.cpp src/json.cpp -ldl
 
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)

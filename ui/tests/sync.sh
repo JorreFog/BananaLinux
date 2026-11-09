@@ -15,7 +15,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 fail=0
 bad() { echo "FAIL sync: $*"; fail=1; }
 BIN=$OUT/banana-sync
-${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
+${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/get_list.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
 PIDS=""
 cleanup() { for p in $PIDS; do kill "$p" 2>/dev/null; done; }
 trap cleanup EXIT INT TERM
@@ -187,6 +187,21 @@ printf 'gba/Asked (USA).gba\n' >> "$OUT/rcf/banana/homesync-get.txt"; printf 'gb
 bs rcf forget >/dev/null 2>&1
 [ -e "$OUT/rcf/banana/homesync-server-games.tsv" ] && bad "Forget left the server's kept games"
 [ -e "$OUT/rcf/banana/homesync-get.txt" ] || [ -e "$OUT/rcf/banana/homesync-get-failed.txt" ] && bad "Forget left the games asked of the server"
+# (paired again with the same server: what was asked of it still waits; paired with another one, without a Forget
+# first: the last one's games, list and failures gone as a Forget takes them, or its next sync would bring them)
+cp -r "$OUT/rc" "$OUT/rcp"
+printf 'gba/Asked (USA).gba\n' >> "$OUT/rcp/banana/homesync-get.txt"; printf 'gba/Asked (USA).gba\tchecksum mismatch\n' >> "$OUT/rcp/banana/homesync-get-failed.txt"
+CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rcp pair "$U" "$CODE" >/dev/null 2>&1 || bad "rcp: pairing again failed: $(st rcp)"
+grep -qx 'gba/Asked (USA).gba' "$OUT/rcp/banana/homesync-get.txt" 2>/dev/null || bad "paired again with the same server: the games asked of it dropped"
+[ -e "$OUT/rcp/banana/homesync-server-games.tsv" ] || bad "paired again with the same server: its kept games dropped"
+P2=$(port)
+python3 "$HERE/tests/fake-romm.py" "$P2" "$L" 2> "$OUT/fake-romm-2.log" & PIDS="$PIDS $!"
+waitport "$P2" /api/heartbeat || bad "the second fake RomM didn't start"
+CODE=$(curl -s -XPOST "http://127.0.0.1:$P2/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rcp pair "http://127.0.0.1:$P2" "$CODE" >/dev/null 2>&1 || bad "rcp: pairing with another server failed: $(st rcp)"
+[ -e "$OUT/rcp/banana/homesync-server-games.tsv" ] && bad "paired with another server: the last one's kept games left"
+[ -e "$OUT/rcp/banana/homesync-get.txt" ] || [ -e "$OUT/rcp/banana/homesync-get-failed.txt" ] && bad "paired with another server: the games asked of the last one left"
 # (a server that doesn't answer at all, as with Wi-Fi not back yet: the sync ends at once as that, said in words, not
 # as each part failing in turn)
 cp -r "$OUT/rc" "$OUT/rcn"
@@ -466,6 +481,9 @@ for v in 5.3.1 development; do
     p=$(port); cv=rv-$v
     FAKE_ROMM_VERSION=$v python3 "$HERE/tests/fake-romm.py" "$p" "$LV" 2> "$OUT/fake-romm-$v.log" & PIDS="$PIDS $!"
     waitport "$p" /api/heartbeat || bad "the fake RomM $v didn't start"
+    # (the plain probe, as Romhost's address finds a RomM, marks one before 5.4 as probe --romm does)
+    case $v in 5.3.1) want="romm http://127.0.0.1:$p RomM 5.3.1 old" ;; *) want="romm http://127.0.0.1:$p RomM $v" ;; esac
+    card "$cv"; [ "$(bs "$cv" probe "127.0.0.1:$p")" = "$want" ] || bad "RomM $v: probe: $(bs "$cv" probe "127.0.0.1:$p")"
     t=$(curl -s -XPOST "http://127.0.0.1:$p/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
     card "$cv"; bs "$cv" pair "http://127.0.0.1:$p" "$t" >/dev/null 2>&1 && bs "$cv" sync >/dev/null 2>&1 || bad "RomM $v: pairing and the games: $(st "$cv")"
     sl=; [ $v = 5.3.1 ] || sl='"slot": "autosave", '
@@ -568,7 +586,7 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     FAKE_ROMM_TLS="$TLS/cert.pem:$TLS/key.pem" python3 "$HERE/tests/fake-romm.py" "$TP" "$L" 2> "$OUT/romm-tls.log" & PIDS="$PIDS $!"
     for i in $(seq 50); do curl -sk "https://127.0.0.1:$TP/api/heartbeat" >/dev/null && break; sleep 0.1; done
     card ta
-    [ "$(bs ta probe "https://127.0.0.1:$TP" | cut -d' ' -f1)" = none ] || bad "https: a certificate of no CA's was taken with Check certificate On"
+    [ "$(bs ta probe "https://127.0.0.1:$TP")" = "none tls" ] || bad "https: a certificate of no CA's was taken with Check certificate On, or not said as the certificate: $(bs ta probe "https://127.0.0.1:$TP")"
     # (said as the certificate, not the clock, though this card's run has had no time sync: its dates aren't what failed)
     r=$(bs ta probe --romm "https://127.0.0.1:$TP"); case $r in "fail tls"*) ;; *) bad "https: a certificate of no CA's, before a time sync: $r" ;; esac
     # one not valid until 2099, as a real one is to a clock the RTC left behind: the clock before a time sync, the
@@ -828,10 +846,42 @@ if [ -x "$HERE/banana-ui" ]; then
     ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
     rlog deny "home server: pairing failed: refused in RomM"
     [ "$(grep -c 'pair --romm' "$SL")" -ge 2 ] || bad "RomM: A after a refusal didn't ask again: $(cat "$SL")"
+    # (the pairing's own probe refusing the certificate, the form's having passed: back on the form, where Y turns off
+    # Check certificate and START connects again)
+    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"
+    ur pairtls "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-pairtls; press y; press start; sleep 300; wait 300" FAKE_SYNC_PAIR=tls
+    rlog pairtls "home server: pairing failed: tls"
+    grep -q '^homesync_tls = off' "$FX/data/settings.conf" || bad "RomM: Y after the pairing's certificate failure didn't turn Check certificate off: $(grep homesync_tls "$FX/data/settings.conf")"
+    [ "$(grep -c 'probe --romm https://romm.example.com$' "$SL")" -ge 2 ] || bad "RomM: START on the form after the pairing's failure didn't connect again: $(cat "$SL")"
+    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"
+    # (a pairing stopped that takes a moment to end, and Connect pressed at once: no wait on the press, the new pairing
+    # started once the old one is gone, not said as a sync running)
+    mkdir -p "$OUT/slow-bin"; ln -sf "$HERE/tests/fake-sync.sh" "$OUT/slow-bin/banana-sync"
+    ur slowstop "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; press b; wait 100; press start; sleep 300; wait 300; shot hs-stopping; sleep 1500; wait 300; sleep 300; wait 300" BANANA_SYNC="$OUT/slow-bin/banana-sync" FAKE_SYNC_PAIR=slowstop
+    [ "$(grep -c 'pair --romm' "$SL")" = 2 ] || bad "RomM: a pairing asked for while the stopped one ended wasn't started after it: $(cat "$SL")"
+    grep -q 'pairing not started: a sync is running' "$OUT/ui-slowstop.log" && bad "RomM: the pairing being stopped was said as a sync running"
+    sleep 1; pkill -f "$OUT/slow-bin/banana-sync" 2>/dev/null
     # paired with RomM: Get games (the third row, after Server and Sync now) lists the server's games; A on one on the
     # card does nothing, A on one that isn't puts it on the download list and starts a sync, A again takes it back
     printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
     GL=$FX/data/homesync-get.txt; rm -f "$GL"; : > "$SL"; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
+    # (A on Server, paired with RomM: its form on the paired address, as the row's help says, not the choice of server)
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$HS; wait 100; shot hs-server-romm" 2> "$OUT/ui-server-romm.log" || bad "banana-ui (Server, RomM paired) exited $?"
+    grep -q "home server: RomM's form at https://romm.example.com$" "$OUT/ui-server-romm.log" || bad "Server, RomM paired: not its form on the paired address: $(grep 'home server' "$OUT/ui-server-romm.log")"
+    # (a pairing that names no kind of server is Romhost's, as banana-sync takes it: its rows, Forget the last of them
+    # after Check certificate; Forget, in the background, unpairs)
+    printf '{"server": "http://192.168.50.96:8092", "token": "rh1_test", "serverName": "Test server"}\n' > "$FX/data/romsync.json"
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-nobackend; press a; press a; sleep 300; wait 300" \
+        2> "$OUT/ui-nobackend.log" || bad "banana-ui (no backend) exited $?"
+    grep -q ' forget$' "$SL" || bad "a pairing naming no kind: Forget not the Romhost page's last row, or not run: $(cat "$SL")"
+    grep -q 'home server: forgotten' "$OUT/ui-nobackend.log" || bad "Forget's end not taken: $(grep 'home server' "$OUT/ui-nobackend.log")"
+    [ -e "$FX/data/romsync.json" ] && bad "Forget left the pairing"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
+    : > "$SL"
     ug() { env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$1" 2> "$OUT/ui-get.log" || bad "banana-ui (Get games) exited $?"; }
@@ -846,7 +896,9 @@ if [ -x "$HERE/banana-ui" ]; then
     printf '# x\ngba/Pocket Hack.gba\tchecksum mismatch\n' > "$FX/data/homesync-get-failed.txt"
     ug "$GET; press a; press down; sleep 300; wait 1100; shot hs-get-failed"
     cmp -s "$OUT/ui-hs-get2-top.png" "$OUT/ui-hs-get-failed-top.png" && bad "Get games: a failed download not shown"
-    # (A on it tries it again: still on the list, its failure gone, Get games' own sync started; A then takes it back)
+    # (A on it tries it again: still on the list, its failure gone, Get games' own sync started; A then takes it back.
+    # The stand-in's sync started above never says it's done: said here, or the menu rightly starts none beside it)
+    echo 'done 0 0 0 0 0 0|games only' > "$BANANA_RUN/sync.status"
     : > "$SL"
     ug "$GET; press a; press down; press a; sleep 300; wait 1100"
     grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: Try again took the game off the list: $(cat "$GL")"

@@ -723,7 +723,7 @@ struct GameEndNotice
 			int g = 0, rm = 0, up = 0, dn = 0, cf = 0, er = 0;
 			in >> g >> rm >> up >> dn >> cf >> er;
 			// (sync.cpp's line for a game whose saves stay on this handheld: nothing to say)
-			if (rest == "its saves stay on this handheld") { until = 0; return false; }
+			if (rest == "its saves stay on this handheld") { bool was = showing(now); until = 0; return was; }	// ("Syncing the save" taken down if it was up)
 			if (er) show("Save not synced", about, 2, 0xffb340, 4000);
 			else if (cf) show("Save conflict", game + ": settle it in Settings > Network > Home server > Manage saves.", 3, 0xffb340, 5000);
 			// (a note beside it, a state kept in the vault or a save held back: said, with "!" rather than the tick)

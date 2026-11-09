@@ -56,6 +56,7 @@
 // save is neither sent nor taken (save_adapt.h). RomM's saves are each game's one save file, the one its emulator
 // reads, for a game whose ROM is the server's by its contents (save_paths.h); a RomM before 5.4 only gives saves, and
 // one that has this handheld's sync switched off gives none.
+#include "get_list.h"
 #include "json.h"
 #include "save_adapt.h"
 #include "save_paths.h"
@@ -327,46 +328,10 @@ namespace
 	// lists them), in the order asked. Any sync of the games brings them, and a game leaves the list once its files are
 	// in place (or a file of the owner's own is at its path); one whose download failed stays for the next sync. Once
 	// on the card a game is the owner's like any other: nothing updates it or removes it. The list is changed under
-	// get.lock, the menu adding (banana-sync get) while a sync takes games off it
+	// get.lock, the menu adding (with get_list's code, which banana-sync get also runs) while a sync takes games off it
 	std::string getFile() { return ROOT + "/banana/homesync-get.txt"; }
 	std::string getFailedFile() { return ROOT + "/banana/homesync-get-failed.txt"; }
-	bool editGet(const std::vector<std::string>& add, const std::set<std::string>& drop)
-	{
-		int lk = open((RUN + "/get.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
-		std::vector<std::string> now = readLines(getFile()), out;
-		std::set<std::string> seen;
-		for (auto& k : now) if (!drop.count(k) && seen.insert(k).second) out.push_back(k);
-		for (auto& k : add) if (!drop.count(k) && seen.insert(k).second) out.push_back(k);
-		bool ok = true;
-		if (out != now)
-		{
-			std::string body = "# Home server > Get games: the games to download, taken off as each comes\n";
-			for (auto& k : out) body += k + "\n";
-			ok = writeAtomic(getFile(), body);
-		}
-		// (and the last try's failure gone, as the menu's page does: a game asked for again, or taken back, waits afresh)
-		std::set<std::string> touched(drop.begin(), drop.end());
-		touched.insert(add.begin(), add.end());
-		std::string failed, was = readFile(getFailedFile());
-		std::istringstream in(was);
-		for (std::string l; std::getline(in, l);)
-		{
-			size_t t = l.find('\t');
-			if (l.empty() || (l[0] != '#' && t != std::string::npos && touched.count(l.substr(0, t)))) continue;
-			failed += l + "\n";
-		}
-		if (failed != was)
-		{
-			bool any = false;
-			std::istringstream f(failed);
-			for (std::string l; std::getline(f, l);) if (!l.empty() && l[0] != '#') any = true;
-			if (!any) unlink(getFailedFile().c_str());
-			else ok &= writeAtomic(getFailedFile(), failed);
-		}
-		if (lk >= 0) close(lk);
-		return ok;
-	}
+	bool editGet(const std::vector<std::string>& add, const std::set<std::string>& drop) { return editGetList(ROOT + "/banana", RUN, add, drop); }
 	// why each game still on Get games' list didn't come the last time a sync tried it (banana/homesync-get-failed.txt,
 	// "<key> TAB <why>", for the page's Failed): a game that came, or was taken off the list, has no line
 	// (files: each game's paths under the ROMs folder, as the manifest has them, a disc set's every disc: an error is a
@@ -436,6 +401,15 @@ namespace
 	// The page works out what is waiting or on the card itself, as both change after: the chosen column is as it was
 	// when written, and the cards aren't looked at for the other (0), which every sync would otherwise do for each game
 	std::string gamesCacheFile() { return ROOT + "/banana/homesync-server-games.tsv"; }
+	// the server's games, for Get games, and what was asked of it and why some didn't come: gone with a Forget and with a
+	// pairing to another server, whose next sync would otherwise download games asked of this one. The games whose saves
+	// stay here are this handheld's, whichever server
+	void dropServerLists()
+	{
+		unlink(gamesCacheFile().c_str());
+		unlink(getFile().c_str());
+		unlink(getFailedFile().c_str());
+	}
 	void writeGamesCache(const Conf& c, const Manifest& m, bool whole)
 	{
 		auto v = readLines(getFile());
@@ -1050,6 +1024,7 @@ namespace
 			if (!e.empty()) say("not registered as a device yet (%s): the next sync tries again", e.c_str());
 		}
 		if (!savePairing(n)) { status("error can't write " + CONF); return 1; }
+		if (!(c.server == url && c.backend == kind)) dropServerLists();	// (another server: what was asked of the last one isn't asked of this)
 		status("paired " + (n.serverName.empty() ? url : n.serverName));
 		say("paired with %s (%s) as \"%s\"", n.serverName.c_str(), url.c_str(), n.name.c_str());
 		return 0;
@@ -1517,8 +1492,13 @@ int main(int argc, char** argv)
 	if (cmd == "probe" && args.size() > 1)
 	{
 		std::string url, name;
-		std::string k = probe(args[1], url, name);
-		printf("%s %s %s\n", k.c_str(), url.c_str(), name.c_str());
+		int tls = 0;
+		std::string k = probe(args[1], url, name, &tls);
+		// (nothing found, an https server among the tries refusing for its certificate: "none tls", for the menu to say)
+		if (k == "none" && tls == CURL_UNTRUSTED) { printf("none tls\n"); return 1; }
+		// (a RomM before 5.4 marked " old", as probe --romm marks it: the menu says what such a server does with saves)
+		std::string v = k == "romm" && name.compare(0, 5, "RomM ") == 0 ? name.substr(5) : "";
+		printf("%s %s %s%s\n", k.c_str(), url.c_str(), name.c_str(), v.empty() || versionAtLeast(v, 5, 4, 0) ? "" : " old");
 		return k == "none";
 	}
 	if (cmd == "status")
@@ -1585,12 +1565,7 @@ int main(int argc, char** argv)
 		unlink((CONF + ".new").c_str());	// (a copy a cut rename left, which the state is otherwise read from)
 		if (lk >= 0) close(lk);
 		if (rc) return rc;
-		// (the server's games, for Get games, and what was asked of it and why some didn't come: another server's next,
-		// which would otherwise download games asked of this one. The games whose saves stay here are this handheld's,
-		// whichever server)
-		unlink(gamesCacheFile().c_str());
-		unlink(getFile().c_str());
-		unlink(getFailedFile().c_str());
+		dropServerLists();
 		status("");
 		return 0;
 	}

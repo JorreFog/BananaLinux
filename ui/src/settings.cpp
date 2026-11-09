@@ -9,6 +9,7 @@
 #include "theme.h"
 #include "vkbd.h"
 #include "json.h"
+#include "get_list.h"
 #include "sync_core.h"
 #include "gba/host.h"
 #include "nds/pages.h"
@@ -131,40 +132,12 @@ namespace banana
 		return trim(s);
 	}
 
-	// the handheld (/etc/banana/board: rgds, rgds-plus); BANANA_BOARD stands in for it in the host tests
 	// a list file of the Home server's (banana/homesync-get.txt, -get-failed.txt, -local.txt): a line each, "#" a comment,
 	// trailing spaces and CRs not part of it (a file edited on a computer)
-	static std::vector<std::string> readListFile(const std::string& path)
-	{
-		std::vector<std::string> out;
-		std::ifstream f(path);
-		for (std::string l; std::getline(f, l);)
-		{
-			while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back();
-			if (!l.empty() && l[0] != '#') out.push_back(l);
-		}
-		return out;
-	}
-	// written whole beside it, flushed to the card and renamed over it, the folder then flushed: a power cut leaves the
-	// old list or the new one, and a write that fails (a full card) leaves the old one. Only this file and its folder
-	// are flushed, not every filesystem: a download writing to the same card doesn't hold up the press
-	static bool writeListFile(const std::string& path, const std::string& header, const std::vector<std::string>& lines)
-	{
-		std::string text = "# " + header + "\n";
-		for (auto& l : lines) text += l + "\n";
-		const std::string tmp = path + ".new";
-		FILE* w = fopen(tmp.c_str(), "w");
-		if (!w) return false;
-		bool ok = fwrite(text.data(), 1, text.size(), w) == text.size();
-		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
-		ok &= fclose(w) == 0;
-		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
-		const size_t slash = path.rfind('/');
-		int d = open(slash == std::string::npos ? "." : path.substr(0, slash).c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-		if (d >= 0) { fsync(d); close(d); }
-		return true;
-	}
+	static std::vector<std::string> readListFile(const std::string& path) { return bsync::readListLines(path); }
+	static bool writeListFile(const std::string& path, const std::string& header, const std::vector<std::string>& lines) { return bsync::writeListLines(path, header, lines); }
 
+	// the handheld (/etc/banana/board: rgds, rgds-plus); BANANA_BOARD stands in for it in the host tests
 	static std::string board_()
 	{
 		if (const char* b = getenv("BANANA_BOARD")) return b;
@@ -918,7 +891,7 @@ namespace banana
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// the Home server page (Network > Home server): its rows for the kind of server paired, none hedged for the other
 		// (RomM's states and the sync before a game; Romhost's Devices page in Homeport decides those). Not paired: the
-		// Server row alone, A choosing RomM or Romhost. A pairing or a Forget makes the rows again (hsRebuild)
+		// Server row, A choosing RomM or Romhost, and Check certificate for a Romhost on https. A pairing or a Forget makes the rows again (hsRebuild)
 		const char* HS = "Home server";
 		hsPairedAt = -1e18;
 		hsRowsFor = hsBackend();
@@ -978,6 +951,11 @@ namespace banana
 			items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects. Never while a game runs." };
 			add(HS, "phone", "Manage saves", "Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.", "", "hs_saves", {}, {}, Item::PAGE);
 		}
+		// (RomM's is on its address form; a Romhost served over https with a certificate of its own making needs it before
+		// it can pair, so it is here unpaired too)
+		if (!romm)
+			add(HS, "phone", "Check certificate", "On: an https server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust.",
+				menu, "homesync_tls", { "On", "Off" }, { "on", "off" });
 		if (!hsRowsFor.empty())
 		{
 			add(HS, "phone", "Forget this server", "Unpairs the handheld. Games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
@@ -1394,7 +1372,15 @@ namespace banana
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
-			if (it.key == "hs_server") { if (hsStep != 3) openHome(HS_CHOOSE); else if (hsKind == "romm") openHome(HS_PAIR); return MOVED; }
+			if (it.key == "hs_server")
+			{
+				// (a pairing under way: its screen. Paired with RomM: its form on the paired address, for Check certificate
+				// or Connect to pair again; B there chooses another server. Otherwise which kind of server)
+				if (hsStep == 3) { if (hsKind == "romm") openHome(HS_PAIR); }
+				else if (hsBackend() == "romm") { hsSetAddress(hsPairedUrl); openHome(HS_FORM); }
+				else openHome(HS_CHOOSE);
+				return MOVED;
+			}
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(false); return MOVED; }
 			if (it.key == "hs_get") { openPickGames(true); return MOVED; }
@@ -1471,12 +1457,11 @@ namespace banana
 			if (it.key == "hs_forget")
 			{
 				armed = -1;
-				// (at once, not in the background: the rows made again next read the pairing gone)
-				std::string out;
-				if (FILE* f = popen((syncCmd("forget") + " 2>&1").c_str(), "r")) { char b[256]; while (fgets(b, sizeof b, f)) out += b; pclose(f); }
-				hsStep = 0;
-				hsRebuild();
-				message = "Unpaired. The games and saves stay on the card. A on Server pairs it again.";
+				// (in the background: it waits for the state file's lock, which a sync writing its part back holds a moment.
+				// The rows are made again when it ends, reading the pairing gone)
+				if (forgetJob.running()) return NONE;
+				forgetJob.start(syncCmd("forget") + " 2>&1", sync);
+				message = "Forgetting the server...";
 				return MOVED;
 			}
 			if (it.key == "reset_system" || it.key == "reset_emulator")
@@ -2750,6 +2735,18 @@ namespace banana
 				scrapeChanged = true;
 			}
 		}
+		// (Forget this server, done: the rows for no server)
+		{
+			std::string out;
+			if (forgetJob.take(out))
+			{
+				hsStep = 0;
+				hsRebuild();
+				message = "Unpaired. The games and saves stay on the card. A on Server pairs it again.";
+				fprintf(stderr, "home server: forgotten\n");
+				scrapeChanged = true;
+			}
+		}
 		// (Get games' row: how many wait, looked at once a second while the Home server page is up, not at each draw,
 		// nor on Settings' other pages)
 		if (page == LIST && hsRowsFor == "romm" && sel >= 0 && sel < (int)items.size() && items[sel].section == "Home server" && t >= getWaitingAt)
@@ -2922,6 +2919,7 @@ namespace banana
 		if (hsStep == 3) return page == HOMESRV ? 250 : 500;
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
+		if (nameJob.running() || forgetJob.running() || hsStopping) return 100;	// (a rename, a Forget, a pairing stopped before the next starts)
 		if (pickLoading || pickRefreshing) return 150;	// (Choose games: the server's list as it comes)
 		if (syncWifiUntil > 0) return 250;	// (Sync now waiting for Wi-Fi to come back)
 		// (a sync's progress, Get games' rows as games come, and the sync started again for a game asked for late)
@@ -5040,13 +5038,20 @@ namespace banana
 		if (pickAsked.empty() || now < getRestartAt) return false;
 		getRestartAt = now + 1000;
 		const bool sy = syncing();
-		if (!pickWasSync || sy) { pickWasSync = sy; return false; }
+		// (no sync running and none since the last look: none ended that could have missed them, and none will be
+		// started here, so nothing is left to watch for. A sync running: looked at once it ends)
+		if (!pickWasSync && !sy) { pickAsked.clear(); return false; }
+		if (sy) { pickWasSync = true; return false; }
 		auto q = readGetList();
 		std::set<std::string> failed;
 		for (auto& l : readListFile(data + "/homesync-get-failed.txt")) failed.insert(l.substr(0, l.find('\t')));
 		bool again = false;
 		for (auto& k : pickAsked)
 			if (q.count(k) && !failed.count(k) && pickRestarted.insert(k).second) again = true;
+		// (and each game done with: come or taken back (off the list), failed (A tries it again), or started again once
+		// already. Settings stops waking for them when none is left)
+		for (auto it = pickAsked.begin(); it != pickAsked.end();)
+			if (!q.count(*it) || failed.count(*it) || (pickRestarted.count(*it) && !again)) it = pickAsked.erase(it); else ++it;
 		pickWasSync = again && startSync(true);
 		return again;
 	}
@@ -5060,26 +5065,9 @@ namespace banana
 	}
 	bool Settings::editGetList(const std::string& key, bool add)
 	{
-		int lk = ::open((runDir + "/get.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
-		std::string path = data + "/homesync-get.txt";
-		auto lines = readListFile(path);
-		lines.erase(std::remove(lines.begin(), lines.end(), key), lines.end());
-		if (add) lines.push_back(key);
-		bool ok = writeListFile(path, "Home server > Get games: the games to download, taken off as each comes", lines);
-		// (and the last try's failure gone: a game asked for again, or taken back, waits afresh)
-		std::string fp = data + "/homesync-get-failed.txt";
-		auto failed = readListFile(fp);
-		auto was = failed.size();
-		failed.erase(std::remove_if(failed.begin(), failed.end(), [&](const std::string& l) { return l.compare(0, key.size() + 1, key + "\t") == 0; }), failed.end());
-		if (failed.size() != was)
-		{
-			if (failed.empty()) unlink(fp.c_str());
-			else writeListFile(fp, "Home server > Get games: why a game still on the list didn't come last time", failed);
-		}
-		if (lk >= 0) ::close(lk);
-		getWaiting = (int)lines.size();
-		return ok;
+		std::set<std::string> drop;
+		if (!add) drop.insert(key);
+		return bsync::editGetList(data, runDir, add ? std::vector<std::string>{ key } : std::vector<std::string>{}, drop, &getWaiting);
 	}
 	// a game's file on either card (the second's roms folder as the sd2 script names it), by its roms-relative path
 	bool Settings::gameOnCard(const std::string& rel) const
@@ -5184,7 +5172,9 @@ namespace banana
 			g.failed.clear();	// (asked for again: waiting, not the last try's failure)
 			if (g.on) pickAsked.insert(g.key); else { pickAsked.erase(g.key); pickRestarted.erase(g.key); }
 			message.clear();
-			if (g.on && !syncing() && startSync(true)) pickWasSync = true;	// (a quick one may be over before the status is read)
+			// (a quick one may be over before the status is read; one running already is watched to its end too, as it may
+			// have read the list before this game was on it)
+			if (g.on && (syncing() || startSync(true))) pickWasSync = true;
 			pickPoll = now + 1000;
 			return MOVED;
 		}
@@ -7563,7 +7553,7 @@ namespace banana
 		JPtr j = readJsonFile(data + "/romsync.json");
 		bool paired = j && j->isObj() && !j->str("token").empty();
 		hsPaired = !paired ? "" : j->str("serverName").empty() ? j->str("server") : j->str("serverName");
-		hsPairedKind = paired ? j->str("backend") : "";
+		hsPairedKind = paired ? j->str("backend", "romhost") : "";	// (none named is Romhost, as banana-sync reads it)
 		hsPairedUrl = paired ? j->str("server") : "";
 		hsPairedName = paired ? j->str("name") : "";
 		// (what Manage saves has to settle, counted for its row and the Home server row above it)
@@ -7673,9 +7663,11 @@ namespace banana
 		runSync();
 		return true;
 	}
+	// a Romhost on https whose certificate isn't trusted, found by its address or refusing the pairing: what to do about it
+	static const char* const TLS_ROMHOST = "The server's certificate isn't trusted. For a certificate of your own making, turn off Check certificate below (or put your CA's certificate on the card as homesync_ca), then pair again.";
 	bool Settings::pollSync(double t)
 	{
-		bool changed = false;
+		bool changed = hsPollStopped();
 		std::string out;
 		if (hsJob.take(out))
 		{
@@ -7724,6 +7716,7 @@ namespace banana
 					name = trim(name);
 					hsKind = kind; hsUrl = url; hsName = name; message.clear(); startEntry(ENTRY_HS_CODE, "Pairing code for", name, LIST);
 				}
+				else if (url == "tls") { hsStep = 0; message = TLS_ROMHOST; }	// ("none tls": an https server whose certificate isn't trusted)
 				else { hsStep = 0; message = "No Romhost answers there. Check the address (and :port, when it isn't 8092) and that the handheld is on the same network as Homeport. For RomM, choose RomM instead: A on Server."; }
 			}
 		}
@@ -7762,7 +7755,11 @@ namespace banana
 					: "Paired with " + ln.substr(7) + ". Sync now, below, gets the games and saves.";
 				hsRebuild();
 			}
-			else if (ln.compare(0, 6, "error ") == 0) { hsStep = 0; message = "Pairing didn't work: " + ln.substr(6) + "."; }
+			else if (ln.compare(0, 6, "error ") == 0)
+			{
+				hsStep = 0;
+				message = ln.find("certificate isn't trusted") != std::string::npos ? TLS_ROMHOST : "Pairing didn't work: " + ln.substr(6) + ".";
+			}
 		}
 		if (was && ln.compare(0, 5, "done ") == 0) libChanged = true;	// new games: the library again
 		return true;

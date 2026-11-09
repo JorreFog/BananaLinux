@@ -668,6 +668,11 @@ namespace banana
 											// 4 asking RomM's address (probe --romm)
 		wifi::Job hsJob;
 		wifi::Job nameJob;	// banana-sync rename, from the Device name row
+		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
+		int hsStopPid = 0;		// a pairing stopped (SIGTERM), not gone yet: the next one waits for it
+		double hsStopAt = 0;
+		bool hsStopping = false;	// a pairing asked for while that one ends: started once it has
+		std::string hsStopCode;	// (its code, "" for the device flow)
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
 		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
@@ -723,7 +728,9 @@ namespace banana
 		void hsStartPair(const std::string& code);	// banana-sync pair --romm (no code: the device flow)
 		void hsPairLine(const std::string& ln);	// a line of the status file while RomM pairs
 		void hsCancelPair();				// the pairing running stopped (its sync.pid)
+		bool hsPollStopped();				// a pairing waiting for the stopped one to end: started when it has
 		std::string hsWhy(const std::string& cause, const std::string& detail) const;	// probe's word, for a person
+		void hsFailed(const std::string& kind, const std::string& detail);	// hsCause, hsMoved and hsMsg for a failure
 		std::vector<int> hsFormRows() const;
 		void syncBar(float x, float y, float w);
 		std::string syncTool() const;

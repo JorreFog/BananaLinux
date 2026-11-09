@@ -238,9 +238,11 @@ takes the panels back, records the play, and shows the game's library again.
 
 Pairing (Settings > Network > Home server > Server) starts by asking which kind of server, as the sync has one at a time.
 Romhost is looked for on the LAN (a UDP broadcast only it answers), its address typed when none answers, then paired
-with the code Homeport shows. RomM is a form, as Grout's: protocol (HTTPS by default), address, an optional port and
-Check certificate (`homesync_tls`, only here: with a server paired, a change to it holds at once, and Server opens the
-form on the paired address); a full URL typed in fills the rows it names, and its path is kept
+with the code Homeport shows; a Romhost on https with a certificate of its own making is paired with the page's Check
+certificate row (`homesync_tls`) off, the row there unpaired and on Romhost's page, and `banana-sync probe <address>`
+answers `none tls` when such a server is what stopped it. RomM is a form, as Grout's: protocol (HTTPS by default),
+address, an optional port and Check certificate (for RomM only on the form: with a server paired, a change to it holds
+at once, and Server opens the form on the paired address, B there choosing another server); a full URL typed in fills the rows it names, and its path is kept
 for a RomM served under a subpath. Connect runs `banana-sync probe --romm <url>`, which asks that URL's `/api/heartbeat` once, with
 no port guessed and no redirect followed, and answers `romm <url> RomM <version>` (with `old` before 5.4) or `fail
 <why>`: `dns`, `refused`, `timeout`, `tls`, `clock` (a certificate failure before Wi-Fi's first time sync, so the clock
@@ -268,7 +270,7 @@ check for an https server; none hedged for the other), made again when a pairing
 
 On RomM, games and saves are apart, as in Grout. Games come by Get games, a store's download: the server's games a
 system at a time (`banana-sync games`), A putting one on the download list (`banana/homesync-get.txt`, written under
-`/run/banana/get.lock`; `banana-sync get [--drop] <key>`) and starting a sync of its own, `banana-sync sync
+`/run/banana/get.lock` by the list code the menu and `banana-sync get [--drop] <key>` share) and starting a sync of its own, `banana-sync sync
 --games-only`, which brings the games and leaves the saves alone, since a RomM library can be hundreds of GB and a
 download is no reason to move saves. A on a game whose download failed tries it again at once. Any sync of the games
 brings what the list holds, games asked for while it runs included (before its saves when
@@ -282,7 +284,8 @@ every system's from the systems list, one system's inside it. The server's list 
 took over half a minute on a real server of 742 games: Get games opens from it at once, saying how old it is, and
 X (Refresh) asks the server again with the kept list still up. `banana-sync games` writes it whole, and every sync that
 lists the server's games (the saves do, unless it is one game's sync) replaces the systems it listed, keeping a
-skipped system's; Forget removes it, and a list naming another server is not shown. Once
+skipped system's; Forget removes it, with the download list and its failures, as does a pairing with another server
+(the same one paired again keeps them), and a list naming another server is not shown. Once
 on the card a game is the owner's like any copied over File sharing: nothing updates it, nothing removes it when it
 leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on
 the card already, copied by hand, is adopted with the entry its owner gave it). Saves follow what is on the

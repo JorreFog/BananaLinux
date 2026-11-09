@@ -102,6 +102,8 @@ namespace banana
 		}
 		if (v != HS_PAIR) { hsMsg.clear(); hsCause.clear(); }
 		message.clear();
+		fprintf(stderr, "home server: %s%s\n", v == HS_CHOOSE ? "choose a server" : v == HS_FORM ? "RomM's form at " : "pairing screen",
+			v == HS_FORM ? hsBase().c_str() : "");	// (what a test waits for)
 	}
 
 	// ---- RomM: the probe, the pairing ----------------------------------------------------------------------------------
@@ -144,18 +146,24 @@ namespace banana
 		std::string detail;
 		in >> kind;	// (after "fail")
 		std::getline(in, detail);
-		detail = bsync::trim(detail);
+		hsFailed(kind, bsync::trim(detail));
+		if (ln.empty()) hsMsg = "banana-sync didn't answer.";
+		fprintf(stderr, "home server: no RomM: %s %s\n", kind.c_str(), bsync::trim(detail).c_str());
+	}
+
+	// why RomM's address didn't do, from the probe or from the pairing's own probe: the cause, the words for it, and for a
+	// redirect to the same API elsewhere (http to https, another port) that address, which Y on the form takes
+	void Settings::hsFailed(const std::string& kind, const std::string& detail)
+	{
 		hsCause = kind;
 		hsMoved.clear();
 		if (kind == "redirect")
 		{
-			// a redirect to the same API elsewhere (http to https, another port): that address offered (Y)
 			const std::string hb = "/api/heartbeat";
 			if (detail.size() > hb.size() && detail.compare(detail.size() - hb.size(), hb.size(), hb) == 0 && detail.find("://") != std::string::npos)
 				hsMoved = detail.substr(0, detail.size() - hb.size());
 		}
-		hsMsg = ln.empty() ? std::string("banana-sync didn't answer.") : hsWhy(kind, detail);
-		fprintf(stderr, "home server: no RomM: %s %s\n", kind.c_str(), detail.c_str());
+		hsMsg = hsWhy(kind, detail);
 	}
 
 	// the banana-sync whose pid is in sync.pid, while it runs (a sync, or a pairing: both hold sync.lock); 0 when none
@@ -174,6 +182,17 @@ namespace banana
 		hsDone = false;
 		hsCode.clear(); hsVerify.clear(); hsCause.clear();
 		hsExpires = 0;
+		// (the pairing stopped a moment ago still ending: this one once it has, hsPollStopped. Only for those 3 s: the pid
+		// may be another process's later)
+		if (hsStopPid > 0 && now - hsStopAt < 3000 && kill(hsStopPid, 0) == 0)
+		{
+			hsStep = 0;
+			hsStopping = true;
+			hsStopCode = code;
+			hsMsg = "Stopping the last pairing...";
+			return;
+		}
+		hsStopPid = 0;
 		// (a sync running holds the lock a pairing needs: said here, its status left as it is, rather than a pairing
 		// that can't start and a Cancel that would stop that sync)
 		if (runningSync(runDir))
@@ -235,7 +254,17 @@ namespace banana
 			if (rest == "refused in RomM") hsMsg = "Refused in RomM. A asks for a new code.";
 			else if (rest == "the code ran out") hsMsg = "The code ran out before it was approved. A asks for a new one.";
 			else if (rest == "stopped") hsMsg = "Stopped.";
-			else hsMsg = hsWhy(cause, detail);
+			else if (cause == "tls" || cause == "redirect")
+			{
+				// (a certificate or a redirect, as the pairing asked again: back on the form at the address paired with,
+				// which may have come from Romhost's question rather than the form, whose Y turns off Check certificate or
+				// takes the address the server sent to)
+				hsSetAddress(hsUrl);
+				hsFailed(cause, detail);
+				hsView = HS_FORM;
+				hsSel = (int)hsFormRows().size() - 1;
+			}
+			else hsFailed(cause, detail);
 			fprintf(stderr, "home server: pairing failed: %s\n", rest.c_str());
 		}
 	}
@@ -243,11 +272,25 @@ namespace banana
 	void Settings::hsCancelPair()
 	{
 		// banana-sync pair writes its pid as a sync does (it holds the same lock); it says "error stopped" as it ends,
-		// which nothing reads now: hsStep is 0. Waited for, a moment, so a pairing started next finds the lock free
+		// which nothing reads now: hsStep is 0. Not waited for here (a curl in it can take a while to notice): a pairing
+		// asked for before it has gone waits for it (hsStartPair), so it finds the lock free
 		hsStep = 0;
+		hsStopping = false;
 		int pid = runningSync(runDir);
-		if (pid > 0 && kill(pid, SIGTERM) == 0)
-			for (int i = 0; i < 20 && kill(pid, 0) == 0; i++) usleep(50000);
+		if (pid > 0 && kill(pid, SIGTERM) == 0) { hsStopPid = pid; hsStopAt = now; }
+	}
+
+	// the pairing asked for while the one stopped was ending: started once it has gone, or after 3 s said as a sync
+	// still running (true: the screen changed)
+	bool Settings::hsPollStopped()
+	{
+		if (!hsStopping) return false;
+		if (hsStopPid > 0 && kill(hsStopPid, 0) == 0 && now - hsStopAt < 3000) return false;
+		const bool gone = hsStopPid <= 0 || kill(hsStopPid, 0) != 0;
+		hsStopping = false;
+		if (gone) { hsStopPid = 0; hsStartPair(hsStopCode); }
+		else { hsCause = "busy"; hsMsg = hsWhy("busy", ""); }
+		return true;
 	}
 
 	std::string Settings::hsWhy(const std::string& cause, const std::string& detail) const
@@ -332,6 +375,7 @@ namespace banana
 		{
 		case Key::B:
 			if (hsDone) { page = LIST; return MOVED; }
+			hsStopping = false;
 			if (hsStep == 3) hsCancelPair();
 			hsView = HS_FORM;
 			hsMsg.clear();
@@ -344,10 +388,11 @@ namespace banana
 				top = std::max(groupStart(groupOf(sel)), std::min(sel, std::max(0, groupEnd(groupOf(sel)) - ROWS)));
 				return MOVED;
 			}
-			if (hsStep == 0) { hsStartPair(""); return MOVED; }
+			if (hsStep == 0 && !hsStopping) { hsStartPair(""); return MOVED; }
 			return NONE;
 		case Key::X:
 			if (hsDone) return NONE;
+			hsStopping = false;
 			if (hsStep == 3) hsCancelPair();
 			startEntry(ENTRY_HS_CODE, "RomM", "Pairing code", HOMESRV);
 			return MOVED;
@@ -371,7 +416,7 @@ namespace banana
 		if (hsDone) { cs[0].label = "Done"; cs.push_back({ Key::A, "A", "Sync now", true }); return cs; }
 		cs[0].label = hsStep == 3 ? "Cancel" : "Back";
 		cs.push_back({ Key::X, "X", "Use a code" });
-		if (hsStep == 0) cs.push_back({ Key::A, "A", "Try again", true });
+		if (hsStep == 0 && !hsStopping) cs.push_back({ Key::A, "A", "Try again", true });
 		return cs;
 	}
 
@@ -427,6 +472,9 @@ namespace banana
 				: row == F_PORT ? "Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP)."
 				: row == F_TLS ? "On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once."
 				: "Asks " + (hsHost.empty() ? std::string("the address") : hsBase()) + " for RomM, then shows a QR code to approve this handheld from your phone.";
+			// (paired already, Connect pairs again: with the same server, or in place of the one paired)
+			if (hsMsg.empty() && row == F_CONNECT && paired && !hsHost.empty())
+				help += hsBackend() == "romm" && hsBase() == hsPairedUrl ? " It pairs this handheld again." : " This replaces the pairing with " + homeServer() + ".";
 			wrapped(help, 20, 50, 196, 540, 10, hsMsg.empty() ? p.muted : p.ink);
 		}
 		else

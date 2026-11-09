@@ -38,7 +38,7 @@ m() { md5sum < "$1" | cut -c1-32; }
 ra() { python3 "$HERE/tests/romm-api.py" "$@" || bad "romm-api.py $1: a wrong answer (above)"; }
 
 BIN=$OUT/banana-sync
-${CXX:-g++} -std=c++17 -O2 -Wall -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" \
+${CXX:-g++} -std=c++17 -O2 -Wall -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/get_list.cpp" \
     "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { bad "banana-sync doesn't build"; exit 1; }
 mkdir -p "$OUT/cores"; fakecore "$OUT/cores/gpsp_libretro.so" && fakecore "$OUT/cores/mupen64plus_next_libretro.so" || bad "the test cores can't be put in place"
 export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/cores"
