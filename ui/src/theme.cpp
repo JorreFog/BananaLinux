@@ -202,10 +202,13 @@ namespace banana
 		return parseColor(kv["accent"], c) || parseColor(kv["accent.base"], c) || !kv["accent"].empty();
 	}
 
+	GlassLook glassLook;
+
 	std::string applyTheme(const std::string& value, const std::string& accentName, std::string* why)
 	{
 		rnds::themeColors.clear();
 		rnds::themeFiles = rnds::ThemeFiles();
+		glassLook = GlassLook();
 		rnds::setAccent(accentName);
 		std::string path = themePath(value);
 		if (path.empty()) return value == "light" ? "light" : value == "carts" ? "carts" : "dark";
@@ -247,6 +250,14 @@ namespace banana
 		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
 		f.switches = kv["switches"] == "true";
+		// Settings in glass: only over a picture (the glass is the picture blurred)
+		if (!kv["settings.glass"].empty() && (!f.wallTop.empty() || !f.wallBottom.empty()))
+		{
+			glassLook.blur = std::max(0.0f, std::min(40.0f, (float)atof(kv["settings.glass"].c_str())));
+			uint32_t gc;
+			if (parseColor(kv["settings.pane"], gc)) glassLook.pane = gc;
+			if (parseColor(kv["settings.edge"], gc)) glassLook.edge = gc;
+		}
 		for (auto& e : kv)
 		{
 			if (e.first.compare(0, 6, "icons.") == 0) { std::string p = themeImage(dir, e.second); if (!p.empty()) f.icons[e.first.substr(6)] = p; }

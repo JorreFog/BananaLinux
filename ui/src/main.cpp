@@ -878,6 +878,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setFontDir(o.banana + "/fonts");
+	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -891,9 +893,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	std::string levelLabel;	// (level <Volume|Brightness> <percent>: the keys' bubble, until "level off")
+	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
-		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		if (screen == 0 && !levelLabel.empty()) settings.level(levelLabel, levelPercent);
+		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
@@ -906,6 +911,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
 			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)

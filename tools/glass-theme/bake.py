@@ -81,6 +81,8 @@ for variant, (tint, edge, shade) in VARIANTS.items():
 THEMES = os.path.join(OUT, "..")
 s = open(os.path.join(THEMES, "glass-dark.json"), encoding="utf-8").read()
 for a, b in [
+    ('"settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30" }', '"settings": { "glass": 14, "pane": "#ffffff4d", "edge": "#ffffff80" }'),
+    ('"top": "glass/dark-top.jpg", "bottom": "glass/dark-bottom.jpg"', '"top": "glass/light-top.jpg", "bottom": "glass/light-bottom.jpg"'),
     ("// Glass dark: frosted panels over a still picture, iPhone-like icons (Canvas's consoles, CC0). Glass light is the\n"
      "  // same with white glass.",
      "// Glass light: frosted panels over a still picture, iPhone-like icons (Canvas's consoles, CC0). Glass dark is the\n"

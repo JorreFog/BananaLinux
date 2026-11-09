@@ -35,11 +35,19 @@ phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio t
       "logo": "mine/logo.png",     the logo at the top of the bottom screen (fitted into its box)
       "icons": {                   a system's icon (PNG, about 128 x 128), by the system's id: nds, gba, gbc,
         "nds": "mine/ds.png",      gb, snes, nes, megadrive, n64, psx, pico-8, ports, ... (the folder names
-        "gba": "mine/gba.png"      in roms/, and banana/systems.conf.default lists them all)
-      },
+        "gba": "mine/gba.png"      in roms/, and banana/systems.conf.default lists them all); Settings' icons
+      },                           too, by their names: picture, music, moon, nds, gamepad, phone, gear,
+                                   bshare-receive, bshare-send, bshare-accept, bshare-decline, bshare-phone,
+                                   bshare-computer, bshare-handheld; the volume and brightness keys' bubble:
+                                   level-volume, level-mute, level-brightness (any size: fitted, smooth)
       "sounds": {                  the menu's sounds (WAV): scroll, select, back, fav, ready, insert; "off"
         "scroll": "mine/tick.wav", for none (they change at the next start of the menu)
         "fav": "off"
+      },
+      "settings": {                Settings' panels as frosted glass over the "background" pictures (blurred
+        "glass": 14,               once, by this many units), tinted "pane" with a hairline "edge", in Inter;
+        "pane": "#14161e6b",       only with a background
+        "edge": "#ffffff30"
       },
       "switches": true             Settings: a switch on the off/on rows, a slider on Brightness and Volume (left
                                    and right change them as before); without it, the value between arrows

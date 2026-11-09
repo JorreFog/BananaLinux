@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,4 +26,9 @@ namespace banana
 	std::string themePreview(const std::string& value);
 	// a system's icon: the theme's own for it (themeFiles.icons by system id), else def
 	std::string themedIcon(const std::string& systemId, const std::string& def);
+
+	// a theme's "settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30" }: Settings' panels frosted glass
+	// over the theme's pictures (glass.h), with that tint and hairline edge (ARGB), in Inter. blur 0: as before
+	struct GlassLook { float blur = 0; uint32_t pane = 0x6b14161e, edge = 0x30ffffff; };
+	extern GlassLook glassLook;
 }
