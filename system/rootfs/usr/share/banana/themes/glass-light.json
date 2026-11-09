@@ -62,7 +62,7 @@
     "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0"           // a game starting
   },
 
-  "behavior": { "launchMs": 650, "scrollMs": 110, "settleMs": 520 },
+  "behavior": { "launchMs": 650, "scrollMs": 420, "scrollEase": "bounce", "settleMs": 520 },
 
   "components": {
     // a screen's picture, its panels' frost baked in
@@ -200,7 +200,7 @@
                 "fill": "=alpha(item.color, 0.0)", "visible": "=sel",
                 "shadow": { "blur": "=34 + 12 * lit", "spread": "=6 + 10 * lit", "color": "=alpha(item.color, 0.7 + 0.3 * lit)" } },
               { "use": "tile", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18", "y": "=sel ? 54 : 69", "w": "=sel ? 105 : 70", "h": "=sel ? 105 : 70",
-                "anchor": "center", "smooth": { "w": 110, "h": 110, "y": 110 },
+                "anchor": "center", "smooth": { "w": 420, "h": 420, "y": 420 }, "ease": "bounce",
                 "shadow": { "y": 4, "blur": 8, "color": "=shade" },
                 "with": { "c": "=item.color", "src": "=item.icon", "r": "=sel ? 24 : 16", "z": "=sel ? 1.5 : 1", "f": "=sel ? lit : 0" } },
               { "type": "text", "x": "=320 + pos * 108 + sign(pos) * min(abs(pos), 1) * 18 + 22", "y": "=sel ? 6 : 36", "text": "★", "size": 13, "color": "=hi",
@@ -225,7 +225,7 @@
         { "type": "rect", "x": "=168 + slide", "y": 203, "w": 180, "h": 180, "anchor": "center", "radius": 14, "fill": "=alpha(sys.color, 0)",
           "shadow": { "blur": "=34 + 20 * lit", "spread": "=2 + 8 * lit", "color": "=alpha(sys.color, 0.3 + 0.45 * lit)" } },
         { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": "=65 + slide", "y": 100, "w": 206, "h": 206,
-          "radius": 10, "placeholder": "=alpha(sys.color, 0.6)",
+          "radius": 10, "placeholder": "=alpha(sys.color, 0.6)", "glint": "=glint", "glintColor": "#ffffff73",
           "opacity": "=easeOut(progress(moved, 200))" },
         // the game: its title, the system, a rule and its numbers, one under the other
         { "type": "group", "x": "=300 + slide * 0.6", "y": 105, "w": 273, "layout": "column", "gap": 8,
@@ -269,10 +269,10 @@
                 "fill": "=alpha(sys.color, 0)", "visible": "=sel", "scale": "=1 + 0.18 * go",
                 "shadow": { "blur": "=26 + 16 * lit + 30 * go", "spread": "=3 + 8 * lit + 10 * go", "color": "=alpha(sys.color, 0.55 + 0.45 * max(lit, go))" } },
               { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 124, "h": 88, "anchor": "center", "radius": 12, "fill": "=card",
-                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 110 } },
+                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 420 }, "ease": "bounce" },
               { "type": "image", "src": "{item.marquee}", "fallback": "{item.art}", "fit": "=item.marquee != '' ? 'contain' : 'cover'",
                 "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": "=item.marquee != '' ? 104 : 124", "h": "=item.marquee != '' ? 68 : 88", "anchor": "center", "radius": "=item.marquee != '' ? 0 : 12",
-                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 110 } },
+                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 420 }, "ease": "bounce" },
               { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) - 56", "w": 112, "y": 88, "align": "center", "text": "{item.title}", "font": "inter-semibold",
                 "size": 13, "color": "=ink", "visible": "=item.marquee == '' && item.art == ''", "scale": "=sel ? 1.25 : 1" },
               { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) + (sel ? 64 : 50)", "y": "=sel ? 40 : 52", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }

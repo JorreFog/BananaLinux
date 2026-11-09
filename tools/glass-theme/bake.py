@@ -114,6 +114,8 @@ for a, b in [
     ('"accents": { "yellow": "#ff9f0a", "orange": "#ff6b1f", "green": "#30d158", "blue": "#0a84ff", "pink": "#ff375f", "purple": "#bf5af2" }',
      '"accents": { "yellow": "#f59300", "orange": "#f2600f", "green": "#28b14c", "blue": "#007aff", "pink": "#ff2d55", "purple": "#af52de" }'),
     ('"shade": "#00000059"', '"shade": "#00000033"'),
+    # the box art's shine brighter on the light glass, as Banana's light theme
+    ('"glintColor": "#ffffff48"', '"glintColor": "#ffffff73"'),
 ]:
     assert s.count(a) == 1, a
     s = s.replace(a, b)

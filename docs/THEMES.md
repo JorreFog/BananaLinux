@@ -37,7 +37,8 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
   "hints": { "home": [["A", "Open"], ["Y", "Favorite"]] }, // the "hints" list's buttons per view
   "behavior": { "launchMs": 900, "scrollMs": 70, "settleMs": 600, "fps": 30, "wrap": false,
-                "extraHints": true, "cues": { "insert": 560 } },
+                "extraHints": true, "cues": { "insert": 560 },
+                "scrollEase": "bounce" },                         // optional: scrollMs is then the move's length, past and back
   "screens": {
     "home":    { "top": [ ...elements... ], "bottom": [ ... ] },
     "library": { "top": [ ... ], "bottom": [ ... ] },
@@ -80,6 +81,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `view` | `"home"`, `"library"` or `"launch"` |
 | `W`, `H`, `screen` | the screen's size in units (640 x 480), 0 for the top screen and 1 for the bottom one |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
+| `glint` | a shine's sweep for an image's `glint`: 0..1 for 560 ms every 5 s from the last move, else -1. The menu wakes only for the sweeps |
 | `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
@@ -118,6 +120,7 @@ An array of elements is a group of them.
 | `clip` | children cut to the element's box |
 | `states` | `[{ "when": "=sel", "fill": "#fff", "scale": 1.1 }, ...]`: properties that replace the others while `when` holds (the last one wins) |
 | `smooth` | `{ "x": 120, "scale": 90 }` (time constants in ms), or one number for x, y, w, h, opacity and scale. The property eases towards its value instead of jumping |
+| `ease` | `"bounce"`: `smooth`'s numbers are durations instead, each move going a little past its value and back (Banana's own themes' curve) |
 | `onTap` | a button the element acts as when tapped: `"a"`, `"b"`, `"left"`... |
 | `use`, `with` | a component, with the element's own properties over the component's; `with: { "label": "Play" }` sets names for its expressions |
 
@@ -141,7 +144,8 @@ Fonts are named in the theme's `fonts` (`"title": "mine/Title.ttf"`) or are buil
 `src`, `fallback` (another source when `src` is empty or doesn't load), `fit` (`cover`, `contain`, `fill`, `coverTop`,
 `pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels), `radius`, `tint` (multiplied),
 `crop` (`cardLabel`: a real DS card scan's artwork, `noStrip`: a DS box without its white strip), `placeholder` (a
-colour shown while it loads or when there is nothing). Pictures are decoded and fitted off the main thread.
+colour shown while it loads or when there is nothing), `glint` (`"=glint"`: a slanted band crossing the picture as
+drawn) in `glintColor` (`#ffffff48`). Pictures are decoded and fitted off the main thread.
 
 ### group
 
