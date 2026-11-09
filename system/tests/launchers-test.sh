@@ -134,5 +134,45 @@ check "$(cat "$D/data/saves/cdata/game.p8d.txt" 2>/dev/null)" "cart" "PICO-8's c
 check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "new" "the newer core save is the flat one"
 check "$(cat "$D/data/banana/saves-legacy/replaced/Game.srm" 2>/dev/null)" "old" "the flat save it replaced is kept"
 
+# a full card (writes past 2 KB fail: ulimit -f 4 with SIGXFSZ ignored, so a write returns an error as ENOSPC does and
+# nothing is killed for it - busybox awk then goes on and exits 0): nothing a script rewrites is left cut short, and
+# a backup it makes never replaces a whole one with a piece
+echo "a full card: nds-saves, nds-buttons and nds-reset leave the files whole"
+# card <newer: dsv|sav>: both files 8 KB (the .dsv d, the .sav s), that one newer, and nds-saves not run yet
+card() {
+    rm -rf "$D"; mkdir -p "$D/drastic/backup" "$D/saves/nds"
+    head -c 8192 /dev/zero | tr '\0' d > "$D/drastic/backup/Game.dsv"; head -c 8192 /dev/zero | tr '\0' s > "$D/saves/nds/Game.sav"
+    touch -d '2026-01-01 10:00' "$D/drastic/backup/Game.dsv" "$D/saves/nds/Game.sav"
+    case $1 in dsv) touch -d '2026-01-01 11:00' "$D/drastic/backup/Game.dsv" ;; sav) touch -d '2026-01-01 11:00' "$D/saves/nds/Game.sav" ;; esac
+}
+card dsv
+cp -p "$D/saves/nds/Game.sav" "$D/saves/nds/Game.sav.bak"
+( trap "" XFSZ; ulimit -f 4; BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log" 2>&1 )
+check "$(held)" "8192d 8192s " "nds-saves, DraStic's newer: BananaDS's .sav kept whole on a full card"
+check "$(wc -c < "$D/saves/nds/Game.sav.bak" | tr -d ' ')" "8192" "...and its .bak too"
+card sav
+cp -p "$D/drastic/backup/Game.dsv" "$D/drastic/backup/Game.dsv.bak"
+( trap "" XFSZ; ulimit -f 4; BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log" 2>&1 )
+check "$(held)" "8192d 8192s " "nds-saves, BananaDS's newer: DraStic's .dsv kept whole on a full card"
+check "$(wc -c < "$D/drastic/backup/Game.dsv.bak" | tr -d ' ')" "8192" "...and its .bak too"
+mkdir -p "$T/btn"; cp "$R/buildroot/board/rgds/drastic.cfg" "$T/btn/drastic.cfg"; printf 'nds_btn_l2 = a\nnds_btn_r2 = b\nnds_btn_l3 = x\nnds_btn_r3 = y\n' > "$T/btn/settings.conf"
+want=$(wc -c < "$T/btn/drastic.cfg" | tr -d ' ')
+cp "$T/btn/drastic.cfg" "$T/btn/free.cfg"; NDS_BUTTONS_SETTINGS=$T/btn/settings.conf sh "$L/nds-buttons" drastic "$T/btn/free.cfg" > /dev/null 2>&1
+cmp -s "$T/btn/drastic.cfg" "$T/btn/free.cfg" && check same differs "(the test itself: these buttons change drastic.cfg)"
+( trap "" XFSZ; ulimit -f 4; NDS_BUTTONS_SETTINGS=$T/btn/settings.conf sh "$L/nds-buttons" drastic "$T/btn/drastic.cfg" > /dev/null 2>&1 )
+check "$(wc -c < "$T/btn/drastic.cfg" | tr -d ' ')" "$want" "nds-buttons: drastic.cfg not cut short on a full card"
+mkdir -p "$T/reset"; head -c 4000 /dev/zero | tr '\0' '#' | fold -w 79 > "$T/reset/settings.conf"; printf '\nnds_btn_r2 = save\n' >> "$T/reset/settings.conf"
+want=$(wc -c < "$T/reset/settings.conf" | tr -d ' ')
+cp "$T/reset/settings.conf" "$T/reset/free.conf"; NDS_RESET_SETTINGS=$T/reset/free.conf sh "$L/nds-reset" ds-buttons > /dev/null 2>&1
+grep -q '^nds_btn_r2 = ff$' "$T/reset/free.conf" || check same differs "(the test itself: ds-buttons resets R2)"
+( trap "" XFSZ; ulimit -f 4; NDS_RESET_SETTINGS=$T/reset/settings.conf sh "$L/nds-reset" ds-buttons > /dev/null 2>&1 )
+check "$(wc -c < "$T/reset/settings.conf" | tr -d ' ')" "$want" "nds-reset ds-buttons: settings.conf not cut short on a full card"
+cp "$R/buildroot/board/rgds/drastic.cfg" "$T/reset/def.cfg"; sed 's/^\(controls_a\[[^]]*\] = \).*/\165535/' "$T/reset/def.cfg" > "$T/reset/drastic.cfg"
+want=$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')
+cp "$T/reset/drastic.cfg" "$T/reset/free.cfg"; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/free.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1
+cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test itself: buttons puts the image's controls back)"
+( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
+check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
