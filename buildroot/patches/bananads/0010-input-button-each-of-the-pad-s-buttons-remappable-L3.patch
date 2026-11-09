@@ -1,4 +1,4 @@
-From 5aa0a995b13d4304370b9a323a00c52de5e01a76 Mon Sep 17 00:00:00 2001
+From 9299e2cf0798e4744623125fb113eb31b500ffd1 Mon Sep 17 00:00:00 2001
 From: Toby Smith <toby.smith@seluna.co.uk>
 Date: Sat, 31 Oct 2026 14:01:56 +0000
 Subject: [PATCH] input.<button>: each of the pad's buttons remappable; L2
@@ -35,10 +35,10 @@ index 4f351fb..5998c2a 100644
  | `kms.lowlat_margin_us` | `1500` | with `kms.lowlat`: the deadline, this long before the earlier panel's vblank; +300 per commit that missed its vblank (at most 5000), back down after a clean 10 s |
  | `kms.lowlat_pad_us` | `1000` | with `kms.lowlat`: added to the frames' measured time when a frame is started |
 diff --git a/bananads/src/frontend_kms.cpp b/bananads/src/frontend_kms.cpp
-index 9ddf073..32608e1 100644
+index 3f10f22..d9f897d 100644
 --- a/bananads/src/frontend_kms.cpp
 +++ b/bananads/src/frontend_kms.cpp
-@@ -1446,6 +1446,42 @@ static uint32_t pad_bit(int code) {
+@@ -1447,6 +1447,42 @@ static uint32_t pad_bit(int code) {
  }
  static bool is_hotkey(int code) { return code == BTN_MODE || code == KEY_F1; }
  
@@ -81,7 +81,7 @@ index 9ddf073..32608e1 100644
  static std::vector<InputDev> open_inputs(const std::string& touch_name) {
      std::vector<InputDev> devs;
      DIR* d = opendir("/dev/input");
-@@ -1571,7 +1607,7 @@ static int menu_key(int code) {
+@@ -1572,7 +1608,7 @@ static int menu_key(int code) {
          default: return -1;
      }
  }
@@ -90,7 +90,7 @@ index 9ddf073..32608e1 100644
  // the menu's Hotkeys page: the buttons the input loop below reads (keep the two together), and bananad's volume keys
  // kms.input: scripted presses by emulated frame (a benchmark's input that is the same at every speed and scale, so
  // two runs emulate the same frames: their sound compares bit for bit). headless.input's syntax: "<frame>:<keys>[:<frames
-@@ -1617,13 +1653,28 @@ static std::vector<KmsPress> kms_parse_input(std::string spec) {
+@@ -1618,13 +1654,28 @@ static std::vector<KmsPress> kms_parse_input(std::string spec) {
  static bool g_quit_saves = true;  // resume.on_quit: F + START saves the spot
  static int mh_hotkey(void*, int i, const char** keys, const char** what) {
      static const char* const k[][2] = {
@@ -126,9 +126,9 @@ index 9ddf073..32608e1 100644
  
  static int mh_canvas(void* c, int panel, uint32_t** px, int* pitch, int* w, int* h) {
 @@ -1830,6 +1881,7 @@ static void opts_init(const Config& cfg, Display& dp) {
+     o.fog = cfg.flag("render.fog", true);
      o.fps = cfg.flag("kms.fps", false);
-     const long ff = cfg.num("kms.ff_speed", 2);
-     o.ff_speed = ff == 3 ? 3 : ff > 3 ? 99 : 2;
+     o.ff_speed = ff_speed_of(cfg.str("kms.ff_speed", "2"));  // (ffspeed.h: "max" too, as save_opt writes it)
 +    pad_init(cfg);
  }
  static const int ff_speeds[4] = {0, 2, 3, 99};  // the menu's Fast-forward values: Off, 2x, 3x, Max
@@ -300,3 +300,6 @@ index ff2ec94..d233fd1 100644
              case 1: snprintf(h, sizeof h, "%d slots", NSLOT); break;
              case 2: if (nb >= 0) snprintf(h, sizeof h, "last: slot %d", nb + 1); else snprintf(h, sizeof h, "no saves yet"); break;
              case 3: snprintf(h, sizeof h, H.opt_count && H.opt_count(H.ctx) ? "volume, shader, effects" : "volume, brightness"); break;
+-- 
+2.56.0
+
