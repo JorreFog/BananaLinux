@@ -4,7 +4,7 @@
 DIR=/data/roms/pico-8
 WRAPPER_DIR="$DIR/bin"
 
-# Create a wget-compatible wrapper using curl for HTTPS downloads.
+# Create wget-to-curl wrapper for HTTPS downloads.
 mkdir -p "$WRAPPER_DIR"
 
 cat > "$WRAPPER_DIR/wget" <<'EOF'
@@ -41,9 +41,7 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-if [ -z "$url" ]; then
-    exit 1
-fi
+[ -n "$url" ] || exit 1
 
 if [ -n "$postfile" ]; then
     exec /usr/bin/curl -L -sS -o "$out" \
@@ -55,17 +53,87 @@ EOF
 
 chmod +x "$WRAPPER_DIR/wget"
 
-# Make PICO-8 use our wrapper instead of BusyBox wget.
+# Make PICO-8 use the curl wrapper.
 export PATH="$WRAPPER_DIR:$PATH"
 
-# Original BananaOS PICO-8 environment.
+# Original BananaOS environment.
 export HOME="$DIR"
 export SDL_VIDEODRIVER=kmsdrm
 export SDL_AUDIODRIVER=alsa
 
-# Launch PICO-8 in Splore.
-exec "$DIR/pico8_64" \
+# Launch PICO-8.
+"$DIR/pico8_64" \
     -home "$DIR" \
     -root_path "$DIR" \
     -joystick 0 \
-    -splore
+    -splore &
+
+PICO_PID=$!
+
+# Monitor FN (button 9) + START (button 10).
+python3 - "$PICO_PID" <<'PY' &
+import os
+import struct
+import sys
+import time
+import signal
+import select
+
+pid = int(sys.argv[1])
+buttons = {9: False, 10: False}
+held_since = None
+
+try:
+    js = open("/dev/input/js0", "rb", buffering=0)
+
+    while True:
+        # Stop monitoring if PICO-8 has exited.
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+
+        # Read joystick events without blocking.
+        ready, _, _ = select.select([js], [], [], 0.05)
+
+        if ready:
+            data = os.read(js.fileno(), 8)
+
+            if len(data) == 8:
+                _, value, event_type, number = struct.unpack(
+                    "IhBB", data
+                )
+
+                if event_type & 1 and not event_type & 0x80:
+                    if number in buttons:
+                        buttons[number] = bool(value)
+
+                        if not all(buttons.values()):
+                            held_since = None
+
+        # Check the hold timer independently of joystick events.
+        if all(buttons.values()):
+            if held_since is None:
+                held_since = time.monotonic()
+            elif time.monotonic() - held_since >= 2:
+                os.kill(pid, signal.SIGTERM)
+                break
+
+finally:
+    try:
+        js.close()
+    except Exception:
+        pass
+PY
+
+MONITOR_PID=$!
+
+# Wait for PICO-8 to exit.
+wait "$PICO_PID"
+STATUS=$?
+
+# Stop the button monitor.
+kill "$MONITOR_PID" 2>/dev/null
+wait "$MONITOR_PID" 2>/dev/null
+
+exit "$STATUS"
