@@ -440,6 +440,8 @@ namespace bsync
 				c.device.clear();
 			}
 			if (dryRun) { say("  would register as a RomM device"); return true; }
+			// (the name as the card has it now, not as this run read it: a rename while it ran isn't undone in RomM)
+			{ Conf d = loadConf(); if (d.server == c.server && d.token == c.token) c.name = d.name; }
 			std::string e = registerDevice(c);
 			if (!e.empty()) { addNote(note, "not registered as a RomM device (" + e + ")"); return true; }
 			say("  registered as RomM device %s", c.device.c_str());

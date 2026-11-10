@@ -125,6 +125,31 @@ bs ra sync --saves-only > "$OUT/romm-rename.log" 2>&1
 grep -q '"name": "Living room DS"' "$OUT/ra/banana/romsync.json" || bad "rename: a sync wrote the old name back: $(grep name "$OUT/ra/banana/romsync.json")"
 [ "$(bs ra rename '  ')" = "error a name of 1 to 63 characters" ] || bad "rename: an empty name taken"
 card rn; [ "$(bs rn rename x)" = "error not paired" ] || bad "rename: a card not paired renamed"
+# (a card holding no device, RomM having one for its hostname under another name: allow_existing gives that device back
+# as it was, and the rename still names it in RomM)
+nodev() { python3 -c 'import json,sys; p=sys.argv[1]; j=json.load(open(p)); j["device"]=""; json.dump(j, open(p, "w"))' "$OUT/$1/banana/romsync.json"; }
+curl -s -XPUT -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"name": "Old name"}' "$U/api/devices/$DA" >/dev/null
+nodev ra; n=$(ndevs)
+[ "$(bs ra rename 'Kitchen DS')" = ok ] || bad "rename with no device held: $(bs ra rename 'Kitchen DS')"
+[ "$(devof ra)" = "$DA" ] && [ "$(ndevs)" = "$n" ] || bad "rename with no device held: $(devof ra) (was $DA), $(ndevs) devices (were $n)"
+devs | grep -q '"name": "Kitchen DS"' || bad "rename with no device held: RomM kept the device's old name: $(devs)"
+# (a full sync whose own registration failed, a rename registering the device while it runs: the sync's write-back
+# keeps the rename's device rather than the none it had)
+nodev ra
+curl -s -XPOST "$U/test/fault" -d '{"path": "POST /api/devices", "kind": "500", "count": 1}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 4, "count": 1}' >/dev/null
+n0=$(curl -s "$U/test/log" | grep -o 'GET /api/saves?' | wc -l)
+bs ra sync > "$OUT/romm-rename2.log" 2>&1 & SP=$!
+for i in $(seq 50); do [ "$(curl -s "$U/test/log" | grep -o 'GET /api/saves?' | wc -l)" -gt "$n0" ] && break; sleep 0.2; done
+[ "$(bs ra rename 'Hall DS')" = ok ] || bad "rename during a sync failed"
+wait $SP
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+[ "$(devof ra)" = "$DA" ] || bad "a sync wrote back its own missing device over the rename's: '$(devof ra)' (was $DA) $(cat "$OUT/romm-rename2.log")"
+grep -q '"name": "Hall DS"' "$OUT/ra/banana/romsync.json" && devs | grep -q '"name": "Hall DS"' || bad "rename during a sync: the name not kept"
+# (and a pairing again with no device held, under another name: "Paired as" the name RomM shows)
+nodev ra; CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+c=$OUT/ra; BANANA_SYNC_NAME="Porch DS" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" pair "$U" "$CODE" >/dev/null 2>&1 || bad "card A pairing with no device held failed: $(st ra)"
+[ "$(devof ra)" = "$DA" ] && devs | grep -q '"name": "Porch DS"' || bad "a pairing with no device held left RomM's old name: $(devof ra) $(devs)"
 curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$DD" >/dev/null
 bs rp sync --saves-only > "$OUT/romm-dev1.log" 2>&1
 grep -q 'the device was gone from RomM' "$OUT/romm-dev1.log" && grep -q 'registered as RomM device' "$OUT/romm-dev1.log" && [ "$(dev "$(devof rp)")" != none ] || bad "a deleted device wasn't registered again: $(cat "$OUT/romm-dev1.log")"

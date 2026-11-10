@@ -590,6 +590,8 @@ namespace bsync
 		// (the handheld's name is the pairing's and rename's, never a sync's: a sync that read the file before a rename
 		// writes the new name back, not the one it read)
 		if (!fresh && same) w.name = d.name;
+		// (nor is a device this run doesn't have: one a rename registered while it ran stays, whichever parts it holds)
+		if (!fresh && same && c.device.empty()) { w.device = d.device; w.deviceNum = d.deviceNum; }
 		if (fresh)
 		{
 			// (paired again with the same server: what its saves had agreed, held or waiting, and its files, as they are
@@ -619,11 +621,9 @@ namespace bsync
 		return ok;
 	}
 	bool saveConf(const Conf& c) { return writeBack(c, false); }
-	bool saveName(const Conf& c)
+	bool saveNameLocked(const Conf& c)
 	{
 		if (dryRun) return true;
-		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
 		Conf d = loadConf();
 		bool ok = d.server == c.server && d.backend == c.backend && d.token == c.token;
 		if (ok)
@@ -632,8 +632,13 @@ namespace bsync
 			if (!c.device.empty()) { d.device = c.device; d.deviceNum = c.deviceNum; }	// (registered by the rename, when RomM had none)
 			ok = writeConf(d);
 		}
-		if (lk >= 0) close(lk);
 		return ok;
+	}
+	int lockConf()
+	{
+		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		return lk;
 	}
 	bool savePairing(const Conf& c) { return writeBack(c, true); }
 	namespace
@@ -1003,6 +1008,16 @@ namespace bsync
 		JPtr j = r.code == 200 || r.code == 201 ? r.json() : nullptr;
 		if (!j || !j->isObj() || j->str("device_id").empty()) return r.error();
 		c.device = j->str("device_id"); c.deviceNum = false;
+		// (a device RomM already had for this hostname comes back as it was, its name the one it had then, and the POST's
+		// own name is not applied: set to this card's with a PUT, so a rename or a pairing again with no device held
+		// doesn't say one name while RomM's Devices shows another)
+		if (j->str("name") != (c.name.empty() ? "BananaOS" : c.name))
+		{
+			std::string pb = "{" + fields + "}";
+			Req p; p.headers = q.headers; p.method = "PUT"; p.url = c.server + "/api/devices/" + urlEsc(c.device); p.body = &pb;
+			Resp pr = http(p);
+			if (pr.code != 200) return pr.error();
+		}
 		return "";
 	}
 }

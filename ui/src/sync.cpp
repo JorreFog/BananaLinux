@@ -1548,13 +1548,16 @@ int main(int argc, char** argv)
 	{
 		std::string nm = trim(args[1]);
 		if (nm.empty() || nm.size() > 63) return answer("a name of 1 to 63 characters");
+		// (under romsync.lock from the read to the write: a pairing or a Forget can't land between RomM renamed and the
+		// card's name kept, which would leave the two apart. A sync writing its part back meanwhile waits out this one
+		// call to the server)
+		int lk = lockConf();
 		Conf c = loadConf();
-		if (!c.paired()) return answer("not paired");
-		if (c.backend != "romm") return answer("Homeport names this handheld (ROMs > Devices)");
-		c.name = nm;
-		std::string e = registerDevice(c);
-		if (!e.empty()) return answer(e);
-		return answer(saveName(c) ? "" : "the pairing changed meanwhile");
+		std::string e = !c.paired() ? "not paired" : c.backend != "romm" ? "Homeport names this handheld (ROMs > Devices)" : "";
+		if (e.empty()) { c.name = nm; e = registerDevice(c); }
+		if (e.empty() && !saveNameLocked(c)) e = "the name can't be kept on the card";
+		if (lk >= 0) close(lk);
+		return answer(e);
 	}
 	if (cmd == "forget")
 	{
