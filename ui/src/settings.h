@@ -651,6 +651,13 @@ namespace banana
 		bool scraping() const { return scrapeLine.compare(0, 8, "running ") == 0; }
 		bool pollScrape(double nowMs);		// true when the line changed
 		void startScrape();
+	public:
+		// a download or unpacking brought files: box art for the new games (the ones without; Wi-Fi on, none running),
+		// so their covers and logos come by themselves. True when it started
+		bool artForNewGames();
+		// with Settings closed: that box art's run followed (the library read again once it's done: takeLibraryChanged)
+		void followArt(double nowMs) { if (scraping()) pollScrape(nowMs); }
+	private:
 		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
 		// home server sync (Network > Home server): banana-sync runs on its own and says how far it got in
 		// /run/banana/sync.status; the pairing is in banana/romsync.json

@@ -7333,6 +7333,13 @@ namespace banana
 		spawn(prog && *prog ? prog : "/usr/bin/banana-scrape", nullptr);
 	}
 
+	bool Settings::artForNewGames()
+	{
+		if (scraping() || !wifiOn()) return false;
+		startScrape();
+		return true;
+	}
+
 	std::string Settings::scrapeShort() const
 	{
 		std::istringstream in(scrapeLine);

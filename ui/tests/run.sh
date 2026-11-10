@@ -816,7 +816,9 @@ PY
         printf '[locked]\nname = Locked\nprotocol = dir\nhost = %s\nuser = u\nremember = no\n\n[testnas]\nname = Test NAS\nprotocol = dir\nhost = %s\nguest = yes\nstart = /Games\n' \
             "$NAS" "$NAS" > "$SV/data/nas.conf"
         SV_SD2=""  # (the second card: set only where a scenario wants it)
-        run_sv() { BANANA_SD2="$SV_SD2" BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_FAST=1 BANANA_FETCH_TEST_PASSWORD=qwe BANANA_RUN="$SRUN" \
+        # (box art fetched by itself after a download: a stand-in that notes it ran)
+        printf '#!/bin/sh\necho ran >> "%s"\n' "$OUT/$size-scrape-ran.txt" > "$OUT/scrape-stub.sh"; chmod +x "$OUT/scrape-stub.sh"
+        run_sv() { BANANA_SCRAPE="$OUT/scrape-stub.sh" BANANA_SD2="$SV_SD2" BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_FAST=1 BANANA_FETCH_TEST_PASSWORD=qwe BANANA_RUN="$SRUN" \
             "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
             --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$SV/roms" --data "$SV/data" --script "$1" 2>> "$slog" ||
             { echo "FAIL $size: banana-ui (servers) exited $?"; fail=1; }; }
@@ -874,6 +876,9 @@ PY
         tail -n +$((n + 1)) "$slog" | grep -A 3 'press start: settings closed' | grep -q 'notice: Downloaded: Echo.gba' ||
             { echo "FAIL $size: servers: no banner for a job done with Files closed"; fail=1; }
         cmp -s "$OUT/$size-sv-closed-top.png" "$OUT/$size-sv-banner-top.png" && { echo "FAIL $size: servers: the banner isn't drawn over the menu"; fail=1; }
+        # a game downloaded: box art for it fetched by itself (covers and logos for games added later)
+        tail -n +$((n + 1)) "$slog" | grep -q "box art: fetching for the new games" ||
+            { echo "FAIL $size: servers: no box art fetched after a download"; fail=1; }
         printf 'target = /Games/gba\tsd2:roms/gba/Hacks\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the second card's folder wasn't remembered"; fail=1; }
         SV_SD2=""
         # Alpha Quest.nds copied (X, Copy) on the server; up and out to This card: Paste here in its banana folder (here
