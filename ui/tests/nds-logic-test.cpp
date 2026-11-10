@@ -422,10 +422,14 @@ static void testSession(const char* tmp)
 		at(B + 0x1328 + 4)[16] |= 0x10;	// 133 = bit 132
 		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000120);
 		bool gift = false;
-		for (auto& e : s.journey()->log) gift |= e.kind == LogKind::GIFT && e.species == 133 && e.text.rfind("Received ", 0) == 0;
+		// (the journey held while its log is read: journey() hands back a fresh copy, and a range-for over
+		// s.journey()->log keeps only the log's reference, not the copy, which is freed before the loop runs: the
+		// counts then came from freed memory, about one run in 200 wrong)
+		const auto jg = s.journey();
+		for (auto& e : jg->log) gift |= e.kind == LogKind::GIFT && e.species == 133 && e.text.rfind("Received ", 0) == 0;
 		CHECK(gift);
 		// a whole Pokédex turning up in one step (a save that has just loaded) is not a run of catches
-		auto catches = [&] { size_t n = 0; for (auto& e : s.journey()->log) n += e.kind == LogKind::CATCH; return n; };
+		auto catches = [&] { size_t n = 0; const auto jc = s.journey(); for (auto& e : jc->log) n += e.kind == LogKind::CATCH; return n; };
 		const size_t catchesBefore = catches();
 		for (int i = 0; i < 8; i++) at(B + 0x1328 + 4)[1 + i] = 0xFF;	// species 9..72
 		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000150);
