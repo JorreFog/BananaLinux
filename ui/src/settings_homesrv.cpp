@@ -169,19 +169,30 @@ namespace banana
 	}
 
 	// the banana-sync whose pid is in sync.pid, while it runs (a sync, or a pairing: both hold sync.lock); 0 when none
+	// (a zombie isn't running: a pairing stopped a moment ago, its parent gone, waits there to be reaped by init, and in
+	// a container whose first process reaps nothing for good)
 	static int runningSync(const std::string& runDir)
 	{
 		int pid = atoi(firstLine(runDir + "/sync.pid").c_str());
 		std::string comm = pid > 0 ? bsync::trim(firstLine("/proc/" + std::to_string(pid) + "/comm")) : "";
-		return pid > 0 && comm == "banana-sync" && kill(pid, 0) == 0 ? pid : 0;
+		std::string st = pid > 0 ? firstLine("/proc/" + std::to_string(pid) + "/stat") : "";
+		size_t r = st.rfind(')');
+		const bool zombie = r != std::string::npos && r + 2 < st.size() && st[r + 2] == 'Z';
+		return pid > 0 && comm == "banana-sync" && !zombie && kill(pid, 0) == 0 ? pid : 0;
 	}
 
-	// a process stopped, or one in its group (a pairing stopped before its pid was written), still running. A zombie is
-	// gone: one whose parent has gone is reaped by init, and until then kill() still finds it (in a container whose
-	// first process reaps nothing, for good)
-	static bool stillThere(pid_t p)
+	// a line of a pairing's own on sync.status: the menu's "pairing", banana-sync pair's code and its error
+	static bool pairingLine(const std::string& ln)
 	{
-		if (p <= 0 || (kill(p, 0) != 0 && kill(-p, 0) != 0)) return false;
+		return ln == "pairing" || ln.compare(0, 5, "pair ") == 0 || ln.compare(0, 6, "error ") == 0;
+	}
+
+	// a process group (a pairing stopped) with a process still running in it. A zombie is gone: one whose parent has
+	// gone is reaped by init, and until then kill() still finds it (in a container whose first process reaps nothing,
+	// for good)
+	static bool groupAlive(pid_t p)
+	{
+		if (p <= 0 || kill(-p, 0) != 0) return false;
 		DIR* d = opendir("/proc");
 		if (!d) return true;
 		bool there = false;
@@ -195,7 +206,7 @@ namespace banana
 			char state = 0;
 			int ppid = 0, pgrp = 0;
 			if (sscanf(st.c_str() + r + 1, " %c %d %d", &state, &ppid, &pgrp) != 3 || state == 'Z') continue;
-			if (atoi(e->d_name) == p || pgrp == p) { there = true; break; }
+			if (pgrp == p) { there = true; break; }
 		}
 		closedir(d);
 		return there;
@@ -209,9 +220,8 @@ namespace banana
 		hsDone = false;
 		hsCode.clear(); hsVerify.clear(); hsCause.clear();
 		hsExpires = 0;
-		// (the pairing stopped a moment ago still ending: this one once it has, hsPollStopped. Only for those 3 s: the pid
-		// may be another process's later)
-		if (now - hsStopAt < 3000 && stillThere(hsStopPid))
+		// (the pairing stopped a moment ago still ending: this one once it has, hsPollStopped)
+		if (hsStopGroup > 0)
 		{
 			hsStep = 0;
 			hsStopping = true;
@@ -219,7 +229,6 @@ namespace banana
 			hsMsg = "Stopping the last pairing...";
 			return;
 		}
-		hsStopPid = 0;
 		// (a sync running holds the lock a pairing needs: said here, its status left as it is, rather than a pairing
 		// that can't start and a Cancel that would stop that sync)
 		if (runningSync(runDir))
@@ -232,6 +241,10 @@ namespace banana
 		}
 		hsStep = 3;
 		hsMsg = code.empty() ? "Asking " + hsName + " for a code..." : "Pairing with the code...";
+		// (the last sync's line kept, for the Sync now row once a pairing that doesn't pair is over: a pairing stopped or
+		// refused isn't a sync that didn't work. A line of an earlier pairing's own isn't that)
+		const std::string was = bsync::trim(firstLine(runDir + "/sync.status"));
+		if (!pairingLine(was)) hsPrevSync = was;
 		std::ofstream(runDir + "/sync.status") << "pairing\n";
 		syncLine.clear();	// (the status read again even when its line is the one before)
 		auto q = gamesync::shellQuote;
@@ -294,41 +307,49 @@ namespace banana
 				hsSel = (int)hsFormRows().size() - 1;
 			}
 			else hsFailed(cause, detail);
+			hsPutBackSync();
 			fprintf(stderr, "home server: pairing failed: %s\n", rest.c_str());
 		}
 	}
 
 	void Settings::hsCancelPair()
 	{
-		// banana-sync pair writes its pid as a sync does (it holds the same lock); it says "error stopped" as it ends,
-		// which nothing reads now: hsStep is 0. Not waited for here (a curl in it can take a while to notice): a pairing
-		// asked for before it has gone waits for it (hsStartPair), so it finds the lock free
+		// the pairing's whole process group (hsRun gives each run its own session): the sh and banana-sync in it, whether
+		// or not banana-sync has written sync.pid yet. Not waited for here (a curl in it can take a while to notice): a
+		// pairing asked for before it has gone waits for it (hsStartPair), so it finds sync.lock free
 		hsStep = 0;
 		hsStopping = false;
-		int pid = runningSync(runDir);
-		if (pid > 0 && kill(pid, SIGTERM) == 0) { hsStopPid = pid; hsStopAt = now; }
-		// (B a moment after the start, before banana-sync has written sync.pid: its process group stopped instead, the
-		// sh and banana-sync in it, whose "error stopped" the menu says for it if it went before it could)
-		else if (pid <= 0 && hsPairGroup > 0 && kill(-hsPairGroup, SIGTERM) == 0)
-		{
-			hsStopPid = hsPairGroup; hsStopAt = now;
-			if (bsync::trim(firstLine(runDir + "/sync.status")) == "pairing") std::ofstream(runDir + "/sync.status") << "error stopped\n";
-		}
+		if (hsPairGroup > 0 && kill(-hsPairGroup, SIGTERM) == 0) { hsStopGroup = hsPairGroup; hsStopAt = now; hsStopKilled = false; }
+		else hsPutBackSync();
 		hsPairGroup = 0;
 	}
 
-
-	// the pairing asked for while the one stopped was ending: started once it has gone, or after 3 s said as a sync
-	// still running (true: the screen changed)
+	// a pairing stopped, looked at as the menu polls: once its group has gone (SIGKILL after 5 s, should a call in it not
+	// notice SIGTERM), the last sync's line back on the Sync now row and the pairing asked for meanwhile started (true:
+	// the screen changed)
 	bool Settings::hsPollStopped()
 	{
-		if (!hsStopping) return false;
-		if (now - hsStopAt < 3000 && stillThere(hsStopPid)) return false;
-		const bool gone = !stillThere(hsStopPid);
-		hsStopping = false;
-		if (gone) { hsStopPid = 0; hsStartPair(hsStopCode); }
-		else { hsCause = "busy"; hsMsg = hsWhy("busy", ""); }
+		if (hsStopGroup <= 0) return false;
+		if (groupAlive(hsStopGroup))
+		{
+			if (!hsStopKilled && now - hsStopAt >= 5000) { kill(-hsStopGroup, SIGKILL); hsStopKilled = true; }
+			return false;
+		}
+		hsStopGroup = 0;
+		hsPutBackSync();
+		if (hsStopping) { hsStopping = false; hsStartPair(hsStopCode); }
 		return true;
+	}
+
+	// the last sync's status line back over a pairing's own ("pairing", its code, its error), so the Sync now row says
+	// that sync, not a failure for one that never ran; a line a sync has written since is left as it is
+	void Settings::hsPutBackSync()
+	{
+		const std::string f = runDir + "/sync.status";
+		if (!pairingLine(bsync::trim(firstLine(f)))) return;
+		if (hsPrevSync.empty()) unlink(f.c_str());
+		else std::ofstream(f) << hsPrevSync << "\n";
+		syncLine.clear();
 	}
 
 	std::string Settings::hsWhy(const std::string& cause, const std::string& detail) const
@@ -429,9 +450,9 @@ namespace banana
 			if (hsStep == 0 && !hsStopping) { hsStartPair(""); return MOVED; }
 			return NONE;
 		case Key::X:
+			// (the pairing running is left to run while a code is typed: its QR code still pairs, and it is stopped only
+			// for a code confirmed)
 			if (hsDone) return NONE;
-			hsStopping = false;
-			if (hsStep == 3) hsCancelPair();
 			startEntry(ENTRY_HS_CODE, "RomM", "Pairing code", HOMESRV);
 			return MOVED;
 		default: return NONE;

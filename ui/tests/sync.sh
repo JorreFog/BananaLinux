@@ -803,11 +803,13 @@ if [ -x "$HERE/banana-ui" ]; then
     export BANANA_RUN=$OUT/ui-run-r
     HS="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press a"
     # ur <name> <script> [VAR=value...]: the menu on a card never paired, from the Home server choice page, with the
-    # stand-in; its log in $OUT/ui-<name>.log. UR_SYNC_PID: a sync's pid in sync.pid from the start
+    # stand-in; its log in $OUT/ui-<name>.log. UR_SYNC_PID: a sync's pid in sync.pid from the start; UR_STATUS: the
+    # last sync's status line
     ur() {
         n=$1 sc=$2; shift 2
         : > "$SL"; rm -rf "$BANANA_RUN" "$FX/data/romsync.json"; mkdir -p "$BANANA_RUN"
         [ -n "${UR_SYNC_PID:-}" ] && echo "$UR_SYNC_PID" > "$BANANA_RUN/sync.pid"
+        [ -n "${UR_STATUS:-}" ] && echo "$UR_STATUS" > "$BANANA_RUN/sync.status"
         env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$@" "$HERE/banana-ui" --headless "$OUT/ui-" --size ${UR_SIZE:-640x480} --assets "$HERE/assets/rnds" \
             --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
             --roms "$FX/roms" --data "$FX/data" --script "$HS; $sc" 2> "$OUT/ui-$n.log" || bad "banana-ui (RomM, $n) exited $?"
@@ -886,9 +888,24 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -q 'pair --romm' "$SL" && bad "RomM: a pairing started under a running sync: $(cat "$SL")"
     kill -0 $BP 2>/dev/null || bad "RomM: B on the pairing screen stopped a sync that was running"
     kill $BP 2>/dev/null; wait $BP 2>/dev/null
-    ur code "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; type ABCD-1234; press start; sleep 300; wait 600; shot hs-code-r" FAKE_SYNC_PAIR=hang
+    ur code "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; type ABCD-1234; press start; sleep 300; wait 600; sleep 300; wait 300; shot hs-code-r" FAKE_SYNC_PAIR=hang
     grep -q "pair --romm https://romm.example.com 'ABCD-1234'\|pair --romm https://romm.example.com ABCD-1234" "$SL" || bad "RomM: the pairing code not sent: $(cat "$SL")"
     rlog code "home server: paired with RomM 5.4.1"
+    # (X, then nothing typed: back on the pairing still running, its QR code still the way to pair, not stopped)
+    ur codeempty "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; press start; wait 300; shot hs-code-empty" FAKE_SYNC_PAIR=hang
+    [ "$(grep -c 'pair --romm' "$SL")" = 1 ] || bad "RomM: X and no code started another pairing: $(cat "$SL")"
+    grep -q '^pair ABCD-EFGH ' "$BANANA_RUN/sync.status" || bad "RomM: X and no code stopped the pairing: $(cat "$BANANA_RUN/sync.status")"
+    pkill -f 'sleep 60' 2>/dev/null
+    # (B on the pairing screen: the Sync now row keeps the last sync's line, not a failure for a sync that never ran;
+    # also for a pairing that takes a moment to end, and one refused in RomM)
+    UR_STATUS="done 1 0 0 0 0 0|" ur cancelst "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press b; wait 300; sleep 300; wait 300" FAKE_SYNC_PAIR=hang
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: B on the pairing screen left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    UR_STATUS="done 1 0 0 0 0 0|" ur cancelslow "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; press b; wait 100; sleep 1500; wait 300; sleep 300; wait 300" BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_PAIR=slowstop
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: a pairing slow to stop left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    UR_STATUS="done 1 0 0 0 0 0|" ur denyst "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600" FAKE_SYNC_PAIR=deny
+    rlog denyst "home server: pairing failed: refused in RomM"
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: a pairing refused left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    unset UR_STATUS	# (an assignment before a function call stays set after it in sh)
     # refused in RomM: said, A asks again
     ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
     rlog deny "home server: pairing failed: refused in RomM"

@@ -669,11 +669,13 @@ namespace banana
 		wifi::Job hsJob;
 		wifi::Job nameJob;	// banana-sync rename, from the Device name row
 		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
-		int hsStopPid = 0;		// a pairing stopped (SIGTERM), not gone yet: the next one waits for it
-		double hsStopAt = 0;
-		pid_t hsPairGroup = 0;	// the pairing started last: its process group, stopped by B before it has written sync.pid
+		pid_t hsPairGroup = 0;	// the pairing running: its process group (banana-sync and the sh before it), what B stops
+		pid_t hsStopGroup = 0;	// a pairing stopped, its group not gone yet: the next one waits for it
+		double hsStopAt = 0;	// (when it was stopped: SIGKILL after 5 s)
+		bool hsStopKilled = false;
 		bool hsStopping = false;	// a pairing asked for while that one ends: started once it has
 		std::string hsStopCode;	// (its code, "" for the device flow)
+		std::string hsPrevSync;	// the status line a pairing replaced (the last sync's), put back when it doesn't pair
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
 		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
@@ -728,8 +730,9 @@ namespace banana
 		void hsRommFound(const std::string& url, const std::string& ver, bool old);	// a probe's RomM, about to be paired
 		void hsStartPair(const std::string& code);	// banana-sync pair --romm (no code: the device flow)
 		void hsPairLine(const std::string& ln);	// a line of the status file while RomM pairs
-		void hsCancelPair();				// the pairing running stopped (its sync.pid)
-		bool hsPollStopped();				// a pairing waiting for the stopped one to end: started when it has
+		void hsCancelPair();				// the pairing running stopped (its process group)
+		bool hsPollStopped();				// a pairing stopped, once gone: the last sync's line back, a pairing waiting started
+		void hsPutBackSync();				// the last sync's status line back over a pairing's own
 		std::string hsWhy(const std::string& cause, const std::string& detail) const;	// probe's word, for a person
 		void hsFailed(const std::string& kind, const std::string& detail);	// hsCause, hsMoved and hsMsg for a failure
 		std::vector<int> hsFormRows() const;

@@ -2923,7 +2923,7 @@ namespace banana
 		if (hsStep == 3) return page == HOMESRV ? 250 : 500;
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
-		if (nameJob.running() || forgetJob.running() || hsStopping) return 100;	// (a rename, a Forget, a pairing stopped before the next starts)
+		if (nameJob.running() || forgetJob.running() || hsStopGroup > 0) return 100;	// (a rename, a Forget, a pairing stopped and not gone yet)
 		if (pickLoading || pickRefreshing) return 150;	// (Choose games: the server's list as it comes)
 		if (syncWifiUntil > 0) return 250;	// (Sync now waiting for Wi-Fi to come back)
 		// (a sync's progress, Get games' rows as games come, and the sync started again for a game asked for late)
@@ -6705,7 +6705,17 @@ namespace banana
 			std::string code = trim(pw);
 			pw.clear();
 			page = entryBack;
-			if (hsKind == "romm") { if (!code.empty()) hsStartPair(code); else hsMsg = "No code typed: the QR code is still the way to pair."; return MOVED; }
+			if (hsKind == "romm")
+			{
+				// (paired meanwhile from the QR code: nothing more to do. No code: back to the pairing still running, its
+				// QR code; one that ended meanwhile says so already. A code: the device flow stopped and the code paired
+				// once it has gone)
+				if (hsDone) return MOVED;
+				if (code.empty()) { if (hsStep == 3) hsMsg = "No code typed: the QR code is still the way to pair."; return MOVED; }
+				if (hsStep == 3) hsCancelPair();
+				hsStartPair(code);
+				return MOVED;
+			}
 			if (code.empty()) { hsStep = 0; message.clear(); return MOVED; }
 			auto q = gamesync::shellQuote;
 			hsStep = 3;
