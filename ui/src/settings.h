@@ -700,7 +700,7 @@ namespace banana
 		mutable std::string hsPaired, hsPairedKind, hsPairedUrl, hsPairedName;
 		mutable int hsConflicts = 0, hsHeld = 0;	// the paired server's saves to settle and held back (romsync.json)
 		std::string hsSettleShort() const;		// "1 conflict, 2 held", "" for none
-		mutable double hsPairedAt = -1e18;
+		mutable std::string hsPairedSig;	// romsync.json as last read (inode, size, time), "" to read it again
 		std::string hsRowsFor = "?";		// the kind the Home server page's rows were made for (build())
 		void hsRebuild();					// the rows made again for the kind paired now, the cursor on the same row
 		// Home server, the pages of its own (settings_homesrv.cpp): RomM or Romhost chosen, RomM's address (protocol,

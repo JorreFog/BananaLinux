@@ -899,7 +899,7 @@ namespace banana
 		// (RomM's states and the sync before a game; Romhost's Devices page in Homeport decides those). Not paired: the
 		// Server row, A choosing RomM or Romhost, and Check certificate for a Romhost on https. A pairing or a Forget makes the rows again (hsRebuild)
 		const char* HS = "Home server";
-		hsPairedAt = -1e18;
+		hsPairedSig.clear();
 		hsRowsFor = hsBackend();
 		const bool romm = hsRowsFor == "romm";
 		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
@@ -2733,7 +2733,7 @@ namespace banana
 			if (nameJob.take(out))
 			{
 				out = trim(out);
-				hsPairedAt = -1e18;
+				hsPairedSig.clear();
 				message = out == "ok" ? "" : "Not renamed: " + (out.compare(0, 6, "error ") == 0 ? out.substr(6) : out);
 				fprintf(stderr, "home server: rename %s\n", out.c_str());
 				scrapeChanged = true;
@@ -7570,10 +7570,17 @@ namespace banana
 	}
 	std::string Settings::homeServer() const
 	{
-		// (read again at most every 2 s: rows ask for it every frame)
-		if (now - hsPairedAt < 2000 && now >= hsPairedAt) return hsPaired;
-		hsPairedAt = now;
-		JPtr j = readJsonFile(data + "/romsync.json");
+		// (read again only when it has changed: rows ask for it every frame and the menu's poll twice a second, and the
+		// file holds every save's and file's state, hundreds of KB on a large library. Each write of it is a new file
+		// renamed over the old one, so its inode alone changes with every write; its size and time too, for one put
+		// there by hand)
+		struct stat st;
+		const std::string f = data + "/romsync.json";
+		const std::string sig = ::stat(f.c_str(), &st) != 0 ? "none" : std::to_string((long long)st.st_ino) + ":" + std::to_string((long long)st.st_size) + ":" +
+			std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string((long long)st.st_mtim.tv_nsec);
+		if (sig == hsPairedSig) return hsPaired;
+		hsPairedSig = sig;
+		JPtr j = readJsonFile(f);
 		bool paired = j && j->isObj() && !j->str("token").empty();
 		hsPaired = !paired ? "" : j->str("serverName").empty() ? j->str("server") : j->str("serverName");
 		hsPairedKind = paired ? j->str("backend", "romhost") : "";	// (none named is Romhost, as banana-sync reads it)
