@@ -1,0 +1,14 @@
+== run_headless: 858.3k/frame; by innermost function
+    338.4k  39.4%  melonDS::NDS::RunSlicesJIT
+    139.1k  16.2%  melonDS::NDS::RunEventsDue
+     90.0k  10.5%  ExecuteJITInline<0, melonDS::ARMv5>
+     72.4k   8.4%  dump_ppm
+     41.6k   4.8%  ExecuteJITInline<1, melonDS::ARMv4>
+     40.5k   4.7%  melonDS::DMA::Run
+     38.2k   4.5%  melonDS::NDS::HaltInterrupted
+     31.1k   3.6%  operator
+     26.6k   3.1%  melonDS::FIFO<melonDS::GPU3D::CmdFIFOEntry, 4u>::IsEmpty
+     22.5k   2.6%  bananads::run_headless
+      9.6k   1.1%  melonDS::SPU::ReadOutput
+      8.1k   0.9%  bananads::Mic::note_output
+      0.1k   0.0%  unsigned int melonDS::NDS::RunFrame<

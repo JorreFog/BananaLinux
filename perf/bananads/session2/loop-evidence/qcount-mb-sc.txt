@@ -1,0 +1,51 @@
+main thread: 6022.4k insns/frame
+  3d                        2785.6k   46.3%
+  2d/gpu                    1521.7k   25.3%
+  other                     1199.7k   19.9%
+  memory                     185.1k    3.1%
+  jit-code                   131.2k    2.2%
+  core                       128.7k    2.1%
+  audio                       56.4k    0.9%
+  libs                        12.9k    0.2%
+  jit-runtime                  1.0k    0.0%
+  interpreter-fallback         0.2k    0.0%
+  JIT total (code+runtime+fallback): 132.3k/frame
+top symbols:
+     2115.7k  [3d] _ZN7melonDS14SoftRenderer3D14RenderScanlineEii
+      887.9k  [other] _ZZ4mainENKUlvE_clEv
+      710.9k  [2d/gpu] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+      463.9k  [3d] _ZNK7melonDS14SoftRenderer3D11RenderPixelEPKNS_7PolygonEhhhss
+      412.9k  [2d/gpu] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+      155.3k  [other] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+      121.7k  [other] _ZN7melonDS30DepthTest_LessThan_FrontFacingEiij
+       93.6k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       79.5k  [3d] _ZN7melonDS14SoftRenderer3D12ClearBuffersEv
+       75.3k  [2d/gpu] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       44.9k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       44.0k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15DrawSpriteEntryEjRKNS0_11SpriteEntryE
+       34.6k  [3d] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       34.2k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15DrawSpritesFromEjRKNS_12Banana2DRegsE
+       33.9k  [core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       32.3k  [3d] _ZN7melonDS5GPU3D3RunEv.localalias
+       30.4k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       27.9k  [core] _ZN7melonDS3NDS11SliceChain9EPS0_
+       24.1k  [core] _ZZN7melonDS3RTCC4ERNS_3NDSEENUlPvjE_4_FUNES3_j.lto_priv.0
+       23.7k  [2d/gpu] _ZN7melonDS5GPU2D22UpdateRegistersPreDrawEb.part.0
+       22.8k  [2d/gpu] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_4_FUNES9_j
+       20.4k  [2d/gpu] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+       20.0k  [2d/gpu] _ZN7melonDS16BananaRenderer2D14PrepareSpritesERNS_12Banana2DRegsE
+       20.0k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       19.6k  [other] blip_read_samples.constprop.0.isra.0
+top JIT blocks:
+       27.5k  mj9:0200051c
+       12.3k  mj9:020006b6
+        9.2k  mj9:02000586
+        8.3k  stub:0000ec00
+        7.7k  mj9:0200054e
+        5.9k  mj9:02000612
+        5.8k  mj9:02000626
+        4.4k  mj9:02000668
+        4.2k  mj9:02000788
+        3.9k  mj7:02380056
+        3.4k  mj9:020001c8
+        3.0k  mj9:02000d76

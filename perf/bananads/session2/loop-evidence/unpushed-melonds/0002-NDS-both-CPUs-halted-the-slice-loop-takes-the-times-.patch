@@ -1,0 +1,104 @@
+From 6b6774165ccf9994ea7fd285634a8c76705d8e27 Mon Sep 17 00:00:00 2001
+From: BananaDS <bananads@localhost>
+Date: Sun, 18 Oct 2026 19:43:39 +0000
+Subject: [PATCH 2/3] NDS: both CPUs halted, the slice loop takes the times to
+ the next event in one step (HaltSkip)
+
+With both CPUs halted and nothing to wake them (no IRQ pending for either, no DMA, GX stall or sleep, the
+geometry engine idle), RunSlicesJIT's iterations until the next event or timer only set the CPUs', GPU3D's and
+the system's times to each slice's end: ~45 instructions a slice, 64 cycles at a time, for the whole of the time
+a game waits for VBlank. Now the loop finds those slice ends as NextTarget would (the same steps, the same margin)
+and sets the times once to the last one with nothing due; the next iteration then runs the slice that reaches the
+event or the timer as before. Nothing runs in between, so nothing can see the slices that were skipped.
+
+SetHaltSkip(bool), off by default here (BananaDS's core.halt_skip turns it on); MELONDS_HALTSKIP_STATS=1 logs the
+skips at exit. membench (both CPUs halt, as a game's) under qemu: main thread 6,032k -> 5,635k instructions a
+frame (the slice loop 920k -> 523k).
+---
+ src/NDS.cpp | 39 +++++++++++++++++++++++++++++++++++++++
+ src/NDS.h   |  5 +++++
+ 2 files changed, 44 insertions(+)
+
+diff --git a/src/NDS.cpp b/src/NDS.cpp
+index a738b4c..56b4e30 100644
+--- a/src/NDS.cpp
++++ b/src/NDS.cpp
+@@ -150,6 +150,9 @@ NDS::NDS(NDSArgs&& args, int type, void* userdata) noexcept :
+ 
+ NDS::~NDS() noexcept
+ {
++    if (getenv("MELONDS_HALTSKIP_STATS"))
++        Log(LogLevel::Info, "[core] halt_skip: %llu skips in %llu frames\n", (unsigned long long)HaltSkipped,
++            (unsigned long long)NumFrames);
+     UnregisterEventFuncs(Event_Div);
+     UnregisterEventFuncs(Event_Sqrt);
+     // The destructor for each component is automatically called by the compiler
+@@ -1358,6 +1361,42 @@ void NDS::RunSlicesJIT()
+     u64 next = SCHED(sb, SchedNext);
+     while (SCHED(sb, Running))
+     {
++        // HaltSkip (exact): both CPUs halted with no IRQ to wake them, no DMA, stall or sleep, the geometry engine
++        // idle: until an event or a timer is due nothing runs, and each slice only sets the times to its end. The
++        // slices' ends are found as NextTarget would (the same steps), and the times set once to the last one that
++        // has nothing due; the iteration below then runs the slice that reaches the event or the timer.
++        if (SCHED(sb, HaltSkip) && arm9.Halted == 1 && arm7.Halted == 1 && !(CPUStop & (CPUStop_GXStall | CPUStop_DMA9 |
++            CPUStop_DMA7 | CPUStop_Sleep)) && !HaltInterrupted(0) && !HaltInterrupted(1)
++            && ((gpu3d.CmdPIPE.IsEmpty() && !(gpu3d.GXStat & (1<<27))) || !gpu3d.GeometryEnabled || gpu3d.FlushRequest))
++        {
++            const u64 timerMin = SCHED(sb, TimerNextMin);
++            const u64 nearUntil = SCHED(sb, SliceNearIPCUntil);
++            const s32 sShort = SCHED(sb, SliceShort), sIdle = SCHED(sb, SliceIdle);
++            u64 t = sys;
++            for (;;)
++            {
++                const u64 max = t + (t < nearUntil ? sShort : sIdle);
++                const u64 tgt = (next < max + kIterationCycleMargin) ? next : max;
++                if (tgt >= next || tgt >= timerMin)
++                    break;
++                t = tgt;
++            }
++            if (t != sys)
++            {
++                ARM9Target = t << ARM9ClockShift;
++                ARM9Timestamp = ARM9Target;
++                gpu3d.Timestamp = t;
++                if (ARM7Timestamp < t)
++                {
++                    ARM7Target = t;
++                    ARM7Timestamp = t;
++                }
++                SCHED(sb, SysTimestamp) = t;
++                sys = t;
++                HaltSkipped++;
++            }
++        }
++
+         // NextTarget(), FastSched
+         const s32 sliceShort = SCHED(sb, SliceShort), sliceIdle = SCHED(sb, SliceIdle);
+         const u64 max = sys + (sys < SCHED(sb, SliceNearIPCUntil) ? sliceShort : sliceIdle);
+diff --git a/src/NDS.h b/src/NDS.h
+index ddf7437..8eff7b3 100644
+--- a/src/NDS.h
++++ b/src/NDS.h
+@@ -309,6 +309,10 @@ public: // TODO: Encapsulate the rest of these members
+     // or sleep), it does that bookkeeping and sets the next slice's ARM9Target, and the chain goes on: 1. Otherwise
+     // it changes nothing and the stub returns to the loop: 0. Only with FastLoop and FastSched (RunSlicesJIT).
+     static u32 SliceChain9(NDS* nds) noexcept;
++    // HaltSkip (exact, BananaDS; RunSlicesJIT): while both CPUs are halted with nothing to wake them, the slice loop
++    // takes the times straight to the last slice end before the next event or timer, instead of slice by slice
++    void SetHaltSkip(bool on) noexcept { HaltSkip = on; }
++    u64 HaltSkipped = 0; // (how many times it did)
+     u32 SliceChainStep() noexcept;
+     // FastDMA (BananaDS, DMA.h): main RAM -> GX FIFO / main RAM transfers without the bus dispatch; exact
+     void SetFastDMA(bool on) noexcept { for (DMA& d : DMAs) d.FastDMA = on; }
+@@ -745,6 +749,7 @@ protected:
+     u64 TimerNextMin = 0; // the lower of the two
+     void TimerNextUpdate(u32 cpu) noexcept;
+     bool FastLoop = false;
++    bool HaltSkip = false;
+     bool SliceChainOK = false; // FastLoop && FastSched: RunSlicesJIT is the loop SliceChain9 stands in for
+     void RunSlicesJIT();
+     void SliceIPC(u32 cpu) noexcept
+-- 
+2.43.0
+

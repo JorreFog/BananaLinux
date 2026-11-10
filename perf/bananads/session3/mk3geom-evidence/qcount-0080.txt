@@ -1,0 +1,7 @@
+qc-off       total  12786.0k  without Gengis  12556.1k  (Gengis  229.9k)  geometry+GX DMA   6484.5k
+qc-on        total  12524.2k  without Gengis  12261.0k  (Gengis  263.2k)  geometry+GX DMA   6201.5k
+   2074.2k       0.0k  -2074.2k  _ZN7melonDS5GPU3D11RunFastFIFOEv
+      2.9k       8.5k     +5.6k  rast_kern_h23110
+     16.5k      23.6k     +7.2k  rast_kern_h12010
+    211.0k     225.2k    +14.2k  line_px
+    130.1k    1921.4k  +1791.2k  _ZN7melonDS5GPU3D3RunEv

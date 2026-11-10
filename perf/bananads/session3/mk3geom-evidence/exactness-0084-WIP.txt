@@ -1,0 +1,27 @@
+# 0084 (render.geom_light) WIP, NOT committed: b5 = 649e008 + 0084-geom-light-WIP.patch, Mon Oct 19 15:08:18 UTC 2026
+MK scene on = base: yes; main RAM 1600-2100 --regs --timing off vs on: SAME after 2100 frames (all of main RAM)
+savestates on:
+a57737e0567aab4f488ed894bdec854d 1850 b5/bananads --set render.geom_light=on
+f476c39ef33cd7a1166128040aa358d1 2000 b5/bananads --set render.geom_light=on
+Run trace (pre-fix build): on/off GXTRACE calls 1133371 hash 123d98004261c019 / GXTRACE calls 1133371 hash 123d98004261c019
+check.sh off vs on:
+PICS FAIL gxstm-soft (30)
+PICS FAIL gxstm-gengis2x (30)
+PICS FAIL gxstm-reload (30)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq: SAME after 300 frames (all of main RAM); exact-suite: FAILS=0
+sabotage 4 (no colour resolve at save): 1850 (pre-fix build) 5744f767947c0843f260c560098157e1 (differs: caught), 2000 f476c39ef33cd7a1166128040aa358d1 (same: not caught)
+before the catch-up fix: mkdiff off vs on hung (>20 min), a sab-4 savestate run at 2000 hung
+qemu (on, qc6-on): see qcount; emu thread 11,868.4k vs 11,876.8k, worker 1,421k

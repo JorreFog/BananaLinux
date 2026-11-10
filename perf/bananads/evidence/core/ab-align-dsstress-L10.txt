@@ -1,0 +1,17 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/bin/bananads-devpgo /home/user/perf/roms/dsstress-L10.nds align-dsstress-L10-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/bin/bananads-align /home/user/perf/roms/dsstress-L10.nds align-dsstress-L10-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.478 -> 6.226 (-3.89%)   @1992 3.862 -> 3.726 (-3.54%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.268 -> 5.346 (-14.70%)
+  insn 4986.5k->4991.1k (+0.1%)  base 5159.2k->5172.4k (+0.3%)  l1i_miss 13.1k->3.5k (-73.3%)  l1i_l3miss 0.4k->0.4k (+12.6%)  ld_miss 18.2k->18.2k (+0.1%)  ld_l3miss 4.3k->4.3k (+0.1%)  st_miss 4.1k->4.2k (+2.2%)  st_l3miss 2.1k->2.1k (+0.4%)  itlb_l2 6.6k->7.3k (+10.1%)  itlb_walk 0.0k->0.0k (+15.1%)  dtlb_l2 35.8k->34.1k (-4.7%)  dtlb_walk 0.0k->0.0k (-0.5%)  bcond_miss 28.9k->27.7k (-4.0%)  bind_miss 4.7k->4.7k (+0.1%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   1.464     1.335    -0.129     764.8k     772.5k
+  3d-geometry          0.954     0.885    -0.070     827.3k     827.3k
+  jit-code             0.274     0.233    -0.041     207.2k     207.2k
+  scheduler/core       0.611     0.600    -0.011     497.4k     494.1k
+  gengis               2.460     2.453    -0.008    2066.9k    2066.9k
+  audio                0.077     0.083    +0.007      78.5k      78.5k
+  jit-runtime          0.075     0.073    -0.002      71.3k      71.3k
+  libc/lib             0.031     0.032    +0.001       5.0k       5.0k
+  other                0.330     0.331    +0.001     261.7k     261.8k

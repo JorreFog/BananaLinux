@@ -1,0 +1,60 @@
+# LEDGER L1 verification (sim): render.2d_comp_unroll off (A) vs on (B), perf/render @ 968fe03, my own device-faithful build
+# build: git worktree add --detach /home/user/perf/sim/v-render 968fe03; JOBS=2 BT="bananads bananads-difftest" /home/user/perf/tools/build-a64-device.sh /home/user/perf/sim/v-render /home/user/perf/sim/vb-render
+# rgds-sim model v1 (params.json v1; sensitivity line = params-fit.json), st mode, frames 100-300, setarch -R
+
+## membench-membench: OUT=/home/user/perf/sim/ver rgds-sim/ab.sh vb-render/b/bananads vb-render/b/bananads /home/user/perf/roms/membench-membench.nds --mode st --a "--set render.2d_comp_unroll=off" --b "--set render.2d_comp_unroll=on" --label L1-membench-membench
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-render/b/bananads /home/user/perf/roms/membench-membench.nds L1-membench-membench-A --mode st --frames 100:300 --set render.2d_comp_unroll=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-render/b/bananads /home/user/perf/roms/membench-membench.nds L1-membench-membench-B --mode st --frames 100:300 --set render.2d_comp_unroll=on
+
+== thread 0 (main): ms/frame @1104 4.820 -> 4.575 (-5.08%)   @1992 2.910 -> 2.770 (-4.81%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.104 -> 4.031 (-1.79%)
+  insn 3642.1k->3299.4k (-9.4%)  base 3992.6k->3712.8k (-7.0%)  l1i_miss 5.7k->5.7k (+0.0%)  l1i_l3miss 1.1k->1.1k (+0.1%)  ld_miss 10.1k->10.6k (+5.0%)  ld_l3miss 2.2k->2.2k (-3.5%)  st_miss 10.8k->11.1k (+3.2%)  st_l3miss 5.4k->5.4k (+0.1%)  itlb_l2 7.0k->7.0k (-0.0%)  itlb_walk 0.0k->0.0k (+79.1%)  dtlb_l2 18.0k->17.9k (-0.3%)  dtlb_walk 0.0k->0.0k (+108.7%)  bcond_miss 16.6k->16.8k (+1.3%)  bind_miss 2.3k->2.3k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  other                0.751     0.495    -0.256     649.9k     307.2k
+  gengis               0.623     0.629    +0.006     387.7k     387.7k
+  2d                   1.499     1.504    +0.005    1067.7k    1067.7k
+  scheduler/core       1.283     1.282    -0.001    1012.2k    1012.2k
+
+## ds2dtest-ds2dtest: OUT=/home/user/perf/sim/ver rgds-sim/ab.sh vb-render/b/bananads vb-render/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds --mode st --a "--set render.2d_comp_unroll=off" --b "--set render.2d_comp_unroll=on" --label L1-ds2dtest-ds2dtest
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-render/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds L1-ds2dtest-ds2dtest-A --mode st --frames 100:300 --set render.2d_comp_unroll=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-render/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds L1-ds2dtest-ds2dtest-B --mode st --frames 100:300 --set render.2d_comp_unroll=on
+
+== thread 0 (main): ms/frame @1104 25.041 -> 23.571 (-5.87%)   @1992 14.118 -> 13.304 (-5.77%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 25.762 -> 25.079 (-2.65%)
+  insn 21288.5k->19329.4k (-9.2%)  base 21781.8k->20167.6k (-7.4%)  l1i_miss 10.3k->12.0k (+17.2%)  l1i_l3miss 0.5k->0.5k (-0.9%)  ld_miss 132.4k->132.5k (+0.0%)  ld_l3miss 2.9k->2.9k (+0.4%)  st_miss 39.0k->38.0k (-2.6%)  st_l3miss 5.3k->5.3k (+0.0%)  itlb_l2 6.7k->7.7k (+14.6%)  itlb_walk 0.0k->0.0k (+464.8%)  dtlb_l2 40.7k->40.7k (+0.0%)  dtlb_walk 0.0k->0.0k (-36.3%)  bcond_miss 80.9k->73.5k (-9.1%)  bind_miss 1.7k->1.7k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                  22.324    20.842    -1.482   19062.7k   17103.6k
+  scheduler/core       1.480     1.487    +0.007    1120.7k    1120.7k
+  gengis               0.291     0.294    +0.003     161.4k     161.4k
+  audio                0.091     0.093    +0.002      76.0k      76.0k
+
+## exactness: rgds-sim/tools/exact.sh vb-render vb-render ... "render.2d_comp_unroll=off" "render.2d_comp_unroll=on" (pictures every 50 frames to 300 + audio dump, 17 ROMs; difftest --every 300 frames, 6 ROMs)
+# exact.sh 2026-10-18T16:16:38Z A=/home/user/perf/sim/vb-render/b/bananads [render.2d_comp_unroll=off] B=/home/user/perf/sim/vb-render/b/bananads [render.2d_comp_unroll=on] 
+PICS+AUDIO ok   cpubench-cpubench-thumb (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-arm (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-thumb-arm7 (7 files identical)
+PICS+AUDIO ok   dsstress-L1 (7 files identical)
+PICS+AUDIO ok   dsstress-L5 (7 files identical)
+PICS+AUDIO ok   thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   arm7-thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   dsstress-L10 (7 files identical)
+PICS+AUDIO ok   iorom-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   ipcrom-ipctest (7 files identical)
+PICS+AUDIO ok   dmasnd-dmasnd (7 files identical)
+PICS+AUDIO ok   sndbench-sndbench (7 files identical)
+PICS+AUDIO ok   ds2dtest-ds2dtest (7 files identical)
+PICS+AUDIO ok   geomtest-geomtest (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-thumb (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-arm (7 files identical)
+PICS+AUDIO ok   membench-membench (7 files identical)
+DIFF ok   cpubench-cpubench-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   cpubench-cpubench-thumb-arm7 (SAME after 300 frames (all of main RAM))
+DIFF ok   membench-membench (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-arm (SAME after 300 frames (all of main RAM))
+DIFF ok   iorom-dsstress-L5 (SAME after 300 frames (all of main RAM))
+FAILS=0
+
+## hash: built 968fe03; after render's rebase the same commit is 911ff8e (git patch-id identical 22b3a95c72e3; tree differs from 968fe03 only by the dropped melonDS 0060 geom_sort)

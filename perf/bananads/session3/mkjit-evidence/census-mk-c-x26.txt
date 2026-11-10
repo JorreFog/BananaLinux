@@ -1,0 +1,26 @@
+near (blocks): 4198376 bytes, 1049594 insns, 14415 blocks, 291 bytes/block
+  alu                            327445   31.2%
+  constants (mov/movk/adrp)      117870   11.2%
+  guest reg store                113671   10.8%
+  flags/CPSR                      97726    9.3%
+  b (slot/jump)                   62351    5.9%
+  fast memory access              59188    5.6%
+  cycles                          54227    5.2%
+  bl (exit stub/call)             48552    4.6%
+  guest reg load                  48221    4.6%
+  cond branch                     41298    3.9%
+  other ld/st                     26671    2.5%
+  other CPU state ld/st           21653    2.1%
+  data (literal)                  19666    1.9%
+  R15 store                       10336    1.0%
+  CPSR load/store                   719    0.1%
+far (link paths): 1105172 bytes, 276293 insns
+  constants (mov/movk/adrp)       81730   29.6%
+  alu                             74582   27.0%
+  other ld/st                     63877   23.1%
+  b (slot/jump)                   29054   10.5%
+  bl (exit stub/call)              8028    2.9%
+  indirect                         8028    2.9%
+  guest reg store                  5268    1.9%
+  guest reg load                   5268    1.9%
+  R15 store                         458    0.2%

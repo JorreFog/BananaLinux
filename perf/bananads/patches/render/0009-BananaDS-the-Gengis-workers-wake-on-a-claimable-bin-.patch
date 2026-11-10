@@ -1,0 +1,39 @@
+From 1c9095b15784120de414025396648e6785e7f670 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:23:51 +0000
+Subject: [PATCH 09/18] BananaDS: the Gengis workers wake on a claimable bin
+ alone
+
+The workers' wake condition compared the frame number (Gen, written by the emulator's thread outside the mutex)
+with the one they last saw, as before the pipeline: a benign data race on a plain unsigned, and not needed, since
+a frame's start stores its claim word under the mutex and notifies. The condition is now the claim word alone.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/src/gengis_renderer.cpp | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/bananads/src/gengis_renderer.cpp b/bananads/src/gengis_renderer.cpp
+index d59e6fb..a0cbe5e 100644
+--- a/bananads/src/gengis_renderer.cpp
++++ b/bananads/src/gengis_renderer.cpp
+@@ -301,13 +301,12 @@ bool GengisRenderer3D::RenderOne(bool emu) {
+ }
+ 
+ void GengisRenderer3D::Worker() {
+-    unsigned seen = 0;
+     for (;;) {
+         {
++            // (a frame's start stores its claim word under M and notifies: a bin to claim is the whole condition)
+             std::unique_lock<std::mutex> l(M);
+-            Wake.wait(l, [&] { return Quit || (Gen != seen && (uint32_t)Claim.load(std::memory_order_acquire) < GX_NBINS); });
++            Wake.wait(l, [&] { return Quit || (uint32_t)Claim.load(std::memory_order_acquire) < GX_NBINS; });
+             if (Quit) return;
+-            seen = Gen;
+         }
+         while (RenderOne()) {}
+     }
+-- 
+2.43.0
+

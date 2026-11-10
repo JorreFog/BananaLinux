@@ -1,0 +1,3 @@
+# win_test: render.2d_win_neon's vector loops vs the scalar ones (ApplyWindow for every layer bit, DrawBG_3D, the quarters' merge with the window inside vs DrawBG_3D + ApplyWindow + the merge without), random lines and masks; device compiler -O2, under qemu-aarch64. MEASURED (exactness)
+# build: aarch64-linux-g++.br_real --sysroot=... -O2 -g0 -std=gnu++17 -mcpu=cortex-a55 -fwrapv -static win_test.cpp; run: qemu-aarch64 ./win_test 5000
+win_test: 5000 cases: ApplyWindow mismatches 0 (of 25000), DrawBG_3D mismatches 0, merge-with-window mismatches 0 (of 60000)

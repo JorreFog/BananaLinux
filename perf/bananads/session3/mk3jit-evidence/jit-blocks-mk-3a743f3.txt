@@ -1,0 +1,105 @@
+JIT code (vcpu 0): 1541.3k insns/frame; outside any mapped block 0.0k; 8888 blocks ran
+top 0 blocks (k insns/frame, cumulative %, bytes):
+dynamic mix of the JIT code (k insns/frame; census.py's classes):
+     462.5k   30.0%  alu
+     206.4k   13.4%  constants (mov/movk/adrp)
+     126.0k    8.2%  other ld/st
+     109.2k    7.1%  cond branch
+     108.7k    7.1%  flags/CPSR
+      91.3k    5.9%  guest reg store
+      82.7k    5.4%  cycles
+      73.2k    4.8%  other CPU state ld/st
+      69.1k    4.5%  guest reg load
+      59.7k    3.9%  fast memory access
+      39.0k    2.5%  b (slot/jump)
+      35.3k    2.3%  bl (exit stub/call)
+      32.6k    2.1%  indirect
+      28.6k    1.9%  R15 store
+      17.0k    1.1%  CPSR load/store
+bl calls from blocks (k calls/frame, by target offset in the dump: resolve with the map):
+      7.02k  stub_0000e900
+      6.29k  stub_0000ec00+8
+      4.06k  stub_0000ec00
+      2.48k  467110
+      1.99k  stub_0000e700
+      1.68k  stub_0000ec01+8
+      1.08k  stub_0000ec01
+      1.01k  487630
+      0.93k  470000
+      0.93k  462cf0
+      0.68k  465140
+      0.49k  4655c0
+      0.37k  stub_0000ec00+104
+      0.35k  stub_0000eb00
+      0.35k  4652c0
+top dynamic instruction texts (k/frame):
+      38.5k  and	w1, w0, #ADDR
+      35.3k  bl	ADDR
+      27.7k  and	w27, w27, #ADDR
+      27.5k  ret
+      25.7k  str	w0, [x29, #96]
+      20.3k  ubfiz	w0, w0, #3, #2
+      18.9k  ldr	w0, [x29, #16]
+      18.2k  movk	x16, #0x7f11, lsl #32
+      18.2k  ldp	x17, x0, [x16]
+      18.2k  add	x17, x17, w28, sxtw
+dynamic mix of the JIT code (k insns/frame; census.py's classes):
+     462.5k   30.0%  alu
+     206.4k   13.4%  constants (mov/movk/adrp)
+     126.0k    8.2%  other ld/st
+     109.2k    7.1%  cond branch
+     108.7k    7.1%  flags/CPSR
+      91.3k    5.9%  guest reg store
+      82.7k    5.4%  cycles
+      73.2k    4.8%  other CPU state ld/st
+      69.1k    4.5%  guest reg load
+      59.7k    3.9%  fast memory access
+      39.0k    2.5%  b (slot/jump)
+      35.3k    2.3%  bl (exit stub/call)
+      32.6k    2.1%  indirect
+      28.6k    1.9%  R15 store
+      17.0k    1.1%  CPSR load/store
+bl calls from blocks (k calls/frame, by target offset in the dump: resolve with the map):
+      7.02k  stub_0000e900
+      6.29k  stub_0000ec00+8
+      4.06k  stub_0000ec00
+      2.48k  467110
+      1.99k  stub_0000e700
+      1.68k  stub_0000ec01+8
+      1.08k  stub_0000ec01
+      1.01k  487630
+      0.93k  470000
+      0.93k  462cf0
+      0.68k  465140
+      0.49k  4655c0
+      0.37k  stub_0000ec00+104
+      0.35k  stub_0000eb00
+      0.35k  4652c0
+top dynamic instruction texts (k/frame):
+      38.5k  and	w1, w0, #ADDR
+      35.3k  bl	ADDR
+      27.7k  and	w27, w27, #ADDR
+      27.5k  ret
+      25.7k  str	w0, [x29, #96]
+      20.3k  ubfiz	w0, w0, #3, #2
+      18.9k  ldr	w0, [x29, #16]
+      18.2k  movk	x16, #0x7f11, lsl #32
+      18.2k  ldp	x17, x0, [x16]
+      18.2k  add	x17, x17, w28, sxtw
+      18.2k  str	x17, [x16]
+      18.2k  mov	w28, #0x0                   	// #0
+      18.2k  cmp	x17, x0
+      18.2k  movk	x16, #0x8aa2, lsl #16
+      17.2k  b	ADDR
+      17.0k  orr	w27, w27, w17
+      17.0k  mrs	x17, nzcv
+      15.3k  str	w27, [x29, #100]
+      15.1k  mov	x16, #0xe6d0                	// #59088
+      14.6k  str	w0, [x29, #288]
+      13.4k  adrp	x0, ADDR
+      12.6k  b.cs	0x3c  // b.hs, b.nlast
+      11.5k  mov	w0, #0xff                  	// #255
+      10.4k  cbnz	w0, 0x74
+       9.3k  ldr	w19, [x1, x26]
+       9.1k  str	w19, [x29, #36]
+       9.1k  ror	w19, w19, w0

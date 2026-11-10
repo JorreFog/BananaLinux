@@ -1,0 +1,872 @@
+From b178c992f7edb35fce196ddb7ebb9a56cc03eed6 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:16:35 +0000
+Subject: [PATCH 3/4] BananaDS: tests/irqmask and tests/bigcode; 0023 covers
+ self loops, 0022 tells slice ends apart
+
+tests/irqmask: work with CPSR.I set while IRQs are pending (HBlank every line, VBlank, two fast timers): masked
+sections with calls, returns, function pointers, loops, IME/IE changes, a supervisor-mode stretch, a CP15 halt;
+VBlank's handler loops in IRQ mode, timer 1's nests; the handler hashes a progress counter, so when each IRQ is
+taken shows in RAM and on screen. Thumb, ARM, and Thumb with a busy ARM7 masking its own fast timer IRQ. With
+jit.irqchain=off it makes ~25k masked-IRQ returns to the loop a frame (ARM9), 0 with it on; pictures and main RAM
+identical both ways. tests/bigcode: a game-sized code footprint (500 generated functions by default, all called
+each pass in a shuffled order: ~100 KB of Thumb, ~7.7k JIT blocks, ~1.5 MB of JIT code) for instruction-fetch
+(L1I/iTLB) measurements that cpubench's few hot loops can't show.
+
+melonDS 0023 now also goes round a self loop's inline check on a masked IRQ (NZCV untouched); 0022 counts a
+return at the slice's end with an IRQ masked apart from one the IRQ caused.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ ...EXITSTATS-counts-why-JIT-block-chain.patch |  24 +--
+ ...Q-that-CPSR.I-masks-doesn-t-end-a-bl.patch |  56 +++++--
+ bananads/tests/bigcode/.gitignore             |   1 +
+ bananads/tests/bigcode/build.py               | 153 ++++++++++++++++++
+ bananads/tests/bigcode/crt9.s                 |  40 +++++
+ bananads/tests/irqmask/.gitignore             |   1 +
+ bananads/tests/irqmask/build.py               |  74 +++++++++
+ bananads/tests/irqmask/crt7.s                 |  20 +++
+ bananads/tests/irqmask/crt9.s                 |  40 +++++
+ bananads/tests/irqmask/irq.s                  | 101 ++++++++++++
+ bananads/tests/irqmask/main7.c                |  35 ++++
+ bananads/tests/irqmask/main9.c                | 107 ++++++++++++
+ 12 files changed, 629 insertions(+), 23 deletions(-)
+ create mode 100644 bananads/tests/bigcode/.gitignore
+ create mode 100644 bananads/tests/bigcode/build.py
+ create mode 100644 bananads/tests/bigcode/crt9.s
+ create mode 100644 bananads/tests/irqmask/.gitignore
+ create mode 100644 bananads/tests/irqmask/build.py
+ create mode 100644 bananads/tests/irqmask/crt7.s
+ create mode 100644 bananads/tests/irqmask/crt9.s
+ create mode 100644 bananads/tests/irqmask/irq.s
+ create mode 100644 bananads/tests/irqmask/main7.c
+ create mode 100644 bananads/tests/irqmask/main9.c
+
+diff --git a/bananads/patches/melonds/0022-NDS-MELONDS_JIT_EXITSTATS-counts-why-JIT-block-chain.patch b/bananads/patches/melonds/0022-NDS-MELONDS_JIT_EXITSTATS-counts-why-JIT-block-chain.patch
+index 3d9820f..8a9b0cc 100644
+--- a/bananads/patches/melonds/0022-NDS-MELONDS_JIT_EXITSTATS-counts-why-JIT-block-chain.patch
++++ b/bananads/patches/melonds/0022-NDS-MELONDS_JIT_EXITSTATS-counts-why-JIT-block-chain.patch
+@@ -11,14 +11,14 @@ exit as per-frame rates. The counts sit on the loop's cold paths only: a dispatc
+ (most of them) runs the same code as without the variable. Dispatches themselves are ARM_Dispatch's calls in
+ a profiler.
+ ---
+- src/NDS.cpp | 57 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+- 1 file changed, 57 insertions(+)
++ src/NDS.cpp | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++++
++ 1 file changed, 59 insertions(+)
+ 
+ diff --git a/src/NDS.cpp b/src/NDS.cpp
+-index 1991a5c..e3ac017 100644
++index 1991a5c..48dc0c7 100644
+ --- a/src/NDS.cpp
+ +++ b/src/NDS.cpp
+-@@ -1218,6 +1218,55 @@ template <u32 num, typename CPU>
++@@ -1218,6 +1218,57 @@ template <u32 num, typename CPU>
+      return false;
+  }
+  
+@@ -28,7 +28,7 @@ index 1991a5c..e3ac017 100644
+ +{
+ +enum
+ +{
+-+    jx_Compile, jx_Region, jx_IrqTaken, jx_IrqMasked, jx_HaltIdle, jx_Count
+++    jx_Compile, jx_Region, jx_IrqTaken, jx_IrqMasked, jx_HaltIdle, jx_StopLate, jx_Count
+ +};
+ +struct JitExitStats
+ +{
+@@ -46,7 +46,8 @@ index 1991a5c..e3ac017 100644
+ +            return;
+ +        static const char* const names[jx_Count] = {
+ +            "lookup misses (blocks compiled)", "region setups (SetupExecutableRegion)",
+-+            "back for an IRQ taken (CPSR.I clear)", "back for an IRQ masked (CPSR.I set)", "back for a halt or idle loop" };
+++            "back for an IRQ taken (CPSR.I clear)", "back for an IRQ masked (CPSR.I set)", "back for a halt or idle loop",
+++            "back at the slice's end, an IRQ masked" };
+ +        const u32 frames = Last - First + 1;
+ +        fprintf(stderr, "melonDS JIT exit stats: frames %u-%u (%u), per frame ARM9 / ARM7\n", First, Last, frames);
+ +        for (int k = 0; k < jx_Count; k++)
+@@ -60,21 +61,22 @@ index 1991a5c..e3ac017 100644
+ +// (only on the loop's cold paths: a stop, a compile, a region change; the dispatches themselves, mostly at the
+ +// slice's end, are counted by a profiler: ARM_Dispatch's calls)
+ +template <u32 num, typename CPU>
+-+[[gnu::noinline, gnu::cold]] static void CountJitExit(NDS& nds, CPU& cpu, int kind)
+++[[gnu::noinline, gnu::cold]] static void CountJitExit(NDS& nds, CPU& cpu, int kind, u64 timestamp = 0, u64 target = 0)
+ +{
+ +    if (nds.NumFrames < JitExits.From)
+ +        return;
+ +    JitExits.First = std::min(JitExits.First, nds.NumFrames);
+ +    JitExits.Last = std::max(JitExits.Last, nds.NumFrames);
+ +    if (kind < 0)
+-+        kind = (cpu.Halted || cpu.IdleLoop) ? jx_HaltIdle : (cpu.CPSR & 0x80) ? jx_IrqMasked : jx_IrqTaken;
+++        kind = (cpu.Halted || cpu.IdleLoop) ? jx_HaltIdle : !(cpu.CPSR & 0x80) ? jx_IrqTaken
+++            : timestamp + cpu.Cycles >= target ? jx_StopLate : jx_IrqMasked;
+ +    JitExits.Count[num][kind]++;
+ +}
+ +
+  // ARMv5/ARMv4::Execute<JIT>'s block loop and its end, for a CPU that isn't halted (FastLoop)
+  template <u32 num, typename CPU>
+  [[gnu::always_inline]] static inline void ExecuteJITInline(NDS& nds, CPU& cpu, u64& timestamp, u64& target, u8* const rxBase)
+-@@ -1233,6 +1282,8 @@ template <u32 num, typename CPU>
++@@ -1233,6 +1284,8 @@ template <u32 num, typename CPU>
+          u32 offset = instrAddr - cpu.FastBlockLookupStart;
+          if (offset >= cpu.FastBlockLookupSize) [[unlikely]]
+          {
+@@ -83,7 +85,7 @@ index 1991a5c..e3ac017 100644
+              if (!SetupExecutableRegionFor<num>(nds, cpu, instrAddr))
+              {
+                  timestamp = target;
+-@@ -1246,10 +1297,16 @@ template <u32 num, typename CPU>
++@@ -1246,10 +1299,16 @@ template <u32 num, typename CPU>
+          if (entry >> 32 == (instrAddr | num)) [[likely]]
+              ARM_Dispatch(&cpu, (JitBlockEntry)(rxBase + (u32)entry));
+          else
+@@ -96,7 +98,7 @@ index 1991a5c..e3ac017 100644
+          if (cpu.StopExecution)
+          {
+ +            if (JitExitStatsOn) [[unlikely]]
+-+                CountJitExit<num>(nds, cpu, -1);
+++                CountJitExit<num>(nds, cpu, -1, timestamp, target);
+              // this order is crucial otherwise idle loops waiting for an IRQ won't function
+              if (cpu.IRQ)
+                  cpu.TriggerIRQ();
+diff --git a/bananads/patches/melonds/0023-ARMJIT_A64-an-IRQ-that-CPSR.I-masks-doesn-t-end-a-bl.patch b/bananads/patches/melonds/0023-ARMJIT_A64-an-IRQ-that-CPSR.I-masks-doesn-t-end-a-bl.patch
+index 637f174..cde4f42 100644
+--- a/bananads/patches/melonds/0023-ARMJIT_A64-an-IRQ-that-CPSR.I-masks-doesn-t-end-a-bl.patch
++++ b/bananads/patches/melonds/0023-ARMJIT_A64-an-IRQ-that-CPSR.I-masks-doesn-t-end-a-bl.patch
+@@ -8,17 +8,18 @@ melonDS sets ARM::IRQ whenever IME and IE & IF say so, whatever CPSR.I is, so wh
+ interrupts disabled (an IRQ handler, an OS_DisableInterrupts section) and one is pending, StopExecution
+ stays set and every block exit went back to the loop: ARM_Ret, TriggerIRQ (which returns at once with I set),
+ Timestamp += Cycles, the lookup and ARM_Dispatch, to run the block the exit would have gone on to anyway.
+-The exit stubs (ExitCheck, ExitCheckPC, DynExit, DynExitA) now look closer when StopExecution is set: with
+-Halted and IdleLoop clear and CPSR.I set they go on with their checks and into the next block, as the loop
+-would. Off the common path (StopExecution clear) nothing changes. Exact; part of 0007's code generation
+-(jit.codegen=old turns it off with the rest), MELONDS_JIT_NOIRQCHAIN=1 alone.
++The exit stubs (ExitCheck, ExitCheckPC, DynExit, DynExitA) and a self loop's inline check now look closer
++when StopExecution is set: with Halted and IdleLoop clear and CPSR.I set they go on with their checks and into
++the next block (round the loop), as the loop would. Off the common path (StopExecution clear) nothing changes;
++NZCV isn't touched (a LoopMode loop may keep flags there). Exact; part of 0007's code generation
++(jit.codegen=old turns it off with the rest), MELONDS_JIT_NOIRQCHAIN=1 alone. tests/irqmask exercises it.
+ ---
+- src/ARMJIT_A64/ARMJIT_Compiler.cpp | 39 ++++++++++++++++++++++++------
++ src/ARMJIT_A64/ARMJIT_Compiler.cpp | 52 ++++++++++++++++++++++++++----
+  src/ARMJIT_A64/ARMJIT_Compiler.h   |  2 ++
+- 2 files changed, 34 insertions(+), 7 deletions(-)
++ 2 files changed, 47 insertions(+), 7 deletions(-)
+ 
+ diff --git a/src/ARMJIT_A64/ARMJIT_Compiler.cpp b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+-index 4b3859b..990fcb3 100644
++index 4b3859b..dc546df 100644
+ --- a/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+ +++ b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+ @@ -279,6 +279,7 @@ Compiler::Compiler(melonDS::NDS& nds) : Arm64Gen::ARM64XEmitter(), NDS(nds)
+@@ -29,7 +30,38 @@ index 4b3859b..990fcb3 100644
+          OptKeepFlags = !old && !getenv("MELONDS_JIT_NOKEEPFLAGS");
+          // LOOPREGS only with MELONDS_JIT_LOOPREGS=1: on an RG DS Plus, HeartGold (USA) goes to a black screen at its
+          // first overworld frame with it (frame 1200 of tools/device/hgquick.sh's walk), and fine with it off alone.
+-@@ -1049,11 +1050,14 @@ void Compiler::Gen_ExitStubs(int num)
++@@ -966,10 +967,12 @@ void Compiler::Comp_ExitTo(bool known, u32 knownR15, bool thumbAfter, bool store
++         }
++     };
++     FixupBranch stop, late;
+++    const u8* selfCont = nullptr;
++     if (selfLoop)
++     {
++         LDR(INDEX_UNSIGNED, W0, RCPU, offsetof(ARM, StopExecution));
++         stop = CBNZ(W0);
+++        selfCont = (const u8*)GetRXPtr();
++         ARM64Reg ts = LoopMode && LoopTsReg != INVALID_REG ? LoopTsReg : X16;
++         if (ts == X16)
++             MOVP2R(X16, Num ? &NDS.ARM7Timestamp : &NDS.ARM9Timestamp);
++@@ -1014,6 +1017,17 @@ void Compiler::Comp_ExitTo(bool known, u32 knownR15, bool thumbAfter, bool store
++         *(u32*)slot = 0x14000000 | ((u32)((entry - slotRX) / 4) & 0x3FFFFFF);
++         LinkedTo[(u32)(BlockStartRX - GetRXBase())].push_back((u32)(slotRX - GetRXBase()));
++         SetJumpTarget(stop);
+++        if (OptIrqChain)
+++        {
+++            // IRQCHAIN (as the stubs' irqMasked): only an IRQ that CPSR.I masks: round the loop again. NZCV untouched
+++            // (LoopMode may hold pending flags there)
+++            ANDI2R(W16, W0, 0x00FF00FF);
+++            FixupBranch hard = CBNZ(W16);
+++            FixupBranch taken = TBZ(RCPSR, 7);
+++            B(selfCont);
+++            SetJumpTarget(hard);
+++            SetJumpTarget(taken);
+++        }
++         SetJumpTarget(late);
++         flagsOut();
++         if (LoopMode)
++@@ -1049,11 +1063,14 @@ void Compiler::Gen_ExitStubs(int num)
+      // to ARM_Ret, which keeps the return stack in step.
+      u64* ts = num ? &NDS.ARM7Timestamp : &NDS.ARM9Timestamp;   // its Target is the next u64
+  
+@@ -46,7 +78,7 @@ index 4b3859b..990fcb3 100644
+          MOVP2R(X16, ts);
+          LDP(INDEX_SIGNED, X17, X0, X16, 0);
+          if (OptExitStub)
+-@@ -1081,12 +1085,28 @@ void Compiler::Gen_ExitStubs(int num)
++@@ -1081,12 +1098,28 @@ void Compiler::Gen_ExitStubs(int num)
+          Write32((u32)(ret >> 32));
+      };
+  
+@@ -76,7 +108,7 @@ index 4b3859b..990fcb3 100644
+          STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));   // (the next block reads it from memory)
+          RET();
+          SetJumpTarget(stop);
+-@@ -1104,11 +1124,12 @@ void Compiler::Gen_ExitStubs(int num)
++@@ -1104,11 +1137,12 @@ void Compiler::Gen_ExitStubs(int num)
+              STR(INDEX_UNSIGNED, W0, RCPU, offsetof(ARM, R[15]));
+              ExitCheck[num][c] = GetRXPtr();
+              FixupBranch stop, late;
+@@ -91,7 +123,7 @@ index 4b3859b..990fcb3 100644
+              SetJumpTarget(late);
+              retToLoop();
+          }
+-@@ -1126,7 +1147,8 @@ void Compiler::Gen_ExitStubs(int num)
++@@ -1126,7 +1160,8 @@ void Compiler::Gen_ExitStubs(int num)
+      {
+          (a ? DynExitA : DynExit)[num][c] = GetRXPtr();
+          FixupBranch stop, late;
+@@ -101,7 +133,7 @@ index 4b3859b..990fcb3 100644
+          if (c)
+              STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));
+  
+-@@ -1186,7 +1208,10 @@ void Compiler::Gen_ExitStubs(int num)
++@@ -1186,7 +1221,10 @@ void Compiler::Gen_ExitStubs(int num)
+          }
+          ADD(X16, X17, W16, ArithOption(W16));   // + the entry's offset (uxtw)
+          BR(X16);
+diff --git a/bananads/tests/bigcode/.gitignore b/bananads/tests/bigcode/.gitignore
+new file mode 100644
+index 0000000..89f9ac0
+--- /dev/null
++++ b/bananads/tests/bigcode/.gitignore
+@@ -0,0 +1 @@
++out/
+diff --git a/bananads/tests/bigcode/build.py b/bananads/tests/bigcode/build.py
+new file mode 100644
+index 0000000..d7a8976
+--- /dev/null
++++ b/bananads/tests/bigcode/build.py
+@@ -0,0 +1,153 @@
++#!/usr/bin/env python3
++"""Build bigcode .nds ROMs: a game-sized ARM9 code footprint for measuring a JIT's instruction fetch (L1I, iTLB).
++
++    build.py [N] -> out/bigcode-thumb.nds (N generated functions, default 500, as Thumb with one in eight ARM: games'
++                    mix), out/bigcode-arm.nds (all ARM)
++cpubench (tests/cpubench) is a few hot loops: its JIT code is ~180 KB and the hot part a few KB, so it can't show what
++a game's spread of code does to the A55's 32 KB L1I and its TLBs. Here each pass calls every one of N distinct
++functions (loads, stores, branches, small loops, calls into shared helpers, halfword and byte accesses, the divider
++now and then) in an order shuffled every pass, so the JIT's blocks for all of them run every frame, about once
++each per pass. The top screen shows the pass count and the checksums (VRAM A as a bitmap). Generated with a fixed
++seed, so the ROM is the same on every build. Needs clang + ld.lld + llvm-objcopy; the header and startup are cpubench's.
++"""
++import os, random, struct, subprocess, sys
++HERE = os.path.dirname(os.path.abspath(__file__))
++OUT = os.path.join(HERE, "out"); os.makedirs(OUT, exist_ok=True)
++N = int(sys.argv[1]) if len(sys.argv) > 1 else 500
++LD = """ENTRY(%s)
++SECTIONS {
++  . = %s;
++  .text : { *(.text.start) *(.text*) *(.rodata*) }
++  . = ALIGN(0x10000);
++  .data : { *(.data*) }
++  . = ALIGN(4);
++  __bss_start = .;
++  .bss : { *(.bss*) *(COMMON) }
++  . = ALIGN(4);
++  __bss_end = .;
++  __itcm_start = .; __itcm_end = .;
++  /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) }
++}
++"""
++CF = ["-O2", "-fno-unwind-tables", "-fno-asynchronous-unwind-tables", "-ffreestanding", "-fno-builtin", "-nostdlib",
++      "-Wall", "-Wno-unused-variable", "-Wno-unused-function"]
++
++def gen(seed=20261018):
++    r = random.Random(seed)
++    out = ["/* generated by build.py: do not edit */",
++           "typedef unsigned int u32; typedef unsigned short u16; typedef unsigned char u8; typedef int s32;",
++           "#define R32(a) (*(volatile u32 *)(a))", "#define R16(a) (*(volatile u16 *)(a))",
++           "#define NOINLINE __attribute__((noinline))", "#define ARMF __attribute__((target(\"arm\"), noinline))",
++           "struct S { u32 v[64]; u16 h[64]; u8 b[256]; u32 tab[64]; };",
++           "static NOINLINE s32 hwdiv(s32 n, s32 d) { R16(0x04000280) = 0; R32(0x04000290) = (u32)n; R32(0x04000294) = (u32)(n >> 31);",
++           "  R32(0x04000298) = (u32)d; R32(0x0400029C) = (u32)(d >> 31); while (R16(0x04000280) & 0x8000) ; return (s32)R32(0x040002A0); }"]
++    H = 24
++    for h in range(H):
++        a, b = r.randrange(1, 31), r.randrange(1, 1 << 16)
++        out.append(f"static NOINLINE u32 h{h}(u32 x) {{ return (x << {a}) ^ (x >> {32 - a}) ^ {b}u; }}")
++    def stmt(depth):
++        k = r.randrange(14)
++        c1, c2, c3 = r.randrange(64), r.randrange(64), r.randrange(1, 255)
++        if k == 0: return f"a += s->v[{c1}]; s->v[{c2}] = a ^ {c3}u;"
++        if k == 1: return f"b = s->h[(a >> {r.randrange(1, 9)}) & 63] + {c3}; s->h[{c1}] = (u16)(b ^ a);"
++        if k == 2: return f"a = (a * {2 * c3 + 1}u) + s->tab[b & 63];"
++        if k == 3: return f"if (a & {1 << r.randrange(8)}) {{ a ^= s->v[{c1}] << {r.randrange(1, 9)}; }} else {{ b += s->v[{c2}]; }}"
++        if k == 4: return f"s->b[(a + {c3}) & 255] = (u8)b; a += s->b[(b ^ {c1}) & 255];"
++        if k == 5 and depth == 0:
++            n = r.randrange(2, 6)
++            return f"for (int i = 0; i < {n}; i++) {{ a += s->tab[(a ^ i) & 63]; b ^= a >> {r.randrange(1, 9)}; }}"
++        if k == 6: return f"a = h{r.randrange(H)}(a + b);"
++        if k == 7: return f"b = (a > {c3 * 1000}u) ? b - a : b + {c3};"
++        if k == 8: return f"switch (a & 3) {{ case 0: a += {c1}; break; case 1: b ^= {c2}; break; case 2: a -= b; break; default: b += a; }}"
++        if k == 9 and r.randrange(6) == 0: return f"a += (u32)hwdiv((s32)(a & 0xFFFF), (s32)(b & 255) + 3);"
++        if k == 10: return f"s->v[{c1}] += a; s->v[{c2}] -= b;"
++        if k == 11: return f"a = (a >> {r.randrange(1, 31)}) | (b << {r.randrange(1, 31)});"
++        if k == 12: return f"if ((b & {c3}) == {c3 & r.randrange(256)}) return a ^ b;"
++        return f"b += a * {c3}u; a ^= b >> {r.randrange(1, 31)};"
++    for i in range(N):
++        attr = "ARMF" if r.randrange(8) == 0 else "NOINLINE"
++        body = " ".join(stmt(0) for _ in range(r.randrange(5, 14)))
++        out.append(f"static {attr} u32 f{i}(struct S *s, u32 x) {{ u32 a = x + {r.randrange(1 << 20)}u, b = s->v[{r.randrange(64)}]; {body} return a + b; }}")
++    out.append("typedef u32 (*fn)(struct S *, u32);")
++    out.append("const fn funcs[%d] = {%s};" % (N, ", ".join(f"f{i}" for i in range(N))))
++    out.append(f"const int nfuncs = {N};")
++    return "\n".join(out) + "\n"
++
++MAIN = r"""
++typedef unsigned int u32; typedef unsigned short u16; typedef unsigned char u8;
++#define R32(a) (*(volatile u32 *)(a))
++#define R8(a) (*(volatile u8 *)(a))
++struct S { u32 v[64]; u16 h[64]; u8 b[256]; u32 tab[64]; };
++typedef u32 (*fn)(struct S *, u32);
++extern const fn funcs[]; extern const int nfuncs;
++void *memset(void *d, int c, unsigned long n) { u8 *p = d; while (n--) *p++ = (u8)c; return d; }
++void *memcpy(void *d, const void *s, unsigned long n) { u8 *p = d; const u8 *q = s; while (n--) *p++ = *q++; return d; }
++static struct S st;
++static unsigned short order[8192];
++static void draw(const u32 *v, int n)
++{
++    volatile unsigned short *fb = (volatile unsigned short *)0x06800000;
++    for (int r = 0; r < n; r++)
++        for (int b = 0; b < 32; b++) {
++            unsigned short col = (v[r] >> b) & 1 ? 0x7FFF : (unsigned short)(0x0010 + r * 0x0C00);
++            for (int y = 0; y < 4; y++)
++                for (int x = 0; x < 4; x++) fb[(8 + r * 6 + y) * 256 + 8 + b * 7 + x] = col;
++        }
++}
++int main(void)
++{
++    R32(0x04000304) = 0x8003; R8(0x04000240) = 0x80; R32(0x04000000) = 0x00020000;
++    for (int i = 0; i < 64; i++) { st.v[i] = i * 0x9E3779B9u; st.tab[i] = (u32)i * 2654435761u; st.h[i] = (unsigned short)(i * 977); }
++    for (int i = 0; i < 256; i++) st.b[i] = (u8)(i * 31);
++    for (int i = 0; i < nfuncs; i++) order[i] = (unsigned short)i;
++    u32 seed = 12345, acc = 1, pass = 0, sums[4] = {0, 0, 0, 0};
++    for (;;) {
++        pass++;
++        for (int i = nfuncs - 1; i > 0; i--) {   /* this pass's order */
++            seed = seed * 1664525u + 1013904223u;
++            int j = (int)(((seed >> 16) * (u32)(i + 1)) >> 16);   /* (no divide: no libgcc) */
++            unsigned short t = order[i]; order[i] = order[j]; order[j] = t;
++        }
++        for (int i = 0; i < nfuncs; i++) acc = funcs[order[i]](&st, acc) + (acc << 1);
++        sums[0] = pass; sums[1] ^= acc; sums[2] += st.v[pass & 63]; sums[3] = sums[3] * 31 + st.h[pass & 63];
++        draw(sums, 4);
++    }
++}
++"""
++def run(cmd): subprocess.run(cmd, check=True, cwd=HERE)
++def link(name, objs, entry, base):
++    ld = os.path.join(OUT, name + ".ld")
++    open(ld, "w").write(LD % (entry, base))
++    run(["ld.lld", "-T", ld, *objs, "-o", f"out/{name}.elf"])
++    run(["llvm-objcopy", "-O", "binary", f"out/{name}.elf", f"out/{name}.bin"])
++    return open(os.path.join(OUT, name + ".bin"), "rb").read()
++def arm9(mode):
++    open(os.path.join(OUT, "funcs.c"), "w").write(gen() if mode == "thumb" else gen().replace("ARMF u32", "NOINLINE u32"))
++    open(os.path.join(OUT, "main9.c"), "w").write(MAIN)
++    for src in ("funcs", "main9"):
++        run(["clang", "--target=armv5te-none-eabi", "-m" + mode, "-mfloat-abi=soft", *CF, "-c", f"out/{src}.c", "-o", f"out/{src}-{mode}.o"])
++    run(["clang", "--target=armv5te-none-eabi", "-marm", "-c", "crt9.s", "-o", "out/crt9.o"])
++    return link("arm9-" + mode, ["out/crt9.o", f"out/main9-{mode}.o", f"out/funcs-{mode}.o"], "_start", "0x02000000")
++HALT7 = struct.pack("<5I", 0xE59F0008, 0xE3A01080, 0xE5C01001, 0xEAFFFFFB, 0x04000300)   # HALTCNT <- 0x80, loop
++def crc16(data, crc=0xFFFF):
++    for b in data:
++        crc ^= b
++        for _ in range(8): crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
++    return crc
++def rom(name, a9, a7):
++    a9 = bytearray(a9) + b"\0" * (-len(a9) % 0x200)
++    a9off = 0x8000; a7off = a9off + len(a9)
++    body = bytearray(0x8000) + a9 + a7
++    body += b"\0" * (-len(body) % 0x200)
++    h = bytearray(0x200)
++    h[0:12] = b"BIGCODE".ljust(12, b"\0"); h[12:16] = b"BIGC"; h[16:18] = b"00"
++    struct.pack_into("<8I", h, 0x20, a9off, 0x02000000, 0x02000000, len(a9), a7off, 0x02380000, 0x02380000, len(a7))
++    struct.pack_into("<2I", h, 0x60, 0x00586000, 0x001808F8)
++    struct.pack_into("<2I", h, 0x80, len(body), 0x200)
++    struct.pack_into("<H", h, 0x15E, crc16(h[:0x15E]))
++    body[0:0x200] = h
++    body += b"\xff" * (0x20000 - len(body)) if len(body) < 0x20000 else b""
++    open(os.path.join(OUT, name), "wb").write(body)
++    return name
++t, a = arm9("thumb"), arm9("arm")
++print("arm9", len(t), len(a), "->", rom("bigcode-thumb.nds", t, HALT7), rom("bigcode-arm.nds", a, HALT7))
+diff --git a/bananads/tests/bigcode/crt9.s b/bananads/tests/bigcode/crt9.s
+new file mode 100644
+index 0000000..9b3660b
+--- /dev/null
++++ b/bananads/tests/bigcode/crt9.s
+@@ -0,0 +1,40 @@
++@ cpubench ARM9 entry: system mode, stack in main RAM, .bss cleared, the protection unit and both caches on (as a
++@ game's startup code does; melonDS's direct boot leaves them off, and uncached code in main RAM runs several times
++@ slower), then main (Thumb or ARM). The regions are direct boot's (main RAM cacheable and write-buffered), plus
++@ region 2 for ITCM (0x00000000, 32 MB with its mirrors), read/write, as games set it.
++    .section .text.start, "ax"
++    .arm
++    .global _start
++_start:
++    mov     r0, #0x04000000
++    mov     r1, #0
++    str     r1, [r0, #0x208]    @ IME off
++    msr     cpsr_c, #0xDF       @ system mode, IRQ/FIQ masked
++    mov     r1, #0
++    mcr     p15, 0, r1, c7, c5, 0   @ invalidate the instruction cache
++    mcr     p15, 0, r1, c7, c6, 0   @ invalidate the data cache
++    ldr     r1, =0x00000031
++    mcr     p15, 0, r1, c6, c2, 0   @ region 2: ITCM
++    mrc     p15, 0, r1, c5, c0, 2
++    bic     r1, r1, #0xF00
++    orr     r1, r1, #0x100
++    mcr     p15, 0, r1, c5, c0, 2   @ its data access: read/write (privileged)
++    mrc     p15, 0, r1, c5, c0, 3
++    bic     r1, r1, #0xF00
++    orr     r1, r1, #0x100
++    mcr     p15, 0, r1, c5, c0, 3   @ its instruction access
++    mrc     p15, 0, r1, c1, c0, 0
++    orr     r1, r1, #0x1000         @ instruction cache
++    orr     r1, r1, #0x5            @ protection unit, data cache
++    mcr     p15, 0, r1, c1, c0, 0
++    ldr     sp, =0x023F0000
++    ldr     r0, =__bss_start
++    ldr     r1, =__bss_end
++    mov     r2, #0
++2:  cmp     r0, r1
++    strlo   r2, [r0], #4
++    blo     2b
++    ldr     r0, =main
++    blx     r0
++3:  b       3b
++    .pool
+diff --git a/bananads/tests/irqmask/.gitignore b/bananads/tests/irqmask/.gitignore
+new file mode 100644
+index 0000000..89f9ac0
+--- /dev/null
++++ b/bananads/tests/irqmask/.gitignore
+@@ -0,0 +1 @@
++out/
+diff --git a/bananads/tests/irqmask/build.py b/bananads/tests/irqmask/build.py
+new file mode 100644
+index 0000000..8d03c20
+--- /dev/null
++++ b/bananads/tests/irqmask/build.py
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Build irqmask .nds ROMs: work with CPSR.I set while IRQs are pending (see main9.c); cpubench's builder.
++
++    build.py -> out/irqmask-thumb.nds and irqmask-arm.nds (the ARM9 as Thumb / ARM, the ARM7 halted), and
++                out/irqmask-thumb-arm7.nds (Thumb, with a busy ARM7 that masks its own fast timer IRQ: main7.c)
++Needs clang + ld.lld + llvm-objcopy. The header layout is stressrom's (ARM9 at 0x02000000, ARM7 at 0x02380000).
++"""
++import os, struct, subprocess
++HERE = os.path.dirname(os.path.abspath(__file__))
++OUT = os.path.join(HERE, "out"); os.makedirs(OUT, exist_ok=True)
++# data in pages of its own, away from the code (games keep them apart: a page holding compiled code makes
++# its stores take the JIT's invalidation check)
++LD = """ENTRY(%s)
++SECTIONS {
++  . = %s;
++  .text : { *(.text.start) *(.text*) *(.rodata*) }
++  . = ALIGN(4);
++  __itcm_start = .;
++  .itcm : { *(.itcmcode) }
++  __itcm_end = .;
++  . = ALIGN(0x10000);
++  .data : { *(.data*) }
++  . = ALIGN(4);
++  __bss_start = .;
++  .bss : { *(.bss*) *(COMMON) }
++  . = ALIGN(4);
++  __bss_end = .;
++  /DISCARD/ : { *(.ARM.exidx*) *(.ARM.extab*) }
++}
++"""
++CF = ["-O2", "-fno-unwind-tables", "-fno-asynchronous-unwind-tables", "-ffreestanding", "-fno-builtin", "-nostdlib", "-Wall"]
++def run(cmd): subprocess.run(cmd, check=True, cwd=HERE)
++def link(name, objs, entry, base):
++    ld = os.path.join(OUT, name + ".ld")
++    open(ld, "w").write(LD % (entry, base))
++    run(["ld.lld", "-T", ld, *objs, "-o", f"out/{name}.elf"])
++    run(["llvm-objcopy", "-O", "binary", f"out/{name}.elf", f"out/{name}.bin"])
++    return open(os.path.join(OUT, name + ".bin"), "rb").read()
++def arm9(mode):
++    run(["clang", "--target=armv5te-none-eabi", "-m" + mode, "-mfloat-abi=soft", *CF, "-c", "main9.c", "-o", f"out/main9-{mode}.o"])
++    run(["clang", "--target=armv5te-none-eabi", "-marm", "-c", "crt9.s", "-o", "out/crt9.o"])
++    run(["clang", "--target=armv5te-none-eabi", "-marm", "-c", "irq.s", "-o", "out/irq.o"])
++    return link("arm9-" + mode, ["out/crt9.o", "out/irq.o", f"out/main9-{mode}.o"], "_start", "0x02000000")
++def arm7loops():
++    run(["clang", "--target=armv4t-none-eabi", "-mthumb", "-mfloat-abi=soft", *CF, "-c", "main7.c", "-o", "out/main7.o"])
++    run(["clang", "--target=armv4t-none-eabi", "-marm", "-c", "crt7.s", "-o", "out/crt7.o"])
++    return link("arm7", ["out/crt7.o", "out/main7.o"], "_start7", "0x02380000")
++def arm7busy():
++    run(["clang", "--target=armv4t-none-eabi", "-mthumb", "-mfloat-abi=soft", *CF, "-c", "main7.c", "-o", "out/main7.o"])
++    run(["clang", "--target=armv4t-none-eabi", "-marm", "-c", "crt7.s", "-o", "out/crt7.o"])
++    return link("arm7", ["out/crt7.o", "out/main7.o"], "_start7", "0x02380000")
++HALT7 = struct.pack("<5I", 0xE59F0008, 0xE3A01080, 0xE5C01001, 0xEAFFFFFB, 0x04000300)   # HALTCNT <- 0x80, loop
++def crc16(data, crc=0xFFFF):
++    for b in data:
++        crc ^= b
++        for _ in range(8): crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
++    return crc
++def rom(name, a9, a7):
++    a9 = bytearray(a9) + b"\0" * (-len(a9) % 0x200)
++    a9off = 0x8000; a7off = a9off + len(a9)
++    body = bytearray(0x8000) + a9 + a7
++    body += b"\0" * (-len(body) % 0x200)
++    h = bytearray(0x200)
++    h[0:12] = b"IRQMASK".ljust(12, b"\0"); h[12:16] = b"IRQM"; h[16:18] = b"00"
++    struct.pack_into("<8I", h, 0x20, a9off, 0x02000000, 0x02000000, len(a9), a7off, 0x02380000, 0x02380000, len(a7))
++    struct.pack_into("<2I", h, 0x60, 0x00586000, 0x001808F8)
++    struct.pack_into("<2I", h, 0x80, len(body), 0x200)
++    struct.pack_into("<H", h, 0x15E, crc16(h[:0x15E]))
++    body[0:0x200] = h
++    body += b"\xff" * (0x20000 - len(body)) if len(body) < 0x20000 else b""
++    open(os.path.join(OUT, name), "wb").write(body)
++    return name
++t, a = arm9("thumb"), arm9("arm")
++print("arm9", len(t), len(a), "->", rom("irqmask-thumb.nds", t, HALT7), rom("irqmask-arm.nds", a, HALT7), rom("irqmask-thumb-arm7.nds", t, arm7loops()))
+diff --git a/bananads/tests/irqmask/crt7.s b/bananads/tests/irqmask/crt7.s
+new file mode 100644
+index 0000000..ada8027
+--- /dev/null
++++ b/bananads/tests/irqmask/crt7.s
+@@ -0,0 +1,20 @@
++    .section .text.start, "ax"
++    .arm
++    .global _start7
++_start7:
++    mov     r0, #0x04000000
++    mov     r1, #0
++    str     r1, [r0, #0x208]
++    msr     cpsr_c, #0xD2           @ IRQ mode: its stack
++    ldr     sp, =0x0380FD80
++    msr     cpsr_c, #0xDF           @ system mode
++    ldr     sp, =0x0380FC00
++    ldr     r0, =__bss_start
++    ldr     r1, =__bss_end
++    mov     r2, #0
++2:  cmp     r0, r1
++    strlo   r2, [r0], #4
++    blo     2b
++    ldr     r0, =main7
++    bx      r0
++    .pool
+diff --git a/bananads/tests/irqmask/crt9.s b/bananads/tests/irqmask/crt9.s
+new file mode 100644
+index 0000000..88972d9
+--- /dev/null
++++ b/bananads/tests/irqmask/crt9.s
+@@ -0,0 +1,40 @@
++@ irqmask ARM9 entry (jitloops's) (cpubench's): system mode, stack in main RAM, .bss cleared, the protection unit and both caches on (as a
++@ game's startup code does; melonDS's direct boot leaves them off, and uncached code in main RAM runs several times
++@ slower), then main (Thumb or ARM). The regions are direct boot's (main RAM cacheable and write-buffered), plus
++@ region 2 for ITCM (0x00000000, 32 MB with its mirrors), read/write, as games set it.
++    .section .text.start, "ax"
++    .arm
++    .global _start
++_start:
++    mov     r0, #0x04000000
++    mov     r1, #0
++    str     r1, [r0, #0x208]    @ IME off
++    msr     cpsr_c, #0xDF       @ system mode, IRQ/FIQ masked
++    mov     r1, #0
++    mcr     p15, 0, r1, c7, c5, 0   @ invalidate the instruction cache
++    mcr     p15, 0, r1, c7, c6, 0   @ invalidate the data cache
++    ldr     r1, =0x00000031
++    mcr     p15, 0, r1, c6, c2, 0   @ region 2: ITCM
++    mrc     p15, 0, r1, c5, c0, 2
++    bic     r1, r1, #0xF00
++    orr     r1, r1, #0x100
++    mcr     p15, 0, r1, c5, c0, 2   @ its data access: read/write (privileged)
++    mrc     p15, 0, r1, c5, c0, 3
++    bic     r1, r1, #0xF00
++    orr     r1, r1, #0x100
++    mcr     p15, 0, r1, c5, c0, 3   @ its instruction access
++    mrc     p15, 0, r1, c1, c0, 0
++    orr     r1, r1, #0x1000         @ instruction cache
++    orr     r1, r1, #0x5            @ protection unit, data cache
++    mcr     p15, 0, r1, c1, c0, 0
++    ldr     sp, =0x023F0000
++    ldr     r0, =__bss_start
++    ldr     r1, =__bss_end
++    mov     r2, #0
++2:  cmp     r0, r1
++    strlo   r2, [r0], #4
++    blo     2b
++    ldr     r0, =main
++    blx     r0
++3:  b       3b
++    .pool
+diff --git a/bananads/tests/irqmask/irq.s b/bananads/tests/irqmask/irq.s
+new file mode 100644
+index 0000000..a2f7744
+--- /dev/null
++++ b/bananads/tests/irqmask/irq.s
+@@ -0,0 +1,101 @@
++@ irqmask: the ARM9's IRQ handler (the BIOS calls it in IRQ mode, CPSR.I set, at DTCM+0x3FFC). It acknowledges IF,
++@ counts each source, folds the interrupted code's progress counter into a hash (so the exact moment every IRQ is
++@ taken shows in RAM and on screen), and for VBlank runs a long loop in IRQ mode (other IRQs pend, masked, meanwhile).
++@ Timer 1's IRQ nests: the handler switches to system mode with IRQs on, runs nested_work (C), and comes back.
++    .arm
++    .global irq_handler
++    .type irq_handler, %function
++irq_handler:
++    ldr     r0, =0x04000000
++    ldr     r1, [r0, #0x214]        @ IF
++    ldr     r2, [r0, #0x210]        @ IE
++    and     r1, r1, r2
++    ldr     r2, =irq_state          @ [0] VBlank [1] HBlank [2] timer 0 [3] timer 1 [4] hash [5] nested depth
++    ldr     r3, =progress
++    ldr     r3, [r3]
++    ldr     r12, [r2, #16]
++    eor     r12, r3, r12, ror #27
++    add     r12, r12, r1
++    str     r12, [r2, #16]          @ hash = rol(hash, 5) ^ progress + sources
++    tst     r1, #1
++    ldrne   r3, [r2]
++    addne   r3, r3, #1
++    strne   r3, [r2]
++    tst     r1, #2
++    ldrne   r3, [r2, #4]
++    addne   r3, r3, #1
++    strne   r3, [r2, #4]
++    tst     r1, #8
++    ldrne   r3, [r2, #8]
++    addne   r3, r3, #1
++    strne   r3, [r2, #8]
++    bic     r3, r1, #0x10           @ acknowledge all but timer 1 now
++    str     r3, [r0, #0x214]
++    tst     r1, #1
++    beq     1f
++    mov     r3, #0                  @ VBlank: a long loop with I set
++    ldr     r12, [r2, #16]
++2:  add     r12, r12, r3
++    eor     r12, r12, r12, lsr #3
++    add     r3, r3, #1
++    cmp     r3, #3072
++    blt     2b
++    str     r12, [r2, #16]
++1:  tst     r1, #0x10
++    beq     3f
++    str     r1, [r0, #0x214]        @ timer 1: acknowledge, then nest
++    ldr     r3, [r2, #12]
++    add     r3, r3, #1
++    str     r3, [r2, #12]
++    mrs     r3, spsr
++    stmfd   sp!, {r3, lr}           @ (IRQ mode's own stack)
++    msr     cpsr_c, #0x1F           @ system mode, IRQs on: others may come in now
++    stmfd   sp!, {r0-r3, r12, lr}   @ (the interrupted code's lr_sys)
++    ldr     r3, =nested_work
++    blx     r3
++    ldmfd   sp!, {r0-r3, r12, lr}
++    msr     cpsr_c, #0x92           @ IRQ mode, I set
++    ldmfd   sp!, {r3, lr}
++    msr     spsr_cxsf, r3
++3:  mrc     p15, 0, r0, c9, c1, 0
++    bic     r0, r0, #0xFF
++    bic     r0, r0, #0xF00
++    add     r0, r0, #0x3F00
++    ldr     r2, [r0, #0xF8]         @ the BIOS's IRQ flags (IntrWait)
++    orr     r2, r2, r1
++    str     r2, [r0, #0xF8]
++    bx      lr
++    .pool
++
++@ ARM helpers the main code calls (Thumb or ARM) for CPSR changes
++    .global irq_off
++    .type irq_off, %function
++irq_off:                            @ returns the old CPSR
++    mrs     r0, cpsr
++    orr     r1, r0, #0x80
++    msr     cpsr_c, r1
++    bx      lr
++    .global irq_restore
++    .type irq_restore, %function
++irq_restore:
++    msr     cpsr_c, r0
++    bx      lr
++    .global svc_spin                @ r0 iterations in supervisor mode (I and F set), registers only
++    .type svc_spin, %function
++svc_spin:
++    mrs     r2, cpsr
++    msr     cpsr_c, #0xD3
++    mov     r1, #0
++1:  add     r1, r1, r0, lsl #1
++    eor     r1, r1, r1, lsr #5
++    subs    r0, r0, #1
++    bne     1b
++    msr     cpsr_c, r2
++    mov     r0, r1
++    bx      lr
++    .global halt_cp15               @ the ARM9's wait-for-interrupt (CP15 c7,c0,4)
++    .type halt_cp15, %function
++halt_cp15:
++    mov     r0, #0
++    mcr     p15, 0, r0, c7, c0, 4
++    bx      lr
+diff --git a/bananads/tests/irqmask/main7.c b/bananads/tests/irqmask/main7.c
+new file mode 100644
+index 0000000..1713c4b
+--- /dev/null
++++ b/bananads/tests/irqmask/main7.c
+@@ -0,0 +1,35 @@
++/* irqmask ARM7: masked stretches with timer 2's IRQ (fast) pending, unmasked ones, and a handler that hashes the
++   progress counter (so when each IRQ is taken shows in RAM: main RAM 0x02300000) */
++typedef unsigned int u32; typedef unsigned short u16; typedef unsigned char u8;
++#define R32(a) (*(volatile u32 *)(a))
++#define R16(a) (*(volatile u16 *)(a))
++#define ARM __attribute__((target("arm"), noinline))
++#define NOINLINE __attribute__((noinline))
++volatile u32 progress7, hash7, ticks7;
++static u32 tab[64];
++static volatile u32 *const box = (volatile u32 *)0x02300000;
++ARM void irq7(void)
++{
++    u32 f = R32(0x04000214) & R32(0x04000210);
++    R32(0x04000214) = f;
++    hash7 = ((hash7 << 5) | (hash7 >> 27)) ^ progress7;
++    ticks7++;
++    *(volatile u32 *)0x0380FFF8 |= f;
++}
++ARM u32 off7(void) { u32 c; __asm__ volatile("mrs %0, cpsr\n orr r1, %0, #0x80\n msr cpsr_c, r1" : "=r"(c) : : "r1"); return c; }
++ARM void restore7(u32 c) { __asm__ volatile("msr cpsr_c, %0" : : "r"(c)); }
++static NOINLINE u32 step(u32 x) { progress7++; return x * 31 + tab[x & 63]; }
++static NOINLINE u32 work7(u32 s, int n) { for (int i = 0; i < n; i++) { s = step(s + i); if (s & 4) s ^= step(s); } return s; }
++int main7(void)
++{
++    for (int i = 0; i < 64; i++) tab[i] = i * 0x9E3779B9u;
++    *(volatile u32 *)0x0380FFFC = (u32)irq7;
++    R16(0x04000108) = 0xF800; R16(0x0400010A) = 0x00C0;      /* timer 2: /1, reload 0xF800, IRQ */
++    R32(0x04000210) = 0x20; R32(0x04000208) = 1; restore7(off7() & ~0x80u);
++    u32 acc = 0;
++    for (;;) {
++        u32 c = off7(); acc = work7(acc, 200); restore7(c);
++        acc = work7(acc, 100);
++        box[0] = progress7; box[1] = hash7; box[2] = ticks7; box[3] = acc;
++    }
++}
+diff --git a/bananads/tests/irqmask/main9.c b/bananads/tests/irqmask/main9.c
+new file mode 100644
+index 0000000..e55c3ec
+--- /dev/null
++++ b/bananads/tests/irqmask/main9.c
+@@ -0,0 +1,107 @@
++/* irqmask ARM9: long stretches of work with CPSR.I set while IRQs are pending, for the JIT's exit stubs (BananaDS's
++   melonDS patch 0023, jit.irqchain: a chain of blocks goes on past an IRQ that CPSR.I masks). HBlank (every line),
++   VBlank and two fast timers keep IRQs pending; the main loop runs masked sections (calls, returns, function
++   pointers, loops, memory, IME and IE changes, a supervisor-mode stretch, a CP15 halt with an IRQ pending) and
++   unmasked ones; the handler (irq.s) hashes a progress counter the code bumps everywhere, so when each IRQ is taken
++   shows in RAM and on the top screen, and VBlank's handler loops for a while in IRQ mode, timer 1's nests.
++   Written for this test. */
++typedef unsigned int u32; typedef unsigned short u16; typedef unsigned char u8; typedef int s32;
++#define R32(a) (*(volatile u32 *)(a))
++#define R16(a) (*(volatile u16 *)(a))
++#define R8(a) (*(volatile u8 *)(a))
++#define ARM __attribute__((target("arm"), noinline))
++#define NOINLINE __attribute__((noinline))
++volatile u32 irq_state[8];
++volatile u32 progress;
++extern void irq_handler(void);
++extern u32 irq_off(void);
++extern void irq_restore(u32);
++extern u32 svc_spin(u32);
++extern void halt_cp15(void);
++static u32 tab[256];
++static u16 half[256];
++#define STEP() (progress++)
++
++static NOINLINE u32 leaf_a(u32 x) { STEP(); return x * 2654435761u + tab[x & 255]; }
++static NOINLINE u32 leaf_b(u32 x) { STEP(); half[x & 255] = (u16)x; return (x >> 3) ^ half[(x >> 8) & 255]; }
++ARM u32 leaf_arm(u32 x) { STEP(); u32 s = x; for (int i = 0; i < 4; i++) s = s * 33 + tab[(s >> 4) & 255]; return s; }
++static NOINLINE u32 mid(u32 x, int d) { STEP(); if (d <= 0) return leaf_a(x); return mid(leaf_b(x), d - 1) + leaf_arm(x); }
++typedef u32 (*fn)(u32);
++static fn const table[4] = { leaf_a, leaf_b, leaf_arm, leaf_b };
++u32 nested_work(void) { u32 s = 0; for (int i = 0; i < 40; i++) { s += table[i & 3](s + i); } tab[s & 255] ^= s; return s; }
++
++/* the work: calls (BL), returns (BX LR, POP {PC}), function pointers, a loop, loads and stores */
++static NOINLINE u32 work(u32 seed, int n)
++{
++    u32 a = seed;
++    for (int i = 0; i < n; i++) {
++        STEP();
++        a = table[(a >> 5) & 3](a + i);
++        if (a & 0x100) a ^= mid(a, 2);
++        tab[(a + i) & 255] += a;
++    }
++    return a;
++}
++static NOINLINE u32 masked_plain(u32 seed) { u32 c = irq_off(); u32 r = work(seed, 300); irq_restore(c); return r; }
++static NOINLINE u32 masked_ime(u32 seed)
++{
++    u32 c = irq_off();
++    u32 r = work(seed, 60);
++    R32(0x04000208) = 0;  r += work(r, 40);          /* IME off: the IRQ flag drops */
++    R32(0x04000208) = 1;  r += work(r, 40);          /* back on: pending again */
++    R32(0x04000210) = 0x1;  r += work(r, 30);         /* IE: VBlank only */
++    R32(0x04000210) = 0x1B; r += work(r, 30);
++    irq_restore(c);
++    return r;
++}
++static NOINLINE u32 masked_svc(u32 seed) { u32 c = irq_off(); u32 r = work(seed, 50); r += svc_spin(2000 + (seed & 255)); r += work(r, 50); irq_restore(c); return r; }
++static NOINLINE u32 masked_halt(u32 seed)
++{
++    u32 c = irq_off();
++    u32 r = work(seed, 20);
++    halt_cp15();                                      /* returns when IF & IE: an IRQ pending, not taken */
++    r += progress;
++    r += work(r, 40);
++    irq_restore(c);
++    return r;
++}
++static NOINLINE u32 unmasked(u32 seed) { return work(seed, 200); }
++static void draw(const u32 *v, int n)
++{
++    volatile u16 *fb = (volatile u16 *)0x06800000;
++    for (int r = 0; r < n; r++)
++        for (int b = 0; b < 32; b++) {
++            u16 col = (v[r] >> b) & 1 ? 0x7FFF : (u16)(0x0010 + r * 0x0C00);
++            for (int y = 0; y < 4; y++)
++                for (int x = 0; x < 4; x++) fb[(8 + r * 6 + y) * 256 + 8 + b * 7 + x] = col;
++        }
++}
++ARM u32 dtcm_base(void) { u32 d; __asm__ volatile("mrc p15, 0, %0, c9, c1, 0" : "=r"(d)); return d & ~0xFFFu; }
++int main(void)
++{
++    R32(0x04000304) = 0x8003;                      /* POWCNT1: LCDs, 2D A, top screen */
++    R8(0x04000240) = 0x80;                          /* VRAM A: LCDC */
++    R32(0x04000000) = 0x00020000;
++    for (int i = 0; i < 256; i++) { tab[i] = i * 0x9E3779B9u; half[i] = (u16)(i * 977); }
++    R32(dtcm_base() + 0x3FFC) = (u32)irq_handler;
++    R16(0x04000004) = 0x0018;                       /* DISPSTAT: VBlank and HBlank IRQs */
++    R16(0x04000100) = 0xF000; R16(0x04000102) = 0x00C0;   /* timer 0: /1, reload 0xF000, IRQ */
++    R16(0x04000104) = 0xC000; R16(0x04000106) = 0x00C1;   /* timer 1: /64, IRQ (nests) */
++    R32(0x04000210) = 0x1B;                         /* IE: VBlank, HBlank, timers 0 and 1 */
++    R32(0x04000208) = 1;
++    irq_restore(irq_off() & ~0x80u);                /* IRQs on in the CPSR */
++    static u32 sums[12];
++    u32 pass = 0;
++    for (;;) {
++        pass++;
++        sums[0] += masked_plain(pass);
++        sums[1] += unmasked(pass);
++        sums[2] += masked_ime(pass);
++        sums[3] += masked_svc(pass);
++        sums[4] += masked_halt(pass);
++        sums[5] = progress;
++        for (int i = 0; i < 6; i++) sums[6 + i] = irq_state[i];
++        sums[0] ^= pass << 24;
++        draw(sums, 12);
++    }
++}
+-- 
+2.43.0
+

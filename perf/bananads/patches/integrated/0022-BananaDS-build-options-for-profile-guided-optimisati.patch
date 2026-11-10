@@ -1,0 +1,201 @@
+From 5f0f21441469c5c83a6694894c7e3dcbefd08b17 Mon Sep 17 00:00:00 2001
+From: core agent <core@perf>
+Date: Sun, 18 Oct 2026 15:38:01 +0000
+Subject: [PATCH 22/23] BananaDS: build options for profile-guided optimisation
+ (BANANADS_PGO, BANANADS_PGO_GENERATE), code layout (-fno-plt, alignment,
+ hot/cold splitting), the stack protector, and the hot targets' -O level; the
+ PGO training script
+
+CMake: -DBANANADS_PGO_GENERATE=ON builds instrumented (-fprofile-generate into BANANADS_PGO_DIR, atomic counters,
+profiles named relative to the build directory with -fprofile-prefix-path so they carry between build directories
+and into Buildroot's); -DBANANADS_PGO=<dir> builds with those profiles (-fprofile-use, -fprofile-partial-training
+unless BANANADS_PGO_PARTIAL=OFF, missing profiles and mismatched functions as warnings). BANANADS_STACK_PROTECTOR=OFF
+removes Ubuntu's default -fstack-protector-strong/-fstack-clash-protection (the device's Buildroot has none);
+BANANADS_NOPLT, BANANADS_ALIGN=F:L:J, BANANADS_HOTCOLD are layout levers to A/B; BANANADS_HOT_OPT=-O3 raises the
+hot targets (core, banana2d, gengis, the frontend) above Buildroot's -O2. tools/perf/pgo/train.sh runs the test
+ROMs under qemu-user with an instrumented build (Gengis at scale 1 and 2, and melonDS's soft renderer) and leaves
+the merged .gcda files for BANANADS_PGO. All default off: the same build as before.
+---
+ bananads/CMakeLists.txt          | 101 +++++++++++++++++++++++++++++++
+ bananads/tools/perf/pgo/train.sh |  43 +++++++++++++
+ 2 files changed, 144 insertions(+)
+ create mode 100755 bananads/tools/perf/pgo/train.sh
+
+diff --git a/bananads/CMakeLists.txt b/bananads/CMakeLists.txt
+index 7206b29..d70be4f 100644
+--- a/bananads/CMakeLists.txt
++++ b/bananads/CMakeLists.txt
+@@ -46,6 +46,81 @@ if(BANANADS_LTO)
+     add_link_options(-flto=auto)
+ endif()
+ 
++# Profile-guided optimisation (docs/PERF.md, "The build: PGO"): GCC's two halves, each a build directory of its own.
++#   -DBANANADS_PGO_GENERATE=ON  an instrumented build. When the emulator exits it writes a profile (a .gcda file)
++#                               per object file into BANANADS_PGO_DIR; tools/perf/pgo/train.sh runs the test ROMs
++#                               under qemu-user with it.
++#   -DBANANADS_PGO=<dir>        a build optimised with the profiles in <dir> (-fprofile-use).
++# An object's profile is named by the object's path relative to the build directory (-fprofile-prefix-path), so a
++# profile set carries from one build directory to another (a developer's, Buildroot's) as long as the compiler is
++# the same (a .gcda is tied to GCC's major.minor) and the sources are: a function whose code or line number
++# changed loses its profile (one warning each, -Wno-error=coverage-mismatch), a file with no profile gets none
++# (-Wno-missing-profile). The emulator's threads count atomically (-fprofile-update=atomic). With
++# BANANADS_PGO_PARTIAL (the default) a function the training never ran is compiled as without a profile; off,
++# GCC takes it for cold and optimises it for size (the test ROMs aren't games: keep it on).
++set(BANANADS_PGO "" CACHE PATH "Build with the GCC profiles (.gcda files) in this directory")
++option(BANANADS_PGO_GENERATE "An instrumented build that writes GCC profiles when it exits" OFF)
++set(BANANADS_PGO_DIR "${CMAKE_BINARY_DIR}/pgo" CACHE PATH "Where the instrumented build writes its profiles")
++option(BANANADS_PGO_PARTIAL "Functions the training never ran stay optimised for speed (-fprofile-partial-training)" ON)
++if(BANANADS_PGO_GENERATE AND BANANADS_PGO)
++    message(FATAL_ERROR "BANANADS_PGO_GENERATE and BANANADS_PGO are two different builds")
++endif()
++if(BANANADS_PGO_GENERATE)
++    get_filename_component(BANANADS_PGO_DIR_ABS ${BANANADS_PGO_DIR} ABSOLUTE)
++    add_compile_options(-fprofile-generate=${BANANADS_PGO_DIR_ABS} -fprofile-update=atomic -fprofile-prefix-path=${CMAKE_BINARY_DIR})
++    add_link_options(-fprofile-generate=${BANANADS_PGO_DIR_ABS} -fprofile-update=atomic)
++    message(STATUS "BananaDS: instrumented for PGO, profiles go to ${BANANADS_PGO_DIR_ABS}")
++elseif(BANANADS_PGO)
++    get_filename_component(BANANADS_PGO_ABS ${BANANADS_PGO} ABSOLUTE)
++    if(NOT IS_DIRECTORY ${BANANADS_PGO_ABS})
++        message(FATAL_ERROR "BANANADS_PGO=${BANANADS_PGO}: not a directory")
++    endif()
++    set(PGO_FLAGS -fprofile-use=${BANANADS_PGO_ABS} -fprofile-prefix-path=${CMAKE_BINARY_DIR} -Wno-missing-profile -Wno-error=coverage-mismatch)
++    if(BANANADS_PGO_PARTIAL)
++        list(APPEND PGO_FLAGS -fprofile-partial-training)
++    endif()
++    add_compile_options(${PGO_FLAGS})
++    add_link_options(${PGO_FLAGS})
++    message(STATUS "BananaDS: profile-guided, profiles from ${BANANADS_PGO_ABS}")
++endif()
++
++# Code layout and hardening levers for the A55 (docs/PERF.md, "The build"), to A/B on the device; the default of
++# each is what measured best on the RG DS simulator or, unmeasured, the toolchain's own.
++# BANANADS_STACK_PROTECTOR: ON leaves the compiler's default (Ubuntu's GCC: -fstack-protector-strong and
++# -fstack-clash-protection in every function with an array; BananaLinux's Buildroot (BR2_SSP_NONE) and the Bootlin
++# toolchain's own gcc: none). OFF is -fno-stack-protector -fno-stack-clash-protection: a PC build of the device's
++# code.
++option(BANANADS_STACK_PROTECTOR "The compiler's default stack protector (OFF: -fno-stack-protector -fno-stack-clash-protection)" ON)
++if(NOT BANANADS_STACK_PROTECTOR)
++    add_compile_options(-fno-stack-protector -fno-stack-clash-protection)
++endif()
++# BANANADS_NOPLT: calls into shared libraries (libc's memcpy and memset, libm, pthread) through a GOT load at the
++# call site instead of a PLT stub (-fno-plt): one indirect branch fewer per call, one load more.
++option(BANANADS_NOPLT "Calls into shared libraries without PLT stubs (-fno-plt)" OFF)
++if(BANANADS_NOPLT)
++    add_compile_options(-fno-plt)
++endif()
++# BANANADS_ALIGN: function:loop:jump alignment in bytes, e.g. 32:16:16 (GCC's cortex-a55 tuning: 16:8:4).
++set(BANANADS_ALIGN "" CACHE STRING "-falign-functions=F -falign-loops=L -falign-jumps=J as F:L:J (empty: GCC's)")
++if(BANANADS_ALIGN)
++    string(REPLACE ":" ";" ALIGN_LIST ${BANANADS_ALIGN})
++    list(LENGTH ALIGN_LIST N)
++    if(NOT N EQUAL 3)
++        message(FATAL_ERROR "BANANADS_ALIGN=${BANANADS_ALIGN}: F:L:J expected")
++    endif()
++    list(GET ALIGN_LIST 0 AF)
++    list(GET ALIGN_LIST 1 AL)
++    list(GET ALIGN_LIST 2 AJ)
++    add_compile_options(-falign-functions=${AF} -falign-loops=${AL} -falign-jumps=${AJ})
++endif()
++# BANANADS_HOTCOLD: hot/cold splitting of each function (-freorder-blocks-and-partition: the cold half goes to
++# .text.unlikely, away from the hot code the L1I holds). Meaningful with a profile (BANANADS_PGO); without one only
++# GCC's static guesses decide.
++option(BANANADS_HOTCOLD "Hot/cold splitting of functions (-freorder-blocks-and-partition)" OFF)
++if(BANANADS_HOTCOLD)
++    add_compile_options(-freorder-blocks-and-partition)
++endif()
++
+ set(BUILD_QT_SDL OFF CACHE BOOL "" FORCE)
+ set(ENABLE_OGLRENDERER OFF CACHE BOOL "" FORCE)
+ set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
+@@ -64,6 +139,12 @@ else()
+     endif()
+     set(MELONDS_SRC ${melonds_SOURCE_DIR})
+ endif()
++# (PGO: a function's profile also carries a checksum of its source file's path; mapping the two source trees to
++# fixed names keeps a profile valid from one checkout or build directory to another, instead of one "source
++# locations have changed" warning per function. Before melonDS's add_subdirectory, so its sources get it too.)
++if(BANANADS_PGO_GENERATE OR BANANADS_PGO)
++    add_compile_options(-fprofile-prefix-map=${MELONDS_SRC}=melonds -fprofile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=bananads)
++endif()
+ # BananaDS's changes to melonDS itself (patches/melonds/*.patch, in order; docs/PERF.md says what they do): applied
+ # once to the melonDS tree, left alone where they already are. They go on in order, so the tree holds the first k
+ # of them: k is the last patch that comes off cleanly (git apply --reverse --check, newest first; an earlier one
+@@ -226,6 +307,26 @@ if(BANANADS_GENGIS)
+     target_compile_definitions(bananads PRIVATE BANANADS_GENGIS=1)
+ endif()
+ target_compile_definitions(bananads PRIVATE BANANADS_VERSION="${PROJECT_VERSION}")
++# BANANADS_HOT_OPT: compiler flags added for the emulator's hot targets (melonDS's core, the Banana 2D engine,
++# Gengis, the frontend's frame path) after the build type's own, e.g. "-O3" where the build is -O2: BananaLinux's
++# Buildroot builds every package at -O2 (BR2_OPTIMIZE_2, and it empties CMake's Release flags), while the PC
++# reference builds were -O3; under qemu-count the -O2 build runs +37% instructions in membench's 2D bucket. The
++# last -O wins in GCC, so this overrides the build type's level for these targets only; with LTO each function
++# keeps the level it was compiled at. Empty: the build type's flags as they are.
++set(BANANADS_HOT_OPT "" CACHE STRING "Extra compiler flags for the hot targets, e.g. -O3 (empty: none)")
++if(BANANADS_HOT_OPT)
++    separate_arguments(HOT_OPT_LIST UNIX_COMMAND "${BANANADS_HOT_OPT}")
++    foreach(T core bananads)
++        target_compile_options(${T} PRIVATE ${HOT_OPT_LIST})
++    endforeach()
++    if(BANANADS_2D)
++        target_compile_options(banana2d PRIVATE ${HOT_OPT_LIST})
++    endif()
++    if(BANANADS_GENGIS)
++        target_compile_options(gengis PRIVATE ${HOT_OPT_LIST})
++    endif()
++    message(STATUS "BananaDS: hot targets with ${BANANADS_HOT_OPT}")
++endif()
+ 
+ if(BANANADS_SDL)
+     pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+diff --git a/bananads/tools/perf/pgo/train.sh b/bananads/tools/perf/pgo/train.sh
+new file mode 100755
+index 0000000..39ee25c
+--- /dev/null
++++ b/bananads/tools/perf/pgo/train.sh
+@@ -0,0 +1,43 @@
++#!/bin/sh
++# train.sh <instrumented bananads> <roms dir> <profile dir> [<out dir>]: the training run of BananaDS's profile-guided
++# build (CMakeLists.txt, BANANADS_PGO). <instrumented bananads> is an aarch64 build with -DBANANADS_PGO_GENERATE=ON
++# whose BANANADS_PGO_DIR is <profile dir>; this runs it under qemu-user on the test ROMs in <roms dir> (every ROM
++# built from the repo: tests/*, tools/*rom, ../stressrom, as /home/user/perf/roms holds them) the way BananaLinux
++# runs games (Gengis, the Banana 2D engine, at render.scale 1 and 2) and once with melonDS's soft renderer, and
++# leaves the merged profiles (.gcda, one per object file) in <profile dir>, or in <out dir> when given (through
++# GCOV_PREFIX). Then: cmake -DBANANADS_PGO=<that dir>.
++# QEMU names the qemu-aarch64 (one built with plugins isn't needed), QEMU_L its -L sysroot (the toolchain's), ROMS
++# the ROM list (file names without .nds, space-separated; the default is the suite below), FRAMES the frames per
++# run (300). Runs are sequential: libgcov merges the counts of each run into the files. Nothing here needs to be
++# deterministic.
++set -eu
++B=$(cd "$(dirname "$1")" && pwd)/$(basename "$1"); R=$(cd "$2" && pwd); P=$3; OUT=${4:-}
++Q=${QEMU:-qemu-aarch64}; QL=${QEMU_L:-/usr/aarch64-linux-gnu}; FRAMES=${FRAMES:-300}
++ROMS=${ROMS:-"cpubench-cpubench-thumb cpubench-cpubench-arm cpubench-cpubench-thumb-arm7 membench-membench
++  membench-membench-arm dsstress-L5 dsstress-L10 thumb-dsstress-L5 arm7-thumb-dsstress-L5 ds2dtest-ds2dtest
++  sndbench-sndbench ipcrom-ipctest dmasnd-dmasnd iorom-dsstress-L5 geomtest-geomtest jitloops-jitloops-thumb"}
++FAILED=0
++W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
++if [ -n "$OUT" ]; then
++  # the gcda path compiled into the binary is <profile dir>/<mangled object name>: GCOV_PREFIX puts <out dir> in
++  # front and GCOV_PREFIX_STRIP takes <profile dir>'s components off
++  mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
++  STRIP=$(printf '%s' "$(cd "$P" 2>/dev/null && pwd || printf '%s' "$P")" | tr -cd / | wc -c)
++  export GCOV_PREFIX="$OUT" GCOV_PREFIX_STRIP="$STRIP"
++fi
++run() { # run <rom> <label> <settings...>
++  rom=$1; l=$2; shift 2
++  $Q -L "$QL" "$B" --frontend headless --set jit=on --set render.2d=banana --set headless.frames=$FRAMES \
++    --set save.dir="$W" --set state.dir="$W" --set wifi.dns=off --set resume.on_start=off --set resume.on_quit=off \
++    "$@" "$R/$rom.nds" > "$W/log" 2>&1 || { echo "train: $rom $l FAILED (exit $?; its profile is whatever was written):"; tail -3 "$W/log"; FAILED=$((FAILED+1)); return 0; }
++  echo "train: $rom $l: $(grep -o '[0-9]* frames in [0-9.]* s' "$W/log" | tail -1)"
++}
++for rom in $ROMS; do
++  [ -f "$R/$rom.nds" ] || { echo "train: no $R/$rom.nds"; exit 1; }
++  run $rom gengis1 --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2
++  run $rom gengis2 --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=2 --set render.2d_thread=on
++  run $rom soft --set render.renderer=soft --set render.threaded=off --set render.2d_thread=off
++done
++D=${OUT:-$P}
++echo "train: $(ls "$D" | grep -c '\.gcda$') profiles in $D ($(du -sh "$D" | cut -f1)), $FAILED runs failed"
++[ $FAILED = 0 ]
+-- 
+2.43.0
+

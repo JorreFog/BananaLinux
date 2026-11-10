@@ -1,0 +1,151 @@
+# per-TB counts (session 2's tbcount), checkpoint build, MK 1650-2150, k insns/frame; ex = branch count = executions
+## SubmitPolygonBody<true> (3,313 calls/frame: entry TB 37 insns, 122.6k)
+total in SubmitPolygonBodyILb1: 1137.6k/frame
+  430e50    122.6k  10.8%
+  430f14     26.5k   2.3%
+  431000     31.6k   2.8%
+  4310cc     19.3k   1.7%
+  4310ec     28.1k   2.5%
+  431108     66.5k   5.8%
+  431330     12.8k   1.1%
+  431358     25.6k   2.3%
+  431388     32.3k   2.8%
+  431410     24.6k   2.2%
+  4314f0     64.0k   5.6%
+  431570     30.7k   2.7%
+  43158c     15.8k   1.4%
+  4316fc     53.8k   4.7%
+  431708     87.0k   7.6%
+  4317a4     15.4k   1.4%
+  4317e8     34.9k   3.1%
+  431808     17.5k   1.5%
+  4319cc     14.1k   1.2%
+  431a24     16.7k   1.5%
+  431ab8     30.6k   2.7%
+  431ad4     18.5k   1.6%
+  431aec     13.1k   1.2%
+  431b30     15.4k   1.4%
+## SubmitVertexBody<true>
+total in SubmitVertexBodyILb1: 775.6k/frame
+  432570     81.4k  10.5%
+  432598    313.5k  40.4%
+  432634    122.1k  15.7%
+  432680     65.1k   8.4%
+  4326a0      8.8k   1.1%
+  4326a8     30.9k   4.0%
+  4326e0     24.4k   3.1%
+  432808     18.2k   2.4%
+  43286c     14.6k   1.9%
+  4328f0     16.5k   2.1%
+  432940     17.3k   2.2%
+  4329a0      7.9k   1.0%
+## GPU3D::Run
+total in GPU3D3Run: 2211.2k/frame
+  4352f0     31.1k   1.4%
+  4354c8     43.1k   1.9%
+  43551c     27.4k   1.2%
+  435548     50.8k   2.3%
+  435550     60.8k   2.7%
+  43555c    124.0k   5.6%
+  435574    144.6k   6.5%
+  435590     38.9k   1.8%
+  43559c     56.4k   2.6%
+  435738    191.9k   8.7%
+  435754     32.8k   1.5%
+  4357a0     36.7k   1.7%
+  4359fc     62.0k   2.8%
+  435a08     58.1k   2.6%
+  435a94     95.0k   4.3%
+  43641c     49.9k   2.3%
+  436438     44.0k   2.0%
+  436494     71.2k   3.2%
+  4364c8     30.4k   1.4%
+  4364e4     26.6k   1.2%
+  436540     47.8k   2.2%
+  43656c     30.4k   1.4%
+  437110     32.3k   1.5%
+  4383f0     41.7k   1.9%
+## DMA::Run9 (TBs over 2k/frame, with executions per frame)
+49e520     12.4k ex     1242 ins/ex  10.0
+49e548     16.1k ex     1242 ins/ex  13.0
+49e634      2.5k ex     1242 ins/ex   2.0
+49e684      6.3k ex     1057 ins/ex   6.0
+49e69c      2.5k ex     1242 ins/ex   2.0
+49e6b4      2.5k ex     1242 ins/ex   2.0
+49e7c8      2.8k ex      236 ins/ex  12.0
+49e7f8      2.1k ex      236 ins/ex   9.0
+49eb8c     31.1k ex    15545 ins/ex   2.0
+49eb90      5.9k ex     5919 ins/ex   1.0
+49eb94     85.9k ex    21464 ins/ex   4.0
+49eba4     30.7k ex      877 ins/ex  35.0
+49ebd8      7.1k ex      322 ins/ex  22.0
+49ec30      2.4k ex     1199 ins/ex   2.0
+49ec38      9.7k ex      304 ins/ex  32.0
+49ec8c      9.9k ex      896 ins/ex  11.0
+49ed0c     11.2k ex     1242 ins/ex   9.0
+49ed30      2.5k ex     1242 ins/ex   2.0
+49ed70      3.5k ex      875 ins/ex   4.0
+49ee04      3.9k ex      492 ins/ex   8.0
+49ee68     13.9k ex      871 ins/ex  16.0
+49eee8      3.9k ex      492 ins/ex   8.0
+49ef14      4.2k ex      379 ins/ex  11.0
+49ef64      2.4k ex      490 ins/ex   5.0
+49f2a0     10.8k ex     1199 ins/ex   9.0
+49f2c4      2.4k ex     1199 ins/ex   2.0
+49f2cc      3.6k ex     1199 ins/ex   3.0
+49f2d8     13.2k ex     1199 ins/ex  11.0
+49f304      2.4k ex     1199 ins/ex   2.0
+49f30c      2.4k ex     1199 ins/ex   2.0
+49f314      7.2k ex     1199 ins/ex   6.0
+49f32c      4.8k ex     1199 ins/ex   4.0
+49f33c      8.4k ex     1199 ins/ex   7.0
+49f358     14.4k ex     1199 ins/ex  12.0
+49f388     10.8k ex     1199 ins/ex   9.0
+49f4b8     31.2k ex     1199 ins/ex  26.0
+49f524      4.8k ex     1199 ins/ex   4.0
+49f534      2.7k ex      896 ins/ex   3.0
+49f540      5.4k ex      896 ins/ex   6.0
+49f5b8     28.6k ex     1191 ins/ex  24.0
+49f60c     61.8k ex    20587 ins/ex   3.0
+49f618    189.8k ex    21089 ins/ex   9.0
+49f63c    188.4k ex    23552 ins/ex   8.0
+49f65c     47.1k ex    23552 ins/ex   2.0
+49f664     47.1k ex    23552 ins/ex   2.0
+49f66c     13.7k ex     3413 ins/ex   4.0
+49f67c     26.2k ex     3274 ins/ex   8.0
+49f69c      6.5k ex      811 ins/ex   8.0
+49f720      9.7k ex      811 ins/ex  12.0
+49f750      2.0k ex      676 ins/ex   3.0
+49f754     41.6k ex    20809 ins/ex   2.0
+49f75c     64.5k ex    16124 ins/ex   4.0
+49f770     64.7k ex    21551 ins/ex   3.0
+49f77c      5.4k ex     5427 ins/ex   1.0
+49f988      2.4k ex     1191 ins/ex   2.0
+49f990    173.7k ex    28947 ins/ex   6.0
+49f9a8     58.5k ex    29246 ins/ex   2.0
+49f9b0     57.9k ex    28947 ins/ex   2.0
+49f9f8     60.4k ex    20139 ins/ex   3.0
+49fa38      2.7k ex      670 ins/ex   4.0
+49fa48      5.3k ex      660 ins/ex   8.0
+49fbb4     34.7k ex     5783 ins/ex   6.0
+49fbcc     21.1k ex     5270 ins/ex   4.0
+49fbdc     30.5k ex     5086 ins/ex   6.0
+49fc90      9.8k ex      893 ins/ex  11.0
+49fc94      3.0k ex      298 ins/ex  10.0
+49fcbc      4.8k ex     1191 ins/ex   4.0
+49fccc     13.1k ex     1191 ins/ex  11.0
+49fe04      3.2k ex      811 ins/ex   4.0
+49fe14      2.8k ex      178 ins/ex  16.0
+49fe30      5.7k ex      633 ins/ex   9.0
+49fe54      3.2k ex      811 ins/ex   4.0
+49fe64      2.4k ex      811 ins/ex   3.0
+49fe70      5.4k ex      896 ins/ex   6.0
+49fe88      2.1k ex      139 ins/ex  15.0
+49fee4      2.1k ex      514 ins/ex   4.0
+49fef4      2.6k ex      514 ins/ex   5.0
+49ff08      4.0k ex      505 ins/ex   8.0
+49ff34      2.5k ex      505 ins/ex   5.0
+49ff48      4.9k ex     1226 ins/ex   4.0
+49ff5c      4.7k ex     1582 ins/ex   3.0
+4a00ac      5.7k ex      633 ins/ex   9.0
+4a00d8      2.8k ex      183 ins/ex  15.0

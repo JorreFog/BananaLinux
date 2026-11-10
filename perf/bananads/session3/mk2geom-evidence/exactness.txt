@@ -1,0 +1,106 @@
+# mk2geom exactness (2026-10-19), build of dc33057's tree (/home/user/perf3/mk2g/bd, build-a64-device.sh), qemu-dev
+# OFF = render.gx_batch=off render.gx_str=off render.geom_sort=off; ON = all three on (the defaults)
+
+## Mario Kart DS (USA), mk-scene.sh (fresh save, 2100 frames)
+ON  md5.txt:
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+OFF md5.txt: identical to ON
+base (mkside-evidence/mk-scene-base-md5.txt): ON identical (8 frames + audio.raw)
+
+## Mario Kart main RAM every frame 1600-2100, OFF vs ON, --regs --timing (gl/mkdiff.sh)
+SAME after 2100 frames (all of main RAM)
+
+## Mario Kart full savestates (gl/sst.sh, headless.reload_at), md5 frame build settings
+a57737e0567aab4f488ed894bdec854d 1850 mkall-b/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 mkall-b/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 bd/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 bd/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 bd/bananads --set render.gx_batch=off --set render.gx_str=off --set render.geom_sort=off
+f476c39ef33cd7a1166128040aa358d1 2000 bd/bananads --set render.gx_batch=off --set render.gx_str=off --set render.geom_sort=off
+
+## Test ROMs, OFF vs ON (gl/check.sh: pictures every 10th of 300 frames, soft / Gengis 2x + 2D thread / savestate reload; difftest --every 300)
+PICS ok   gxstm-soft (30 frames identical)
+PICS ok   gxstm-gengis2x (30 frames identical)
+PICS ok   gxstm-reload (30 frames identical)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq (--regs --timing, 300 frames): SAME after 300 frames (all of main RAM)
+
+## exact-suite.sh OFF vs ON
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   cpubench-cpubench-arm (6 files identical)
+PICS ok   cpubench-cpubench-thumb-arm7 (6 files identical)
+PICS ok   dsstress-L5 (6 files identical)
+PICS ok   thumb-dsstress-L5 (6 files identical)
+PICS ok   arm7-thumb-dsstress-L5 (6 files identical)
+PICS ok   dsstress-L10 (6 files identical)
+PICS ok   iorom-dsstress-L5 (6 files identical)
+PICS ok   ipcrom-ipctest (6 files identical)
+PICS ok   dmasnd-dmasnd (7 files identical)
+PICS ok   sndbench-sndbench (7 files identical)
+PICS ok   jitloops-jitloops-thumb (6 files identical)
+PICS ok   jitloops-jitloops-arm (6 files identical)
+PICS ok   jitloops-jitloops-thumb-arm7 (6 files identical)
+PICS ok   membench-membench (6 files identical)
+PICS ok   irqmask-thumb (6 files identical)
+PICS ok   irqmask-arm (6 files identical)
+PICS ok   irqmask-thumb-arm7 (6 files identical)
+DIFF ok   dmasnd-dmasnd (SAME after 300 frames (all of main RAM))
+DIFF ok   sndbench-sndbench (SAME after 300 frames (all of main RAM))
+DIFF ok   ipcrom-ipctest (SAME after 300 frames (all of main RAM))
+DIFF ok   cpubench-cpubench-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   cpubench-cpubench-thumb-arm7 (SAME after 300 frames (all of main RAM))
+DIFF ok   membench-membench (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-arm (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb-arm7 (SAME after 300 frames (all of main RAM))
+DIFF ok   irqmask-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   irqmask-arm (SAME after 300 frames (all of main RAM))
+DIFF ok   irqmask-thumb-arm7 (SAME after 300 frames (all of main RAM))
+TESTS ok (all BananaDS host tests passed)
+FAILS=0
+
+## Sabotage build (/home/user/perf3/mk2g/bsab: all three sabotages, each enabled alone by its toggle, others off)
+0063 (an STM's push/pop commands not counted), gxstm difftest: DIFFERENT after frame 1
+0063, geomtest-irq difftest: SAME after 300 frames (all of main RAM)  (not caught: no STMs)
+0063, MK savestate 1850: a57737e0567aab4f488ed894bdec854d  (= the real build's: not caught; MK sends 2 GX STMs a frame)
+0064 (a quick parameter into an empty FIFO put in the FIFO, not the pipe), MK savestate 1850: 6903d498f15a75d550a9b2d79f55fe58  (CAUGHT: differs)
+0064, gxstm difftest: hung (no result after 30 min; the real build's takes ~1 min): caught
+0064, geomtest-irq difftest: SAME after 300 frames (all of main RAM)  (not caught)
+0065 (the counting sort's first pass unstable), MK savestate 1850: d206ad74327fc331aa2ccf59109652fe  (CAUGHT: differs)
+
+## 0066 (render.gx_dmarun), off vs on, build of 58aa659's tree
+scene on: [mk-scene] OK: audio.raw matches the base build's; ON vs base hashes: identical; ON vs OFF md5.txt: identical
+a57737e0567aab4f488ed894bdec854d 1850 bd/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 bd/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 bd/bananads --set render.gx_dmarun=off
+f476c39ef33cd7a1166128040aa358d1 2000 bd/bananads --set render.gx_dmarun=off
+MK main RAM 1600-2100 --regs --timing: SAME after 2100 frames (all of main RAM)
+geomtest-irq --regs --timing: SAME after 300 frames (all of main RAM)
+check.sh (16 picture sets and difftests): all ok/SAME; exact-suite.sh: FAILS=0
+trace build (0066-trace-build.patch on top; every Run9 call's state hashed), mk-scene 2100 frames:
+  tr-on DMATRACE calls 676042 hash 9b0e23f126188cd7
+  tr-off DMATRACE calls 676042 hash 9b0e23f126188cd7
+sabotages (each with the trace):
+  first unit of a DMA not a new burst (ignore burststart): DMATRACE calls 676042 hash 9b0e23f126188cd7; savestate 1850 a57737e0567aab4f488ed894bdec854d: NOT caught (never reached in MK)
+  a burst restarting inside a block skips the table's first entry: DMATRACE calls 676042 hash 9b0e23f126188cd7; savestate 1850 a57737e0567aab4f488ed894bdec854d: NOT caught (never reached in MK)
+  one cycle more when a block starts at a burst's second unit: DMATRACE calls 675962 hash 1faa1e0330579d6a, audio c8b1da95 (base 0266610c); savestate 1850 b3332a7b9118282e56911f69f5c01510: CAUGHT

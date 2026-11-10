@@ -1,0 +1,10 @@
+# dead end 1: MixChannelsFast's per-channel work for a due PCM16/ADPCM channel in one function per format with RunSamples inline (MixDueChannel), vs 0072 alone; MK 1680-2100 per frame
+all: 13101k vs 13385k; without rendering symbols: 12644k vs 12858k (+1.69%)
+      0.0k     643.7k   +643.7k  _ZN7melonDS3SPU13MixDueChannelILj2EEEvijjj
+    340.6k       0.0k   -340.6k  _ZN7melonDSL10RunSamplesILj2EEEiRNS_10SPUChannelEj
+    582.0k     314.4k   -267.6k  _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_
+      0.0k     115.8k   +115.8k  _ZN7melonDS3SPU13MixDueChannelILj1EEEvijjj
+     39.2k       0.0k    -39.2k  _ZN7melonDSL10RunSamplesILj1EEEiRNS_10SPUChannelEj
+
+# dead end 2: core.fast_due (a channel due again next Mix not marked lazy), vs 0072
+    582.0k     566.4k    -15.6k  _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_

@@ -1,0 +1,14 @@
+== main::{lambda()#1}: 1131.1k/frame; by innermost function
+    497.6k  44.0%  melonDS::NDS::RunSlicesJIT
+    139.1k  12.3%  melonDS::NDS::RunEventsDue
+    133.0k  11.8%  ExecuteJITInline<0, melonDS::ARMv5>
+     79.0k   7.0%  melonDS::NDS::HaltInterrupted
+     72.3k   6.4%  dump_ppm
+     53.5k   4.7%  melonDS::FIFO<melonDS::GPU3D::CmdFIFOEntry, 4u>::IsEmpty
+     41.6k   3.7%  ExecuteJITInline<1, melonDS::ARMv4>
+     39.7k   3.5%  melonDS::DMA::Run
+     30.4k   2.7%  operator
+     26.4k   2.3%  main::{lambda
+      9.6k   0.9%  melonDS::SPU::ReadOutput
+      8.1k   0.7%  bananads::Mic::note_output
+      0.7k   0.1%  bananads::run_headless

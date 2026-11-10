@@ -1,0 +1,49 @@
+# mk3geom exactness for 0080 (render.geom_queue), build b1 of the worktree (3a743f3 + 0080), device build under qemu-dev, Mon Oct 19 12:37:09 UTC 2026
+## MK scene (mk-scene.sh), on:
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## off: identical to on: yes
+## base (mkside-evidence/mk-scene-base-md5.txt) identical: yes
+## main RAM every frame 1600-2100, --regs --timing, off vs on (gl/mkdiff.sh)
+SAME after 2100 frames (all of main RAM)
+## full savestates (gl/sst.sh)
+a57737e0567aab4f488ed894bdec854d 1850 b1/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 b1/bananads --set render.geom_queue=off
+f476c39ef33cd7a1166128040aa358d1 2000 b1/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 b1/bananads --set render.geom_queue=off
+## trace build (0099-trace-sab.patch: Run's state hashed after every call; MELONDS_GXSAB=1/2 sabotages)
+tr-on GXTRACE calls 1133371 hash 1d071039ad2ff41a
+tr-off GXTRACE calls 1133371 hash 1d071039ad2ff41a
+tr-s1 GXTRACE calls 1133350 hash 1519027bd6599353
+tr-s2 GXTRACE calls 1133371 hash f2d562a12285341a
+sab1 savestate 1850: 14429badef4d7395d9f159c8fe47d245 1850 btr/bananads 
+sab2 savestate 1850: a57737e0567aab4f488ed894bdec854d 1850 btr/bananads 
+sab1/sab2 frames+audio: identical to on (not caught there)
+## test ROMs (gl/check.sh off vs on)
+PICS ok   gxstm-soft (30 frames identical)
+PICS ok   gxstm-gengis2x (30 frames identical)
+PICS ok   gxstm-reload (30 frames identical)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq --regs --timing: SAME after 300 frames (all of main RAM)
+## exact-suite.sh off vs on
+FAILS=0
+## PipeRefills vs the old counting, exhaustive (p0 0-4, f0 0-256, every read count): cases 135439 bad 0

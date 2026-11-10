@@ -1,0 +1,6 @@
+# qemu-count, device mode (measure-dev.sh), device build b9d = perf/render HEAD (render.2d_fence_wait) under qemu-dev, dsstress L5, frames 100-300; block = the default, spin = --set render.2d_fence_wait=spin; 'waits' = the [2d] log's count of the emulator's thread's waits (full ring/log, capture)
+== dev-L5-block: main thread: 2292.3k insns/frame | vcpu:kinsn/frame 1:1446.2 2:1452.5 3:1332.1 4:2822.4 
+9889 waits for the thread
+== dev-L5-spin: main thread: 2423.9k insns/frame | vcpu:kinsn/frame 1:1701.0 2:1519.0 3:1411.1 4:2387.3 
+1486 waits for the thread
+# spin: WaitForWorker<WaitFence> 19.8k + libs (sched_yield) 171.1k on the emulator's thread; block: libs 107.2k. Under qemu the waits' lengths are host-scheduling artefacts; the device verdict is kms.stats (repeats/drops) and the fps

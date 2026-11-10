@@ -1,0 +1,48 @@
+rgds-sim report st1x-b13d-L5 (model v2; frames per thread; ms at 1104 / 1992 MHz)
+params: base_scale=1.0 l3_cyc=30.0 l3_ns=0.0 dram_ns=120.0 mispredict_cyc=8.0 tlb_l2_cyc=2.0 walk_cyc=25.0 st_cost=0.2 note=v2 = v1's cost parameters (documented/assumed defaults) + the plugin's L1D write streaming (ws=4, wsl3=128, wsn=2). v3 = v2 + timed software prefetch: SIMARGS=prfm=1 (opt-in; label numbers 'v3'). v1 = SIMARGS=ws=0. Calibration: as v1 (README).
+
+vcpu thread            insns/frame  cycles@1104   ms@1104   ms@1992
+0    main                  5469.4k      7601.5k     6.885     4.071
+
+== thread 0 (main): 5469.4k insns, 6.885 ms @1104, 4.071 ms @1992, IPC@1104 0.72
+  cycle shares @1104: base 74.3%  L1I 5.7%  L1D 14.8%  iTLB 0.4%  dTLB 0.9%  branch 4.0%
+  per frame: L1I miss 12.3k (0.90% of fetch blocks; to DRAM 0.5k)  L1D ld miss 17.5k (1.11% of loads; DRAM 3.9k) st miss 5.0k (DRAM 2.1k)  pf 8.9k
+  iTLB L2 hit 16.0k walk 0.0k  dTLB L2 hit 32.3k walk 0.0k  branches: cond 576.2k mispred 5.50%, indirect+ret 35.6k mispred 16.50%
+  classes: alu 32.8% fpneon 26.1% ld 13.0% bcond 10.5% st 4.3% ldv 4.0% stv 2.7% stp 1.9% ldp 1.5% b 1.0% mul 1.0% ret 0.5% bl 0.4% sys 0.1%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  gengis              2334.9k  42.7%      2.702  39.2%     0.9%    18.3%     0.4%     2.7%
+  2d                   868.2k  15.9%      1.502  21.8%     9.3%    26.8%     1.7%     2.9%
+  3d-geometry          852.8k  15.6%      0.998  14.5%    10.8%     3.2%     1.5%     7.6%
+  scheduler/core       548.2k  10.0%      0.709  10.3%     5.8%     2.0%     2.6%     5.6%
+  other                263.9k   4.8%      0.293   4.3%     2.2%    18.8%     1.4%     4.1%
+  jit-code             207.4k   3.8%      0.252   3.7%    18.8%     1.0%     3.4%     5.6%
+  memory               246.8k   4.5%      0.252   3.7%     0.2%     1.6%     0.6%     1.3%
+  audio                 76.0k   1.4%      0.075   1.1%    11.1%     4.4%     2.3%     1.5%
+  jit-runtime           65.5k   1.2%      0.069   1.0%     0.2%     0.2%     3.5%    13.8%
+  libc/lib               5.8k   0.1%      0.034   0.5%    51.3%    28.0%     1.3%     4.4%
+  top functions / JIT blocks by modeled time @1104:
+       0.813 ms  11.8%     798.0k insns  [gengis] rast_kern_h02000
+       0.566 ms   8.2%     436.2k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.549 ms   8.0%     583.7k insns  [gengis] gx_polygon
+       0.478 ms   6.9%     401.9k insns  [3d-geometry] _ZN7melonDS5GPU3D3RunEv
+       0.394 ms   5.7%     357.5k insns  [gengis] rast_kern_h02010
+       0.365 ms   5.3%     113.9k insns  [2d] _ZN7melonDSL10CompositeNILi1ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       0.341 ms   4.9%     279.0k insns  [gengis] rast_kern_h02100
+       0.295 ms   4.3%     155.3k insns  [2d] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+       0.268 ms   3.9%     201.1k insns  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       0.205 ms   3.0%     229.4k insns  [other] f_run.constprop.0
+       0.204 ms   3.0%      73.5k insns  [gengis] _ZN8bananads16GengisRenderer3D7ConvertERNS0_4SlotE
+       0.193 ms   2.8%      80.2k insns  [gengis] gx_render_bin
+       0.158 ms   2.3%     125.3k insns  [gengis] rast_kern_h02110
+       0.129 ms   1.9%     102.1k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       0.121 ms   1.8%     110.0k insns  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       0.120 ms   1.7%     126.5k insns  [3d-geometry] _ZN7melonDS5GPU3D7Write32Ejj
+       0.105 ms   1.5%      75.3k insns  [2d] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       0.092 ms   1.3%      83.5k insns  [2d] _ZN7melonDS16BananaRenderer2D10BuildStepsEPNS_8CompStepEPhRibS4_RPKj
+       0.091 ms   1.3%      92.8k insns  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       0.077 ms   1.1%      72.0k insns  [3d-geometry] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       0.076 ms   1.1%      63.0k insns  [2d] _ZN7melonDSL10CompositeNILi0ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       0.059 ms   0.9%      19.9k insns  [2d] _ZN7melonDS3GPU13StartScanlineEj
+       0.049 ms   0.7%      44.9k insns  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j.lto_priv
+       0.047 ms   0.7%      38.7k insns  [jit-runtime] ARM_Dispatch
+       0.045 ms   0.6%      34.0k insns  [scheduler/core] _ZN7melonDS3NDS13ScheduleEventEjbijj

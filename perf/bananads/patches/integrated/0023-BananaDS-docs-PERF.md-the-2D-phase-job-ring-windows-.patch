@@ -1,0 +1,51 @@
+From 4de7bebc7e32b830314564ba8377db9eb2cdabf7 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 17:33:13 +0000
+Subject: [PATCH 23/23] BananaDS docs: PERF.md, the 2D phase (job ring,
+ windows, the step list; the 1x L1I note)
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/PERF.md | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/bananads/docs/PERF.md b/bananads/docs/PERF.md
+index 5b38d5c..d678896 100644
+--- a/bananads/docs/PERF.md
++++ b/bananads/docs/PERF.md
+@@ -466,14 +466,29 @@ rgds-sim on the device-like build (`tools/build-a64-device.sh`: Buildroot's -O2
+ | `render.2d_quarters`: at 2x the four quarters' composites of a 3D line differ only in the 3D layer: the layers below it are painted onto the base once, the layers above onto nothing once, and each quarter merges its 3D line in (random-stack test: 12000 quarter cases, 0 mismatches) | `render.2d_quarters` | the 2D thread at 2x (Composite was its biggest own cost) |
+ | `render.2d_emit_zip`: at 2x the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's rows, the quarters zipped and 2D lines doubled, no 1 KB line in between (6000 random lines, 0 mismatches) | `render.2d_emit_zip` | the 2D thread at 2x |
+ 
++The 2D phase (16:52 on, all agents on the 2D engine; `render`'s share the compositor, sprites, windows, the job
++ring, PrepareScanline*, the copy log): three more, exact and toggled, measured on rgds-sim (st mode, deterministic)
++on the device build, and jit's output-stage work (`render.2d_conv16`, `render.2d_prefetch16`, FillLine) merged in:
++
++| Change | Toggle | What it measured |
++|---|---|---|
++| the 2D job ring without the 3D-line (4 KB) and display (512 B) arrays between the jobs: 512 x ~256 B consecutive instead of 2.5 MB with a job per page (with `render.3d_share` the 4 KB copies were never written) | `render.2d_job_stride=compact\|inline` | the 2D thread's loop 0.176 -> 0.112 ms/frame (L5 2x), its dTLB walks 0.9k -> 0.3k; the thread inside dev-mode noise |
++| the windows' per-pixel loops (ApplyWindow) 16 px a step and the 3D layer's conversion (DrawBG_3D) 4 a step; at 2x a windowed line keeps the raw 3D path, the window applied inside the quarters' merge (it took DrawBG_3D + ApplyWindow per quarter: 8 scalar passes a line) | `render.2d_win_neon` | membench with WIN0 over the 3D scene (the HUD case no test ROM had): the 2D thread -47% at 2x, the emulator's thread -31% (st 2x), -18% (1x) |
++| the compositor's step list kept while its inputs (layers drawn/full, sprite priorities, BG priorities, raw 3D, second pixel) hold, instead of rebuilt per line (~220 instructions, 2-3% of the thread) | `render.2d_steps_cache` | a few % of the 2D thread's instructions (findings/render.md) |
++
++A note on L1I misses at 1x (sim's flag on the branch): the emulator's thread's L1I misses on dsstress L5 at 1x went
++10.8k -> 13.8k -> 10.9k -> 12.3k per frame over four consecutive builds whose 1x code is the same (the thread
+++-0.7%): the link layout moving in a 32 KB 4-way L1I, which any commit anywhere does under LTO. The robust fix is a
++build flag on the device (`BANANADS_ALIGN=32:16:16` or PGO, core's findings), not a renderer change.
++
+ Found and not done, with what it would take:
+ - Display capture (DISPCAPCNT) draws unit A on the emulator's thread (at 2x all four composites of each line) while it
+   is on: the `[2d]` log line's "lines with unit A drawn in place" says how much a game does it. Moving it needs the
+   captured VRAM written at the line's time or every CPU read of the capture target to wait for the 2D thread.
+ - Gengis's kernels: `bananads/gengis/` is byte-identical to SuperDrastic `claude/gengis-a55-scheduling` @ a63fe5b,
+   which is `main` plus that branch: nothing newer to port.
+-- The job ring: 512 jobs x 4.9 KB (the unused Line3D/Display copies at 2x) = 2.5 MB of address space, ~160 KB of it
+-  touched: only L1 dTLB misses from the stride; left alone.
++- A tile-fused merge + output pass at 2x (the composited quarters never leave L1): written and shelved; it edits the
++  output stage and the 4 KB intermediate is L1-resident anyway (~4% of the 2D thread's instructions at most).
+ - VBlank's polygon Y-sort as a counting sort (a melonDS patch, tried and dropped): exact, but dsstress L10, the
+   heaviest 3D ROM here, gains 18k instructions a frame (0.1%) and geomtest nothing (under 64 polygons a frame).
+ - The geometry engine after 0011 (dsstress L5, device configuration, instructions a frame on the emulator's thread):
+-- 
+2.43.0
+

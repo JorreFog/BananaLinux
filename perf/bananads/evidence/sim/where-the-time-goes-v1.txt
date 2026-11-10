@@ -1,0 +1,259 @@
+# Where the time goes on the A55 (rgds-sim model v1), base = build-dev (device-faithful build of 00c34c7), 16:47 UTC
+# commands: /home/user/perf/sim/phase2.sh /home/user/perf/build-dev/b/bananads dev  (= rgds-sim/run.sh <bin> <rom> <w> --mode st|dev, frames 100-300)
+#   st (1x): jit on, render.threaded/2d_thread off, gengis_threads=0, Gengis renderer; dev (2x): render.scale=2, gengis, gengis_threads=2, 2D thread on (default at 2x)
+# table: /home/user/perf/sim/p2table.py /home/user/perf/sim/p2/dev; full reports (top functions): /home/user/perf/sim/p2/dev/<w>/report.txt
+# per bucket: share of the thread's modeled time [share of its instructions], and how much of the bucket's own time is L1I/L1D/TLB/branch
+# flag '<--' = time share >= 1.4x instruction share
+
+model v1; ms/frame at 1104 MHz; per thread: total ms (insns/frame), then each bucket as % of that thread's modeled time [% of its instructions]
+
+cpubench-thumb thread 0 (main): 5.653 ms @1104, 3.230 @1992, 4970k insns, IPC 0.80 | base 87% L1I 2.1% L1D 5.3% iTLB 0.2% dTLB 1.1% branch 4.2%
+   jit-code         51.6% [ 56.3%]  L1I  1.9% L1D  0.9% TLB  0.5% br  4.9% of it
+   scheduler/core   23.6% [ 22.7%]  L1I  0.6% L1D  1.2% TLB  2.0% br  3.8% of it
+   2d               11.5% [  8.7%]  L1I  3.7% L1D 24.8% TLB  2.8% br  2.6% of it
+   gengis            4.7% [  3.2%]  L1I  3.3% L1D 29.5% TLB  0.7% br  0.2% of it  <-- time share 1.5x its insn share
+   jit-runtime       3.5% [  3.8%]  L1I  0.6% L1D  0.3% TLB  2.5% br 12.6% of it
+   memory            3.4% [  3.7%]  L1I  1.7% L1D  1.1% TLB  1.1% br  0.6% of it
+   audio             1.2% [  1.5%]  L1I  1.2% L1D  4.4% TLB  2.5% br  1.1% of it
+
+cpubench-arm thread 0 (main): 5.140 ms @1104, 2.947 @1992, 4471k insns, IPC 0.79 | base 86% L1I 2.1% L1D 5.8% iTLB 0.2% dTLB 0.9% branch 5.1%
+   jit-code         46.0% [ 50.4%]  L1I  1.8% L1D  1.1% TLB  0.5% br  6.6% of it
+   scheduler/core   25.6% [ 24.9%]  L1I  0.6% L1D  1.3% TLB  1.3% br  4.2% of it
+   2d               12.7% [  9.7%]  L1I  3.9% L1D 25.1% TLB  2.7% br  2.5% of it
+   gengis            5.1% [  3.6%]  L1I  3.8% L1D 29.1% TLB  0.7% br  0.2% of it  <-- time share 1.4x its insn share
+   memory            4.8% [  5.4%]  L1I  1.3% L1D  0.7% TLB  0.1% br  4.3% of it
+   jit-runtime       3.7% [  4.2%]  L1I  0.5% L1D  0.3% TLB  1.7% br 12.5% of it
+   audio             1.3% [  1.7%]  L1I  1.2% L1D  4.6% TLB  2.4% br  0.5% of it
+
+cpubench-thumb-arm7 thread 0 (main): 6.247 ms @1104, 3.560 @1992, 5412k insns, IPC 0.78 | base 85% L1I 2.1% L1D 5.1% iTLB 0.2% dTLB 1.8% branch 5.5%
+   jit-code         52.1% [ 57.0%]  L1I  1.9% L1D  1.2% TLB  1.5% br  4.8% of it
+   scheduler/core   23.0% [ 21.9%]  L1I  0.6% L1D  1.3% TLB  3.3% br  6.3% of it
+   2d               10.6% [  8.0%]  L1I  4.1% L1D 25.2% TLB  2.8% br  3.0% of it
+   jit-runtime       5.3% [  5.2%]  L1I  0.3% L1D  0.2% TLB  1.0% br 23.7% of it
+   gengis            4.3% [  3.0%]  L1I  3.6% L1D 29.8% TLB  0.7% br  0.2% of it  <-- time share 1.4x its insn share
+   memory            3.1% [  3.4%]  L1I  1.7% L1D  1.1% TLB  1.3% br  0.6% of it
+   audio             1.1% [  1.4%]  L1I  1.3% L1D  4.3% TLB  3.5% br  0.5% of it
+
+membench thread 0 (main): 4.778 ms @1104, 2.879 @1992, 3629k insns, IPC 0.69 | base 76% L1I 4.7% L1D 15.9% iTLB 0.2% dTLB 0.7% branch 2.9%
+   2d               45.7% [ 46.2%]  L1I  3.8% L1D 20.9% TLB  1.3% br  2.5% of it
+   scheduler/core   26.9% [ 28.0%]  L1I  1.5% L1D  3.3% TLB  0.5% br  3.4% of it
+   gengis           13.0% [ 10.6%]  L1I  1.8% L1D 33.7% TLB  0.7% br  1.9% of it
+   memory            4.5% [  5.3%]  L1I  8.6% L1D  2.8% TLB  0.3% br  3.7% of it
+   jit-code          3.3% [  3.1%]  L1I 29.7% L1D  3.3% TLB  0.4% br  4.0% of it
+   3d-geometry       2.6% [  2.9%]  L1I 11.5% L1D  5.8% TLB  0.4% br  8.4% of it
+   audio             1.6% [  2.1%]  L1I  1.9% L1D 16.6% TLB  1.3% br  0.7% of it
+   other             1.1% [  1.1%]  L1I 14.3% L1D 22.4% TLB  1.7% br  2.8% of it
+
+ds2dtest thread 0 (main): 25.145 ms @1104, 14.184 @1992, 21286k insns, IPC 0.77 | base 78% L1I 1.4% L1D 17.3% iTLB 0.1% dTLB 0.3% branch 2.5%
+   2d               88.9% [ 89.5%]  L1I  1.0% L1D 18.2% TLB  0.3% br  2.4% of it
+   scheduler/core    6.2% [  5.3%]  L1I  3.1% L1D  7.7% TLB  0.5% br  5.7% of it
+   memory            1.7% [  2.0%]  L1I  2.6% L1D  4.2% TLB  0.8% br  1.1% of it
+   gengis            1.2% [  0.8%]  L1I  6.4% L1D 34.4% TLB  0.6% br  0.3% of it  <-- time share 1.6x its insn share
+   jit-code          0.8% [  1.1%]  L1I  5.8% L1D  0.7% TLB  0.2% br  0.5% of it
+
+sndbench thread 0 (main): 5.462 ms @1104, 3.159 @1992, 4948k insns, IPC 0.82 | base 85% L1I 2.8% L1D 6.7% iTLB 0.3% dTLB 1.4% branch 3.6%
+   scheduler/core   45.5% [ 48.2%]  L1I  0.7% L1D  2.7% TLB  1.7% br  2.5% of it
+   2d               14.3% [ 11.4%]  L1I  4.4% L1D 21.2% TLB  2.4% br  2.5% of it
+   memory           11.6% [ 14.2%]  L1I  2.2% L1D  0.6% TLB  2.3% br  0.5% of it
+   audio            10.0% [  9.7%]  L1I  3.3% L1D  5.2% TLB  1.5% br  6.1% of it
+   jit-code          7.7% [  8.0%]  L1I 10.6% L1D  2.7% TLB  1.0% br  0.8% of it
+   jit-runtime       5.5% [  5.1%]  L1I  0.2% L1D  0.1% TLB  1.1% br 25.3% of it
+   gengis            4.9% [  3.2%]  L1I  3.3% L1D 30.0% TLB  0.7% br  0.2% of it  <-- time share 1.5x its insn share
+
+L1-1x thread 0 (main): 6.435 ms @1104, 3.807 @1992, 5205k insns, IPC 0.73 | base 76% L1I 4.9% L1D 14.8% iTLB 0.3% dTLB 0.7% branch 2.9%
+   gengis           35.7% [ 39.5%]  L1I  1.1% L1D 17.8% TLB  0.4% br  2.0% of it
+   2d               23.2% [ 16.7%]  L1I  8.3% L1D 28.2% TLB  1.5% br  2.2% of it
+   scheduler/core   13.8% [ 13.6%]  L1I  2.8% L1D  2.8% TLB  1.3% br  4.0% of it
+   3d-geometry       9.2% [  9.8%]  L1I  9.5% L1D  4.3% TLB  1.4% br  7.3% of it
+   memory            8.4% [  9.9%]  L1I  1.0% L1D  1.8% TLB  0.2% br  0.8% of it
+   jit-code          3.8% [  4.2%]  L1I 20.7% L1D  1.5% TLB  2.1% br  3.7% of it
+   other             2.8% [  2.8%]  L1I  6.5% L1D 22.6% TLB  1.5% br  3.5% of it
+   jit-runtime       1.5% [  1.9%]  L1I  0.2% L1D  2.1% TLB  2.5% br  7.1% of it
+   audio             1.1% [  1.5%]  L1I  2.2% L1D  6.7% TLB  2.7% br  1.5% of it
+
+L5-1x thread 0 (main): 6.981 ms @1104, 4.154 @1992, 5472k insns, IPC 0.71 | base 73% L1I 5.1% L1D 16.5% iTLB 0.4% dTLB 0.8% branch 3.9%
+   gengis           39.0% [ 42.6%]  L1I  0.7% L1D 18.7% TLB  0.4% br  3.0% of it
+   2d               22.8% [ 15.9%]  L1I  9.1% L1D 31.1% TLB  1.5% br  2.3% of it  <-- time share 1.4x its insn share
+   3d-geometry      13.8% [ 15.5%]  L1I  7.4% L1D  4.1% TLB  1.4% br  7.4% of it
+   scheduler/core   10.1% [ 10.0%]  L1I  4.3% L1D  3.5% TLB  2.2% br  5.3% of it
+   other             4.3% [  4.8%]  L1I  2.9% L1D 19.4% TLB  1.3% br  3.9% of it
+   memory            3.8% [  4.6%]  L1I  2.4% L1D  1.7% TLB  0.5% br  1.2% of it
+   jit-code          3.7% [  3.8%]  L1I 20.7% L1D  2.0% TLB  3.2% br  5.5% of it
+   jit-runtime       1.1% [  1.2%]  L1I  0.2% L1D  2.8% TLB  4.7% br 15.1% of it
+   audio             1.0% [  1.4%]  L1I  2.0% L1D  6.8% TLB  3.5% br  2.2% of it
+
+L10-1x thread 0 (main): 6.824 ms @1104, 4.082 @1992, 5279k insns, IPC 0.70 | base 73% L1I 4.9% L1D 17.3% iTLB 0.4% dTLB 0.8% branch 3.8%
+   gengis           37.2% [ 40.2%]  L1I  0.6% L1D 20.0% TLB  0.4% br  3.1% of it
+   2d               23.4% [ 16.4%]  L1I  9.0% L1D 31.4% TLB  1.4% br  2.2% of it  <-- time share 1.4x its insn share
+   3d-geometry      14.0% [ 16.0%]  L1I  7.2% L1D  4.3% TLB  1.4% br  7.4% of it
+   scheduler/core   10.8% [ 11.0%]  L1I  4.0% L1D  3.0% TLB  2.0% br  4.9% of it
+   other             5.0% [  5.5%]  L1I  2.0% L1D 24.1% TLB  1.2% br  3.2% of it
+   jit-code          3.8% [  3.9%]  L1I 19.7% L1D  1.8% TLB  3.2% br  5.4% of it
+   memory            3.2% [  4.1%]  L1I  2.6% L1D  1.4% TLB  0.6% br  1.2% of it
+   jit-runtime       1.1% [  1.4%]  L1I  0.1% L1D  2.6% TLB  4.3% br 14.1% of it
+   audio             1.0% [  1.4%]  L1I  1.7% L1D  6.8% TLB  3.5% br  2.2% of it
+
+L1-2x-dev thread 0 (main): 3.263 ms @1104, 1.949 @1992, 2667k insns, IPC 0.74 | base 79% L1I 7.0% L1D 8.8% iTLB 0.5% dTLB 1.0% branch 3.5%
+   scheduler/core   26.9% [ 26.5%]  L1I  2.6% L1D  1.7% TLB  1.3% br  4.1% of it
+   3d-geometry      17.5% [ 19.1%]  L1I  7.9% L1D  3.6% TLB  1.4% br  7.1% of it
+   memory           16.7% [ 19.4%]  L1I  1.5% L1D  1.9% TLB  0.2% br  0.8% of it
+   2d               12.0% [  8.9%]  L1I 14.3% L1D 17.7% TLB  3.7% br  2.3% of it
+   gengis           11.0% [ 10.0%]  L1I  2.4% L1D 34.8% TLB  0.6% br  1.1% of it
+   jit-code          7.4% [  8.3%]  L1I 20.4% L1D  1.1% TLB  2.1% br  3.2% of it
+   jit-runtime       2.9% [  3.7%]  L1I  0.1% L1D  0.1% TLB  2.4% br  7.3% of it
+   audio             2.3% [  2.8%]  L1I  3.7% L1D 13.8% TLB  2.5% br  1.3% of it
+   other             1.9% [  0.9%]  L1I 20.5% L1D 38.3% TLB  0.6% br  4.5% of it  <-- time share 2.1x its insn share
+   libc/lib          1.3% [  0.4%]  L1I 54.0% L1D 22.2% TLB  2.0% br  2.2% of it  <-- time share 3.6x its insn share
+
+L1-2x-dev thread 1 (thread1): 3.239 ms @1104, 2.087 @1992, 2559k insns, IPC 0.72 | base 66% L1I 0.1% L1D 33.2% iTLB 0.0% dTLB 0.3% branch 1.0%
+   gengis           97.4% [ 97.5%]  L1I  0.0% L1D 33.1% TLB  0.2% br  1.0% of it
+   other             2.5% [  2.5%]  L1I  0.2% L1D 32.4% TLB  0.9% br  2.9% of it
+
+L1-2x-dev thread 2 (thread2): 3.229 ms @1104, 2.085 @1992, 2538k insns, IPC 0.71 | base 65% L1I 0.1% L1D 33.5% iTLB 0.0% dTLB 0.3% branch 1.0%
+   gengis           97.4% [ 97.5%]  L1I  0.0% L1D 33.4% TLB  0.2% br  1.0% of it
+   other             2.5% [  2.5%]  L1I  0.2% L1D 33.0% TLB  0.9% br  2.8% of it
+
+L1-2x-dev thread 3 (bananads-2d): 3.604 ms @1104, 2.590 @1992, 1769k insns, IPC 0.44 | base 51% L1I 0.1% L1D 47.1% iTLB 0.0% dTLB 0.8% branch 1.3%
+   2d               85.3% [ 82.8%]  L1I  0.0% L1D 46.9% TLB  0.8% br  1.4% of it
+   other             8.6% [  7.3%]  L1I  0.1% L1D 60.7% TLB  1.6% br  0.5% of it
+   gengis            6.0% [ 10.0%]  L1I  0.5% L1D 31.2% TLB  0.6% br  1.0% of it
+
+L5-2x-dev thread 0 (main): 4.355 ms @1104, 2.655 @1992, 3370k insns, IPC 0.70 | base 73% L1I 5.6% L1D 16.2% iTLB 0.5% dTLB 1.0% branch 4.2%
+   gengis           33.9% [ 30.8%]  L1I  0.7% L1D 34.2% TLB  0.4% br  1.9% of it
+   3d-geometry      21.4% [ 25.2%]  L1I  5.9% L1D  3.3% TLB  1.5% br  7.4% of it
+   scheduler/core   15.8% [ 16.3%]  L1I  3.9% L1D  2.0% TLB  2.2% br  5.4% of it
+   2d                9.3% [  7.1%]  L1I 13.5% L1D 20.0% TLB  3.8% br  2.8% of it
+   memory            6.1% [  7.5%]  L1I  3.6% L1D  1.3% TLB  0.5% br  1.2% of it
+   jit-code          5.9% [  6.2%]  L1I 20.0% L1D  1.4% TLB  3.2% br  4.9% of it
+   other             3.2% [  2.3%]  L1I  8.0% L1D 35.7% TLB  0.8% br  5.2% of it
+   audio             1.8% [  2.3%]  L1I  4.2% L1D 12.2% TLB  3.3% br  2.0% of it
+   jit-runtime       1.6% [  1.9%]  L1I  0.1% L1D  0.1% TLB  4.6% br 15.6% of it
+   libc/lib          1.0% [  0.4%]  L1I 48.4% L1D 18.8% TLB  2.1% br  2.7% of it  <-- time share 2.3x its insn share
+
+L5-2x-dev thread 1 (thread1): 2.753 ms @1104, 1.791 @1992, 1932k insns, IPC 0.64 | base 63% L1I 0.3% L1D 34.9% iTLB 0.0% dTLB 0.3% branch 1.9%
+   gengis           96.5% [ 95.7%]  L1I  0.2% L1D 35.4% TLB  0.3% br  1.8% of it
+   other             3.3% [  4.2%]  L1I  1.2% L1D 22.0% TLB  1.1% br  3.9% of it
+
+L5-2x-dev thread 2 (thread2): 2.614 ms @1104, 1.697 @1992, 1850k insns, IPC 0.64 | base 63% L1I 0.3% L1D 34.6% iTLB 0.0% dTLB 0.3% branch 1.9%
+   gengis           96.5% [ 95.6%]  L1I  0.2% L1D 35.0% TLB  0.3% br  1.8% of it
+   other             3.4% [  4.3%]  L1I  1.0% L1D 21.8% TLB  1.1% br  3.9% of it
+
+L5-2x-dev thread 3 (bananads-2d): 4.765 ms @1104, 3.308 @1992, 2647k insns, IPC 0.50 | base 55% L1I 0.2% L1D 42.6% iTLB 0.0% dTLB 0.7% branch 1.5%
+   2d               63.9% [ 55.4%]  L1I  0.1% L1D 46.4% TLB  0.7% br  1.4% of it
+   gengis           28.5% [ 38.1%]  L1I  0.4% L1D 31.0% TLB  0.4% br  2.0% of it
+   other             7.5% [  6.4%]  L1I  0.3% L1D 55.7% TLB  1.5% br  1.0% of it
+
+L10-2x-dev thread 0 (main): 4.401 ms @1104, 2.650 @1992, 3401k insns, IPC 0.70 | base 73% L1I 5.0% L1D 16.3% iTLB 0.5% dTLB 1.0% branch 4.2%
+   gengis           33.6% [ 30.7%]  L1I  0.4% L1D 32.7% TLB  0.4% br  2.2% of it
+   3d-geometry      21.0% [ 24.8%]  L1I  5.4% L1D  3.4% TLB  1.5% br  7.4% of it
+   scheduler/core   16.4% [ 17.0%]  L1I  3.5% L1D  1.7% TLB  2.0% br  5.0% of it
+   2d                9.4% [  7.2%]  L1I 12.6% L1D 20.5% TLB  3.6% br  2.7% of it
+   jit-code          5.7% [  6.1%]  L1I 18.3% L1D  1.2% TLB  3.3% br  4.9% of it
+   memory            5.0% [  6.3%]  L1I  4.1% L1D  0.8% TLB  0.6% br  1.2% of it
+   other             4.3% [  3.0%]  L1I  4.6% L1D 42.8% TLB  1.0% br  4.2% of it  <-- time share 1.5x its insn share
+   jit-runtime       1.7% [  2.1%]  L1I  0.0% L1D  0.1% TLB  4.3% br 14.5% of it
+   audio             1.7% [  2.2%]  L1I  3.8% L1D 11.4% TLB  3.3% br  2.0% of it
+   libc/lib          1.0% [  0.6%]  L1I 42.1% L1D 17.7% TLB  2.0% br  2.2% of it  <-- time share 1.7x its insn share
+
+L10-2x-dev thread 1 (thread1): 2.082 ms @1104, 1.329 @1992, 1455k insns, IPC 0.63 | base 64% L1I 0.2% L1D 33.7% iTLB 0.0% dTLB 0.4% branch 2.2%
+   gengis           96.1% [ 94.7%]  L1I  0.1% L1D 34.4% TLB  0.3% br  2.1% of it
+   other             3.7% [  5.3%]  L1I  0.8% L1D 15.9% TLB  1.2% br  3.3% of it
+
+L10-2x-dev thread 2 (thread2): 2.130 ms @1104, 1.370 @1992, 1463k insns, IPC 0.62 | base 63% L1I 0.2% L1D 34.7% iTLB 0.0% dTLB 0.4% branch 2.1%
+   gengis           96.2% [ 94.7%]  L1I  0.1% L1D 35.4% TLB  0.3% br  2.1% of it
+   other             3.6% [  5.2%]  L1I  0.8% L1D 16.3% TLB  1.2% br  3.2% of it
+
+L10-2x-dev thread 3 (bananads-2d): 4.572 ms @1104, 3.184 @1992, 2455k insns, IPC 0.49 | base 54% L1I 0.1% L1D 43.8% iTLB 0.0% dTLB 0.7% branch 1.6%
+   2d               67.1% [ 59.4%]  L1I  0.1% L1D 47.0% TLB  0.7% br  1.4% of it
+   gengis           25.1% [ 33.5%]  L1I  0.3% L1D 31.7% TLB  0.4% br  2.2% of it
+   other             7.7% [  6.9%]  L1I  0.2% L1D 55.2% TLB  1.5% br  0.9% of it
+
+## top functions, cpubench-thumb (report.txt excerpt)
+  top functions / JIT blocks by modeled time @1104:
+       1.162 ms  20.6%     962.0k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.477 ms   8.4%     438.7k insns  [jit-code] mj9_02000a48
+       0.350 ms   6.2%     247.9k insns  [jit-code] stub_0000ec00
+       0.319 ms   5.6%     308.7k insns  [jit-code] mj9_02000904
+       0.306 ms   5.4%     297.5k insns  [jit-code] mj9_0200084e
+       0.258 ms   4.6%      86.4k insns  [2d] _ZN7melonDS14BananaRenderer11OutputLineAEPjjtPKt.part.0
+       0.239 ms   4.2%     144.3k insns  [gengis] gx_render_bin
+       0.189 ms   3.3%     177.5k insns  [jit-code] mj9_02000936
+       0.131 ms   2.3%     111.8k insns  [jit-runtime] ARM_Dispatch
+       0.121 ms   2.1%     111.5k insns  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       0.100 ms   1.8%     110.4k insns  [jit-code] mj9_02000ab8
+       0.081 ms   1.4%      78.8k insns  [jit-code] mj9_020007ba
+       0.079 ms   1.4%      73.5k insns  [jit-code] mj9_02000aca
+       0.075 ms   1.3%      81.6k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       0.066 ms   1.2%      73.9k insns  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+
+## top functions, membench (report.txt excerpt)
+  top functions / JIT blocks by modeled time @1104:
+       1.154 ms  24.1%     900.5k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.793 ms  16.6%     710.9k insns  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+       0.477 ms  10.0%     412.9k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       0.298 ms   6.2%     155.3k insns  [2d] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+       0.287 ms   6.0%     150.3k insns  [gengis] gx_render_bin
+       0.170 ms   3.6%      75.3k insns  [2d] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       0.169 ms   3.5%     102.5k insns  [gengis] rast_kern_h20010
+       0.103 ms   2.2%     101.9k insns  [gengis] gx_polygon.lto_priv.0
+       0.096 ms   2.0%      93.6k insns  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       0.051 ms   1.1%      44.0k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpriteEntryEjRKNS0_11SpriteEntryE
+       0.050 ms   1.0%      44.9k insns  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       0.048 ms   1.0%      34.2k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpritesFromEjRKNS_12Banana2DRegsE
+       0.044 ms   0.9%      30.4k insns  [2d] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       0.042 ms   0.9%      34.6k insns  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       0.041 ms   0.9%      31.6k insns  [3d-geometry] _ZN7melonDS5GPU3D3RunEv.localalias
+
+## top functions, ds2dtest (report.txt excerpt)
+  top functions / JIT blocks by modeled time @1104:
+      13.966 ms  55.5%   11743.1k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       3.179 ms  12.6%    3034.5k insns  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+       1.839 ms   7.3%    1857.0k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpriteEntryEjRKNS0_11SpriteEntryE
+       1.635 ms   6.5%    1395.4k insns  [2d] _ZN7melonDS16BananaRenderer2D11CompositeToEPj
+       1.381 ms   5.5%    1032.7k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.343 ms   1.4%     365.3k insns  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       0.289 ms   1.2%     186.5k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpritesFromEjRKNS_12Banana2DRegsE
+       0.252 ms   1.0%     131.0k insns  [2d] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       0.244 ms   1.0%     144.3k insns  [gengis] gx_render_bin
+       0.132 ms   0.5%     153.2k insns  [2d] _ZN7melonDSL10CompositeNILi5ELb1ELb0EEEvPKNS_8CompStepEPKjbPjS6_.lto_priv.0
+       0.113 ms   0.5%     112.9k insns  [jit-runtime] ARM_Dispatch
+       0.113 ms   0.5%      85.0k insns  [2d] _ZN7melonDS12SoftRenderer9DoCaptureEj
+       0.111 ms   0.4%      52.4k insns  [2d] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       0.105 ms   0.4%     100.1k insns  [2d] _ZN7melonDSL10CompositeNILi5ELb0ELb0EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       0.089 ms   0.4%      27.6k insns  [2d] _ZN7melonDS14BananaRenderer11OutputLineAEPjjtPKt.part.0
+
+## top functions, L5-1x (report.txt excerpt)
+  top functions / JIT blocks by modeled time @1104:
+       0.819 ms  11.7%     798.0k insns  [gengis] rast_kern_h02000
+       0.572 ms   8.2%     436.2k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.561 ms   8.0%     286.5k insns  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+       0.550 ms   7.9%     583.2k insns  [gengis] gx_polygon.lto_priv.0
+       0.462 ms   6.6%     398.9k insns  [3d-geometry] _ZN7melonDS5GPU3D3RunEv.localalias
+       0.390 ms   5.6%     357.5k insns  [gengis] rast_kern_h02010
+       0.342 ms   4.9%     279.0k insns  [gengis] rast_kern_h02100
+       0.299 ms   4.3%     155.3k insns  [2d] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+       0.244 ms   3.5%     201.1k insns  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       0.215 ms   3.1%      80.2k insns  [gengis] gx_render_bin
+       0.207 ms   3.0%     229.4k insns  [other] f_run.constprop.0
+       0.205 ms   2.9%      72.9k insns  [gengis] _ZN8bananads16GengisRenderer3D7ConvertEv
+       0.177 ms   2.5%      75.3k insns  [2d] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       0.159 ms   2.3%     125.3k insns  [gengis] rast_kern_h02110
+       0.127 ms   1.8%     102.3k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+
+## top functions, L5-2x-dev (report.txt excerpt)
+  top functions / JIT blocks by modeled time @1104:
+       0.564 ms  13.0%     436.2k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.517 ms  11.9%     423.5k insns  [gengis] rast_kern_h02000
+       0.455 ms  10.4%     398.9k insns  [3d-geometry] _ZN7melonDS5GPU3D3RunEv.localalias
+       0.272 ms   6.3%     165.3k insns  [gengis] rast_kern_h02100
+       0.245 ms   5.6%     181.6k insns  [gengis] rast_kern_h02010
+       0.230 ms   5.3%     201.1k insns  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       0.148 ms   3.4%      37.5k insns  [gengis] gx2_render_bin
+       0.141 ms   3.2%     136.4k insns  [gengis] gx_polygon.lto_priv.1
+       0.131 ms   3.0%      73.9k insns  [gengis] rast_kern_h02110
+       0.121 ms   2.8%     110.0k insns  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       0.116 ms   2.7%     126.5k insns  [3d-geometry] _ZN7melonDS5GPU3D7Write32Ejj
+       0.099 ms   2.3%      92.8k insns  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       0.080 ms   1.8%      72.0k insns  [3d-geometry] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       0.066 ms   1.5%      29.8k insns  [2d] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+       0.061 ms   1.4%      19.3k insns  [2d] _ZN7melonDS3GPU13StartScanlineEj.localalias

@@ -1,0 +1,4 @@
+/home/user/perf3/mkside-work/sw2/run.log:[mks] cpu0 setups 851498 swaps 647835 keeps 749372
+/home/user/perf3/mkside-work/sw2/run.log:[mks] cpu1 setups 1927489 swaps 1448670 keeps 1670792
+/home/user/perf3/mkside-work/sw1/run.log:[mks] cpu0 setups 229044 swaps 154657 keeps 191592
+/home/user/perf3/mkside-work/sw1/run.log:[mks] cpu1 setups 1774141 swaps 1387137 keeps 1568324

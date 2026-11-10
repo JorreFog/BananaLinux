@@ -1,0 +1,3 @@
+# bananads-difftest --regs --every --from 1500 --frames 2100 --fresh-save, MK scene input (mkdiff.sh), A jit.wram7fast=off, B on
+0072 first form (block route through CheckAndInvalidate): SAME after 2100 frames (all of main RAM)
+0072 final form (code index loaded once): SAME after 2100 frames (all of main RAM)

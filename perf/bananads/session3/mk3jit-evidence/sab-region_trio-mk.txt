@@ -1,0 +1,1 @@
+MK scene, sabotage build of 0087 (MELONDS_SABTRIO=1: a swapped-in BIOS9 / shared WRAM / WRAM7 region's start 4 bytes off): hangs at boot (audio.raw stops at 20480 bytes, no picture after 10 min; a normal run takes ~80 s): caught

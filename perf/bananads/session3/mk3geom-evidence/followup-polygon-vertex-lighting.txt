@@ -1,0 +1,20 @@
+# follow-up (13:19-13:30 UTC): polygon setup, vertices, lighting per region / block, -g1 build of 0080 (same code for these functions as 3610c71), MK 1650-2150, k insns/frame
+## SubmitPolygonBody<true> (3,312 calls; ~2,560 pass culling; ~1,280 stored) by source region
+  168.8k screen coords
+  162.6k cull normal+dot
+  148.2k Z/W
+  145.3k vertex RAM copy+final colour
+  124.5k outside test+clip calls
+  107.9k bounds/W size
+   75.5k polygon fields
+   44.3k entry/prologue
+   42.8k copies/lines
+   39.6k other
+   34.4k zero-dot
+   29.1k strip reuse
+   11.5k RAM-full reject
+## ClipAgainstPlane<2> (1,262 calls): 103k, mostly the near-plane (-w) pass: real clipping, no trivial reject to take
+## lighting (CalculateLightingBody<true>, ~4,350 normals, ~1 light): 639k, ~145 a normal: the enabled-light loop body ~95 compiled tight (byte loads of the material and light colours, the muls)
+## normal repeats (instrumented build, LitVer bumped on matrix 0x10-0x1C, material/light 0x30-0x34, BEGIN 0x40), whole scene to 2150:
+LITSTAT calls 2097152 hits_in_256_entry_cache(param,state) 420184 
+   (the previous normal's param repeated: 0 times; a 256-entry direct-mapped cache keyed on (param, lighting state) hits ~20%)

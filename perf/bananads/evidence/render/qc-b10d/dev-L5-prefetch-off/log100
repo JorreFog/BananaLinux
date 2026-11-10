@@ -1,0 +1,16 @@
+BananaDS 0.1.0, /home/user/perf/roms/dsstress-L5.nds
+[emu] ROM mapped (0 MB), read in the background
+ROM entry not found for gamecode 1397904467
+Inserted cart with game code: STRS
+Inserted cart with ID: 000100C2
+ROM entry: 00020000 00000002
+MAC: 00:09:BF:12:1E:E2
+Game is now booting
+[gengis] Gengis Engine at 2x, 3 render threads
+[emu] dsstress-L5 started (JIT on, MAC 00:09:bf:12:1e:e2)
+[headless] 100 frames in 3.75 s: 26.6 fps (45% of a DS)
+Stopping emulated console (Reason: External)
+[emu] the DS stopped (reason 1)
+[2d] 2D thread: 38400 jobs, 0 lines with unit A drawn in place (display capture), 2.4 MB through the copy log, 2861 waits for the thread (capture, full ring or log)
+[gengis] the emulator's thread drew 4 of 396 bins and converted 0 frames
+unmappinged everything

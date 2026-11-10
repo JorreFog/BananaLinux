@@ -1,0 +1,43 @@
+# rgds-sim v1, st mode, jit's game-sized code ROM (tests/bigcode, 2000 functions, ~6 MB JIT code; /home/user/perf/jit/sd/bananads/tests/bigcode/out/bigcode-thumb.nds), frames 20-60: device build vs device PGO build; 16:12 UTC (run after sim's 16:10 ASLR fix)
+# commands: OUT=/home/user/perf/core/runs/sim sh rgds-sim/run.sh <bin> <bigcode-thumb.nds> <label> --frames 20:60 ; reports /home/user/perf/core/runs/sim/{dev,devpgo}-bigcode-thumb/report.txt
+## dev
+vcpu thread            insns/frame  cycles@1104   ms@1104   ms@1992
+0    main                  4117.7k     11242.3k    10.183     7.382
+
+== thread 0 (main): 4117.7k insns, 10.183 ms @1104, 7.382 ms @1992, IPC@1104 0.37
+  cycle shares @1104: base 39.3%  L1I 39.6%  L1D 16.3%  iTLB 0.3%  dTLB 1.3%  branch 3.3%
+  per frame: L1I miss 44.0k (4.27% of fetch blocks; to DRAM 23.6k)  L1D ld miss 20.4k (2.45% of loads; DRAM 8.1k) st miss 7.2k (DRAM 3.9k)  pf 10.3k
+  iTLB L2 hit 17.7k walk 0.0k  dTLB L2 hit 69.7k walk 0.1k  branches: cond 478.6k mispred 5.90%, indirect+ret 69.0k mispred 25.67%
+  classes: alu 48.0% ld 17.0% bcond 11.6% st 9.5% ldp 2.8% fpneon 2.1% stp 1.9% stv 1.7% ret 1.3% bl 1.2% b 1.1% mul 0.6% sys 0.5% ldv 0.4% br 0.3%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  jit-code            1701.4k  41.3%      6.147  60.4%    59.2%    12.4%     1.1%     3.0%
+  scheduler/core      1008.2k  24.5%      1.818  17.9%     2.5%    29.9%     3.0%     4.1%
+  2d                   432.2k  10.5%      0.861   8.5%    23.6%    22.3%     2.3%     2.0%
+  memory               547.7k  13.3%      0.642   6.3%     6.5%     3.0%     0.8%     0.5%
+  gengis               160.1k   3.9%      0.308   3.0%    10.4%    31.6%     0.8%     0.3%
+  libc/lib             175.1k   4.3%      0.270   2.7%    14.7%     8.0%     4.0%    17.3%
+  audio                 76.0k   1.8%      0.088   0.9%    11.8%    15.9%     3.1%     0.7%
+  jit-runtime           16.2k   0.4%      0.040   0.4%    36.2%    22.3%     1.3%     7.5%
+  other                  0.6k   0.0%      0.008   0.1%    33.6%    51.7%     3.8%     2.0%
+  interpreter            0.2k   0.0%      0.001   0.0%    68.3%     6.9%     1.0%     4.9%
+## devpgo
+vcpu thread            insns/frame  cycles@1104   ms@1104   ms@1992
+0    main                  3902.8k     10877.9k     9.853     7.197
+
+== thread 0 (main): 3902.8k insns, 9.853 ms @1104, 7.197 ms @1992, IPC@1104 0.36
+  cycle shares @1104: base 38.2%  L1I 40.1%  L1D 16.8%  iTLB 0.3%  dTLB 1.4%  branch 3.1%
+  per frame: L1I miss 41.4k (4.24% of fetch blocks; to DRAM 23.6k)  L1D ld miss 20.3k (2.51% of loads; DRAM 8.1k) st miss 7.3k (DRAM 3.9k)  pf 10.3k
+  iTLB L2 hit 15.4k walk 0.1k  dTLB L2 hit 75.3k walk 0.1k  branches: cond 437.6k mispred 5.84%, indirect+ret 66.3k mispred 25.19%
+  classes: alu 47.6% ld 17.4% bcond 11.2% st 10.1% ldp 2.9% fpneon 2.4% stp 1.9% stv 1.4% ret 1.3% bl 1.3% b 0.7% mul 0.6% sys 0.5% ldv 0.4% br 0.3%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  jit-code            1701.4k  43.6%      6.127  62.2%    59.2%    12.4%     1.1%     2.9%
+  scheduler/core       901.4k  23.1%      1.685  17.1%     2.4%    31.9%     3.3%     3.7%
+  2d                   377.4k   9.7%      0.761   7.7%    20.9%    25.6%     2.7%     1.4%
+  memory               558.6k  14.3%      0.619   6.3%     5.8%     3.2%     1.6%     0.7%
+  libc/lib             175.1k   4.5%      0.270   2.7%    14.1%     8.1%     4.2%    17.3%
+  gengis                93.9k   2.4%      0.240   2.4%     6.6%    40.4%     0.9%     0.3%
+  audio                 78.5k   2.0%      0.099   1.0%    18.6%    14.4%     1.9%     1.7%
+  jit-runtime           15.5k   0.4%      0.041   0.4%    36.4%    23.0%     1.3%     6.4%
+  other                  0.9k   0.0%      0.012   0.1%    45.3%    41.2%     2.8%     1.8%
+  interpreter            0.2k   0.0%      0.001   0.0%    68.1%     7.3%     0.8%     4.7%
+## main thread ms@1104: 10.183 -> 9.853 (-3.2%); insns 4117.7k -> 3902.8k (-5.2%); L1I misses 44.0k -> 41.4k/frame; L1I is ~40% of cycles here (the JIT code's own misses, unchanged by PGO: its 6.1 ms stays); the C++ side gains as on cpubench

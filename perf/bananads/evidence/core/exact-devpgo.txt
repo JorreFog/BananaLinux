@@ -1,0 +1,18 @@
+# exactness: device PGO build (build-devpgo) vs the device build (build-dev); 16:14 UTC
+# command: QEMU_A=/home/user/perf/tools/qemu-dev QEMU_B=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/exact.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devpgo/b/bananads exact-devpgo
+# 13 ROMs x {soft single-thread, Gengis 2x 2 threads + 2D thread}: frames 50..300 every 50 (both screens) + the 300-frame audio dump, cmp; rtc.fixed
+cpubench-cpubench-thumb: pictures (6 frames x soft, gengis2) and audio compared
+cpubench-cpubench-arm: pictures (6 frames x soft, gengis2) and audio compared
+cpubench-cpubench-thumb-arm7: pictures (6 frames x soft, gengis2) and audio compared
+dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+thumb-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+arm7-thumb-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+dsstress-L10: pictures (6 frames x soft, gengis2) and audio compared
+iorom-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+ipcrom-ipctest: pictures (6 frames x soft, gengis2) and audio compared
+dmasnd-dmasnd: pictures (6 frames x soft, gengis2) and audio compared
+sndbench-sndbench: pictures (6 frames x soft, gengis2) and audio compared
+membench-membench: pictures (6 frames x soft, gengis2) and audio compared
+ds2dtest-ds2dtest: pictures (6 frames x soft, gengis2) and audio compared
+FAILS=0
+exit 0

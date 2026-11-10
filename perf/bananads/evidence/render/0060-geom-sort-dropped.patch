@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BananaDS <bananads@localhost>
+Date: Sun, 18 Oct 2026 15:45:00 +0000
+Subject: [PATCH] GPU3D: VBlank's polygon Y-sort as a counting sort (MELONDS_GEOMSORT)
+
+At VBlank the polygons of a flushed frame are Y-sorted with std::stable_sort on SortKey (ytop | ybot << 8 |
+translucent << 16): n log n comparisons through pointers for up to 2048 polygons, and a temporary buffer
+allocated and freed every frame. The same stable order comes from a counting sort in two passes (the key's low
+8 bits, then its high 9), with a buffer of the GPU3D's own: 4n + 768 steps. Sets under 64 polygons keep
+std::stable_sort (the passes' fixed cost is more than its). Exact: a stable sort by the same key gives the same
+order. MELONDS_GEOMSORT=0 keeps std::stable_sort for every set; BananaDS sets it from render.geom_sort.
+---
+diff --git a/src/GPU3D.cpp b/src/GPU3D.cpp
+index 729d538..43ea5ff 100644
+--- a/src/GPU3D.cpp
++++ b/src/GPU3D.cpp
+@@ -149,6 +149,9 @@ GPU3D::GPU3D(melonDS::GPU& gpu) noexcept :
+     // read once, here: a difftest has two NDS objects, each created with its own setting
+     const char* e = getenv("MELONDS_GEOMFAST");
+     GeomFast = !(e && e[0] == '0');
++    // MELONDS_GEOMSORT=0: VBlank's polygon Y-sort with std::stable_sort, as before, instead of the counting sort
++    const char* es = getenv("MELONDS_GEOMSORT");
++    GeomSort = !(es && es[0] == '0');
+ }
+ 
+ void Vertex::DoSavestate(Savestate* file) noexcept
+@@ -2795,6 +2798,24 @@ void GPU3D::CheckFIFODMAPlain() noexcept
+ }
+ 
+ 
++// GeomSort: the Y-sort as a stable counting sort on SortKey (ytop | ybot << 8 | translucent << 16, 17 bits: two
++// passes, the low 8 bits then the high 9, each stable), through tmp: the order std::stable_sort gives, without its
++// n log n comparisons and the buffer it allocates every frame. Small sets stay with std::stable_sort
++static void YSortCounting(Polygon** polys, u32 n, Polygon** tmp)
++{
++    u32 count[512];
++    memset(count, 0, 256 * sizeof(u32));
++    for (u32 i = 0; i < n; i++) count[polys[i]->SortKey & 0xFF]++;
++    u32 sum = 0;
++    for (u32 b = 0; b < 256; b++) { const u32 c = count[b]; count[b] = sum; sum += c; }
++    for (u32 i = 0; i < n; i++) tmp[count[polys[i]->SortKey & 0xFF]++] = polys[i];
++    memset(count, 0, 512 * sizeof(u32));
++    for (u32 i = 0; i < n; i++) count[(tmp[i]->SortKey >> 8) & 0x1FF]++;
++    sum = 0;
++    for (u32 b = 0; b < 512; b++) { const u32 c = count[b]; count[b] = sum; sum += c; }
++    for (u32 i = 0; i < n; i++) polys[count[(tmp[i]->SortKey >> 8) & 0x1FF]++] = tmp[i];
++}
++
+ bool YSort(Polygon* a, Polygon* b)
+ {
+     // polygon sorting rules:
+@@ -2831,9 +2852,11 @@ void GPU3D::VBlank() noexcept
+ 
+                     // apply Y-sorting
+ 
+-                    std::stable_sort(RenderPolygonRAM.begin(),
+-                        RenderPolygonRAM.begin() + ((FlushAttributes & 0x1) ? NumOpaquePolygons : NumPolygons),
+-                        YSort);
++                    const u32 nsort = (FlushAttributes & 0x1) ? NumOpaquePolygons : NumPolygons;
++                    if (GeomSort && nsort >= 64)
++                        YSortCounting(RenderPolygonRAM.data(), nsort, SortTmp.data());
++                    else
++                        std::stable_sort(RenderPolygonRAM.begin(), RenderPolygonRAM.begin() + nsort, YSort);
+                 }
+ 
+                 RenderNumPolygons = NumPolygons;
+diff --git a/src/GPU3D.h b/src/GPU3D.h
+index 9b45721..73b3d24 100644
+--- a/src/GPU3D.h
++++ b/src/GPU3D.h
+@@ -361,6 +361,7 @@ public:
+ 
+     std::array<Polygon*,2048> RenderPolygonRAM {};
+     u32 RenderNumPolygons = 0;
++    std::array<Polygon*,2048> SortTmp {};   // GeomSort's second buffer (VBlank's counting sort)
+ 
+     u32 FlushRequest = 0;
+     u32 FlushAttributes = 0;
+@@ -368,6 +369,7 @@ public:
+     // BananaDS: the geometry engine's fast paths (render.geom_fast, MELONDS_GEOMFAST=0 turns them off; exact), set
+     // from the environment as the GPU3D is created
+     bool GeomFast = true;
++    bool GeomSort = true;   // MELONDS_GEOMSORT: VBlank's Y-sort as a counting sort (exact: the same stable order)
+     // DMA's block path (DMA::Run9, MELONDS_DMABLOCK): what Write32(0x04000400, word) does with GeomFast for each of n
+     // words of main RAM from src, stopping after the word that stalls the system (a full FIFO); the words written
+     u32 WriteGXFIFOBlock(const u8* ram, u32 mask, u32 src, u32 n) noexcept;

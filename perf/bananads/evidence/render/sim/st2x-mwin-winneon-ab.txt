@@ -1,0 +1,14 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b13d/b/bananads /home/user/perf/render/roms/membench-win.nds st2x-mwin-winneon-A --mode st --frames 100:300 --set render.2d_win_neon=off --set render.scale=2
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b13d/b/bananads /home/user/perf/render/roms/membench-win.nds st2x-mwin-winneon-B --mode st --frames 100:300 --set render.2d_win_neon=on --set render.scale=2
+
+== thread 0 (main): ms/frame @1104 11.106 -> 7.629 (-31.31%)   @1992 6.698 -> 4.770 (-28.78%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 9.104 -> 7.174 (-21.20%)
+  insn 8632.8k->5037.7k (-41.6%)  base 9438.2k->5691.0k (-39.7%)  l1i_miss 5.7k->5.6k (-1.8%)  l1i_l3miss 1.3k->1.2k (-1.2%)  ld_miss 31.4k->30.0k (-4.4%)  ld_l3miss 8.3k->8.3k (-0.1%)  st_miss 10.6k->9.6k (-8.6%)  st_l3miss 2.9k->3.0k (+3.0%)  itlb_l2 8.2k->8.2k (-0.1%)  itlb_walk 0.0k->0.0k (+19.1%)  dtlb_l2 20.6k->20.2k (-1.9%)  dtlb_walk 0.5k->0.5k (+1.0%)  bcond_miss 26.7k->21.7k (-18.8%)  bind_miss 2.3k->2.3k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   7.328     3.860    -3.468    5730.0k    2134.9k
+  scheduler/core       1.333     1.325    -0.008    1013.4k    1013.4k
+  gengis               1.431     1.433    +0.002    1046.0k    1046.0k
+  libc/lib             0.039     0.037    -0.002       8.2k       8.2k
+  audio                0.086     0.085    -0.001      76.0k      76.0k
+  other                0.349     0.348    -0.001     324.6k     324.6k

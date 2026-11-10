@@ -1,0 +1,30 @@
+# Device numbers: BananaDS docs/results-B-rgds-20261011.md (kit e67e3ef = tree of 4536791, RG DS, headless, 1200
+# frames, device-test.sh's settings: render.threaded=on (the default then), soft 3D 1x, melonDS 2D).
+# run = the rgds-sim run label (calib/run-calib.sh); fps as reported.
+# run	mhz	fps
+in-arm-dsstress-L1	1992	81.8
+in-arm-dsstress-L1	1104	54.2
+mj-arm-dsstress-L1	1992	81.3
+mj-arm-dsstress-L1	1104	54.5
+bj-arm-dsstress-L1	1992	79.7
+bj-arm-dsstress-L1	1104	54.2
+in-arm-dsstress-L5	1992	49.5
+in-arm-dsstress-L5	1104	30.7
+mj-arm-dsstress-L5	1992	59.9
+mj-arm-dsstress-L5	1104	37.3
+bj-arm-dsstress-L5	1992	54.6
+bj-arm-dsstress-L5	1104	34.0
+in-arm-dsstress-L10	1992	45.2
+in-arm-dsstress-L10	1104	28.5
+mj-arm-dsstress-L10	1992	55.6
+mj-arm-dsstress-L10	1104	35.2
+bj-arm-dsstress-L10	1992	48.4
+bj-arm-dsstress-L10	1104	31.2
+in-arm7-thumb-dsstress-L5	1992	36.6
+in-arm7-thumb-dsstress-L5	1104	23.3
+mj-arm7-thumb-dsstress-L5	1992	58.9
+mj-arm7-thumb-dsstress-L5	1104	35.8
+bj-arm7-thumb-dsstress-L5	1992	47.5
+bj-arm7-thumb-dsstress-L5	1104	29.0
+# render.threaded=off, BananaJIT, L10, full clock (the on row of that table, 48.6, is the bj L10 1992 row above)
+bj-arm-dsstress-L10-thoff	1992	52.2
