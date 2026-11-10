@@ -821,8 +821,28 @@ namespace
 		// https typed without a port is that server's 443 alone, and an address with a port is taken as typed
 		if (!hasPort && !https) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
 		if (!hasPort && !scheme) tries.push_back(normUrl("https://" + a, 0));
-		for (auto& u : tries)
+		// (a redirect to https on the same host, which an address typed with http:// and a server behind a proxy that
+		// sends everything to https gives: the address it names tried next, as the https try is for a bare one, rather
+		// than followed, so the address kept is the one that answers)
+		auto hostOf = [](const std::string& u)
 		{
+			size_t h = u.find("://");
+			h = h == std::string::npos ? 0 : h + 3;
+			size_t e = u.find_first_of(":/", h);
+			return lower(u.substr(h, e == std::string::npos ? std::string::npos : e - h));
+		};
+		auto moved = [&](const Resp& r, const std::string& from, const std::string& asked)
+		{
+			auto l = r.hdr.find("location");
+			if (r.code < 300 || r.code >= 400 || l == r.hdr.end()) return;
+			const std::string& loc = l->second;
+			if (lower(loc.substr(0, 8)) != "https://" || loc.size() <= asked.size() || loc.compare(loc.size() - asked.size(), asked.size(), asked) != 0) return;
+			std::string base = loc.substr(0, loc.size() - asked.size());
+			if (hostOf(base) == hostOf(from) && std::find(tries.begin(), tries.end(), base) == tries.end()) tries.push_back(base);
+		};
+		for (size_t i = 0; i < tries.size(); i++)
+		{
+			const std::string u = tries[i];
 			// (redirects not followed: a web port that sends everything to https would otherwise answer as the https
 			// server, and that port then be kept, every POST to it turned into a GET by the redirect; the https try
 			// further down finds the server where it is)
@@ -830,10 +850,12 @@ namespace
 			Resp r = http(q);
 			if (tls && (r.curl == CURL_UNTRUSTED || r.curl == CURL_BAD_CA)) *tls = r.curl;
 			if (r.code == 0) continue;	// (nothing there, on this scheme and port: the heartbeat wouldn't get further)
+			moved(r, u, "/api/v1/hello");
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (j && j->str("service") == "romhost") { url = u; name = j->str("name"); return "romhost"; }
 			q.url = u + "/api/heartbeat";
 			r = http(q);
+			moved(r, u, "/api/heartbeat");
 			j = r.code == 200 ? r.json() : nullptr;
 			if (j && j->get("SYSTEM")) { url = u; name = "RomM " + j->get("SYSTEM")->str("VERSION"); return "romm"; }
 		}

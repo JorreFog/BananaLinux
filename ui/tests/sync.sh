@@ -641,6 +641,24 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     t0=$(date +%s); r=$(bs ta probe "127.0.0.1:$TP"); t1=$(date +%s)
     [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "http to the TLS port: $r"
     [ $((t1 - t0)) -le 3 ] || bad "http to the TLS port took $((t1 - t0)) s"
+    # an address typed with http:// whose server sends everything to https on the same host (a proxy in front): the
+    # https address it names is tried, and kept; a redirect to another host isn't followed there
+    RP=$(port)
+    python3 - "$RP" "https://127.0.0.1:$TP" "https://elsewhere.example:$TP" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys
+port, to, other = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(301)
+        self.send_header("Location", (other if self.path.startswith("/other") else to) + self.path.replace("/other", "", 1))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+EOF
+    waitport "$RP" / || true
+    r=$(bs ta probe "http://127.0.0.1:$RP"); [ "$r" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "http:// redirected to https on the same host: $r"
+    r=$(bs ta probe "http://127.0.0.1:$RP/other"); [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "a redirect to another host was followed: $r"
     # a bare address: Romhost's 8092 first, https (443) when nothing answers on the http ports. 443 needs its own network
     # namespace (root in there, nobody's port 443 out here)
     if unshare -rn true 2>/dev/null; then
