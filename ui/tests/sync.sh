@@ -1009,7 +1009,7 @@ if [ -x "$HERE/banana-ui" ]; then
     : > "$GL"
     # (a game picked while a sync runs, Settings then closed for the library before that sync ends: the next run still
     # started, with Settings closed. Its done line written only once the menu says Settings closed)
-    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Games|x' > "$BANANA_RUN/sync.status"
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Downloading|x' > "$BANANA_RUN/sync.status"
     ( for i in $(seq 200); do grep -q 'settings closed' "$OUT/ui-get.log" 2>/dev/null && break; sleep 0.1; done; sleep 0.5
       echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
     ug "$GET; press a; press down; press a; sleep 300; press b; press b; press b; press b; press b; press b; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
@@ -1019,7 +1019,7 @@ if [ -x "$HERE/banana-ui" ]; then
     : > "$GL"
     # (and Get games left and opened again before that sync ends: the game picked on the first visit still watched for.
     # The done line written once the page has opened the second time)
-    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Games|x' > "$BANANA_RUN/sync.status"
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Downloading|x' > "$BANANA_RUN/sync.status"
     ( for i in $(seq 200); do [ "$(grep -c ' games$' "$SL" 2>/dev/null)" -ge 2 ] && break; sleep 0.1; done; sleep 0.5
       echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
     ug "$GET; press a; press down; press a; sleep 300; press b; press b; press a; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
@@ -1062,6 +1062,28 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -v '^#' "$OUT/rce/banana/homesync-get.txt" 2>/dev/null | grep -q . && bad "Get games, three picks: games left on the list: $(cat "$OUT/rce/banana/homesync-get.txt")"
     case $(st rce) in done\ *) ;; *) bad "Get games, three picks: the last line isn't done: $(st rce)" ;; esac
     grep -q 'ended before it started' "$OUT/ui-e2e.log" && bad "Get games, three picks: a sync ended before it started"
+    # (the progress line while games come down counts games, not files: two games of one system with their covers are
+    # four files, by path both ROMs before either cover; the line says game 1 of 2 through the first game's ROM and
+    # cover, by its title, then game 2 of 2. The first cover slowed to a few seconds so its line is seen)
+    LV=$OUT/romm-lib-covers; mkdir -p "$LV/gba" "$LV/covers"
+    head -c 30000 /dev/urandom > "$LV/gba/Banana Run (USA).gba"; head -c 30000 /dev/urandom > "$LV/gba/Orchard Tactics (USA).gba"
+    for i in 101 102; do head -c 4000 /dev/urandom > "$LV/covers/$i.png"; done	# (the stand-in numbers ROMs from 101)
+    PV=$(port); python3 "$HERE/tests/fake-romm.py" "$PV" "$LV" 2> "$OUT/fake-romm-covers.log" & PIDS="$PIDS $!"
+    waitport "$PV" /api/heartbeat || bad "the covers RomM stand-in didn't start"
+    UV=http://127.0.0.1:$PV
+    card rcv
+    CODE=$(curl -s -XPOST "$UV/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rcv pair "$UV" "$CODE" > "$OUT/rcv-pair.log" 2>&1 || bad "rcv: pairing failed: $(st rcv) $(cat "$OUT/rcv-pair.log")"
+    "$BIN" --root "$OUT/rcv" --run "$OUT/rcv/run" get "gba/Banana Run (USA).gba" "gba/Orchard Tactics (USA).gba" >/dev/null
+    curl -s -XPOST "$UV/test/fault" -d '{"path": "GET /assets/romm/resources/roms/", "kind": "slow", "arg": 1000, "count": 1}' >/dev/null
+    GETALL=0 bs rcv sync --games-only > "$OUT/rcv-sync.log" 2>&1 & _v=$!
+    : > "$OUT/rcv-lines"
+    while kill -0 $_v 2>/dev/null; do st rcv >> "$OUT/rcv-lines"; sleep 0.1; done
+    wait $_v || bad "rcv: the sync bringing two games and their covers failed: $(st rcv) $(cat "$OUT/rcv-sync.log")"
+    grep -q '^running [0-9]* [0-9]* Downloading game 1 of 2|Banana Run.* (cover)$' "$OUT/rcv-lines" || bad "progress: the first game's cover not said as game 1 of 2: $(sort -u "$OUT/rcv-lines")"
+    grep -q '^running [0-9]* [0-9]* Downloading game 2 of 2|Orchard Tactics' "$OUT/rcv-lines" || bad "progress: the second game not said as game 2 of 2: $(sort -u "$OUT/rcv-lines")"
+    grep -q ' of [3-9]|\| Games ' "$OUT/rcv-lines" && bad "progress: the line counted files: $(sort -u "$OUT/rcv-lines")"
+    [ -e "$OUT/rcv/roms/gba/media/box/Orchard Tactics (USA).png" ] || bad "progress: the second cover didn't come: $(cat "$OUT/rcv/banana/logs/sync.log" 2>&1)"
     # (search, Y: from the systems every system's games, part of a title; B takes it away)
     ug "$GET; press y; type pock; press start; wait 300; shot hs-get-search; press a; sleep 300; wait 300; press b; press b; wait 100"
     grep -q 'get games: "pock" finds 1' "$OUT/ui-get.log" || bad "Get games: the search: $(grep 'get games' "$OUT/ui-get.log")"

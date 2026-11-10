@@ -7852,7 +7852,14 @@ namespace banana
 		std::istringstream in(syncLine);
 		std::string state;
 		in >> state;
-		if (state == "running") { int a = 0, b = 0; in >> a >> b; return b ? std::to_string(a) + " / " + std::to_string(b) : "Syncing"; }
+		if (state == "running")
+		{
+			// (while games come down the two numbers are MB, the bar moving with the bytes; for saves they count saves)
+			int a = 0, b = 0;
+			std::string what;
+			in >> a >> b >> what;
+			return !b ? "Syncing" : std::to_string(a) + " / " + std::to_string(b) + (what == "Downloading" ? " MB" : "");
+		}
 		if (state == "done") { int g, rm, up, dn, cf, er = 0; in >> g >> rm >> up >> dn >> cf >> er; return er ? "Didn't all work" : cf ? "Done, conflicts" : "Done"; }
 		if (state == "error") return syncLine.compare(0, 16, "error noconnect ") == 0 ? "No connection" : syncLine.find("unpaired") != std::string::npos ? "Pair again" : "Didn't work";
 		return "Not yet";

@@ -421,10 +421,11 @@ namespace
 		std::set<std::string> keep;
 		std::string sd2 = sd2Roms();
 		std::set<std::string> onSd2;	// the wanted files that belong on the second SD card
+		std::map<std::string, const MGame*> gameOf;	// each wanted file's game, for the progress line
 		for (auto& s : m.systems) for (auto& g : s.games)
 		{
 			bool on = !chosen || chosen->count(gameKey(g));
-			for (auto& f : g.files) { if (on) want[f.path] = &f; else keep.insert(f.path); }
+			for (auto& f : g.files) { if (on) { want[f.path] = &f; gameOf[f.path] = &g; } else keep.insert(f.path); }
 			if (!on)
 			{
 				continue;
@@ -561,18 +562,30 @@ namespace
 			for (auto& g : res.conflicts) say("  ! (yours, left alone) %s", g.c_str());
 			return res;
 		}
+		// the progress line counts games, not files: a game is its ROM, its cover, a PS1 set's discs and .m3u, so the
+		// files are put in their games' order (by path a cover, under media/, comes after every ROM of its system) and
+		// the line says which game of how many, by its title
+		std::map<const MGame*, int> order;
+		for (auto* f : todo) order.emplace(gameOf[f->path], (int)order.size());
+		std::stable_sort(todo.begin(), todo.end(), [&](const MFile* a, const MFile* b) { return order[gameOf[a->path]] < order[gameOf[b->path]]; });
+		const int games = (int)order.size();
 		long long doneBytes = 0;
-		int i = 0;
+		int gi = 0, fi = 0;
+		const MGame* last = nullptr;
 		std::set<std::string> got;	// (the files this run downloaded)
 		for (auto* f : todo)
 		{
-			i++;
+			const MGame* g = gameOf[f->path];
+			fi++;
+			if (g != last) { gi++; last = g; }
 			bool sd = onSd2.count(f->path) > 0;
 			std::string dst = (sd ? sd2 : ROMS) + "/" + f->path, err;
-			std::string label = baseOf(f->path);
+			std::string label = g && !g->title.empty() ? g->title : baseOf(f->path);
+			if (f->media) label += " (cover)";
+			const std::string what = games > 1 ? "Downloading game " + std::to_string(gi) + " of " + std::to_string(games) : "Downloading";
 			auto show = [&](long long now) {
 				long long mb = (doneBytes + now) >> 20, tot = std::max(1LL, need >> 20);
-				status("running " + std::to_string(std::min(mb, tot)) + " " + std::to_string(tot) + " Games " + std::to_string(i) + "/" + std::to_string(todo.size()) + "|" + label);
+				status("running " + std::to_string(std::min(mb, tot)) + " " + std::to_string(tot) + " " + what + "|" + label);
 			};
 			show(0);
 			progress = [&](long long now, long long) { show(now); };
@@ -617,7 +630,7 @@ namespace
 			res.changed = true;
 			got.insert(f->path);
 			saveConf(c);	// progress kept: a sync cut short goes on from here
-			say("  [%d/%zu] %s", i, todo.size(), f->path.c_str());
+			say("  [file %d/%zu] %s", fi, todo.size(), f->path.c_str());
 		}
 		for (auto& rel : gone)
 		{
@@ -1384,7 +1397,7 @@ namespace
 		// (Get games' own run says so first, for Sync now's report: its saves weren't looked at)
 		if (gamesOnly) said = said.empty() ? "games only" : "games only: " + said;
 		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + said);
-		say("done: %d games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
+		say("done: %d files of games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
 		return errors.empty() ? 0 : 1;
 	}
 }
