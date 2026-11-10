@@ -82,12 +82,12 @@ bs ra sync > "$OUT/romm-sync2.log" 2>&1
 grep -q "0 to download" "$OUT/romm-sync2.log" || bad "a second sync downloaded again: $(head -2 "$OUT/romm-sync2.log")"
 [ "$(grep -c '<path>./Banana Run' "$G")" = 1 ] || bad "the entry was added twice"
 # a system that makes its own covers (systems.conf: covers = own, as Game & Watch): its game comes, the server's cover
-# and the gamelist's picture for it don't
+# and the gamelist's picture for it don't (sync first: bs asks Get games for every game only for a run that starts so)
 card ro
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs ro pair "$U" "$CODE" >/dev/null 2>&1 || bad "ro: pairing failed: $(st ro)"
 printf '[gba]\nname = Game Boy Advance\ncovers = own\n' > "$OUT/ro/systems.conf"
-bs ro --systems "$OUT/ro/systems.conf" sync > "$OUT/own-covers.log" 2>&1 || bad "own covers sync: $(tail -3 "$OUT/own-covers.log")"
+bs ro sync --systems "$OUT/ro/systems.conf" > "$OUT/own-covers.log" 2>&1 || bad "own covers sync: $(tail -3 "$OUT/own-covers.log")"
 has "ro/roms/gba/Banana Run (USA).gba"
 [ -e "$OUT/ro/roms/gba/media/box/Banana Run (USA).png" ] && bad "covers = own: the server's cover was downloaded"
 grep -q '<image>' "$OUT/ro/roms/gba/gamelist.xml" && bad "covers = own: the gamelist names a cover that isn't there"
@@ -1036,11 +1036,12 @@ if [ -x "$HERE/banana-ui" ]; then
     ug "$HSN; wifi coming; press down; press a; sleep 500; wait 100; wifi online; sleep 500; wait 100"
     grep -q 'home server: the sync starts' "$OUT/ui-get.log" && [ "$(grep -c ' sync$' "$SL")" = 1 ] || bad "Sync now didn't start once Wi-Fi was back: $(cat "$SL")"
     rm -f "$BANANA_RUN/sync.status"
-    # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows, name, sort and art)
+    # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows (DS CPU speed the last), name,
+# sort and art)
     LC=$FX/data/homesync-local.txt; rm -f "$LC"
-    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"
     grep -qx 'nds/Banana Kart DS.nds' "$LC" 2>/dev/null || bad "Save sync: the game's line not written: $(cat "$LC" 2>&1)"
-    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press left; wait 300; press b; wait 300"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press left; wait 300; press b; wait 300"
     grep -q 'Banana Kart' "$LC" && bad "Save sync on again left the line: $(cat "$LC")"
     rm -f "$FX/data/romsync.json"
     unset BANANA_RUN
