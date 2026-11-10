@@ -807,6 +807,10 @@ if [ -x "$HERE/banana-ui" ]; then
     # last sync's status line
     ur() {
         n=$1 sc=$2; shift 2
+        # (a pairing the case before started and left running, as deny's A asking again does, gone first: it writes
+        # its line seconds later into the same status file, and on a busy machine that landed in the next case, whose
+        # pairing then read "error refused in RomM" as its own)
+        pkill -KILL -f "$HERE/tests/fake-sync.sh" 2>/dev/null; pkill -KILL -f "$OUT/slow-bin/banana-sync" 2>/dev/null
         : > "$SL"; rm -rf "$BANANA_RUN" "$FX/data/romsync.json"; mkdir -p "$BANANA_RUN"
         [ -n "${UR_SYNC_PID:-}" ] && echo "$UR_SYNC_PID" > "$BANANA_RUN/sync.pid"
         [ -n "${UR_STATUS:-}" ] && echo "$UR_STATUS" > "$BANANA_RUN/sync.status"
