@@ -3,6 +3,7 @@
 // files, how to start them), their look (icon, colour, maker) from the theme's rnds/systems.cfg, games from the ROM
 // folders, names and art from an EmulationStation gamelist.xml when there is one (a card scraped on ROCKNIX keeps
 // its art) or from media/<kind>/<rom name>.png, and play counts, play time and favourites from Banana's own files.
+#include "parental.h"
 #include "../rnds/RndsUI.h"
 #include <ctime>
 #include <functional>
@@ -123,6 +124,9 @@ namespace banana
 		std::string gameKey(int game);
 		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
 		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
+		// Parental controls (parental.h): on as of the last scan, and every game for the Allowed games page
+		bool parentalOn() const { return kids; }
+		const std::vector<parental::GameRef>& allGames() const { return everything; }
 		// Settings > Display & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
@@ -135,6 +139,10 @@ namespace banana
 		std::map<std::string, Look> looks;
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
 		std::set<std::string> hidden;				// system ids the Store took off the menu (its built-in apps removed)
+		// System > Parental controls on (parental.h): only the allowed games, no app or empty system on the row
+		bool kids = false;
+		std::set<std::string> kidsGames;
+		std::vector<parental::GameRef> everything;	// every game, whatever the controls (the Allowed games page)
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
 		std::map<std::string, Titles> titles;
