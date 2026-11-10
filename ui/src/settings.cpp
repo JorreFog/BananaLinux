@@ -436,6 +436,12 @@ namespace banana
 	}
 
 	static bool tileless(const std::string& section);
+	// the systems a home server syncs, as the Home server systems page lists them (its homesync.<id> rows) and Get games
+	// names them
+	struct HomeSystem { const char* id; const char* name; };
+	static const HomeSystem HOME_SYSTEMS[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
+		{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
+
 	void Settings::build()
 	{
 		std::string menu = data + "/settings.conf", power = data + "/bananad.conf", sd = data + "/superdrastic.conf";
@@ -962,9 +968,7 @@ namespace banana
 		}
 		{
 			const char* HSS = "Home server systems";
-			struct { const char* id; const char* name; } sy[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
-			for (auto& s : sy) add(HSS, "phone", s.name, romm ? "Sync: its games' saves sync with RomM. Skip: they stay on this handheld." : "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
+			for (auto& s : HOME_SYSTEMS) add(HSS, "phone", s.name, romm ? "Sync: its games' saves sync with RomM. Skip: they stay on this handheld." : "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
 		}
 		addShelfRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
@@ -4901,10 +4905,8 @@ namespace banana
 
 	static std::string pickSysName(const std::string& f)
 	{
-		static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
-			{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" }, { "gameandwatch", "Game & Watch" } };
-		auto it = N.find(f);
-		return it == N.end() ? f : it->second;
+		for (auto& s : HOME_SYSTEMS) if (f == s.id) return s.name;
+		return f;
 	}
 
 	std::string Settings::takePickRows(const std::string& text)

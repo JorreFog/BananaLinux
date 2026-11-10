@@ -315,15 +315,7 @@ namespace
 		for (auto& f : g.files) if (!f.media) return f.path;
 		return g.files.empty() ? std::string() : g.files[0].path;
 	}
-	std::vector<std::string> readLines(const std::string& path)
-	{
-		std::vector<std::string> out;
-		std::ifstream f(path);
-		std::string l;
-		while (std::getline(f, l)) { while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back(); if (!l.empty() && l[0] != '#') out.push_back(l); }
-		return out;
-	}
-	std::set<std::string> readChoice() { auto v = readLines(ROOT + "/banana/homesync-games.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	std::set<std::string> readChoice() { auto v = readListLines(ROOT + "/banana/homesync-games.txt"); return std::set<std::string>(v.begin(), v.end()); }
 	// RomM's Get games: the games asked for and not on the card yet, banana/homesync-get.txt, a key a line (as games
 	// lists them), in the order asked. Any sync of the games brings them, and a game leaves the list once its files are
 	// in place (or a file of the owner's own is at its path); one whose download failed stays for the next sync. Once
@@ -338,42 +330,27 @@ namespace
 	// game's when it names one of them)
 	void noteGetFailed(const std::set<std::string>& tried, const std::vector<std::string>& passErrors, const std::map<std::string, std::vector<std::string>>& files)
 	{
-		int lk = open((RUN + "/get.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
-		auto q = readLines(getFile());
-		std::set<std::string> listed(q.begin(), q.end());
-		std::map<std::string, std::string> why;
-		for (auto& l : readLines(getFailedFile())) { size_t t = l.find('\t'); if (t != std::string::npos) why[l.substr(0, t)] = l.substr(t + 1); }
-		for (auto& k : tried)
+		editGetFailed(ROOT + "/banana", RUN, [&](const std::set<std::string>& listed, std::map<std::string, std::string>& why)
 		{
-			if (!listed.count(k)) { why.erase(k); continue; }
-			// (its own files' error when there is one, else what stopped the whole pass: no space, the server's list.
-			// Never another game's file's)
-			auto about = [&](const std::string& e, const std::string& path) { return e.compare(0, path.size() + 2, path + ": ") == 0; };
-			auto anyGame = [&](const std::string& e) { for (auto& g : files) for (auto& f : g.second) if (about(e, f)) return true; return about(e, k); };
-			std::string w;
-			auto own = files.find(k);
-			for (auto& e : passErrors)
+			for (auto& k : tried)
 			{
-				if (about(e, k)) { w = e.substr(k.size() + 2); break; }
-				if (own != files.end()) for (auto& f : own->second) if (about(e, f)) { w = e; break; }
-				if (!w.empty()) break;
+				if (!listed.count(k)) { why.erase(k); continue; }
+				// (its own files' error when there is one, else what stopped the whole pass: no space, the server's list.
+				// Never another game's file's)
+				auto about = [&](const std::string& e, const std::string& path) { return e.compare(0, path.size() + 2, path + ": ") == 0; };
+				auto anyGame = [&](const std::string& e) { for (auto& g : files) for (auto& f : g.second) if (about(e, f)) return true; return about(e, k); };
+				std::string w;
+				auto own = files.find(k);
+				for (auto& e : passErrors)
+				{
+					if (about(e, k)) { w = e.substr(k.size() + 2); break; }
+					if (own != files.end()) for (auto& f : own->second) if (about(e, f)) { w = e; break; }
+					if (!w.empty()) break;
+				}
+				if (w.empty()) for (auto& e : passErrors) if (!anyGame(e)) { w = e; break; }
+				why[k] = w.empty() ? "not brought, for no reason given" : w;
 			}
-			if (w.empty()) for (auto& e : passErrors) if (!anyGame(e)) { w = e; break; }
-			if (w.empty()) w = "not brought, for no reason given";
-			for (char& ch : w) if (ch == '\t' || ch == '\n') ch = ' ';
-			why[k] = w;
-		}
-		std::string lines;
-		for (auto& kv : why) if (listed.count(kv.first)) lines += kv.first + "\t" + kv.second + "\n";
-		// (no file when nothing failed: the page takes none as none)
-		if (lines.empty()) unlink(getFailedFile().c_str());
-		else
-		{
-			std::string body = "# Home server > Get games: why a game still on the list didn't come last time\n" + lines;
-			if (body != readFile(getFailedFile())) writeAtomic(getFailedFile(), body);
-		}
-		if (lk >= 0) close(lk);
+		});
 	}
 	// a game as the games command prints it, "<system>\t<key>\t<title>\t<bytes>\t<chosen>\t<on the handheld>", "" for one
 	// with no key; chosen is on Get games' list (RomM) or ticked (Romhost), on the handheld is on either card (not looked
@@ -412,7 +389,7 @@ namespace
 	}
 	void writeGamesCache(const Conf& c, const Manifest& m)
 	{
-		auto v = readLines(getFile());
+		auto v = readListLines(getFile());
 		std::set<std::string> chosen(v.begin(), v.end());
 		std::string sd2 = sd2Roms(), rows;
 		for (auto& s : m.systems)
@@ -421,7 +398,7 @@ namespace
 			say("the server's games couldn't be kept on the card (%s)", gamesCacheFile().c_str());
 	}
 	// RomM: the games whose saves stay on this handheld (the game page's Save sync), "<system folder>/<ROM file name>"
-	std::set<std::string> readLocal() { auto v = readLines(ROOT + "/banana/homesync-local.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	std::set<std::string> readLocal() { auto v = readListLines(ROOT + "/banana/homesync-local.txt"); return std::set<std::string>(v.begin(), v.end()); }
 	std::string localKeyOf(const std::string& romRel)
 	{
 		size_t s = romRel.find('/');
@@ -1234,7 +1211,7 @@ namespace
 		const bool romm = c.backend == "romm";
 		bool pick = !romm && get("homesync_games", "all") == "chosen";
 		std::set<std::string> chosen;
-		if (romm) { auto v = readLines(getFile()); chosen.insert(v.begin(), v.end()); c.etag.clear(); }
+		if (romm) { auto v = readListLines(getFile()); chosen.insert(v.begin(), v.end()); c.etag.clear(); }
 		else if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
 		auto b = backendFor(c);
 		b->skip = skip;
@@ -1328,7 +1305,7 @@ namespace
 		{
 			if (!romm || savesOnly || dryRun) return false;
 			std::set<std::string> next;
-			for (auto& k : readLines(getFile())) if (tried.insert(k).second) next.insert(k);
+			for (auto& k : readListLines(getFile())) if (tried.insert(k).second) next.insert(k);
 			if (next.empty()) return false;
 			chosen = next;
 			awake.take();
@@ -1535,7 +1512,7 @@ int main(int argc, char** argv)
 		std::string err;
 		if (!b->manifest(m, {}, err)) { printf("error %s\n", err.c_str()); return 1; }
 		std::set<std::string> chosen = readChoice();
-		if (c.backend == "romm") { auto v = readLines(getFile()); chosen = std::set<std::string>(v.begin(), v.end()); }
+		if (c.backend == "romm") { auto v = readListLines(getFile()); chosen = std::set<std::string>(v.begin(), v.end()); }
 		std::string sd2 = sd2Roms();	// (a game on either card is on the handheld)
 		for (auto& s : m.systems)
 			for (auto& g : s.games) fputs(gameLine(s, g, chosen, sd2).c_str(), stdout);

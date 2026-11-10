@@ -4,6 +4,8 @@
 // still on the list whose last download failed). Changed by the menu's Get games page and by banana-sync (its get
 // command, and a sync taking each game off as it comes), both under get.lock in the run folder, with this one code so
 // the two never write the files differently. Needs nothing of the sync's own, so banana-ui links it as it is.
+#include <functional>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -21,4 +23,9 @@ namespace bsync
 	// old one then left whole); waiting, when given, the games on the list after
 	bool editGetList(const std::string& bananaDir, const std::string& runDir, const std::vector<std::string>& add,
 		const std::set<std::string>& drop, int* waiting = nullptr);
+	// the failed file changed under get.lock: fn given the games on the list now and each failed one's why (key ->
+	// why), to change as it will; written back for the games still listed, no file when none is. False when it can't
+	// be written (the old one then left whole)
+	bool editGetFailed(const std::string& bananaDir, const std::string& runDir,
+		const std::function<void(const std::set<std::string>& listed, std::map<std::string, std::string>& why)>& fn);
 }
