@@ -605,6 +605,22 @@ echo pairing > "$OUT/pb/run/sync.status"
 bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1
 [ "$(st pb)" = 'error busy' ] || bad "a pairing refused by a running sync didn't say so: $(st pb)"
 kill $_f 2>/dev/null; wait $_f 2>/dev/null
+# (a sync asked for by hand as the last one lets go of the lock, as Get games starts its next run on the done line the
+# last wrote before it ended: waits for it and runs, rather than ending at once with the menu's "running 0 0 |" left)
+flock "$OUT/pb/run/sync.lock" sleep 1.5 & _f=$!; sleep 0.3
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+GETALL=0 bs pb sync >/dev/null 2>&1; r=$?
+[ $r != 3 ] && [ "$(st pb)" != 'running 0 0 |' ] || bad "a sync started as the last one ended gave up: $r $(st pb)"
+wait $_f 2>/dev/null
+# (one still running ten seconds on: said over the menu's line; started automatically, it ends at once and says nothing)
+flock "$OUT/pb/run/sync.lock" sleep 13 & _f=$!; sleep 0.3
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+GETALL=0 bs pb sync >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'error busy: another sync is running' ] || bad "a sync refused by a running one didn't say so: $r $(st pb)"
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+bs pb sync --auto wifi >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'running 0 0 |' ] || bad "an automatic sync refused by a running one wrote a line: $r $(st pb)"
+pkill -P $_f 2>/dev/null; kill $_f 2>/dev/null; wait $_f 2>/dev/null
 
 # ---------------------------------------------------------------- RomM on https (#109)
 # behind a certificate of its own making (no CA on the handheld for it): https typed is used as it is, the check
@@ -1002,7 +1018,7 @@ if [ -x "$HERE/banana-ui" ]; then
     : > "$SL"
     ug "$GET; shot hs-get-kept; press a; wait 300; press down; wait 100"
     grep -q ' games$' "$SL" && bad "Get games: a kept list, yet the server asked: $(cat "$SL")"
-    grep -q 'get games: 2 games kept on the card' "$OUT/ui-get.log" || bad "Get games: the kept list not shown: $(grep 'get games' "$OUT/ui-get.log")"
+    grep -q "get games: the server's list of 2 games, as kept on the card" "$OUT/ui-get.log" || bad "Get games: the kept list not shown: $(grep 'get games' "$OUT/ui-get.log")"
     # (on the card as the cards say now, not as the kept list had it: a game kept as there, deleted since, is asked for
     # by A)
     printf '# https://romm.example.com\t%s\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t1\ngba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\n' "$(($(date +%s) - 7200))" > "$GKF"
@@ -1039,6 +1055,19 @@ if [ -x "$HERE/banana-ui" ]; then
     rm -f "$BANANA_RUN/sync.status"; : > "$SL"
     ug "$HSN; wifi coming; press down; press a; sleep 500; wait 100; wifi online; sleep 500; wait 100"
     grep -q 'home server: the sync starts' "$OUT/ui-get.log" && [ "$(grep -c ' sync$' "$SL")" = 1 ] || bad "Sync now didn't start once Wi-Fi was back: $(cat "$SL")"
+    rm -f "$BANANA_RUN/sync.status"
+    # (a sync started that ends without a word, as banana-sync did on the device when the last run still held the lock:
+    # the row says so at once, not "running" for the 120 s until the stale line is given up on)
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; press down; press a; sleep 600; wait 300; sleep 600; wait 300"
+    grep -q 'home server: the sync ended before it started' "$OUT/ui-get.log" && [ "$(cat "$BANANA_RUN/sync.status")" = "error the sync ended before it started" ] \
+        || bad "Sync now: a sync that ended without a word left the row running: $(cat "$BANANA_RUN/sync.status")"
+    # (and Stop on one running before it has written sync.pid: stopped through its group, the row saying so)
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    FAKE_SYNC_SILENT=1 ug "$HSN; press down; press a; sleep 600; wait 300; press a; sleep 600; wait 300"
+    [ "$(cat "$BANANA_RUN/sync.status")" = "error stopped" ] || bad "Sync now: Stop before sync.pid didn't stop it: $(cat "$BANANA_RUN/sync.status")"
+    pgrep -f "$HERE/tests/fake-sync.sh" >/dev/null && bad "Sync now: Stop before sync.pid left the sync running"
+    pkill -f "$HERE/tests/fake-sync.sh" 2>/dev/null
     rm -f "$BANANA_RUN/sync.status"
     # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows (DS CPU speed the last), name,
 # sort and art)

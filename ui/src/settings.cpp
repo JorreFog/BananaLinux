@@ -4852,7 +4852,23 @@ namespace banana
 		int pid = atoi(readLine(runDir + "/sync.pid").c_str());
 		std::string comm = pid > 0 ? readLine("/proc/" + std::to_string(pid) + "/comm") : "";
 		if (pid > 0 && comm == "banana-sync" && kill(pid, SIGTERM) == 0) message = "Stopping the sync. What came already stays on the card; Sync now carries on from there.";
-		else message = "The sync couldn't be stopped (it may be ending by itself).";
+		// (the one this menu started, before it has written sync.pid: through its group, as a pairing is)
+		// (it says nothing as it goes, being stopped before it could: the menu says so)
+		else if (syncGroup > 0 && groupAlive(syncGroup) && kill(-syncGroup, SIGTERM) == 0)
+		{
+			syncGroup = 0;
+			std::ofstream(runDir + "/sync.status") << "error stopped\n";
+			syncNext = 0;
+			message = "Stopped.";
+		}
+		// (nothing running to stop, the row still saying running: it says stopped, rather than Stop doing nothing)
+		else
+		{
+			syncGroup = 0;
+			std::ofstream(runDir + "/sync.status") << "error stopped\n";
+			syncNext = 0;
+			message = "Stopped.";
+		}
 	}
 
 	void Settings::openPickGames(bool get)
@@ -4899,7 +4915,7 @@ namespace banana
 		pickListedAt = atof(head.substr(want.size()).c_str());
 		pickError.clear();
 		pickPoll = 0;	// (what waits, what came and what failed, worked out at the next look, not as they were written)
-		fprintf(stderr, "get games: %zu games kept on the card\n", pickGames.size());
+		fprintf(stderr, "get games: the server's list of %zu games, as kept on the card\n", pickGames.size());
 		return true;
 	}
 
@@ -7678,8 +7694,9 @@ namespace banana
 		std::ofstream(runDir + "/sync.status") << "running 0 0 |\n";
 		syncLine.clear();
 		syncNext = 0;
-		// (Get games' own run brings the games asked for and leaves the saves to the syncs that are for them)
-		hsRun(syncGamesOnly ? "sync --games-only" : "sync");
+		// (Get games' own run brings the games asked for and leaves the saves to the syncs that are for them; its group
+		// kept, for a run that ends before saying anything and for Stop before it has written sync.pid)
+		syncGroup = hsRun(syncGamesOnly ? "sync --games-only" : "sync");
 	}
 	// the sync waiting for Wi-Fi: started once it has an address, or at the 20 s (a sync that can't reach the server then
 	// says so)
@@ -7764,6 +7781,20 @@ namespace banana
 			int fd = ::open((runDir + "/sync.lock").c_str(), O_RDWR | O_CLOEXEC);
 			if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) == 0) { ln = "error stopped"; std::ofstream(runDir + "/sync.status") << ln << "\n"; flock(fd, LOCK_UN); }
 			if (fd >= 0) ::close(fd);
+		}
+		// the sync this menu started gone without a word of its own, the menu's "running 0 0 |" still standing: over now,
+		// not after the 120 s above (on the device a Get games run started as the last one let go of sync.lock ended at
+		// once, and the row said Starting for two minutes with nothing running and Stop unable to stop it)
+		if (syncGroup > 0)
+		{
+			if (ln != "running 0 0 |") syncGroup = 0;
+			else if (!groupAlive(syncGroup))
+			{
+				syncGroup = 0;
+				ln = "error the sync ended before it started";
+				std::ofstream(runDir + "/sync.status") << ln << "\n";
+				fprintf(stderr, "home server: the sync ended before it started\n");
+			}
 		}
 		if (ln == syncLine) return changed;
 		bool was = syncing();

@@ -84,6 +84,8 @@ done
 # the sync before a game, as $FAKE_SYNC_LAUNCH says: done at once, a conflict held, failed, the first answer and then
 # nothing, nothing at all, or the saves held by another sync for 8 s (held) or for good (heldlong) and then nothing
 # (FAKE_SYNC_DONE: a sync run by hand says it's done a second later, as banana-sync's own would, Get games' own saying so)
+# (FAKE_SYNC_SILENT: one by hand that runs on without a word, no sync.pid, as banana-sync waiting for the lock)
+[ -z "$when" ] && [ -n "${FAKE_SYNC_SILENT:-}" ] && [ -n "$status" ] && { sleep 30; exit 0; }
 [ -z "$when" ] && [ -n "${FAKE_SYNC_DONE:-}" ] && [ -n "$status" ] && { sleep 1; echo "done 0 0 0 0 0 0|$gonly" > "$status.new"; mv "$status.new" "$status"; exit 0; }
 # the sync after a game, as $FAKE_SYNC_QUIT says: the save sent (a second's run with slow), nothing to send, a conflict
 # held, the server out of reach (the save kept to send later), a note with nothing sent, a game whose saves stay here,

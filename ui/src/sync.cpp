@@ -1611,8 +1611,15 @@ int main(int argc, char** argv)
 		return answer(bar != std::string::npos ? a.last.substr(bar + 1) : "held again: the server's changed since");
 	}
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+	// (a sync asked for by hand, the menu's Sync now or Get games' next run, waits a moment for one that is ending: a
+	// run writes its done line before it lets go of the lock, and the menu starts the next as it reads that line. On
+	// the device a Get games run started there gave up at once, and the game asked for during the last one never came)
+	if (lk >= 0 && cmd == "sync" && autoWhy.empty())
+		for (int i = 0; i < 100 && flock(lk, LOCK_EX | LOCK_NB) != 0; i++) usleep(100000);
 	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0)
 	{
+		// (and one still running after that: said over the menu's own line, never over that run's)
+		if (cmd == "sync" && autoWhy.empty() && trim(readFile(STATUS)) == "running 0 0 |") status("error busy: another sync is running");
 		if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n");
 		// (the pairing screen waits for a line: a pairing started as a sync began isn't left asking for a code. Said
 		// only over the menu's own "pairing": a line the running sync wrote is that sync's)

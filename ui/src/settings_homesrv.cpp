@@ -190,7 +190,7 @@ namespace banana
 	// a process group (a pairing stopped) with a process still running in it. A zombie is gone: one whose parent has
 	// gone is reaped by init, and until then kill() still finds it (in a container whose first process reaps nothing,
 	// for good)
-	static bool groupAlive(pid_t p)
+	bool Settings::groupAlive(pid_t p)
 	{
 		if (p <= 0 || kill(-p, 0) != 0) return false;
 		DIR* d = opendir("/proc");

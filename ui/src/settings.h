@@ -670,6 +670,8 @@ namespace banana
 		wifi::Job nameJob;	// banana-sync rename, from the Device name row
 		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
 		pid_t hsPairGroup = 0;	// the pairing running: its process group (banana-sync and the sh before it), what B stops
+		static bool groupAlive(pid_t p);	// a process group with a process still running in it (a zombie is gone)
+		pid_t syncGroup = 0;	// the process group of the sync the menu started, until its first line replaces the menu's own
 		pid_t hsStopGroup = 0;	// a pairing stopped, its group not gone yet: the next one waits for it
 		double hsStopAt = 0;	// (when it was stopped: SIGKILL after 5 s)
 		bool hsStopKilled = false;
