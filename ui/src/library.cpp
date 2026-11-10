@@ -702,6 +702,8 @@ namespace banana
 						if (std::string mq = media.find(dir, "marquee", stem); !mq.empty()) g.marquee = mq;
 					}
 					if (g.box.empty()) g.box = media.find(dir, "box", stem);
+					// a PICO-8 cart is a picture itself (its label on a cartridge): its art when nothing else is
+					if (g.box.empty() && lower(base).size() > 7 && lower(base).compare(base.size() - 7, 7, ".p8.png") == 0) g.box = g.path;
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
 					if (g.marquee.empty()) g.marquee = media.find(dir, "marquee", stem);
