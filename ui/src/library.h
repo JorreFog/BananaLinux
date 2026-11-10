@@ -42,6 +42,10 @@ namespace banana
 		bool favorites = false;		// the Favorites collection
 		bool recent = false;		// the Recently played collection (also favorites = true: copies, sysOf)
 		bool search = false;		// the Search collection (also favorites = true: a collection of copies, sysOf)
+		// the Apps tile: every app (Bshare, Files, Poketool, Döda Kvarter, the Store and what it installed), each entry
+		// with its own system in appDefs (how it starts, its icon); last on the row, never in the collections
+		bool apps = false;
+		std::vector<SystemDef> appDefs;
 		std::vector<Game> games;	// favourites: copies, with sysOf giving each one's own system
 		std::vector<int> sysOf;
 		int order = 0;				// its place in systems.conf

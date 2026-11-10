@@ -67,7 +67,7 @@ namespace banana
 	}
 #define HOOK(name) (std::integral_constant<int, hookConst(name)>::value)
 	// sysField's names by number
-	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index" };
+	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "apps", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index" };
 	static int sysFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++) m.emplace(sysFieldNames[i], i); return m; }();
@@ -550,6 +550,7 @@ namespace banana
 			else if (fId == SYSF("time")) out = EV(si.time);
 			else if (fId == SYSF("fav")) out = EV(si.fav ? 1.0 : 0.0);
 			else if (fId == SYSF("app")) out = EV(si.app ? 1.0 : 0.0);
+			else if (fId == SYSF("apps")) out = EV(si.apps ? 1.0 : 0.0);
 			else if (fId == SYSF("hasResume")) out = EV(si.hasResume ? 1.0 : 0.0);
 			else if (fId == SYSF("resumeTitle")) out = EV(si.resumeTitle);
 			else if (fId == SYSF("resumeEyebrow")) out = EV(si.resumeEyebrow);

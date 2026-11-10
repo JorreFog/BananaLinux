@@ -650,6 +650,12 @@ namespace banana
 		shelves.clear();
 		MediaIndex media;
 		std::map<std::string, std::string> modes = shelfModes();
+		// the Apps tile: what systems.cfg marks [app], the menu's own pages (Files, Bshare) and the Store's apps
+		Shelf apps;
+		apps.apps = true;
+		apps.order = 1 << 22;
+		apps.def.id = "storeapps"; apps.def.name = "Apps"; apps.def.maker = "Apps & tools";
+		auto isApp = [this](const SystemDef& d) { return lookOf(d.id).app || d.id == "storeapps" || d.run.compare(0, 7, "banana:") == 0; };
 		for (auto& def : defs)
 		{
 			if (hidden.count(def.id)) continue;
@@ -736,9 +742,23 @@ namespace banana
 			// on the home row with something to start in it. PortMaster's own entry counts: it is what gets ports, and
 			// with it left out, deleting the last port took PortMaster off the row too (reachable again only through
 			// Shown systems > Ports > Always; QA 2026-10-26). Shown systems > Ports > Hidden takes it off
+			if (isApp(def))
+			{
+				// one entry for an app always there with nothing in its folder (a card's own systems.conf, the host's tests)
+				if (sh.games.empty() && def.always)
+				{
+					Game g;
+					g.title = def.name.empty() ? def.id : def.name;
+					g.rel = g.title + ".app"; g.path = folderPath(romRoot, def.folder) + "/" + g.rel;
+					sh.games.push_back(g);
+				}
+				for (auto& g : sh.games) { apps.games.push_back(g); apps.appDefs.push_back(def); }
+				continue;
+			}
 			bool launchable = !sh.games.empty();
 			if (launchable || def.always || mode == "show") shelves.push_back(sh);
 		}
+		if (!apps.games.empty()) shelves.push_back(apps);
 		arrange();
 		if (lib >= (int)shelves.size()) lib = 0;
 	}
@@ -787,54 +807,45 @@ namespace banana
 	void Library::arrange()
 	{
 		shelves.erase(std::remove_if(shelves.begin(), shelves.end(), [](const Shelf& s) { return s.favorites; }), shelves.end());
-		// the configured order, favourite systems first
+		// the configured order, favourite systems first, the Apps tile last
 		std::stable_sort(shelves.begin(), shelves.end(), [this](const Shelf& a, const Shelf& b)
 		{
+			if (a.apps != b.apps) return b.apps;
 			int fa = (int)favSystems.count(a.def.id), fb = (int)favSystems.count(b.def.id);
 			return fa != fb ? fa > fb : a.order < b.order;
 		});
-		// Favorites: a collection after the systems (its place among them as a favourite itself), when not empty
-		Shelf fav;
-		fav.favorites = true;
-		fav.order = 1 << 20;
-		fav.def.id = "favorites"; fav.def.name = "Favorites"; fav.def.maker = "Collection";
-		for (int s = 0; s < (int)shelves.size(); s++)
-			for (auto& g : shelves[s].games)
-				if (g.fav) { fav.games.push_back(g); fav.sysOf.push_back(s); }
-		std::sort(fav.games.begin(), fav.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
-		// sysOf follows the sort: find each game's system again by its path
-		for (size_t k = 0; k < fav.games.size(); k++)
+		// the collections, first on the row: Search (while there is a query), Recently played, Favorites. Their games
+		// point into the systems (sysOf), which move along by as many collections as go before them
+		std::vector<Shelf> front;
+		if (!query.empty())
+		{
+			// Search: the games of every system whose name (or file name) has each of its words, case aside
+			std::vector<SearchWord> words = searchWords(query);
+			Shelf srch;
+			srch.favorites = srch.search = true;
+			srch.def.id = "search"; srch.def.name = "Search"; srch.def.maker = "\u201c" + query + "\u201d";
 			for (int s = 0; s < (int)shelves.size(); s++)
 			{
-				bool in = false;
-				for (auto& root : roots())
-				{
-					std::string d = folderPath(root, shelves[s].def.folder) + "/";
-					if (fav.games[k].path.compare(0, d.size(), d) == 0) { in = true; break; }
-				}
-				if (in) { fav.sysOf[k] = s; break; }
+				if (shelves[s].apps) continue;
+				for (auto& g : shelves[s].games)
+					if (searchMatch(g, words)) { srch.games.push_back(g); srch.sysOf.push_back(s); }
 			}
-		if (!fav.games.empty())
-		{
-			// after the favourite systems when the collection is starred itself, else at the end
-			size_t at = shelves.size();
-			if (favSystems.count("favorites"))
-				for (at = 0; at < shelves.size() && favSystems.count(shelves[at].def.id); at++) {}
-			// the systems from there on move one along: sysOf follows them (else a favourite launched with the
-			// shelf before its own system's emulator, and its plays were kept under "favorites/")
-			for (int& s : fav.sysOf) if (s >= (int)at) s++;
-			shelves.insert(shelves.begin() + (long)at, fav);
+			std::vector<size_t> ix(srch.games.size());
+			for (size_t k = 0; k < ix.size(); k++) ix[k] = k;
+			std::stable_sort(ix.begin(), ix.end(), [&](size_t a, size_t b) { return sortKey(srch.games[a]) < sortKey(srch.games[b]); });
+			Shelf sorted = srch;
+			for (size_t k = 0; k < ix.size(); k++) { sorted.games[k] = srch.games[ix[k]]; sorted.sysOf[k] = srch.sysOf[ix[k]]; }
+			front.push_back(sorted);
 		}
-		// Recently played: the last games played on any system, newest first, a collection at the end of the shelf (one L
-		// from the first system; at the end, so the systems' places, and the menu's saved one, don't move)
 		{
+			// Recently played: the last games played on any system, newest first; where the row starts
 			Shelf rec;
 			rec.favorites = rec.recent = true;
 			rec.order = 1 << 21;
 			rec.def.id = "recently-played"; rec.def.name = "Recently played"; rec.def.maker = "Collection";
 			std::vector<std::pair<time_t, std::pair<int, size_t>>> played;	// last play, (system, game)
 			for (int s = 0; s < (int)shelves.size(); s++)
-				if (!shelves[s].favorites)
+				if (!shelves[s].apps)
 					for (size_t i = 0; i < shelves[s].games.size(); i++)
 						if (shelves[s].games[i].last > 0) played.push_back({ shelves[s].games[i].last, { s, i } });
 			std::sort(played.begin(), played.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
@@ -843,35 +854,29 @@ namespace banana
 				rec.games.push_back(shelves[played[k].second.first].games[played[k].second.second]);
 				rec.sysOf.push_back(played[k].second.first);
 			}
-			if (!rec.games.empty()) shelves.push_back(rec);
+			if (!rec.games.empty()) front.push_back(rec);
 		}
-		// Search: first on the shelf while there is a query, the games of every system whose name (or file name) has each
-		// of its words, case aside
-		if (!query.empty())
 		{
-			std::vector<SearchWord> words = searchWords(query);
-			Shelf srch;
-			srch.favorites = srch.search = true;
-			srch.def.id = "search"; srch.def.name = "Search"; srch.def.maker = "\u201c" + query + "\u201d";
+			// Favorites: the starred games of every system, by name
+			Shelf fav;
+			fav.favorites = true;
+			fav.order = 1 << 20;
+			fav.def.id = "favorites"; fav.def.name = "Favorites"; fav.def.maker = "Collection";
+			std::vector<std::pair<Game, int>> fs;
 			for (int s = 0; s < (int)shelves.size(); s++)
-			{
-				if (shelves[s].favorites) continue;
-				for (auto& g : shelves[s].games)
-				{
-					if (searchMatch(g, words)) { srch.games.push_back(g); srch.sysOf.push_back(s + 1); }	// (+1: the systems move one along)
-				}
-			}
-			std::vector<size_t> ix(srch.games.size());
-			for (size_t k = 0; k < ix.size(); k++) ix[k] = k;
-			std::stable_sort(ix.begin(), ix.end(), [&](size_t a, size_t b) { return sortKey(srch.games[a]) < sortKey(srch.games[b]); });
-			Shelf sorted = srch;
-			for (size_t k = 0; k < ix.size(); k++) { sorted.games[k] = srch.games[ix[k]]; sorted.sysOf[k] = srch.sysOf[ix[k]]; }
-			for (auto& sh : shelves) if (sh.favorites) for (int& s : sh.sysOf) s++;
-			shelves.insert(shelves.begin(), sorted);
+				if (!shelves[s].apps)
+					for (auto& g : shelves[s].games)
+						if (g.fav) fs.push_back({ g, s });
+			std::stable_sort(fs.begin(), fs.end(), [](const auto& a, const auto& b) { return sortKey(a.first) < sortKey(b.first); });
+			for (auto& f : fs) { fav.games.push_back(f.first); fav.sysOf.push_back(f.second); }
+			if (!fav.games.empty()) front.push_back(fav);
 		}
+		for (auto& c : front) for (int& s : c.sysOf) s += (int)front.size();
+		shelves.insert(shelves.begin(), front.begin(), front.end());
 		if (lib >= (int)shelves.size()) lib = 0;
 		changed = false;
 	}
+
 
 	Game* Library::sourceOf(int shelf, int game, int* sys)
 	{
@@ -890,13 +895,14 @@ namespace banana
 	{
 		int sys = -1;
 		Game* g = sourceOf(lib, game, &sys);
-		return g && sys >= 0 ? shelves[sys].def.id + "/" + g->rel : "";
+		return g && sys >= 0 ? systemOf(game).id + "/" + g->rel : "";	// (an app on the Apps tile: its own system's)
 	}
 
 	const SystemDef& Library::systemOf(int game) const
 	{
 		const Shelf& sh = shelves[lib];
 		if (sh.favorites && game >= 0 && game < (int)sh.sysOf.size()) return shelves[sh.sysOf[game]].def;
+		if (sh.apps && game >= 0 && game < (int)sh.appDefs.size()) return sh.appDefs[game];
 		return sh.def;
 	}
 
@@ -905,7 +911,7 @@ namespace banana
 		int sys = lib;
 		Game* g = sourceOf(lib, game, &sys);
 		if (!g) return;
-		Stat& st = stats[shelves[sys].def.id + "/" + g->rel];
+		Stat& st = stats[systemOf(game).id + "/" + g->rel];
 		if (seconds >= 5)	// a start that failed straight away isn't a play
 		{
 			st.plays++;
@@ -945,6 +951,7 @@ namespace banana
 		}
 		r.icon = themedIcon(s.def.id, look.icon);	// a user theme's own icon for the system (theme.h)
 		r.app = look.app;
+		r.apps = s.apps;
 		r.games = (int)s.games.size();
 		long secs = 0;
 		for (auto& g : s.games) { if (g.plays > 0) r.played++; secs += g.seconds; }
@@ -952,7 +959,7 @@ namespace banana
 		r.fav = favSystems.count(s.def.id) > 0;
 		// (one of the menu's own pages, as Files: never played, so no "Not played yet" chip for its one entry, nor "Last
 		// played: Files"; X on it opens the page as A does)
-		int res = s.def.run.compare(0, 7, "banana:") == 0 ? -1 : resumeIndex(s);
+		int res = s.apps || s.def.run.compare(0, 7, "banana:") == 0 ? -1 : resumeIndex(s);
 		if (res >= 0)
 		{
 			const Game& g = s.games[res];
@@ -1002,6 +1009,8 @@ namespace banana
 			if (dsCartIcons) r.cartArt = romIconCover(dataDir, g.path);	// ("" without an icon: the art, as before)
 		}
 		r.icon = themedIcon(systemOf(i).id, lookOf(systemOf(i).id).icon);
+		// an app on the Apps tile with no picture of its own (Files, Bshare, Poketool...): its icon as its picture
+		if (lib < (int)shelves.size() && shelves[lib].apps && r.box.empty() && r.cart.empty() && r.label.empty() && r.marquee.empty()) r.box = r.icon;
 		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)
 		if (g.achB > 0)
 		{
@@ -1125,7 +1134,7 @@ namespace banana
 
 	void Library::toggleSystemFav(int sys)
 	{
-		if (sys < 0 || sys >= (int)shelves.size()) return;
+		if (sys < 0 || sys >= (int)shelves.size() || shelves[sys].apps) return;	// (the Apps tile stays last)
 		const std::string& id = shelves[sys].def.id;
 		if (!favSystems.erase(id)) favSystems.insert(id);
 		saveFavs();
@@ -1135,6 +1144,7 @@ namespace banana
 	void Library::toggleGameFav(int game)
 	{
 		int sys = lib;
+		if (lib >= 0 && lib < (int)shelves.size() && shelves[lib].apps) return;	// (an app: no favourite, it's on the Apps tile)
 		Game* g = sourceOf(lib, game, &sys);
 		if (!g) return;
 		std::string key = shelves[sys].def.id + "/" + g->rel;
@@ -1163,7 +1173,8 @@ namespace banana
 		// first, as the bar keeps the hints that fit in order: in Russian SELECT's came first and START's was left out
 		// (bug hunt 0.5.1.1 BUG-ui-10), and a player who can't find Settings can't find anything else either
 		if (!library) r.push_back({ "START", "Settings" });
-		if (library && game >= 0 && game < gameCount()) r.push_back({ "X", "Options" });	// (the game page: a DS game's emulator and shader, any game's name)
+		// (the game page: a DS game's emulator and shader, any game's name; not an app's, nor with Parental controls on)
+		if (library && game >= 0 && game < gameCount() && !(lib < (int)shelves.size() && shelves[lib].apps)) r.push_back({ "X", "Options" });
 		r.push_back({ "SELECT", "Search" });
 		return r;
 	}

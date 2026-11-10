@@ -24,7 +24,7 @@ st_not() { if grep -q -- "$2" "$OUT/$size-st-$1.log"; then echo "FAIL $size (set
 # the whole setup, as on a first boot: Language (kept), Wi-Fi (Banana Home joined with its password, then tested),
 # Time zone (one to the right), DS name (typed), RetroAchievements (logged in, checked with the stand-in site), Box art
 # (started), the summary, Finish: the host's Welcome
-st_run flow "home 0; setup; setupstate; shot st-lang; press a; shot st-wifi; setupstate; press a; sleep 50; press a; type password1; press start; \
+st_run flow "home nds; setup; setupstate; shot st-lang; press a; shot st-wifi; setupstate; press a; sleep 50; press a; type password1; press start; \
     shot st-wifi-joining; wait 2500; sleep 50; sleep 50; setupstate; shot st-wifi-ok; press a; shot st-tz; press right; press up; press a; setupstate; \
     shot st-name; press a; type Joar; press start; shot st-name-set; press a; shot st-ra; press a; type good; press start; type right; press start; \
     sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-ra-ok; press a; shot st-art; setupstate; press down; press a; press start; setupstate; shot st-done; \
@@ -54,7 +54,7 @@ printf 'done\n' > "$SFX/data/setup-done"
 printf 'ra_user=good\nra_password=right\n' > "$SFX/data/accounts.conf"
 st_md5=$(cat "$SFX/data/wifi.conf" "$SFX/data/accounts.conf" "$SFX/ds/bananads/bananads.conf" | md5sum)
 st_tz=$(grep '^timezone = ' "$SFX/data/settings.conf")
-st_run update "home 0; setupneeded; setup; setupstate; shot st-up-lang; press a; sleep 50; sleep 50; setupstate; shot st-up-wifi; press a; setupstate; press a; setupstate; shot st-up-name; \
+st_run update "home nds; setupneeded; setup; setupstate; shot st-up-lang; press a; sleep 50; sleep 50; setupstate; shot st-up-wifi; press a; setupstate; press a; setupstate; shot st-up-name; \
     press a; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-up-ra; press a; setupstate; shot st-up-art; press a; shot st-up-done; press a; setupneeded"
 st_check update "setupneeded: 1"
 st_check update "setupstate: slide=wifi pick=0 choices=Next|Test again|Choose another network link=1 net=1 time=1"
@@ -72,14 +72,14 @@ tail -n 1 "$OUT/$size-st-update.log" | grep -q "setupneeded: 0" || { echo "FAIL 
 # down (the login checked: refused / no answer; an account saved before is checked by itself and kept with A); no Wi-Fi at all, every step skipped (START), the
 # summary saying so
 rm -f "$SFX/data/setup-done" "$SFX/data/accounts.conf"
-st_run nonet "home 0; setupat wifi; sleep 50; setupstate; shot st-wifi-nonet" FAKE_WIFI_NET=fail FAKE_WIFI_TIME=fail
+st_run nonet "home nds; setupat wifi; sleep 50; setupstate; shot st-wifi-nonet" FAKE_WIFI_NET=fail FAKE_WIFI_TIME=fail
 st_check nonet "setupstate: slide=wifi pick=0 choices=Test again|Choose another network|Skip for now link=1 net=0 time=0"
-st_run rawrong "home 0; setupat retroachievements; press a; type good; press start; type wrong; press start; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-ra-wrong"
+st_run rawrong "home nds; setupat retroachievements; press a; type good; press start; type wrong; press start; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-ra-wrong"
 st_check rawrong "setupstate: slide=retroachievements pick=0 choices=Try again|Skip for now .* ra=2"
-st_run radown "home 0; setupat retroachievements; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-ra-down" BANANA_RA_URL=http://127.0.0.1:9/dorequest.php
+st_run radown "home nds; setupat retroachievements; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot st-ra-down" BANANA_RA_URL=http://127.0.0.1:9/dorequest.php
 st_check radown "setupstate: slide=retroachievements pick=0 choices=Keep it and go on|Check again|Log in with another account .* ra=3"
 rm -f "$SFX/data/wifi.conf" "$SFX/data/accounts.conf"
-st_run skip "home 0; setupat wifi; setupstate; press start; press start; press start; press start; press start; setupstate; shot st-done-skipped; press start"
+st_run skip "home nds; setupat wifi; setupstate; press start; press start; press start; press start; press start; setupstate; shot st-done-skipped; press start"
 st_check skip "setupstate: slide=wifi pick=0 choices=Choose a network|Skip for now"
 st_check skip "setupstate: slide=done"
 st_check skip "setup finished: the welcome"
@@ -87,22 +87,22 @@ st_check skip "setup finished: the welcome"
 # back on the slide reached: setup-step says where a setup cut off (a restart) was; B goes back a slide; the first slide
 # has no way back at the boot
 rm -f "$SFX/data/setup-done"
-st_run resume "home 0; setup; press a; press a; setupstate; press b; press b; press b; setupstate"
+st_run resume "home nds; setup; press a; press a; setupstate; press b; press b; press b; setupstate"
 [ "$(cat "$SFX/data/setup-step" 2>/dev/null)" = "language boot" ] || { echo "FAIL $size: setup-step: $(cat "$SFX/data/setup-step" 2>/dev/null)"; fail=1; }
 st_check resume "setupstate: slide=language"
 # touch: the time zone's right half moves it on, a tap on Next goes on
-st_run touch "home 0; setupat timezone; touch 1 500 177; touch 1 320 111; setupstate"
+st_run touch "home nds; setupat timezone; touch 1 500 177; touch 1 320 111; setupstate"
 st_check touch "setupstate: slide=name"
 # the setup again from Settings > System: B on its first slide goes back to Settings, Finish too (no Welcome)
-st_run again "home 0; setupagain; press b; setupstate; setupagain; press start; press start; press start; press start; press start; press start; press a; setupstate"
+st_run again "home nds; setupagain; press b; setupstate; setupagain; press start; press start; press start; press start; press start; press start; press a; setupstate"
 st_check again "setupstate: closed page=0 open=1"
 st_not again "setup finished"
 # the language picked on the first slide (from the list: right opens it, down to fi (es, then fi), A takes it; up to Next): saved, the menu starts again (LANGUAGE), on the Wi-Fi slide (setup-step)
-st_run lang "home 0; setup; press right; shot st-langlist; press down; press down; press a; press up; press a"
+st_run lang "home nds; setup; press right; shot st-langlist; press down; press down; press a; press up; press a"
 st_check lang "press a: settings result 9"
 grep -q '^language = fi' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
 [ "$(cat "$SFX/data/setup-step" 2>/dev/null)" = "wifi boot" ] || { echo "FAIL $size: setup-step after the language: $(cat "$SFX/data/setup-step" 2>/dev/null)"; fail=1; }
-st_run ru "home 0; setupat wifi; shot st-ru-wifi"
+st_run ru "home nds; setupat wifi; shot st-ru-wifi"
 sed -i '/^language = /d' "$SFX/data/settings.conf"
 
 # the arrival: its frames drawn (the zoom, the rumble, the burst, the flight, the glow, white, black, the card, dark)

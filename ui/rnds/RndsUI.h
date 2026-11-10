@@ -29,6 +29,7 @@ namespace rnds
 		std::string time;		// "86h 12m"
 		bool fav = false;
 		bool app = false;			// the system is one app (the theme's systems.cfg says "[app]"): A on its tile starts it
+		bool apps = false;			// Banana: the Apps tile, its list the apps (no favourites, no game page)
 		bool hasResume = false;		// a game to show on the "last played" chip
 		std::string resumeEyebrow;	// "Last played"
 		std::string resumeTitle;

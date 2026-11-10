@@ -1003,18 +1003,18 @@ namespace rnds
 			int n = count();
 			if ((int)slots.size() != n) { slots.assign(n, SlotState()); prevCenter = -1; }
 			int c = center();
-			// how far the centre moved (in items, the short way round; Banana: along the row, see LINEAR)
-			int move = prevCenter >= 0 && prevCenter < n ? (LINEAR ? c - prevCenter : delta(c, prevCenter, n)) : 0;
+			// how far the centre moved (in items, the short way round; Banana: along the row on the game list, see linear())
+			int move = prevCenter >= 0 && prevCenter < n ? (linear() ? c - prevCenter : delta(c, prevCenter, n)) : 0;
 			// half way round (two items: either way is one step) the pressed direction says which way it went, so
 			// left slides left and right slides right
-			if (!LINEAR && lastDir && n % 2 == 0 && std::abs(move) == n / 2) move = lastDir > 0 ? n / 2 : -(n / 2);
+			if (!linear() && lastDir && n % 2 == 0 && std::abs(move) == n / 2) move = lastDir > 0 ? n / 2 : -(n / 2);
 			lastDir = 0;
 			if (std::abs(move) > 3) animate = false;
 			prevCenter = c;
 			for (int i = 0; i < n; i++)
 			{
 				SlotState& st = slots[i];
-				int d = LINEAR ? i - c : delta(i, c, n);
+				int d = linear() ? i - c : delta(i, c, n);
 				float cx, cs, co;
 				slotValue(st, cx, cs, co);
 				float tx = d * 122.0f, tsc = d == 0 ? 1.0f : 0.84f, to = std::abs(d) > 3 ? 0.0f : 1.0f;
@@ -1064,11 +1064,12 @@ namespace rnds
 
 		// two to four items go round as an endless strip (copies a loop away on both sides); more fill the screen and
 		// wrap the old way (the item leaves on one side and comes in on the other)
-		static bool endless(int n) { return !LINEAR && n >= 2 && n <= 4; }
-		// Banana: the shelf and the game list are a row with two ends, as the Carts theme's: the first item is the
-		// leftmost, nothing is drawn left of it (the last one there read as the first), and the last is the rightmost.
-		// Left on the first still goes to the last and right on the last to the first: the row slides to that end.
-		static constexpr bool LINEAR = true;
+		bool endless(int n) { return !linear() && n >= 2 && n <= 4; }
+		// Banana: the game list is a row with two ends, as the Carts theme's: the first game is the leftmost, nothing is
+		// drawn left of it, and the last is the rightmost (left on the first still goes to the last, the row sliding to
+		// that end). The home row goes round endlessly, as in 0.4.1: Recently played starts it, the Apps tile ends it,
+		// and Recently played follows the Apps tile again
+		bool linear() const { return ui->mView != HOME; }
 
 		float thumbLeft(int at, int n, float inner) { return n < 2 ? 0 : at * (inner - 42) / (n - 1); }
 
@@ -1322,8 +1323,8 @@ namespace rnds
 
 			if (v == HOME)
 			{
-				g.left = Face{ "Y", "Fav", sys(ui->mSys).fav ? 1 : 0, ACT_FAV };
 				const auto& sy = sys(ui->mSys);
+				g.left = sy.apps ? Face{ "A", "Open", 0, ACT_NONE } : Face{ "Y", "Fav", sy.fav ? 1 : 0, ACT_FAV };
 				if (sy.app) g.right = Face{ "X", "Start", 0, ACT_RESUME };	// an app has nothing to resume
 				else if (!sy.hasResume) g.right = Face{ "", "No games", 2, ACT_NONE };	// (X would do nothing)
 				else g.right = Face{ "X", sy.played > 0 ? "Resume" : "Start", 0, ACT_RESUME };	// (nothing played: the first game)
@@ -1332,6 +1333,7 @@ namespace rnds
 			{
 				g.left = Face{ "B", "Back", 0, ACT_BACK };
 				if (src->gameCount() == 0) g.right = Face{ "", "No games", 2, ACT_NONE };	// nothing to favourite
+				else if (sys(ui->mSys).apps) g.right = Face{ "A", "Open", 0, ACT_NONE };	// (Banana: an app isn't a favourite)
 				else g.right = Face{ "Y", "Fav", game(ui->mGame).fav ? 1 : 0, ACT_FAV };
 			}
 			else
