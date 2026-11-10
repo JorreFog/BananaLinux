@@ -163,9 +163,15 @@ static void load_conf(const char *path)
 	fclose(f);
 }
 
-/* the time zone the settings screen keeps in banana-ui's settings.conf (a POSIX rule), for sleep.log's times */
+/* Parental controls' daily play time (settings.conf's parental and parental_minutes; playtime_step) */
+static int pt_on, pt_minutes;
+
+/* the time zone the settings screen keeps in banana-ui's settings.conf (a POSIX rule), for sleep.log's times; and
+ * Parental controls' daily play time, from the same file */
 static void load_timezone(void)
 {
+	pt_on = 0;
+	pt_minutes = 0;
 	FILE *f = fopen("/data/banana/settings.conf", "r");
 	if (!f) return;
 	char ln[256];
@@ -176,6 +182,8 @@ static void load_timezone(void)
 		char *k = ln, *v = eq + 1;
 		trim(k); trim(v);
 		if (!strcmp(k, "timezone") && *v) { setenv("TZ", v, 1); tzset(); }
+		if (!strcmp(k, "parental")) pt_on = !strcmp(v, "on");
+		if (!strcmp(k, "parental_minutes")) pt_minutes = atoi(v);
 	}
 	fclose(f);
 }
@@ -781,6 +789,200 @@ static int game_gone(pid_t game, double secs)
 	return kill(game, 0) != 0;
 }
 
+/* the game saved and asked to quit, as each emulator does it: SuperDrastic, BananaDS and BananaFront write their resume
+ * state (RetroArch its automatic one) and quit; the rest (PortMaster ports, PICO-8) get SIGTERM, with no state to come
+ * back to. Doesn't wait: *wait is how long the emulator may take (60 s, never cutting a save short; 10 for the rest).
+ * The emulator whose resume state it asked for, or NULL. (sleep_poweroff, and Parental controls' time up) */
+static const char *game_save_quit(pid_t game, pid_t pg, double *wait)
+{
+	const char *emu = NULL;
+	pid_t p, grp = pg > 0 ? -pg : game;
+	*wait = 60;	/* (the emulators' own limits are shorter: never cut a save short) */
+	if (pg > 0 && (p = pgrp_member(pg, "drastic"))) {
+		/* SuperDrastic: SIGUSR1 saves the resume state (DSFLIP_RESUME_FILE, which run-drastic always sets) and
+		 * quits; sent while stopped, it is the first thing the game does on SIGCONT */
+		emu = "superdrastic";
+		kill(p, SIGUSR1);
+		kill(grp, SIGCONT);
+	} else if (pg > 0 && (p = pgrp_member(pg, "bananads"))) {
+		/* BananaDS: SIGUSR1 quits with the resume state written whatever resume.on_quit says, then the save */
+		emu = "bananads";
+		kill(p, SIGUSR1);
+		kill(grp, SIGCONT);
+	} else if (pg > 0 && (p = pgrp_member(pg, "bananafront"))) {
+		/* BananaFront: SIGUSR1 quits with the automatic state written (RetroArch's .state.auto, the one Quick
+		 * resume loads) whatever the setting, then the save */
+		emu = "bananafront";
+		bf_resume_path();
+		kill(p, SIGUSR1);
+		kill(grp, SIGCONT);
+	} else if (pg > 0 && (p = pgrp_member(pg, "retroarch"))) {
+		/* RetroArch: a state in its automatic slot (-1: the slot down past 0, from wherever it is; the one
+		 * savestate_auto_load reads), then QUIT, which waits for the save task to finish. run-retroarch puts
+		 * the slot back after. No state in Hardcore: then it only quits (its SRAM is written on the way). */
+		emu = "retroarch";
+		kill(grp, SIGCONT);
+		usleep(500000);	/* (the pipe is read once a frame: running first) */
+		int slot = 0;
+		FILE *f = fopen("/data/retroarch/retroarch.cfg", "r");
+		if (f) {
+			char ln[256];
+			while (fgets(ln, sizeof ln, f)) sscanf(ln, "state_slot = \"%d\"", &slot);
+			fclose(f);
+		}
+		if (slot < 0) slot = 0;
+		if (slot > 997) slot = 997;
+		int ok = 1;
+		for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
+		if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
+		if (ok) ra_command("QUIT\n");
+		else {
+			/* no state asked for (RetroArch gone, or not reading its pipe): nothing of this save to come back to,
+			 * and a resume-boot would load an older automatic state once at the next boot as if it were this one */
+			sleep_log("RetroArch's command pipe closed: no resume state saved");
+			emu = NULL;
+		}
+	} else {
+		/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
+		kill(grp, SIGCONT);
+		kill(grp, SIGTERM);
+		*wait = 10;
+	}
+	return emu;
+}
+
+/* ---- Parental controls' daily play time -------------------------------------------------------------------------------
+ * System > Parental controls > Daily play time (banana-ui's settings.conf: parental = on, a PIN in parental.conf, and
+ * parental_minutes). Counted while a game runs and the handheld is awake (mono() stands still asleep), and kept in
+ * /data/banana/playtime.txt ("<YYYY-MM-DD> <seconds>", today's; another day's counts as none), so a restart doesn't
+ * give the time back. 10 minutes and 1 minute before the end the menu's banner says so (/run/banana/playtime-notice,
+ * "left <minutes>", which banana-ui shows, over RetroArch's games too); at the end it says "up", and the game is saved
+ * and closed as a power-off from sleep does it (game_save_quit); banana-ui starts no other one until tomorrow. */
+static double pt_used, pt_tick, pt_saved_at, pt_close_at;
+static char pt_day[16];
+static int pt_warned, pt_dirty;
+static pid_t pt_game, pt_closing;
+
+static int pt_limit(void)	/* the minutes allowed today, 0 none */
+{
+	if (!pt_on || pt_minutes <= 0) return 0;
+	char pin[256];
+	FILE *f = fopen("/data/banana/parental.conf", "r");
+	int has = 0;
+	if (f) {
+		while (fgets(pin, sizeof pin, f)) if (!strncmp(pin, "pin", 3) && strchr(pin, '=')) has = 1;
+		fclose(f);
+	}
+	return has ? pt_minutes : 0;
+}
+
+static void pt_today(char *out, size_t n)
+{
+	time_t now = time(NULL);
+	struct tm tm;
+	localtime_r(&now, &tm);
+	strftime(out, n, "%Y-%m-%d", &tm);
+}
+
+static void pt_load(void)
+{
+	char day[16] = "";
+	double used = 0;
+	FILE *f = fopen("/data/banana/playtime.txt", "r");
+	if (f) {
+		if (fscanf(f, "%15s %lf", day, &used) != 2) used = 0;
+		fclose(f);
+	}
+	pt_today(pt_day, sizeof pt_day);
+	pt_used = !strcmp(day, pt_day) && used > 0 ? used : 0;
+}
+
+static void pt_save(void)
+{
+	FILE *f = fopen("/data/banana/playtime.txt.new", "w");
+	if (!f) return;
+	fprintf(f, "%s %.0f\n", pt_day, pt_used);
+	fflush(f);
+	fsync(fileno(f));
+	fclose(f);
+	rename("/data/banana/playtime.txt.new", "/data/banana/playtime.txt");
+	pt_dirty = 0;
+}
+
+static void pt_notice(const char *what)
+{
+	FILE *f = fopen("/run/banana/playtime-notice.new", "w");
+	if (!f) return;
+	fprintf(f, "%s %ld\n", what, (long)time(NULL));	/* (the time: the same words another day are news again) */
+	fclose(f);
+	rename("/run/banana/playtime-notice.new", "/run/banana/playtime-notice");
+	pid_t ui = ui_pid();
+	if (ui > 0) kill(ui, SIGUSR2);	/* (the menu looks at once, not at its next second) */
+	/* and in a RetroArch game, on its screen (its command pipe; nothing when another emulator runs) */
+	int m = 0;
+	char msg[128];
+	if (!strncmp(what, "up", 2)) snprintf(msg, sizeof msg, "SHOW_MSG Play time is up for today: the game is saved and closed\n");
+	else if (sscanf(what, "left %d", &m) == 1)
+		snprintf(msg, sizeof msg, "SHOW_MSG %d minute%s of play left, then the game is saved and closed\n", m, m == 1 ? "" : "s");
+	else return;
+	ra_command(msg);
+}
+
+/* once a loop: the time counted, the warnings, the end; the seconds until it needs looking at again (-1: not soon) */
+static double playtime_step(double now)
+{
+	char day[16];
+	pt_today(day, sizeof day);
+	if (!pt_day[0]) pt_load();
+	if (strcmp(day, pt_day)) { strcpy(pt_day, day); pt_used = 0; pt_warned = 0; pt_dirty = 1; }	/* midnight: a new day's time */
+	int limit = pt_limit();
+	pid_t game = pid_of("/run/banana/game.pid");
+	if (!game || limit <= 0) {
+		if (pt_dirty) pt_save();
+		pt_tick = 0; pt_game = 0; pt_close_at = 0; pt_closing = 0;
+		return -1;
+	}
+	if (game != pt_game) { pt_game = game; pt_warned = 0; }	/* a new game: told again how long it has */
+	if (pt_tick > 0) {
+		double d = now - pt_tick;
+		if (d > 0 && d < 120) { pt_used += d; pt_dirty = 1; }	/* (a longer gap: not time played) */
+	}
+	pt_tick = now;
+	if (pt_dirty && now - pt_saved_at >= 60) { pt_save(); pt_saved_at = now; }
+	double left = limit * 60.0 - pt_used;
+	if (left > 0) {
+		char w[32];
+		if (left <= 60 && !(pt_warned & 2)) { pt_warned |= 3; pt_notice("left 1"); }
+		else if (left <= 600 && !(pt_warned & 1)) {
+			pt_warned |= 1;
+			snprintf(w, sizeof w, "left %d", (int)((left + 59) / 60));
+			pt_notice(w);
+		}
+		double next = left > 600 ? left - 600 : left > 60 ? left - 60 : left;
+		return next < 60 ? next : 60;
+	}
+	pid_t pg = getpgid(game);
+	if (pt_closing != game) {
+		/* the end: saved and closed */
+		pt_save(); pt_saved_at = now;
+		pt_notice("up");
+		sleep_log("Parental controls: today's %d min played: the game saved and closed", limit);
+		double wait;
+		game_save_quit(game, pg, &wait);
+		pt_closing = game;
+		pt_close_at = now + wait;
+		return 1;
+	}
+	if (now >= pt_close_at) {
+		/* it didn't quit in time: as a shutdown would end it */
+		sleep_log("Parental controls: the game hasn't quit: stopped");
+		kill(pg > 0 ? -pg : game, SIGTERM);
+		pt_close_at = now + 5;
+		return 5;
+	}
+	return pt_close_at - now;
+}
+
 static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 {
 	sleep_log("asleep %.0f min: the game saved, then shutting down (poweroff_after_sleep_minutes)", asleep / 60);
@@ -798,67 +1000,16 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 		}
 		char rom[1024];
 		game_rom(game, rom, sizeof rom);
-		const char *emu = NULL;
-		pid_t p, grp = pg > 0 ? -pg : game;
-		double wait = 60;	/* (the emulators' own limits are shorter: never cut a save short) */
+		double wait;
 		struct timespec asked;	/* the resume state must be newer than this to count as this save's */
 		clock_gettime(CLOCK_REALTIME, &asked);
 		asked.tv_sec -= 1;	/* (a filesystem's timestamps may be coarser than the clock) */
-		if (pg > 0 && (p = pgrp_member(pg, "drastic"))) {
-			/* SuperDrastic: SIGUSR1 saves the resume state (DSFLIP_RESUME_FILE, which run-drastic always sets) and
-			 * quits; sent while stopped, it is the first thing the game does on SIGCONT */
-			emu = "superdrastic";
-			kill(p, SIGUSR1);
-			kill(grp, SIGCONT);
-		} else if (pg > 0 && (p = pgrp_member(pg, "bananads"))) {
-			/* BananaDS: SIGUSR1 quits with the resume state written whatever resume.on_quit says, then the save */
-			emu = "bananads";
-			kill(p, SIGUSR1);
-			kill(grp, SIGCONT);
-		} else if (pg > 0 && (p = pgrp_member(pg, "bananafront"))) {
-			/* BananaFront: SIGUSR1 quits with the automatic state written (RetroArch's .state.auto, the one Quick
-			 * resume loads) whatever the setting, then the save */
-			emu = "bananafront";
-			bf_resume_path();
-			kill(p, SIGUSR1);
-			kill(grp, SIGCONT);
-		} else if (pg > 0 && (p = pgrp_member(pg, "retroarch"))) {
-			/* RetroArch: a state in its automatic slot (-1: the slot down past 0, from wherever it is; the one
-			 * savestate_auto_load reads), then QUIT, which waits for the save task to finish. run-retroarch puts
-			 * the slot back after. No state in Hardcore: then it only quits (its SRAM is written on the way). */
-			emu = "retroarch";
-			kill(grp, SIGCONT);
-			usleep(500000);	/* (the pipe is read once a frame: running first) */
-			int slot = 0;
-			FILE *f = fopen("/data/retroarch/retroarch.cfg", "r");
-			if (f) {
-				char ln[256];
-				while (fgets(ln, sizeof ln, f)) sscanf(ln, "state_slot = \"%d\"", &slot);
-				fclose(f);
-			}
-			if (slot < 0) slot = 0;
-			if (slot > 997) slot = 997;
-			int ok = 1;
-			for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
-			if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
-			if (ok) ra_command("QUIT\n");
-			else {
-				/* no state asked for (RetroArch gone, or not reading its pipe): nothing of this save to come back to,
-				 * and a resume-boot would load an older automatic state once at the next boot as if it were this one */
-				sleep_log("RetroArch's command pipe closed: no resume state saved");
-				emu = NULL;
-			}
-		} else {
-			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
-			kill(grp, SIGCONT);
-			kill(grp, SIGTERM);
-			wait = 10;
-		}
+		const char *emu = game_save_quit(game, pg, &wait);
 		if (game_gone(game, wait)) {
 			/* SuperDrastic quits after 5 s whether or not DraStic wrote the state, and BananaDS when it can't
 			 * write it: then an older resume state (or none) is all there is, and the next boot mustn't start the
 			 * game from it as if it were this one (review 0.4.3: resume-boot was written either way) */
-			char rs[1200];
+			char rs[1400];	/* (bf_resume's size and more) */
 			struct stat st;
 			if (emu && rom[0]) resume_state_path(emu, rom, rs, sizeof rs); else rs[0] = 0;
 			if (rs[0] && (stat(rs, &st) || st.st_mtim.tv_sec < asked.tv_sec)) {
@@ -2075,7 +2226,7 @@ int main(int argc, char **argv)
 	load_drivers_present();
 	leds_update();
 	last_input = mono();
-	double next_battery = 0;
+	double next_battery = 0, pt_due = -1;	/* pt_due: when Parental controls' play time wants a look (playtime_step) */
 	int low_count = 0;
 	say("running: lid %s, auto-sleep %g min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
 	/* the power and volume keys heard from here: rcS waits for this before the menu (and its boot animation) starts */
@@ -2118,6 +2269,7 @@ int main(int argc, char **argv)
 		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (pt_due >= 0 && pt_due < wait) wait = pt_due;	/* Parental controls: a game's time counted, its warnings, its end */
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		in_poll = 1;
 		if (!stopping) poll(pf, n, timeout);
@@ -2193,6 +2345,7 @@ int main(int argc, char **argv)
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5 && !transfer_hold())
 			suspend_now(lid_held ? "lid closed, the download done" : "lid still closed");
 
+		pt_due = playtime_step(now);
 		if (now >= next_battery) {
 			next_battery = now + 60;
 			leds_update();	/* a capacity change has no uevent on every gauge */

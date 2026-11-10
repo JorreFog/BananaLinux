@@ -376,6 +376,8 @@ namespace banana
 				stats[c[0]] = s;
 			}
 		}
+		kids = parental::on(dataDir);
+		kidsGames = kids ? parental::games(dataDir) : std::set<std::string>();
 		hidden.clear();
 		{
 			// the built-in apps removed in the Store (Döda Kvarter, Poketool): their systems, one per line, left out
@@ -647,6 +649,7 @@ namespace banana
 		forgetIconNames();
 		loadState();
 		shelves.clear();
+		everything.clear();
 		MediaIndex media;
 		std::map<std::string, std::string> modes = shelfModes();
 		for (auto& def : defs)
@@ -707,6 +710,8 @@ namespace banana
 					auto st = stats.find(key);
 					if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
 					g.fav = favGames.count(key) > 0;
+					everything.push_back({ def.name, key, g.title });
+					if (kids && !kidsGames.count(key)) continue;	// (Parental controls: not one of the allowed games)
 					sh.games.push_back(g);
 				}
 			}
@@ -715,7 +720,7 @@ namespace banana
 			// with it left out, deleting the last port took PortMaster off the row too (reachable again only through
 			// Shown systems > Ports > Always; QA 2026-10-26). Shown systems > Ports > Hidden takes it off
 			bool launchable = !sh.games.empty();
-			if (launchable || def.always || mode == "show") shelves.push_back(sh);
+			if (launchable || (!kids && (def.always || mode == "show"))) shelves.push_back(sh);
 		}
 		arrange();
 		if (lib >= (int)shelves.size()) lib = 0;
