@@ -108,8 +108,8 @@ for a, b in [
     ('"edge": "#ffffff30"', '"edge": "#ffffff80"'),
     ('"chip": "#ffffff"', '"chip": "#14141c"'),
     ('"chipInk": "#1e1e24"', '"chipInk": "#ffffff"'),
-    # a warm grey, not white: an all-white logo still shows on it
-    ('"card": "#1c1e28"', '"card": "#b4ac9f"'),
+    # frosted white glass, as the panels (the picture behind showing through)
+    ('"card": "#1c1e28"', '"card": "#ffffffb3"'),
     # the accents a shade deeper, to read on white glass
     ('"accents": { "yellow": "#ff9f0a", "orange": "#ff6b1f", "green": "#30d158", "blue": "#0a84ff", "pink": "#ff375f", "purple": "#bf5af2" }',
      '"accents": { "yellow": "#f59300", "orange": "#f2600f", "green": "#28b14c", "blue": "#007aff", "pink": "#ff2d55", "purple": "#af52de" }'),

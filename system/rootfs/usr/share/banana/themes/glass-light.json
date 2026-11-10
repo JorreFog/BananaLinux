@@ -52,7 +52,7 @@
     "edge": "#ffffff80",        // the glass's hairline edge
     "chip": "#14141c",          // a button's key
     "chipInk": "#ffffff",
-    "card": "#b4ac9f",          // a game's card in the tray
+    "card": "#ffffffb3",          // a game's card in the tray
     "shade": "#00000033",
     "hi": "=accent",
     // motion and light, all started by a press so they play once and stop (Motion off in Settings: none of them)
