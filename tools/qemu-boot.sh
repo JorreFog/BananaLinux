@@ -251,12 +251,12 @@ if [ $HAVE_BANANADS = 1 ] && [ -f "$ROM" ]; then
         sed -i '/^nds_emulator/d; /^quick_resume/d' "$DATA/banana/settings.conf" 2>/dev/null || true
         # Quick resume (off by default) on, so quitting writes the resume state checked below
         printf 'nds_emulator = bananads\nquick_resume = on\n' >> "$DATA/banana/settings.conf"
-        echo 0 > "$DATA/banana/last-system"
         echo "BANANADS_KMS_STATS=30" > "$DATA/banana/bananads.env"
     }
     with_data prep_bananads
     boot bananads
-    key ret; sleep 1
+    # the row starts on Recently played (the DS and GBA games of the second boot), the DS next
+    key right ret; sleep 1
     key ret
     wait_for "starting nds" 30 "the DS game was started (run-nds, BananaDS chosen)"
     sleep 20; shot bananads-game

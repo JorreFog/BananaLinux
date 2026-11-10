@@ -2324,12 +2324,9 @@ int main(int argc, char** argv)
 		cjkFont(disp.height() / 480.0f);	// (here, off the boot animation's thread)
 		lib.scan();
 		logf("library: %d shelves in %.0f ms", lib.systemCount(), nowMs() - t0);
+		// the menu always starts at the row's start: Recently played (the first tile; the first system before
+		// anything was played)
 		int startSys = 0;
-		{
-			std::ifstream f(o.data + "/last-system");
-			f >> startSys;
-			if (startSys < 0 || startSys >= lib.systemCount()) startSys = 0;
-		}
 		uiPtr.reset(makeMenu(settings["theme"], disp.height() / 480.0f));
 		uiPtr->setHome(startSys);
 		// the menu's pictures decoded here too, while the animation plays (on the main thread at the hand-over they
@@ -2915,10 +2912,6 @@ int main(int argc, char** argv)
 			std::string how = sd.run.substr(0, sd.run.find(' '));
 			how = how.substr(how.rfind('/') + 1);
 			recordEvent("game", "start: %s (%s, %s)", lib.gameAt(game).title.c_str(), sd.id.c_str(), how.c_str());
-		}
-		{
-			std::ofstream f(o.data + "/last-system");
-			f << ui->systemIndex() << "\n";
 		}
 		// everything the game wants goes back to the system: the panels, the buttons, the sound device. A RetroArch
 		// game with the game panel on (settings.conf retroarch_panel) gets only its own panel, through a DRM lease
@@ -3720,10 +3713,7 @@ int main(int argc, char** argv)
 				input.read(p.fd, handle);
 		}
 	}
-	{
-		std::ofstream f(o.data + "/last-system");
-		f << ui->systemIndex() << "\n";
-	}
+	unlink((o.data + "/last-system").c_str());	// (where the menu was: it starts on Recently played now)
 	recordEvent("menu", "quit");
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	{
