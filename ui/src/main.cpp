@@ -1430,11 +1430,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.touch(x1 * k, y1 * k, true);
 			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
 		}
-		else if (op == "shot")
+		else if (op == "shot" || op == "snap")
 		{
+			// snap: the menu as one frame on the device shows it, its pictures' loads finished once (a shot settles
+			// twice: a picture the cache dropped meanwhile is back)
 			std::string name; cs >> name;
 			double t0 = 0, t1 = 0;
-			if (settings.isOpen())
+			if (op == "snap") { settle(); t0 = nowMs(); ui.render(); t1 = nowMs(); }
+			else if (settings.isOpen())
 			{
 				settings.update(now);	// what came back since the last command (a press skips the update below)
 				settings.update(now);

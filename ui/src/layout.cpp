@@ -236,10 +236,10 @@ namespace banana
 		}
 		static size_t cacheBytes(const ShapeTex& t) { return t.bytes; }
 		static size_t cacheBytes(const TextTex&) { return 0; }
-		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
+		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; uint64_t used = 0; };	// placed in the box (device px)
+		static size_t cacheBytes(const ImgTex&) { return 0; }
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
-		std::deque<std::string> imageOrder;
 		struct Job { std::string key, src, fit, crop; int w, h; float radius; };
 		std::deque<Job> jobs;
 		std::set<std::string> pending, pendingSrc, failed;
@@ -1100,13 +1100,15 @@ namespace banana
 					if (m->mQueued) m->mQueued();
 				}
 				if (it == images.end()) { drawPlaceholder(c, x, y, w, h, f); return; }
-				const ImgTex& im = it->second;
+				ImgTex& im = it->second;
+				im.used = ++useTick;
 				if (!im.tex) return;
 				float kx = iw / std::max(1.0f, im.w + 2 * im.ox), ky = ih / std::max(1.0f, im.h + 2 * im.oy);
 				m->be->draw(im.tex, std::round(x * s) + im.ox * kx, std::round(y * s) + im.oy * ky, im.w * kx, im.h * ky, tint);
 				return;
 			}
-			const ImgTex& im = it->second;
+			ImgTex& im = it->second;
+			im.used = ++useTick;
 			if (!im.tex) return;
 			m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
 			drawGlint(c, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, f);
@@ -1592,16 +1594,14 @@ namespace banana
 				if (cut != std::string::npos) src = dn.first.substr(0, cut);
 				pendingSrc.erase(src);
 				if (!dn.second.tex) continue;
-				images[dn.first] = dn.second;
+				ImgTex& im = images[dn.first] = dn.second;
+				im.used = ++useTick;
 				latest[src] = dn.first;
-				imageOrder.push_back(dn.first);
 			}
 			done.clear();
-			while (images.size() > 160 && !imageOrder.empty())
-			{
-				images.erase(imageOrder.front());
-				imageOrder.pop_front();
-			}
+			// the least recently drawn go, not the first made: scrolling through games (their boxes, logos and the
+			// bounce's sizes) dropped the wallpaper, made first, and the screens went plain white or black meanwhile
+			if (images.size() > 160) evictOldest(images, 120);
 		}
 	};
 
