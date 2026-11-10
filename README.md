@@ -12,7 +12,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
   <a href="https://bananaos-cfw.dev">Website</a> ·
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Download</a> ·
   <a href="#get-it">Install</a> ·
-  <a href="#new-in-0-5-2-2">What's new</a> ·
+  <a href="#new-in-0-5-3-4">What's new</a> ·
   <a href="#seen-on-youtube">Videos</a> ·
   <a href="#status">Known issues</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a> ·
@@ -28,7 +28,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 </p>
 
 > [!WARNING]
-> **Beta 0.5.2.2.** An update over Wi-Fi on top of 0.5.0: install 0.5.0 from its card image, then update in Settings › System › Update. Read the known issues under [Status](#status) before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
+> **Beta 0.5.3.4.** An update over Wi-Fi on top of 0.5.0: install 0.5.0 from its card image, then update in Settings › System › Update. Read the known issues under [Status](#status) before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
 
 <a id="what-it-is"></a>
 <img src="docs/img/readme/h-what.png" width="100%" alt="">
@@ -37,7 +37,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 
 BananaOS is a complete Linux system built specifically for the RG DS and RG DS Plus. It uses Buildroot, a Linux kernel with [ROCKNIX](https://rocknix.org) hardware support, BusyBox init and a dedicated interface for both screens. The system image is read-only; games, saves and settings live on a separate exFAT partition.
 
-It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)). Italian (Italiano, translated by Olympicus) and Finnish (Suomi, translated by HANHITSI) arrive in 0.5.3, and Spanish (Español, translated by Pixelado Dev) after it.
+It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy), Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)), Italian (Italiano, translated by Olympicus), Finnish (Suomi, translated by HANHITSI) and Spanish (Español, translated by Pixelado Dev).
 
 <p align="center">
   <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, BananaDS 12.6% faster, 10 built-in layout themes, 2 DS emulators">
@@ -67,8 +67,27 @@ It starts directly in the menu, releases display, input and audio resources when
 </table>
 <p align="center"><sub>Thank you all! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
 
-<a id="new-in-0-5-2-2"></a>
+<a id="new-in-0-5-3-4"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
+
+## New in 0.5.3.4
+
+The full list: the [0.5.3.4 release notes](https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.3.4). It brings together the 0.5.3 builds the beta testers ran first. Over Wi-Fi only: there is no new card image.
+
+> [!IMPORTANT]
+> **Poketool and PortMaster now come from the App Store.** They are no longer built in: install them from the Store, and your bank and your ports stay on the card.
+
+- **Three new languages:** Spanish (Español) by Pixelado Dev, Italian (Italiano) by Olympicus and Finnish (Suomi) by HANHITSI. Thank you! The language is picked from a list (Settings › System › Language), and the Pokémon companions read the Spanish releases.
+- **GBA Pokémon companion:** the DS companion's pages (Battle, Party, Team, Here, Map, Guide, Pokédex, journey log) for Ruby, Sapphire, Emerald, FireRed, LeafGreen and the hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass, SoulGold and Unbound, with a Nuzlocke-style **Challenge mode**: Settings › Other systems › Second screen.
+- **Speaker EQ:** a tuned profile for the RG DS Plus speakers, seven sliders, or your own Equalizer APO profile (Settings › Display & sound). Speakers only.
+- **Game & Watch** on both screens, through MAME, and **Commodore 64** and **ZX Spectrum** (basic support).
+- **Activity** on the home row: play time, a timeline and trends, and what to play next.
+- **Clearer Settings:** one plain sentence per row, and a line under each choice saying what it does.
+- **BananaDS:** black caves and washed-out fog fixed (Black 2's Chargestone Cave), a per-game **DS CPU speed** up to 2133 MHz, no crackle when fast-forward ends.
+- **Safer saves and updates:** RetroArch and BananaFront saves move to one folder (`/data/saves`, old copies kept in `banana/saves-legacy`), a full card no longer cuts saves short, and a cut-off update can't leave the handheld unable to start. Plus sleep, lid and Bluetooth fixes.
+- **App Store:** GBA DS by kyannon, dual-screen GBA.
+
+<a id="new-in-0-5-2-2"></a>
 
 ## New in 0.5.2.2
 
@@ -85,9 +104,6 @@ The full list: the [0.5.2.2 release notes](https://github.com/JorreFog/BananaLin
 - **A tidier Settings:** a page per emulator, and subpages such as System › Updates and Network › Bluetooth.
 - **BananaDS:** faster at 3x and 4x, and a per-game "Fast, DSi CPU" timing (Pokémon HeartGold: Origin at 60 fps).
 - **Files and sharing:** games from a NAS or a computer (SMB, SFTP, FTP), archives unpacked on the handheld, and Bshare for LocalSend in the App Store.
-
-> [!NOTE]
-> **Coming in 0.5.3:** Italian and Finnish, a journey log and a Nuzlocke-style challenge in the GBA Pokémon companion, and GBA DS in the App Store. Poketool and PortMaster move to the Store: they no longer come with BananaOS, and your bank and your ports stay on the card.
 
 <a id="new-in-0-5-0"></a>
 
@@ -162,7 +178,7 @@ Insert the card and power on. The first boot prepares your data partition, plays
 
 - **From 0.4.x:** put `banana-rgds-plus-0.5.0.update.tar` (RG DS Plus) or `banana-rgds-0.5.0.update.tar` (RG DS) in `banana/updates` on the card, then Settings › System › Update, A on the package and A again. It installs to the card's other system slot and runs from the next restart; the version you had stays one restart away (Settings › System › Previous version). Games, saves and settings stay.
 - **From a 0.5.0 beta:** Settings › System › Update finds 0.5.0 over Wi-Fi. Beta testers: switch Beta channel off there to follow the releases from now on.
-- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update (Settings › System › Updates from 0.5.2.2 on) checks the releases, downloads the package for your handheld and checks it before installing. On 0.5.0 or 0.5.0.1 it finds 0.5.2.2. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS-<handheld>.txt` file.
+- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update (Settings › System › Updates from 0.5.2.2 on) checks the releases, downloads the package for your handheld and checks it before installing. On 0.5.0 or later it finds 0.5.3.4. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS-<handheld>.txt` file.
 
 The first start after the update runs the new first-time setup once, prefilled with what your card already has.
 
@@ -235,10 +251,11 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 ## More systems, apps and ports
 
 - Other systems: Game Boy, Game Boy Color, GBA, Mega Drive, NES, SNES and PICO-8 in BananaFront, BananaOS's own player; Commodore 64 and ZX Spectrum through it too, with a touch keyboard on the second screen (or F + B over the game); PlayStation and N64 in RetroArch; each on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
-- Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, game companions for 500+ GBA games (off by default), and the DS Pokémon companion (alpha) for Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2 in BananaDS (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
+- Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and the hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass, SoulGold and Unbound (with a Nuzlocke-style Challenge mode), game companions for 500+ GBA games (off by default), and the DS Pokémon companion (alpha) for Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2 in BananaDS (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
 - Game & Watch on both screens, in MAME: the MAME ROM zips and artwork zips as you download them (`roms/gameandwatch` and `roms/gameandwatch/artwork`), Multi Screen games one screen a panel, the unit's artwork around the LCD. Names and covers fill in by themselves (the covers drawn from your artwork). F opens MAME's menu, L2 swaps the panels, F + L2 takes a screenshot.
 - Ports and PICO-8: PortMaster (from the App Store) with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
-- App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster and eReaderDS from the menu.
+- App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster, GBA DS (dual-screen GBA by kyannon), Bshare (LocalSend) and eReaderDS from the menu.
+- Activity: your play time, a timeline and trends, and what to play next, from a tile on the home row.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
 - Your library on a home server: sync games, box art and saves with BananaOS's own Romhost or with RomM (Settings › Network › Home server).
 - Files: copy, move, rename and delete files and folders, and make folders, on the card and the RG DS Plus's second SD card, from a tile on the home screen (it stays open while it copies; Y twice stops). It also gets games from a NAS or a computer over SMB, SFTP or FTP(S): into the folder their type says, or any folder chosen (or made) on either card, or pasted where you want them. A cut download resumes where it stopped, whatever the protocol; zip, 7z and RAR archives are unpacked (multi-volume and password-protected ones as well), and archives already on a card too. Close the lid and the download finishes before the handheld sleeps.
@@ -279,7 +296,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 ## Built for two screens and a lid
 
 - Suspend and resume: close the lid and the game pauses, the card is flushed and the handheld sleeps. Open it and the game carries on. Woken in a bag, it goes back to sleep. With Power off after sleeping, a long sleep on the battery saves the game and turns the handheld off; press power and you are back in it.
-- Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream.
+- Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream. A speaker EQ (Settings › Display & sound) has a tuned profile for the RG DS Plus speakers.
 - Battery care: while asleep it checks the battery and shuts down cleanly before it runs flat. The LEDs work as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging.
 
 <details>
@@ -296,9 +313,16 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 ## Status and known issues
 
-BananaOS is a beta. The QA team tested 0.5.0 on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both its update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. 0.5.2.2 was tested on both handhelds, with the DS companion checked game by game. These are checks of those releases, not a compatibility guarantee.
+BananaOS is a beta. The QA team tested 0.5.0 on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both its update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. 0.5.2.2 was tested on both handhelds, with the DS companion checked game by game, and 0.5.3.4 was installed through the update on both handhelds, with each DS emulator and BananaFront run on them. These are checks of those releases, not a compatibility guarantee.
 
-Known issues in 0.5.2.2:
+Known issues in 0.5.3.4:
+
+- **Translations:** lines added in 0.5.3.4 (the new Settings texts, Speaker EQ, Activity) show in English in the other languages until the next round.
+- **Speaker EQ:** the tuned profile is for the RG DS Plus; the RG DS gets the sliders only.
+- **Activity's** history starts the first time you open it.
+- **Pokémon White 2** can freeze when switching Pokémon in battle in BananaDS ([#169](https://github.com/JorreFog/BananaLinux/pull/169)); SuperDrastic is not affected. The HeartGold: Origin companion's Battle page is empty.
+
+Known issues from 0.5.2.2:
 
 - **The DS Pokémon companion is an alpha:** BananaDS only (a game set to SuperDrastic in its own options shows no icon); Black 2 / White 2's season isn't read from the game yet (pick it on the Here page); games whose intro needs a touch were not all tested with it on.
 - **Translations:** lines added since the Chinese and Russian translations (the DS companion, the reorganised Settings) show in English or as machine drafts. In Russian, the home screen's START chip and Settings' power-button chip are a little too long.
@@ -327,7 +351,7 @@ What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Release
 
 ### Build from source
 
-On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The latest release is the tag `v0.5.2.2`:
+On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The latest release is the tag `v0.5.3.4`:
 
 ```sh
 make rgds          # output/rgds/images/banana-rgds.img.gz
