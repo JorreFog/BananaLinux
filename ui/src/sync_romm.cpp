@@ -89,25 +89,23 @@ namespace bsync
 		bool listed = false;
 		bool scoped() const { return !onlyRom.empty() || onlyQueued; }
 		std::vector<JPtr> romJson;
-		// (the list as fetched, and the systems left out of it: each call's own view is made from it, so one skipping
-		// more doesn't take games from one after it that skips less)
+		// (the list as fetched, every system's: each call's own view is made from it, without those it skips)
 		std::map<long long, std::string> allPlatforms;
 		std::vector<RommRom> allRoms;
 		std::vector<JPtr> allJson;
-		std::set<std::string> fetchSkip;
+		void view(const std::set<std::string>& skip)
+		{
+			platforms.clear(); roms.clear(); romJson.clear();
+			for (auto& p : allPlatforms) if (!skip.count(p.second)) platforms.insert(p);
+			for (auto& r : allRoms) if (!skip.count(r.folder)) roms.push_back(r);
+			for (auto& j : allJson) if (platforms.count((long long)j->num("platform_id"))) romJson.push_back(j);
+		}
 		bool list(const std::set<std::string>& skip, std::string& err)
 		{
-			// (listed once a run, and seen as each call skips: Get games' passes list every system, the saves leave out
-			// those set to Skip. A call wanting a system the fetch left out fetches again)
-			if (listed && std::includes(skip.begin(), skip.end(), fetchSkip.begin(), fetchSkip.end()))
-			{
-				platforms.clear(); roms.clear(); romJson.clear();
-				for (auto& p : allPlatforms) if (!skip.count(p.second)) platforms.insert(p);
-				for (auto& r : allRoms) if (!skip.count(r.folder)) roms.push_back(r);
-				for (auto& j : allJson) if (platforms.count((long long)j->num("platform_id"))) romJson.push_back(j);
-				return true;
-			}
-			listed = false;
+			// (listed once a run, every system the handheld has a folder for, Skip or not: on RomM a system set to Skip
+			// only keeps its saves here, and its games are still Get games' to offer, from the list a sync keeps for
+			// that page. Each call then sees the systems it doesn't skip: the saves leave those set to Skip out)
+			if (listed) { view(skip); return true; }
 			platforms.clear(); roms.clear(); romJson.clear();
 			Resp r = call("GET", "/api/platforms");
 			if (r.code != 200) { err = r.code == 401 || r.code == 403 ? "unpaired" : "platforms: " + r.error(); return false; }
@@ -117,7 +115,7 @@ namespace bsync
 			{
 				auto it = ROMM_SLUGS.find(p->str("slug"));
 				std::string folder = it != ROMM_SLUGS.end() ? it->second : BANANA_FOLDERS.count(p->str("fs_slug")) ? p->str("fs_slug") : "";
-				if (folder.empty() || skip.count(folder)) continue;
+				if (folder.empty()) continue;
 				// (one game's save: only its system's games listed, those in the folder its ROM is in)
 				if (!onlyRom.empty() && sendOk)
 				{
@@ -154,7 +152,8 @@ namespace bsync
 				}
 			}
 			listed = true;
-			allPlatforms = platforms; allRoms = roms; allJson = romJson; fetchSkip = skip;
+			allPlatforms = platforms; allRoms = roms; allJson = romJson;
+			view(skip);
 			return true;
 		}
 		bool haveList() const override { return listed && !scoped(); }

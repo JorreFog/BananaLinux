@@ -192,7 +192,8 @@ bs rc games > "$OUT/pick-games.tsv" 2>&1 || bad "games: $(head -2 "$OUT/pick-gam
 grep -q "^gba	gba/Banana Run (USA).gba	.*	0	1$" "$OUT/pick-games.tsv" || bad "games: the game got not listed as on the card: $(cat "$OUT/pick-games.tsv")"
 grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not waiting + not on the card: $(cat "$OUT/pick-games.tsv")"
 # (the server's games kept on the card for Get games' page: games writes them whole, under the server's address; a
-# sync replaces the systems it listed and keeps a skipped one's; one game's sync leaves them; Forget takes them away)
+# sync writes them whole too, a system set to Skip included (on RomM that keeps only its saves here); one game's sync
+# leaves them; Forget takes them away)
 GC=$OUT/rc/banana/homesync-server-games.tsv
 head -1 "$GC" 2>/dev/null | grep -q "^# $U	[0-9][0-9]*$" || bad "games: the list not kept on the card under the server: $(head -1 "$GC" 2>&1)"
 # (but for its last column, on the card, which the page looks at for itself: 0 in what is kept)
@@ -206,6 +207,9 @@ bs rc sync --saves-only > "$OUT/pick-gc-sync.log" 2>&1 || bad "gc sync: $(tail -
 grep -q 'Gone (USA)' "$GC" && bad "a sync didn't replace the kept list's games of a system it listed: $(cat "$GC")"
 grep -q '^nds	nds/Peel Quest (USA).nds	' "$GC" || bad "a sync dropped a skipped system's games from the kept list: $(cat "$GC")"
 grep -q '^gba	gba/Banana Run (USA).gba	' "$GC" || bad "a sync's kept list lost a listed system's game: $(cat "$GC")"
+rm -f "$GC"
+bs rc sync --saves-only > "$OUT/pick-gc-sync2.log" 2>&1 || bad "gc sync 2: $(tail -3 "$OUT/pick-gc-sync2.log")"
+grep -q '^nds	nds/Peel Quest (USA).nds	' "$GC" || bad "a sync with no kept list before left a skipped system's games out of it: $(cat "$GC" 2>&1)"
 sed -i '/^homesync\.nds/d' "$OUT/rc/banana/settings.conf"
 cp -r "$OUT/rc" "$OUT/rcf"
 printf 'gba/Asked (USA).gba\n' >> "$OUT/rcf/banana/homesync-get.txt"; printf 'gba/Asked (USA).gba\tchecksum mismatch\n' >> "$OUT/rcf/banana/homesync-get-failed.txt"
