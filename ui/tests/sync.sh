@@ -604,7 +604,7 @@ bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1; r=$?
 echo pairing > "$OUT/pb/run/sync.status"
 bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1
 [ "$(st pb)" = 'error busy' ] || bad "a pairing refused by a running sync didn't say so: $(st pb)"
-kill $_f 2>/dev/null; wait $_f 2>/dev/null
+pkill -P $_f 2>/dev/null; kill $_f 2>/dev/null; wait $_f 2>/dev/null	# (flock's sleep too: it holds the lock)
 # (a sync asked for by hand as the last one lets go of the lock, as Get games starts its next run on the done line the
 # last wrote before it ended: waits for it and runs, rather than ending at once with the menu's "running 0 0 |" left)
 flock "$OUT/pb/run/sync.lock" sleep 1.5 & _f=$!; sleep 0.3
@@ -902,7 +902,8 @@ if [ -x "$HERE/banana-ui" ]; then
     rlog access "home server: no RomM: access https://team.cloudflareaccess.com"
     grep -q 'pair' "$SL" && bad "RomM: paired past Cloudflare Access's login: $(cat "$SL")"
     # a sync running (a banana-sync's pid in sync.pid): the pairing says so and isn't started, and B leaves that sync be
-    ln -sf "$(command -v sleep)" "$OUT/banana-sync"; "$OUT/banana-sync" 60 & BP=$!
+    # (a sleep named banana-sync, in a folder of its own: $BIN, the real one, is used again after)
+    mkdir -p "$OUT/busy-bin"; ln -sf "$(command -v sleep)" "$OUT/busy-bin/banana-sync"; "$OUT/busy-bin/banana-sync" 60 & BP=$!
     UR_SYNC_PID=$BP ur busy "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; shot hs-busy; press b; wait 100"
     rlog busy "home server: pairing not started: a sync is running"
     grep -q 'pair --romm' "$SL" && bad "RomM: a pairing started under a running sync: $(cat "$SL")"
@@ -952,6 +953,7 @@ if [ -x "$HERE/banana-ui" ]; then
     [ -e "$FX/data/romsync.json" ] && bad "RomM: a pairing stopped before its sync.pid was written went on and paired"
     # paired with RomM: Get games (the third row, after Server and Sync now) lists the server's games; A on one on the
     # card does nothing, A on one that isn't puts it on the download list and starts a sync, A again takes it back
+    pkill -KILL -f "$OUT/slow-bin/banana-sync" 2>/dev/null	# (latepid's pairing, should B have failed to stop it, gone before it pairs this card)
     printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
     GL=$FX/data/homesync-get.txt; rm -f "$GL"; : > "$SL"; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
     # (A on Server, paired with RomM: its form on the paired address, as the row's help says, not the choice of server)
@@ -1005,10 +1007,66 @@ if [ -x "$HERE/banana-ui" ]; then
     # (and its line says it was Get games' own, for Sync now's report: the saves weren't looked at)
     grep -q '^done 0 0 0 0 0 0|games only$' "$BANANA_RUN/sync.status" || bad "Get games: its run's line doesn't say so: $(cat "$BANANA_RUN/sync.status")"
     : > "$GL"
+    # (a game picked while a sync runs, Settings then closed for the library before that sync ends: the next run still
+    # started, with Settings closed. Its done line written only once the menu says Settings closed)
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Games|x' > "$BANANA_RUN/sync.status"
+    ( for i in $(seq 200); do grep -q 'settings closed' "$OUT/ui-get.log" 2>/dev/null && break; sleep 0.1; done; sleep 0.5
+      echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
+    ug "$GET; press a; press down; press a; sleep 300; press b; press b; press b; press b; press b; press b; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
+    wait $_d
+    grep -q 'settings closed' "$OUT/ui-get.log" || bad "Get games, Settings closed: the script didn't close Settings: $(grep 'press b' "$OUT/ui-get.log" | tail -2)"
+    [ "$(grep -c ' sync --games-only$' "$SL")" = 1 ] || bad "Get games: a game picked during a sync, Settings closed: the next run not started: $(cat "$SL")"
+    : > "$GL"
+    # (and Get games left and opened again before that sync ends: the game picked on the first visit still watched for.
+    # The done line written once the page has opened the second time)
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Games|x' > "$BANANA_RUN/sync.status"
+    ( for i in $(seq 200); do [ "$(grep -c ' games$' "$SL" 2>/dev/null)" -ge 2 ] && break; sleep 0.1; done; sleep 0.5
+      echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
+    ug "$GET; press a; press down; press a; sleep 300; press b; press b; press a; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
+    wait $_d
+    [ "$(grep -c ' games$' "$SL")" -ge 2 ] || bad "Get games, opened again: the script didn't open it twice: $(cat "$SL")"
+    [ "$(grep -c ' sync --games-only$' "$SL")" = 1 ] || bad "Get games: a game picked on an earlier visit: the next run not started: $(cat "$SL")"
+    : > "$GL"; rm -f "$BANANA_RUN/sync.status"
+    # (three games picked one after another, as anyone would, with the real banana-sync behind the menu and the RomM
+    # stand-in: Peel Quest first, its download slowed to ten seconds; Banana Run while it comes; Settings closed for the
+    # library, then opened again and Disc Game picked. All three on the card, the list emptied, the last line done, and
+    # never a sync that ended before it started)
+    # (a stand-in and a library of its own: the shared one's games are deleted and changed by the cases before)
+    LE=$OUT/romm-lib-e2e; mkdir -p "$LE/nds" "$LE/gba" "$LE/psx/Disc Game (USA)"
+    head -c 300000 /dev/urandom > "$LE/nds/Peel Quest (USA).nds"
+    head -c 70000 /dev/urandom > "$LE/gba/Banana Run (USA).gba"
+    head -c 5000 /dev/urandom > "$LE/psx/Disc Game (USA)/Disc Game (USA) (Disc 1).bin"
+    printf 'FILE "Disc Game (USA) (Disc 1).bin" BINARY\n' > "$LE/psx/Disc Game (USA)/Disc Game (USA) (Disc 1).cue"
+    PE=$(port); python3 "$HERE/tests/fake-romm.py" "$PE" "$LE" 2> "$OUT/fake-romm-e2e.log" & PIDS="$PIDS $!"
+    waitport "$PE" /api/heartbeat || bad "the e2e RomM stand-in didn't start"
+    UE=http://127.0.0.1:$PE
+    card rce
+    CODE=$(curl -s -XPOST "$UE/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rce pair "$UE" "$CODE" > "$OUT/rce-pair.log" 2>&1 || bad "rce: pairing failed: $(st rce) $(cat "$OUT/rce-pair.log")"
+    bs rce games >/dev/null 2>&1
+    curl -s -XPOST "$UE/test/fault" -d '{"path": "GET /api/roms/.*/content/Peel", "kind": "slow", "arg": 30000, "count": 1}' >/dev/null
+    E_GET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press a; sleep 300; wait 300"
+    # (Settings opened again on the group it was left on, Network: A at once)
+    E_OPEN="press start; press a; press up; press up; press a; press down; press down; press a; sleep 300; wait 300"
+    E_WAIT="sleep 1000"; for i in $(seq 13); do E_WAIT="$E_WAIT; sleep 1000"; done
+    # (the systems: Game Boy Advance, Nintendo DS, PlayStation; a system opens on its first game)
+    E_SCRIPT="$E_GET; press down; press a; press a; sleep 800; wait 100; press b; press up; press a; press a; sleep 800; wait 100"
+    E_SCRIPT="$E_SCRIPT; press b; press b; press b; press b; press b; press b; sleep 1000; $E_OPEN; press down; press down; press a; press a; shot e2e-third; $E_WAIT"
+    env BANANA_SYNC="$BIN" BANANA_RUN="$OUT/rce/run" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$OUT/rce/roms" --data "$OUT/rce/banana" --script "$E_SCRIPT" \
+        2> "$OUT/ui-e2e.log" || bad "banana-ui (Get games, the real banana-sync) exited $?"
+    grep -q 'settings closed' "$OUT/ui-e2e.log" || bad "Get games, three picks: the script didn't close Settings between them"
+    for g in "nds/Peel Quest (USA).nds" "gba/Banana Run (USA).gba"; do [ -e "$OUT/rce/roms/$g" ] || bad "Get games, three picks: $g didn't come: $(cat "$OUT/rce/banana/logs/sync.log" 2>&1)"; done
+    find "$OUT/rce/roms/psx" -name 'Disc Game*' 2>/dev/null | grep -q . || bad "Get games, three picks: Disc Game didn't come: $(cat "$OUT/rce/banana/logs/sync.log" 2>&1)"
+    grep -v '^#' "$OUT/rce/banana/homesync-get.txt" 2>/dev/null | grep -q . && bad "Get games, three picks: games left on the list: $(cat "$OUT/rce/banana/homesync-get.txt")"
+    case $(st rce) in done\ *) ;; *) bad "Get games, three picks: the last line isn't done: $(st rce)" ;; esac
+    grep -q 'ended before it started' "$OUT/ui-e2e.log" && bad "Get games, three picks: a sync ended before it started"
     # (search, Y: from the systems every system's games, part of a title; B takes it away)
     ug "$GET; press y; type pock; press start; wait 300; shot hs-get-search; press a; sleep 300; wait 300; press b; press b; wait 100"
     grep -q 'get games: "pock" finds 1' "$OUT/ui-get.log" || bad "Get games: the search: $(grep 'get games' "$OUT/ui-get.log")"
     grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: A on a game found didn't put it on the list: $(cat "$GL" 2>&1)"
+    : > "$GL"	# (the game the search put on the list taken off for the cases after)
     ug "$GET; press a; press y; type zzz; press start; wait 300; press down; press a; wait 100"
     grep -q 'get games: "zzz" finds 0' "$OUT/ui-get.log" || bad "Get games: a search finding nothing: $(grep 'get games' "$OUT/ui-get.log")"
     # (the server's list kept on the card: shown at once with nothing asked of the server, Start asks it once, another

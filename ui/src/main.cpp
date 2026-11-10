@@ -3403,10 +3403,13 @@ int main(int argc, char** argv)
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
 		}
-		else if (settingsView.syncWaitsForWifi())
+		else if (settingsView.syncWaitsForWifi() || settingsView.watchesSync())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			settingsView.update(now);	// (Sync now, left waiting for Wi-Fi: started once it's back)
+			// (Sync now, left waiting for Wi-Fi: started once it's back; Get games' picks: the next run started for a game
+			// picked after the last one's last look at the list; the library again for the games that came)
+			settingsView.update(now);
+			if (settingsView.takeLibraryChanged()) roms.due = now;
 		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
 		if (!gate.active() && access("/run/banana/launch", F_OK) == 0)
@@ -3578,7 +3581,7 @@ int main(int argc, char** argv)
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			timeout = want || drawn ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
-			if (!want && !drawn && !settingsView.isOpen() && settingsView.syncWaitsForWifi()) timeout = timeout < 0 ? 250 : std::min(timeout, 250);
+			if (!want && !drawn && !settingsView.isOpen() && (settingsView.syncWaitsForWifi() || settingsView.watchesSync())) timeout = timeout < 0 ? 250 : std::min(timeout, 250);
 		}
 		if (want && !drawn && !disp.flipPending())	// ...unless no flip is pending: then the end of the quiet refresh
 			timeout = std::max(1, (int)(quietUntil - nowMs() + 0.999));

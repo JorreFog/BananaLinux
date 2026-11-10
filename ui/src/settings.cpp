@@ -2720,13 +2720,15 @@ namespace banana
 	bool Settings::update(double t)
 	{
 		now = t;
-		// (a sync waiting for Wi-Fi starts with Settings closed too)
+		// (a sync waiting for Wi-Fi starts with Settings closed too, and so does the next run for Get games' picks: the
+		// sync's line is followed whether or not Settings is open)
 		bool waited = pollSyncWifi();
+		waited |= pollSyncStatus(t, false);
+		waited |= pollGetRestart();
 		if (!mOpen) return false;
 		bool scrapeChanged = waited | pollScrape(t);
 		scrapeChanged |= pollSync(t);
 		scrapeChanged |= pollPickGames();
-		scrapeChanged |= pollGetRestart();
 		// (the Device name row's rename: the new name read back, or why it wasn't, under the row)
 		{
 			std::string out;
@@ -4876,7 +4878,8 @@ namespace banana
 		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return; }
 		page = PICKGAMES;
 		pickGet = get; pickPoll = 0; pickQuery.clear();
-		pickAsked.clear(); pickRestarted.clear(); pickWasSync = syncing();
+		// (the games picked on an earlier visit still watched for: the next run for one picked late still starts)
+		pickWasSync |= syncing();
 		pickLevel = 0; pickSysSel = 0; pickSel = 0; pickTop = 0; pickDirty = false;
 		pickGames.clear(); pickSys.clear(); pickError.clear();
 		pickCacheMtime = -1;
@@ -5055,6 +5058,9 @@ namespace banana
 	{
 		if (pickAsked.empty() || now < getRestartAt) return false;
 		getRestartAt = now + 1000;
+		// (picked for a server this handheld no longer pairs with, Forget or a pairing since: nothing to start for them)
+		homeServer();
+		if (hsPairedUrl != pickServer) { pickAsked.clear(); pickRestarted.clear(); pickWasSync = false; return false; }
 		const bool sy = syncing();
 		// (no sync running and none since the last look: none ended that could have missed them, and none will be
 		// started here, so nothing is left to watch for. A sync running: looked at once it ends)
@@ -5188,7 +5194,7 @@ namespace banana
 			if (!editGetList(g.key, want)) { message = "The download list can't be written: the card may be read-only."; return MOVED; }
 			g.on = want;
 			g.failed.clear();	// (asked for again: waiting, not the last try's failure)
-			if (g.on) pickAsked.insert(g.key); else { pickAsked.erase(g.key); pickRestarted.erase(g.key); }
+			if (g.on) { pickAsked.insert(g.key); pickServer = hsPairedUrl; } else { pickAsked.erase(g.key); pickRestarted.erase(g.key); }
 			message.clear();
 			// (a quick one may be over before the status is read; one running already is watched to its end too, as it may
 			// have read the list before this game was on it)
@@ -7769,36 +7775,16 @@ namespace banana
 		}
 		// (the pairing screen's countdown, a second at a time)
 		if (page == HOMESRV && hsStep == 3 && !hsCode.empty() && (int)((hsExpires - t) / 1000) != hsShownSec) { hsShownSec = (int)((hsExpires - t) / 1000); changed = true; }
-		if (t < syncNext && !changed) return false;
-		syncNext = t + 500;
+		pollSyncStatus(t, changed);
 		// paired or unpaired since the rows were made (here, or banana-sync run by hand): the rows for that
-		if (hsBackend() != hsRowsFor && hsStep != 3) { hsRebuild(); changed = true; }
-		std::string ln = readLine(runDir + "/sync.status");
-		// a run that is gone (crashed, killed): "running" with no word for 120 s and no sync alive (sync.lock unheld) is over
-		struct stat st;
-		if (ln.compare(0, 8, "running ") == 0 && stat((runDir + "/sync.status").c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 120)
+		if ((t >= hsRowsAt || changed) && hsStep != 3)
 		{
-			int fd = ::open((runDir + "/sync.lock").c_str(), O_RDWR | O_CLOEXEC);
-			if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) == 0) { ln = "error stopped"; std::ofstream(runDir + "/sync.status") << ln << "\n"; flock(fd, LOCK_UN); }
-			if (fd >= 0) ::close(fd);
+			hsRowsAt = t + 500;
+			if (hsBackend() != hsRowsFor) { hsRebuild(); changed = true; }
 		}
-		// the sync this menu started gone without a word of its own, the menu's "running 0 0 |" still standing: over now,
-		// not after the 120 s above (on the device a Get games run started as the last one let go of sync.lock ended at
-		// once, and the row said Starting for two minutes with nothing running and Stop unable to stop it)
-		if (syncGroup > 0)
-		{
-			if (ln != "running 0 0 |") syncGroup = 0;
-			else if (!groupAlive(syncGroup))
-			{
-				syncGroup = 0;
-				ln = "error the sync ended before it started";
-				std::ofstream(runDir + "/sync.status") << ln << "\n";
-				fprintf(stderr, "home server: the sync ended before it started\n");
-			}
-		}
-		if (ln == syncLine) return changed;
-		bool was = syncing();
-		syncLine = ln;
+		if (!syncLineFresh) return changed;
+		syncLineFresh = false;
+		const std::string ln = syncLine;
 		if (hsStep == 3 && hsKind == "romm") hsPairLine(ln);
 		else if (hsStep == 3)
 		{
@@ -7822,6 +7808,42 @@ namespace banana
 				message = ln.find("certificate isn't trusted") != std::string::npos ? TLS_ROMHOST : "Pairing didn't work: " + ln.substr(6) + ".";
 			}
 		}
+		return true;
+	}
+	// sync.status, twice a second: a run gone (crashed, killed) or ended without a word given up on, the line kept for the
+	// rows, the pairing screen's part left to pollSync (Settings open). Also with Settings closed, for the next run Get
+	// games' picks may need and the library's new games
+	bool Settings::pollSyncStatus(double t, bool force)
+	{
+		if (t < syncNext && !force) return false;
+		syncNext = t + 500;
+		std::string ln = readLine(runDir + "/sync.status");
+		// a run that is gone (crashed, killed): "running" with no word for 120 s and no sync alive (sync.lock unheld) is over
+		struct stat st;
+		if (ln.compare(0, 8, "running ") == 0 && stat((runDir + "/sync.status").c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 120)
+		{
+			int fd = ::open((runDir + "/sync.lock").c_str(), O_RDWR | O_CLOEXEC);
+			if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) == 0) { ln = "error stopped"; std::ofstream(runDir + "/sync.status") << ln << "\n"; flock(fd, LOCK_UN); }
+			if (fd >= 0) ::close(fd);
+		}
+		// the sync this menu started gone without a word of its own, the menu's "running 0 0 |" still standing: over now,
+		// not after the 120 s above (on the device a Get games run started as the last one let go of sync.lock ended at
+		// once, and the row said Starting for two minutes with nothing running and Stop unable to stop it)
+		if (syncGroup > 0)
+		{
+			if (ln != "running 0 0 |") syncGroup = 0;
+			else if (!groupAlive(syncGroup))
+			{
+				syncGroup = 0;
+				ln = "error the sync ended before it started";
+				std::ofstream(runDir + "/sync.status") << ln << "\n";
+				fprintf(stderr, "home server: the sync ended before it started\n");
+			}
+		}
+		if (ln == syncLine) return false;
+		bool was = syncing();
+		syncLine = ln;
+		syncLineFresh = true;
 		if (was && ln.compare(0, 5, "done ") == 0) libChanged = true;	// new games: the library again
 		return true;
 	}

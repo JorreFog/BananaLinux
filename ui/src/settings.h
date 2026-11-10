@@ -95,6 +95,9 @@ namespace banana
 		// Sync now waiting for Wi-Fi to come back: update() looks every 250 ms, with Settings closed too (the menu's
 		// loop calls it then); the headless tests give wlan0's state
 		bool syncWaitsForWifi() const { return syncWifiUntil > 0; }
+		// a sync this menu started still to watch with Settings closed: one gone without a word to say, or Get games'
+		// picks still waiting on it (a game picked after its last look at the list needs the next run started)
+		bool watchesSync() const { return syncGroup > 0 || !pickAsked.empty(); }
 		void setWifiFacts(std::function<gamesync::WifiFacts()> f) { wifiFacts = std::move(f); }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -268,6 +271,7 @@ namespace banana
 		// each, when one ended without reading the list after they were asked for (wasSync: a sync ran at the last look)
 		std::set<std::string> pickAsked, pickRestarted;
 		bool pickWasSync = false;
+		std::string pickServer;	// the paired address pickAsked's games were picked for
 		double getRestartAt = 0;
 		bool pollGetRestart();
 		// Get games' list as banana-sync keeps it on the card (banana/homesync-server-games.tsv): when the server listed
@@ -680,6 +684,9 @@ namespace banana
 		std::string hsPrevSync;	// the status line a pairing replaced (the last sync's), put back when it doesn't pair
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
+		bool pollSyncStatus(double t, bool force);	// sync.status read (also with Settings closed); true when its line changed
+		bool syncLineFresh = false;
+		double hsRowsAt = 0;	// the next look at whether the Home server rows are still the pairing's	// a new status line pollSync hasn't yet handled (the pairing screen's)
 		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
 		bool hsTurnLaunchOn();	// a RomM 5.4 pairing's: Sync before playing on when it was off (true: it was)
 		bool startSync(bool gamesOnly = false);	// (true: a sync was started, or waits for Wi-Fi coming back to start; gamesOnly: Get games' downloads alone)
