@@ -54,6 +54,8 @@ namespace rnds
 		std::string marquee;	// the game's logo, or a DS game's own icon (a layout theme's "marquee"); "" without one
 		std::string icon;		// what a cartridge with none of the art above shows on a plain label instead of
 								// staying empty: a 32x32 pixel icon, its system's (a tool, an app, a game nobody scraped)
+		Color accent;			// its system's colour; an app on the Apps tile its own (the tile it had on the row)
+		bool tool = false;		// a tool among the games (PICO-8's Splore): a layout theme may show it as an app
 		int achA = 0, achB = 0;	// unlocked / total
 		std::string achLabel;	// "28 / 50 achievements" (lower case; drawn upper)
 		bool fav = false;

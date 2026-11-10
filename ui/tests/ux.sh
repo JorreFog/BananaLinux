@@ -423,3 +423,31 @@ ux_run p8 "lib pico-8 0; wait 2400; shot ux-p8"
 UXFX=$UXFX_SAVE
 p8_red=$(convert "$OUT/$size-ux-p8-top.png" -fx '(r > 0.8 && g < 0.2 && b < 0.25) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)
 [ "$p8_red" = 1 ] || { echo "FAIL $size: a PICO-8 cart's own picture isn't its art"; fail=1; }
+
+# Glass: an app on the Apps tile is the tile it was on the home row (its own colour and icon), not a game's card:
+# BShare (left of Files) a blue tile, where a game's card is dark. And PICO-8's Splore (an empty Splore.p8) has its own
+# picture, a globe and a magnifier (the globe's blue on the top screen), in Glass and in the default theme
+APFX=$OUT/ux-apps-fixture-$size
+rm -rf "$APFX"; "$HERE/tests/fixture.sh" "$APFX" >/dev/null
+mkdir -p "$APFX/roms/pico-8"; : > "$APFX/roms/pico-8/Splore.p8"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$APFX/roms" --data "$APFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-dark.json" \
+    --script "homeid files; wait 2400; shot ux-glass-apps; lib pico-8 0; wait 2400; shot ux-glass-splore" 2> "$OUT/$size-glass-apps.log" ||
+    { echo "FAIL $size: banana-ui (glass apps) exited $?"; fail=1; }
+UXFX_SAVE=$UXFX; UXFX=$APFX
+ux_run splore "lib pico-8 0; wait 2400; shot ux-splore"
+UXFX=$UXFX_SAVE
+ap_blue() { convert "$1" -crop "$(awk -v k=$ux_k -v x=$2 -v y=$3 'BEGIN { printf "%dx%d+%d+%d", 30 * k, 30 * k, x * k, y * k }')" -format '%[fx:mean.b > 0.6 && mean.b > mean.r + 0.25]' info: 2>/dev/null; }
+[ "$(ap_blue "$OUT/$size-ux-glass-apps-bot.png" 140 194)" = 1 ] || { echo "FAIL $size: Glass's Apps: BShare isn't its blue tile"; fail=1; }
+sp_blue() { convert "$1" -fx '(r > 0.1 && r < 0.25 && g > 0.6 && g < 0.75 && b > 0.95) ? 1 : 0' -format '%[fx:mean > 0.01]' info: 2>/dev/null; }
+[ "$(sp_blue "$OUT/$size-ux-glass-splore-top.png")" = 1 ] || { echo "FAIL $size: Glass: Splore without its picture"; fail=1; }
+[ "$(sp_blue "$OUT/$size-ux-splore-top.png")" = 1 ] || { echo "FAIL $size: Splore without its picture"; fail=1; }
+# with PICO-8's own icon beside it (the owner's copy: lexaloffle-pico8.png, a magenta stand-in here) that icon is
+# Splore's picture instead
+convert -size 128x128 xc:'#ff00ff' "$APFX/roms/pico-8/lexaloffle-pico8.png"
+UXFX_SAVE=$UXFX; UXFX=$APFX
+ux_run splore-own "lib pico-8 0; wait 2400; shot ux-splore-own"
+UXFX=$UXFX_SAVE
+[ "$(convert "$OUT/$size-ux-splore-own-top.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)" = 1 ] ||
+    { echo "FAIL $size: Splore doesn't show PICO-8's own icon"; fail=1; }

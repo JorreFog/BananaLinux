@@ -704,6 +704,15 @@ namespace banana
 					if (g.box.empty()) g.box = media.find(dir, "box", stem);
 					// a PICO-8 cart is a picture itself (its label on a cartridge): its art when nothing else is
 					if (g.box.empty() && lower(base).size() > 7 && lower(base).compare(base.size() - 7, 7, ".p8.png") == 0) g.box = g.path;
+					// PICO-8's Splore (an empty Splore.p8 opens its cart browser): a tool, not a game. Its picture is PICO-8's
+					// own icon from the owner's copy beside pico8_64 (PICO-8's license: not ours to ship), else our pixel globe
+					if (def.id == "pico-8" && lower(stem) == "splore")
+					{
+						std::string own = dir + "/lexaloffle-pico8.png";
+						g.toolIcon = exists(own) ? own : assets + "/splore.png";
+						if (g.box.empty()) g.box = g.toolIcon;
+						if (g.marquee.empty()) g.marquee = g.toolIcon;
+					}
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
 					if (g.marquee.empty()) g.marquee = media.find(dir, "marquee", stem);
@@ -936,6 +945,15 @@ namespace banana
 		return best >= 0 ? best : (s.games.empty() ? -1 : 0);
 	}
 
+	// a system's colour: its look's, else its maker's, else blue
+	rnds::Color Library::accentOf(const SystemDef& d) const
+	{
+		Look look = lookOf(d.id);
+		if (look.hasAccent) return look.accent;
+		auto mk = looks.find("@" + lower(!d.maker.empty() ? d.maker : look.maker));
+		return mk != looks.end() ? mk->second.accent : rnds::Color::hex(0x3d8ec4);
+	}
+
 	rnds::SysInfo Library::system(int i)
 	{
 		rnds::SysInfo r;
@@ -945,12 +963,7 @@ namespace banana
 		r.id = s.def.id;
 		r.name = s.def.name.empty() ? s.def.id : s.def.name;
 		r.maker = !s.def.maker.empty() ? s.def.maker : look.maker;
-		r.accent = look.hasAccent ? look.accent : rnds::Color::hex(0x3d8ec4);
-		if (!look.hasAccent)
-		{
-			auto mk = looks.find("@" + lower(r.maker));
-			if (mk != looks.end()) r.accent = mk->second.accent;
-		}
+		r.accent = accentOf(s.def);
 		r.icon = themedIcon(s.def.id, look.icon);	// a user theme's own icon for the system (theme.h)
 		r.app = look.app;
 		r.apps = s.apps;
@@ -1011,6 +1024,8 @@ namespace banana
 			if (dsCartIcons) r.cartArt = romIconCover(dataDir, g.path);	// ("" without an icon: the art, as before)
 		}
 		r.icon = themedIcon(systemOf(i).id, lookOf(systemOf(i).id).icon);
+		r.accent = accentOf(systemOf(i));
+		if (!g.toolIcon.empty()) { r.tool = true; r.icon = g.toolIcon; }
 		// an app on the Apps tile with no picture of its own (Files, Bshare, Poketool...): its icon as its picture
 		if (lib < (int)shelves.size() && shelves[lib].apps && r.box.empty() && r.cart.empty() && r.label.empty() && r.marquee.empty()) r.box = r.icon;
 		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)

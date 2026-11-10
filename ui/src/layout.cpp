@@ -86,7 +86,7 @@ namespace banana
 	}
 #define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
 	// gameField's names by number
-	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId", "color", "tool" };
 	static int gameFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
@@ -578,6 +578,8 @@ namespace banana
 			else if (fId == GAMEF("rom")) out = EV(g.rom);
 			else if (fId == GAMEF("romIcon")) out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
 			else if (fId == GAMEF("icon")) out = EV(g.icon);
+			else if (fId == GAMEF("color")) out = EV(hex(g.accent));
+			else if (fId == GAMEF("tool")) out = EV(g.tool ? 1.0 : 0.0);
 			else if (fId == GAMEF("achA") || fId == GAMEF("achievements")) out = EV((double)g.achA);
 			else if (fId == GAMEF("achB") || fId == GAMEF("achievementsTotal")) out = EV((double)g.achB);
 			else if (fId == GAMEF("achLabel")) out = EV(g.achLabel);

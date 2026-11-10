@@ -29,6 +29,7 @@ namespace banana
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
 		std::string marquee;	// the game's logo (media/marquee, gamelist.xml's <marquee>)
+		std::string toolIcon;	// a tool among the games (PICO-8's Splore), not a game: its icon, shown as an app's
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;
@@ -163,6 +164,7 @@ namespace banana
 		void saveFavs();
 		void saveStats();
 		Look lookOf(const std::string& id) const;
+		rnds::Color accentOf(const SystemDef& d) const;	// a system's colour (its look's, its maker's, else blue)
 		int resumeIndex(const Shelf& s) const;
 		Game* sourceOf(int shelf, int game, int* sys = nullptr);
 	};
