@@ -314,6 +314,21 @@ def fingerprint():
 
 
 @case
+def existing_keeps_name():
+    """a device given back by allow_existing keeps the name it had: the POST's name is neither answered nor stored,
+    and only a PUT renames it"""
+    host = f"conformance-{RUN}-named"
+    s1, d1 = device(TA, host, name="First name")
+    s2, d2 = device(TA, host, name="Second name")
+    check((s1, s2) == (201, 200) and d2["device_id"] == d1["device_id"] and d2.get("name") == "First name",
+          f"the same hostname under another name: {s1} {d1} / {s2} {d2}")
+    st, g = call("GET", f"/api/devices/{d1['device_id']}", token=TA)
+    check(st == 200 and g.get("name") == "First name", f"stored after the second POST: {st} {g.get('name')!r}")
+    st, p = call("PUT", f"/api/devices/{d1['device_id']}", {"name": "Second name"}, token=TA)
+    check(st == 200 and p.get("name") == "Second name", f"PUT with the name: {st} {p.get('name')!r}")
+
+
+@case
 def sync_disabled():
     """a device with sync turned off can't negotiate"""
     st, d = device(TA, f"conformance-{RUN}-off")
