@@ -9,6 +9,8 @@ if [ -f $DIR/pico8_64 ]; then
     chmod 755 $DIR/pico8_64 2>/dev/null
     # its settings and saves in the folder itself; SDL straight to the panels (KMS) and ALSA
     export HOME=$DIR SDL_VIDEODRIVER=kmsdrm SDL_AUDIODRIVER=alsa
+    # Splore's downloads from the BBS by wget, over https: ours by curl (pico8-bin/wget), BusyBox's can't
+    export PATH=/usr/libexec/banana/pico8-bin:$PATH
     if [ -n "$SPLORE" ]; then exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -splore
     else exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -run "$1"; fi
 fi

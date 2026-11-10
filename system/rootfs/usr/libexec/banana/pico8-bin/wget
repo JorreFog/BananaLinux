@@ -1,0 +1,36 @@
+#!/bin/sh
+# PICO-8's wget (run-pico8 puts this folder first in its PATH): Splore and its cart downloads fetch the BBS
+# (https://www.lexaloffle.com) with wget, and BusyBox's has no https ("could not connect to bbs"). The same request
+# by curl, which has it and the system's certificates. wget's options as PICO-8 and the like use them:
+#   -O <file> (- is the output), -q, -T/--timeout <s>, -t/--tries <n>, -U/--user-agent <ua>, --no-check-certificate;
+#   others are ignored. One URL.
+out= url= timeout=20 tries=1 ua=
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -O) out=$2; shift ;;
+    -O*) out=${1#-O} ;;
+    --output-document=*) out=${1#*=} ;;
+    -T) timeout=$2; shift ;;
+    -T*) timeout=${1#-T} ;;
+    --timeout=*|--read-timeout=*|--connect-timeout=*) timeout=${1#*=} ;;
+    -t) tries=$2; shift ;;
+    -t*) tries=${1#-t} ;;
+    --tries=*) tries=${1#*=} ;;
+    -U) ua=$2; shift ;;
+    --user-agent=*) ua=${1#*=} ;;
+    -*) ;;
+    *) url=$1 ;;
+    esac
+    shift
+done
+[ -n "$url" ] || { echo "wget: missing URL" >&2; exit 1; }
+[ "$tries" -gt 0 ] 2>/dev/null || tries=1
+# with no -O, wget names the file after the URL
+[ -n "$out" ] || { out=$(basename "${url%%\?*}"); [ -n "$out" ] || out=index.html; }
+set -- -fsSL --max-time "$timeout" --retry $((tries - 1))
+[ -n "$ua" ] && set -- "$@" -A "$ua"
+if [ "$out" = - ]; then exec curl "$@" "$url"; fi
+# a failed download leaves no half file behind
+curl "$@" -o "$out.part" "$url" && mv -f "$out.part" "$out" && exit 0
+rm -f "$out.part"
+exit 4
