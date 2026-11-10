@@ -1368,7 +1368,9 @@ STOPPED=$(s4 "/api/sync/sessions?device_id=$(devof4 a)&limit=1" | jget '[0]["id"
 cmp -s "$QA" "$QB" && [ ! -e "$OUT/h-a/run/launch.older" ] || bad "slots: a stop during the placing left the mark of a newer save not fetched: $(cat "$OUT/hr-a.log")"
 hs a; grep -q 'Peel Quest' "$OUT/hs-a.log" && bad "slots: a save placed under a stop not agreed: $(cat "$OUT/hs-a.log")"
 head -c 8192 /dev/urandom > "$QB"; hs b
-slowrun; kill -s KILL "-$SR"; wait $SR 2>/dev/null; sleep 0.3
+# (-- before the group: dash otherwise takes "-<pid>" for an option, the kill fails, and the run ends by itself)
+slowrun; kill -s KILL -- "-$SR"; wait $SR 2>/dev/null; RC=$?; sleep 0.3
+[ "$RC" = 137 ] || bad "slots: the run wasn't killed with its group (exit $RC): $(cat "$OUT/hr-a.log")"
 # (its negotiation's session left open too)
 KILLED=$(s4 "/api/sync/sessions?device_id=$(devof4 a)&limit=1" | jget '[0]["id"]')
 pgrep -f "$OUT/nds-slow" >/dev/null && bad "slots: nds-saves outlived the run killed with its group"
