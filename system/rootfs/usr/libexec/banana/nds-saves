@@ -17,7 +17,7 @@
 # (a power cut while it was written) holds two that differ like both changed, and is written again once they agree
 # or an emulator starting settles them. A save under 512 bytes (the smallest real
 # one is a 4 Kbit EEPROM's) is no save: it never goes over one that has something in it, which goes over it instead,
-# whichever changed (#96). DraStic's save unreadable (its footer doesn't add up, or a size no DS save has, 512 bytes
+# whichever changed, with no record or an unreadable one as well: nothing is held for it, and no file's time asked (#96). DraStic's save unreadable (its footer doesn't add up, or a size no DS save has, 512 bytes
 # or more): neither touched, said, exit 5, the game held the same way. The raw size is kept as it is: melonDS sizes
 # the save memory from its game list, not from the file, and
 # fits a file of another size to it (cut short, or padded with 0xFF) without a word. Every file is written beside its
@@ -164,10 +164,11 @@ fi
 A=$(cat "$REC" 2>/dev/null)
 # (a record there but not an MD5, as a power cut while it was written leaves it: two that differ are held as both
 # changed, never decided by the files' times as with no record at all; an emulator starting, or the two agreeing,
-# writes it again)
+# writes it again. Two saves, that is: BananaDS's under 512 bytes is none, and goes on to the rule for it below, as it
+# would with a record. DraStic's under 512 never set d)
 if [ -f "$REC" ] && ! printf %s "$A" | grep -qx '[0-9a-f]\{32\}'; then
     A=
-    if [ -z "$PREFER" ] && [ -n "$d" ] && [ -n "$s" ] && [ "$d" != "$s" ]; then
+    if [ -z "$PREFER" ] && [ -n "$d" ] && [ -n "$s" ] && [ "$d" != "$s" ] && [ "$(size "$SAV")" -ge 512 ]; then
         echo "nds-saves: $G: the record of the save the two last held can't be read: neither touched"
         done_ "$BOTH"
     fi
@@ -191,15 +192,16 @@ if [ "$d" = "$s" ]; then
     [ "$A" = "$s" ] || rec "$s" || done_ "$FAILED"
     done_
 fi
-if [ -z "$A" ]; then
-    # (no record yet: the newer by the files' times, this once)
+zd=$(wc -c < "$RAW"); zs=$(wc -c < "$SAV")
+if [ -z "$A" ] && [ "$zs" -ge 512 ]; then
+    # (no record yet: the newer by the files' times, this once. Not asked of a BananaDS save under 512 bytes, which the
+    # rule below decides whatever the times, and whose record may be there and unreadable)
     if [ "$DSV" -nt "$SAV" ]; then A=$s; else A=$d; fi
     echo "nds-saves: $G: the two saves differ and never agreed before: the newer file's taken, the other kept in the vault"
 fi
 # a save under 512 bytes is no save (the smallest real one is a 4 Kbit EEPROM's; under it, a file a game made and never
 # filled, as SM64DS leaves in SuperDrastic, #96): it never goes over one that has something in it, which goes over it
 # instead, whether it is the one that changed, both did, or the emulator starting prefers it
-zd=$(wc -c < "$RAW"); zs=$(wc -c < "$SAV")
 if [ "$A" != "$s" ] && [ "$zs" -lt 512 ] && [ "$zd" -gt 0 ]; then
     echo "nds-saves: $G: BananaDS's save is empty ($zs bytes): DraStic's kept, BananaDS takes it"; A=$s
 elif [ "$A" != "$d" ] && [ "$zd" -lt 512 ] && [ "$zs" -gt 0 ]; then

@@ -117,6 +117,17 @@ check "$(held)" "8192s 8192s " "no .dsv yet: made from the .sav"
 saves 8192 0 sav; saves_again=$(held)
 BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"
 check "$(held) $(wc -c < "$T/log" | tr -d ' ')" "$saves_again 0" "a second run: nothing more to do"
+# the record of what the two last held unreadable (a power cut while it was written) holds two saves at a sync, not a
+# save and a file that is none: the empty one gives way at once, as it does with a record, and no file's time is asked
+saves 8192 - x
+head -c 100 /dev/zero | tr '\0' s > "$D/saves/nds/Game.sav"; : > "$D/banana/nds-saves/Game.md5"
+BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"; rc=$?
+check "$rc $(held)" "0 8192d 8192d " "an unreadable record, a 100-byte .sav and a real .dsv: the .dsv over it, not held"
+check "$(grep -c 'empty (100 bytes)' "$T/log") $(grep -c 'never agreed' "$T/log")" "1 0" "...said as the empty save it is, not as two that never agreed"
+check "$(cat "$D/banana/nds-saves/Game.md5" | wc -c | tr -d ' ')" "33" "...and the record written again"
+head -c 8192 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"; : > "$D/banana/nds-saves/Game.md5"
+BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"; rc=$?
+check "$rc $(held)" "3 8192d 8192t " "an unreadable record and two real saves that differ: held, neither touched"
 # a ROCKNIX save beside the game (#25): an empty one is not taken
 rm -rf "$D"; mkdir -p "$T/roms"; : > "$T/roms/Game.dsv"
 BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
