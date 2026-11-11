@@ -1141,5 +1141,32 @@ for size in 640x480 1024x768; do
         --script "ndsoverlay" 2> "$OUT/$size-ndsoverlay.log" ||
         { echo "FAIL $size: the DS companion's overlay: $(grep -h 'FAIL\|ndsoverlay:' "$OUT/$size-ndsoverlay.log" | head -2)"; fail=1; }
 done
+# systems.conf's pick (main.cpp pickRun): a command run before a game starts that may name the game's run line. The
+# headless launch runs it as a real one does and logs what it decided: the line it printed, or the system's own run line
+# when it prints nothing, fails, names one of the menu's pages or doesn't answer in 3 s (and is stopped, with what it
+# started)
+PK=$OUT/pick; mkdir -p "$PK"
+pick() {    # pick <case> <pick command>: the DS's first game launched with that pick; its log in $PK/<case>.log
+    awk -v cmd="$2" '{print} /^\[nds\]$/{print "pick = " cmd}' "$HERE/../system/rootfs/etc/banana/systems.conf" > "$PK/$1.conf"
+    "$HERE/banana-ui" --headless "$PK/$1-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$PK/$1.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press a; wait 2400; press right; wait 2400; press a; wait 3000; press a; wait 500" \
+        2> "$PK/$1.log" || { echo "FAIL pick $1: banana-ui exited $?"; fail=1; }
+}
+pcheck() { grep -q "$2" "$PK/$1.log" || { echo "FAIL pick $1: no '$2' ($(grep -h 'pick (\|launch ' "$PK/$1.log" | head -2))"; fail=1; }; }
+cat > "$PK/pick.sh" <<'EOF2'
+# the made-up app: a game whose name has Monkey in it is its own, with the ROM and the system as it was given them
+case "$1" in *Monkey*) [ "$BANANA_SYSTEM" = nds ] && [ "$BANANA_ROM" = "$1" ] && echo "  /data/myapp/play.sh $2 %ROM%  ";; esac
+EOF2
+pick takes "sh '$PK/pick.sh' %ROM% %SYSTEM%"
+pcheck takes "launch [0-9]*: .*Monkey"; pcheck takes "pick (nds): /data/myapp/play.sh nds %ROM%$"
+pick none "true"; pcheck none "pick (nds): nothing printed: the system's run line"
+pick fails "echo /data/myapp/play.sh %ROM%; exit 3"; pcheck fails "pick (nds): exit 3: the system's run line"
+pick missing "/no/such/pick %ROM%"; pcheck missing "pick (nds): exit 127: the system's run line"
+pick page "echo banana:files"; pcheck page "pick (nds): banana:files is one of the menu's pages, not taken"
+pick slow "sh -c 'sleep 30 & wait'; echo /data/myapp/play.sh"
+pcheck slow "pick (nds): no answer in 3 s: the system's run line"
+pgrep -f "sleep 30" >/dev/null && { echo "FAIL pick slow: what the pick started is still running"; pkill -f "sleep 30"; fail=1; }
+pick nopick ""; grep -q "pick (" "$PK/nopick.log" && { echo "FAIL pick nopick: a pick ran with none set"; fail=1; }
+grep -q "launch [0-9]*: " "$PK/nopick.log" || { echo "FAIL pick nopick: no launch"; fail=1; }
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

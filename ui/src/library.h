@@ -20,6 +20,7 @@ namespace banana
 		bool always = false;			// on the shelf with no games (the DS: a fresh card shows where games go)
 		bool flat = false;				// games only in the folder itself (ports: their own folders hold scripts too)
 		std::string changed;			// a command run when its folder changes (Game & Watch: names and covers)
+		std::string pick;				// a command run before a game starts that may name its run line (main.cpp pickRun)
 	};
 
 	struct Game

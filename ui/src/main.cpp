@@ -189,6 +189,81 @@ static std::string replaceAll(std::string s, const std::string& from, const std:
 	return s;
 }
 
+// systems.conf's pick: a command run just before one of the system's games starts, with %ROM% and %SYSTEM% filled in as
+// for run (and BANANA_ROM / BANANA_SYSTEM set). If it exits 0 having printed a line, that line is this game's run line,
+// and everything that follows from the run line (the game panel, the recorder's launcher name) goes by it; otherwise
+// (nothing printed, another exit code, no such command, 3 s gone by) the system's own run line, as if there were no
+// pick. So an app that plays only some of a system's games (GBA DS) can take those and leave the rest as they were,
+// game panel and all, without replacing the system's run line. A line naming one of the menu's own pages (banana:...)
+// is not taken. Logged either way.
+static std::string pickRun(const SystemDef& sd, const std::string& rom)
+{
+	if (sd.pick.empty()) return sd.run;
+	std::string cmd = replaceAll(replaceAll(sd.pick, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
+	int fd[2];
+	if (pipe2(fd, O_CLOEXEC) != 0) { logf("pick (%s): no pipe: %s: the system's run line", sd.id.c_str(), strerror(errno)); return sd.run; }
+	pid_t pid = fork();
+	if (pid < 0)
+	{
+		logf("pick (%s): fork failed: %s: the system's run line", sd.id.c_str(), strerror(errno));
+		::close(fd[0]); ::close(fd[1]);
+		return sd.run;
+	}
+	if (pid == 0)
+	{
+		setpgid(0, 0);	// (its own group: a pick that hangs is stopped with everything it started)
+		signal(SIGPIPE, SIG_DFL);
+		sigset_t none;
+		sigemptyset(&none);
+		sigprocmask(SIG_SETMASK, &none, nullptr);
+		int devnull = ::open("/dev/null", O_RDONLY);
+		if (devnull >= 0) dup2(devnull, 0);
+		dup2(fd[1], 1);
+		setenv("BANANA_ROM", rom.c_str(), 1);
+		setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
+		execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
+		_exit(127);
+	}
+	setpgid(pid, pid);	// (both sides: whichever runs first)
+	::close(fd[1]);
+	std::string out;
+	const double until = nowMs() + 3000;
+	bool timedOut = false;
+	for (;;)
+	{
+		int left = (int)(until - nowMs());
+		if (left <= 0) { timedOut = true; break; }
+		pollfd p = { fd[0], POLLIN, 0 };
+		int r = poll(&p, 1, left);
+		if (r < 0 && errno == EINTR) continue;
+		if (r <= 0) { timedOut = r == 0; break; }
+		char buf[512];
+		ssize_t n = read(fd[0], buf, sizeof buf);
+		if (n < 0 && errno == EINTR) continue;
+		if (n <= 0) break;
+		if (out.size() < 4096) out.append(buf, (size_t)n);
+	}
+	::close(fd[0]);
+	if (timedOut) kill(-pid, SIGKILL);
+	int status = 0;
+	while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+	if (timedOut) { logf("pick (%s): no answer in 3 s: the system's run line", sd.id.c_str()); return sd.run; }
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+	{
+		logf("pick (%s): %s %d: the system's run line", sd.id.c_str(), WIFEXITED(status) ? "exit" : "signal",
+			WIFEXITED(status) ? WEXITSTATUS(status) : WTERMSIG(status));
+		return sd.run;
+	}
+	std::string line = out.substr(0, out.find('\n'));
+	while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) line.pop_back();
+	size_t at = line.find_first_not_of(" \t");
+	line = at == std::string::npos ? "" : line.substr(at);
+	if (line.empty()) { logf("pick (%s): nothing printed: the system's run line", sd.id.c_str()); return sd.run; }
+	if (line.compare(0, 7, "banana:") == 0) { logf("pick (%s): %s is one of the menu's pages, not taken: the system's run line", sd.id.c_str(), line.c_str()); return sd.run; }
+	logf("pick (%s): %s", sd.id.c_str(), line.c_str());
+	return line;
+}
+
 // ---- the Source with a few host settings on top -------------------------------------------------------------------
 struct Host : Library
 {
@@ -1456,7 +1531,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
-			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			else
+			{
+				logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+				pickRun(lib.systemOf(g), lib.gameAt(g).path);	// (the system's pick, if it has one, as a launch runs it: logged)
+			}
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -2731,12 +2810,14 @@ int main(int argc, char** argv)
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;
-		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
+		// (the system's run line, or the one its pick named for this game: the panels and the rest go by it)
+		const std::string run = pickRun(sd, rom);
+		std::string cmd = replaceAll(replaceAll(run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
 			// the recorder: the game, its system, how it's run (the launcher's name: run-retroarch, run-nds...)
-			std::string how = sd.run.substr(0, sd.run.find(' '));
+			std::string how = run.substr(0, run.find(' '));
 			how = how.substr(how.rfind('/') + 1);
 			recordEvent("game", "start: %s (%s, %s)", lib.gameAt(game).title.c_str(), sd.id.c_str(), how.c_str());
 		}
@@ -2760,9 +2841,9 @@ int main(int argc, char** argv)
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
 		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
-		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
-			sd.run.find("run-bananafront") != std::string::npos ||
-			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
+		bool ra = run.find("run-retroarch") != std::string::npos || run.find("run-ps1") != std::string::npos ||
+			run.find("run-bananafront") != std::string::npos ||
+			(run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
 		const char* OUT = "/run/banana/retroarch.out";	// RetroArch's stdout, for the Pokémon companion
