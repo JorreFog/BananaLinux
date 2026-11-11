@@ -199,6 +199,33 @@ namespace bsync
 	}
 	inline std::string lower(std::string s) { for (auto& c : s) c = (char)tolower((unsigned char)c); return s; }
 
+	// RomM's save slot as the owner named it (homesync_slot = custom, homesync_slot_name): 1 to 64 letters, digits,
+	// spaces, - and _, not starting or ending with a space. It goes into a URL, escaped, and into romsync.json's keys,
+	// "<rom id>/<slot>", which a colon would mix up with a state's "<rom id>/state:<name>"
+	inline bool slotNameOk(const std::string& n)
+	{
+		if (n.empty() || n.size() > 64 || n.front() == ' ' || n.back() == ' ') return false;
+		for (unsigned char ch : n)
+			if (!std::isalnum(ch) && ch != ' ' && ch != '-' && ch != '_') return false;
+		return true;
+	}
+	// the slot a RomM 5.4 sync uses, from the two settings: autosave (Grout's and RomM's page's) unless a custom name
+	// is chosen and is a slot name
+	inline std::string slotOf(const std::string& choice, const std::string& name)
+	{
+		return choice == "custom" && slotNameOk(name) ? name : "autosave";
+	}
+
+	// the RomM slot a record of romsync.json belongs to, "<rom id>/<slot>"; "" for a state's ("<rom id>/state:<name>")
+	// and a save waiting under its ROM ("rom:<path>")
+	inline std::string slotOfKey(const std::string& k)
+	{
+		size_t s = k.find('/');
+		if (s == std::string::npos || s == 0 || k.compare(s + 1, 6, "state:") == 0) return "";
+		for (size_t i = 0; i < s; i++) if (!std::isdigit((unsigned char)k[i])) return "";
+		return k.substr(s + 1);
+	}
+
 	// a path from a server, relative to the card's roms or data folder: no absolute path, no "..", no empty part,
 	// nothing starting with a dot except the .discs folders a PS1 set lives in
 	inline bool safeRel(const std::string& p)

@@ -1492,9 +1492,83 @@ s4 "/api/sync/sessions?device_id=$(devof4 a)&limit=500" | python3 -c 'import jso
 grep -q "negotiation's own plan: .*(not followed)" "$OUT/hs-a.log" || bad "slots: negotiation's plan not logged: $(cat "$OUT/hs-a.log")"
 [ "$(curl -s "$U4/test/violations")" = "[]" ] || bad "slots: a card sent what it never may: $(curl -s "$U4/test/violations")"
 
+# ---------------------------------------------------------------- the slot Settings names (homesync_slot = custom,
+# homesync_slot_name): saves sync with that slot alone, and autosave's devices never see them; a slot changed carries a
+# save waiting to the new slot and lets go of what was held with the old one, its copy kept in the vault; the versions
+# agreed stay per slot, so going back finds them; a name that isn't a slot's is said, and autosave used. A stand-in of
+# its own, every card's token strict
+L5=$OUT/lib5
+mkdir -p "$L5/gba"; for g in Den Held Wait; do printf 'gba rom %s' "$g" > "$L5/gba/$g (USA).gba"; done
+P5=$(port)
+python3 "$HERE/tests/fake-romm.py" "$P5" "$L5" 2> "$OUT/fake-romm5.log" & PIDS="$PIDS $!"
+waitport "$P5" /api/heartbeat || bad "the custom slot's fake RomM didn't start"
+U5=http://127.0.0.1:$P5
+TA5=$(curl -s -XPOST "$U5/test/token" -d '{}' | jget '["token"]')
+s5() { curl -s -H "Authorization: Bearer $TA5" "$U5$1"; }
+TOKS5=""
+hand5() {
+    _h=$OUT/s-$1; realcard "$_h"; cp "$L5/gba/"* "$_h/roms/gba/"
+    _t=$(curl -s -XPOST "$U5/test/token" -d '{}' | jget '["token"]')
+    TOKS5="$TOKS5${TOKS5:+, }\"$_t\""; curl -s -XPOST "$U5/test/strict" -d "{\"tokens\": [$TOKS5]}" >/dev/null
+    printf '{"backend": "romm", "server": "%s", "token": "%s"}\n' "$U5" "$_t" > "$_h/banana/romsync.json"
+}
+ss() { _n=$1; shift; "$BIN" --root "$OUT/s-$_n" --run "$OUT/s-$_n/run" --status "$OUT/s-$_n/run/sync.status" "$@" > "$OUT/ss-$_n.log" 2>&1; }
+rid5() { s5 "/api/roms?platform_ids=$(s5 /api/platforms | jget '[0]["id"]')&limit=500" | python3 -c "import json,sys; print(next(r['id'] for r in json.load(sys.stdin)['items'] if r['fs_name'] == sys.argv[1]))" "$1 (USA).gba"; }
+# head5 <game> <slot>: that slot's head's MD5, "none" without one
+head5() { s5 "/api/saves?rom_id=$(rid5 "$1")&slot=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$2")" | python3 -c '
+import json, sys
+rows = json.load(sys.stdin)
+print(max(rows, key=lambda s: (s["updated_at"], s["id"]))["content_hash"] if rows else "none")'; }
+rs5() { python3 -c "import json,sys; c = json.load(open(sys.argv[1])); print($2)" "$OUT/s-$1/banana/romsync.json"; }
+slot5() { sed -i '/^homesync_slot/d' "$OUT/s-$1/banana/settings.conf"; [ -z "$2" ] || printf 'homesync_slot = custom\nhomesync_slot_name = %s\n' "$2" >> "$OUT/s-$1/banana/settings.conf"; }
+hand5 e; hand5 g; E5=$OUT/s-e/saves/gba; G5=$OUT/s-g/saves/gba
+slot5 e "Den Slot"
+head -c 8192 /dev/urandom > "$E5/Den (USA).srm"; cp "$E5/Den (USA).srm" "$OUT/den1.srm"
+ss e sync --saves-only
+grep -q 'save slot: Den Slot' "$OUT/ss-e.log" && [ "$(head5 Den "Den Slot")" = "$(m "$OUT/den1.srm")" ] && [ "$(head5 Den autosave)" = none ] ||
+    bad "custom slot: not sent to it alone: $(head5 Den "Den Slot") $(head5 Den autosave): $(cat "$OUT/ss-e.log")"
+ss g sync --saves-only
+[ -e "$G5/Den (USA).srm" ] && bad "custom slot: an autosave handheld took a custom slot's save: $(cat "$OUT/ss-g.log")"
+# back to autosave: the card's save never agreed with it goes to an empty autosave, and the autosave handheld takes it
+slot5 e; ss e sync --saves-only
+[ "$(head5 Den autosave)" = "$(m "$OUT/den1.srm")" ] || bad "custom slot: back to autosave, not sent there: $(cat "$OUT/ss-e.log")"
+ss g sync --saves-only; cmp -s "$G5/Den (USA).srm" "$OUT/den1.srm" || bad "custom slot: the autosave handheld didn't get it: $(cat "$OUT/ss-g.log")"
+# and to the custom slot again: agreed there still, nothing moves
+slot5 e "Den Slot"; ss e sync --saves-only
+grep -q " 0 saves up, 0 down, 0 conflicts, 0 errors" "$OUT/ss-e.log" || bad "custom slot: going back lost the agreement: $(cat "$OUT/ss-e.log")"
+# a save waiting to be sent to the custom slot (the server refused it after a game) goes to autosave once that's the slot
+printf 'homesync_auto = quit\n' >> "$OUT/s-e/banana/settings.conf"
+head -c 8192 /dev/urandom > "$E5/Wait (USA).srm"; cp "$E5/Wait (USA).srm" "$OUT/wait.srm"
+curl -s -XPOST "$U5/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null
+ss e sync --auto quit --rom "gba/Wait (USA).gba"
+[ "$(rs5 e 'list(c["queue"])')" = "['$(rid5 Wait)/Den Slot']" ] || bad "custom slot: the refused save isn't waiting for its slot: $(rs5 e 'c["queue"]'): $(cat "$OUT/ss-e.log")"
+slot5 e; ss e sync --auto wifi
+grep -q 'slot Den Slot to autosave: a save waiting to be sent goes to autosave' "$OUT/ss-e.log" && [ "$(head5 Wait autosave)" = "$(m "$OUT/wait.srm")" ] &&
+    [ "$(head5 Wait "Den Slot")" = none ] && [ "$(rs5 e 'len(c["queue"])')" = 0 ] ||
+    bad "custom slot: the waiting save didn't follow the slot: $(rs5 e 'c["queue"]'): $(cat "$OUT/ss-e.log")"
+# a conflict held with the custom slot: not listed once Settings names another, and let go by the next sync, said, its
+# copy staying in the vault
+slot5 e "Den Slot"; head -c 8192 /dev/urandom > "$E5/Held (USA).srm"; ss e sync --saves-only
+curl -s -XPOST "$U5/test/save" -d "{\"rom_id\": $(rid5 Held), \"slot\": \"Den Slot\", \"file_name\": \"Held (USA).srm\", \"data\": \"$(head -c 8192 /dev/urandom | od -An -v -tx1 | tr -d ' \n')\", \"updated_at\": \"$(date -u -d "@$(( $(date +%s) + 5 ))" +%Y-%m-%dT%H:%M:%SZ)\"}" >/dev/null
+head -c 8192 /dev/urandom > "$E5/Held (USA).srm"; ss e sync --saves-only
+grep -q 'conflict, both kept: saves/gba/Held (USA).srm' "$OUT/ss-e.log" || bad "custom slot: no conflict to let go of: $(cat "$OUT/ss-e.log")"
+HV=$(rs5 e '[v["vault"] for v in c["conflicts"].values()][0]')
+slot5 e
+"$BIN" --root "$OUT/s-e" --run "$OUT/s-e/run" saves > "$OUT/ss-e-saves.txt" 2>/dev/null
+grep -q '^conflict' "$OUT/ss-e-saves.txt" && bad "custom slot: a conflict with the slot no longer named still listed: $(cat "$OUT/ss-e-saves.txt")"
+ss e sync --saves-only
+grep -q 'slot Den Slot to autosave: saves/gba/Held (USA).srm with Den Slot no longer held' "$OUT/ss-e.log" && [ -n "$HV" ] && [ -e "$HV" ] &&
+    [ "$(rs5 e 'sum(1 for k in list(c["conflicts"]) + list(c["held"]) if k.endswith("/Den Slot"))')" = 0 ] ||
+    bad "custom slot: the old slot's conflict not let go, or its copy gone: $HV: $(rs5 e 'c["conflicts"]'): $(cat "$OUT/ss-e.log")"
+# a name no slot can have: said, and autosave it is
+slot5 e "bad:name"; head -c 8192 /dev/urandom > "$E5/Den (USA).srm"; ss e sync --saves-only
+grep -q "save slot: \"bad:name\" isn't a slot name" "$OUT/ss-e.log" && [ "$(head5 Den autosave)" = "$(m "$E5/Den (USA).srm")" ] ||
+    bad "custom slot: a bad name not said, or not autosave: $(cat "$OUT/ss-e.log")"
+[ "$(curl -s "$U5/test/violations")" = "[]" ] || bad "custom slot: a card sent what it never may: $(curl -s "$U5/test/violations")"
+
 # no traceback but those of the faults that asked the handler to fail: each traceback's last line, the exception, is
 # what tells them apart
-for f in "$OUT/fake-romm.log" "$OUT/fake-romm2.log" "$OUT/fake-romm3.log" "$OUT/fake-romm4.log"; do
+for f in "$OUT/fake-romm.log" "$OUT/fake-romm2.log" "$OUT/fake-romm3.log" "$OUT/fake-romm4.log" "$OUT/fake-romm5.log"; do
     u=$(awk '/^Traceback/ { t = 1; next } t && !/^ / { t = 0; if ($0 !~ /^RuntimeError: a fault asked for on/) print }' "$f")
     [ -z "$u" ] || bad "the stand-in failed a request ($f): $u"
 done

@@ -45,7 +45,8 @@
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
 // --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto,
 // homesync_launch, homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate,
-// homesync_tls = off: no certificate checked).
+// homesync_tls = off: no certificate checked; homesync_slot = custom with homesync_slot_name: the RomM slot saves sync
+// with instead of autosave).
 // The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
 // Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
@@ -1170,6 +1171,8 @@ namespace
 			for (auto& kv : m)
 			{
 				const SlotNote& n = kv.second;
+				// (one with a slot Settings no longer names: nothing to decide, the next sync drops it, its copy kept)
+				if (c.backend == "romm" && !slotOfKey(kv.first).empty() && slotOfKey(kv.first) != saveSlot) continue;
 				// (a conflict the last sync left, its game's DS saves apart since: neither choice could be carried out
 				// until the game's next start brings the two together, so none is offered, and the line says why)
 				bool ds = heldForDs(c, kv.first);
@@ -1216,6 +1219,12 @@ namespace
 			if (autoWhy == "launch" && (onlyRom.empty() || onlyRom[0] == '/' || c.backend != "romm" || get("homesync_launch", "off") != "on")) return 0;
 		}
 		if (!tlsVerify && c.server.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
+		if (c.backend == "romm" && get("homesync_slot", "autosave") == "custom")
+		{
+			if (saveSlot != "autosave") say("save slot: %s", saveSlot.c_str());
+			else if (get("homesync_slot_name", "") != "autosave")
+				say("save slot: \"%s\" isn't a slot name (letters, digits, spaces, - and _, up to 64): saves sync with autosave", get("homesync_slot_name", "").c_str());
+		}
 		bool states = get("homesync_states", "off") == "on" || settleKey.find("/state:") != std::string::npos;
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
@@ -1451,6 +1460,7 @@ int main(int argc, char** argv)
 		CA = set["homesync_ca"];
 		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
 		tlsVerify = set["homesync_tls"] != "off";
+		saveSlot = slotOf(set["homesync_slot"], set["homesync_slot_name"]);
 	}
 	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | get [--drop] <key>... | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];

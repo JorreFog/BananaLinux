@@ -24,6 +24,7 @@ namespace bsync
 	extern const char* VERSION;
 	extern std::string ROOT, ROMS, CONF, SETTINGS, SYSTEMS, STATUS, RUN, CA;	// CA: homesync_ca, a PEM file of CA certificates (or "")
 	extern bool dryRun, verbose;
+	extern std::string saveSlot;	// RomM 5.4's slot every game's save syncs with (settings: homesync_slot, homesync_slot_name)
 	extern bool tlsVerify;	// homesync_tls = off: an https server's certificate taken unchecked
 	extern bool logWanted;	// the next line said opens the report on the card, banana/logs/sync.log
 	// what of romsync.json this run may write: the games and the pairing while it holds sync.lock (holdRoms), the

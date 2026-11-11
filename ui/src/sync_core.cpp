@@ -23,6 +23,7 @@ namespace bsync
 	const char* VERSION = "banana-sync 1.0";
 	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana", CA;
 	bool dryRun = false, verbose = false, holdRoms = true, holdSaves = true;
+	std::string saveSlot = "autosave";
 	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
 	long connectTimeout = 10, callTimeout = 60;
 

@@ -282,9 +282,9 @@ namespace bsync
 			return true;
 		}
 		// A game's save is the one file its emulator reads (save_paths.h): saves/nds/<stem>.sav, saves/gba/<stem>.srm,
-		// saves/<stem>.srm, for a game on the card whose ROM is the server's by its contents. On RomM 5.4
-		// and newer it syncs with that ROM's autosave slot (slots() below). An older RomM's saves (one per ROM and file
-		// name, no slots) only come down (sync() below, which the states use too): changed on the server only ->
+		// saves/<stem>.srm, for a game on the card whose ROM is the server's by its contents. On RomM 5.4 and newer it
+		// syncs with that ROM's slot, autosave unless Settings names another (slots() below). An older RomM's saves (one
+		// per ROM and file name, no slots) only come down (sync() below, which the states use too): changed on the server only ->
 		// download; changed on both -> the server's taken and the card's kept beside it as <file>.card-<date>.bak. A
 		// blank save here (a core's fresh one) is never sent: it takes the server's when it was never synced, and is
 		// left alone when it was (blanked since). Every download is checked against the server's MD5 and installed
@@ -494,6 +494,7 @@ namespace bsync
 			if (!sendOk && (beforeGame || onlyQueued)) return true;
 			// (a path still absolute: on neither card's ROMs folder, an app's. Slots know only the games under those)
 			if (sendOk && !onlyRom.empty() && onlyRom[0] == '/') return true;
+			if (sendOk) followSlot();
 			if (!list(skip, err)) { errors.push_back("saves: " + err); keepUnsent(errors); return false; }
 			if (!checkDevice(note)) return true;
 			if (!onlyRom.empty() && !sendOk) say("RomM %s: every save synced, not only %s's", c.serverVersion.c_str(), onlyRom.c_str());
@@ -530,19 +531,24 @@ namespace bsync
 		{
 			Played g;
 			if (!keepPlayed(g, errors)) return;
-			std::string key;
-			for (auto& s : c.slots) if (s.second.rel == g.rel) key = s.first;
-			if (g.ndsHeld || (!key.empty() && c.slots[key].md5 == g.md5)) { say("  kept in the vault, the server out of reach: %s", g.rel.c_str()); return; }
+			// (its record with this slot; one with another slot only, Settings' slot changed since, still names its ROM, so
+			// it waits for this slot's, as a save never agreed with it)
+			std::string key, other;
+			for (auto& s : c.slots)
+				if (s.second.rel == g.rel && !slotOfKey(s.first).empty()) (slotOfKey(s.first) == SLOT ? key : other) = s.first;
+			bool agreed = !key.empty() && c.slots[key].md5 == g.md5;
+			if (key.empty() && !other.empty()) key = other.substr(0, other.find('/') + 1) + SLOT;
+			if (g.ndsHeld || agreed) { say("  kept in the vault, the server out of reach: %s", g.rel.c_str()); return; }
 			// (a game never synced from this card: its slot isn't known until the server is reached, so it waits under its
 			// ROM, which the sync when Wi-Fi comes back looks up)
 			if (key.empty()) key = "rom:" + onlyRom;
 			QueueSt& w = c.queue[key];
-			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), key.compare(0, 4, "rom:") == 0 ? g.rel : "" };
+			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), !c.slots.count(key) ? g.rel : "" };
 			say("  waiting to be sent, the server out of reach (a copy in the vault): %s", g.rel.c_str());
 			keptUnsent = true;
 			saveConf(c);
 		}
-		// ---- RomM's save slots (5.4 and newer): each game's save is the autosave slot of its ROM, a version per change,
+		// ---- RomM's save slots (5.4 and newer): each game's save is a slot of its ROM (SLOT), a version per change,
 		// shared with the other devices that play it. Which way a save goes is decided here by content alone, from three
 		// MD5s: L, the card's save; S, the slot's head (its newest version by updated_at then id, the order RomM's own
 		// upload guard keeps); A, the version both sides last held (romsync.json's slots). Only one side moved from A:
@@ -550,7 +556,47 @@ namespace bsync
 		// conflict, held, both kept (the server's fetched into the vault), until its owner says which. No clock is ever
 		// compared, RomM's negotiation plan is never followed (it goes by clocks, and of versions saved in the same
 		// second it may offer any), and nothing is deleted or overwritten on the server: no overwrite, no cleanup.
-		const std::string SLOT = "autosave";
+		// (autosave unless the owner named another in Settings: every device that should share a game's save uses one slot)
+		const std::string SLOT = saveSlot;
+		// the slot changed in Settings since these records were made: a save waiting to be sent goes to the new slot (one
+		// waiting there already stays, the other's copy kept in the vault), and what was held or in conflict with the old
+		// slot is no longer anything to decide, its note dropped and its copy kept in the vault, said. The versions both
+		// sides agreed on stay, per slot, so going back to the old slot finds them. In the new slot every game is a save
+		// never agreed with it: the card's goes to an empty slot, other bytes there are a conflict, both kept
+		void followSlot()
+		{
+			std::map<std::string, QueueSt> moved;
+			for (auto it = c.queue.begin(); it != c.queue.end();)
+			{
+				std::string sl = slotOfKey(it->first);
+				if (sl.empty() || sl == SLOT) { ++it; continue; }
+				std::string nk = it->first.substr(0, it->first.find('/') + 1) + SLOT;
+				if (c.queue.count(nk) || moved.count(nk))
+				{
+					if (!it->second.vault.empty()) say("  slot %s to %s: another save waits for the game already, this one stays in the vault: %s", sl.c_str(), SLOT.c_str(), it->second.vault.c_str());
+				}
+				else
+				{
+					say("  slot %s to %s: a save waiting to be sent goes to %s: %s", sl.c_str(), SLOT.c_str(), SLOT.c_str(), it->second.vault.empty() ? it->first.c_str() : it->second.vault.c_str());
+					QueueSt w = it->second;
+					// (its save's path, which the old slot's record held, kept with it: the new slot has no record yet)
+					auto si = c.slots.find(it->first);
+					if (w.rel.empty() && si != c.slots.end()) w.rel = si->second.rel;
+					moved[nk] = w;
+				}
+				it = c.queue.erase(it);
+			}
+			c.queue.insert(moved.begin(), moved.end());
+			for (auto* m : { &c.conflicts, &c.held })
+				for (auto it = m->begin(); it != m->end();)
+				{
+					std::string sl = slotOfKey(it->first);
+					if (sl.empty() || sl == SLOT) { ++it; continue; }
+					say("  slot %s to %s: %s with %s no longer held%s%s", sl.c_str(), SLOT.c_str(), it->second.rel.c_str(), sl.c_str(),
+						it->second.vault.empty() ? "" : ", the server's copy stays in the vault: ", it->second.vault.c_str());
+					it = m->erase(it);
+				}
+		}
 		struct Head { long long id = 0, size = -1; time_t t = 0; std::string name, hash, updated, device; bool current = false; };
 		std::vector<long long> sessions;	// negotiation's, completed at the end of the saves
 		std::map<std::string, SlotNote> prior, priorHeld;	// what was held before this run (a conflict's vault copy kept)
@@ -676,7 +722,7 @@ namespace bsync
 			for (size_t a = 0; a < ids.size(); a += 100)
 			{
 				std::set<long long> scope(ids.begin() + a, ids.begin() + std::min(ids.size(), a + 100));
-				std::string q = "/api/saves?slot=" + SLOT + (c.device.empty() ? "" : "&" + devQ());
+				std::string q = "/api/saves?slot=" + urlEsc(SLOT) + (c.device.empty() ? "" : "&" + devQ());
 				for (long long id : scope) q += "&rom_ids=" + std::to_string(id);
 				Resp r = call("GET", q);
 				if (r.code != 200) { err = "saves: " + r.error(); return false; }
@@ -950,7 +996,7 @@ namespace bsync
 			if (!why.empty()) { errors.push_back(rel + ": " + why + ", not sent"); unlink(snap.c_str()); return Up::Failed; }
 			if (h && !h->current && !confirm(*h)) { errors.push_back(rel + ": the server's newest version can't be marked seen"); unlink(snap.c_str()); return Up::Failed; }
 			Req q; q.method = "POST"; q.headers = auth(); q.timeout = 0;
-			q.url = c.server + "/api/saves?rom_id=" + std::to_string(g.rom.id) + "&slot=" + SLOT + "&" + devQ() + "&emulator=" + urlEsc(g.label) + "&content_hash=" + L;
+			q.url = c.server + "/api/saves?rom_id=" + std::to_string(g.rom.id) + "&slot=" + urlEsc(SLOT) + "&" + devQ() + "&emulator=" + urlEsc(g.label) + "&content_hash=" + L;
 			q.fileParts.push_back({ "saveFile", snap });
 			q.partName = baseOf(rel);
 			std::map<long long, Head> now;	// the slot looked at again after a refusal, its head's MD5 asked for when not listed
