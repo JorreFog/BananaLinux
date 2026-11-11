@@ -1786,3 +1786,12 @@ settings		Usual (443)	Tavallinen (443)
 settings		Usual (80)	Tavallinen (80)
 settings		Check certificate	Tarkista varmenne
 settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Viimeisin synkronointi, Lataa pelejä -lataukset: {g} pelitiedostoa alas. Tallennuksia ei synkronoitu: Synkronoi nyt synkronoi ne{er}
+# (Save slot, on Settings > Network > Home server: a machine-translated draft, for the translator to check in the next round)
+settings		Save slot	Tallennuspaikka
+settings		The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.	RomM-paikka, jonka kanssa tämän käsikonsolin tallennukset synkronoidaan. Grout ja RomMin oma sivu käyttävät Autosavea.
+settings		Empty for Autosave	Tyhjä: Autosave
+settings		A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed.	Itse nimeämäsi paikka: kirjaimet, numerot, välilyönnit, - ja _. Vain samaan paikkaan asetetut laitteet jakavat pelin tallennuksen; Grout ja RomMin sivu käyttävät Autosavea. Tyhjä: Autosave. START, kun se on kirjoitettu.
+settings		Autosave	Autosave
+settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Paikan nimi on kirjaimia, numeroita, välilyöntejä, - ja _, enintään 64.
+settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Tallennukset synkronoidaan Autosaven kanssa seuraavasta synkronoinnista alkaen, kuten Groutin ja RomMin sivun.
+settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Tallennukset synkronoidaan paikan {slot} kanssa seuraavasta synkronoinnista alkaen. Vain samaan paikkaan asetetut laitteet jakavat ne.

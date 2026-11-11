@@ -1837,3 +1837,12 @@ settings		Usual (443)	默认（443）
 settings		Usual (80)	默认（80）
 settings		Check certificate	检查证书
 settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	上次同步（获取游戏的下载）：游戏文件下载 {g}。存档未同步：“立即同步”会同步它们{er}
+# (Save slot, on Settings > Network > Home server: a machine-translated draft, for the translator to check in the next round)
+settings		Save slot	存档槽位
+settings		The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.	此掌机的存档与之同步的 RomM 槽位。Grout 和 RomM 自己的页面使用 Autosave。
+settings		Empty for Autosave	留空为 Autosave
+settings		A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed.	你自己命名的槽位：字母、数字、空格、- 和 _。只有设为同一槽位的设备才共享游戏存档；Grout 和 RomM 的页面使用 Autosave。留空为 Autosave。输入后按 START。
+settings		Autosave	Autosave
+settings		A slot's name is letters, digits, spaces, - and _, up to 64.	槽位名称由字母、数字、空格、- 和 _ 组成，最多 64 个。
+settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	从下次同步起，存档与 Autosave 同步，与 Grout 和 RomM 页面相同。
+settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	从下次同步起，存档与 {slot} 同步。只有设为同一槽位的设备共享它们。

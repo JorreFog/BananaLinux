@@ -1126,6 +1126,22 @@ if [ -x "$HERE/banana-ui" ]; then
     cp "$OUT/romsync-plain.json" "$FX/data/romsync.json"
     cmp -s "$OUT/ui-net-settle0-bot.png" "$OUT/ui-net-settle1-bot.png" && bad "Network's Home server row: saves to settle not counted"
     cmp -s "$OUT/ui-hs-settle0-bot.png" "$OUT/ui-hs-settle1-bot.png" && bad "Manage saves' row: saves to settle not counted"
+    # (Save slot, below Device name, on a RomM that keeps slots only: a name typed is the slot's, both settings written and said; one no
+    # slot can have refused, nothing written; emptied, Autosave again)
+    SLOTROW="$NET; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; wait 100"
+    SCF=$FX/data/settings.conf
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.3.1", "serverVersion": "5.3.1"}\n' > "$FX/data/romsync.json"
+    ug "$SLOTROW; shot hs-slot-old"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1", "serverVersion": "5.4.1"}\n' > "$FX/data/romsync.json"
+    ug "$SLOTROW; shot hs-slotrow; press a; type Den Slot; shot hs-slot-entry; press start; wait 100; shot hs-slot-set"
+    cmp -s "$OUT/ui-hs-slot-old-bot.png" "$OUT/ui-hs-slotrow-bot.png" && bad "Save slot: the same rows on a RomM before 5.4"
+    grep -qx 'homesync_slot = custom' "$SCF" && grep -qx 'homesync_slot_name = Den Slot' "$SCF" && grep -q 'home server: save slot Den Slot' "$OUT/ui-get.log" ||
+        bad "Save slot: a name typed not taken: $(grep homesync_slot "$SCF") $(grep 'save slot' "$OUT/ui-get.log")"
+    ug "$SLOTROW; press a; press b; press b; press b; press b; press b; press b; press b; press b; type bad:x; press start; wait 100; shot hs-slot-bad"
+    grep -qx 'homesync_slot_name = Den Slot' "$SCF" && ! grep -q 'home server: save slot' "$OUT/ui-get.log" || bad "Save slot: a name no slot can have taken: $(grep homesync_slot "$SCF")"
+    ug "$SLOTROW; press a; press b; press b; press b; press b; press b; press b; press b; press b; press start; wait 100"
+    grep -qx 'homesync_slot = autosave' "$SCF" && grep -q 'home server: save slot autosave' "$OUT/ui-get.log" || bad "Save slot: emptied, not Autosave again: $(grep homesync_slot "$SCF")"
+    cp "$OUT/romsync-plain.json" "$FX/data/romsync.json"
     # (Sync now as Wi-Fi comes back, pressed as the lid opens: it waits, and starts once Wi-Fi has an address)
     HSN="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a"
     rm -f "$BANANA_RUN/sync.status"; : > "$SL"

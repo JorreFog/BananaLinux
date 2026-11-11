@@ -930,6 +930,10 @@ namespace banana
 			add(HS, "phone", "Manage saves", "Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.", "", "hs_saves", {}, {}, Item::PAGE);
 			add(HS, "phone", "Systems", "Which systems' saves sync. For one game: X on it in the library, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
 			add(HS, "phone", "Device name", "This handheld's name in RomM, shown on the saves it sends.", "", "hs_name", {}, {}, Item::PAGE);
+			// (a RomM before 5.4 has no slots: its saves only come down)
+			slotShown = hsSlot();
+			if (hsSlotsKept())
+				add(HS, "phone", "Save slot", "The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.", "", "hs_slot", {}, {}, Item::PAGE);
 			// (Check certificate is on Server's RomM form only, where the address is: changed there it holds at once)
 		}
 		else if (!hsRowsFor.empty())
@@ -1390,6 +1394,7 @@ namespace banana
 			if (it.key == "hs_get") { openPickGames(true); return MOVED; }
 			if (it.key == "hs_saves") { openSaves(); return MOVED; }
 			if (it.key == "hs_name") { homeServer(); startEntry(ENTRY_HS_NAME, "Device name", "As RomM lists this handheld", LIST, hsPairedName); return MOVED; }
+			if (it.key == "hs_slot") { startEntry(ENTRY_HS_SLOT, "Save slot", "Empty for Autosave", LIST, hsSlot() == "autosave" ? "" : hsSlot()); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
@@ -2402,7 +2407,7 @@ namespace banana
 			else if (syncLine.compare(0, 16, "error noconnect ") == 0) help = "The last sync couldn't reach the server: " + syncLine.substr(16) + ". Check Wi-Fi, then Sync now again.";
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
 		}
-		if ((cur.key == "hs_server" || cur.key == "hs_forget" || cur.key == "hs_name") && !message.empty()) help = message;
+		if ((cur.key == "hs_server" || cur.key == "hs_forget" || cur.key == "hs_name" || cur.key == "hs_slot") && !message.empty()) help = message;
 		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "colors")
 		{
@@ -2634,6 +2639,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "hs_saves") v = hsSettleShort();
 			else if (it.kind == Item::PAGE && it.key == "hs_name") { homeServer(); v = nameJob.running() ? "Renaming" : fit(hsPairedName, true, 19, 300); }
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
+			else if (it.kind == Item::PAGE && it.key == "hs_slot") v = slotShown == "autosave" ? "Autosave" : fit(slotShown, true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_get") v = getWaiting > 0 ? std::to_string(getWaiting) + " waiting" : "";
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
 			{
@@ -3548,6 +3554,7 @@ namespace banana
 			: entry == ENTRY_HS_URL ? "As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed."
 			: entry == ENTRY_HS_PORT ? "Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed."
 			: entry == ENTRY_HS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM."
+			: entry == ENTRY_HS_SLOT ? "A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed."
 			: entry == ENTRY_BETA_PASS ? "The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only."
 			: entry == ENTRY_HS_CODE && hsKind == "romm" ? "In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed."
 			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device. START when it is typed."
@@ -6705,6 +6712,26 @@ namespace banana
 			nameJob.start(syncCmd("rename " + gamesync::shellQuote(v)) + " 2>/dev/null", sync);
 			return MOVED;
 		}
+		case ENTRY_HS_SLOT:
+		{
+			// (empty, or autosave typed: Autosave. The next sync follows it: a save waiting goes to the new slot, and what
+			// was held with the old one is let go, its copy kept in the vault)
+			std::string v = trim(pw);
+			const std::string f = data + "/settings.conf";
+			std::string low = v;
+			for (char& ch : low) ch = (char)tolower((unsigned char)ch);
+			if (!v.empty() && low != "autosave" && !bsync::slotNameOk(v)) { message = "A slot's name is letters, digits, spaces, - and _, up to 64."; return MOVED; }
+			pw.clear();
+			page = entryBack;
+			const std::string was = hsSlot();
+			if (v.empty() || low == "autosave") { setConfValue(f, "homesync_slot", "autosave"); setConfValue(f, "homesync_slot_name", ""); }
+			else { setConfValue(f, "homesync_slot", "custom"); setConfValue(f, "homesync_slot_name", v); }
+			const std::string now = slotShown = hsSlot();
+			message = now == was ? "" : now == "autosave" ? "Saves sync with Autosave from the next sync, as Grout's and RomM's page's do."
+				: "Saves sync with " + now + " from the next sync. Only devices set to the same slot share them.";
+			if (now != was) fprintf(stderr, "home server: save slot %s\n", now.c_str());
+			return MOVED;
+		}
 		case ENTRY_BETA_PASS:
 		{
 			if (pw.empty()) { message = "Type the beta password, then START."; return MOVED; }
@@ -7649,6 +7676,17 @@ namespace banana
 		setConfValue(f, "homesync_launch", "on");
 		fprintf(stderr, "home server: Sync before playing on\n");
 		return true;
+	}
+	bool Settings::hsSlotsKept()
+	{
+		JPtr j = readJsonFile(data + "/romsync.json");
+		const std::string ver = j && j->isObj() ? j->str("serverVersion") : "";
+		return !ver.empty() && bsync::versionAtLeast(ver, 5, 4, 0);
+	}
+	std::string Settings::hsSlot()
+	{
+		const std::string f = data + "/settings.conf";
+		return bsync::slotOf(getConfValue(f, "homesync_slot", "autosave"), getConfValue(f, "homesync_slot_name", ""));
 	}
 	void Settings::hsRebuild()
 	{

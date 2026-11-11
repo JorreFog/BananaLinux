@@ -1786,3 +1786,12 @@ settings		Usual (443)	Solita (443)
 settings		Usual (80)	Solita (80)
 settings		Check certificate	Verifica certificato
 settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Ultima sincronizzazione, download di Scarica giochi: {g} file di giochi scaricati. I salvataggi non sono stati sincronizzati: Sincronizza ora li sincronizza{er}
+# (Save slot, on Settings > Network > Home server: a machine-translated draft, for the translator to check in the next round)
+settings		Save slot	Slot dei salvataggi
+settings		The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.	Lo slot di RomM con cui si sincronizzano i salvataggi di questa console. Grout e la pagina di RomM usano Autosave.
+settings		Empty for Autosave	Vuoto per Autosave
+settings		A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed.	Uno slot con un nome scelto da te: lettere, cifre, spazi, - e _. Solo i dispositivi impostati sullo stesso slot condividono il salvataggio di un gioco; Grout e la pagina di RomM usano Autosave. Vuoto per Autosave. START quando è scritto.
+settings		Autosave	Autosave
+settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Il nome di uno slot è fatto di lettere, cifre, spazi, - e _, fino a 64.
+settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Dalla prossima sincronizzazione i salvataggi si sincronizzano con Autosave, come quelli di Grout e della pagina di RomM.
+settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Dalla prossima sincronizzazione i salvataggi si sincronizzano con {slot}. Solo i dispositivi impostati sullo stesso slot li condividono.

@@ -363,7 +363,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_HS_NAME, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_HS_NAME, ENTRY_HS_SLOT, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -688,7 +688,10 @@ namespace banana
 		bool syncLineFresh = false;
 		double hsRowsAt = 0;	// the next look at whether the Home server rows are still the pairing's	// a new status line pollSync hasn't yet handled (the pairing screen's)
 		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
-		bool hsTurnLaunchOn();	// a RomM 5.4 pairing's: Sync before playing on when it was off (true: it was)
+		bool hsTurnLaunchOn();
+		bool hsSlotsKept();			// the paired RomM keeps save slots (5.4 and newer, as the pairing found it)
+		std::string hsSlot();		// the slot saves sync with, as Settings names it: autosave unless a custom one
+		std::string slotShown = "autosave";	// (the Save slot row's value, read when the page is built and when it is set)	// a RomM 5.4 pairing's: Sync before playing on when it was off (true: it was)
 		bool startSync(bool gamesOnly = false);	// (true: a sync was started, or waits for Wi-Fi coming back to start; gamesOnly: Get games' downloads alone)
 		void runSync();
 		// Sync now as Wi-Fi comes back (pressed as the lid opens, before it has an address): waited for until this time

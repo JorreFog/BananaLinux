@@ -1778,3 +1778,12 @@ settings		Usual (443)	Стандартный (443)
 settings		Usual (80)	Стандартный (80)
 settings		Check certificate	Проверять сертификат
 settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Посл. синхронизация (загрузки «Получить игры»): загружено файлов игр: {g}. Сохранения не синхронизированы: их синхронизирует «Синхронизировать сейчас»{er}
+# (Save slot, on Settings > Network > Home server: a machine-translated draft, for the translator to check in the next round)
+settings		Save slot	Слот сохранений
+settings		The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.	Слот RomM, с которым синхронизируются сохранения этой консоли. Grout и страница RomM используют Autosave.
+settings		Empty for Autosave	Пусто — Autosave
+settings		A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed.	Слот с вашим названием: буквы, цифры, пробелы, - и _. Сохранение игры общее только у устройств с одним слотом; Grout и страница RomM используют Autosave. Пусто — Autosave. START, когда введено.
+settings		Autosave	Autosave
+settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Название слота: буквы, цифры, пробелы, - и _, до 64 символов.
+settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Со следующей синхронизации сохранения синхронизируются с Autosave, как у Grout и страницы RomM.
+settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Со следующей синхронизации сохранения синхронизируются со слотом {slot}. Общие они только у устройств с тем же слотом.
