@@ -29,6 +29,11 @@ merge one '[psx]\nperf = performance\n'
 eq one psx perf performance; eq one psx run "$(img psx run)"; eq one psx ext "$(img psx ext)"; eq one nds run "$(img nds run)"
 [ "$(ids one)" = "$(grep '^\[' "$IMG" | tr -d '[]' | tr '\n' ' ')" ] || bad one "the systems or their order changed: $(ids one)"
 
+# an app that plays some of a system's games (GBA DS) sets only the system's pick (main.cpp pickRun): the image's run
+# line stays for the rest
+merge pick "[gba]\npick = bash '/data/store/apps/gbads/banana-play.sh' --pick %ROM%\n"
+eq pick gba pick "bash '/data/store/apps/gbads/banana-play.sh' --pick %ROM%"; eq pick gba run "$(img gba run)"; eq pick gba ext "$(img gba ext)"
+
 # a full copy of an older image's list (0.4.2's, with a system of the user's own at the end): the old defaults give
 # way to the image's current values, the user's system stays
 cat > "$T/old.card" <<'EOF'

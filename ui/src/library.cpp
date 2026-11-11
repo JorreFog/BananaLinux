@@ -250,7 +250,7 @@ namespace banana
 		loadLooks();
 	}
 
-	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, perf, always, flat, changed)
+	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, pick, perf, always, flat, changed)
 	void Library::loadDefs()
 	{
 		defs.clear();
@@ -275,6 +275,7 @@ namespace banana
 			else if (k == "maker") cur->maker = v;
 			else if (k == "folder") cur->folder = v;
 			else if (k == "run") cur->run = v;
+			else if (k == "pick") cur->pick = v;
 			else if (k == "perf") cur->perf = v;
 			else if (k == "always") cur->always = v == "yes" || v == "1" || v == "true";
 			else if (k == "flat") cur->flat = v == "yes" || v == "1" || v == "true";
