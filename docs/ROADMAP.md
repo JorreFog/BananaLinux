@@ -61,8 +61,7 @@
 ## Next
 
 - [x] A string extractor for new languages (`tools/lang-extract.py`)
-- [ ] Home server saves on RomM 5.4's slots, shared with Grout and other devices: built and tested on PCs and in
-      QEMU, to be checked on the handhelds
+- [ ] Home server saves on RomM 5.4's slots, shared with Grout and other devices
 - [ ] The rest of the Chinese translation (lines added since it was made)
 - [ ] EmulationStation as an alternative frontend
 - [x] Charging while switched off on the RG DS Plus (#34): it did charge; the gauge missed it until 0.5.0
