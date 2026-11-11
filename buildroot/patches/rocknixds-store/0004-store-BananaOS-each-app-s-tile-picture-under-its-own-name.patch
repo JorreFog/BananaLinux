@@ -1,0 +1,170 @@
+From b0ad018bf6e6ae7eb438f72f5ae293a8c2f464f9 Mon Sep 17 00:00:00 2001
+From: kyannon <341221214+kyannon@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 17:56:57 -0500
+Subject: [PATCH] store: BananaOS: each app's tile picture under its own name
+
+BananaOS keeps every Store app's entry and pictures in one folder (the
+Apps shelf's /data/store/tiles), and the Store named a picture by its
+package's own file name. GBA DS's and eReaderDS's are both icon.png, so
+the one installed last showed on both tiles, and removing either took
+the other's picture away too (BananaLinux #239).
+
+A picture now gets the app's id in front of its name in images/
+(gbads-icon.png, ereaderds-icon.png), unless its name already starts
+with it (Poketool's bank-image.png stays as it is). A remove takes the
+app's own pictures. A refresh (the Store opening) lists again the
+installed apps whose line still shows a picture by the old name, each
+with its own picture; an old-named picture goes once no line on the
+shelf shows it.
+---
+ store/device/rocknixds-store | 86 ++++++++++++++++++++++++++++++++----
+ 1 file changed, 77 insertions(+), 9 deletions(-)
+
+diff --git a/store/device/rocknixds-store b/store/device/rocknixds-store
+index 8f342aa..36d590e 100755
+--- a/store/device/rocknixds-store
++++ b/store/device/rocknixds-store
+@@ -724,7 +724,45 @@ def gamelist(folder, action, entry, fields):
+     os.replace(tmp, gl)
+ 
+ 
+-def unlist(folder, lay):
++def tile_picture(app_id, m):
++    """the name a picture of the app's has in its tile folder's images/: its own name when that starts with the app's
++    id ("bank-image.png"), else the id in front ("gbads-icon.png"). BananaOS keeps every app's entry in the one folder
++    (/data/store/tiles), where two apps' icon.png were one file: the last one installed showed on both tiles."""
++    n = os.path.basename(str(m))
++    return n if n.startswith(app_id + "-") else app_id + "-" + n
++
++
++def pictures_in_use(folder):
++    """the pictures the lines of that folder's gamelist.xml show (their names in images/)"""
++    used = set()
++    try:
++        root = ET.parse(os.path.join(folder, "gamelist.xml")).getroot()
++    except (OSError, ET.ParseError):
++        return None                                      # (unknown: nothing is taken for unused)
++    for g in root.findall("game"):
++        for k in MEDIA_KINDS:
++            e = g.find(k)
++            if e is not None and e.text and e.text.strip().startswith("./images/"):
++                used.add(e.text.strip()[len("./images/"):])
++    return used
++
++
++def drop_old_pictures(folder, lay):
++    """the pictures under the names the Store gave them before tile_picture (the package's own name) that no line
++    shows any more: another app's picture may still be one of them, so only those no line uses go"""
++    used = pictures_in_use(folder)
++    if used is None:
++        return
++    for m in (lay["media"] or {}).values():
++        n = os.path.basename(str(m))
++        if n not in used:
++            try:
++                os.remove(os.path.join(folder, "images", n))
++            except OSError:
++                pass
++
++
++def unlist(folder, lay, app_id):
+     """the app's script, pictures and line out of that folder"""
+     if folder is None:                                   # (BananaOS's PORTS)
+         return
+@@ -736,9 +774,10 @@ def unlist(folder, lay):
+     os.remove(os.path.join(folder, entry))
+     for m in (lay["media"] or {}).values():
+         try:
+-            os.remove(os.path.join(folder, "images", os.path.basename(m)))
++            os.remove(os.path.join(folder, "images", tile_picture(app_id, m)))
+         except OSError:
+             pass
++    drop_old_pictures(folder, lay)
+ 
+ 
+ def shq(s):
+@@ -817,7 +856,7 @@ def list_in_menu(app, lay):
+     if not tile and not lay["ports"]:
+         return
+     folder, other = (lay["folder"], PORTS) if tile else (PORTS, lay["folder"])
+-    unlist(other, lay)
++    unlist(other, lay, app["id"])
+     folder = P(folder)
+     os.makedirs(os.path.join(folder, "images"), exist_ok=True)
+     tmp = os.path.join(folder, entry + ".new")
+@@ -840,12 +879,40 @@ def list_in_menu(app, lay):
+     for k in MEDIA_KINDS:
+         m = (lay["media"] or {}).get(k)
+         if m and os.path.exists(os.path.join(dest, safe_rel(m))):
+-            shutil.copyfile(os.path.join(dest, m), os.path.join(folder, "images", os.path.basename(m)))
+-            fields.append((k, "./images/" + os.path.basename(m)))
++            n = tile_picture(app["id"], m)
++            shutil.copyfile(os.path.join(dest, m), os.path.join(folder, "images", n))
++            fields.append((k, "./images/" + n))
+     fields += [("releasedate", app.get("releasedate", "")), ("developer", app.get("developer", "")),
+                ("publisher", app.get("publisher", app.get("developer", ""))), ("genre", app.get("genre", "")),
+                ("players", app.get("players", ""))]
+     gamelist(folder, "add", entry, fields)
++    drop_old_pictures(folder, lay)
++
++
++def retile():
++    """BananaOS: the installed apps whose line on the Apps shelf still shows a picture by its package's own name (the
++    Store before tile_picture) listed again, each with its own picture, and the old shared ones that no line shows go"""
++    if not BANANA:
++        return
++    for a in apps():
++        try:
++            if not installed_version(a) or builtin(a):
++                continue
++            lay = stored_layout(a)
++            if not lay["entry"] or not lay["media"]:
++                continue
++            folder = P(lay["folder"])
++            if not os.path.exists(os.path.join(folder, lay["entry"])):
++                continue
++            used = pictures_in_use(folder)
++            if used is None:
++                continue
++            want = set(tile_picture(a["id"], m) for m in lay["media"].values())
++            if not want <= used or any(os.path.basename(str(m)) in used and os.path.basename(str(m)) not in want
++                                       for m in lay["media"].values()):
++                list_in_menu(a, lay)
++        except Exception:                                # (one app's trouble never stops the others or the refresh)
++            continue
+ 
+ 
+ # ---- tiles for apps ROCKNIXDS doesn't know: their ES system and their look in ROCKNIXDS Pixel ----------------------
+@@ -1130,8 +1197,8 @@ def install(app_id, version=None):
+             if have:
+                 old_lay = stored_layout(app)
+                 if old_lay["dest"] != lay["dest"] or old_lay["entry"] != lay["entry"]:
+-                    unlist(old_lay["folder"], old_lay)
+-                    unlist(PORTS, old_lay)
++                    unlist(old_lay["folder"], old_lay, app_id)
++                    unlist(PORTS, old_lay, app_id)
+             dest = P(lay["dest"])
+             os.makedirs(os.path.dirname(dest), exist_ok=True)
+             new, old = dest + ".new", dest + ".old"
+@@ -1200,8 +1267,8 @@ def remove(app_id):
+         if lay["pre_remove"] and os.path.exists(os.path.join(dest, safe_rel(lay["pre_remove"]))):
+             subprocess.run([os.path.join(dest, lay["pre_remove"])], cwd=dest,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+-        unlist(lay["folder"], lay)
+-        unlist(PORTS, lay)
++        unlist(lay["folder"], lay, app_id)
++        unlist(PORTS, lay, app_id)
+         keep = set(safe_rel(k).split("/")[0] for k in lay["keep"])
+         for f in os.listdir(dest):
+             if f in keep:
+@@ -1239,6 +1306,7 @@ def packaged_catalog():
+ 
+ 
+ def refresh():
++    retile()
+     c = fetch_catalog()
+     offline_if_none = False
+     if c is None and BANANA:
+-- 
+2.43.0
+
