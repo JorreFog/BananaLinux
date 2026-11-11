@@ -27,22 +27,10 @@ mkdir -p /data/saves /data/states /data/screenshots
 [ -x /usr/libexec/banana/saves-flat ] && /usr/libexec/banana/saves-flat
 set -- --system "${BANANA_SYSTEM:-}" --config /data/retroarch/config "$CORE" "$ROM"
 # the Game Boy Advance's one save folder for every GBA core (run-retroarch's /data/saves/gba): the same files, and a
-# game with no save there yet gets the newest one from a core's folder, as there
+# game with no save there yet gets the newest one from a core's folder, by the same script as there (gba-seed)
 if [ "$BANANA_SYSTEM" = gba ]; then
     G=/data/saves/gba; mkdir -p $G
-    n=${ROM##*/}; n=${n%.*}
-    if [ ! -f "$G/$n.srm" ]; then
-        best=
-        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
-            f="/data/saves/$d/$n.srm"
-            [ -s "$f" ] || continue
-            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
-        done
-        [ -n "$best" ] && cp -p "$best" "$G/$n.srm.new" && mv "$G/$n.srm.new" "$G/$n.srm" && sync &&
-            echo "run-bananafront: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
-    fi
+    /usr/libexec/banana/gba-seed "$ROM"
     set -- --save-dir $G "$@"
 else
     # every other system's saves flat in /data/saves, as RetroArch keeps them now (sort_savefiles_enable false) and

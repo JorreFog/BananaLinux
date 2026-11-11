@@ -210,6 +210,41 @@ check "$(cat "$D/data/saves/FCEUmm/Unknown.srm" "$D/data/saves/Gambatte/Unknown.
 check "$(cat "$D/data/saves/Mario (USA).srm" 2>/dev/null)" "new" "one system's game in two cores: the newer save is flat"
 check "$(grep -c 'Pac-Man (USA).srm' "$T/log")" "1" "the clash is said in the log, once"
 check "$([ -f "$D/run/saves-flat" ] && echo marked || echo again)" "again" "no marker: tried again at the next boot"
+check "$(find "$T"/flat* -name '*.tmp' -o -name '*.new' | wc -l | tr -d ' ')" "0" "saves-flat leaves no file of its own beside a save"
+# a run cut before its rename left its copy beside the save: cleared by the next run that writes that save, one of a
+# run still going (this shell's number) left alone
+D=$T/flat5; mkdir -p "$D/data/saves/Snes9x" "$D/run" "$D/etc"; : > "$D/etc/systems.conf"
+echo new > "$D/data/saves/Snes9x/Game.srm"; echo cut > "$D/data/saves/Game.srm.saves-flat.999999999.tmp"; echo mine > "$D/data/saves/Game.srm.saves-flat.$$.tmp"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Game.srm" 2>/dev/null) $(ls "$D/data/saves" | grep -c '\.tmp$')" "new 1" "a cut run's copy beside the save is cleared, a running one's left"
+
+echo "gba-seed: a GBA game with no save in saves/gba yet gets its newest non-blank one from a core's folder"
+# (banana-sync blank, which the seed asks: a stand-in that calls all 0xff or all 0x00 blank, as the real one does a GBA core's)
+D=$T/seed; mkdir -p "$D/bin" "$D/saves/gpSP" "$D/saves/mGBA" "$D/saves/VBA-M"
+cat > "$D/bin/banana-sync" <<'EOS'
+#!/bin/sh
+[ "$1" = blank ] || exit 2
+[ "$(tr -d '\377' < "$2" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$2" | head -c 1 | wc -c)" = 0 ]
+EOS
+chmod +x "$D/bin/banana-sync"
+seed() { PATH="$D/bin:$PATH" BANANA_ROOT=$D sh "$L/gba-seed" "/roms/gba/$1.gba" 2> "$T/log"; }
+echo old > "$D/saves/gpSP/Game.srm"; touch -d '2026-01-01 10:00' "$D/saves/gpSP/Game.srm"
+echo new > "$D/saves/mGBA/Game.srm"; touch -d '2026-01-01 11:00' "$D/saves/mGBA/Game.srm"
+head -c 1024 /dev/zero | tr '\0' '\377' > "$D/saves/VBA-M/Game.srm"; touch -d '2026-01-01 12:00' "$D/saves/VBA-M/Game.srm"
+echo cut > "$D/saves/gba.pre"; mkdir -p "$D/saves/gba"; mv "$D/saves/gba.pre" "$D/saves/gba/Game.srm.seed.999999999.tmp"
+echo mine > "$D/saves/gba/Game.srm.seed.$$.tmp"
+seed Game; rc=$?
+check "$rc $(cat "$D/saves/gba/Game.srm" 2>/dev/null)" "0 new" "the newest with data in it, not a newer blank one"
+check "$(cat "$D/saves/gpSP/Game.srm" "$D/saves/mGBA/Game.srm" | tr '\n' ' ')" "old new " "the core folders' files stay as they were"
+check "$(ls "$D/saves/gba" | tr '\n' ' ')" "Game.srm Game.srm.seed.$$.tmp " "its own copy renamed over, a cut run's cleared, a running one's left"
+check "$(grep -c "the GBA save from $D/saves/mGBA/Game.srm" "$T/log")" "1" "...and said"
+echo newer > "$D/saves/gpSP/Game.srm"; seed Game
+check "$(cat "$D/saves/gba/Game.srm")" "new" "a save already there is never seeded over"
+head -c 1024 /dev/zero > "$D/saves/gpSP/Blank.srm"; seed Blank
+check "$([ -e "$D/saves/gba/Blank.srm" ] && echo seeded || echo none) $(wc -c < "$T/log" | tr -d ' ')" "none 0" "only a blank one in a core's folder: nothing seeded"
+seed Nothing
+check "$(ls "$D/saves/gba" | grep -c Nothing)" "0" "no save in any core's folder: nothing"
+check "$(grep -c 'gba-seed "\$2"' "$L/run-retroarch") $(grep -c 'gba-seed "\$ROM"' "$L/run-bananafront")" "1 1" "both frontends' launchers seed by it"
 
 echo "run-nds: a DSi game goes to BananaDS whatever Settings say, zipped too"
 # (the launcher with its paths in a made-up root: the two emulators' launchers only say which one would run)

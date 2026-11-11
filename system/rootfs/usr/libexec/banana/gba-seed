@@ -1,0 +1,41 @@
+#!/bin/sh
+# The Game Boy Advance's one save folder, /data/saves/gba/<game>.srm, which every GBA core reads whichever frontend
+# starts it: a game with no save there yet gets a copy of its newest one from a core's own folder
+# (/data/saves/<core>/<game>.srm, where RetroArch kept them before; saves-flat moves those folders over, and this is
+# for a game started while that move hasn't gone through), one with data in it: a core that only ever wrote a blank one
+# doesn't win. The core folders' files stay as they were. Run by run-retroarch and run-bananafront before a GBA game,
+# the one script for both, so the two frontends can't come to seed differently.
+# The copy is written beside the save under a name of this script's own, the card synced, then renamed over and the
+# card synced again: a power cut can't leave a half-written save under the name the cores read, which no later start
+# would seed again, the file being there. The name ends .tmp, never counted as a save by the sync, and isn't the one
+# the sync writes beside the same save, so the two never meet in one file; a cut run's is cleared here, by the run's
+# number, one still running left its own.
+#   gba-seed <rom>
+#   BANANA_ROOT=<dir> gba-seed ...   the data partition somewhere else than /data (the tests' cards)
+DATA=${BANANA_ROOT:-/data}
+G=$DATA/saves/gba
+n=${1##*/}; n=${n%.*}
+[ -n "$n" ] || exit 2
+mkdir -p "$G"
+[ -f "$G/$n.srm" ] && exit 0
+for f in "$G/$n.srm.seed."*.tmp; do
+    p=${f##*.srm.seed.}; p=${p%.tmp}
+    [ -f "$f" ] && [ ! -d "/proc/$p" ] && rm -f "$f"
+done
+best=
+for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+    f="$DATA/saves/$d/$n.srm"
+    [ -s "$f" ] || continue
+    # (blank: what the save sync also counts as no save, all 0xff or all 0x00 for a GBA core)
+    banana-sync blank "$f" "$d" && continue
+    if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+done
+[ -n "$best" ] || exit 0
+T="$G/$n.srm.seed.$$.tmp"
+if cp -p "$best" "$T" && sync && mv "$T" "$G/$n.srm" && sync; then
+    echo "gba-seed: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
+else
+    rm -f "$T"
+    echo "gba-seed: the GBA save from $best couldn't be copied to $G/$n.srm (the card full?)" >&2
+    exit 1
+fi

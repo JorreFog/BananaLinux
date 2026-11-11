@@ -2,9 +2,15 @@
 # One flat save folder for RetroArch and BananaFront: /data/saves (and /data/saves/gba for every GBA
 # core, /data/saves/nds for the DS). Before 0.5.3 RetroArch's sort_savefiles_enable left each core's saves in
 # /data/saves/<core>/; Home server sync writes and reads the flat paths, so those saves were invisible to it.
-# Run once per boot, before the launcher starts the core: a core folder's save moves (newest wins) to the flat
-# path, and the old file goes to /data/banana/saves-legacy/<core>/ as a backup. A failure leaves the old file and
-# writes no marker, so the next boot tries again.
+# Run by the launchers before they start a core, and by the Home server's sync (under save.lock) before it decides
+# anything: a core folder's save moves (newest wins) to the flat path, and the old file goes to
+# /data/banana/saves-legacy/<core>/ as a backup. A run that moved everything writes a marker in /run/banana, so it
+# is once per boot; a failure, or two saves it can't give to one game, leaves the old file and writes no marker, so
+# the next start or sync of the same boot tries again, and the next boot's.
+# The flat save is written beside its name under a name of this script's own, the card synced, then renamed over and
+# the card synced again, so a power cut leaves no half-written save under the name the cores read; the name ends .tmp,
+# never counted as a save by the sync, and isn't the one the sync writes beside the same save. A cut run's is cleared
+# here, by the run's number, one still running left its own.
 #
 # (BANANA_DATA / BANANA_RUN / BANANA_SYSTEMS: the tests' made-up card.)
 DATA=${BANANA_DATA:-/data}
@@ -105,10 +111,15 @@ for dir in "$DATA"/saves/*/; do
                 [ -e "$r" ] && r="$r.$(date +%Y%m%d-%H%M%S)"
                 mkdir -p "${r%/*}" 2>/dev/null && cp -p "$dest/$n" "$r" || { FAIL=1; continue; }
             fi
-            if cp -p "$f" "$dest/$n.new" && mv -f "$dest/$n.new" "$dest/$n"; then
+            for t in "$dest/$n.saves-flat."*.tmp; do
+                p=${t##*.saves-flat.}; p=${p%.tmp}
+                [ -f "$t" ] && [ ! -d "/proc/$p" ] && rm -f "$t"
+            done
+            t="$dest/$n.saves-flat.$$.tmp"
+            if cp -p "$f" "$t" && sync && mv -f "$t" "$dest/$n" && sync; then
                 :
             else
-                rm -f "$dest/$n.new"
+                rm -f "$t"
                 FAIL=1
                 continue
             fi

@@ -345,35 +345,15 @@ fi
 # game's data (gpSP always did; our mGBA is patched to, where upstream writes the size the game reached that
 # session, which cut a Flash 1M save to 64 KB or an 8 KB EEPROM one to 512 bytes when the game stayed low; RetroArch
 # loads the part a core asks for), so one file serves both. A game with no save there yet gets a copy of its newest
-# one from a core's folder (one with data in it: a core that only ever wrote a blank one doesn't win); the core
-# folders' files stay as they were, as backups. States stay per core (their formats differ). What RetroArch saves of
-# the two keys on exit is put back below.
+# one from a core's folder (one with data in it: a core that only ever wrote a blank one doesn't win; gba-seed, which
+# run-bananafront runs too); the core folders' files stay as they were, as backups. States stay per core (their
+# formats differ). What RetroArch saves of the two keys on exit is put back below.
 GBASAVE=
 if [ "$BANANA_SYSTEM" = gba ]; then
     GBASAVE=/data/saves/gba
     mkdir -p $GBASAVE
-    n=${2##*/}; n=${n%.*}
-    if [ ! -f "$GBASAVE/$n.srm" ]; then
-        best=
-        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
-            f="/data/saves/$d/$n.srm"
-            [ -s "$f" ] || continue
-            # (blank: what the save sync also counts as no save, all 0xff or all 0x00 for a GBA core)
-            banana-sync blank "$f" "$d" && continue
-            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
-        done
-        if [ -n "$best" ]; then
-            # (synced before the rename: a power cut can't leave a half-written save under the name the cores read; the
-            # name beside it ends .tmp, never counted as a save by the sync, and a cut run's is cleared here, one still
-            # running left its own)
-            for f in "$GBASAVE/$n.srm.seed."*.tmp; do
-                p=${f##*.srm.seed.}; p=${p%.tmp}
-                [ -f "$f" ] && [ ! -d "/proc/$p" ] && rm -f "$f"
-            done
-            cp -p "$best" "$GBASAVE/$n.srm.seed.$$.tmp" && sync && mv "$GBASAVE/$n.srm.seed.$$.tmp" "$GBASAVE/$n.srm" && sync
-            echo "run-retroarch: the GBA save from $best, now $GBASAVE/$n.srm (every GBA core)" >&2
-        fi
-    fi
+    # (gba-seed: the copy from a core's folder, written under a name of its own and synced before its rename)
+    /usr/libexec/banana/gba-seed "$2"
     SVD=$(sed -n '/^savefile_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
     SVS=$(sed -n '/^sort_savefiles_enable = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
 fi
