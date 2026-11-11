@@ -140,7 +140,7 @@ settings		The top screen's bob and shine. Off holds it still and saves a little 
 settings		On	Attivo
 settings		Off	Disattivo
 settings		Volume	Volume
-settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	Gli altoparlanti o le cuffie, quelli in uso. I tasti del volume lo cambiano ovunque.
+settings		The speakers or headphones. The volume keys change it anywhere.	Gli altoparlanti o le cuffie, quelli in uso. I tasti del volume lo cambiano ovunque.
 settings		Menu sounds	Suoni del menu
 settings		The menu's clicks, and the cartridge going into the console.	I clic del menu e la cartuccia che entra nella console.
 settings		Battery	Batteria
@@ -246,7 +246,7 @@ settings		While a game plays on one screen, the other shows its RetroAchievement
 settings		Game panel	Pannello di gioco
 settings		Network	Rete
 settings		Wi-Fi	Wi-Fi
-settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	Le reti nei dintorni: A su una la collega, con una password digitata qui sulla tastiera (o al tocco).
+settings		Networks nearby. A on one joins it.	Le reti nei dintorni: A su una la collega, con una password digitata qui sulla tastiera (o al tocco).
 settings		File sharing	Condivisione file
 settings		System	Sistema
 settings		Time zone	Fuso orario
@@ -256,7 +256,7 @@ settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a p
 settings		Box art	Copertine
 settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Copertine, schermate dei titoli, generi e anni per i tuoi giochi, dalle raccolte libere di libretro (nessun account, serve il Wi-Fi). Prosegue in background; i giochi che hanno già la grafica vengono saltati, quindi rilanciandolo scarica solo ciò che è nuovo.
 settings		Previous version	Versione precedente
-settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Riavvia nell'altro slot: la versione che girava prima dell'ultimo aggiornamento. Premi A due volte.
+settings		Restarts into the version from before the last update. Press A twice.	Riavvia nell'altro slot: la versione che girava prima dell'ultimo aggiornamento. Premi A due volte.
 settings		SSH	SSH
 settings		First-time setup	Configurazione iniziale
 settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	I passaggi del primo avvio, di nuovo: Wi-Fi, fuso orario e account RetroAchievements (ScreenScraper: non ancora disponibile).
@@ -470,7 +470,7 @@ settings		Mic sensitivity	Sensibilità microfono
 settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	Quanto sopra il rumore della stanza deve essere una parola o un soffio per arrivare al gioco. Gate disattivato lascia che il gioco senta tutto ciò che il microfono capta, compreso il suo stesso suono dall'altoparlante.
 settings		Gate off	Gate disattivato
 settings		Reset BananaDS	Ripristina BananaDS
-settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	Le impostazioni di BananaDS tornano a quelle di Banana. Salvataggi, stati salvati e l'orologio di ogni gioco restano. Premi A due volte.
+settings		Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.	Le impostazioni di BananaDS tornano a quelle di Banana. Salvataggi, stati salvati e l'orologio di ogni gioco restano. Premi A due volte.
 settings		Threaded 3D	3D su thread
 settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	Attivo disegna il 3D del DS in parallelo al gioco, il modo più veloce. Disattivo lo disegna in sincronia con il gioco: per un gioco il cui 3D, se attivo, appare sullo schermo sbagliato o con un frame di ritardo (i giochi Dragon Quest).
 settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	Sperimentale. Attivo: nessuna coda di frame: ogni frame va ai pannelli al primo aggiornamento possibile, e DraStic avvia ogni frame il più tardi possibile, così una pressione si vede circa due aggiornamenti prima (anche il suono un po' prima). I frame irregolari (2x, scene pesanti) possono mostrarsi come piccoli scatti che la coda nasconderebbe.
@@ -798,7 +798,7 @@ settings		The emulator (RetroArch core) for this system's games: the first is Ba
 settings		Home server	Server di casa
 settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	I tuoi giochi, le loro copertine e i tuoi salvataggi da un server di casa: Romhost (la libreria di ROM di Homeport) o RomM. A apre la sua pagina: associazione, Sincronizza ora, e cosa si sincronizza.
 settings		Credits	Crediti
-settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	Le persone che hanno realizzato questa versione di BananaOS: sviluppo, traduzioni, test e ringraziamenti. A apre l'elenco.
+settings		The people behind this version of BananaOS.	Le persone che hanno realizzato questa versione di BananaOS: sviluppo, traduzioni, test e ringraziamenti. A apre l'elenco.
 settings		SuperDrastic: F + SELECT	SuperDrastic: F + SELECT
 settings		Swap the screens	Scambia gli schermi
 settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Giochi DS in SuperDrastic: lo schermo superiore del DS sul pannello inferiore e il suo schermo inferiore su quello superiore (il tocco lo segue: il touchscreen superiore della RG DS; sulla RG DS Plus nessun tocco mentre sono scambiati), e viceversa. Conservato per ogni gioco.
@@ -815,7 +815,7 @@ settings		Auto sync	Sincronizzazione automatica
 settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	Uscendo da un gioco: i suoi salvataggi vanno al server quando esci (pochi secondi, in background). E con il Wi-Fi: anche giochi e salvataggi ogni volta che il Wi-Fi si connette. Mai mentre un gioco è in esecuzione.
 settings		Leaving a game	Uscendo da un gioco
 settings		And on Wi-Fi	E con il Wi-Fi
-settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Quali sistemi si sincronizzano su questa console. I giochi di un sistema saltato restano come sono sulla scheda.
+settings		Which systems sync here. Skipped systems stay as they are.	Quali sistemi si sincronizzano su questa console. I giochi di un sistema saltato restano come sono sulla scheda.
 settings		Forget this server	Dimentica questo server
 settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Dissocia la console: nulla si sincronizza finché non viene associata di nuovo. I giochi e i salvataggi restano sulla scheda. Premi A due volte.
 settings		Home server systems	Sistemi del server di casa
