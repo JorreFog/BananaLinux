@@ -148,7 +148,8 @@ namespace bsync
 			return !local || local->size() == n ? "" : other;
 		case Kind::GBA:
 		{
-			// (gpSP writes every save as 128 KiB, mGBA its real size, the same bytes in the same places. Standalone mGBA
+			// (gpSP, and this image's patched mGBA and BananaGBA, write every save as 128 KiB, upstream's mGBA on another
+			// device the size the game reached, the same bytes in the same places. Standalone mGBA
 			// also writes the game's clock, 16 bytes, after the save of a cartridge that has one, the Pokemon games'
 			// 128 KiB coming out as 131088: left off, as the cores here keep no clock in the save and read it as they
 			// would a save without one)
