@@ -234,171 +234,185 @@ Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, clos
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.
 
-### Saves and a home server
+## Saves and a home server: banana-sync
 
-Pairing (Settings > Network > Home server > Server) starts by asking which kind of server, as the sync has one at a time.
-Romhost is looked for on the LAN (a UDP broadcast only it answers), its address typed when none answers, then paired
-with the code Homeport shows; a Romhost on https with a certificate of its own making is paired with the page's Check
-certificate row (`homesync_tls`) off, the row there unpaired and on Romhost's page, and `banana-sync probe <address>`
-answers `none tls` when such a server is what stopped it. RomM is a form, as Grout's: protocol (HTTPS by default),
-address, an optional port and Check certificate (for RomM only on the form: with a server paired, a change to it holds
-at once, and Server opens the form on the paired address, B there choosing another server); a full URL typed in fills the rows it names, and its path is kept
-for a RomM served under a subpath. Connect runs `banana-sync probe --romm <url>`, which asks that URL's `/api/heartbeat` once, with
-no port guessed and no redirect followed, and answers `romm <url> RomM <version>` (with `old` before 5.4) or `fail
-<why>`: `dns`, `refused`, `timeout`, `tls`, `clock` (a certificate failure before Wi-Fi's first time sync, so the clock
-is the RTC's), `ca`, `redirect <location>`, `access <location>` (Cloudflare Access's login), `denied <status>`, `http
-<status>`, `notromm`, `noanswer`. The menu says each in words of its own, offers to turn the check off after `tls` and
-to take the address a `redirect` went to. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line
-`pair <code> <url> <seconds>` is the pairing screen, the code large on the top panel with the approval page written out
-and the time left, and that page as a QR code on the bottom one (Nayuki's qrcodegen, `ui/src/qr`), for a phone where
-the owner is signed in to RomM, through Cloudflare Access's login when there is one; X takes a client token's pairing
-code instead, B stops the pairing (its pid is in `sync.pid`, as a sync's). Only the approval page is ever opened in a
-browser: the handheld talks to the API alone, so a server behind Cloudflare Access needs a bypass for `/api`. The old
-probe, which guessed http on 8092, 8080 and 80 before https, followed redirects: Cloudflare answers 8080 with a
-redirect to https, so a bare name paired at `http://<name>:8080`, and the redirect then turned the device flow's POST
-into a GET (405). It is still Romhost's typed address, without following redirects, and no pairing POST follows one.
+Pairing (Settings > Network > Home server > Server) starts by asking which kind of server, as the sync has one at a
+time. Romhost is looked for on the LAN (a UDP broadcast only it answers), its address typed when none answers, then
+paired with the code Homeport shows; a Romhost on https with a certificate of its own making is paired with the page's
+Check certificate row (`homesync_tls`) off, the row there unpaired and on Romhost's page, and `banana-sync probe
+<address>` answers `none tls` when such a server is what stopped it. RomM is a form, as Grout's: protocol (HTTPS by
+default), address, an optional port and Check certificate (for RomM only on the form: with a server paired, a change to
+it holds at once, and Server opens the form on the paired address, B there choosing another server); a full URL typed in
+fills the rows it names, and its path is kept for a RomM served under a subpath. Connect runs `banana-sync probe --romm
+<url>`, which asks that URL's `/api/heartbeat` once, with no port guessed and no redirect followed, and answers `romm
+<url> RomM <version>` (with `old` before 5.4) or `fail <why>`: `dns`, `refused`, `timeout`, `tls`, `clock` (a
+certificate failure before Wi-Fi's first time sync, so the clock is the RTC's), `ca`, `redirect <location>`, `access
+<location>` (Cloudflare Access's login), `denied <status>`, `http <status>`, `notromm`, `noanswer` (the list is the
+usage comment's at the top of `ui/src/sync.cpp`; `denied` is a 401 or a 403, and `noanswer` carries curl's message). The
+menu says each in words of its own, offers to turn the check off after `tls` and to take the address a `redirect` went
+to. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line `pair <code> <url> <seconds>` is the
+pairing screen, the code large on the top panel with the approval page written out and the time left, and that page as a
+QR code on the bottom one (Nayuki's qrcodegen, `ui/src/qr`), for a phone where the owner is signed in to RomM, through
+Cloudflare Access's login when there is one; X takes a client token's pairing code instead, B stops the pairing (its pid
+is in `sync.pid`, as a sync's). Only the approval page is ever opened in a browser: the handheld talks to the API alone,
+so a server behind Cloudflare Access needs a bypass for `/api`. Romhost's typed address still goes through `banana-sync
+probe <address>`, which tries a bare name on http at 8092, 8080 and 80, then on https, and follows no redirect either
+(one to https on the same host is added to its tries). No pairing POST follows a redirect: Cloudflare answers 8080 with
+one to https, and a redirect followed turns the device flow's POST into a GET (405).
+
 A pairing turns Auto sync on (Leaving a game) when it was off, and the Paired screen says so: saves going to the server
-without a press is what pairing is for, and a pairing left on the image's default of off synced only by Sync now. A
-pairing with RomM 5.4 or newer (the version `romsync.json` keeps) turns Sync before playing on as well, so another
-handheld's newer save comes before the game rather than as a conflict after it; a RomM before 5.4 has no sync before a
-game to turn on.
+without a press is what pairing is for, and with Auto sync off only Sync now syncs. A pairing with RomM 5.4 or newer
+(the version `romsync.json` keeps) turns Sync before playing on as well, so another handheld's newer save comes before
+the game rather than as a conflict after it; a RomM before 5.4 has no sync before a game to turn on.
+
 The handheld pairs under its model's name (RG DS, RG DS Plus), or the name it had when it pairs again; RomM's Device
-name row renames it with `banana-sync rename <name>`, which updates the RomM device at once and only then keeps the
-name in `romsync.json` (a sync's write-back never puts back a name it read before).
-Once paired, the page's rows are those of that kind of server (RomM's states, its sync before a game, its certificate
-check for an https server; none hedged for the other), made again when a pairing or a Forget changes it.
+name row renames it with `banana-sync rename <name>`, which updates the RomM device at once and only then keeps the name
+in `romsync.json` (a sync's write-back never puts back a name it read before). Once paired, the page's rows are those of
+that kind of server (RomM's states, its sync before a game and its Save slot, Romhost's games and its certificate check;
+none hedged for the other), made again when a pairing or a Forget changes it.
 
 On RomM, games and saves are apart, as in Grout. Games come by Get games, a store's download: the server's games a
 system at a time (`banana-sync games`), A putting one on the download list (`banana/homesync-get.txt`, written under
-`/run/banana/get.lock` by the list code the menu and `banana-sync get [--drop] <key>` share) and starting a sync of its own, `banana-sync sync
---games-only`, which brings the games and leaves the saves alone, since a RomM library can be hundreds of GB and a
-download is no reason to move saves. A on a game whose download failed tries it again at once. Any sync of the games
-brings what the list holds, games asked for while it runs included (before its saves when
-it can, so a game's save comes with it; those asked for during the saves after them, with `save.lock` let go, so the
-sync after a game never waits on a download; one asked for as a sync is ending is brought by another the menu
-starts, once), and takes each off once its files are in place, or a file of the owner's
-own is at its path; a download that failed stays for the next sync, its row saying Failed and why (the sync writes
-`banana/homesync-get-failed.txt`), and Auto sync on Wi-Fi carries the list on. Y searches the titles and file names,
-every system's from the systems list, one system's inside it. The server's list is kept on the card
-(`banana/homesync-server-games.tsv`, its first line the server's address and when it was listed), as the full list
-took over half a minute on a real server of 742 games: Get games opens from it at once, saying how old it is, and
-X (Refresh) asks the server again with the kept list still up. `banana-sync games` writes it whole, and every sync that
-lists the server's games (the saves do, unless it is one game's sync) replaces the systems it listed, keeping a
-skipped system's; Forget removes it, with the download list and its failures, as does a pairing with another server
-(the same one paired again keeps them), and a list naming another server is not shown. Once
-on the card a game is the owner's like any copied over File sharing: nothing updates it, nothing removes it when it
-leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on
-the card already, copied by hand, is adopted with the entry its owner gave it). Saves follow what is on the
-card, however it came: every game the server has (by platform and file name) syncs its saves, and a server's save for
-a game that isn't on the card stays there. Systems leaves a system's saves out; one game's can stay on this handheld
-by its page in the library (X on the game, Save sync), a line `<system folder>/<ROM file name>` in
-`banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at once. On RomM 5.4
-and newer each game's save is its ROM's `autosave` slot, the one Grout and RomM's own page use, unless Save slot (the
-page's last row before Forget) names another: `homesync_slot = custom` and `homesync_slot_name`, 1 to 64 letters,
-digits, spaces, `-` and `_` (no colon, so `<rom id>/<slot>` in `romsync.json` can't be taken for a state's
-`<rom id>/state:<name>`; a name that isn't one is said in the log and autosave used). There is no slotless choice: RomM
-keeps a slotless save as one row per file name and emulator, written over in place, with no versions, no upload guard
-and nothing in its negotiation, so two devices' changes couldn't be told apart. A slot changed is followed by the next
-sync: a save waiting to be sent goes to the new slot, what was held or in conflict with the old one is let go (said,
-its copy kept in the vault, and the Saves page stops listing it as soon as the setting changes), and the versions
-agreed stay per slot, so going back finds them agreed; in the new slot every game is a save never agreed with it. Romhost
-is unchanged: the card follows the server's list (Games to sync: All, or the games ticked in Choose games), and
-Homeport decides the rest. Get games and the gamelist name a
-RomM game by its title and the tags RomM parses from its file name (a revision, a hack's `[Hack by ... v1.0]`, a
-translation), so a hack doesn't read as a second copy of its base game; the regions follow only where two games of a
-system would share a title, and the file names where that still doesn't tell them apart. A compressed ROM's hashes on
-RomM (zip, 7z, rar, tar, gz, bz2) are of what is inside, so a download of one is checked by its size, and a zip also
-by its members' CRCs against RomM's `archive_members`; any other file by its hash.
+`/run/banana/get.lock` by the list code the menu and `banana-sync get [--drop] <key>` share) and starting a sync of its
+own, `banana-sync sync --games-only`, which brings the games and leaves the saves alone, since a RomM library can be
+hundreds of GB and a download is no reason to move saves. A on a game whose download failed tries it again at once. Any
+sync of the games brings what the list holds, games asked for while it runs included (before its saves when it can, so a
+game's save comes with it; those asked for during the saves after them, with `save.lock` let go, so the sync after a
+game never waits on a download; one asked for as a sync is ending is brought by another the menu starts, once), and
+takes each off once its files are in place, or a file of the owner's own is at its path; a download that failed stays
+for the next sync, its row saying Failed and why (the sync writes `banana/homesync-get-failed.txt`), and Auto sync on
+Wi-Fi carries the list on. Y searches the titles and file names, every system's from the systems list, one system's
+inside it.
 
-The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on RomM
-what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses, before
-the game starts or on Settings > Network > Home server > Manage saves, whose row (and the Home server row a level up) counts
-the conflicts and the saves held back. That page also lists the kept copies, which it can put
-back; nothing on the handheld removes one. All of it goes through `banana-sync` (`saves`, `resolve`, `restore`),
-under `/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the
-vault. Keeping the card's is an ordinary sync that knows the choice, so a server that moved meanwhile is held again.
+The server's list is kept on the card (`banana/homesync-server-games.tsv`, its first line the server's address and when
+it was listed), as the full list took over half a minute on a real server of 742 games: Get games opens from it at once,
+saying how old it is, and X (Refresh) asks the server again with the kept list still up. `banana-sync games` writes it
+whole, and every sync that lists the server's games (the saves do, unless it is one game's sync) replaces the systems it
+listed, keeping a skipped system's; Forget removes it, with the download list and its failures, as does a pairing with
+another server (the same one paired again keeps them), and a list naming another server is not shown.
+
+Once on the card a game is the owner's like any copied over File sharing: nothing updates it, nothing removes it when it
+leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on the
+card already, copied by hand, is adopted with the entry its owner gave it).
+
+Saves follow what is on the card, however it came: every game the server has (by platform and file name) syncs its
+saves, and a server's save for a game that isn't on the card stays there. Systems leaves a system's saves out; one
+game's can stay on this handheld by its page in the library (X on the game, Save sync), a line `<system folder>/<ROM
+file name>` in `banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at
+once.
+
+On RomM 5.4 and newer each game's save is its ROM's `autosave` slot, the one Grout and RomM's own page use, unless Save
+slot (a row on RomM's page, there for 5.4 and newer) names another: `homesync_slot = custom` and `homesync_slot_name`, 1
+to 64 ASCII letters, digits, spaces, `-` and `_` (no colon, so `<rom id>/<slot>` in `romsync.json` can't be taken for a
+state's `<rom id>/state:<name>`; a name that isn't one is said in the log and autosave used). There is no slotless
+choice: RomM keeps a slotless save as one row per file name and emulator, written over in place, with no versions, no
+upload guard and nothing in its negotiation, so two devices' changes couldn't be told apart. A slot changed is followed
+by the next sync: a save waiting to be sent goes to the new slot, what was held or in conflict with the old one is let
+go (said, its copy kept in the vault, and the Saves page stops listing it as soon as the setting changes), and the
+versions agreed stay per slot, so going back finds them agreed; in the new slot every game is a save never agreed with
+it.
+
+Romhost is unchanged: the card follows the server's list (Games to sync: All, or the games ticked in Choose games), and
+Homeport decides the rest.
+
+Get games and the gamelist name a RomM game by its title and the tags RomM parses from its file name (a revision, a
+hack's `[Hack by ... v1.0]`, a translation), so a hack doesn't read as a second copy of its base game; the regions
+follow only where two games of a system would share a title, and the file names where that still doesn't tell them
+apart. A compressed ROM's hashes on RomM (zip, 7z, rar, tar and its compressed forms, gz, bz2; the list is
+`ui/src/sync_romm.cpp`'s) are of what is inside, so a download of one is checked by its size, and a zip also by its
+members' CRCs against RomM's `archive_members`; any other file by its hash.
+
+The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on
+RomM what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses,
+before the game starts or on Settings > Network > Home server > Manage saves, whose row (and the Home server row a level
+up) counts the conflicts and the saves held back. That page also lists the kept copies, which it can put back; nothing
+on the handheld removes one. All of it goes through `banana-sync` (`saves`, `resolve`, `restore`), under
+`/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the vault.
+Keeping the card's is an ordinary sync that knows the choice, so a server that moved meanwhile is held again.
 
 What the sync holds to, whatever happens around it:
 
 - A save gone or blank on the card since it last synced is never put back by itself: the server's copy goes to the
-  vault, the menu asks before the game starts (take the server's, or play without), and the Saves page offers it. A
-  new save written there afterwards (the game started over) is not the old save played on, so it is decided as one
-  that never agreed, at every sync until a version is agreed: the same bytes as the server's agree, anything else is
-  a conflict, both kept, never a version sent over the server's as the newer. On a RomM before 5.4 the card's saves
-  never go up, so only the first half applies: the save is noted on the Saves page, its last good copy in the vault,
-  with nothing fetched to take back. On Romhost, Homeport decides, by its plan.
-- A save put in place takes the quick-resume states that belonged with the old one with it: BananaDS's resume state,
-  and RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. Loaded over the new save, one would put
-  the old save's memory back, and the emulator would write that over the new save at its next save, which the sync
-  would then send as the newer. They go before the save changes, so a write that fails costs a resume state at most.
-  A DS game's resume state is also loaded only over the save the game was quit with: as a DS game ends, the menu
-  tells `nds-saves` what the two saves hold (`--played`), and so does bananad when it quits the game itself (Power off
-  after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the state of the emulator
-  starting when its save is another since (one copied onto the card by hand, or gone) rather than load it. With no
-  record (a card from before this) the state is loaded. File times decide none of this: the handheld's clock is lost
-  with its battery, and the launchers' old rule, a state older than the save dropped, lied with it.
+  vault, the menu asks before the game starts (take the server's, or play without), and the Saves page offers it. A new
+  save written there afterwards (the game started over) is not the old save played on, so it is decided as one that
+  never agreed, at every sync until a version is agreed: the same bytes as the server's agree, anything else is a
+  conflict, both kept, never a version sent over the server's as the newer. On a RomM before 5.4 the card's saves never
+  go up, so only the first half applies: the save is noted on the Saves page, its last good copy in the vault, with
+  nothing fetched to take back. On Romhost, Homeport decides, by its plan.
+- A save put in place has the quick-resume states that belonged with the old one removed: BananaDS's resume state, and
+  RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. Loaded
+  over the new save, one would put the old save's memory back, and the emulator would write that over the new save at
+  its next save, which the sync would then send as the newer. They are removed before the save changes, so a write that
+  fails costs a resume state at most. A DS game's resume state is also loaded only over the save the game was quit with:
+  as a DS game ends, the menu tells `nds-saves` what the two saves hold (`--played`), and so does bananad when it quits
+  the game itself (Power off after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the
+  state of the emulator starting when its save is another since (one copied onto the card by hand, or gone) rather than
+  load it. With no record (a card from before this) the state is loaded. File times decide none of this: the handheld's
+  clock is lost with its battery, and a state judged older or newer than its save by their dates would be judged wrong
+  with it.
 - A sync of the saves placing one checks that no game is running before each write, and the menu marks a game as
-  starting (`/run/banana/game.starting`) before it waits for the save lock, so a sync that keeps the lock past the
-  2 s the menu gives it leaves that game's save unplaced for the next sync to decide, rather than placing it under an
+  starting (`/run/banana/game.starting`) before it waits for the save lock, so a sync that keeps the lock past the 2 s
+  the menu gives it leaves that game's save unplaced for the next sync to decide, rather than placing it under an
   emulator that is reading it. Before the game started again after Power off after sleeping, a sync of other games
   leaves that one as it is, on any server (`/run/banana/resume-once`, `banana/resume-boot`): its save and its states,
   the resume state among them, stay as they are on the card. The menu starts no sync after a game whose end is that
   shutdown.
 - The sync after a game with the server out of reach keeps a copy of the game's save in the vault at once, on any
-  server, and so does an upload that fails. On RomM the save is also left waiting to be sent, which the sync when
-  Wi-Fi comes back sends: under its slot when the card has synced the game before, else under the game's ROM until
-  that sync finds its slot, where it is decided as any save never agreed (the server's own bytes agree, others are a
-  conflict, both kept). A DS pair that can't be brought together has both of its saves kept and is not left waiting:
-  which of the two is the save is settled at the game's next start. A save that waited and was never sent, the server's
-  then taken over it, stays in the vault, said in the sync's log, as nothing else names it.
+  server, and so does an upload that fails. On RomM the save is also left waiting to be sent, which the sync when Wi-Fi
+  comes back sends: under its slot when the card has synced the game before, else under the game's ROM until that sync
+  finds its slot, where it is decided as any save never agreed (the server's own bytes agree, others are a conflict,
+  both kept). A DS pair that can't be brought together has both of its saves kept and is not left waiting: which of the
+  two is the save is settled at the game's next start. A save that waited and was never sent, the server's then taken
+  over it, stays in the vault, said in the sync's log, as nothing else names it.
 - A sync of every save or of games on RomM asks the server's heartbeat first, and one with no answer at all ends there
   (`error noconnect <why>`, the Sync now row saying No connection) with nothing touched. Sync now (and Get games' A)
   pressed while Wi-Fi is coming back, as it is for a few seconds after a wake, waits for it as the sync before a game
-  does, up to 20 s, rather than starting a sync that can't find the server's name. The image's libcurl has no
-  messages of its own, so the usual failures (a name not found, refused, no answer in time, a certificate) are put in
-  words by the sync.
-- DraStic's and BananaDS's saves not brought together before a sync (both changed, DraStic's unreadable, or a read
-  or a write that failed) leave that game out of that sync, so a save that may be the older of the two is never
-  decided on; a failure is tried again at the next sync. Both changed is settled at the game's next start: the
-  emulator starting plays its own, and the other is kept in the vault (`nds-saves --prefer`).
-- Every file is written beside its name, synced, and renamed over, the folder synced after; the exFAT card doesn't
-  make the rename itself atomic under a power cut, so the journal's recovery puts a whole new file found beside an
-  empty name in place, and the sync's state file is read from its copy beside it when the rename lost it. The record
-  of a recovered install is written before the journal closes it, so a second cut recovers it again. An install stays
-  open in the journal until its agreement is recorded, so a run killed between the two (the menu's last resort when a
-  stop isn't heeded) is agreed at the next start, even when a game was played over the save meanwhile: the game's save
-  is then a change from that version, sent, not a conflict with it. `nds-saves` and
-  the GBA seed in `run-retroarch` sync before their renames the same way, under names of their own, so two writers
-  of one save never meet in one temporary file; those names end `.tmp`, so a cut run's leftover is never taken for a
-  save, and the next run of `nds-saves` or the seed clears it.
-- The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges
-  what the saves agreed meanwhile instead of writing a stale copy over it.
+  does, up to 20 s, rather than starting a sync that can't find the server's name. The image's libcurl has no messages
+  of its own, so the usual failures (a name not found, refused, no answer in time, a certificate) are put in words by
+  the sync.
+- DraStic's and BananaDS's saves not brought together before a sync (both changed, DraStic's unreadable, or a read or a
+  write that failed) leave that game out of that sync, so a save that may be the older of the two is never decided on; a
+  failure is tried again at the next sync. Both changed is settled at the game's next start: the emulator starting plays
+  its own, and the other is kept in the vault (`nds-saves --prefer`).
+- Every file is written beside its name, synced, and renamed over, the folder synced after; the exFAT card doesn't make
+  the rename itself atomic under a power cut, so the journal's recovery puts a whole new file found beside an empty name
+  in place, and the sync's state file is read from its copy beside it when the rename lost it. The record of a recovered
+  install is written before the journal closes it, so a second cut recovers it again. An install stays open in the
+  journal until its agreement is recorded, so a run killed between the two (the menu's last resort when a stop isn't
+  heeded) is agreed at the next start, even when a game was played over the save meanwhile: the game's save is then a
+  change from that version, sent, not a conflict with it. `nds-saves` and the GBA seed in `run-retroarch` sync before
+  their renames the same way, under names of their own, so two writers of one save never meet in one temporary file;
+  those names end `.tmp`, so a cut run's leftover is never taken for a save, and the next run of `nds-saves` or the seed
+  clears it.
+- The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges what
+  the saves agreed meanwhile instead of writing a stale copy over it.
 
 Around a game, `banana-sync sync --rom <path>` (after a game, and `--auto launch` before one) decides that game's save
 alone, and its states when they are on, except before a game; after a game Romhost and a RomM before 5.4 sync every
 save, and before one nothing. It takes `/run/banana/save.lock` but not `sync.lock`, so it runs beside a sync copying
-games, and each run writes back only the part of `banana/romsync.json` whose lock it holds; it says how far it got in
-a file the menu names for that game's end (`--report /run/banana/gameend-<ms>.status`, so an earlier game's sync still
-going writes to its own, and the file removed once its run is over; `/run/banana/gameend.status` when run without it), not on the Home server page, whose Stop is
-for a sync copying games. The menu reads that file and says what came of it in the banner at the top: "Syncing the save" while a run longer than a second goes on
-(a press hides it), then "Save synced", "Save up to date", "Save conflict" (settled on Manage saves) or "Save not
-synced", with banana-sync's own words beside it: a note such as a state kept in the vault, the reason it failed, and,
-only when the save was left waiting in the vault with the server out of reach, "kept to send with the next sync". A
-game whose saves stay on the handheld says nothing, and a run whose "running" line is 120 s old, with `save.lock` free (a long upload holds it), is let go. A game on the second
-SD card is on the handheld as one on the card is, its save on the card. The menu's side is
-`ui/src/gamesync.cpp`: a wait in its main loop before the game, about 8 s for Wi-Fi coming up, then 5 s for the
-server's first answer in `/run/banana/launch.status` (a `waiting` line there is another sync's lock on the saves,
-which the 5 s don't count), 20 s in all from the wait's start, B plays now, and nothing waited for the game started
-again after a power-off; then `save.lock` held for the game's length, `/run/banana/game.starting` written before the
-wait for it. The wait asks about a conflict (A this handheld's, X the server's, B later), a save gone or blank here with
-the server's to take back (from `/run/banana/launch.conflict`, the Saves page's lines of that game, which the sync before
-it leaves), a newer server save that didn't arrive, and a choice that couldn't be carried out. A stop (B, or the 20 s)
-gives banana-sync 3 s to finish placing a save, then kills it and what it started, the menu drawing meanwhile.
+games, and each run writes back only the part of `banana/romsync.json` whose lock it holds; it says how far it got in a
+file the menu names for that game's end (`--report /run/banana/gameend-<ms>.status`, so an earlier game's sync still
+going writes to its own, and the file removed once its run is over; `/run/banana/gameend.status` when run without it),
+not on the Home server page, whose Stop is for a sync copying games. The menu reads that file and says what came of it
+in the banner at the top: that the save is syncing while a run longer than a second goes on (a press hides it), then
+that it was synced, was up to date already, is in conflict (settled on Manage saves) or was not synced, with
+banana-sync's own words beside it: a note such as a state kept in the vault, the reason it failed, and, only when the
+save was left waiting in the vault with the server out of reach, that it is kept to send with the next sync. A game
+whose saves stay on the handheld says nothing, and a run whose "running" line is 120 s old, with `save.lock` free (a
+long upload holds it), is let go. A game on the second SD card is on the handheld as one on the card is, its save on the
+card. The menu's side is `ui/src/gamesync.cpp`: a wait in its main loop before the game, about 8 s for Wi-Fi coming up,
+then 5 s for the server's first answer in `/run/banana/launch.status` (a `waiting` line there is another sync's lock on
+the saves, which the 5 s don't count), 20 s in all from the wait's start, B plays now, and nothing waited for the game
+started again after a power-off; then `save.lock` held for the game's length, `/run/banana/game.starting` written before
+the wait for it. The wait asks about a conflict (A this handheld's, X the server's, B later), a save gone or blank here
+with the server's to take back (from `/run/banana/launch.conflict`, the Saves page's lines of that game, which the sync
+before it leaves), a newer server save that didn't arrive, and a choice that couldn't be carried out. A stop (B, or the
+20 s) gives banana-sync 3 s to finish placing a save, then kills it and what it started, the menu drawing meanwhile.
 
 Where each game's save is (`saves/nds`, `saves/gba`, or the flat `saves/` every other RetroArch system's core and
 BananaFront write since 0.5.3) is `ui/src/save_paths.cpp`; before deciding anything the sync runs `saves-flat`, which
-the launchers run once a boot, so a save still in a core's folder from before then is the one synced. The sizes and forms a system's saves come in, a DraStic footer cut, mGBA's clock bytes left
-off, are `ui/src/save_adapt.cpp`.
+the launchers run too, so a save still in a core's folder from before then is the one synced. The sizes and forms a
+system's saves come in, a DraStic footer cut, mGBA's clock bytes left off, are `ui/src/save_adapt.cpp`.
 
 The tests: `ui/tests/fake-romm.py` stands in for RomM 5.4.1 (slots, devices, negotiation, and `/test/fault` and
 `/test/strict` hooks). `OUT=ui/tests/out ui/tests/sync-slots.sh` checks it against `ui/tests/romm-conformance.py`, cases
@@ -406,19 +420,19 @@ measured on a real 5.4.1, run against a real server too when `ROMM_URL` and `ROM
 user, as JSON) are set; then `ui/tests/romm-peers.py` (a Grout-style client and one writing as this sync does), the card
 helpers in `ui/tests/sync-card.sh`, and the sync's saves by slot on several cards sharing one stand-in, every card's
 token strict, with the real `nds-saves` on its card. A change to the stand-in's RomM behaviour needs a conformance case
-that passes on a real RomM first; its test hooks (faults, clock, seeds) don't. `OUT=ui/tests/out ui/tests/romm-interop.sh`
-plays the interoperability table through (Grout's stand-in and a BananaOS-label peer, the server's rows recorded around
-every run: none may go or change), on the stand-in or a real RomM; with `GROUT_SRC` (a Grout checkout at the commit in
-`ui/tests/GROUT`) Grout's side is Grout's own sync code, built headless by `tools/grout-peer.sh` from
-`ui/tests/grout-peer/main.go` (Go and the SDL2 development packages). Both read the server through
-`ui/tests/romm-api.py`, which fails on a wrong answer rather than printing nothing. `ui/tests/sync.sh` keeps the ROM
-sync, pairing, TLS, a RomM before 5.4 and Romhost on its own simpler card, and drives the menu's wait before a game
+that passes on a real RomM first; its test hooks (faults, clock, seeds) don't. `OUT=ui/tests/out
+ui/tests/romm-interop.sh` plays the interoperability table through (Grout's stand-in and a BananaOS-label peer, the
+server's rows recorded around every run: none may go or change), on the stand-in or a real RomM; with `GROUT_SRC` (a
+Grout checkout at the commit in `ui/tests/GROUT`) Grout's side is Grout's own sync code, built headless by
+`tools/grout-peer.sh` from `ui/tests/grout-peer/main.go` (Go and the SDL2 development packages). Both read the server
+through `ui/tests/romm-api.py`, which fails on a wrong answer rather than printing nothing. `ui/tests/sync.sh` keeps the
+ROM sync, pairing, TLS, a RomM before 5.4 and Romhost on its own simpler card, and drives the menu's wait before a game
 (its `wifi`, `launchpath` and `gameend` script verbs, `ui/tests/fake-sync.sh` as the sync) and the Saves page;
-`ui/tests/gamesync-test` has the wait's helpers and `ui/tests/vault-test` the vault and the save forms;
-`ui/tests/paths-test.sh` has the save paths;
-`system/tests/launchers-test.sh` runs `nds-saves` on a made-up card. `tools/qemu-sync.sh` (with `tools/qemu-lib.sh`,
-which `qemu-boot.sh` shares) runs an image's own `banana-sync` and `nds-saves` in QEMU against the stand-in or a real
-RomM: pairing, each way, power cuts, a conflict on the prompt and on the Saves page, the server gone.
+`ui/tests/gamesync-test.cpp` has the wait's helpers and `ui/tests/vault-test.cpp` the vault and the save forms;
+`ui/tests/paths-test.sh` has the save paths. `ui/tests/run.sh` runs all of these; CI runs
+`system/tests/launchers-test.sh`, which has `nds-saves` on a made-up card. Run by hand, `tools/qemu-sync.sh` (with
+`tools/qemu-lib.sh`, which `qemu-boot.sh` shares) runs an image's own `banana-sync` and `nds-saves` in QEMU against the
+stand-in or a real RomM: pairing, each way, power cuts, a conflict on the prompt and on the Saves page, the server gone.
 
 ## Files' servers: banana-fetch
 
