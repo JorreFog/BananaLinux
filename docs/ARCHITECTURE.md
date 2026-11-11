@@ -295,8 +295,9 @@ Once on the card a game is the owner's like any copied over File sharing: nothin
 leaves the server, and its gamelist entry is written once and not kept to be taken out (a game asked for that was on the
 card already, copied by hand, is adopted with the entry its owner gave it).
 
-Saves follow what is on the card, however it came: every game the server has (by platform and file name) syncs its
-saves, and a server's save for a game that isn't on the card stays there. Systems leaves a system's saves out; one
+Saves follow what is on the card, however it came: every game the server has (found by platform and file name, and
+the server's by its contents: a file of that name with other bytes, another dump or revision, is said in the sync's log
+and not synced) syncs its saves, and a server's save for a game that isn't on the card stays there. Systems leaves a system's saves out; one
 game's can stay on this handheld by its page in the library (X on the game, Save sync), a line `<system folder>/<ROM
 file name>` in `banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at
 once.
@@ -340,7 +341,9 @@ What the sync holds to, whatever happens around it:
   go up, so only the first half applies: the save is noted on the Saves page, its last good copy in the vault, with
   nothing fetched to take back. On Romhost, Homeport decides, by its plan.
 - A save put in place has the quick-resume states that belonged with the old one removed: BananaDS's resume state, and
-  RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. Loaded
+  RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. (A save
+  in the flat `saves/` doesn't say its core, so every core's folder but the DS's is looked in by the save's name:
+  another system's game of the same file name, which shares that flat save too, loses its resume state with it.) Loaded
   over the new save, one would put the old save's memory back, and the emulator would write that over the new save at
   its next save, which the sync would then send as the newer. They are removed before the save changes, so a write that
   fails costs a resume state at most. A DS game's resume state is also loaded only over the save the game was quit with:
@@ -380,10 +383,11 @@ What the sync holds to, whatever happens around it:
   install is written before the journal closes it, so a second cut recovers it again. An install stays open in the
   journal until its agreement is recorded, so a run killed between the two (the menu's last resort when a stop isn't
   heeded) is agreed at the next start, even when a game was played over the save meanwhile: the game's save is then a
-  change from that version, sent, not a conflict with it. `nds-saves` and the GBA seed in `run-retroarch` sync before
-  their renames the same way, under names of their own, so two writers of one save never meet in one temporary file;
-  those names end `.tmp`, so a cut run's leftover is never taken for a save, and the next run of `nds-saves` or the seed
-  clears it.
+  change from that version, sent, not a conflict with it. `nds-saves`, `gba-seed` (the copy a GBA game with no save in `saves/gba`
+  yet gets from a core's folder, which both frontends' launchers run) and `saves-flat` sync before their renames the
+  same way, under names of their own, so two writers of one save never meet in one temporary file; those names end
+  `.tmp`, so a cut run's leftover is never taken for a save, and the next run of the same script for that save clears
+  it.
 - The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges what
   the saves agreed meanwhile instead of writing a stale copy over it.
 

@@ -319,10 +319,11 @@ namespace bsync
 	bool workFile(const std::string& name);
 	std::string saveKind(const std::string& rel);
 	std::map<std::string, std::string> localSaves(bool states);
-	// saves-flat (system/rootfs/usr/libexec/banana), once a boot as the launchers run it: a save still in a RetroArch
-	// core's folder from before 0.5.3 moved to the flat saves/ (saves/gba for the GBA's cores) the emulators read now,
-	// so a card that hasn't started a game since the update syncs the save its next game will read. Run under
-	// save.lock, before anything is decided; BANANA_SAVES_FLAT names another script (the tests')
+	// saves-flat (system/rootfs/usr/libexec/banana), as the launchers run it (until a run of this boot has moved
+	// everything, which leaves its marker): a save still in a RetroArch core's folder from before 0.5.3 moved to the
+	// flat saves/ (saves/gba for the GBA's cores) the emulators read now, so a card that hasn't started a game since
+	// the update syncs the save its next game will read. Run under save.lock, before anything is decided;
+	// BANANA_SAVES_FLAT names another script (the tests')
 	void savesFlatFirst();
 	void ndsSavesFirst();
 	// nds-saves' exit code: 0 once the two agree (or with no nds-saves to run, off the card); NDS_BOTH_CHANGED,

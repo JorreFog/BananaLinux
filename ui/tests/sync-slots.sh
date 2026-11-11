@@ -757,8 +757,8 @@ grep -q "not synced, DraStic's and BananaDS's saves couldn't be brought together
     bad "the DS pair not brought together, synced all the same: $(cat "$OUT/bs.log")"
 cp "$OUT/qsav.sav" "$Q"
 ls "$C/saves/nds" "$C/drastic/backup" "$C/banana/nds-saves" | grep -q 'nds-saves\.' && bad "nds-saves left a file of its own behind: $(ls "$C/saves/nds" "$C/drastic/backup" "$C/banana/nds-saves")"
-# no record of what the two last held (the first start after the update): the newer file's taken, this once, the
-# other kept in the vault
+# no record of what the two last held (a card from before the record, at whichever run meets the two first: here a
+# sync's, with no emulator starting): the newer file's taken, this once, the other kept in the vault
 cat "$Q" > "$QD"; ndsrun
 head -c 8192 /dev/urandom > "$OUT/qnew.sav"; dsv "$OUT/qnew.sav" "$QD"; touch -d "@$(( $(date +%s) - 60 ))" "$Q"; rm "$QR"
 ndsrun; rc=$?

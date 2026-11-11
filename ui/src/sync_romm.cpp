@@ -285,7 +285,7 @@ namespace bsync
 		// saves/<stem>.srm, for a game on the card whose ROM is the server's by its contents. On RomM 5.4 and newer it
 		// syncs with that ROM's slot, autosave unless Settings names another (slots() below). An older RomM's saves (one
 		// per ROM and file name, no slots) only come down (sync() below, which the states use too): changed on the server only ->
-		// download; changed on both -> the server's taken and the card's kept beside it as <file>.card-<date>.bak. A
+		// download; changed on both -> held, both kept (the server's fetched to the vault), never the newer by the files' times. A
 		// blank save here (a core's fresh one) is never sent: it takes the server's when it was never synced, and is
 		// left alone when it was (blanked since). Every download is checked against the server's MD5 and installed
 		// through the vault.
