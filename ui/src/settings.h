@@ -53,8 +53,11 @@ namespace banana
 		void toRow(const std::string& key);		// the cursor on that row, in its group's list (headless runs: row)
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
-		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
+		// the systems for Shown systems (id, name); withGames: the ids with games on the card (Games artworks > Systems
+		// lists those, and any set to Skip)
+		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames = {});
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
+		std::set<std::string> gameSystems;	// (setSystems' withGames)
 		void addShelfRows();
 		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();

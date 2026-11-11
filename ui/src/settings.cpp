@@ -1,5 +1,7 @@
 #include <ctime>
 #include "settings.h"
+
+#include "artsystems.h"
 #include "settings_draw.h"
 #include "settings_curl.h"
 #include "recorder.h"
@@ -553,7 +555,7 @@ namespace banana
 			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
 			add(ML, "picture", "DS cartridges", "What the cartridges on the bottom screen show (in Glass, every game's card).", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
-			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.",
+			items.back().hints = { "The covers Games artworks fetched. A game without one shows its own icon.",
 				"A DS game's own icon, as the DSi menu shows it. In Glass, other games show their logo, or their box art without one." };
 		}
 		const char* P = "Sleep & power";
@@ -889,7 +891,7 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
-		add(D, "picture", "Box art", "Covers, title screens, genres and years: fetch them and pick their source.", "", "sys_boxart", {}, {}, Item::PAGE);
+		add(D, "picture", "Games artworks", "Covers, logos and title screens: fetch them, for the systems you pick.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
@@ -902,12 +904,13 @@ namespace banana
 			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
 			add(UP, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
-		// the Box art page (Look & sound > Box art)
+		// the Games artworks page (Look & sound > Games artworks); its Systems page's rows are addShelfRows()
 		{
-			const char* BA = "Box art";
-			add(BA, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.",
+			const char* BA = "Games artworks";
+			add(BA, "picture", "Fetch artworks", "Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.",
 				"", "scrape", {}, {}, Item::PAGE);
-			add(BA, "picture", "Box art from", "Where covers come from.",
+			add(BA, "picture", "Systems", "Which systems' games get artworks.", "", "art_systems", {}, {}, Item::PAGE);
+			add(BA, "picture", "Artworks from", "Where covers come from.",
 				menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 			items.back().hints = { "libretro's collections.", "libretro, then TwilightBoxart for the covers it lacks.", "TwilightBoxart first, where it has them." };
 		}
@@ -1045,7 +1048,7 @@ namespace banana
 			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
 			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
-			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Box art", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds", "Speaker EQ" } },
+			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Games artworks", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds", "Speaker EQ" } },
 			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "Waking up", "LEDs" } },
 			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
@@ -1412,7 +1415,8 @@ namespace banana
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
-				{ "sys_boxart", "Box art" },
+				{ "sys_boxart", "Games artworks" },
+				{ "art_systems", "Artwork systems" },
 				{ "sys_reset", "Reset options" },
 				{ "menu_look", "Menu look" },
 				{ "ds_buttons", "DS buttons" },
@@ -1761,9 +1765,10 @@ namespace banana
 				page = LIST;
 			}
 	}
-	void Settings::setSystems(const std::vector<std::pair<std::string, std::string>>& systems)
+	void Settings::setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames)
 	{
 		shelfSystems = systems;
+		gameSystems = withGames;
 		addShelfRows();
 		addSystemRows();
 		groups.clear();
@@ -1800,6 +1805,21 @@ namespace banana
 			it.section = "Shown systems"; it.icon = "picture"; it.label = sy.second; it.file = data + "/settings.conf"; it.key = "shelf." + sy.first;
 			it.help = "With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).";
 			it.names = { "With games", "Hidden", "Always" }; it.values = { "auto", "hide", "show" };
+			items.push_back(it);
+			load(items.back());
+		}
+		// Games artworks > Systems: a row each system artworks can be fetched for (artsystems.h) with games on the card (or
+		// set to Skip, to be set back), Fetch or Skip
+		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Artwork systems"; }), items.end());
+		for (auto& sy : shelfSystems)
+		{
+			if (!banana::artCollections().count(sy.first)) continue;
+			if (!gameSystems.empty() && !gameSystems.count(sy.first) && getConfValue(data + "/settings.conf", "art." + sy.first, "on") != "off") continue;
+			Item it;
+			it.section = "Artwork systems"; it.icon = "picture"; it.label = sy.second; it.file = data + "/settings.conf"; it.key = "art." + sy.first;
+			it.help = "Whether Fetch artworks gets this system's covers, logos and title screens.";
+			it.names = { "Fetch", "Skip" }; it.values = { "on", "off" };
+			it.hints = { "Its games get artworks.", "Left as they are: what they have stays." };
 			items.push_back(it);
 			load(items.back());
 		}
@@ -2625,7 +2645,7 @@ namespace banana
 		// what the group is for, in a line, as Android's settings list says it (its rows' names, all of them, read as a
 		// wall of text: the user, 2026-10-28)
 		static const std::pair<const char*, const char*> ABOUT[] = {
-			{ "Look & sound", "Which systems show, the theme, box art, brightness, volume and sounds." },
+			{ "Look & sound", "Which systems show, the theme, games artworks, brightness, volume and sounds." },
 			{ "Sleep & power", "When the handheld dims, sleeps and turns off, the lid and the LEDs." },
 			{ "Nintendo DS", "The DS emulator, and how DS games look, sound and run." },
 			{ "Other systems", "RetroArch's games: the game panel, achievements, shaders and sound." },
@@ -2931,6 +2951,12 @@ namespace banana
 			}
 			else if (it.kind == Item::INFO) v = it.key == "hk" && !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does)
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
+			else if (it.kind == Item::PAGE && it.key == "art_systems")	// how many systems get artworks
+			{
+				int on = 0, all = 0;
+				for (const Item& s : items) if (s.section == "Artwork systems") { all++; if (s.at == 0) on++; }
+				v = on == all ? "All" : std::to_string(on) + " of " + std::to_string(all);
+			}
 			else if (it.kind == Item::PAGE && it.key == "nds_emus")	// the DS emulator in use
 			{
 				const Item* e = itemByKey("nds_emulator");
@@ -7115,7 +7141,7 @@ namespace banana
 				if (have > 0) status = std::to_string(have) + " of " + std::to_string(all) + " games have art";
 			}
 			help = scraping() ? "Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes."
-				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.";
+				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Games artworks runs it again for new games.";
 			break;
 		case SL_DONE:
 			help = "Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.";
@@ -7154,7 +7180,7 @@ namespace banana
 				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
 			auto art = artCount ? artCount() : std::pair<int, int>(0, 0);
 			bool artBefore = scrapeLine.empty() && art.first > 0;	// (fetched before: an update, the setup again)
-			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
+			row("Games artworks", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
 				artBefore ? std::to_string(art.first) + " of " + std::to_string(art.second) + " games have art" : skipped(SL_ART) ? "Skipped" : "Not fetched",
 				scraping() || scrapeLine.compare(0, 4, "done") == 0 || artBefore ? 1 : -1);
 			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);

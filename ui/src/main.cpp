@@ -725,6 +725,13 @@ static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host&
 	for (auto& d : lib.systemDefs()) r.push_back({ d.id, d.name });
 	return r;
 }
+// the systems with games on the home row (Games artworks > Systems lists them)
+static std::set<std::string> gameSystems(Host& lib)
+{
+	std::set<std::string> r;
+	for (int i = 0; i < lib.systemCount(); i++) if (!lib.shelf(i).games.empty()) r.insert(lib.shelf(i).def.id);
+	return r;
+}
 
 // a change in Shown systems (Settings::SHELVES): the home row read again, on the same system when it is still there
 template <class U> static void afterShelves(Host& lib, U& ui)
@@ -882,7 +889,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
-	settings.setSystems(shelfSystems(lib));
+	settings.setSystems(shelfSystems(lib), gameSystems(lib));
 	settings.setSync(true);
 	settings.filesAsync = getenv("BANANA_FILES_ASYNC") != nullptr;	// (Files' job page and Stop: the sleep and filesdone ops)
 	settings.setLibraryPaths(o.systems, o.roms);
@@ -2331,7 +2338,7 @@ int main(int argc, char** argv)
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)
-	settingsView.setSystems(shelfSystems(lib));
+	settingsView.setSystems(shelfSystems(lib), gameSystems(lib));
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
 	settingsView.setLibraryPaths(o.systems, o.roms);
@@ -3408,6 +3415,7 @@ int main(int argc, char** argv)
 				ui->dataChanged();
 				ui->setHome(at);
 				roms.watch(lib.watchDirs());
+				settingsView.setSystems(shelfSystems(lib), gameSystems(lib));	// (Games artworks > Systems: new ones with games)
 				logf("the games on the card changed: %d systems", lib.systemCount());
 				// a system's "changed" command (systems.conf), for a change in its folder
 				roms.run(lib.changedRuns(roms.changed), "a system's folder changed");

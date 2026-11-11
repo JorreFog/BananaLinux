@@ -396,3 +396,8 @@ ux_check plaza "touch 300 450: used"
 ux_check plaza "touch: key x"
 if grep "theme:" "$OUT/$size-plaza.log"; then echo "FAIL $size: Plaza's theme has errors"; fail=1; fi
 
+# Look & sound > Games artworks > Systems: a row each system artworks come for (Fetch or Skip); Right on the first sets
+# it to Skip (settings.conf's art.<id> = off, which the fetch leaves out)
+ux_run artsys "home 0; press start; row Games artworks art_systems; press a; shot ux-artsys; press right; press b; press b; press b"
+grep -q '^art\.[a-z0-9-]* = off' "$UXFX/data/settings.conf" || { echo "FAIL $size: Games artworks > Systems: Skip wasn't saved: $(grep '^art\.' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+sed -i '/^art\./d' "$UXFX/data/settings.conf"
