@@ -123,7 +123,7 @@ settings		The top screen's bob and shine. Off holds it still and saves a little 
 settings		On	开
 settings		Off	关闭
 settings		Volume	音量
-settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	正在发声的扬声器或耳机。音量键可在任何地方调节。
+settings		The speakers or headphones. The volume keys change it anywhere.	正在发声的扬声器或耳机。音量键可在任何地方调节。
 settings		Menu sounds	菜单音效
 settings		The menu's clicks, and the cartridge going into the console.	菜单的点击声，以及卡带插入主机的声音。
 settings		Battery	电池
@@ -251,7 +251,7 @@ settings		Game companion	游戏伴侣
 settings		Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	其他 Game Boy Advance 游戏在第二屏幕上的显示：随游戏运行展示七个页面（状态、细看、战斗、地图、背包、收集品、进度），能读取时从游戏获取，不能时则显示备注。宝可梦游戏仍使用宝可梦伴侣。需要开启「第二屏幕」。灵感来自 Lidor Itzhari 的 PokeDaisy。
 settings		Network	网络
 settings		Wi-Fi	Wi-Fi
-settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	附近的网络：在某网络上按 A 即可加入，密码在此处用键盘输入（或通过触摸）。
+settings		Networks nearby. A on one joins it.	附近的网络：在某网络上按 A 即可加入，密码在此处用键盘输入（或通过触摸）。
 settings		File sharing	文件共享
 settings		System	系统
 settings		Time zone	时区
@@ -261,7 +261,7 @@ settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a p
 settings		Box art	封面
 settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	游戏的封面、标题画面、类型和年份，来自 libretro 的免费图库（无需账号，需 Wi-Fi）。它在后台持续运行；已有封面的游戏会被跳过，因此再次运行只会获取新增内容。
 settings		Previous version	上一版本
-settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	重启进入另一个插槽：上次更新前运行的版本。按 A 两次。
+settings		Restarts into the version from before the last update. Press A twice.	重启进入另一个插槽：上次更新前运行的版本。按 A 两次。
 settings		SSH	SSH
 settings		First-time setup	首次设置
 settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	再次执行首次启动的步骤：Wi-Fi、时区和 RetroAchievements 账号（ScreenScraper：暂不可用）。
@@ -352,7 +352,7 @@ settings		When asked: GitHub is only asked when you choose Check for updates. Da
 settings		When asked	按需
 settings		Daily	每日
 settings		New versions of Banana: checking, installing, and going back.	Banana 的新版本：检查、安装和退回。
-settings		A new version, from GitHub or a package on the card. It runs from the next restart.	新版本，来自 GitHub 或卡上的更新包。下次重启后运行。
+settings		A new version from GitHub or the card. It starts on the next restart.	新版本，来自 GitHub 或卡上的更新包。下次重启后运行。
 settings		Whether the update check counts test versions.	更新检查是否计入测试版本。
 settings		Test versions count. Every release so far is one.	计入测试版本。迄今为止的每个版本都是测试版。
 settings		Only stable versions.	仅稳定版本。
@@ -887,7 +887,7 @@ settings		This game's 3D resolution	本游戏的 3D 分辨率
 # (the Credits page's lines below are a machine-translated draft, not Majirefy's: for them to check; the names and titles in /etc/banana/credits.txt stay as written)
 settings		Credits	致谢
 settings		Thank you	谢谢
-settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	制作此 BananaOS 版本的人员：开发、翻译、测试与致谢。按 A 打开名单。
+settings		The people behind this version of BananaOS.	制作此 BananaOS 版本的人员：开发、翻译、测试与致谢。按 A 打开名单。
 settings		Development	开发
 settings		Translations	翻译
 settings		Testing	测试
@@ -1048,7 +1048,7 @@ settings		Mic sensitivity	麦克风灵敏度
 settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	说话或吹气的声音需高出环境噪声多少才能被游戏接收到。关闭门限则游戏会听到麦克风捕捉到的一切，包括扬声器传出的自身声音。
 settings		Gate off	关闭门限
 settings		Reset BananaDS	重置 BananaDS
-settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	将 BananaDS 的设置恢复为 Banana 的默认值。存档、即时存档以及每款游戏的时钟保持不变。按 A 两次。
+settings		Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.	将 BananaDS 的设置恢复为 Banana 的默认值。存档、即时存档以及每款游戏的时钟保持不变。按 A 两次。
 settings		Threaded 3D	多线程 3D
 settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	开：在游戏旁并行绘制 DS 的 3D，速度更快。关：与游戏同步绘制：适用于开启后 3D 显示错屏或慢一帧的游戏（勇者斗恶龙系列）。
 settings		Reset buttons	重置按键
@@ -1283,7 +1283,7 @@ settings		Auto sync	自动同步
 settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	离开游戏时：其存档会在你离开时发送到服务器（后台进行，耗时数秒）。并且通过 Wi-Fi：每次 Wi-Fi 连接时也会同步游戏与存档。游戏运行时永不进行。
 settings		Leaving a game	离开游戏时
 settings		And on Wi-Fi	以及通过 Wi-Fi
-settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	在此掌机上同步哪些系统。跳过的系统的游戏在卡上保持不变。
+settings		Which systems sync here. Skipped systems stay as they are.	在此掌机上同步哪些系统。跳过的系统的游戏在卡上保持不变。
 settings		Forget this server	遗忘此服务器
 settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	取消掌机的配对：在重新配对前不会同步任何内容。游戏与存档保留在卡上。按 A 两次。
 settings		Home server systems	家庭服务器系统
