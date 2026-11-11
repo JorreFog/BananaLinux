@@ -102,7 +102,7 @@ settings		New York, Toronto	纽约、多伦多
 settings		Halifax	哈利法克斯
 settings		Santiago	圣地亚哥
 settings		Sao Paulo, Buenos Aires	圣保罗、布宜诺斯艾利斯
-settings		Display & sound	显示与声音
+settings		Look & sound	显示与声音
 settings		Theme	主题
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; or Carts (experimental): your games as cartridges on a shelf, in a clean typeface.	ROCKNIXDS Pixel 的两套配色，深色或浅色以适应白天；或 Carts（实验性）：将你的游戏像卡带一样摆在架子上，采用简洁字体。
 settings		Dark	深色
@@ -816,7 +816,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	音量键
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	随处可用（包括游戏中）：扬声器，或插入时的耳机。
 settings		F + volume	F + 音量键
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	随处可用（包括游戏中）：同时调节两块屏幕的背光。单独调节某块屏幕：设置 > 显示与声音。
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	随处可用（包括游戏中）：同时调节两块屏幕的背光。单独调节某块屏幕：设置 > 显示与声音。
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	随处可用：按一下休眠（游戏在原处暂停），再按一下唤醒。合上翻盖效果相同。
 settings		Hold power	长按电源键
 settings		Everywhere: held for 2 seconds. A game running saves first.	随处可用：长按 2 秒。运行中的游戏会先保存。

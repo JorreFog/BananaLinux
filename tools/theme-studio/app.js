@@ -975,7 +975,7 @@
   function renderTheme() {
     const pane = $("#pane-theme"); pane.innerHTML = "";
     const L = (t, tip) => { const l = h("label", { title: tip || "" }, t); return l; };
-    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); titleNow(); }, "text", null, L("Name", "Shown in Settings › Display & sound › Theme"));
+    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); titleNow(); }, "text", null, L("Name", "Shown in Settings › Look & sound › Theme"));
     field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text", null, L("Author"));
     field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS, L("Font", "The font text uses unless it says otherwise"));
     field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool", null, L("Show errors", "Draw the theme's problems on the handheld's top screen (for testing)"));
@@ -1173,7 +1173,7 @@
     add.onclick = () => { if (np.value && nf.files[0]) attach(np.value, nf.files[0]); };
     pane.appendChild(h("div", { class: "ctl" }, np, nf, add));
     pane.appendChild(h("h3", { class: "sec" }, "Put it on the handheld"));
-    pane.appendChild(h("div", { class: "note" }, h("b", null, "Export"), " (top right) downloads " + fileStem() + ".zip with these files. Unzip it into banana/themes/ on the card, then pick the theme in Settings › Display & sound › Theme."));
+    pane.appendChild(h("div", { class: "note" }, h("b", null, "Export"), " (top right) downloads " + fileStem() + ".zip with these files. Unzip it into banana/themes/ on the card, then pick the theme in Settings › Look & sound › Theme."));
     if (!RENDER || !RENDER.available || !RENDER.themesDir) return;
     pane.appendChild(h("div", { class: "muted" }, "Send to handheld writes into " + RENDER.themesDir));
     const nm = h("input", { type: "text", value: fileStem() });
@@ -1183,7 +1183,7 @@
       catch (e) { setStatus("send failed: " + e.message, "bad"); }
     };
     pane.appendChild(h("div", { class: "ctl" }, nm, go));
-    pane.appendChild(h("div", { class: "muted" }, "then pick it in Settings > Display & sound > Theme (it shows under its name)"));
+    pane.appendChild(h("div", { class: "muted" }, "then pick it in Settings > Look & sound > Theme (it shows under its name)"));
   }
   function fileStem() {
     return (state.theme.name || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";

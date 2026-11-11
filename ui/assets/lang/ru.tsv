@@ -117,7 +117,7 @@ settings		New York, Toronto	Нью-Йорк, Торонто
 settings		Halifax	Галифакс
 settings		Santiago	Сантьяго
 settings		Buenos Aires, Sao Paulo	Буэнос-Айрес, Сан-Паулу
-settings		Display & sound	Экран и звук
+settings		Look & sound	Экран и звук
 settings		Theme	Тема
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	Две палитры ROCKNIXDS Pixel: тёмная или светлая (для дня); Картриджи (эксперим.): ваши игры в виде картриджей на полке с аккуратным шрифтом; или ваша тема: файл .json в banana/themes на карте (см. README.txt).
 settings		Dark	Тёмная
@@ -545,7 +545,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	Кнопки громкости
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Везде, включая игры: громкость динамиков (или наушников при их подключении).
 settings		F + volume	F + громкость
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Везде, включая игры: регулировка подсветки обоих экранов одновременно. Раздельно для каждого экрана: «Настройки > Экран и звук».
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Везде, включая игры: регулировка подсветки обоих экранов одновременно. Раздельно для каждого экрана: «Настройки > Экран и звук».
 settings		Power	Кнопка питания
 settings		Sleep	Сон
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Везде: нажатие переводит в сон (игра ставится на паузу), повторное нажатие пробуждает. Закрытие крышки делает то же самое.

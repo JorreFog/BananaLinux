@@ -50,6 +50,7 @@ namespace banana
 		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list (headless runs: row)
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
@@ -282,7 +283,7 @@ namespace banana
 		void renderCredits();
 		// the credits list's lines: a section's heading, then its names (index into credits; -1 - section for a heading)
 		std::vector<int> crLines;
-		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
+		// Look & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
 		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
 		std::vector<std::string> thNames, thValues;
 		int thSel = 0, thTop = 0;

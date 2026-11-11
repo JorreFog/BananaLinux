@@ -1,5 +1,5 @@
 # Speaker EQ, Anbernic RG DS Plus (both speakers, the aw88166 amplifiers on their "Music" profile).
-# Equalizer APO parametric text, read by the banana_eq ALSA plugin (Settings > Display & sound > Speaker EQ).
+# Equalizer APO parametric text, read by the banana_eq ALSA plugin (Settings > Look & sound > Speaker EQ).
 # Measured: an AT2035 at 20 cm, four positions (centre twice, 5 cm left and right), exponential sweeps, 20 ms gate.
 # The raw speakers: a +6 dB honk around 1 kHz, a +5 dB shrill bump at 6-8 kHz, little below 500 Hz or above 10 kHz.
 # Then tuned by ear on DS music (brass, strings, flutes, menu sounds): more low-mid body, a gentle 2.7 kHz cut.
