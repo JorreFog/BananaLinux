@@ -288,6 +288,26 @@ def version_tag():
 
 
 @case
+def custom_slot():
+    """a slot of the client's naming, a space in it, is a slot as autosave is: a version per upload named with the
+    server's time, the upload guard, 50 versions kept per lineage; slot=<name> lists that slot alone, and autosave's
+    listing none of it"""
+    rom, name = ROMS[5], f"my slot {RUN}"
+    sl = lambda tok: ok(*call("GET", "/api/saves", token=tok, query={"rom_id": rom, "slot": name}), "custom listing")
+    s = ok(*upload(TA, A, rom, f"{RUN} custom 0".encode(), slot=name), "first upload")
+    check(s["slot"] == name, f"slot {s['slot']!r}")
+    check(re.search(r" \[\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\]\.srm$", s["file_name"]), f"no version tag in {s['file_name']!r}")
+    st, r = upload(TB, B, rom, f"{RUN} custom B".encode(), slot=name)
+    check(st == 409 and r.get("detail") == "Slot has a newer save since your last sync", f"B's first upload: HTTP {st} {r}")
+    for i in range(1, 55):
+        ok(*upload(TA, A, rom, f"{RUN} custom {i}".encode(), slot=name), f"upload {i}")
+    rows = sl(TA)
+    check(all(x["slot"] == name for x in rows), f"slot=<name> listing: {sorted({x['slot'] for x in rows})}")
+    check(len([x for x in rows if x["emulator"] == EMU[0]]) == 50, f"after 55 uploads: {len(rows)} versions, not 50")
+    check(not [x for x in listing(TA, rom) if x["slot"] == name], "the autosave listing holds the custom slot's saves")
+
+
+@case
 def rom_id_limit():
     """at most 500 ROM ids, in the listing and in negotiation"""
     st, _ = call("GET", "/api/saves", token=TA, query={"rom_ids": list(range(1, 502))})
