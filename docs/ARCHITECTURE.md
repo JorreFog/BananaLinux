@@ -292,7 +292,16 @@ the card already, copied by hand, is adopted with the entry its owner gave it). 
 card, however it came: every game the server has (by platform and file name) syncs its saves, and a server's save for
 a game that isn't on the card stays there. Systems leaves a system's saves out; one game's can stay on this handheld
 by its page in the library (X on the game, Save sync), a line `<system folder>/<ROM file name>` in
-`banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at once. Romhost
+`banana/homesync-local.txt`: neither sent nor taken, and the sync before or after that game is done at once. On RomM 5.4
+and newer each game's save is its ROM's `autosave` slot, the one Grout and RomM's own page use, unless Save slot (the
+page's last row before Forget) names another: `homesync_slot = custom` and `homesync_slot_name`, 1 to 64 letters,
+digits, spaces, `-` and `_` (no colon, so `<rom id>/<slot>` in `romsync.json` can't be taken for a state's
+`<rom id>/state:<name>`; a name that isn't one is said in the log and autosave used). There is no slotless choice: RomM
+keeps a slotless save as one row per file name and emulator, written over in place, with no versions, no upload guard
+and nothing in its negotiation, so two devices' changes couldn't be told apart. A slot changed is followed by the next
+sync: a save waiting to be sent goes to the new slot, what was held or in conflict with the old one is let go (said,
+its copy kept in the vault, and the Saves page stops listing it as soon as the setting changes), and the versions
+agreed stay per slot, so going back finds them agreed; in the new slot every game is a save never agreed with it. Romhost
 is unchanged: the card follows the server's list (Games to sync: All, or the games ticked in Choose games), and
 Homeport decides the rest. Get games and the gamelist name a
 RomM game by its title and the tags RomM parses from its file name (a revision, a hack's `[Hack by ... v1.0]`, a
