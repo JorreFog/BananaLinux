@@ -105,6 +105,18 @@ namespace banana
 		return plane;
 	}
 
+	void Display::screensFor(const int uw[2], const int uh[2])
+	{
+		const char* st = getenv("BANANA_STAGE");
+		bool fit = st && !strcmp(st, "fit");
+		for (int s = 0; s < 2; s++)
+		{
+			bool same = uw[s] == W && uh[s] == H;
+			CW[s] = fit || same ? W : uw[s];
+			CH[s] = fit || same ? H : uh[s];
+		}
+	}
+
 #ifndef BANANA_SDL
 	// (built without SDL: the panels through KMS only, and the SDL calls are never reached)
 	bool Display::wantSdl() { return false; }
@@ -245,12 +257,22 @@ namespace banana
 			// as its modesets are queued (a second at most)
 			masterAtOpen = handOver;
 			for (int t = 0; !handOver && t < 100; t++) { if (drmSetMaster(fd) == 0) { masterAtOpen = true; break; } usleep(10000); }
+			{
+				int uw[2], uh[2];
+				for (int s = 0; s < 2; s++)
+				{
+					bool side = rot[s] == 90 || rot[s] == 270;
+					uw[s] = side ? found[s].mode.vdisplay : found[s].mode.hdisplay;
+					uh[s] = side ? found[s].mode.hdisplay : found[s].mode.vdisplay;
+				}
+				screensFor(uw, uh);
+			}
 			for (int s = 0; s < 2; s++)
 			{
 				p[s] = Panel();
 				p[s].conn = found[s].conn; p[s].crtc = found[s].crtc;
 				memcpy(p[s].mode, &found[s].mode, sizeof p[s].mode);
-				p[s].fit.set(W, H, found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s]);
+				p[s].fit.set(screenWidth(s), screenHeight(s), found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s]);
 				if (!p[s].fit.identity())
 					fprintf(stderr, "banana-ui: display: screen %d's panel is %dx%d (turned %d): the %dx%d canvas fitted at %dx%d+%d+%d\n",
 						s, found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s], W, H, p[s].fit.dw, p[s].fit.dh, p[s].fit.ox, p[s].fit.oy);
@@ -474,7 +496,7 @@ namespace banana
 			d.add(pn.missed[back]);
 			pn.missed[back] = Damage();
 			d.x0 = std::max(d.x0, 0); d.y0 = std::max(d.y0, 0);
-			d.x1 = std::min(d.x1, W); d.y1 = std::min(d.y1, H);
+			d.x1 = std::min(d.x1, screenWidth(s)); d.y1 = std::min(d.y1, screenHeight(s));
 			if (d.empty()) continue;
 			Buf& bf = pn.buf[back];
 			// only the columns that changed: the scanout buffer is uncached, every byte written costs (a panel of another

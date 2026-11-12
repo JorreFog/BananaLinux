@@ -113,7 +113,21 @@ namespace rnds
 		virtual void popClip() = 0;
 		virtual void beginScreen(int screen) = 0;	// 0 top, 1 bottom
 		virtual void endScreen() = 0;
+		// the current screen's whole area in the device px the menu draws in, when the screen is another shape than the
+		// menu's 4:3 canvas (the AYN Thor's 16:9 top and near-square bottom: the canvas is staged in its middle). A
+		// screen's background (its wallpaper, its "screen" box) is drawn over all of it, so the screen is filled; what
+		// sits on it keeps its place in the canvas. false: the screen is the canvas (the RG DS)
+		virtual bool stageArea(float& x, float& y, float& w, float& h) const { (void)x; (void)y; (void)w; (void)h; return false; }
 	};
+
+	// the current screen's background area in the menu's 640x480 units (scale s: device px per unit): the stage's
+	// whole screen, else the canvas
+	inline void screenArea(const Backend* be, float s, float& x, float& y, float& w, float& h)
+	{
+		float ax, ay, aw, ah;
+		if (be && s > 0 && be->stageArea(ax, ay, aw, ah)) { x = ax / s; y = ay / s; w = aw / s; h = ah / s; }
+		else { x = 0; y = 0; w = 640; h = 480; }
+	}
 
 	// a texture plus where its CSS box sits in it (device px)
 	struct Sprite

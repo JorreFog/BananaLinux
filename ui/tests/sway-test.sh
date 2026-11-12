@@ -2,7 +2,7 @@
 # banana-ui under a Wayland compositor, as on ROCKNIX (the SDL display, src/kms_sdl.cpp): sway headless with two
 # outputs the AYN Thor's screens' size (HEADLESS-1 1920x1080 as the top, HEADLESS-2 1240x1080 as the bottom), the menu
 # started on them, then a screenshot of each output ($OUT/sway-top.png, sway-bottom.png) and their checks: each
-# window fullscreen on its own output, the picture fitted (the bars black, the middle drawn). Needs sway, grim and a
+# window fullscreen on its own output, each screen filled (the menu staged in it, its background over all of it). Needs sway, grim and a
 # banana-ui built with SDL=1 (make -C ui host SDL=1); skipped otherwise.
 #   ui/tests/sway-test.sh
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -48,12 +48,13 @@ grep -q 'display (SDL wayland): screen 1 on display .*1240x1080' "$OUT/sway-bana
 px() { convert "$1" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null; }
 for f in sway-top sway-bottom; do [ -s "$OUT/$f.png" ] || { echo "FAIL sway test: no screenshot $f"; fail=1; }; done
 if [ $fail = 0 ]; then
-    # the top: 1440x1080 in the middle of 1920, bars of 240 each side
-    [ "$(px "$OUT/sway-top.png" 100 540)" = "srgb(0,0,0)" ] || { echo "FAIL sway test: the top's left bar isn't black"; fail=1; }
+    # each screen filled (the menu staged in it, its background over all of it: no black bars), the canvas's middle drawn
+    for c in "sway-top 100 540" "sway-top 1820 540" "sway-bottom 620 30" "sway-bottom 620 1050"; do
+        set -- $c
+        [ "$(px "$OUT/$1.png" $2 $3)" != "srgb(0,0,0)" ] || { echo "FAIL sway test: $1 is black at $2,$3 (a bar, not filled)"; fail=1; }
+    done
     [ "$(convert "$OUT/sway-top.png" -crop 1440x1080+240+0 -format '%[fx:mean]' info:)" != 0 ] || { echo "FAIL sway test: the top's picture is black"; fail=1; }
-    # the bottom: 1240x930 in the middle of 1240x1080, bars of 75 above and below
-    [ "$(px "$OUT/sway-bottom.png" 620 30)" = "srgb(0,0,0)" ] || { echo "FAIL sway test: the bottom's top bar isn't black"; fail=1; }
     [ "$(convert "$OUT/sway-bottom.png" -crop 1240x930+0+75 -format '%[fx:mean]' info:)" != 0 ] || { echo "FAIL sway test: the bottom's picture is black"; fail=1; }
 fi
-[ $fail = 0 ] && echo "sway test: both screens on their outputs, fitted ($OUT/sway-top.png, $OUT/sway-bottom.png)"
+[ $fail = 0 ] && echo "sway test: both screens on their outputs, filled ($OUT/sway-top.png, $OUT/sway-bottom.png)"
 exit $fail

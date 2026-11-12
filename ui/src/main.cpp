@@ -287,6 +287,7 @@ struct Options
 	std::string headless, script;
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
+	int sw[2] = { 0, 0 }, sh[2] = { 0, 0 };	// --screens: each screen's own size (headless)
 };
 
 static std::string envOr(const char* name, const std::string& def)
@@ -849,6 +850,7 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
+	if (o.sw[0] > 0) be.setScreens(o.sw[0], o.sh[0], o.sw[1], o.sh[1]);	// (--screens: the AYN Thor's shapes)
 	std::string layout = themePath(theme);
 	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", o.h / 480.0f)
 		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, o.h / 480.0f, o.assets + "/fonts", o.banana + "/fonts")
@@ -860,10 +862,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	auto settle = [&] { ui.update(now); ui.finishWork(); ui.update(now); };
 	auto save = [&](int s, const std::string& path)
 	{
-		std::vector<uint8_t> rgb((size_t)o.w * o.h * 3);
+		const int w = be.screenWidth(s), h = be.screenHeight(s);
+		std::vector<uint8_t> rgb((size_t)w * h * 3);
 		const uint32_t* p = be.pixels(s);
-		for (size_t i = 0; i < (size_t)o.w * o.h; i++) { rgb[i * 3] = (p[i] >> 16) & 255; rgb[i * 3 + 1] = (p[i] >> 8) & 255; rgb[i * 3 + 2] = p[i] & 255; }
-		return stbi_write_png(path.c_str(), o.w, o.h, 3, rgb.data(), o.w * 3) != 0;
+		for (size_t i = 0; i < (size_t)w * h; i++) { rgb[i * 3] = (p[i] >> 16) & 255; rgb[i * 3 + 1] = (p[i] >> 8) & 255; rgb[i * 3 + 2] = p[i] & 255; }
+		return stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3) != 0;
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
@@ -2032,11 +2035,18 @@ struct FrameStats
 
 // the buttons and touchscreens; on panels the canvas is fitted to (the AYN Thor, panelfit.h) a touch goes through the
 // panel's fit to the canvas
-static void openInput(Input& input, const Display& disp, const std::string& touch)
+static void openInput(Input& input, const Display& disp, const SoftBackend& be, const std::string& touch)
 {
 	input.open(touch, disp.width(), disp.height());
-	if (disp.fitted())
-		input.mapTouch([&disp](int s, float nx, float ny, bool wide, float& x, float& y) { return disp.touchToCanvas(s, nx, ny, wide, x, y); });
+	if (disp.fitted() || be.staged(0) || be.staged(1))
+		input.mapTouch([&disp, &be](int s, float nx, float ny, bool wide, float& x, float& y)
+		{
+			// the panel's point on the screen's canvas, then (a staged screen) on the menu's
+			float cx, cy;
+			if (!disp.touchToCanvas(s, nx, ny, wide, cx, cy)) return false;
+			if (!be.staged(s)) { x = cx; y = cy; return true; }
+			return be.screenToCanvas(s, cx, cy, x, y);
+		});
 }
 
 int main(int argc, char** argv)
@@ -2072,6 +2082,8 @@ int main(int argc, char** argv)
 		else if (a == "--script") o.script = next();
 		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
+		// --screens 1920x1080,1240x1080: each screen its own shape, the --size canvas staged in it (headless)
+		else if (a == "--screens") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d,%dx%d", &o.sw[0], &o.sh[0], &o.sw[1], &o.sh[1]) != 4) { logf("bad screens"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
 
@@ -2153,6 +2165,11 @@ int main(int argc, char** argv)
 		usleep(50000);
 	}
 	SoftBackend be(disp.width(), disp.height());
+	// each screen its own shape (the AYN Thor's): the menu's canvas staged in it, its backgrounds over all of it
+	be.setScreens(disp.screenWidth(0), disp.screenHeight(0), disp.screenWidth(1), disp.screenHeight(1));
+	if (be.staged(0) || be.staged(1))
+		logf("screens %dx%d and %dx%d: the %dx%d menu staged in each", be.screenWidth(0), be.screenHeight(0),
+			be.screenWidth(1), be.screenHeight(1), be.width(), be.height());
 	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
 	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
@@ -2236,7 +2253,7 @@ int main(int argc, char** argv)
 	const bool setupNow = firstSetup || !setupAt.empty();
 
 	Input input;
-	openInput(input, disp, o.touch);
+	openInput(input, disp, be, o.touch);
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
@@ -3072,7 +3089,7 @@ int main(int argc, char** argv)
 		if (settingsView.colorsOpen()) disp.setColors(ScreenColors());
 		else applyColors("after the game");
 		be.invalidate();
-		openInput(input, disp, o.touch);
+		openInput(input, disp, be, o.touch);
 		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		{
@@ -3188,7 +3205,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (rearrange(lib, *ui)) dirty = true;
 		}
-		if (input.rescanDue()) openInput(input, disp, o.touch);	// a pad came or went
+		if (input.rescanDue()) openInput(input, disp, be, o.touch);	// a pad came or went
 		{
 			// the display controller's interrupt storm, looked at every 10 s without waiting: over 20000 a second on
 			// average since the last look, the full check (it measures again and switches the panels off and on)

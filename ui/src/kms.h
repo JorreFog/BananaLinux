@@ -31,6 +31,11 @@ namespace banana
 		// a touch as a fraction of its touchscreen's range (panelfit.h's touchToCanvas)
 		bool touchToCanvas(int s, float nx, float ny, bool wide, float& x, float& y) const { return p[s].fit.touchToCanvas(nx, ny, wide, x, y); }
 		bool fitted() const { return !p[0].fit.identity() || !p[1].fit.identity(); }
+		// each screen's own canvas (the composed rows present() takes): the panel upright when its shape isn't the menu's
+		// (the AYN Thor's 1920x1080 and 1240x1080; the menu's 4:3 is staged in it, soft.h's setScreens), else
+		// width() x height(). BANANA_STAGE=fit: the 4:3 canvas on every screen, fitted with black bars instead
+		int screenWidth(int s) const { return CW[s] ? CW[s] : W; }
+		int screenHeight(int s) const { return CH[s] ? CH[s] : H; }
 		// the screens are a compositor's windows (SDL2: Wayland under sway, on ROCKNIX; kms_sdl.cpp), not the panels
 		bool compositor() const { return sdl; }
 		// a window was uncovered or resized (SDL): the menu draws everything again; true once per event
@@ -75,6 +80,9 @@ namespace banana
 		Panel p[2];
 		bool makeBuf(Buf& b, int w, int h);
 		bool sdl = false, exposed = false;
+		int CW[2] = { 0, 0 }, CH[2] = { 0, 0 };
+		// the screens' canvases for panels (or windows) of upright size uw x uh each (screenWidth)
+		void screensFor(const int uw[2], const int uh[2]);
 		void* sdlWin[2] = { nullptr, nullptr };
 		int sdlTimer = -1;
 		bool openSdl(const std::string& top, std::string& err);

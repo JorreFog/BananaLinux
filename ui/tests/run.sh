@@ -49,6 +49,24 @@ make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test"
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # the canvas on panels of another size or way round (the AYN Thor's two portrait panels)
 make -s -C "$HERE" tests/panelfit-test >/dev/null && "$HERE/tests/panelfit-test" 2> "$OUT/panelfit-test.log" || { echo "FAIL the panels' fit: $(grep FAIL "$OUT/panelfit-test.log" | head -3)"; fail=1; }
+# the AYN Thor's two screens (1920x1080 top, 1240x1080 bottom): the 4:3 menu staged in each, the backgrounds filling
+# them (no black bars), the PNGs at the screens' own sizes ($OUT/thor-*.png, for a look)
+TD=$OUT/thor-data; rm -rf "$TD"; cp -r "$FX/data" "$TD"; echo "setup 2" > "$TD/setup-done"
+"$HERE/banana-ui" --headless "$OUT/thor-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+    --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$FX/roms" --data "$TD" --script "home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings" \
+    2> "$OUT/thor.log" || { echo "FAIL thor: banana-ui exited $?"; fail=1; }
+if command -v identify >/dev/null; then
+    for v in home lib settings; do
+        [ "$(identify -format '%wx%h' "$OUT/thor-$v-top.png" 2>/dev/null)" = 1920x1080 ] || { echo "FAIL thor: $v's top isn't 1920x1080"; fail=1; }
+        [ "$(identify -format '%wx%h' "$OUT/thor-$v-bot.png" 2>/dev/null)" = 1240x1080 ] || { echo "FAIL thor: $v's bottom isn't 1240x1080"; fail=1; }
+        for c in "top 4 540" "top 1915 540" "bot 620 4" "bot 620 1075"; do
+            set -- $c
+            [ "$(convert "$OUT/thor-$v-$1.png" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null)" != "srgb(0,0,0)" ] ||
+                { echo "FAIL thor: $v's $1 is black at $2,$3 (not filled)"; fail=1; }
+        done
+    done
+fi
 # banana-ui as ROCKNIX's frontend: the systems from its es_systems.cfg, and the menu under sway on the Thor's two
 # outputs (the SDL display; skipped without sway, grim or a banana-ui built with SDL=1)
 sh "$HERE/../rocknix/tests/run.sh" || fail=1

@@ -1831,6 +1831,8 @@ namespace banana
 
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
+		// a screen's background over the whole canvas: over the whole screen when it is another shape (rnds::screenArea)
+		if (kind == "screen" && x == 0 && y == 0 && w == 640 && h == 480) rnds::screenArea(be, s, x, y, w, h);
 		SPal p = pal(light);
 		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		std::string key = "box:" + kind + (on ? "1" : "0") + ":" + std::to_string(dw) + "x" + std::to_string(dh);

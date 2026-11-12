@@ -70,7 +70,8 @@ namespace banana
 				idx[s], SDL_GetDisplayName(idx[s]) ? SDL_GetDisplayName(idx[s]) : "?", pw[s], ph[s]);
 		}
 		canvasFor(pw[0], ph[0], 0, pw[1], ph[1], 0, W, H);
-		for (int s = 0; s < 2; s++) p[s].fit.set(W, H, pw[s], ph[s], 0);
+		screensFor(pw, ph);
+		for (int s = 0; s < 2; s++) p[s].fit.set(screenWidth(s), screenHeight(s), pw[s], ph[s], 0);
 		// the loop's wake-up: SDL's events (the compositor's pings, a resize) are pumped every 50 ms
 		sdlTimer = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
 		itimerspec its = {};
@@ -101,16 +102,16 @@ namespace banana
 		{
 			Damage d = dmg[s];
 			d.x0 = std::max(d.x0, 0); d.y0 = std::max(d.y0, 0);
-			d.x1 = std::min(d.x1, W); d.y1 = std::min(d.y1, H);
+			d.x1 = std::min(d.x1, screenWidth(s)); d.y1 = std::min(d.y1, screenHeight(s));
 			if (d.empty() || !sdlWin[s]) continue;
 			SDL_Surface* sf = SDL_GetWindowSurface(W_(sdlWin[s]));
 			if (!sf) continue;
 			if (sf->w != p[s].fit.panelW() || sf->h != p[s].fit.panelH())
 			{
 				// the compositor gave the window another size (an output's mode changed): fitted again, all of it drawn
-				p[s].fit.set(W, H, sf->w, sf->h, 0);
+				p[s].fit.set(screenWidth(s), screenHeight(s), sf->w, sf->h, 0);
 				SDL_FillRect(sf, nullptr, 0);
-				d.x0 = d.y0 = 0; d.x1 = W; d.y1 = H;
+				d.x0 = d.y0 = 0; d.x1 = screenWidth(s); d.y1 = screenHeight(s);
 			}
 			if (SDL_MUSTLOCK(sf)) SDL_LockSurface(sf);
 			p[s].fit.blit(screens[s], (uint8_t*)sf->pixels, (uint32_t)sf->pitch, d);
