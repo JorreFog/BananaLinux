@@ -21,6 +21,13 @@ ES=/storage/.config/emulationstation/es_systems.cfg
 [ -f "${ES}" ] || ES=/usr/config/emulationstation/es_systems.cfg
 python3 /usr/share/banana/rocknix/es-systems-to-banana.py "${ES}" "${RUN}/systems.conf" 2>>"${LOG}"
 
+# the two screens' backlights (which is the top: the DSI hosts' order, usr/libexec/banana/backlight), each at the
+# level the menu keeps for it
+set -- $(BANANA_TOP="${WLR_CON:-DSI-2}" /usr/libexec/banana/backlight names)
+[ "$1" != - ] && export BANANA_BACKLIGHT_TOP="$1"
+[ "$2" != - ] && export BANANA_BACKLIGHT_BOTTOM="$2"
+/usr/libexec/banana/backlight restore 2>>"${LOG}"
+
 # both screens as windows (src/kms_sdl.cpp): the top one on sway's main output (WLR_CON, the 095-sway profile's),
 # the other on the second
 export BANANA_DISPLAY=sdl SDL_VIDEODRIVER=wayland

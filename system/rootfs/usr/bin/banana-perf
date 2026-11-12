@@ -13,6 +13,43 @@
 # BananaDS's port of it: the lowest clock at which the game drops no frames, per game, through scaling_max_freq,
 # put back when the game ends); the GPU stays on demand.
 # (no programs run, only the shell's builtins: it runs at every game's start and end, and each fork cost ~5 ms)
+# a handheld with clusters (several cpufreq policies: the AYN Thor's A510 x3, A715/A710 x4 and X3, policy0, 3 and 7): the
+# same profiles per cluster, each capped at a share of its own top clock, and the GPU's devfreq (the Adreno's) as above.
+# Shares from the RG DS's caps over its top clock (1416 and 1104 of 1992 MHz: 71% and 55%). On a ROCKNIX system the
+# governor it sets for a game (runemu.sh, the cpugovernor setting) is told the same (/run/banana/perf: run-rocknix).
+# (BANANA_CPUFREQ: another cpufreq directory, for the tests)
+P=${BANANA_CPUFREQ:-/sys/devices/system/cpu/cpufreq}
+set -- "$1" $(ls -d "$P"/policy[0-9]* 2>/dev/null)
+if [ $# -gt 2 ]; then
+    mode=$1; shift
+    G=; for g in ${BANANA_DEVFREQ:-/sys/class/devfreq}/*.gpu; do [ -e "$g" ] && { G=$g; break; }; done
+    # cluster <policy dir> <governor> <max share %> [min share %]: the nearest available clocks at or under the shares
+    cluster() {
+        read -r fs < "$1/scaling_available_frequencies" 2>/dev/null
+        read -r l < "$1/cpuinfo_min_freq"; read -r h < "$1/cpuinfo_max_freq"
+        near() { b=$l; for f in $fs; do [ $f -le $(( h / 100 * $1 )) ] && [ $f -gt $b ] && b=$f; done; echo $b; }
+        mx=$h; [ "$3" -lt 100 ] && mx=$(near $3)
+        mn=$l; [ -n "$4" ] && mn=$(near $4)
+        echo $l > "$1/scaling_min_freq"; echo $mx > "$1/scaling_max_freq"; echo $mn > "$1/scaling_min_freq"
+        echo $2 > "$1/scaling_governor"
+    }
+    gpu() { [ -n "$G" ] && echo $1 > "$G/governor" 2>/dev/null; }
+    for c in "$@"; do
+        case $mode in
+        ui)           cluster "$c" schedutil 100 ;;
+        powersave)    cluster "$c" schedutil 71 ;;
+        balanced)     cluster "$c" schedutil 100 ;;
+        steady)       cluster "$c" schedutil 100 55 ;;
+        performance|superdrastic) cluster "$c" performance 100 ;;
+        *) echo "usage: banana-perf ui|powersave|balanced|steady|performance|superdrastic" >&2; exit 1 ;;
+        esac
+    done
+    case $mode in ui) gpu powersave ;; performance) gpu performance ;; *) gpu simple_ondemand ;; esac
+    # (what run-rocknix tells ROCKNIX's runemu.sh: its governor and GPU level for the game)
+    mkdir -p /run/banana 2>/dev/null
+    case $mode in performance|superdrastic) echo "performance performance" ;; ui) ;; *) echo "schedutil auto" ;; esac > /run/banana/perf 2>/dev/null
+    exit 0
+fi
 CPU=/sys/devices/system/cpu/cpufreq/policy0
 GPU=
 for g in /sys/class/devfreq/*.gpu; do [ -e "$g" ] && { GPU=$g; break; }; done

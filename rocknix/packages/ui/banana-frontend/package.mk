@@ -46,6 +46,11 @@ makeinstall_target() {
     cp -a ${PKG_DIR}/sources/sleep.d/. ${INSTALL}/etc/banana/sleep.d/
     cp ${PKG_DIR}/sources/hw.conf ${INSTALL}/etc/banana/hw.conf
     echo rocknix > ${INSTALL}/etc/banana/board
+  # the frontend choice (ROCKNIX's autostart, common scripts) and its default for a fresh /storage
+  mkdir -p ${INSTALL}/usr/lib/autostart/common ${INSTALL}/usr/config/profile.d
+    cp ${PKG_DIR}/sources/099-banana-frontend ${INSTALL}/usr/lib/autostart/common/
+    chmod 0755 ${INSTALL}/usr/lib/autostart/common/099-banana-frontend
+    echo 'UI_SERVICE="sway.service bananasway.service"' > ${INSTALL}/usr/config/profile.d/099-banana-ui_service
   # the paths BananaOS's scripts and the menu know, on ROCKNIX's writable /storage
   mkdir -p ${INSTALL}/data
     ln -sf /storage/.config/banana ${INSTALL}/data/banana
@@ -53,6 +58,5 @@ makeinstall_target() {
     ln -sf /storage/roms/bios ${INSTALL}/data/bios
 }
 
-post_install() {
-  enable_service bananasway.service
-}
+# (started by ROCKNIX's autostart as UI_SERVICE, as EmulationStation's essway is: the common start script chooses it,
+# ROCKNIX's banana.frontend setting going back to EmulationStation)

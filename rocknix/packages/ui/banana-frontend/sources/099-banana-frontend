@@ -1,0 +1,15 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# ROCKNIX's autostart (common): BananaOS's menu as the frontend, in EmulationStation's place, unless ROCKNIX's setting
+# banana.frontend is 0 (then EmulationStation, as ROCKNIX ships it). The choice is a profile.d file after ROCKNIX's own
+# (090-ui_service, the platform quirk's): its UI_SERVICE wins, and autostart starts it.
+. /etc/profile.d/001-functions 2>/dev/null
+P=/storage/.config/profile.d/099-banana-ui_service
+mkdir -p "${P%/*}"
+if [ "$(get_setting banana.frontend)" = "0" ]; then
+  rm -f "${P}"
+else
+  cat <<EOF >"${P}"
+UI_SERVICE="sway.service bananasway.service"
+EOF
+fi

@@ -1,6 +1,6 @@
 [Unit]
 Description=BananaOS menu on both screens (with Sway)
-# in EmulationStation's place: essway's own unit, with banana-ui; essway is masked for the boot when this starts
+# in EmulationStation's place (essway's own unit, with banana-ui), started by ROCKNIX's autostart as UI_SERVICE
 Requires=sway.service
 After=sway.service
 Conflicts=essway.service
@@ -9,8 +9,6 @@ Conflicts=essway.service
 Type=simple
 Environment=HOME=/storage
 EnvironmentFile=/etc/profile
-ExecStartPre=-/usr/bin/systemctl mask --runtime essway.service
-ExecStartPre=-/usr/bin/systemctl stop --no-block essway.service
 ExecStart=/usr/bin/start_banana.sh
 WorkingDirectory=/storage
 Restart=always

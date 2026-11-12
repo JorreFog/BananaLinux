@@ -1,0 +1,39 @@
+#!/bin/sh
+# A game on ROCKNIX, where the menu is its frontend: through ROCKNIX's own runemu.sh, as EmulationStation starts it
+# (es-systems-to-banana.py writes each system's "run" as this), with what the menu adds around it:
+# - the performance mode the menu set (banana-perf, before this: the game's or its system's) told to runemu.sh, which
+#   sets its own governor and GPU level for the game from ROCKNIX's settings: the game's are made the menu's
+# - the bottom screen dark while a game that doesn't use it runs (settings.conf's bottom_in_games: auto, the default,
+#   for every system but the two-screen ones; on; off), and lit again after
+#   run-rocknix <system> <rom> [runemu.sh's options: --core=... --emulator=... --controllers=...]
+SYSTEM=$1; ROM=$2; shift 2
+DATA=${BANANA_DATA:-/data/banana}
+RUN=${BANANA_RUN:-/run/banana}
+LIB=${BANANA_LIBEXEC:-/usr/libexec/banana}
+RUNEMU=${BANANA_RUNEMU:-/usr/bin/runemu.sh}
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+
+# the performance mode: ROCKNIX's per-game settings the same as what banana-perf just set (/run/banana/perf:
+# "<governor> <gpu level>")
+if read -r gov gpu < "$RUN/perf" 2>/dev/null && [ -n "$gov" ]; then
+    setting() {
+        if [ -n "$ROCKNIX_SETTINGS" ]; then { grep -vF "$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
+        elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$1" "$2" ) >/dev/null 2>&1; fi
+    }
+    g="$SYSTEM[\"${ROM##*/}\"]"
+    setting "$g.cpugovernor" "$gov"
+    setting "$g.gpuperf" "$gpu"
+fi
+
+# the bottom screen
+bottom=$(conf bottom_in_games); [ -n "$bottom" ] || bottom=auto
+case $SYSTEM in nds|ndsiware|3ds|n3ds|gameandwatch|wiiu|dsi) two=1 ;; *) two= ;; esac
+dark=
+case $bottom in off) dark=1 ;; auto) [ -z "$two" ] && dark=1 ;; esac
+[ -n "$dark" ] && "$LIB/backlight" off 1 >/dev/null 2>&1
+
+"$RUNEMU" "$ROM" -P"$SYSTEM" "$@"
+rc=$?
+
+[ -n "$dark" ] && "$LIB/backlight" on 1 >/dev/null 2>&1
+exit $rc

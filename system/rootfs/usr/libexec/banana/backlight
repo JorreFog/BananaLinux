@@ -1,0 +1,104 @@
+#!/bin/sh
+# The two screens' backlights, each its own level. Which backlight lights which screen: BANANA_BACKLIGHT_TOP / _BOTTOM
+# (the hardware profile's), else found here. Two DSI panels' backlights (the AYN Thor's AMOLEDs: each panel is its own
+# backlight) sit under their DSI hosts, and the connectors are numbered in the hosts' order (DSI-1 the first host): the
+# top screen's connector (BANANA_TOP, "DSI-2") names its host, the other is the bottom's. Levels are in thousandths of
+# the maximum; banana/backlight keeps "<top> <bottom>" (Settings writes it, as on BananaOS).
+#   backlight names                 "<top> <bottom>" (sysfs names; "-" for one there isn't)
+#   backlight get <0|1>             screen 0 (top) or 1 (bottom)'s level now, in thousandths
+#   backlight set <0|1> <0-1000>    one screen's level (kept in banana/backlight)
+#   backlight restore               both as banana/backlight keeps them (the menu's start)
+#   backlight off <0|1> / on <0|1>  a screen dark for a game that doesn't use it, and back as it was
+#   backlight sync                  on a system whose services own the screens' levels (HW_SERVICES=systemd: ROCKNIX),
+#                                   its per-screen settings (display.brightness, display.brightness2...) made the same,
+#                                   so its brightness hotkeys step each screen from where it is
+SYS=${BANANA_SYS:-/sys}
+DATA=${BANANA_DATA:-/data/banana}
+RUN=${BANANA_RUN:-/run/banana}
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+B=$SYS/class/backlight
+
+names() {
+    if [ -n "$BANANA_BACKLIGHT_TOP" ] || [ -n "$BANANA_BACKLIGHT_BOTTOM" ]; then
+        echo "${BANANA_BACKLIGHT_TOP:--} ${BANANA_BACKLIGHT_BOTTOM:--}"; return
+    fi
+    # each backlight with its DSI host's address, in the hosts' order
+    list=$(for d in "$B"/*; do
+        [ -e "$d/brightness" ] || continue
+        h=$(readlink -f "$d/device" 2>/dev/null | grep -o '/[0-9a-f]*\.dsi' | head -n 1 | tr -d /)
+        echo "${h:-~} ${d##*/}"
+    done | sort)
+    n=$(echo "$list" | grep -c .)
+    if [ "$n" -ge 2 ] && ! echo "$list" | grep -q '^~'; then
+        # DSI-<k>: the k-th host; the top is BANANA_TOP's, the bottom the other one
+        k=$(echo "${BANANA_TOP:-DSI-2}" | sed -n 's/^DSI-\([0-9]*\)$/\1/p'); [ -n "$k" ] || k=2
+        top=$(echo "$list" | sed -n "${k}p" | cut -d' ' -f2)
+        bottom=$(echo "$list" | cut -d' ' -f2 | grep -vx "$top" | head -n 1)
+        echo "${top:--} ${bottom:--}"
+    elif [ "$n" -ge 2 ]; then
+        # not under DSI hosts (the RG DS's backlight0 and 1): its device trees' names, backlight1 the top
+        echo "backlight1 backlight0"
+    elif [ "$n" = 1 ]; then
+        echo "$(echo "$list" | cut -d' ' -f2) -"
+    else
+        echo "- -"
+    fi
+}
+name() { set -- $(names) "$1"; [ "$3" = 1 ] && echo "$2" || echo "$1"; }
+max() { cat "$B/$1/max_brightness" 2>/dev/null; }
+pair() { sed -n '1p' "$DATA/backlight" 2>/dev/null; }	# "<top> <bottom>"
+kept() { scr=$1; set -- $(pair); [ "$scr" = 1 ] && echo "$2" || echo "$1"; }
+
+get() {
+    n=$(name "$1"); [ "$n" != - ] || return 1
+    m=$(max "$n"); c=$(cat "$B/$n/brightness" 2>/dev/null)
+    [ -n "$m" ] && [ "$m" -gt 0 ] && echo $(( (c * 1000 + m / 2) / m ))
+}
+write() {   # write <screen> <thousandths>: the backlight only
+    n=$(name "$1"); [ "$n" != - ] || return 1
+    m=$(max "$n"); [ -n "$m" ] && [ "$m" -gt 0 ] || return 1
+    raw=$(( (m * $2 + 500) / 1000 )); [ "$2" -gt 0 ] && [ "$raw" -lt 1 ] && raw=1
+    echo $raw > "$B/$n/brightness"
+}
+keep() {    # keep <screen> <thousandths>: banana/backlight, the other screen as it is
+    set -- "$1" "$2" "$(kept 0)" "$(kept 1)"
+    [ -n "$3" ] && [ "$3" -gt 0 ] || set -- "$1" "$2" "$2" "$4"
+    [ -n "$4" ] && [ "$4" -gt 0 ] || set -- "$1" "$2" "$3" "$2"
+    mkdir -p "$DATA"
+    if [ "$1" = 1 ]; then echo "$3 $2"; else echo "$2 $4"; fi > "$DATA/backlight.new" && mv -f "$DATA/backlight.new" "$DATA/backlight"
+}
+sync() {
+    [ "$HW_SERVICES" = systemd ] || return 0
+    [ -r /etc/profile.d/001-functions ] || [ -n "$ROCKNIX_SETTINGS" ] || return 0
+    # ROCKNIX numbers the screens in /sys/class/backlight's order, the first's key without a number
+    i=0
+    for d in "$B"/*; do
+        [ -e "$d/brightness" ] || continue
+        i=$((i + 1))
+        m=$(max "${d##*/}"); [ -n "$m" ] && [ "$m" -gt 0 ] || continue
+        pct=$(( ($(cat "$d/brightness") * 100 + m / 2) / m ))
+        key=display.brightness; [ $i -gt 1 ] && key=display.brightness$i
+        if [ -n "$ROCKNIX_SETTINGS" ]; then
+            { grep -v "^$key=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$key=$pct"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
+        else ( . /etc/profile.d/001-functions; set_setting $key $pct ) >/dev/null 2>&1; fi
+    done
+}
+
+case $1 in
+names) names ;;
+get) get "${2:-0}" ;;
+set)
+    case "$3" in ''|*[!0-9]*) echo "backlight: not a level: $3" >&2; exit 2 ;; esac
+    v=$3; [ $v -gt 1000 ] && v=1000
+    write "$2" $v || exit 1
+    keep "$2" $v; sync
+    ;;
+restore)
+    for s in 0 1; do v=$(kept $s); [ -n "$v" ] && [ "$v" -gt 0 ] && write $s $v; done
+    sync
+    ;;
+off) write "$2" 0; mkdir -p "$RUN"; touch "$RUN/backlight-off-$2" ;;
+on) rm -f "$RUN/backlight-off-$2"; v=$(kept "$2"); [ -n "$v" ] && [ "$v" -gt 0 ] && write "$2" $v ;;
+sync) sync ;;
+*) echo "backlight names | get <0|1> | set <0|1> <0-1000> | restore | off <0|1> | on <0|1> | sync" >&2; exit 2 ;;
+esac

@@ -37,5 +37,17 @@ sh "$L/update" check > "$T/check"; ok check "state=newer"; ok check "latest=2026
 sh "$L/update" download; ok log "rocknix-update update"; ok run/update-status "ready rocknix-20261201"
 # the second card: none to manage
 sh "$L/sd2" scan; [ ! -e "$T/run/sd2/slot" ] || { echo "FAIL rocknix services: sd2 offers a slot"; fail=1; }
+# a game through run-rocknix: runemu.sh with the menu's mode as ROCKNIX's per-game settings, the bottom screen dark for
+# a one-screen system and lit again, left alone for the DS
+printf '#!/bin/sh\necho "runemu $*" >> "%s/log"\n' "$T" > "$T/bin/runemu.sh"; chmod +x "$T/bin/runemu.sh"
+printf '#!/bin/sh\necho "backlight $*" >> "%s/log"\n' "$T" > "$T/backlight"; chmod +x "$T/backlight"
+echo "performance performance" > "$T/run/perf"
+env BANANA_LIBEXEC="$T" BANANA_RUNEMU="$T/bin/runemu.sh" sh "$L/run-rocknix" psp "/roms/psp/Some Game.iso" --core=ppsspp --emulator=ppsspp-sa
+ok log 'runemu /roms/psp/Some Game.iso -Ppsp --core=ppsspp --emulator=ppsspp-sa'
+ok system.cfg 'psp\["Some Game.iso"\].cpugovernor=performance'
+ok log "backlight off 1"; ok log "backlight on 1"
+: > "$T/log"
+env BANANA_LIBEXEC="$T" BANANA_RUNEMU="$T/bin/runemu.sh" sh "$L/run-rocknix" nds "/roms/nds/a.nds"
+grep -q "backlight" "$T/log" && { echo "FAIL rocknix services: the DS's bottom screen was darkened"; fail=1; }
 [ $fail = 0 ] && echo "rocknix services: all passed"
 exit $fail

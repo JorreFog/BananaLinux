@@ -2941,7 +2941,12 @@ int main(int argc, char** argv)
 		}
 		drawn = false;	// the menu is drawn afresh when the panels come back
 		rep.key = Key::NONE;
-		if (system(("banana-perf " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
+		{
+			// the game's own mode (its options' Performance row) over its system's
+			const std::string gp = settingsView.gamePerf(rom.substr(rom.rfind('/') + 1));
+			const std::string perf = !gp.empty() ? gp : sd.perf.empty() ? "balanced" : sd.perf;
+			if (system(("banana-perf " + shellQuote(perf)).c_str()) != 0) {}
+		}
 		// a job of Files' (a download, an unpacking) stops while the game runs (the network, the card and the CPU are the
 		// game's), and goes on after it: banana-fetch's runner and its 7zz, stopped as a group
 		const fetch::Paths fetchPaths = fetch::Paths::fromEnv(o.data);

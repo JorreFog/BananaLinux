@@ -10,7 +10,13 @@
 import sys
 import xml.etree.ElementTree as ET
 
-RUN = '/usr/bin/runemu.sh %ROM% -P{sys} --core={core} --emulator={emu} --controllers=""'
+# (run-rocknix: runemu.sh with the menu's performance mode and the bottom screen around it)
+RUN = '/usr/libexec/banana/run-rocknix {sys} %ROM% --core={core} --emulator={emu} --controllers=""'
+# each system's performance mode (banana-perf's profile; a game's own in its options wins): the heavy 3D ones flat out,
+# the DS steady (its emulators wait on every frame), the rest balanced
+PERF = {'performance': {'psp', 'pspminis', 'ps2', 'gamecube', 'wii', 'wiiware', 'wiiu', '3ds', 'dreamcast', 'naomi',
+                        'atomiswave', 'saturn', 'n64', 'n64dd', 'psvita', 'xbox', 'ps3', 'triforce', 'segamodel3', 'windows'},
+        'steady': {'nds', 'ndsiware'}}
 # systems whose shelf stays even with no games (where a fresh card's games go)
 ALWAYS = {'nds', 'gba', 'gbc', 'gb', 'snes', 'nes', 'psx', 'n64', 'megadrive', 'genesis', 'ports'}
 OWN_PAGES = '''
@@ -73,6 +79,8 @@ def convert(root):
         if exts:
             out.append('ext = %s' % ' '.join(exts))
         out.append('run = %s' % run)
+        perf = next((m for m, ss in PERF.items() if sid in ss), 'balanced')
+        out.append('perf = %s' % perf)
         if sid in ALWAYS:
             out.append('always = yes')
         out.append('')

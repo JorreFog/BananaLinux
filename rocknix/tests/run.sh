@@ -8,14 +8,18 @@ fail=0
 out=$(python3 -I "$C" "$HERE/tests/es_systems.cfg") || { echo "FAIL rocknix: the converter failed"; exit 1; }
 want() { printf '%s\n' "$out" | grep -qxF -- "$1" || { echo "FAIL rocknix: no line '$1'"; fail=1; }; }
 want '[nds]'
-want 'run = /usr/bin/runemu.sh %ROM% -Pnds --core=melonds-sa --emulator=melonds-sa --controllers=""'
+want 'perf = steady'
+want 'run = /usr/libexec/banana/run-rocknix nds %ROM% --core=melonds-sa --emulator=melonds-sa --controllers=""'
 want 'ext = nds zip 7z'
 want 'folder = /storage/roms/nds'
-want 'run = /usr/bin/runemu.sh %ROM% -Pgba --core=mgba --emulator=retroarch --controllers=""'
+want 'run = /usr/libexec/banana/run-rocknix gba %ROM% --core=mgba --emulator=retroarch --controllers=""'
 want 'run = %ROM%'
 want 'run = banana:files'
 bash -n "$HERE/packages/ui/banana-frontend/sources/start_banana.sh" || { echo "FAIL rocknix: start_banana.sh"; fail=1; }
 sh -n "$HERE/../tools/rocknix-banana.sh" || { echo "FAIL rocknix: rocknix-banana.sh"; fail=1; }
 sh "$HERE/tests/services.sh" || fail=1
+sh "$HERE/tests/backlight.sh" || fail=1
+sh "$HERE/tests/perf.sh" || fail=1
+bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail
