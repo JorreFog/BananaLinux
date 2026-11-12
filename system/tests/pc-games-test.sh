@@ -54,5 +54,32 @@ grep -q "wine-11.0/bin/wine $T/roms/My Game/bin/game.exe -windowed \[fps\]" "$T/
 printf 'd3d = wined3d\n' >> "$T/roms/My Game.pc"; : > "$T/log"
 sh "$P" run "$T/roms/My Game.pc" >/dev/null 2>&1
 grep -q "d3d11,dxgi=b" "$T/log" || bad "wined3d not asked for: $(cat "$T/log")"
+# the PC games page's side: a game's settings set and read, the preset's and the overlay's variables at a run
+sh "$P" set "$T/roms/My Game.pc" preset fast; sh "$P" set "$T/roms/My Game.pc" hud full; sh "$P" set "$T/roms/My Game.pc" d3d; sh "$P" set "$T/roms/My Game.pc" env
+[ "$(sh "$P" get "$T/roms/My Game.pc" preset)" = fast ] && [ -z "$(sh "$P" get "$T/roms/My Game.pc" d3d)" ] || bad "set/get: $(tr '\n' '|' < "$T/roms/My Game.pc")"
+grep -q '^exe = My Game/bin/game.exe$' "$T/roms/My Game.pc" && grep -q '^args = -windowed$' "$T/roms/My Game.pc" || bad "set took other lines: $(tr '\n' '|' < "$T/roms/My Game.pc")"
+sh "$P" set "$T/roms/My Game.pc" nonsense x >/dev/null 2>&1 && bad "an unknown setting was taken"
+printf '#!/bin/sh\necho "box64 [$DXVK_HUD] [$BOX64_DYNAREC_BIGBLOCK] [$BOX64_DYNAREC_STRONGMEM]" >> "%s/log"\n' "$T" > "$T/box64"; : > "$T/log"
+sh "$P" run "$T/roms/My Game.pc" >/dev/null 2>&1
+grep -q "\[fps,frametimes,gpuload,memory,version\] \[3\] \[0\]" "$T/log" || bad "the fast preset and the full overlay: $(cat "$T/log")"
+sh "$P" set "$T/roms/My Game.pc" preset compatible; : > "$T/log"; sh "$P" run "$T/roms/My Game.pc" >/dev/null 2>&1
+grep -q "\] \[0\] \[2\]" "$T/log" || bad "the compatible preset: $(cat "$T/log")"
+# the list: a game on the card with its size, a Steam game not downloaded, the shelf's own entry, a cover
+echo "steam = 620" > "$T/roms/Portal 2.pc"; mkdir -p "$T/roms/media/box"; : > "$T/roms/media/box/My Game.jpg"
+L=$(sh "$P" list)
+TAB=$(printf '\t')
+echo "$L" | grep -q "^$T/roms/My Game.pc${TAB}My Game${TAB}installed${TAB}${TAB}[0-9]*${TAB}$T/roms/media/box/My Game.jpg$" || bad "list, a game on the card: $(echo "$L" | tr '\t' '~')"
+echo "$L" | grep -q "^$T/roms/Portal 2.pc${TAB}Portal 2${TAB}cloud${TAB}620${TAB}0${TAB}$" || bad "list, a Steam game to download: $(echo "$L" | tr '\t' '~')"
+echo "$L" | grep -q "${TAB}Steam${TAB}tool${TAB}" || bad "list, the shelf's own entry: $(echo "$L" | tr '\t' '~')"
+# the programs to pick from: the guess first, the installer and the rest after
+[ "$(sh "$P" exes "$T/roms/My Game.pc" | head -n 1)" = "My Game/bin/game.exe" ] && sh "$P" exes "$T/roms/My Game.pc" | grep -qx "My Game/setup.exe" || bad "exes: $(sh "$P" exes "$T/roms/My Game.pc" | tr '\n' '|')"
+# uninstall: a copied game's folder, entry and cover go; a Steam game's entry stays as one to download, its settings with it
+mkdir -p "$T/roms/Portal 2/bin"; : > "$T/roms/Portal 2/bin/portal2.exe"; printf 'steam = 620\nexe = Portal 2/bin/portal2.exe\npreset = fast\n' > "$T/roms/Portal 2.pc"
+sh "$P" uninstall "$T/roms/Portal 2.pc" >/dev/null
+[ ! -e "$T/roms/Portal 2" ] && [ "$(tr '\n' '|' < "$T/roms/Portal 2.pc")" = "steam = 620|preset = fast|" ] || bad "uninstall, a Steam game: $(ls "$T/roms") $(tr '\n' '|' < "$T/roms/Portal 2.pc")"
+sh "$P" uninstall "$T/roms/My Game.pc" >/dev/null
+[ ! -e "$T/roms/My Game" ] && [ ! -e "$T/roms/My Game.pc" ] && [ ! -e "$T/roms/media/box/My Game.jpg" ] || bad "uninstall, a copied game: $(ls "$T/roms" "$T/roms/media/box")"
+sh "$P" uninstall "$T/roms/Steam.pc" >/dev/null 2>&1 && bad "the shelf's own entry was uninstalled"
+[ -d "$T/roms/media" ] || bad "uninstall took more than the game"
 [ $fail = 0 ] && echo "pc-games: all passed"
 exit $fail

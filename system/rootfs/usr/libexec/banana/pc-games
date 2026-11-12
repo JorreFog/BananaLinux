@@ -14,6 +14,12 @@
 #   pc-games scan                  a <Game>.pc entry for every game folder in /data/roms/pc that has none (the shelf's
 #                                  "changed" hook): its main .exe guessed (the biggest that isn't an installer or a helper)
 #   pc-games run <file.pc|.exe>    run a game (run-pc: inside run-wayland)
+#   pc-games list                  the shelf for the menu's PC games page, a line a game, tab-separated:
+#                                  <file.pc> <name> <installed | cloud | missing | tool> <Steam app id> <MB on the card> <cover>
+#   pc-games get <file.pc> <key>   one of a game's settings (the keys below)
+#   pc-games set <file.pc> <key> [value]   set it, or take it away with no value
+#   pc-games exes <file.pc>        the programs in the game's folder, the likeliest first (to pick "exe" from)
+#   pc-games uninstall <file.pc>   the game's folder off the card; a Steam game's entry stays (to download again)
 #   pc-games guess <folder>        that game folder's main program, as scan guesses it
 #   pc-games install <setup.exe>   run an installer (it installs into the prefix's C: drive; "scan" then finds nothing
 #                                  to add: make a .pc for it, or use the Start menu entry it prints)
@@ -27,6 +33,8 @@
 #   args = -windowed                    (optional)
 #   env  = DXVK_HUD=fps                 (optional: variables for this game, space separated)
 #   steam = 620                         (a game of the owner's Steam library: usr/libexec/banana/steam downloads it)
+#   preset = compatible | balanced | fast   (optional: how careful Box64's recompiler is; default balanced)
+#   hud  = fps | full                   (optional: DXVK's overlay)
 #   d3d  = dxvk | wined3d               (optional: wined3d for a game DXVK draws wrong; default dxvk)
 #
 # (host tests: BANANA_PC for /data/pc, BANANA_PC_MNT for the mount point, BANANA_PC_ROMS, BANANA_PC_NOMOUNT=1 to use
@@ -207,6 +215,58 @@ scan)
 guess)
     guess "$2"
     ;;
+list)
+    TAB=$(printf '\t')
+    for f in "$ROMS"/*.pc; do
+        [ -f "$f" ] || continue
+        name=$(basename "$f" .pc); exe=$(val exe "$f"); id=$(val steam "$f"); mb=0; st=installed
+        case $exe in
+        banana:*) st=tool ;;
+        '') [ -n "$id" ] && st=cloud || st=missing ;;
+        [Cc]:*) ;;
+        *)  [ -f "$ROMS/$exe" ] || st=missing
+            d=$ROMS/${exe%%/*}; [ -d "$d" ] && [ "$d" != "$ROMS/$exe" ] && mb=$(du -sm "$d" 2>/dev/null | cut -f1) ;;
+        esac
+        # (a Steam game whose program is gone is one to download again)
+        [ $st = missing ] && [ -n "$id" ] && st=cloud
+        cover=; for c in "$ROMS/media/box/$name.jpg" "$ROMS/media/box/$name.png"; do [ -f "$c" ] && { cover=$c; break; }; done
+        printf '%s\n' "$f$TAB$name$TAB$st$TAB$id$TAB${mb:-0}$TAB$cover"
+    done
+    ;;
+get)
+    val "$3" "$2"
+    ;;
+set)
+    # set <file.pc> <key> [value]
+    [ -f "$2" ] && [ -n "$3" ] || die "usage: pc-games set <file.pc> <key> [value]"
+    case $3 in exe|args|env|d3d|preset|hud|steam) ;; *) die "no such setting: $3" ;; esac
+    { grep -v "^[[:space:]]*$3[[:space:]]*=" "$2"; if [ -n "$4" ]; then printf '%s = %s\n' "$3" "$4"; fi; } > "$2.new" && mv "$2.new" "$2"
+    ;;
+exes)
+    exe=$(val exe "$2"); d=$ROMS/$(basename "$2" .pc)
+    case $exe in */*) case $exe in [Cc]:*|/*) ;; *) d=$ROMS/${exe%%/*} ;; esac ;; esac
+    [ -d "$d" ] || exit 0
+    # (the guess first, then the rest by size)
+    g=$(guess "$d"); [ -n "$g" ] && printf '%s\n' "$g"
+    find "$d" -type f -iname '*.exe' 2>/dev/null | while IFS= read -r f; do printf '%s\t%s\n' "$(wc -c < "$f")" "${f#"$ROMS"/}"; done |
+        sort -rn | cut -f2- | grep -vxF "$g" | head -n 40
+    ;;
+uninstall)
+    [ -f "$2" ] || die "no such entry: $2"
+    exe=$(val exe "$2"); id=$(val steam "$2"); name=$(basename "$2" .pc)
+    case $exe in banana:*|[Cc]:*|/*) die "$name isn't a game folder on the card" ;; esac
+    d=${exe%%/*}; [ -n "$d" ] || d=$name
+    # (a folder of the roms folder itself, by its plain name: nothing else is ever removed)
+    case $d in ''|.|..|*/*) die "$name has no folder of its own" ;; esac
+    [ -d "$ROMS/$d" ] && rm -rf "${ROMS:?}/$d"
+    if [ -n "$id" ]; then
+        # a Steam game: its entry stays, as one to download (its settings with it)
+        grep -v '^[[:space:]]*exe[[:space:]]*=' "$2" > "$2.new" && mv "$2.new" "$2"
+    else
+        rm -f "$2" "$ROMS/media/box/$name.jpg" "$ROMS/media/box/$name.png" "$ROMS/media/box/$name.jpg.none"
+    fi
+    say "$name: off the card"
+    ;;
 run)
     [ -n "$2" ] || die "run what?"
     mount_img && ready || die "PC games aren't set up yet: open PC games > Set up PC games (Wi-Fi needed)"
@@ -216,6 +276,12 @@ run)
     *.pc)
         exe=$(val exe "$f"); args=$(val args "$f"); d3d=$(val d3d "$f"); [ -n "$d3d" ] || d3d=dxvk
         [ -n "$exe" ] || die "$f names no exe"
+        # how careful Box64's recompiler is (its own variables; a game's "env" line, read after, wins)
+        case $(val preset "$f") in
+        compatible) export BOX64_DYNAREC_BIGBLOCK=0 BOX64_DYNAREC_STRONGMEM=2 BOX64_DYNAREC_SAFEFLAGS=2 BOX64_DYNAREC_FASTNAN=0 BOX64_DYNAREC_FASTROUND=0 BOX64_DYNAREC_X87DOUBLE=1 BOX64_DYNAREC_CALLRET=0 ;;
+        fast) export BOX64_DYNAREC_BIGBLOCK=3 BOX64_DYNAREC_STRONGMEM=0 BOX64_DYNAREC_SAFEFLAGS=0 BOX64_DYNAREC_FASTNAN=1 BOX64_DYNAREC_FASTROUND=1 BOX64_DYNAREC_CALLRET=1 BOX64_DYNAREC_FORWARD=1024 ;;
+        esac
+        case $(val hud "$f") in fps) export DXVK_HUD=fps ;; full) export DXVK_HUD=fps,frametimes,gpuload,memory,version ;; esac
         # shellcheck disable=SC2046
         e=$(val env "$f"); [ -n "$e" ] && export $e
         case $exe in [Cc]:*) path=$exe ;; /*) path=$exe ;; *) path=$ROMS/$exe ;; esac ;;

@@ -144,6 +144,11 @@ sh "$S" library >/dev/null 2>&1; [ "$(ls "$T/roms"/*.pc | wc -l)" = 5 ] || bad "
 sh "$S" install "$T/roms/Portal 2.pc" > "$T/inst.out" 2>&1 || bad "install failed: $(tail -n 2 "$T/inst.out")"
 [ "$(sed -n 's/^exe = //p' "$T/roms/Portal 2.pc")" = "Portal 2/bin/game.exe" ] || bad "the program after a download: $(cat "$T/roms/Portal 2.pc")"
 grep -q '^steam = 620$' "$T/roms/Portal 2.pc" || bad "the app id was lost from the entry"
+[ "$(cat "$T/run/steam.progress")" = "620 100 done" ] || bad "the download's progress at its end: $(cat "$T/run/steam.progress")"
+# again with a setting of the owner's in the entry: kept; and a download stopped says so
+echo "preset = fast" >> "$T/roms/Portal 2.pc"; sh "$S" install "$T/roms/Portal 2.pc" >/dev/null 2>&1
+grep -q '^preset = fast$' "$T/roms/Portal 2.pc" && [ "$(grep -c '^exe = ' "$T/roms/Portal 2.pc")" = 1 ] || bad "a download rewrote the entry's settings: $(tr '\n' '|' < "$T/roms/Portal 2.pc")"
+sh "$S" stop 620; [ "$(cat "$T/run/steam.progress")" = "620 0 stopped" ] || bad "stop: $(cat "$T/run/steam.progress")"
 # the QR sign-in, on top of the account already there: the code as squares (the downloader's 29 by 29, its light
 # border kept), written again when Steam changes it, and the account that scanned it found by its new token
 sh "$S" login-qr >/dev/null 2>&1 & QP=$!

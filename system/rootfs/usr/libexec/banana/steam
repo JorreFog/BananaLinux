@@ -21,7 +21,9 @@
 #   steam cancel              stop a login
 #   steam logout              forget the token
 #   steam library             the account's games as <Game>.pc entries on the shelf, then their box art
-#   steam install <file.pc>   download that game (its "steam = <app id>" line), then guess its program
+#   steam install <file.pc>   download that game (its "steam = <app id>" line), then guess its program; how far it
+#                             is in /run/banana/steam.progress: <app id> <percent> downloading | done | failed <why>
+#   steam stop <app id>       stop that download (what is on the card stays; install goes on from it)
 #   steam art                 box art for the shelf's games that have none: Steam's by app id; a game copied by hand
 #                             by its name from Steam's store search, then SteamGridDB when the owner has a key
 #                             (accounts.conf: sgdb_key)
@@ -311,15 +313,35 @@ install)
     mkdir -p "$dir" || die "the card can't be written"
     say "downloading $stem (app $id) to $dir"
     # (four files at once: the card's writing is the limit, not the network)
+    # how far it is, for the menu's PC games page: "<app id> <percent> <downloading | done | failed ... | stopped>"
+    PROG=$RUN/steam.progress
+    mkdir -p "$RUN"; prog() { echo "$id $*" > "$PROG.new" && mv "$PROG.new" "$PROG"; }
+    prog 0 downloading
     "$DD" -app "$id" -os windows -osarch 64 -username "$U" -remember-password -dir "$dir" -max-downloads 4 < /dev/null 2>&1 |
-        tee -a "$LOG" | grep -v '^Got \|^Using \|^Pre-allocating \|^Validating '
+        while IFS= read -r line; do
+            printf '%s\n' "$line" >> "$LOG"
+            case $line in
+            *[0-9].[0-9][0-9]%\ *) p=${line%%.*}; p=${p##* }; prog "${p:-0}" downloading ;;	# (" 42.17% <file>")
+            esac
+            case $line in Got\ *|Using\ *|Pre-allocating\ *|Validating\ *) ;; *) printf '%s\n' "$line" ;; esac
+        done
+    [ "$(cut -d' ' -f3 "$PROG" 2>/dev/null)" = stopped ] && die "the download of $stem was stopped (what is on the card stays: picking it again goes on from there)"
     if [ -z "$(find "$dir" -type f -iname '*.exe' 2>/dev/null | head -n 1)" ]; then
+        prog 0 failed nothing was downloaded
         die "nothing was downloaded for $stem: no Windows build, or the login ran out (log in again in Settings)"
     fi
     exe=$("$L/pc-games" guess "$dir")
-    [ -n "$exe" ] || die "$stem is on the card, but its program wasn't found: write \"exe = ...\" in $stem.pc"
-    printf 'steam = %s\nexe = %s\n' "$id" "$exe" > "$F"
+    [ -n "$exe" ] || { prog 100 failed its program was not found; die "$stem is on the card, but its program wasn't found: write \"exe = ...\" in $stem.pc"; }
+    # (the entry's other lines, the owner's settings for this game, are kept)
+    { grep -v '^[[:space:]]*\(steam\|exe\)[[:space:]]*=' "$F" 2>/dev/null; printf 'steam = %s\nexe = %s\n' "$id" "$exe"; } > "$F.new" && mv "$F.new" "$F"
+    prog 100 done
     say "$stem is ready: $exe"
+    ;;
+stop)
+    # stop <app id>: a download under way (the files it has stay; "install" goes on from them)
+    [ -n "$2" ] || die "usage: steam stop <app id>"
+    echo "$2 0 stopped" > "$RUN/steam.progress"
+    pkill -f -- "-app $2 -os windows" 2>/dev/null
     ;;
 art)
     mkdir -p "$ROMS/media/box" 2>/dev/null || exit 0
