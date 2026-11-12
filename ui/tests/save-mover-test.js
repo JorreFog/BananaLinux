@@ -45,17 +45,34 @@ function dsv(raw, foot, padded = raw, version = 0) {
 }
 const where = (it) => it.kind === "skip" ? "skip" : it.kind === "ask" ? "ask" : api.outPath(it);
 
-// RetroArch's saves go where the card's cores read them: every GBA core's saves/gba, another system's core's folder;
-// told by the folder they came from, the ROM matched, or the owner's pick, never the flat saves/ no emulator reads
+// RetroArch's saves go where the card's cores read them: every GBA core's saves/gba, every other system's the one
+// flat saves/ (ui/src/save_paths.cpp is where the card's own sync finds them; a folder per core is no longer read).
+// The system is told by the folder the save came from, the ROM matched, or the owner's pick
 check(where(item("RetroArch/saves/mGBA/Game.srm", new Uint8Array(131072))) === "saves/gba/Game.srm", "an mGBA save");
-check(where(item("RetroArch/saves/Snes9x/Kart.srm", new Uint8Array(8192))) === "saves/Snes9x/Kart.srm", "a Snes9x save");
-check(where(item("RetroArch/saves/Gambatte/Land.srm", new Uint8Array(8192))) === "saves/Gambatte/Land.srm", "a Gambatte save");
-check(where(item("RetroArch/saves/Nestopia/Bros.srm", new Uint8Array(8192))) === "saves/FCEUmm/Bros.srm", "a NES save from another core");
-check(where(item("Game_1.mcd", new Uint8Array(131072))) === "saves/PCSX-ReARMed/Game.srm", "a PS1 memory card");
+check(where(item("RetroArch/saves/Snes9x/Kart.srm", new Uint8Array(8192))) === "saves/Kart.srm", "a Snes9x save");
+check(where(item("RetroArch/saves/Gambatte/Land.srm", new Uint8Array(8192))) === "saves/Land.srm", "a Gambatte save");
+check(where(item("RetroArch/saves/Nestopia/Bros.srm", new Uint8Array(8192))) === "saves/Bros.srm", "a NES save from another core");
+check(where(item("Game_1.mcd", new Uint8Array(131072))) === "saves/Game.srm", "a PS1 memory card");
 check(where(item("mGBA/Clock.sav", new Uint8Array(131088))) === "saves/gba/Clock.srm", "mGBA's save with its clock bytes");
-check(where(item("RetroArch/saves/Flat.srm", new Uint8Array(8192))) === "ask", "a save of no known system: asked, not put in saves/");
-check(where(item("RetroArch/saves/Flat.srm", new Uint8Array(8192), "ra:snes")) === "saves/Snes9x/Flat.srm", "a system picked");
-check(!/^saves\/[^/]+\.srm$/.test(where(item("RetroArch/saves/Any.srm", new Uint8Array(32768)))), "nothing goes to the flat saves/");
+check(where(item("RetroArch/saves/Flat.srm", new Uint8Array(8192))) === "ask", "a save of no known system: asked, since a GBA save has its own folder");
+check(where(item("RetroArch/saves/Flat.srm", new Uint8Array(8192), "ra:snes")) === "saves/Flat.srm", "a system picked: the flat saves/");
+check(where(item("RetroArch/saves/Flat.srm", new Uint8Array(8192), "ra:gba")) === "saves/gba/Flat.srm", "the GBA picked: its folder");
+for (const core of ["Gambatte", "Snes9x", "FCEUmm", "PicoDrive", "PCSX-ReARMed", "Mupen64Plus-Next"])
+  check(/^saves\/[^/]+\.srm$/.test(where(item("RetroArch/saves/" + core + "/Any.srm", new Uint8Array(32768)))), "nothing goes to a core's folder (" + core + ")");
+
+// two saves for one place on the card: copies of one game's save (the newest kept, the other said as a copy), or, from
+// two systems, two games' saves the flat saves/ can't keep apart (one kept, both said as that, neither as a copy)
+const noteOf = (x) => x.notes.filter((n) => n[2]).map((n) => n[1]).join(" ");
+let a = item("RetroArch/saves/Gambatte/Tetris.srm", new Uint8Array(8192)), b = item("RetroArch/saves/FCEUmm/Tetris.srm", new Uint8Array(8192));
+a.mtime = 2; b.mtime = 1;
+api.resolveDuplicates([a, b]);
+check(a.include && !b.include, "two systems' saves of one name: one kept");
+check(/different game/.test(noteOf(a)) && /different game/.test(noteOf(b)) && /Game Boy/.test(noteOf(b)) && /NES/.test(noteOf(b)), "two systems' saves of one name: said on both, with the systems: " + noteOf(a) + " | " + noteOf(b));
+check(!/cop(y|ies)/i.test(noteOf(a) + noteOf(b)), "two systems' saves of one name: not said as copies");
+a = item("RetroArch/saves/Gambatte/Land.srm", new Uint8Array(8192)); b = item("backup/RetroArch/saves/Gambatte/Land.srm", new Uint8Array(8192));
+a.mtime = 1; b.mtime = 2;
+api.resolveDuplicates([a, b]);
+check(!a.include && b.include && /Newest of 2 copies/.test(noteOf(b)) && /Another copy/.test(noteOf(a)), "one system's save twice: the newest kept, the other a copy: " + noteOf(a) + " | " + noteOf(b));
 
 // the DS: a footer cut by nds-saves' rule, or the file left out
 let it = item("DraStic/backup/Quest.dsv", dsv(8192, 122));

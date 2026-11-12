@@ -254,9 +254,9 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
         <tbody>
           <tr><td><code>DraStic/backup/Game.dsv</code></td><td>DS save, DraStic</td><td><code>saves/nds/Game.sav</code> (footer cut off)</td></tr>
           <tr><td><code>…/Game.sav</code> from melonDS</td><td>DS save, raw</td><td><code>saves/nds/Game.sav</code></td></tr>
-          <tr><td><code>RetroArch/saves/Game.srm</code></td><td>GBA, GB, SNES, NES, Mega Drive, N64, PS1 in RetroArch</td><td><code>saves/gba/Game.srm</code> for the GBA, else the folder of the system's core: <code>saves/Gambatte/</code>, <code>saves/Snes9x/</code>, <code>saves/FCEUmm/</code>…</td></tr>
-          <tr><td><code>Game.sav</code> from mGBA, Pizza Boy…</td><td>GBA / GB save, raw</td><td><code>saves/gba/Game.srm</code> or <code>saves/Gambatte/Game.srm</code></td></tr>
-          <tr><td><code>Game_1.mcd</code> from DuckStation</td><td>PS1 memory card</td><td><code>saves/PCSX-ReARMed/Game.srm</code></td></tr>
+          <tr><td><code>RetroArch/saves/Game.srm</code></td><td>GBA, GB, SNES, NES, Mega Drive, N64, PS1 in RetroArch</td><td><code>saves/gba/Game.srm</code> for the GBA, <code>saves/Game.srm</code> for every other system</td></tr>
+          <tr><td><code>Game.sav</code> from mGBA, Pizza Boy…</td><td>GBA / GB save, raw</td><td><code>saves/gba/Game.srm</code> or <code>saves/Game.srm</code></td></tr>
+          <tr><td><code>Game_1.mcd</code> from DuckStation</td><td>PS1 memory card</td><td><code>saves/Game.srm</code></td></tr>
           <tr><td><code>.dss .state .ss1 .mst</code></td><td>Save states</td><td>Left out: they don't load in another emulator</td></tr>
           <tr><td><code>.eep .sra .fla .mpk</code></td><td>N64 saves from a standalone emulator</td><td>Left out: these need a manual conversion</td></tr>
         </tbody>
@@ -298,18 +298,19 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
 
   // ---- what BananaOS knows ----
   const ROM_SYSTEMS = { nds: "nds", gba: "gba", gbc: "gbc", gb: "gb", nes: "nes", snes: "snes", megadrive: "megadrive", psx: "psx", n64: "n64" };
-  // where each system's save goes on the card: every GBA core reads saves/gba, any other system's core the folder
-  // RetroArch names after it (the core BananaOS runs it with, as the card's sync finds it; BananaNES's saves are
-  // FCEUmm's), and the names a system's saves were kept under elsewhere, to tell a save's system by its folder
+  // the systems a RetroArch save can be, and the names each one's saves were kept under elsewhere, to tell a save's
+  // system by its folder. On the card every GBA core reads saves/gba and every other system's the one flat saves/
+  // (since BananaOS 0.5.3; a folder per core, which RetroArch kept before, is no longer read), so the system decides
+  // only that: the GBA's folder, or the flat one
   const SYSTEMS = [
-    { id: "gba", name: "Game Boy Advance", dir: "gba", from: ["gba", "mgba", "gpsp", "vba next", "vba-m", "vbam", "meteor", "myboy"] },
-    { id: "gb", name: "Game Boy", dir: "Gambatte", from: ["gb", "gambatte", "sameboy", "gearboy", "tgb dual"] },
-    { id: "gbc", name: "Game Boy Color", dir: "Gambatte", from: ["gbc"] },
-    { id: "nes", name: "NES", dir: "FCEUmm", from: ["nes", "fceumm", "nestopia", "mesen", "quicknes"] },
-    { id: "snes", name: "Super Nintendo", dir: "Snes9x", from: ["snes", "snes9x", "snes9x 2010", "bsnes"] },
-    { id: "megadrive", name: "Mega Drive", dir: "PicoDrive", from: ["megadrive", "genesis", "picodrive", "genesis plus gx"] },
-    { id: "psx", name: "PlayStation", dir: "PCSX-ReARMed", from: ["psx", "ps1", "pcsx-rearmed", "duckstation", "swanstation", "beetle psx"] },
-    { id: "n64", name: "Nintendo 64", dir: "Mupen64Plus-Next", from: ["n64", "mupen64plus-next", "mupen64plus", "parallel n64"] },
+    { id: "gba", name: "Game Boy Advance", from: ["gba", "mgba", "gpsp", "vba next", "vba-m", "vbam", "meteor", "myboy"] },
+    { id: "gb", name: "Game Boy", from: ["gb", "gambatte", "sameboy", "gearboy", "tgb dual"] },
+    { id: "gbc", name: "Game Boy Color", from: ["gbc"] },
+    { id: "nes", name: "NES", from: ["nes", "fceumm", "nestopia", "mesen", "quicknes"] },
+    { id: "snes", name: "Super Nintendo", from: ["snes", "snes9x", "snes9x 2010", "bsnes"] },
+    { id: "megadrive", name: "Mega Drive", from: ["megadrive", "genesis", "picodrive", "genesis plus gx"] },
+    { id: "psx", name: "PlayStation", from: ["psx", "ps1", "pcsx-rearmed", "duckstation", "swanstation", "beetle psx"] },
+    { id: "n64", name: "Nintendo 64", from: ["n64", "mupen64plus-next", "mupen64plus", "parallel n64"] },
   ];
   const SYSTEM = Object.fromEntries(SYSTEMS.map((s) => [s.id, s]));
   const ROM_EXT = { nds: "nds", gba: "gba", gbc: "gbc", gb: "gb", nes: "nes", sfc: "snes", smc: "snes", md: "megadrive", gen: "megadrive", smd: "megadrive", n64: "n64", z64: "n64", v64: "n64", chd: "psx", cue: "psx", pbp: "psx", m3u: "psx" };
@@ -426,26 +427,30 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
         it.notes.push(["ok", "DeSmuME footer found: cut off (" + (it.bytes.length - raw) + " bytes)."]);
       } else if (!dsSize(it.bytes.length)) return skip(it, "Not a size a DS save comes in (512 bytes to 8 MB): a file cut short, left out.");
     }
-    // (RetroArch keeps each system's saves in its core's folder, so the system has to be known)
-    if (kind === "ra" && !SYSTEM[system]) { kind = "ask"; it.notes.push(["warn", "Pick the system: each one's saves go in its own folder on the card.", 0, "ask"]); }
+    // (the GBA's saves have a folder of their own on the card, so whether this is one has to be known)
+    if (kind === "ra" && !SYSTEM[system]) { kind = "ask"; it.notes.push(["warn", "Pick the system: a Game Boy Advance save goes in its own folder on the card.", 0, "ask"]); }
     if (kind === "ra" && ext === "sav") it.notes.push(["ok", "Renamed to .srm for RetroArch."]);
     it.kind = kind; it.system = kind === "ra" ? system : null; it.outBase = safeName(base);
     return it;
   }
   function skip(it, why) { it.kind = "skip"; it.outBase = ""; it.notes = [["bad", why]]; it.include = false; return it; }
 
-  // where the card's emulators read it: BananaDS's saves/nds, every GBA core's saves/gba, another system's core's folder
-  const outPath = (it) => it.kind === "nds" ? "saves/nds/" + it.outBase + ".sav" : it.kind === "ra" ? "saves/" + SYSTEM[it.system].dir + "/" + it.outBase + ".srm" : "";
+  // where the card's emulators read it: BananaDS's saves/nds, every GBA core's saves/gba, every other system's the
+  // flat saves/
+  const outPath = (it) => it.kind === "nds" ? "saves/nds/" + it.outBase + ".sav" : it.kind === "ra" ? "saves/" + (it.system === "gba" ? "gba/" : "") + it.outBase + ".srm" : "";
 
   function convert(it) {
     if (it.kind === "nds" && hasDesmumeFooter(it.bytes)) return it.bytes.subarray(0, desmumeRawSize(it.bytes));
     return it.bytes;
   }
 
-  // The same game twice (a DraStic .dsv and a melonDS .sav): keep the newest
-  function resolveDuplicates() {
+  // The same game twice (a DraStic .dsv and a melonDS .sav): keep the newest. Two saves of one name from two systems
+  // (Gambatte's Tetris.srm and FCEUmm's) are not that: two games, which the card's one flat saves/ can't keep apart
+  // (its own move of the old core folders leaves such a pair where it is). Still one file on the card, so still one
+  // ticked, but said as what it is on both, not as a copy quietly left out
+  function resolveDuplicates(list = items) {
     const groups = new Map();
-    for (const it of items) {
+    for (const it of list) {
       if (it.kind !== "nds" && it.kind !== "ra") continue;
       const k = outPath(it).toLowerCase();
       if (!groups.has(k)) groups.set(k, []);
@@ -457,6 +462,16 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
       g.sort((a, b) => b.mtime - a.mtime);
       // one file per game on the card: the one ticked by hand, else the newest
       const chosen = g.find((it) => it.userTouched && it.include) || g[0];
+      const systems = [...new Set(g.map((it) => it.system).filter((s) => SYSTEM[s]))];
+      if (systems.length > 1) {
+        const names = systems.map((s) => SYSTEM[s].name).join(", ");
+        g.forEach((it) => {
+          if (it !== chosen) it.include = false;
+          it.notes.push(["warn", "A different game's save has the same name (" + names + "). The card keeps one " + outPath(it) + " for all of them, so only one can go on it: " +
+            (it === chosen ? "this one is ticked." : "tick this one to bring it instead.") + " Renaming a game and its save on the card keeps both.", 1]);
+        });
+        continue;
+      }
       g.forEach((it) => {
         if (it === chosen) it.notes.push(["ok", it === g[0] ? "Newest of " + g.length + " copies of this save." : "Chosen over a newer copy of this save.", 1]);
         else { it.include = false; it.notes.push(["warn", "Another copy of the same save. Tick it to use this one instead.", 1]); }
@@ -742,7 +757,7 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
   ];
   refresh();
   // (the tests' way in: ui/tests/save-mover-test.js runs this page's script with a stand-in document)
-  if (typeof globalThis.saveMoverTest === "function") globalThis.saveMoverTest({ classify, outPath, convert, desmumeRawSize });
+  if (typeof globalThis.saveMoverTest === "function") globalThis.saveMoverTest({ classify, outPath, convert, desmumeRawSize, resolveDuplicates });
 })();
 </script>
 </body>
