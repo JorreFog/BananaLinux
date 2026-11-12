@@ -1,8 +1,9 @@
-# Banana: a light Linux for the Anbernic RG DS and RG DS Plus.
+# Banana: a light Linux for the Anbernic RG DS and RG DS Plus, and (in bring-up) the AYN Thor.
 #
 #   make rgds          the RG DS's SD card image        -> output/rgds/images/banana-rgds.img.gz
 #   make rgds-plus     the RG DS Plus's SD card image   -> output/rgds-plus/images/banana-rgds-plus.img.gz
 #   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
+#   make thor          the AYN Thor's (SM8550; in bring-up, docs/THOR-PORT.md) -> output/thor/images/banana-thor.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed), and its helpers when their
 #                      libraries are there (banana-fetch: libcurl, libssh2, OpenSSL; libsmb2 too, or it has no SMB)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick), then the
@@ -17,7 +18,7 @@ BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 ROCKNIXDS_STORE ?=	# (the Store's test: a rocknixds-store checkout with BananaOS's patches)
 OUT ?= $(CURDIR)/output
-BOARDS = rgds rgds-plus universal
+BOARDS = rgds rgds-plus universal thor
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)

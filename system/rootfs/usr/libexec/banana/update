@@ -88,6 +88,14 @@ set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file 
         sed "s/^DEFAULT .*/DEFAULT $1/" $E > $E.new && sync && extlinux_ok "$1" $E.new $E
     } || { rm -f $E.new; fail "can't write extlinux.conf"; }
     mv -f $E.new $E || fail "can't write extlinux.conf"
+    # a Boot Loader Specification entry beside it (the AYN Thor's card: OpenABL may read this one instead): the same
+    # slot's kernel, device tree and root
+    L=/boot/loader/entries/banana.conf
+    if [ -f $L ]; then
+        sed -e "s|^\(linux *\)/[ab]/|\1/$1/|" -e "s|^\(devicetree *\)/[ab]/|\1/$1/|" \
+            -e "s|root=PARTLABEL=banana-root-[ab]|root=PARTLABEL=banana-root-$1|" $L > $L.new && sync &&
+            grep -q "root=PARTLABEL=banana-root-$1" $L.new && mv -f $L.new $L || { rm -f $L.new; fail "can't write $L"; }
+    fi
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
@@ -142,6 +150,7 @@ list)
         rgds-plus-*) b=rgds-plus; v=${n#rgds-plus-} ;;
         universal-*) b=universal; v=${n#universal-} ;;
         rgds-*) b=rgds; v=${n#rgds-} ;;
+        thor-*) b=thor; v=${n#thor-} ;;
         *) b=?; v=$n ;;
         esac
         printf '%s\t%s\t%s\n' "$p" "$v" "$b"

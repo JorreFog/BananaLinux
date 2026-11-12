@@ -51,11 +51,11 @@ jobs:
       - name: DS launchers (run-drastic's drastic.cfg changes, nds-saves, against a made-up card)
         run: sh system/tests/launchers-test.sh
       - name: Shell scripts parse
-        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
+        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh buildroot/board/thor/*.sh tools/*.sh system/rootfs/usr/libexec/banana/hw-env; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
-          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig; do
+          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig banana_thor_defconfig; do
             make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
             grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do
               grep -qxF "$l" /tmp/out-$d/.config || { echo "$d drops: $l"; exit 1; }

@@ -1,0 +1,11 @@
+DEFAULT a
+TIMEOUT 0
+PROMPT 0
+LABEL a
+  LINUX /a/Image
+  FDT /a/@DTB@.dtb
+  APPEND root=PARTLABEL=banana-root-a rootfstype=squashfs ro rootwait quiet loglevel=3 console=tty0 init=/sbin/init rcupdate.rcu_expedited=1 cpufreq.default_governor=performance allow_mismatched_32bit_el0 fw_devlink.strict=1 pcie_ports=compat irqaffinity=0-2 driver_async_probe=edt_ft5x06
+LABEL b
+  LINUX /b/Image
+  FDT /b/@DTB@.dtb
+  APPEND root=PARTLABEL=banana-root-b rootfstype=squashfs ro rootwait quiet loglevel=3 console=tty0 init=/sbin/init rcupdate.rcu_expedited=1 cpufreq.default_governor=performance allow_mismatched_32bit_el0 fw_devlink.strict=1 pcie_ports=compat irqaffinity=0-2 driver_async_probe=edt_ft5x06

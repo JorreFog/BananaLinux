@@ -13,10 +13,18 @@ SDL2_CONF_OPTS += --enable-video-offscreen
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the
 # RG DS's panels at 60 Hz).
 BANANA_RGDS = $(BR2_EXTERNAL_BANANA_PATH)/board/rgds
+# the board this build is for: its post scripts' argument (rgds, rgds-plus, universal, thor). The RG DS's kernel
+# drivers, device trees and patches go into an RG DS kernel only; the AYN Thor's come from board/thor (below).
+BANANA_BOARD = $(call qstrip,$(BR2_ROOTFS_POST_SCRIPT_ARGS))
+ifeq ($(BANANA_BOARD),thor)
+BANANA_BOARD_DIR = $(BR2_EXTERNAL_BANANA_PATH)/board/thor
+else
+BANANA_BOARD_DIR = $(BANANA_RGDS)
+endif
 # ROCKNIX's kernel patches, applied as ROCKNIX applies them (patch -p1, fuzz allowed): a few of them were written
 # against a slightly different kernel and only fit with fuzz, which Buildroot's own patch step (-F0) refuses
 define BANANA_LINUX_ROCKNIX_PATCHES
-	for p in $(sort $(wildcard $(BANANA_RGDS)/linux-patches/*.patch)); do \
+	for p in $(sort $(wildcard $(BANANA_BOARD_DIR)/linux-patches/*.patch)); do \
 		echo "Applying $$(basename $$p)"; \
 		patch -p1 -N --no-backup-if-mismatch -d $(LINUX_DIR) < $$p || exit 1; \
 	done
@@ -38,13 +46,40 @@ define BANANA_LINUX_RGDS_DRIVERS
 			echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += $$d.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \
 	done
 endef
+ifneq ($(BANANA_BOARD),thor)
 LINUX_POST_PATCH_HOOKS += BANANA_LINUX_RGDS_DRIVERS
+endif
+
+# The AYN Thor (SM8550): ROCKNIX's device trees (qcs8550-ayn-thor.dts and its common .dtsi, tools/sync-rocknix-sm8550.sh)
+# into the kernel's qcom directory, with Banana's changes to them (board/thor/dts-patches). Its drivers (the RSInput
+# gamepad, both AMOLED panels, the stick LEDs, the haptics) come in ROCKNIX's patches above.
+BANANA_THOR = $(BR2_EXTERNAL_BANANA_PATH)/board/thor
+define BANANA_LINUX_THOR_DTS
+	cp $(BANANA_THOR)/dts/*.dts $(BANANA_THOR)/dts/*.dtsi $(LINUX_DIR)/arch/arm64/boot/dts/qcom/
+	for p in $(sort $(wildcard $(BANANA_THOR)/dts-patches/*.patch)); do \
+		patch -p1 -N -d $(LINUX_DIR)/arch/arm64/boot/dts/qcom < $$p || exit 1; \
+	done
+	for d in $(notdir $(basename $(wildcard $(BANANA_THOR)/dts/*.dts))); do \
+		grep -q "$$d.dtb" $(LINUX_DIR)/arch/arm64/boot/dts/qcom/Makefile || \
+			echo "dtb-\$$(CONFIG_ARCH_QCOM) += $$d.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/qcom/Makefile; \
+	done
+endef
+ifeq ($(BANANA_BOARD),thor)
+LINUX_POST_PATCH_HOOKS += BANANA_LINUX_THOR_DTS
+endif
 
 # The RTL8821CS's Bluetooth firmware (btrtl, through hci_uart's H5): rtl_bt/rtl8821cs_fw.bin and the config it needs
 # for the UART (1.5 Mbaud, flow control), which linux-firmware ships as a link to rtl8761b_config.bin (WHENCE: Link
 # rtl_bt/rtl8821cs_config.bin -> rtl8761b_config.bin; Buildroot makes the link once its target is installed).
 # Buildroot's Realtek BT options would bring every 87xx/88xx file instead of these two.
-ifeq ($(BR2_PACKAGE_BLUEZ5_UTILS)$(BR2_PACKAGE_LINUX_FIRMWARE),yy)
+# The AYN Thor's from linux-firmware beyond Buildroot's options (ROCKNIX's devices/SM8550/config/kernel-firmware.dat):
+# the Adreno 740's zap shader and GMU firmware (QCOM_ADRENO brings qcom/a* only), and the WCN7850's Bluetooth half
+ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE)$(BANANA_BOARD),ythor)
+LINUX_FIRMWARE_FILES += qcom/sm8550/a740_zap.mbn qcom/gmu_gen70200.bin qca/hmtbtfw20.tlv qca/hmtnv20.*
+LINUX_FIRMWARE_ALL_LICENSE_FILES += LICENSE.qcom qcom/NOTICE.txt
+endif
+
+ifeq ($(BR2_PACKAGE_BLUEZ5_UTILS)$(BR2_PACKAGE_LINUX_FIRMWARE)$(filter thor,$(BANANA_BOARD)),yy)
 LINUX_FIRMWARE_FILES += rtl_bt/rtl8821cs_fw.bin rtl_bt/rtl8761b_config.bin
 LINUX_FIRMWARE_ALL_LICENSE_FILES += LICENCE.rtlwifi_firmware.txt
 endif
