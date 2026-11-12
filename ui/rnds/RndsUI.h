@@ -157,6 +157,9 @@ namespace rnds
 	extern Accent accent;
 	bool setAccent(const std::string& name);		// false: unknown, the yellow kept
 	void setAccent(const Accent& a);				// a theme's own accent
+	bool accentNamed(const std::string& name, Accent& a);	// one of the six by its setting's value
+	// the ink a theme gives for text on its accent (0xff000000 | rgb), 0: none (inkOn's, by contrast)
+	extern uint32_t accentInk;
 	// a user theme's colours over the palette, by the palette's names ("ink", "screenBg", ...), 0xAARRGGBB; empty: none.
 	// Applied when a palette is set (UI and Banana's settings screen alike)
 	extern std::map<std::string, uint32_t> themeColors;
@@ -187,6 +190,13 @@ namespace rnds
 		// edge to edge with the title at the top and the hints at the bottom, the top screen's as a crumb, a large title
 		// and the help under it); "" in the 4:3 canvas
 		std::string setLayout;
+		// the material look's plate (the selection) and its "state" (a switch that's on, a bar's fill, the main hint's
+		// key) from the accent: how much white at the top, where the accent itself sits (0..1 down), how much black at
+		// the bottom, and the bottom lip's height in px ("settings": { "plate": { "light", "at", "dark", "lip" },
+		// "state": { ... } }). stateMix[0] < 0: the state is the plate
+		float plateMix[4] = { 0.18f, 0.38f, 0.14f, 6 }, stateMix[4] = { -1, 0.38f, 0.14f, 6 };
+		bool accentLogo = true;		// the boot animation's banana in the accent's hue ("accentLogo": false: it stays yellow)
+		std::string setTexture;		// a picture tiled over the look's cards, rows and tiles in place of the dots (.png); "" none
 		std::string setGlyphs;		// a folder of line icons (<name>-32.png, <name>-88.png: white, tinted) for rows and tiles; "" none
 		// the moments between screens ("transitions": "fade"): smooth fades instead of the iris and the stepped fades
 		std::string transitions;

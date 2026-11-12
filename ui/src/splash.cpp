@@ -49,7 +49,8 @@ namespace banana
 			const uint8_t* s = &b.px[i * 4];
 			uint32_t a = s[3];
 			auto m = [a](uint32_t v) { uint32_t x = v * a + 128; return (x + (x >> 8)) >> 8; };
-			px[i] = rnds::tintAccent((a << 24) | (m(s[0]) << 16) | (m(s[1]) << 8) | m(s[2]));	// the accent's banana
+			px[i] = (a << 24) | (m(s[0]) << 16) | (m(s[1]) << 8) | m(s[2]);
+			if (rnds::themeFiles.accentLogo) px[i] = rnds::tintAccent(px[i]);	// the accent's banana (a theme may keep it yellow)
 		}
 		return true;
 	}

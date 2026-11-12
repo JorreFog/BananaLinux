@@ -101,6 +101,63 @@ if command -v identify >/dev/null; then
     convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
         awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
 fi
+# Thor OLED's three variants (thor-white, thor-purple, thor-rainbow: "extends": "thor-oled"): each loads without a
+# theme error under its own name, in its own accent ("accent = theme"), with its plate under the selected system (the
+# white shell, Board's mint, the alabaster); the Theme row sets a theme's own accent when it is chosen and yellow again
+# for a theme without one; a theme extending one that isn't there says so
+thorVariant() {	# <stem> <name> <awk test on the plate's r g b>
+    TV=$OUT/$1-data; rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"
+    [ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d; /^accent *=/d' "$TV/settings.conf"
+    printf 'theme = user:%s\naccent = theme\n' "$1" >> "$TV/settings.conf"
+    BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+    "$HERE/banana-ui" --headless "$OUT/$1-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$TV" --script "home 0; wait 2400; shot home; press start; shot settings" \
+        2> "$OUT/$1.log" || { echo "FAIL $1: banana-ui exited $?"; fail=1; }
+    grep -q 'theme' "$OUT/$1.log" && { echo "FAIL $1: $(grep -m2 theme "$OUT/$1.log")"; fail=1; }
+    grep -q "\"name\": \"$2\"" "$HERE/../system/rootfs/usr/share/banana/themes/$1.json" || { echo "FAIL $1: its name isn't $2"; fail=1; }
+    if command -v convert >/dev/null 2>&1; then
+        [ "$(convert "$OUT/$1-home-top.png" -format "%[pixel:p{4,1076}]" info: 2>/dev/null)" = "srgb(0,0,0)" ] || { echo "FAIL $1: the home's corner isn't true black"; fail=1; }
+        convert "$OUT/$1-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
+            awk "{ exit !($3) }" || { echo "FAIL $1: its plate under the selected system is $(convert "$OUT/$1-home-bot.png" -format '%[pixel:p{620,690}]' info: 2>/dev/null)"; fail=1; }
+    fi
+}
+thorVariant thor-white "Thor White" '$1 > 215 && $2 > 215 && $3 > 210'
+thorVariant thor-purple "Thor Clear Purple" '$1 < 170 && $2 > 190 && $3 > 130 && $3 < 220'
+thorVariant thor-rainbow "Thor Rainbow" '$1 > 195 && $2 > 185 && $3 > 150 && $3 < 225 && $1 > $3 + 20'
+TV=$OUT/thor-accent-data; rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"
+[ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d; /^accent *=/d' "$TV/settings.conf"
+printf 'theme = user:thor-rainbow\naccent = blue\n' >> "$TV/settings.conf"
+thorAccent() {	# <script>: the Theme row (Display & sound's fifth) moved
+    BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+    "$HERE/banana-ui" --headless "$OUT/thor-accent-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$TV" --script "home 0; section Display & sound; press down; press down; press down; press down; $1" 2>> "$OUT/thor-accent.log" || { echo "FAIL thor accent: banana-ui exited $?"; fail=1; }
+}
+: > "$OUT/thor-accent.log"
+thorAccent "press right"
+grep -qx 'theme = user:thor-white' "$TV/settings.conf" && grep -qx 'accent = theme' "$TV/settings.conf" ||
+    { echo "FAIL thor accent: Thor White chosen: $(grep -E '^(theme|accent) ' "$TV/settings.conf" | tr '\n' ' ')"; fail=1; }
+thorAccent "press down; press right; shot accent"
+grep -qx 'accent = yellow' "$TV/settings.conf" || { echo "FAIL thor accent: after Celadon comes $(grep '^accent ' "$TV/settings.conf") (Banana: yellow)"; fail=1; }
+thorAccent "press down; press left; press up; press right"
+grep -qx 'theme = user:vinyl-lounge' "$TV/settings.conf" && grep -qx 'accent = yellow' "$TV/settings.conf" ||
+    { echo "FAIL thor accent: a theme without its own accent after Thor White in Celadon: $(grep -E '^(theme|accent) ' "$TV/settings.conf" | tr '\n' ' ')"; fail=1; }
+TX=$OUT/thor-extends; rm -rf "$TX"; mkdir -p "$TX"
+printf '{ "name": "Lost", "extends": "not-there", "colors": { "ink": "#ff0000" } }\n' > "$TX/lost.json"
+printf '{ "name": "Base", "base": "light", "colors": { "ink": "#112233", "muted": "#445566" } }\n' > "$TX/base.json"
+printf '{ "name": "Over", "extends": "base", "colors": { "muted": "#778899" } }\n' > "$TX/over.json"
+for t in lost over; do
+    rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"; [ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d' "$TV/settings.conf"; echo "theme = user:$t" >> "$TV/settings.conf"
+    BANANA_THEMES="$TX" "$HERE/banana-ui" --headless "$OUT/thor-extends-$t-" --size 640x480 --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$TV" --script "home 0; shot home" 2> "$OUT/thor-extends-$t.log" || { echo "FAIL extends: banana-ui exited $? with $t.json"; fail=1; }
+done
+grep -q "the theme it extends, \"not-there\", isn't there" "$OUT/thor-extends-lost.log" || { echo "FAIL extends: a missing base isn't reported ($(head -2 "$OUT/thor-extends-lost.log"))"; fail=1; }
+grep -q 'theme' "$OUT/thor-extends-over.log" && { echo "FAIL extends: $(grep -m2 theme "$OUT/thor-extends-over.log")"; fail=1; }
+if command -v convert >/dev/null 2>&1; then
+    # (the base's light palette came through: the screen isn't Dark's)
+    cmp -s "$OUT/thor-extends-over-home-top.png" "$OUT/thor-extends-lost-home-top.png" && { echo "FAIL extends: the theme on base.json looks like Dark"; fail=1; }
+fi
 # the AYN Thor's own setup slides (Controls, Home server, Steam), Settings > System > Accounts, the quick menu and the
 # Thor OLED theme's fades
 . "$HERE/tests/setup-thor.sh"

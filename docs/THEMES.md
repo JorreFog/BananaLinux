@@ -59,6 +59,44 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
 Each screen is 480 units high and 640 wide on both handhelds. The RG DS Plus's 1024 x 768 panels scale it by 1.6,
 and text and shapes are drawn sharp at that size.
 
+### A theme on another ("extends")
+
+A theme can be another one with a few things changed: `"extends": "<that theme's file name without .json>"` (looked
+for beside the theme, then in `banana/themes` on the card, then among the image's). Its members go over the other
+theme's: objects member by member, so one colour in `colors`, one value in `vars`, one of `accents`, one component or
+one screen can be replaced and the rest stays; anything else (a string, a number, a list such as `children` or a
+gradient's `stops`) is replaced whole; `null` takes a member away. A theme can extend one that extends another, four
+deep. Files a theme names (pictures, fonts, sounds, `settings.glyphs`) are looked for in its own folder first, then in
+the folder of the theme it extends. An instance's `with` and its component's own `with` are joined the same way: the
+instance's values first, then those of the component's that the instance didn't give, so a component can work values
+out from what it is given (Thor OLED's `key` works its colours out from `k` and `mode`), and a theme on top can
+replace how.
+
+So a base theme written with `vars` for its colours and measures gives variants that are a page long. The image's
+`thor-white.json`, `thor-purple.json` and `thor-rainbow.json` are `thor-oled.json` for the Thor's other shells: each
+has its own `name`, its `accents.own`, the palette in `colors` and `vars`, and its pictures (the shelf, the bubble's
+pointer, Clear Purple's grain) in a folder of its own; Thor Rainbow also replaces the `with` of the `key` component,
+so A B X Y are the buttons' four colours.
+
+### The accent's choices ("accents")
+
+Settings > Display & sound > Accent colour offers Banana's six (`yellow`, `blue`, `red`, `green`, `purple`, `pink`:
+the values of `accent` in `settings.conf`). A theme can give any of them its own name, colour and the ink for text on
+it, and add one of its own before them:
+
+```jsonc
+"accents": {
+  "own":   { "name": "Celadon", "color": "#8fceb6", "ink": "#0a1a14" },   // the setting's value "theme"
+  "green": { "name": "Lime", "color": "#9be15d", "ink": "#0d1606" }
+}
+```
+
+The row lists the theme's own first, then the six in the order the theme names them, then the rest. Choosing a theme
+with an accent of its own (in Settings or the theme gallery) sets the accent to it (`accent = theme`), and leaving
+for a theme without one sets it back to yellow; after that the row changes it as always. `ink` is what `accent.ink`
+gives (and the plate's text in Settings) while Settings > Text on accent is Auto. A theme with `"accent"` (one fixed
+colour) has no choices, as before. `"accentLogo": false` keeps the boot animation's banana yellow whatever the accent.
+
 ### Screens of another shape (the AYN Thor)
 
 The AYN Thor's top screen is 16:9 (1920 x 1080) and its bottom one nearly square (1240 x 1080). By default a theme still
@@ -97,6 +135,9 @@ menu are drawn by the engine, not from `screens`. A theme still decides how they
 
 | `layout` | `"screen"`: the pages laid out on each screen's own shape instead of in the 4:3 canvas (the AYN Thor's screens). Bottom screen: the page from edge to edge with 64 px margins (of a 1080-line screen), its title at the top, the button hints at the foot, seven rows of 96 px in a Settings list, the groups and the game panel's tiles as a grid; a touch anywhere on the screen counts. Top screen: a crumb, the title large (96 px, smaller when it is long) and the help under it, from `left` |
 | `glyphs` | a folder beside the theme with line icons, `<name>-32.png` for a row and `<name>-88.png` for a tile (white on transparent; they are tinted): `save load menu fast quit keys` for the game panel, `sun speaker palette drop motion clock globe wifi info user trophy cloud text toggle sliders open bolt power` for rows, `next prev` for the chevrons |
+| `plate` | `{ "light": 0.18, "at": 0.38, "dark": 0.14, "lip": 6 }`: the material look's plate from the accent: how much white is mixed in at its top, how far down (0..1) the accent itself sits, how much black at the bottom (mixed in OKLab), and the height of its lower lip in px |
+| `state` | the same four for what says "on" (a switch, a bar's fill, the main hint's key) when that isn't the plate: Thor White's plate is its white shell (`colors.plateTop` ...), its state a glaze of the accent |
+| `texture` | a picture (RGBA .png beside the theme) tiled over the material look's cards, rows and tiles in place of the cards' dots, a texel a design pixel: Thor Clear Purple's grain |
 
 `"panels": "material"` is Thor OLED's look for all of these pages: every surface one dark gradient with a 2 px lit line
 along its top edge and a hairline inside it (cards also carry a dot texture), a picked row a lighter surface in a 4 px
@@ -119,9 +160,14 @@ entries (all optional; Thor OLED's are the defaults):
 | `stateTop` `stateMid` `stateLow` `stateInk` | what says "on" (a switch, a bar's fill, the main hint's key): the plate unless given |
 | `ring` | the focus ring, chevrons, scrub thumb and accent dot (default: the accent) |
 | `keyTop` `keyLow` `keyInk` `keyLip` `keyLit` | a hint's key: gradient, letter, the lip inside its bottom, a line along its top |
-| `keyA` `keyB` `keyX` `keyY` (+ `keyAInk` ...) | a face button's own colour (it wins over the main action's plate) |
+| `keyA` `keyB` `keyX` `keyY` (+ `keyAInk` ...) | a face button's own colour (it wins over the main action's plate); with them the Theme row's page shows a key to the four beside its swatches |
 | `danger` `dangerTop` `dangerLow` `dangerText` `dangerInk` | Quit: its text, and its tile when pressed |
 | `fav` `favTop` `ok` `dots` `track` `knobTop` `qrGround` | the pink, the green, the cards' dots, a bar's track, a switch's dark knob, the ground of the Steam sign-in code |
+| `plateSub` | the second line and the icon on the plate (default `plateInk`) |
+| `keyMid` | a key's gradient through a third colour, 55 % down |
+| `iconLit` `iconEdge` `iconOnLit` `iconOnLip` | a row's icon tile: a line along its top and a hairline inside it; the picked row's: its top line and lower lip |
+| `knobLow` `knobOffTop` `knobOffLow` | a switch's knob when on (with `knobTop`) and when off |
+| `cardRim` | a 3 px rim along a card's top edge (none by default) |
 
 `screens.settings` (a layout theme's) is drawn over each screen's background under those pages: `thor-oled.json`
 puts its status bar there, so Settings and the setup have the same header as the shelf.

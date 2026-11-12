@@ -1,6 +1,8 @@
 #include "layout.h"
 #include "library.h"
 #include "pool.h"
+#include "theme.h"
+#include <unistd.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -45,7 +47,7 @@ namespace banana
 	bool isLayoutTheme(const std::string& path)
 	{
 		if (path.empty()) return false;
-		JPtr j = readJsonFile(path);
+		JPtr j = readThemeDoc(path);
 		return j && j->get("screens") && j->get("screens")->isObj();
 	}
 
@@ -173,6 +175,7 @@ namespace banana
 		bool screenStage = false;
 		float scrW = 640, scrH = 480, scrArea[4] = { 0, 0, 640, 480 };
 		std::string path, dir;
+		std::vector<std::string> dirs;
 		JPtr doc;
 		std::map<std::string, JPtr> components;
 		std::vector<std::pair<std::string, Prop>> vars;
@@ -309,7 +312,19 @@ namespace banana
 			{
 				if (e.first == "use") continue;
 				bool found = false;
-				for (auto& me : merged->obj) if (me.first == e.first) { me.second = e.second; found = true; }
+				for (auto& me : merged->obj)
+					if (me.first == e.first)
+					{
+						found = true;
+						if (e.first == "with" && e.second->isObj() && me.second->isObj())
+						{
+							// the instance's values, then the component's own that it didn't give (worked out from them)
+							auto w = std::make_shared<JVal>(*e.second);
+							for (auto& ce : me.second->obj) if (!e.second->get(ce.first)) w->obj.push_back(ce);
+							me.second = w;
+						}
+						else me.second = e.second;
+					}
 				if (!found) merged->obj.push_back(e);
 			}
 			// the component may itself be another one's instance
@@ -410,7 +425,9 @@ namespace banana
 		std::string file(const std::string& name) const
 		{
 			if (name.empty() || name[0] == '/') return name;
-			return dir + "/" + name;
+			// (a theme that extends another: its own folder first, then that one's)
+			for (size_t k = 0; k + 1 < dirs.size(); k++) if (access((dirs[k] + "/" + name).c_str(), F_OK) == 0) return dirs[k] + "/" + name;
+			return (dirs.empty() ? dir : dirs.back()) + "/" + name;
 		}
 
 		void load(const std::string& pixelFonts, const std::string& interFonts)
@@ -422,7 +439,7 @@ namespace banana
 			fontFiles["inter-semibold"] = interFonts + "/Inter-SemiBold.ttf";
 			fontFiles["inter-bold"] = interFonts + "/Inter-Bold.ttf";
 			std::string why;
-			doc = readJsonFile(path, &why);
+			doc = readThemeDoc(path, &why, &dirs);
 			if (!doc) { err(why); return; }
 			if (const JVal* f = doc->get("fonts"))
 				for (auto& e : f->obj) if (e.second->isStr()) fontFiles[e.first] = file(e.second->s);
@@ -609,7 +626,7 @@ namespace banana
 			if (nId == HOOK("accent.band")) { out = EV(hex(rnds::accent.band)); return true; }
 			if (nId == HOOK("accent.low")) { out = EV(hex(rnds::accent.low)); return true; }
 			// text on the accent: dark or light by contrast (Settings > Text on accent), and a second line in its hue
-			if (nId == HOOK("accent.ink")) { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
+			if (nId == HOOK("accent.ink")) { out = EV(hex(rnds::accentInk && !rnds::accentTextMode ? rnds::accentInk & 0xffffff : rnds::inkOn(rnds::accent.base))); return true; }
 			if (nId == HOOK("accent.inkSub")) { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
 			if (pre("palette.", rest)) { rnds::Color c; if (rnds::themeColor(rest.c_str(), c)) { out = EV(hex(c)); return true; } out = EV(""); return true; }
 			if (nId == HOOK("cursor")) { out = EV((double)cursor()); return true; }

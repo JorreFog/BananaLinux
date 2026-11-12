@@ -979,7 +979,7 @@ namespace banana
 			const bool on = gFlash == i, quit = i == 4;
 			box(on ? (quit ? "danger" : "plate") : "tileM", on, x, y, w, h);
 			const Color fg = on ? (quit ? mcol("dangerInk") : mcol("plateInk")) : quit ? mcol("dangerText") : p.ink;
-			const Color ic = on ? fg : quit ? mcol("dangerText") : mcol("ink2");
+			const Color ic = on ? (quit ? fg : mcol("plateSub")) : quit ? mcol("dangerText") : mcol("ink2");
 			const std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
 			const std::string kk = getenv("BANANA_ROCKNIX") ? std::string(i == 5 ? "Tap" : "") : std::string(GTILES[i].keys);
 			const bool tall = h >= px(200);
@@ -990,7 +990,7 @@ namespace banana
 			if (lw <= w - px(24)) text(lb, true, nameZ, x + w / 2 - lw / 2, y0 + icon + px(12), fg);
 			else textFit(lb, true, nameZ, x + px(12), y0 + icon + px(12), w - px(24), fg, false);
 			float kw = text(kk, false, keyZ, 0, 0, fg, false, 0, true);
-			text(kk, false, keyZ, x + w / 2 - kw / 2, y0 + icon + px(12) + nameZ * 1.2f + px(6), on ? fg : mcol("dim"));
+			text(kk, false, keyZ, x + w / 2 - kw / 2, y0 + icon + px(12) + nameZ * 1.2f + px(6), on ? (quit ? fg : mcol("plateSub")) : mcol("dim"));
 		}
 		for (int i = 0; i < ntiles && !material(); i++)
 		{

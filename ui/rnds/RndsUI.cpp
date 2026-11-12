@@ -23,6 +23,12 @@ namespace rnds
 	std::map<std::string, uint32_t> themeColors;
 	ThemeFiles themeFiles;
 	void setAccent(const Accent& a) { accent = a; }
+	uint32_t accentInk = 0;
+	bool accentNamed(const std::string& name, Accent& a)
+	{
+		for (auto& e : ACCENTS) if (name == e.name) { a = e.a; return true; }
+		return false;
+	}
 	int accentTextMode = 0;
 	static float relLum(uint32_t c)
 	{

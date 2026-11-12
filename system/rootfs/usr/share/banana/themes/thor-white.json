@@ -1,0 +1,54 @@
+{
+  // Thor White: Thor OLED for the white AYN Thor. The screens stay black; the menu borrows the shell: the selected
+  // thing is a white key cap (the plate is the shell's plastic whatever the accent), the button hints are the white
+  // buttons with their grey print, and what is on or filled (a switch, a bar, the focus ring, the main hint's key)
+  // is a glaze of the accent. Celadon, a porcelain glaze, is its own accent. Everything else is thor-oled.json's:
+  // only what differs is here (docs/THEMES.md, "A theme on another").
+  "name": "Thor White",
+  "author": "BananaOS",
+  "extends": "thor-oled",
+
+  "accents": { "own": { "name": "Celadon", "color": "#8fceb6", "ink": "#0a1a14" } },
+  // Settings and the game panel: the plate's middle 40 % down, the state a glaze of the accent
+  "settings": { "plate": { "at": 0.4, "lip": 6 }, "state": { "light": 0.22, "at": 0.4, "dark": 0.16 } },
+  "colors": {
+    "ink": "#edf0ec", "muted": "#a8aeaa", "line": "#282c2a", "edge": "#202423",
+    "panelBand": "#1c1f1e", "panelBody": "#131514", "panelLow": "#0f1110",
+    "chipBand": "#1c1f1e", "chipBody": "#131514",
+    "bubbleBand": "#1c1f1e", "bubbleBody": "#131514", "bubbleLow": "#0f1110",
+    "frameBorder": "#202423", "frameBg": "#0d0f0e",
+    "meterBg": "#202423", "brandBg": "#0d0f0e", "rule": "#202423",
+    "trackHi": "#202423", "railBg": "#0d0f0e", "faceMuted": "#202423", "slotLip": "#202423",
+    "kbdBg": "#edf0ec", "kbdInk": "#141816",
+    "matTop": "#1c1f1e", "matMid": "#131514", "matLow": "#0f1110", "selTop": "#282c2a", "selLow": "#1c1f1e",
+    "lit": "#f0f8f414", "hair": "#ecf1ee14", "hair2": "#ecf1ee26", "tileEdge": "#ecf1ee1a", "cardRim": "#ecf1ee29",
+    "ink2": "#a8aeaa", "dim": "#919793", "surface": "#0d0f0e", "raised": "#161918", "raised2": "#202423",
+    "dots": "#f0f8f40b",
+    // the shell: the plate, the keys, a switch's knob, the sign-in code's ground
+    "plateTop": "#ffffff", "plateMid": "#f2f3ef", "plateLow": "#e4e5e0", "plateInk": "#141816", "plateSub": "#575c59",
+    "plateLit": "#ffffff", "plateLip": "#1e28241a", "iconOnLit": "#ffffff", "iconOnLip": "#1e28241f",
+    "keyTop": "#ffffff", "keyLow": "#e4e5e0", "keyInk": "#575c59", "keyLip": "#1e282429",
+    "knobTop": "#ffffff", "knobLow": "#e4e5e0", "knobOffTop": "#ffffff", "knobOffLow": "#e4e5e0",
+    "qrGround": "#f2f3ef"
+  },
+
+  "vars": {
+    "ink": "#edf0ec", "ink2": "#a8aeaa", "muted": "#919793",
+    "surface": "#0d0f0e", "raised": "#161918", "raised2": "#202423",
+    "hair": "#ecf1ee14", "hair2": "#ecf1ee26",
+    "mat0": "#1c1f1e", "mat1": "#131514", "mat2": "#0f1110", "matLit": "#2d302f",
+    // cards: a rim of the shell's light along the top, 3 px
+    "cardLit": "#454948", "cardLitPx": 3,
+    // the plate is the shell, its text the buttons' grey print
+    "pTop": "#ffffff", "pMid": "#f2f3ef", "pBot": "#e4e5e0", "pAt": 40, "pLit": "#ffffff", "pLow": "#d0d2cd", "pInk": "#575c59",
+    // the state is the glaze
+    "sTop": "=mix(accent, '#ffffff', 0.22)", "sMid": "=accent", "sBot": "=mix(accent, '#000000', 0.16)", "sAt": 40,
+    // the keys: white buttons, grey print
+    "kTop": "#ffffff", "kMid": "#f2f3ef", "kAt": 40, "kBot": "#e4e5e0", "kInk": "#575c59", "kLip": 0.14,
+    // the selected tile's window has a moulded rim, like the Thor's screens in its shell
+    "winLight": "#ffffff", "winRim": "#c9c9c3", "winRimPx": 3, "tileHi": "#1a1d1c", "tileLo": "#0c0e0d",
+    // the last game's cover in a white bezel
+    "bz": 6, "bzTop": "#ffffff", "bzBot": "#e4e5e0",
+    "shelfImg": "thor-white/shelf.png", "tailImg": "thor-white/tail.png"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  // Thor Clear Purple: Thor OLED for the clear purple AYN Thor. True black behind frosted, purple-tinted glass: cards,
+  // rows and tiles carry a fine grain in place of the LCD's dots, with a bright acrylic top edge; the button hints
+  // are the Thor's clear purple buttons; the shelf is clear acrylic with a screw at each end. Board, the mint of the
+  // circuit board seen through the shell, is its own accent. Everything else is thor-oled.json's.
+  "name": "Thor Clear Purple",
+  "author": "BananaOS",
+  "extends": "thor-oled",
+
+  "accents": { "own": { "name": "Board", "color": "#6fe3b4", "ink": "#06180f" } },
+  "settings": { "texture": "thor-purple/grain.png" },
+  "colors": {
+    "ink": "#efeaf8", "muted": "#b2a8c6", "line": "#33284a", "edge": "#281f38",
+    "panelBand": "#241b33", "panelBody": "#1a1426", "panelLow": "#130e1b",
+    "chipBand": "#241b33", "chipBody": "#1a1426",
+    "bubbleBand": "#241b33", "bubbleBody": "#1a1426", "bubbleLow": "#130e1b",
+    "frameBorder": "#281f38", "frameBg": "#110d18",
+    "meterBg": "#281f38", "brandBg": "#110d18", "rule": "#281f38",
+    "trackBg": "#0a0810", "trackHi": "#281f38", "railBg": "#110d18", "faceMuted": "#281f38", "slotLip": "#281f38",
+    "kbdBg": "#efeaf8", "kbdInk": "#140f1c",
+    "matTop": "#241b33", "matMid": "#1a1426", "matLow": "#130e1b", "selTop": "#33284a", "selLow": "#231b33",
+    "lit": "#e2d2ff24", "litLow": "#aa8cf012", "hair": "#d6c4ff17", "hair2": "#d6c4ff2b", "tileEdge": "#d6c4ff1c",
+    "ink2": "#b2a8c6", "dim": "#9289a8", "surface": "#110d18", "raised": "#1b1526", "raised2": "#281f38",
+    "track": "#0a0810", "qrGround": "#efeaf8",
+    // the keys: clear purple buttons
+    "keyTop": "#8467c2", "keyMid": "#5e43a0", "keyLow": "#523992", "keyInk": "#f6f0ff", "keyLit": "#ffffff52", "keyLip": "#14082859",
+    // a row's icon in a small clear purple cap
+    "iconTop": "#3b2b5c", "iconLow": "#2a1f42", "iconInk": "#d9ccf2", "iconLit": "#e2d2ff29", "iconEdge": "#ba96ff1a"
+  },
+
+  "vars": {
+    "ink": "#efeaf8", "ink2": "#b2a8c6", "muted": "#9289a8",
+    "surface": "#110d18", "raised": "#1b1526", "raised2": "#281f38",
+    "hair": "#d6c4ff17", "hair2": "#d6c4ff2b",
+    "mat0": "#241b33", "mat1": "#1a1426", "mat2": "#130e1b", "matLit": "#3f3550",
+    // cards: the grain over the glass
+    "cardTex": "thor-purple/grain.png", "cardLit": "#3f3550",
+    "kTop": "#8467c2", "kMid": "#5e43a0", "kAt": 55, "kBot": "#523992", "kInk": "#f6f0ff", "kLip": 0.35, "kLit": "#ab98d6", "kLitPx": 2,
+    "tileHi": "#1d1728", "tileLo": "#0f0b16",
+    "shelfImg": "thor-purple/shelf.png", "tailImg": "thor-purple/tail.png"
+  }
+}

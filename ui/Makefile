@@ -192,7 +192,7 @@ GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp s
 tests/gba-pages-test: $(GBA_PAGES_SRC) src/nds/pages.h src/nds/model.h src/gba/gen3rom.h src/gba/gen3live.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(GBA_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 
-NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp src/json.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 

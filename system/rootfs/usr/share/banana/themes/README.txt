@@ -11,6 +11,11 @@ Ten more come with the system (0.5.0), made with the Banana Theme Studio, which 
 layout: comic-panel, coral-reef, felt-table, neon-arcade, oak-bookshelf, orbital-hud, paper-notebook,
 phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio to make your own from it.
 
+Thor OLED (thor-oled.json) is the AYN Thor's own, and Thor White, Thor Clear Purple and Thor Rainbow are the same
+theme for the Thor's other shells. Each of those three is a short file that starts from thor-oled.json with
+"extends": "thor-oled" and only says what differs (its colours, its own accent, its pictures); a theme of yours can
+start from any theme the same way. docs/THEMES.md, "A theme on another".
+
     {
       "name": "My theme",          the name shown in Settings (else the file name)
       "author": "you",             (shown nowhere yet)

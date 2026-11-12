@@ -278,6 +278,15 @@ namespace banana
 		build();
 	}
 
+	// another theme chosen: one with an accent of its own starts in it (Thor White's celadon), and that accent doesn't
+	// go along to a theme without one
+	void Settings::themeAccent(const std::string& theme)
+	{
+		const std::string conf = data + "/settings.conf", own = themeOwnAccent(theme), cur = getConfValue(conf, "accent", "yellow");
+		if (!own.empty() && cur != own) setConfValue(conf, "accent", own);
+		else if (own.empty() && cur == "theme") setConfValue(conf, "accent", "yellow");
+	}
+
 	void Settings::setVariant(const std::string& value)
 	{
 		// the Theme setting's value (theme.cpp): its palette, a user theme's colours, files and accent set (or cleared)
@@ -293,7 +302,9 @@ namespace banana
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
 			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + "|" + f.panels +
-				"|" + f.setTop + "|" + std::to_string(f.setLeft) + "|" + f.setIcons + "|" + f.setPick + "|" + f.setHints + "|" + f.setHeader + "|" + f.bodyFont + "|" + f.setLayout + "|" + f.setGlyphs;
+				"|" + f.setTop + "|" + std::to_string(f.setLeft) + "|" + f.setIcons + "|" + f.setPick + "|" + f.setHints + "|" + f.setHeader + "|" + f.bodyFont + "|" + f.setLayout + "|" + f.setGlyphs + "|" + f.setTexture + "|" + std::to_string(rnds::accentInk);
+			for (float v : f.plateMix) look += "|" + std::to_string(v);
+			for (float v : f.stateMix) look += "|" + std::to_string(v);
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
@@ -1181,11 +1192,12 @@ namespace banana
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
 			// changes: the Theme row loads it again)
-			static const std::vector<std::string> NAMES = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" },
-				VALUES = { "yellow", "blue", "red", "green", "purple", "pink" };
-			bool own = themeSetsAccent(getConfValue(data + "/settings.conf", "theme", "dark"));
-			it.names = own ? std::vector<std::string>{ "From the theme" } : NAMES;
-			it.values = own ? std::vector<std::string>{ getConfValue(it.file, "accent", "yellow") } : VALUES;
+			const std::string theme = getConfValue(data + "/settings.conf", "theme", "dark");
+			bool own = themeSetsAccent(theme);
+			accentChoices = themeAccents(theme);
+			it.names.clear(); it.values.clear();
+			for (auto& a : accentChoices) { it.names.push_back(a.name); it.values.push_back(a.value); }
+			if (own) { it.names = { "From the theme" }; it.values = { getConfValue(it.file, "accent", "yellow") }; }
 			it.help = own ? "This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here."
 				: "The colour of the selection, the logo and the boot animation's banana.";
 		}
@@ -1691,6 +1703,7 @@ namespace banana
 		if (it.key.compare(0, 6, "shelf.") == 0) return SHELVES;	// (the home row read again)
 		if (it.key == "theme")
 		{
+			themeAccent(it.values[at]);
 			setVariant(it.values[at]);
 			for (auto& x : items) if (x.key == "accent") load(x);	// "From the theme", or the colours again
 			return THEME;
@@ -2784,7 +2797,7 @@ namespace banana
 				centred(groups[g], true, std::max(21.6f, px(40)), y + px(168), m.gridW - px(32), on ? onInk : p.ink);
 				std::string hint = groupHint(g);
 				if (text(hint, false, px(28), 0, 0, sub, false, 0, true) > m.gridW - px(40)) hint = groupHint(g, 1);
-				centred(hint, false, px(28), y + px(228), m.gridW - px(40), on ? onInk : sub);
+				centred(hint, false, px(28), y + px(228), m.gridW - px(40), on ? mcol("plateSub") : sub);
 			}
 		}
 		else for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
@@ -5500,7 +5513,9 @@ namespace banana
 			if (access(top.c_str(), F_OK) == 0 && access(bot.c_str(), F_OK) == 0) continue;
 			bool ownTop = top.compare(0, dir.size() + 1, dir + "/") != 0;	// the theme's own picture: never written over
 			std::string id = bot.substr(dir.size() + 1, bot.size() - dir.size() - 1 - 17);	// (less "-<8 hex>-bot.png")
-			cmd += "mkdir -p \"$D/x\" && printf 'theme = %s\\n' " + q(v) + " > \"$D/x/settings.conf\" && timeout 40 " + q(exe) +
+			// (a theme with an accent of its own is shown in it)
+			const std::string ownAccent = themeOwnAccent(v);
+			cmd += "mkdir -p \"$D/x\" && printf 'theme = %s\\n" + (ownAccent.empty() ? std::string() : "accent = " + ownAccent + "\\n") + "' " + q(v) + " > \"$D/x/settings.conf\" && timeout 40 " + q(exe) +
 				" --headless \"$D/x/\" --size 640x480 " + thumbArgs + " --data \"$D/x\" --script 'home 0; wait 1500; shot s' >/dev/null 2>&1 && " +
 				"mkdir -p " + q(dir) + " && rm -f " + q(dir + "/" + id) + "-????????-???.png; " +
 				(ownTop ? std::string() : "mv \"$D/x/s-top.png\" " + q(top) + "; ") + "mv \"$D/x/s-bot.png\" " + q(bot) + "; rm -rf \"$D/x\"; ";
@@ -5536,6 +5551,7 @@ namespace banana
 					if (it.at == thSel) return NONE;
 					it.at = thSel;
 					save(it);
+					themeAccent(it.values[thSel]);
 					setVariant(it.values[thSel]);
 					for (auto& x : items) if (x.key == "accent") load(x);
 					return THEME;

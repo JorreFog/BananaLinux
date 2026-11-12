@@ -1,0 +1,62 @@
+{
+  // Thor Rainbow: Thor OLED for the Rainbow AYN Thor (the alabaster shell with the four coloured face buttons). The
+  // selection is the shell's plastic: a lighter plate with a deeper moulded lip; the four colours are on the screen
+  // only where they mean their button, on the A B X Y hints (A red, B yellow, X blue, Y green, whatever the hint's
+  // state); the shoulder and Start/Select keys are the grey plastics. Alabaster is its own accent. Everything else
+  // is thor-oled.json's.
+  "name": "Thor Rainbow",
+  "author": "BananaOS",
+  "extends": "thor-oled",
+
+  "accents": { "own": { "name": "Alabaster", "color": "#ece0c3", "ink": "#1a1610" } },
+  "settings": { "plate": { "light": 0.3, "at": 0.3, "dark": 0.1, "lip": 8 } },
+  "colors": {
+    "ink": "#ece8df", "muted": "#aca69b", "line": "#2c2a25", "edge": "#262420",
+    "panelBand": "#201f1c", "panelBody": "#151412", "panelLow": "#100f0e",
+    "chipBand": "#201f1c", "chipBody": "#151412",
+    "bubbleBand": "#201f1c", "bubbleBody": "#151412", "bubbleLow": "#100f0e",
+    "frameBorder": "#262420", "frameBg": "#100f0d",
+    "meterBg": "#262420", "brandBg": "#100f0d", "rule": "#262420",
+    "trackHi": "#262420", "railBg": "#100f0d", "faceMuted": "#262420", "slotLip": "#262420",
+    "kbdBg": "#ece8df",
+    "matTop": "#201f1c", "matMid": "#151412", "matLow": "#100f0e", "selTop": "#2c2a25", "selLow": "#1e1d1a",
+    "hair": "#f0eadc17", "hair2": "#f0eadc29",
+    "ink2": "#aca69b", "dim": "#8c867b", "surface": "#100f0d", "raised": "#1a1916", "raised2": "#262420",
+    "qrGround": "#ece8df",
+    "plateLit": "#ffffff8c", "plateLip": "#3c321e29", "iconOnLit": "#ffffff99", "iconOnLip": "#3c321e2e",
+    // the keys: the four face buttons in their colours, the others grey
+    "keyTop": "#e2ddd2", "keyLow": "#bcb8b0", "keyInk": "#2a2824",
+    "keyA": "#d8333c", "keyAInk": "#ffffff", "keyB": "#f2c230", "keyBInk": "#2a1f00",
+    "keyX": "#5a6be0", "keyXInk": "#ffffff", "keyY": "#33a65e", "keyYInk": "#04180b"
+  },
+
+  "vars": {
+    "ink": "#ece8df", "ink2": "#aca69b", "muted": "#8c867b",
+    "surface": "#100f0d", "raised": "#1a1916", "raised2": "#262420",
+    "hair": "#f0eadc17", "hair2": "#f0eadc29",
+    "mat0": "#201f1c", "mat1": "#151412", "mat2": "#100f0e", "matLit": "#302f2b", "cardLit": "#302f2b",
+    // the plate: more of the light at the top, the accent 30 % down, a lip of 8 px in the shell's shadow
+    "pTop": "=mix(accent, '#ffffff', 0.3)", "pBot": "=mix(accent, '#000000', 0.1)", "pAt": 30,
+    "pLit": "=mix(mix(accent, '#ffffff', 0.3), '#ffffff', 0.55)", "pLow": "=mix(mix(accent, '#000000', 0.1), '#3c321e', 0.16)", "pLowPx": 8,
+    "sTop": "=mix(accent, '#ffffff', 0.3)", "sBot": "=mix(accent, '#000000', 0.1)", "sAt": 30,
+    "kLitPx": 3,
+    "winLight": "#ffffff99", "tileHi": "#1f1d1a", "tileLo": "#0f0e0c",
+    "shelfImg": "thor-rainbow/shelf.png", "tailImg": "thor-rainbow/tail.png"
+  },
+
+  "components": {
+    // a key's colours by its button: the face buttons their own (lighter at the top, a lit line), the others grey,
+    // the main action's Start or Select on the plate
+    "key": {
+      "with": {
+        "c0": "=k == 'A' ? '#e25a59' : k == 'B' ? '#f4cc5f' : k == 'X' ? '#6f83e7' : k == 'Y' ? '#5ab476' : mode == 1 ? sTop : '#e2ddd2'",
+        "c1": "=k == 'A' ? '#d8333c' : k == 'B' ? '#f2c230' : k == 'X' ? '#5a6be0' : k == 'Y' ? '#33a65e' : mode == 1 ? sMid : '#d4cfc5'",
+        "cAt": "=k == 'A' || k == 'B' || k == 'X' || k == 'Y' ? 45 : mode == 1 ? sAt : 38",
+        "c2": "=k == 'A' ? '#d8333c' : k == 'B' ? '#f2c230' : k == 'X' ? '#5a6be0' : k == 'Y' ? '#33a65e' : mode == 1 ? sBot : '#bcb8b0'",
+        "ci": "=k == 'A' ? '#ffffff' : k == 'B' ? '#2a1f00' : k == 'X' ? '#ffffff' : k == 'Y' ? '#04180b' : mode == 1 ? sInk : '#2a2824'",
+        "cl": "=k == 'A' ? '#f0979a' : k == 'B' ? '#f8de97' : k == 'X' ? '#a2aef0' : k == 'Y' ? '#94cda6' : mode == 1 ? sTop : '#e2ddd2'",
+        "cLip": 0.2
+      }
+    }
+  }
+}

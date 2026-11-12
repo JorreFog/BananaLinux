@@ -8,6 +8,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <sys/stat.h>
 
 namespace banana
 {
@@ -76,7 +77,7 @@ namespace banana
 		}
 	};
 
-	static bool readTheme(const std::string& path, std::map<std::string, std::string>& out, std::string* why)
+	static bool readOne(const std::string& path, std::map<std::string, std::string>& out, std::string* why)
 	{
 		std::ifstream f(path);
 		if (!f) { if (why) *why = "can't open " + path; return false; }
@@ -88,6 +89,76 @@ namespace banana
 		j.object("", out);
 		if (!j.ok) { if (why) *why = path + ": a JSON error near byte " + std::to_string(j.i); return false; }
 		return true;
+	}
+
+	static std::string pathFor(const std::string& stem);
+
+	// the theme a theme extends ("extends": "<file name without .json>"): beside it, else the card's, else the image's
+	static std::string basePath(const std::string& path, const std::string& name)
+	{
+		if (name.empty() || name.find('/') != std::string::npos || name.find("..") != std::string::npos) return "";
+		std::string p = path.substr(0, path.rfind('/') + 1) + name + ".json";
+		if (p != path && std::ifstream(p)) return p;
+		p = pathFor(name);
+		return p != path && std::ifstream(p) ? p : "";
+	}
+
+	// a theme's members by name ("colors.ink"), over those of the theme it extends (and that one's, four deep)
+	static bool readTheme(const std::string& path, std::map<std::string, std::string>& out, std::string* why, int depth = 0)
+	{
+		std::map<std::string, std::string> own;
+		if (!readOne(path, own, why)) return false;
+		auto ex = own.find("extends");
+		if (ex != own.end())
+		{
+			std::string base = depth < 4 ? basePath(path, ex->second) : "";
+			if (base.empty()) { if (why) *why = path + ": the theme it extends, \"" + ex->second + "\", isn't there"; return false; }
+			if (!readTheme(base, out, why, depth + 1)) return false;
+			own.erase("extends");
+		}
+		for (auto& e : own) out[e.first] = e.second;
+		return true;
+	}
+
+	// ---- the same for the whole document (a layout theme's screens, components and vars) ---------------------------
+	// over's members over base's: objects member by member, anything else replaced, a null takes the member away
+	static JPtr mergeJson(const JPtr& base, const JPtr& over)
+	{
+		if (!base || !over || !base->isObj() || !over->isObj()) return over;
+		auto r = std::make_shared<JVal>(*base);
+		for (auto& e : over->obj)
+		{
+			if (e.first == "extends") continue;
+			auto it = std::find_if(r->obj.begin(), r->obj.end(), [&](const std::pair<std::string, JPtr>& m) { return m.first == e.first; });
+			if (it == r->obj.end()) { if (e.second->kind != JVal::NUL) r->obj.push_back(e); }
+			else if (e.second->kind == JVal::NUL) r->obj.erase(it);
+			else it->second = mergeJson(it->second, e.second);
+		}
+		return r;
+	}
+	static JPtr readDoc(const std::string& path, std::string* why, std::vector<std::string>* dirs, int depth)
+	{
+		JPtr j = readJsonFile(path, why);
+		if (!j || !j->isObj()) return j;
+		std::string dir = path.substr(0, path.rfind('/'));
+		if (dirs && std::find(dirs->begin(), dirs->end(), dir) == dirs->end()) dirs->push_back(dir);
+		std::string ex = j->str("extends");
+		if (ex.empty()) return j;
+		std::string base = depth < 4 ? basePath(path, ex) : "";
+		if (base.empty()) { if (why) *why = path + ": the theme it extends, \"" + ex + "\", isn't there"; return nullptr; }
+		JPtr b = readDoc(base, why, dirs, depth + 1);
+		return b ? mergeJson(b, j) : nullptr;
+	}
+	JPtr readThemeDoc(const std::string& path, std::string* why, std::vector<std::string>* dirs)
+	{
+		return readDoc(path, why, dirs, 0);
+	}
+	std::vector<std::string> themeDirs(const std::string& path)
+	{
+		std::vector<std::string> dirs;
+		readDoc(path, nullptr, &dirs, 0);
+		if (dirs.empty()) dirs.push_back(path.substr(0, path.rfind('/')));
+		return dirs;
 	}
 
 	// "#rgb", "#rrggbb" or "#rrggbbaa" (CSS order) -> 0xAARRGGBB
@@ -151,17 +222,20 @@ namespace banana
 	}
 
 	// a file a theme names: relative to its folder (or absolute), used only when it's there
-	static std::string themeFile(const std::string& dir, const std::string& name)
+	// (a theme that extends another: its own folder first, then that one's)
+	typedef std::vector<std::string> Dirs;
+	static std::string themeFile(const Dirs& dirs, const std::string& name)
 	{
 		if (name.empty()) return "";
-		std::string p = name[0] == '/' ? name : dir + "/" + name;
-		return std::ifstream(p) ? p : "";
+		if (name[0] == '/') return std::ifstream(name) ? name : "";
+		for (auto& dir : dirs) { std::string p = dir + "/" + name; if (std::ifstream(p)) return p; }
+		return "";
 	}
 
 	// a picture the theme names (a wallpaper, the logo, an icon): only one stb_image reads (PNG or JPEG) and at most
 	// 4096 px a side, checked from its header before anything is decoded (an 8192 x 8192 wallpaper decoded is 256 MB,
 	// and banana-ui stays in memory under the games); otherwise the default is used, and the log says why
-	static std::string themeImage(const std::string& dir, const std::string& name)
+	static std::string themeImage(const Dirs& dir, const std::string& name)
 	{
 		std::string p = themeFile(dir, name);
 		if (p.empty())
@@ -189,7 +263,7 @@ namespace banana
 		if (path.empty()) return "";
 		std::map<std::string, std::string> kv;
 		if (!readTheme(path, kv, nullptr) || kv["preview"].empty()) return "";
-		return themeImage(path.substr(0, path.rfind('/')), kv["preview"]);
+		return themeImage(themeDirs(path), kv["preview"]);
 	}
 
 	bool themeSetsAccent(const std::string& value)
@@ -202,16 +276,70 @@ namespace banana
 		return parseColor(kv["accent"], c) || parseColor(kv["accent.base"], c) || !kv["accent"].empty();
 	}
 
+	static rnds::Accent accentOf(uint32_t c)
+	{
+		rnds::Accent a;
+		a.base = c & 0xffffff;
+		a.light = mix(a.base, 0xffffff, 0.6f); a.dark = mix(a.base, 0, 0.62f);
+		a.band = mix(a.base, 0xffffff, 0.3f); a.low = mix(a.base, 0, 0.2f);
+		return a;
+	}
+
+	std::vector<ThemeAccent> themeAccents(const std::string& value)
+	{
+		static const char* const V[] = { "yellow", "blue", "red", "green", "purple", "pink" };
+		static const char* const N[] = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" };
+		std::vector<ThemeAccent> r;
+		std::string path = themePath(value);
+		JPtr j = path.empty() ? nullptr : readThemeDoc(path);
+		const JVal* acc = j ? j->get("accents") : nullptr;
+		auto add = [&](const std::string& v, const JVal* o)
+		{
+			if (std::any_of(r.begin(), r.end(), [&](const ThemeAccent& t) { return t.value == v; })) return;
+			ThemeAccent t;
+			t.value = v;
+			rnds::Accent a;
+			uint32_t c;
+			for (int k = 0; k < 6; k++) if (v == V[k]) { t.name = N[k]; rnds::accentNamed(v, a); t.color = a.base; }
+			if (o && o->isObj())
+			{
+				t.name = o->str("name", t.name);
+				if (parseColor(o->str("color"), c)) t.color = c & 0xffffff;
+				else if (v == "theme") return;	// (its own needs a colour)
+			}
+			else if (v == "theme") return;
+			if (t.name.empty()) t.name = "Theme";
+			r.push_back(t);
+		};
+		if (acc && acc->isObj())
+		{
+			add("theme", acc->get("own"));
+			for (auto& e : acc->obj) for (const char* v : V) if (e.first == v) add(v, e.second.get());
+		}
+		for (const char* v : V) add(v, nullptr);
+		return r;
+	}
+
+	std::string themeOwnAccent(const std::string& value)
+	{
+		std::string path = themePath(value);
+		if (path.empty()) return "";
+		std::map<std::string, std::string> kv;
+		uint32_t c;
+		return readTheme(path, kv, nullptr) && parseColor(kv["accents.own.color"], c) ? "theme" : "";
+	}
+
 	std::string applyTheme(const std::string& value, const std::string& accentName, std::string* why)
 	{
 		rnds::themeColors.clear();
 		rnds::themeFiles = rnds::ThemeFiles();
 		rnds::setAccent(accentName);
+		rnds::accentInk = 0;
 		std::string path = themePath(value);
 		if (path.empty()) return value == "light" ? "light" : value == "carts" ? "carts" : "dark";
 		std::map<std::string, std::string> kv;
 		if (!readTheme(path, kv, why)) return "dark";
-		std::string dir = path.substr(0, path.rfind('/'));
+		const Dirs dir = themeDirs(path);
 		std::string base = kv["base"] == "light" ? "light" : "dark";
 		// the accent: one colour (its lighter and darker shades worked out) or each of the five named
 		uint32_t c;
@@ -235,6 +363,16 @@ namespace banana
 			rnds::setAccent(a);
 		}
 		else if (!kv["accent"].empty()) rnds::setAccent(kv["accent"]);	// one of Banana's (yellow, blue, ...)
+		else
+		{
+			// the Accent colour setting's, as this theme has it ("accents": its names, colours and inks for the six,
+			// and its own: the setting's "theme"; a theme without its own shows the yellow for that)
+			std::string k = accentName == "theme" ? "own" : accentName;
+			rnds::Accent six;
+			if (k == "own" ? !parseColor(kv["accents.own.color"], c) : !rnds::accentNamed(k, six)) k = "yellow";
+			if (parseColor(kv["accents." + k + ".color"], c)) rnds::setAccent(accentOf(c));
+			if (parseColor(kv["accents." + k + ".ink"], c)) rnds::accentInk = 0xff000000u | (c & 0xffffff);
+		}
 		// the palette's colours by name
 		for (auto& e : kv)
 			if (e.first.compare(0, 7, "colors.") == 0 && parseColor(e.second, c)) rnds::themeColors[e.first.substr(7)] = c;
@@ -246,6 +384,7 @@ namespace banana
 		f.wallTop = themeImage(dir, kv["background.top"]);
 		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
+		f.accentLogo = kv["accentLogo"] != "false";
 		f.panels = kv["panels"] == "flat" || kv["panels"] == "material" ? kv["panels"] : "";
 		// Settings' own look (its "settings" member)
 		f.setTop = kv["settings.top"] == "open" ? "open" : "";
@@ -256,8 +395,30 @@ namespace banana
 		f.setHints = kv["settings.hints"] == "pill" ? "pill" : "";
 		f.setHeader = kv["settings.header"] == "rule" ? "rule" : "";
 		f.setLayout = kv["settings.layout"] == "screen" ? "screen" : "";
+		{
+			auto nums = [&](const char* key, float* m)
+			{
+				static const char* const K[] = { "light", "at", "dark", "lip" };
+				static const float MAX[] = { 1, 1, 1, 24 };
+				for (int k = 0; k < 4; k++)
+				{
+					const std::string& t = kv[std::string("settings.") + key + "." + K[k]];
+					char* end = nullptr;
+					double v = t.empty() ? -1 : strtod(t.c_str(), &end);
+					if (!t.empty() && end && !*end && v >= 0 && v <= MAX[k]) m[k] = (float)v;
+				}
+			};
+			nums("plate", f.plateMix);
+			nums("state", f.stateMix);
+			f.setTexture = themeImage(dir, kv["settings.texture"]);
+		}
 		f.setGlyphs.clear();
-		if (!kv["settings.glyphs"].empty() && kv["settings.glyphs"].find("..") == std::string::npos && !dir.empty()) f.setGlyphs = dir + "/" + kv["settings.glyphs"];
+		if (!kv["settings.glyphs"].empty() && kv["settings.glyphs"].find("..") == std::string::npos)
+			for (auto& d : dir)
+			{
+				struct stat st;
+				if (stat((d + "/" + kv["settings.glyphs"]).c_str(), &st) == 0 && S_ISDIR(st.st_mode)) { f.setGlyphs = d + "/" + kv["settings.glyphs"]; break; }
+			}
 		{
 			// a font of the theme's (a .ttf beside it) or a built-in name (Inter's: the menu's fonts folder, found by Settings)
 			const std::string& bf = kv["settings.bodyFont"];

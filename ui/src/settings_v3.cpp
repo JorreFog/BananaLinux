@@ -62,21 +62,36 @@ namespace banana
 			{ "keyTop", 0xfffaf0, 1 }, { "keyInk", 0x141312, 1 }, { "keyLip", 0x000000, 0.22f }, { "keyLit", 0xffffff, 0 },
 			{ "dots", 0xfffaf0, 0.045f }, { "track", 0x0a0a09, 1 },
 			{ "plateLit", 0xffffff, 0.4f }, { "plateLip", 0x000000, 0.16f }, { "knobTop", 0x2a2620, 1 }, { "qrGround", 0xefe9de, 1 },
+			{ "cardRim", 0xffffff, 0 }, { "iconLit", 0xffffff, 0 }, { "iconEdge", 0xffffff, 0 }, { "iconOnLit", 0xffffff, 0.4f }, { "iconOnLip", 0x000000, 0 },
 		};
 		for (auto& d : D) if (!strcmp(d.n, name)) return Color::hex(d.rgb, d.a);
 		const Color a = Color::hex(rnds::accent.base);
 		if (!strcmp(name, "ring") || !strcmp(name, "plateMid")) return a;
-		if (!strcmp(name, "stateMid")) return mcol("plateMid");
 		if (!strcmp(name, "iconTop") || !strcmp(name, "iconLow")) return mcol("raised2");
 		if (!strcmp(name, "iconInk")) return mcol("ink2");
-		if (!strcmp(name, "plateTop")) return oklabMix(a, 0.82f, Color(1, 1, 1));
-		if (!strcmp(name, "plateLow")) return oklabMix(a, 0.86f, Color(0, 0, 0));
-		if (!strcmp(name, "plateInk")) return oklabMix(a, 0.12f, Color(0, 0, 0));
+		const rnds::ThemeFiles& tf = rnds::themeFiles;
+		if (!strcmp(name, "plateTop")) return oklabMix(a, 1 - tf.plateMix[0], Color(1, 1, 1));
+		if (!strcmp(name, "plateLow")) return oklabMix(a, 1 - tf.plateMix[2], Color(0, 0, 0));
+		if (tf.stateMix[0] >= 0)
+		{
+			// (a state of its own: a glaze of the accent where the plate is something else, Thor White's shell)
+			if (!strcmp(name, "stateTop")) return oklabMix(a, 1 - tf.stateMix[0], Color(1, 1, 1));
+			if (!strcmp(name, "stateMid")) return a;
+			if (!strcmp(name, "stateLow")) return oklabMix(a, 1 - tf.stateMix[2], Color(0, 0, 0));
+		}
+		if (!strcmp(name, "knobLow")) return mcol("stateInk");
+		if (!strcmp(name, "knobOffTop")) return pal(light).ink;
+		if (!strcmp(name, "knobOffLow")) return mcol("ink2");
+		// (text on the accent: the theme's ink for it, else the accent nearly black; Settings > Text on accent decides
+		// over both)
+		const Color aInk = rnds::accentTextMode ? Color::hex(rnds::inkOn(rnds::accent.base)) : rnds::accentInk ? Color::hex(rnds::accentInk & 0xffffff) : oklabMix(a, 0.12f, Color(0, 0, 0));
+		if (!strcmp(name, "plateInk")) return aInk;
 		if (!strcmp(name, "plateSub")) return mcol("plateInk");
 		// what says "on" (a switch, a bar's fill, the main hint's key): the plate, unless the theme has another (a glaze)
+		if (!strcmp(name, "stateMid")) return mcol("plateMid");
 		if (!strcmp(name, "stateTop")) return mcol("plateTop");
 		if (!strcmp(name, "stateLow")) return mcol("plateLow");
-		if (!strcmp(name, "stateInk")) return mcol("plateInk");
+		if (!strcmp(name, "stateInk")) return aInk;
 		if (!strcmp(name, "keyLow")) return pal(light).ink;
 		if (!strcmp(name, "ink")) return pal(light).ink;
 		return Color(1, 0, 1);
@@ -90,8 +105,10 @@ namespace banana
 		{
 			float r[4] = { 0, 0, 0, 0 };	// corners: top-left, top-right, bottom-right, bottom-left (px)
 			std::vector<Stop> stops;	// top to bottom
-			Color ringC, litC, lowC, lit2C, dotsC, stepC;
-			float ring = 0, lit = 0, low = 0, lit2 = 0, step = 0, dotPitch = 0, dotR = 0;	// px
+			Color ringC, litC, lowC, lit2C, dotsC, stepC, rimC;
+			float ring = 0, lit = 0, low = 0, lit2 = 0, step = 0, dotPitch = 0, dotR = 0, rim = 0;	// px
+			const rnds::Bitmap* tex = nullptr;	// tiled over it (RGBA), a texel texQ px
+			float texQ = 1;
 		};
 
 		// the surface w x h px (and its step under it), straight RGBA
@@ -141,6 +158,12 @@ namespace banana
 							const float k = std::max(0.0f, std::min(1.0f, m.dotR + 0.5f - std::hypot(fx, fy)));
 							if (k > 0) over(c, m.dotsC, k);
 						}
+						if (m.tex && m.tex->w > 0 && m.tex->h > 0)
+						{
+							const uint8_t* t = &m.tex->px[((size_t)((int)(y / m.texQ) % m.tex->h) * m.tex->w + (int)(x / m.texQ) % m.tex->w) * 4];
+							if (t[3]) over(c, Color(t[0] / 255.0f, t[1] / 255.0f, t[2] / 255.0f, 1), t[3] / 255.0f);
+						}
+						if (m.rim > 0) over(c, m.rimC, std::max(0.0f, a - cov(sd(px, py - m.rim))));
 						if (m.lit > 0) over(c, m.litC, std::max(0.0f, a - cov(sd(px, py - m.lit))));
 						if (m.lit2 > 0) over(c, m.lit2C, std::max(0.0f, a - cov(sd(px, py + m.lit2))));
 						if (m.low > 0) over(c, m.lowC, std::max(0.0f, a - cov(sd(px, py + m.low))));
@@ -179,24 +202,43 @@ namespace banana
 			MSpec m;
 			auto radius = [&](float r) { r = std::min(r * q, std::min(dw, dh) / 2.0f); for (float& v : m.r) v = r; };
 			auto mat = [&] { m.stops = { { 0, mcol("matTop") }, { 0.7f, mcol("matMid") }, { 1, mcol("matLow") } }; m.lit = 2 * q; m.litC = mcol("lit"); m.lit2 = 2 * q; m.lit2C = mcol("litLow"); };
+			const rnds::ThemeFiles& tf = rnds::themeFiles;
+			const float pAt = tf.plateMix[1], sAt = tf.stateMix[0] >= 0 ? tf.stateMix[1] : pAt;
 			auto plate = [&](const char* top, const char* mid, const char* low, float at)
 			{
 				m.stops = { { 0, mcol(top) }, { at, mcol(mid) }, { 1, mcol(low) } };
-				m.lit = 3 * q; m.litC = mcol("plateLit"); m.low = 6 * q; m.lowC = mcol("plateLip");
+				m.lit = 3 * q; m.litC = mcol("plateLit"); m.low = tf.plateMix[3] * q; m.lowC = mcol("plateLip");
 			};
-			auto dots = [&] { m.dotPitch = 8 * q; m.dotR = 1.2f * q; m.dotsC = mcol("dots"); };
+			// (the theme's texture over cards, rows and tiles; without one the cards carry the LCD's dots)
+			static std::map<std::string, rnds::Bitmap> textures;
+			auto texture = [&]
+			{
+				if (tf.setTexture.empty()) return false;
+				auto t = textures.find(tf.setTexture);
+				if (t == textures.end())
+				{
+					rnds::Bitmap b = rnds::decodeFile(tf.setTexture);
+					if (b.alpha) b = rnds::Bitmap();	// (RGBA only)
+					t = textures.emplace(tf.setTexture, b).first;
+				}
+				if (t->second.empty()) return false;
+				m.tex = &t->second; m.texQ = std::max(0.25f, q);
+				return true;
+			};
+			auto dots = [&] { if (texture()) return; m.dotPitch = 8 * q; m.dotR = 1.2f * q; m.dotsC = mcol("dots"); };
 			const bool big = dh >= 180 * q;
-			if (style == "row") { radius(24); mat(); m.ring = 2 * q; m.ringC = mcol("hair"); }
+			if (style == "row") { radius(24); mat(); texture(); m.ring = 2 * q; m.ringC = mcol("hair"); }
 			else if (style == "rowsel")
 			{
 				radius(big ? 32 : 24);
 				m.stops = { { 0, mcol("selTop") }, { 1, mcol("selLow") } };
+				texture();
 				m.lit = 2 * q; m.litC = mcol("lit"); m.ring = 4 * q; m.ringC = mcol("ring");
 			}
-			else if (style == "tile") { radius(32); mat(); m.ring = 2 * q; m.ringC = mcol("tileEdge"); }
-			else if (style == "plate") { radius(32); plate("plateTop", "plateMid", "plateLow", 0.38f); }
+			else if (style == "tile") { radius(32); mat(); texture(); m.ring = 2 * q; m.ringC = mcol("tileEdge"); }
+			else if (style == "plate") { radius(32); plate("plateTop", "plateMid", "plateLow", pAt); }
 			else if (style == "danger") { radius(32); plate("dangerTop", "danger", "dangerLow", 0.4f); m.litC = Color(1, 1, 1, 0.3f); }
-			else if (style == "card") { radius(dh < 110 * q ? 24 : 32); mat(); dots(); m.ring = 2 * q; m.ringC = mcol("hair"); }
+			else if (style == "card") { radius(dh < 110 * q ? 24 : 32); mat(); dots(); m.ring = 2 * q; m.ringC = mcol("hair"); m.rim = 3 * q; m.rimC = mcol("cardRim"); }
 			else if (style == "pill") { radius(1000); mat(); m.ring = 2 * q; m.ringC = mcol("hair"); }
 			else if (style.compare(0, 3, "key") == 0)
 			{
@@ -206,26 +248,28 @@ namespace banana
 				if (shape == 'F') radius(1000);
 				else if (shape == 'S') { m.r[0] = m.r[1] = 20 * q; m.r[2] = m.r[3] = 8 * q; }
 				else radius(12);
-				if (st == '1') m.stops = { { 0, mcol("stateTop") }, { 0.38f, mcol("stateMid") }, { 1, mcol("stateLow") } };
+				Color mid;
+				if (st == '1') m.stops = { { 0, mcol("stateTop") }, { sAt, mcol("stateMid") }, { 1, mcol("stateLow") } };
 				else if (st == '2') m.stops = { { 0, mcol("favTop") }, { 1, mcol("fav") } };
+				else if (rnds::themeColor("keyMid", mid)) m.stops = { { 0, mcol("keyTop") }, { 0.55f, mid }, { 1, mcol("keyLow") } };
 				else m.stops = { { 0, mcol("keyTop") }, { 1, mcol("keyLow") } };
 				m.low = 3 * q; m.lowC = mcol("keyLip"); m.lit = 2 * q; m.litC = mcol("keyLit");
 				m.step = 2 * q; m.stepC = Color(0, 0, 0, 0.7f);
 			}
-			else if (style == "icon") { radius(8); m.stops = { { 0, mcol("iconTop") }, { 1, mcol("iconLow") } }; }
-			else if (style == "iconOn") { radius(8); m.stops = { { 0, mcol("plateTop") }, { 0.38f, mcol("plateMid") }, { 1, mcol("plateLow") } }; m.lit = 2 * q; m.litC = mcol("plateLit"); }
+			else if (style == "icon") { radius(8); m.stops = { { 0, mcol("iconTop") }, { 1, mcol("iconLow") } }; m.lit = 2 * q; m.litC = mcol("iconLit"); m.ring = 2 * q; m.ringC = mcol("iconEdge"); }
+			else if (style == "iconOn") { radius(8); m.stops = { { 0, mcol("plateTop") }, { pAt, mcol("plateMid") }, { 1, mcol("plateLow") } }; m.lit = 2 * q; m.litC = mcol("iconOnLit"); m.low = 3 * q; m.lowC = mcol("iconOnLip"); }
 			else if (style == "swOff") { radius(1000); m.stops = { { 0, mcol("raised") } }; m.ring = 2 * q; m.ringC = mcol("hair2"); }
-			else if (style == "swOn") { radius(1000); m.stops = { { 0, mcol("stateTop") }, { 0.38f, mcol("stateMid") }, { 1, mcol("stateLow") } }; m.lit = 2 * q; m.litC = Color(1, 1, 1, 0.35f); }
-			else if (style == "knobOff") { radius(1000); m.stops = { { 0, mcol("ink") }, { 1, mcol("ink2") } }; }
-			else if (style == "knobOn") { radius(1000); m.stops = { { 0, mcol("knobTop") }, { 1, mcol("stateInk") } }; }
+			else if (style == "swOn") { radius(1000); m.stops = { { 0, mcol("stateTop") }, { sAt, mcol("stateMid") }, { 1, mcol("stateLow") } }; m.lit = 2 * q; m.litC = Color(1, 1, 1, 0.35f); }
+			else if (style == "knobOff") { radius(1000); m.stops = { { 0, mcol("knobOffTop") }, { 1, mcol("knobOffLow") } }; }
+			else if (style == "knobOn") { radius(1000); m.stops = { { 0, mcol("knobTop") }, { 1, mcol("knobLow") } }; }
 			else if (style == "track") { radius(6); m.stops = { { 0, mcol("track") } }; }
-			else if (style == "fill") { radius(6); m.stops = { { 0, mcol("stateTop") }, { 0.38f, mcol("stateMid") }, { 1, mcol("stateLow") } }; }
+			else if (style == "fill") { radius(6); m.stops = { { 0, mcol("stateTop") }, { sAt, mcol("stateMid") }, { 1, mcol("stateLow") } }; }
 			else if (style == "scrub") { radius(4); m.stops = { { 0, mcol("raised2") } }; }
 			else if (style == "thumb") { radius(4); m.stops = { { 0, mcol("ring") } }; }
 			else if (style == "dot") { radius(1000); m.stops = { { 0, mcol("ring") } }; }
 			else if (style == "raised") { radius(12); m.stops = { { 0, mcol("raised2") } }; m.lit = 2 * q; m.litC = mcol("lit"); }
 			else if (style == "kbkey") { radius(14); mat(); m.ring = 2 * q; m.ringC = mcol("hair"); }
-			else if (style == "kbkeyOn") { radius(14); plate("plateTop", "plateMid", "plateLow", 0.38f); m.low = 4 * q; }
+			else if (style == "kbkeyOn") { radius(14); plate("plateTop", "plateMid", "plateLow", pAt); m.low = 4 * q; }
 			else if (style.compare(0, 3, "sw#") == 0 || style.compare(0, 4, "cap#") == 0)
 			{
 				// a swatch of the palette (flat, a hairline ring) or an accent's cap (round, lit as the plate)
@@ -466,7 +510,7 @@ namespace banana
 		// the icon's tile: raised, or the plate on the picked row
 		const float tile = px(64), tx = left + px(16), ty = y + (h - tile) / 2;
 		mpaint(on ? "iconOn" : "icon", tx, ty, tile, tile);
-		glyph(rowGlyph(it), 32, tx + px(16), ty + px(16), on ? mcol("plateInk") : mcol("iconInk"));
+		glyph(rowGlyph(it), 32, tx + px(16), ty + px(16), on ? mcol("plateSub") : mcol("iconInk"));
 		const float lx = tx + tile + px(24), z = px(34), tyText = y + (h - z * 1.2f) / 2;
 		const Color ink2 = mcol("ink2");
 		float vright = right - px(24);
@@ -533,15 +577,31 @@ namespace banana
 				mpaint("sw#" + hex(S[i].c), x, y, px(160), px(160));
 				textWith(S[i].name, IR, "|ir", z, x, y + px(176), mcol("dim"));
 			}
+			// a theme whose face buttons have colours of their own (the Rainbow Thor's): a key to them beside the swatches
+			Color own;
+			if (rnds::themeColor("keyA", own))
+			{
+				const struct { const char* key; const char* what; } L[] = { { "A", "Open" }, { "B", "Back" }, { "X", "Options" }, { "Y", "Favourite" } };
+				const float lx = HELP_X + px(1176);
+				textWith("Button hints", IR, "|ir", z, lx, y - px(4), mcol("dim"));
+				float col2 = 0;
+				for (int i = 0; i < 4; i += 2) col2 = std::max(col2, px(48 + 12 + 24) + textWith(L[i].what, IM, "|im", z, 0, 0, p.ink, false, 0, true));
+				for (int i = 0; i < 4; i++)
+				{
+					const float kx = lx + (i % 2) * col2, ky = y + px(54) + (i / 2) * px(72);
+					keycap(L[i].key, kx, ky, 0);
+					textWith(L[i].what, IM, "|im", z, kx + px(60), ky + (px(48) - z * 1.22f) / 2, mcol("ink2"));
+				}
+			}
 			return;
 		}
-		const rnds::Accent keepA = rnds::accent;
 		float x = HELP_X;
 		for (int i = 0; i < (int)it.values.size() && i < 8; i++)
 		{
-			if (!rnds::setAccent(it.values[i])) { rnds::setAccent(keepA); continue; }
-			const Color c = Color::hex(rnds::accent.base);
-			rnds::setAccent(keepA);
+			Color c;
+			bool known = false;
+			for (auto& a : accentChoices) if (a.value == it.values[i]) { c = Color::hex(a.color); known = true; }
+			if (!known) continue;
 			const bool cur = i == it.at;
 			const float nw = textWith(it.names[i], IR, "|ir", z, 0, 0, p.ink, false, 0, true), cell = std::max(px(96), nw);
 			if (cur) { mpaint("capring", x + cell / 2 - px(60), y - px(12), px(120), px(120)); mpaint("caphole", x + cell / 2 - px(56), y - px(8), px(112), px(112)); }
