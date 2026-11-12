@@ -124,11 +124,12 @@ namespace banana
 		return trim(r);
 	}
 
-	static std::map<std::string, GlEntry> readGamelist(const std::string& dir)
+	// file: the folder's gamelist.xml, or another list in the same form whose paths are the folder's too (a port's
+	// gameinfo.xml); entries already in out are kept
+	static void readGamelistFile(const std::string& dir, const std::string& file, std::map<std::string, GlEntry>& out)
 	{
-		std::map<std::string, GlEntry> out;
-		std::ifstream f(dir + "/gamelist.xml");
-		if (!f) return out;
+		std::ifstream f(file);
+		if (!f) return;
 		std::stringstream ss;
 		ss << f.rdbuf();
 		std::string x = ss.str();
@@ -154,7 +155,23 @@ namespace banana
 			e.image = rel(xmlText(b, "image")); e.thumb = rel(xmlText(b, "thumbnail"));
 			e.cart = rel(xmlText(b, "cartridge")); e.boxback = rel(xmlText(b, "boxback")); e.marquee = rel(xmlText(b, "marquee"));
 			e.developer = xmlText(b, "developer"); e.publisher = xmlText(b, "publisher"); e.players = xmlText(b, "players"); e.esrb = xmlText(b, "esrb");
-			out[path] = e;
+			out.emplace(path, e);
+		}
+	}
+
+	// the folder's gamelist.xml; with ports, each PortMaster port's own gameinfo.xml too (in its folder, the same form,
+	// its picture the cover or screenshot it came with): PortMaster adds them to a frontend's gamelist.xml only on the
+	// systems it knows, and BananaOS isn't one. The folder's gamelist.xml goes first (an owner's edits win).
+	static std::map<std::string, GlEntry> readGamelist(const std::string& dir, bool ports = false)
+	{
+		std::map<std::string, GlEntry> out;
+		readGamelistFile(dir, dir + "/gamelist.xml", out);
+		if (!ports) return out;
+		if (DIR* d = opendir(dir.c_str()))
+		{
+			while (dirent* e = readdir(d))
+				if (e->d_name[0] != '.') readGamelistFile(dir, dir + "/" + e->d_name + "/gameinfo.xml", out);
+			closedir(d);
 		}
 		return out;
 	}
@@ -672,7 +689,7 @@ namespace banana
 				std::string dir = folderPath(rootList[ri], def.folder);
 				std::vector<std::string> rels;
 				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
-				auto gl = readGamelist(dir);
+				auto gl = readGamelist(dir, def.id == "ports");
 				for (auto& rel : rels)
 				{
 					Game g;

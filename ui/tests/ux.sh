@@ -430,6 +430,19 @@ UXFX=$UXFX_SAVE
 p8_red=$(convert "$OUT/$size-ux-p8-top.png" -fx '(r > 0.8 && g < 0.2 && b < 0.25) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)
 [ "$p8_red" = 1 ] || { echo "FAIL $size: a PICO-8 cart's own picture isn't its art"; fail=1; }
 
+# a PortMaster port's picture is the one it came with: its folder's gameinfo.xml (PortMaster's, gamelist form) names
+# its cover (a green one here), with no gamelist.xml in roms/ports
+PMFX=$OUT/ux-pm-fixture-$size
+rm -rf "$PMFX"; "$HERE/tests/fixture.sh" "$PMFX" >/dev/null
+mkdir -p "$PMFX/roms/ports/greenport"; printf '#!/bin/bash\n' > "$PMFX/roms/ports/Green Port.sh"
+convert -size 160x205 xc:'#10c030' "$PMFX/roms/ports/greenport/cover.png"
+printf '<?xml version="1.0"?>\n<gameList>\n  <game>\n    <path>./Green Port.sh</path>\n    <name>Green Port</name>\n    <image>./greenport/cover.png</image>\n  </game>\n</gameList>\n' > "$PMFX/roms/ports/greenport/gameinfo.xml"
+UXFX_SAVE=$UXFX; UXFX=$PMFX
+ux_run pm "lib ports 0; wait 2400; shot ux-pm"
+UXFX=$UXFX_SAVE
+pm_green=$(convert "$OUT/$size-ux-pm-top.png" -fx '(g > 0.6 && r < 0.2 && b < 0.3) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)
+[ "$pm_green" = 1 ] || { echo "FAIL $size: a port's own cover (its gameinfo.xml) isn't its art"; fail=1; }
+
 # Glass: an app on the Apps tile is the tile it was on the home row (its own colour and icon), not a game's card:
 # BShare (left of Files) a blue tile, where a game's card is dark. And PICO-8's Splore (an empty Splore.p8) has its own
 # picture, a globe and a magnifier (the globe's blue on the top screen), in Glass and in the default theme
