@@ -991,6 +991,8 @@ namespace banana
 				{ "F + volume", "Brightness", "Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound." },
 				{ "Power", "Sleep", "Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same." },
 				{ "Hold power", "Shut down", "Everywhere: held for 2 seconds. A game running saves first." },
+				{ "Back twice", "Quit", "In a port (PortMaster's games, and PortMaster itself) and in PICO-8: Back pressed twice quickly." },
+				{ "Back", "Back to Splore", "In a PICO-8 game started from Splore: back to Splore's list." },
 				{ "Menu: START", "Settings", "In the menu: Settings. Y there: Sleep, Restart and Shut down." },
 				{ "Menu: SELECT", "Search", "In the menu: search every system's games by name." },
 				{ "Menu: X", "Resume, options", "On the home row: the system's last game. On a game: its page (name, box art, emulator, delete)." },

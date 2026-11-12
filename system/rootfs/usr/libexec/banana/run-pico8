@@ -11,8 +11,17 @@ if [ -f $DIR/pico8_64 ]; then
     export HOME=$DIR SDL_VIDEODRIVER=kmsdrm SDL_AUDIODRIVER=alsa
     # Splore's downloads from the BBS by wget, over https: ours by curl (pico8-bin/wget), BusyBox's can't
     export PATH=/usr/libexec/banana/pico8-bin:$PATH
-    if [ -n "$SPLORE" ]; then exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -splore
-    else exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -run "$1"; fi
+    # (pico8-splore gone: a Splore ended by Back twice, its script stopped too, may have left it)
+    [ -z "$SPLORE" ] && rm -f /run/banana/pico8-splore && exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -run "$1"
+    # Splore: Back once (bananad) ends PICO-8 with pico8-back left, and Splore starts again: back from a cart to the
+    # cart browser, which PICO-8 has no key for on every version. Back twice ends it all (no pico8-back).
+    R=/run/banana; touch $R/pico8-splore; rm -f $R/pico8-back
+    while :; do
+        $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -splore; S=$?
+        rm $R/pico8-back 2>/dev/null || break
+    done
+    rm -f $R/pico8-splore
+    exit $S
 fi
 [ -n "$SPLORE" ] && { echo "Splore needs the official PICO-8 (pico8_64) in roms/pico-8" >&2; exit 1; }
 exec /usr/libexec/banana/run-retroarch fake08 "$1"

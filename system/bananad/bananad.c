@@ -92,6 +92,8 @@ static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
 static double lid_sleep_at;	/* the lid shut in a DS game: the sleep a moment later, once the game has seen it */
+#define BACK_TWICE 0.5	/* seconds: Back pressed again within this is "twice" */
+static double back_once_at;	/* Back pressed once in PICO-8: Splore again then, unless a second press came first */
 static double menu_sleep_at;	/* the menu's Sleep (banana-ui wrote /run/banana/sleep-now and sent SIGHUP): a moment later,
 				 * once the button that chose it is let go */
 static double power_since, last_input, ignore_power_until;
@@ -1928,6 +1930,22 @@ static void handle(const struct input_event *e)
 	case BTN_TR2: if (e->value == 1 && !fn_held) ra_button("r2"); break;
 	case BTN_THUMBL: if (e->value == 1 && !fn_held) ra_button("l3"); break;
 	case BTN_THUMBR: if (e->value == 1 && !fn_held) ra_button("r3"); break;
+	case BTN_Z:
+		/* Back twice within half a second, in a port (run-port's, PortMaster's menu too) or in PICO-8: it quits, as a
+		 * shutdown ends it (SIGTERM to its group; run-port stops what the port started). Neither has a quit of
+		 * its own that works the same everywhere. Once, in PICO-8's Splore: back to Splore (back_once_at, below) */
+		if (e->value == 1) {
+			static double back_at;
+			pid_t g = pid_of("/run/banana/game.pid"), pg = g ? getpgid(g) : 0;
+			int port = g && pg > 0 && pgrp_member(pg, "run-port"), pico8 = g && pg > 0 && pgrp_member(pg, "pico8_64");
+			if (!port && !pico8) { back_at = back_once_at = 0; break; }
+			if (now - back_at > BACK_TWICE) { back_at = now; if (pico8) back_once_at = now + BACK_TWICE; break; }
+			back_at = back_once_at = 0;
+			sleep_log("back twice: %s quits", port ? "the port" : "PICO-8");
+			kill(-pg, SIGCONT);
+			kill(-pg, SIGTERM);
+		}
+		break;
 	case KEY_POWER:
 		if (now < ignore_power_until) break;
 		if (e->value) { power_down = 1; power_since = now; }
@@ -2135,6 +2153,7 @@ int main(int argc, char **argv)
 		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (back_once_at > 0) { double d = back_once_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		in_poll = 1;
 		if (!stopping) poll(pf, n, timeout);
@@ -2206,6 +2225,18 @@ int main(int argc, char **argv)
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
 		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
+		/* Back once in PICO-8 started on Splore (run-pico8's pico8-splore): PICO-8 has no key back to Splore from a cart
+		 * on every version, so it is ended and run-pico8 starts Splore again (pico8-back). A cart started on its own:
+		 * nothing (twice quits) */
+		if (back_once_at > 0 && now >= back_once_at) {
+			back_once_at = 0;
+			pid_t g = pid_of("/run/banana/game.pid"), pg = g ? getpgid(g) : 0, p;
+			if (pg > 0 && (p = pgrp_member(pg, "pico8_64")) && access("/run/banana/pico8-splore", F_OK) == 0) {
+				close(open("/run/banana/pico8-back", O_WRONLY | O_CREAT, 0644));
+				sleep_log("back: PICO-8 back to Splore");
+				kill(p, SIGTERM);
+			}
+		}
 		/* started or woken with the lid shut, or shut during a download that is over now */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5 && !transfer_hold())
 			suspend_now(lid_held ? "lid closed, the download done" : "lid still closed");
