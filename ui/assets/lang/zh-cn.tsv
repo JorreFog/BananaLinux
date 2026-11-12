@@ -1789,7 +1789,6 @@ settings		The code ran out before it was approved. A asks for a new one.	配对�
 settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	找不到 {host}。请检查地址，以及此 Wi-Fi 能否访问 RomM 所在的网络。
 settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} 拒绝了连接。请检查端口，以及 HTTPS 或 HTTP。
 settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} 未及时响应。能否从此 Wi-Fi 访问它？请检查端口，以及 HTTPS 或 HTTP。
-settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	服务器的证书不受信任。若为自制证书，按 Y 关闭「检查证书」（或将你的 CA 证书以 homesync_ca 放到卡上）。
 settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	暂时无法检查证书：时钟尚未通过互联网校准。请连接 Wi-Fi 等待一分钟后重试。
 settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca 指定的文件无法读取：请在 banana/settings.conf 中检查。
 settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access 在那里要求登录。请放行 RomM 的 API：在 Access 中为 {host}/api 设置 Bypass 策略。你的手机仍需登录，以打开批准掌机的页面。
@@ -1803,9 +1802,7 @@ settings		No answer from {host} ({detail}).	{host} 没有响应（{detail}）。
 settings		RomM	RomM
 settings		Port (443 if empty)	端口（留空为 443）
 settings		Port (80 if empty)	端口（留空为 80）
-settings		Check certificate is off: Connect tries again.	「检查证书」已关闭：选择「连接」会再试一次。
 settings		Pairing code	配对码
-settings		Don't check	不检查
 settings		Use it	使用
 settings		Use a code	使用配对码
 settings		Home server > RomM	家庭服务器 > RomM
@@ -1846,3 +1843,22 @@ settings		Autosave	Autosave
 settings		A slot's name is letters, digits, spaces, - and _, up to 64.	槽位名称由字母、数字、空格、- 和 _ 组成，最多 64 个。
 settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	从下次同步起，存档与 Autosave 同步，与 Grout 和 RomM 页面相同。
 settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	从下次同步起，存档与 {slot} 同步。只有设为同一槽位的设备共享它们。
+# (trusting a server's own certificate, on RomM's address form, and a few lines said when the menu is kept waiting: a
+# machine-translated draft, for the translator to check in the next round)
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).	服务器的证书不受信任。若为自己制作的证书，按 Y 可查看该证书，并只信任这一张证书（或将你的 CA 证书以 homesync_ca 放到卡上）。
+settings		Certificate	证书
+settings		Trust this certificate?	信任此证书？
+settings		Trust it	信任
+settings		Issued to	颁发给
+settings		Issued by	颁发者
+settings		Valid	有效期
+settings		No authority vouches for it. Trust it only if it is your own server's: from then on this certificate, and no other, is accepted for this server.	没有任何机构为它担保。只有确认它是你自己服务器的证书时才信任：此后该服务器只接受这一张证书，不接受其他证书。
+settings		Reading the server's certificate...	正在读取服务器的证书...
+settings		The server's certificate couldn't be read. Check the address and try Connect again.	无法读取服务器的证书。请检查地址，然后再选择「连接」。
+settings		The certificate couldn't be kept on the card. Is the card full?	无法将证书保存到卡上。卡是否已满？
+settings		On, its own trusted	开，已信任其证书
+settings		A moment...	请稍候...
+settings		Still finishing the last search. Try Connect again in a moment.	上一次搜索尚未结束。请稍后再选择「连接」。
+settings		The pairing stopped by itself. A tries again.	配对自行停止了。按 A 重试。
+settings		The last name is still being set. Try again in a moment.	上一个名称仍在设置中。请稍后再试。
+settings		Couldn't unpair: the card didn't take the change. Try again.	无法取消配对：卡未能写入更改。请重试。

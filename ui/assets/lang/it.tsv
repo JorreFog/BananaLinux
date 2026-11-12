@@ -1738,7 +1738,6 @@ settings		The code ran out before it was approved. A asks for a new one.	Il codi
 settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	Impossibile trovare {host}. Controlla l'indirizzo, e che questo Wi-Fi raggiunga la rete su cui si trova RomM.
 settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} ha rifiutato la connessione. Controlla la porta, e HTTPS o HTTP.
 settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} non ha risposto in tempo. È raggiungibile da questo Wi-Fi? Controlla la porta, e HTTPS o HTTP.
-settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	Il certificato del server non è attendibile. Per un certificato creato da te, Y disattiva Verifica certificato (oppure metti il certificato della tua CA sulla scheda come homesync_ca).
 settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	Il certificato non può ancora essere verificato: l'orologio non è stato impostato da internet. Aspetta un minuto con il Wi-Fi e riprova.
 settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca indica un file che non si può leggere: controllalo in banana/settings.conf.
 settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access chiede un accesso lì. Lascia passare l'API di RomM: una policy Bypass per {host}/api in Access. Il telefono accede comunque, per la pagina che approva la console.
@@ -1752,9 +1751,7 @@ settings		No answer from {host} ({detail}).	Nessuna risposta da {host} ({detail}
 settings		RomM	RomM
 settings		Port (443 if empty)	Porta (443 se vuota)
 settings		Port (80 if empty)	Porta (80 se vuota)
-settings		Check certificate is off: Connect tries again.	Verifica certificato è disattivata: Connetti riprova.
 settings		Pairing code	Codice di associazione
-settings		Don't check	Non verificare
 settings		Use it	Usalo
 settings		Use a code	Usa un codice
 settings		Home server > RomM	Server di casa > RomM
@@ -1795,3 +1792,22 @@ settings		Autosave	Autosave
 settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Il nome di uno slot è fatto di lettere, cifre, spazi, - e _, fino a 64.
 settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Dalla prossima sincronizzazione i salvataggi si sincronizzano con Autosave, come quelli di Grout e della pagina di RomM.
 settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Dalla prossima sincronizzazione i salvataggi si sincronizzano con {slot}. Solo i dispositivi impostati sullo stesso slot li condividono.
+# (trusting a server's own certificate, on RomM's address form, and a few lines said when the menu is kept waiting: a
+# machine-translated draft, for the translator to check in the next round)
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).	Il certificato del server non è attendibile. Per un certificato creato da te, Y lo mostra, per fidarti di quel solo certificato (oppure metti il certificato della tua CA sulla scheda come homesync_ca).
+settings		Certificate	Certificato
+settings		Trust this certificate?	Fidarsi di questo certificato?
+settings		Trust it	Fidati
+settings		Issued to	Rilasciato a
+settings		Issued by	Rilasciato da
+settings		Valid	Valido
+settings		No authority vouches for it. Trust it only if it is your own server's: from then on this certificate, and no other, is accepted for this server.	Nessuna autorità lo garantisce. Fidati solo se è quello del tuo server: da quel momento per questo server viene accettato questo certificato e nessun altro.
+settings		Reading the server's certificate...	Lettura del certificato del server...
+settings		The server's certificate couldn't be read. Check the address and try Connect again.	Impossibile leggere il certificato del server. Controlla l'indirizzo e riprova con Connetti.
+settings		The certificate couldn't be kept on the card. Is the card full?	Impossibile salvare il certificato sulla scheda. La scheda è piena?
+settings		On, its own trusted	Sì, il suo è attendibile
+settings		A moment...	Un momento...
+settings		Still finishing the last search. Try Connect again in a moment.	L'ultima ricerca sta ancora finendo. Riprova Connetti tra un momento.
+settings		The pairing stopped by itself. A tries again.	L'associazione si è interrotta da sola. A riprova.
+settings		The last name is still being set. Try again in a moment.	L'ultimo nome è ancora in fase di impostazione. Riprova tra un momento.
+settings		Couldn't unpair: the card didn't take the change. Try again.	Impossibile annullare l'associazione: la scheda non ha accettato la modifica. Riprova.

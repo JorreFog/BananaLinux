@@ -1738,7 +1738,6 @@ settings		The code ran out before it was approved. A asks for a new one.	Koodi v
 settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	Osoitetta {host} ei löydy. Tarkista osoite ja että tämä Wi-Fi yltää verkkoon, jossa RomM on.
 settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} kieltäytyi yhteydestä. Tarkista portti sekä HTTPS tai HTTP.
 settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} ei vastannut ajoissa. Onko se tavoitettavissa tästä Wi-Fistä? Tarkista portti sekä HTTPS tai HTTP.
-settings		The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).	Palvelimen varmenteeseen ei luoteta. Itse tehdylle varmenteelle Y kytkee pois Tarkista varmenne -asetuksen (tai laita CA:si varmenne kortille nimellä homesync_ca).
 settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	Varmennetta ei voi vielä tarkistaa: kelloa ei ole asetettu internetistä. Odota minuutti Wi-Fissä ja yritä uudelleen.
 settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca viittaa tiedostoon, jota ei voi lukea: tarkista se tiedostosta banana/settings.conf.
 settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access pyytää siellä kirjautumista. Päästä RomMin API läpi: Bypass-käytäntö osoitteelle {host}/api Accessissa. Puhelimesi kirjautuu silti sivulle, jolla käsikonsoli hyväksytään.
@@ -1752,9 +1751,7 @@ settings		No answer from {host} ({detail}).	Ei vastausta kohteelta {host} ({deta
 settings		RomM	RomM
 settings		Port (443 if empty)	Portti (443, jos tyhjä)
 settings		Port (80 if empty)	Portti (80, jos tyhjä)
-settings		Check certificate is off: Connect tries again.	Tarkista varmenne on pois: Yhdistä yrittää uudelleen.
 settings		Pairing code	Parituskoodi
-settings		Don't check	Älä tarkista
 settings		Use it	Käytä sitä
 settings		Use a code	Käytä koodia
 settings		Home server > RomM	Kotipalvelin > RomM
@@ -1795,3 +1792,22 @@ settings		Autosave	Autosave
 settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Paikan nimi on kirjaimia, numeroita, välilyöntejä, - ja _, enintään 64.
 settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Tallennukset synkronoidaan Autosaven kanssa seuraavasta synkronoinnista alkaen, kuten Groutin ja RomMin sivun.
 settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Tallennukset synkronoidaan paikan {slot} kanssa seuraavasta synkronoinnista alkaen. Vain samaan paikkaan asetetut laitteet jakavat ne.
+# (trusting a server's own certificate, on RomM's address form, and a few lines said when the menu is kept waiting: a
+# machine-translated draft, for the translator to check in the next round)
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).	Palvelimen varmenteeseen ei luoteta. Jos varmenne on itse tekemäsi, Y näyttää sen, jotta voit luottaa juuri siihen varmenteeseen (tai laita CA:si varmenne kortille nimellä homesync_ca).
+settings		Certificate	Varmenne
+settings		Trust this certificate?	Luotetaanko tähän varmenteeseen?
+settings		Trust it	Luota
+settings		Issued to	Myönnetty
+settings		Issued by	Myöntäjä
+settings		Valid	Voimassa
+settings		No authority vouches for it. Trust it only if it is your own server's: from then on this certificate, and no other, is accepted for this server.	Mikään varmentaja ei takaa sitä. Luota siihen vain, jos se on oman palvelimesi: sen jälkeen tälle palvelimelle hyväksytään tämä varmenne eikä mitään muuta.
+settings		Reading the server's certificate...	Luetaan palvelimen varmennetta...
+settings		The server's certificate couldn't be read. Check the address and try Connect again.	Palvelimen varmennetta ei voitu lukea. Tarkista osoite ja yritä Yhdistä uudelleen.
+settings		The certificate couldn't be kept on the card. Is the card full?	Varmennetta ei voitu tallentaa kortille. Onko kortti täynnä?
+settings		On, its own trusted	Päällä, oma luotettu
+settings		A moment...	Hetki...
+settings		Still finishing the last search. Try Connect again in a moment.	Edellinen haku on vielä kesken. Yritä Yhdistä hetken päästä uudelleen.
+settings		The pairing stopped by itself. A tries again.	Paritus pysähtyi itsestään. A yrittää uudelleen.
+settings		The last name is still being set. Try again in a moment.	Edellistä nimeä asetetaan vielä. Yritä hetken päästä uudelleen.
+settings		Couldn't unpair: the card didn't take the change. Try again.	Parituksen purku ei onnistunut: kortti ei ottanut muutosta vastaan. Yritä uudelleen.
