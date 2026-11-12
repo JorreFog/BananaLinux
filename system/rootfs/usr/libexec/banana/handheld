@@ -1,0 +1,105 @@
+#!/bin/sh
+# The handheld's own extras, where it has them (the AYN Thor's under ROCKNIX: a fan, RGB rings round the sticks, a GPU
+# that can clock higher), for Settings > Handheld. The work is ROCKNIX's tools': fancontrol (its cooling.profile), the
+# Thor's ledcontrol and analog_sticks_ledcontrol, the SM8550's gpu_overclock; its settings are kept the same, so its own
+# menus and its boot agree.
+#   handheld caps                         what this handheld has, a word a line: fan, leds, gpuboost
+#   handheld fan quiet|moderate|aggressive|custom
+#   handheld leds off|battery|system|<colour> [low|medium|high]
+#                                         the stick lights: off, the battery's colour (ROCKNIX's), the colour of the
+#                                         system playing (run-rocknix, at a game's start), or one colour: yellow, red,
+#                                         green, blue, purple, pink, cyan, white
+#   handheld leds-effect none|breathe     the lights breathing (a slow pulse) or steady
+#   handheld leds-system <system>         (run-rocknix) the lights in the system's colour, when "system" is chosen
+#   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz)
+# (host tests: BANANA_SYS for /sys, BANANA_TOOLS for ROCKNIX's tools, ROCKNIX_SETTINGS for its settings file)
+SYS=${BANANA_SYS:-/sys}
+TOOLS=${BANANA_TOOLS:-/usr/bin}
+DATA=${BANANA_DATA:-/data/banana}
+RUN=${BANANA_RUN:-/run/banana}
+LED=$SYS/devices/platform
+setting() {
+    if [ -n "$ROCKNIX_SETTINGS" ]; then { grep -vF "$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
+    elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$1" "$2" ) >/dev/null 2>&1; fi
+}
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+has_fan() { ls "$SYS"/class/hwmon/hwmon*/pwm1 >/dev/null 2>&1; }
+has_leds() { [ -d "$LED/multi-ledl1" ] && [ -d "$LED/multi-ledr1" ]; }
+has_gpu() { [ -x "$TOOLS/gpu_overclock" ]; }
+# a colour's red, green and blue
+rgb() {
+    case $1 in
+    yellow) echo "255 190 0" ;; red) echo "255 0 0" ;; green) echo "0 255 0" ;; blue) echo "0 0 255" ;;
+    purple) echo "160 0 255" ;; pink) echo "255 60 150" ;; cyan) echo "0 220 255" ;; white) echo "255 255 255" ;;
+    *) echo "255 190 0" ;;
+    esac
+}
+level() { case $1 in low) echo 64 ;; high) echo 255 ;; *) echo 140 ;; esac; }
+# each system's colour, the way its maker's machines look (the rest: the banana's yellow)
+system_colour() {
+    case $1 in
+    nds|ndsiware|3ds|n3ds|gb|gbh|gbc|gbch|gba|gbah|snes|sfc|nes|famicom|fds|n64|gamecube|wii|wiiu|switch|virtualboy|pokemini|gameandwatch) echo red ;;
+    megadrive|genesis|mastersystem|gamegear|sega32x|segacd|megacd|saturn|dreamcast|naomi|atomiswave|sg-1000) echo blue ;;
+    psx|ps2|psp|pspminis|psvita|ps3) echo cyan ;;
+    pcengine|tg16|pcenginecd|tg16cd|supergrafx|pcfx) echo purple ;;
+    arcade|mame|fbneo|fbn|cps1|cps2|cps3|neogeo|neocd) echo pink ;;
+    *) echo yellow ;;
+    esac
+}
+paint() {   # paint <colour> <brightness 0-255>: both rings
+    set -- $(rgb "$1") "$2"
+    "$TOOLS/analog_sticks_ledcontrol" "$4" "$1" "$2" "$3" "$1" "$2" "$3" >/dev/null 2>&1
+    setting analogsticks.led "$4 $1 $2 $3 $1 $2 $3"
+}
+stop_effect() { [ -f "$RUN/leds-effect.pid" ] && kill "$(cat "$RUN/leds-effect.pid")" 2>/dev/null; rm -f "$RUN/leds-effect.pid"; }
+
+case $1 in
+caps)
+    has_fan && echo fan
+    has_leds && echo leds
+    has_gpu && echo gpuboost
+    ;;
+fan)
+    case $2 in quiet|moderate|aggressive|custom) ;; *) echo "handheld fan quiet|moderate|aggressive|custom" >&2; exit 2 ;; esac
+    setting cooling.profile "$2"
+    ${BANANA_SYSTEMCTL:-systemctl} restart fancontrol >/dev/null 2>&1
+    ;;
+leds)
+    has_leds || exit 0
+    lvl=$(level "${3:-$(conf leds_level)}")
+    case $2 in
+    off) stop_effect; "$TOOLS/ledcontrol" off >/dev/null 2>&1; setting led.color off ;;
+    battery) stop_effect; "$TOOLS/ledcontrol" battery >/dev/null 2>&1; setting led.color battery ;;
+    system) paint "$(system_colour "$(cat "$RUN/leds-system" 2>/dev/null)")" "$lvl"; setting led.color rgb ;;
+    *) paint "$2" "$lvl"; setting led.color rgb ;;
+    esac
+    [ "$2" != off ] && [ "$2" != battery ] && [ "$(conf leds_effect)" = breathe ] && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds-effect breathe
+    ;;
+leds-system)
+    mkdir -p "$RUN"; echo "$2" > "$RUN/leds-system"
+    [ "$(conf leds)" = system ] && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds system
+    ;;
+leds-effect)
+    stop_effect
+    [ "$2" = breathe ] || exit 0
+    has_leds || exit 0
+    # a slow pulse of the rings' brightness, in the background (their colours as set)
+    top=$(level "$(conf leds_level)")
+    (
+        while :; do
+            for b in 8 16 32 48 64 96 128 160 192 224 255 224 192 160 128 96 64 48 32 16; do
+                v=$(( b * top / 255 ))
+                for s in l r; do for n in 1 2 3 4; do echo $v > "$LED/multi-led$s$n/leds/rgb:$s$n/brightness" 2>/dev/null; done; done
+                sleep 0.1
+            done
+        done
+    ) </dev/null >/dev/null 2>&1 &
+    mkdir -p "$RUN"; echo $! > "$RUN/leds-effect.pid"
+    ;;
+gpu)
+    has_gpu || exit 0
+    case $2 in on) "$TOOLS/gpu_overclock" enable ;; off) "$TOOLS/gpu_overclock" disable ;; *) exit 2 ;; esac >/dev/null 2>&1
+    ;;
+*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off" >&2; exit 2 ;;
+esac
+exit 0

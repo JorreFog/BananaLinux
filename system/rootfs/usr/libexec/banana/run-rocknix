@@ -25,6 +25,9 @@ if read -r gov gpu < "$RUN/perf" 2>/dev/null && [ -n "$gov" ]; then
     setting "$g.gpuperf" "$gpu"
 fi
 
+# the stick lights in the system's colour (when Settings > Handheld > Stick lights is "By system")
+"$LIB/handheld" leds-system "$SYSTEM" >/dev/null 2>&1
+
 # the bottom screen
 bottom=$(conf bottom_in_games); [ -n "$bottom" ] || bottom=auto
 case $SYSTEM in nds|ndsiware|3ds|n3ds|gameandwatch|wiiu|dsi) two=1 ;; *) two= ;; esac

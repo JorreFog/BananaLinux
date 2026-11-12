@@ -475,6 +475,13 @@ namespace banana
 		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
+		// (as ROCKNIX's frontend, where its games are started by run-rocknix: start_banana.sh says so)
+		if (getenv("BANANA_ROCKNIX"))
+		{
+			add(D, "picture", "Bottom screen in games", "Whether the bottom screen stays lit while a game plays.", menu, "bottom_in_games",
+				{ "Auto", "On", "Off" }, { "auto", "on", "off" });
+			items.back().hints = { "Lit for the two-screen systems (DS, 3DS, Game & Watch), dark for the rest: saves battery.", "Always lit.", "Always dark while a game plays." };
+		}
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
@@ -508,6 +515,44 @@ namespace banana
 		add(P, "moon", "Waking up", "How the handheld wakes from sleep.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		items.back().hints = { "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." };
+		// the handheld's own extras where it has them (usr/libexec/banana/handheld caps: the AYN Thor's fan, stick lights and
+		// GPU under ROCKNIX), on a page of their own
+		{
+			std::string caps;
+			const char* hh = getenv("BANANA_HANDHELD");	// (a stand-in for the tests)
+			if (FILE* f = popen((std::string(hh && *hh ? hh : "/usr/libexec/banana/handheld") + " caps 2>/dev/null").c_str(), "r"))
+			{
+				char buf[64];
+				while (fgets(buf, sizeof buf, f)) caps += buf;
+				pclose(f);
+			}
+			if (!caps.empty())
+			{
+				add(P, "gear", "Fan, lights & speed", "The fan, the lights round the sticks and the GPU's top speed.", "", "handheld", {}, {}, Item::PAGE);
+				const char* HH = "Fan, lights & speed";
+				if (caps.find("fan") != std::string::npos)
+				{
+					add(HH, "gear", "Fan", "How soon and how hard the fan spins as the handheld warms up.", menu, "fan",
+						{ "Quiet", "Balanced", "Strong" }, { "quiet", "moderate", "aggressive" });
+					items.back().hints = { "Spins up late: the quietest, the handheld runs warmer.", "In between.", "Spins up early and fast: the coolest, and the loudest." };
+				}
+				if (caps.find("leds") != std::string::npos)
+				{
+					add(HH, "gear", "Stick lights", "The lights round the two sticks.", menu, "leds",
+						{ "Off", "Battery", "By system", "Yellow", "Red", "Green", "Blue", "Purple", "Pink", "Cyan", "White" },
+						{ "off", "battery", "system", "yellow", "red", "green", "blue", "purple", "pink", "cyan", "white" });
+					items.back().hints = { "No light.", "The battery's colour: green, red when low, amber while charging.", "The colour of the system that's playing (Nintendo red, Sega blue, PlayStation cyan...).",
+						"Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour." };
+					add(HH, "gear", "Light brightness", "How bright the stick lights are.", menu, "leds_level", { "Low", "Medium", "High" }, { "low", "medium", "high" });
+					add(HH, "gear", "Light effect", "Whether the stick lights glow steadily or breathe.", menu, "leds_effect", { "Steady", "Breathing" }, { "none", "breathe" });
+				}
+				if (caps.find("gpuboost") != std::string::npos)
+				{
+					add(HH, "gear", "GPU boost", "The graphics chip's top speed, for the heaviest games.", menu, "gpu_boost", { "Off", "On" }, { "off", "on" });
+					items.back().hints = { "As shipped: cooler and longer on the battery.", "Higher (1 GHz): smoother in the heaviest 3D games, warmer, more battery." };
+				}
+			}
+		}
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
@@ -1247,6 +1292,14 @@ namespace banana
 		}
 		if (it.key == "bt_audio") spawn(btTool.c_str(), "audio");	// (nothing while Bluetooth is off: read at its next up)
 		if (it.key == "ssh") spawn("/usr/libexec/banana/ssh", v == "on" ? "up" : "down");
+		if (it.key == "fan") spawn("/usr/libexec/banana/handheld", "fan", v.c_str());
+		if (it.key == "leds" || it.key == "leds_level" || it.key == "leds_effect")
+		{
+			const std::string leds = getConfValue(data + "/settings.conf", "leds", "system");
+			if (it.key == "leds_effect" && v == "none") spawn("/usr/libexec/banana/handheld", "leds-effect", "none");
+			spawn("/usr/libexec/banana/handheld", "leds", leds.c_str());
+		}
+		if (it.key == "gpu_boost") spawn("/usr/libexec/banana/handheld", "gpu", v.c_str());
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
 		if (it.key == "sd2_roms") spawn("/usr/libexec/banana/sd2", "scan");
@@ -1275,6 +1328,7 @@ namespace banana
 				{ "sys_updates", "Updates" },
 				{ "sys_boxart", "Box art" },
 				{ "menu_look", "Menu look" },
+				{ "handheld", "Fan, lights & speed" },
 				{ "ds_buttons", "DS buttons" },
 				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },

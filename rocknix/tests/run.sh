@@ -20,6 +20,7 @@ sh -n "$HERE/../tools/rocknix-banana.sh" || { echo "FAIL rocknix: rocknix-banana
 sh "$HERE/tests/services.sh" || fail=1
 sh "$HERE/tests/backlight.sh" || fail=1
 sh "$HERE/tests/perf.sh" || fail=1
+sh "$HERE/tests/handheld.sh" || fail=1
 bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

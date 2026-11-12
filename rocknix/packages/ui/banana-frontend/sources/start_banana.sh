@@ -28,6 +28,14 @@ set -- $(BANANA_TOP="${WLR_CON:-DSI-2}" /usr/libexec/banana/backlight names)
 [ "$2" != - ] && export BANANA_BACKLIGHT_BOTTOM="$2"
 /usr/libexec/banana/backlight restore 2>>"${LOG}"
 
+# the stick lights and the GPU boost as Settings > Sleep & power > Fan, lights & speed keeps them (the fan's profile is
+# ROCKNIX's own setting, which its fancontrol reads at boot)
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "${DATA}/settings.conf" 2>/dev/null | tail -n 1; }
+/usr/libexec/banana/handheld leds "$(conf leds || true)" >/dev/null 2>&1
+[ "$(conf gpu_boost)" = on ] && /usr/libexec/banana/handheld gpu on >/dev/null 2>&1
+# Settings' rows for a frontend whose games run through run-rocknix
+export BANANA_ROCKNIX=1
+
 # both screens as windows (src/kms_sdl.cpp): the top one on sway's main output (WLR_CON, the 095-sway profile's),
 # the other on the second
 export BANANA_DISPLAY=sdl SDL_VIDEODRIVER=wayland

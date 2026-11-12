@@ -21,7 +21,7 @@ mkdir -p "$P/sources/ui"
 # BananaOS's system scripts the menu runs, in their services mode on ROCKNIX (see the package)
 rm -rf "$P/sources/libexec" "$P/sources/sleep.d"
 mkdir -p "$P/sources/libexec" "$P/sources/sleep.d"
-for f in wifi wifi-nm bluetooth volume update ssh share sd2 sound-server hw-probe backlight run-rocknix ra-reset ra-secrets nds-saves nds-reset \
+for f in wifi wifi-nm bluetooth volume update ssh share sd2 sound-server hw-probe backlight run-rocknix handheld ra-reset ra-secrets nds-saves nds-reset \
          nds-buttons nds-game-option nds-game-shader saves-flat systems-merge kv-env; do
     [ -f "$HERE/system/rootfs/usr/libexec/banana/$f" ] && cp "$HERE/system/rootfs/usr/libexec/banana/$f" "$P/sources/libexec/"
 done

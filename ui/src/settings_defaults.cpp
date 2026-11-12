@@ -36,6 +36,12 @@ namespace banana
 		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
+		// the handheld's extras (Sleep & power > Fan, lights & speed: usr/libexec/banana/handheld)
+		const char* const FAN[] = { "quiet", "moderate", "aggressive", nullptr };
+		const char* const LEDS[] = { "off", "battery", "system", "yellow", "red", "green", "blue", "purple", "pink", "cyan", "white", nullptr };
+		const char* const LEDS_LEVEL[] = { "low", "medium", "high", nullptr };
+		const char* const LEDS_EFFECT[] = { "none", "breathe", nullptr };
+		const char* const BOTTOM_GAMES[] = { "auto", "on", "off", nullptr };
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
@@ -100,6 +106,12 @@ namespace banana
 			{ "share", "off", ENUM, ON_OFF, 0, 0 },
 			{ "share_login", "password", ENUM, LOGIN, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
+			{ "fan", "quiet", ENUM, FAN, 0, 0 },
+			{ "leds", "system", ENUM, LEDS, 0, 0 },
+			{ "leds_level", "medium", ENUM, LEDS_LEVEL, 0, 0 },
+			{ "leds_effect", "none", ENUM, LEDS_EFFECT, 0, 0 },
+			{ "gpu_boost", "off", ENUM, ON_OFF, 0, 0 },
+			{ "bottom_in_games", "auto", ENUM, BOTTOM_GAMES, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
 			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },
