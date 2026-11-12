@@ -170,7 +170,9 @@ namespace rnds
 		std::map<std::string, std::string> sounds;	// scroll, select, back, fav, ready, insert -> .wav, or "off"
 		bool dither = true;							// the screens' dot pattern
 		// Settings' panels: "" the Pixel look (banded, thick outlines, hard shadows), "flat" flat ones with a hairline
-		// edge and a highlight along the top (the Thor OLED theme: lit surfaces on true black)
+		// edge and a highlight along the top; "material" Thor OLED's (a dark gradient lit along its top edge, a hairline
+		// inside it, the selection on the accent's plate or in an accent ring, button hints shaped like the buttons,
+		// labels in Inter)
 		std::string panels;
 		// Settings, the setup, the keyboard and the game panel in a theme's own way (its "settings" member; empty: the
 		// Pixel look's, as the RG DS's themes have it):
@@ -181,6 +183,11 @@ namespace rnds
 		std::string setHints;		// "pill": B / A as pills with a round key, A's edge in the accent
 		std::string setHeader;		// "rule": a page's title over a hairline instead of in a box
 		std::string bodyFont;		// the help texts' font (.ttf; "" the theme's regular one)
+		// "screen": Settings' pages laid out on each screen's own shape (the AYN Thor's: the bottom screen's pages from
+		// edge to edge with the title at the top and the hints at the bottom, the top screen's as a crumb, a large title
+		// and the help under it); "" in the 4:3 canvas
+		std::string setLayout;
+		std::string setGlyphs;		// a folder of line icons (<name>-32.png, <name>-88.png: white, tinted) for rows and tiles; "" none
 		// the moments between screens ("transitions": "fade"): smooth fades instead of the iris and the stepped fades
 		std::string transitions;
 	};

@@ -2311,7 +2311,8 @@ static void openInput(Input& input, const Display& disp, const SoftBackend& be, 
 			float cx, cy;
 			if (!disp.touchToCanvas(s, nx, ny, wide, cx, cy)) return false;
 			if (!be.staged(s)) { x = cx; y = cy; return true; }
-			return be.screenToCanvas(s, cx, cy, x, y);
+			// (a theme that lays its pages out on the whole screen: a touch outside the canvas counts too)
+			return be.screenToCanvas(s, cx, cy, x, y) || rnds::themeFiles.setLayout == "screen";
 		});
 }
 

@@ -293,7 +293,7 @@ namespace banana
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
 			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + "|" + f.panels +
-				"|" + f.setTop + "|" + std::to_string(f.setLeft) + "|" + f.setIcons + "|" + f.setPick + "|" + f.setHints + "|" + f.setHeader + "|" + f.bodyFont;
+				"|" + f.setTop + "|" + std::to_string(f.setLeft) + "|" + f.setIcons + "|" + f.setPick + "|" + f.setHints + "|" + f.setHeader + "|" + f.bodyFont + "|" + f.setLayout + "|" + f.setGlyphs;
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
@@ -323,6 +323,14 @@ namespace banana
 
 	void Settings::loadBody()
 	{
+		shift.lay = rnds::themeFiles.setLayout == "screen";
+		// the material look's labels: Inter (the menu's own)
+		if (rnds::themeFiles.panels == "material" && (!IM || !IR))
+		{
+			const std::string dir = fontDir.empty() ? assets + "/../banana/fonts" : fontDir;
+			IM = rnds::Font::load(dir + "/Inter-Medium.ttf");
+			IR = rnds::Font::load(dir + "/Inter-Regular.ttf");
+		}
 		// the help texts' own font (a theme's settings.bodyFont: Inter by name, or a .ttf of the theme's)
 		const std::string& bf = rnds::themeFiles.bodyFont;
 		if (bf != bodyLoaded)
@@ -1583,7 +1591,7 @@ namespace banana
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
 				for (size_t i = 0; i < items.size(); i++) if (items[i].key == "about") sel = (int)i;
-				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+				top = std::max(groupStart(groupOf(sel)), sel - listRows() + 1);
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
 			}
@@ -1740,7 +1748,7 @@ namespace banana
 		const std::string action = emulator ? "reset_emulator" : "reset_system";
 		sel = 0;
 		for (size_t i = 0; i < items.size(); i++) if (items[i].key == action) { sel = (int)i; break; }
-		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - ROWS)));
+		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - listRows())));
 		armed = -1;
 
 		toast(emulator ? "Emulator settings reset" : "System settings reset",
@@ -1789,7 +1797,7 @@ namespace banana
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
 			if (sel < top) top = sel;
-			if (sel >= top + ROWS) top = sel - ROWS + 1;
+			if (sel >= top + listRows()) top = sel - listRows() + 1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
@@ -1797,12 +1805,12 @@ namespace banana
 		{
 			// a page of the group's list at a time (the rows in view), stopping at its first and last rows (the groups
 			// are B's grid; L/R went to the next group's list, one more thing the list didn't say)
-			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? ROWS : -ROWS)));
+			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? listRows() : -listRows())));
 			if (to == sel) return NONE;
 			sel = to;
 			armed = -1;
 			if (sel < top) top = sel;
-			if (sel >= top + ROWS) top = sel - ROWS + 1;
+			if (sel >= top + listRows()) top = sel - listRows() + 1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
@@ -1816,7 +1824,7 @@ namespace banana
 			{
 				message.clear();
 				for (size_t i = 0; i < items.size(); i++) if (items[i].key == s->key) sel = (int)i;
-				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+				top = std::max(groupStart(groupOf(sel)), sel - listRows() + 1);
 				armed = -1;
 				return MOVED;
 			}
@@ -1928,6 +1936,7 @@ namespace banana
 
 	Settings::Result Settings::touch(float x, float y, bool down)
 	{
+		shift.untouch(x, y);
 		float cx = x / s, cy = y / s;
 		if (down) { downX = cx; downY = cy; downOnRow = true; return NONE; }
 		if (!downOnRow) return NONE;
@@ -2004,10 +2013,11 @@ namespace banana
 		if (inGroups)
 		{
 			if (downY >= 418 && downY <= 466) return pressGroups(downX < 220 ? Key::B : downX < 420 ? Key::Y : Key::A);
+			const Measures m = measures();
 			for (int g = 0; g < gridCount(); g++)
 			{
-				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
-				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
+				float x = 18 + (g % 3) * m.gridPX, y = m.gridY + (g / 3) * m.gridPY;
+				if (downX < x || downX > x + m.gridW || downY < y || downY > y + m.gridH) continue;
 				if (g != gsel) { gsel = g; return MOVED; }
 				return pressGroups(Key::A);
 			}
@@ -2020,10 +2030,11 @@ namespace banana
 			if (downX < 320) return press(Key::B);
 			return change(1);
 		}
-		for (int r = 0; r < ROWS && top + r < gEnd; r++)
+		const Measures lm = measures();
+		for (int r = 0; r < listRows() && top + r < gEnd; r++)
 		{
-			float ry = 82 + r * 64;
-			if (downY < ry || downY > ry + 56) continue;
+			float ry = lm.rowY + r * lm.rowPitch;
+			if (downY < ry || downY > ry + lm.rowH) continue;
 			int i = top + r;
 			if (i != sel) { sel = i; armed = -1; return MOVED; }
 			// the selected row: its value's left half steps back, the rest forward
@@ -2033,8 +2044,8 @@ namespace banana
 		if (std::fabs(cy - downY) > 40)
 		{
 			int gb = groupStart(groupOf(sel));
-			top = std::max(gb, std::min(std::max(gb, gEnd - ROWS), top + (cy < downY ? ROWS : -ROWS)));
-			sel = std::max(top, std::min(sel, top + ROWS - 1));
+			top = std::max(gb, std::min(std::max(gb, gEnd - listRows()), top + (cy < downY ? listRows() : -listRows())));
+			sel = std::max(top, std::min(sel, top + listRows() - 1));
 			return MOVED;
 		}
 		return NONE;
@@ -2094,6 +2105,11 @@ namespace banana
 		// a screen's background over the whole canvas: over the whole screen when it is another shape (rnds::screenArea)
 		const bool wholeScreen = kind == "screen" && x == 0 && y == 0 && w == 640 && h == 480;
 		if (wholeScreen) rnds::screenArea(be, s, x, y, w, h);
+		if (material() && mbox(kind, on, x, y, w, h))
+		{
+			if (wholeScreen && chrome && shift.screen >= 0) chrome(shift.screen);
+			return;
+		}
 		SPal p = pal(light);
 		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		std::string key = "box:" + kind + (on ? "1" : "0") + ":" + std::to_string(dw) + "x" + std::to_string(dh);
@@ -2272,11 +2288,30 @@ namespace banana
 	float Settings::text(const std::string& t, bool medium, float size, float x, float top, const Color& c, bool upper, float ls, bool measureOnly)
 	{
 		if (t.empty()) return 0;
-		rnds::TextStyle st;
 		const bool body = bodyNow && !medium && B;
-		st.font = medium ? M : body ? B : R; st.size = size; st.letterSpacing = ls; st.upper = upper;
+		std::shared_ptr<rnds::Font> font = medium ? M : body ? B : R;
+		const char* tag = medium ? "|m" : body ? "|b" : "|r";
+		if (material())
+		{
+			// (the top screen's header, drawn at x 170 beside the icon: a crumb, the title large, the value after the crumb)
+			if (lay() && shift.screen == 0 && x == 170 && !measureOnly) return headText(t, size, c);
+			const float was = size;
+			role(medium, size, font, upper, ls);
+			if (font == IM) tag = "|im"; else if (font == IR) tag = "|ir";
+			if (size < was && !measureOnly) top += (was - size) * 0.5f;	// (a smaller face in the old one's line)
+		}
+		return textWith(t, font, tag, size, x, top, c, upper, ls, measureOnly);
+	}
+
+	float Settings::textWith(const std::string& t, const std::shared_ptr<rnds::Font>& font, const char* tag, float size, float x, float top, const Color& c, bool upper, float ls, bool measureOnly)
+	{
+		if (t.empty()) return 0;
+		rnds::TextStyle st;
+		st.font = font; st.size = size; st.letterSpacing = ls; st.upper = upper;
 		if (!st.font) return 0;
-		std::string key = "txt:" + t + (medium ? "|m" : body ? "|b" : "|r") + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls) + (rawText ? "|raw" : "");
+		const float rk = shift.rk();	// (a staged screen laid out the theme's way: the line made for its own pixels)
+		std::string key = "txt:" + t + tag + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls) + (rawText ? "|raw" : "");
+		if (rk != 1) key += "@" + std::to_string(rk);
 		auto it = cache.find(key);
 		bool fresh = it == cache.end();
 		if (fresh) it = put(key, Cached(), rnds::Bitmap());
@@ -2293,7 +2328,7 @@ namespace banana
 			if (!measureOnly)
 			{
 				float asc = st.font->ascent(size), desc = st.font->descent(size), lh = asc + desc;
-				rnds::TextBitmap tb = rnds::renderLine(l, st, s, asc + std::floor((lh - (asc + desc)) / 2));
+				rnds::TextBitmap tb = rnds::renderLine(l, st, rk != 1 ? s * rk : s, asc + std::floor((lh - (asc + desc)) / 2));
 				if (!tb.bmp.empty()) cc.tex = be->upload(tb.bmp, true);
 				cc.ox = tb.padX; cc.oy = tb.padY;
 				cc.drawn = true;
@@ -2302,8 +2337,41 @@ namespace banana
 			}
 		}
 		if (!measureOnly && cc.tex)
-			be->draw(cc.tex, std::floor(X(x)) - cc.ox, std::floor(X(top)) - cc.oy, (float)cc.tex->w, (float)cc.tex->h, c);
+		{
+			if (rk != 1) be->draw(cc.tex, X(x) - cc.ox / rk, X(top) - cc.oy / rk, cc.tex->w / rk, cc.tex->h / rk, c);
+			else be->draw(cc.tex, std::floor(X(x)) - cc.ox, std::floor(X(top)) - cc.oy, (float)cc.tex->w, (float)cc.tex->h, c);
+		}
 		return cc.w;
+	}
+
+	// the material look's top screen: what a page draws as its header (a section in small capitals, the name, a value
+	// in the accent, beside an icon) is a crumb, the name as a large title under it, and the value after the crumb
+	float Settings::headText(const std::string& t, float size, const Color& c)
+	{
+		SPal p = pal(light);
+		const float crumbY = px(200), crumbSize = px(32);
+		if (size < 18)
+		{
+			float w = textWith(t, IR, "|ir", crumbSize, HELP_X, crumbY, mcol("ink2"));
+			crumbEnd = HELP_X + w;
+			return w;
+		}
+		if (size >= 29)
+		{
+			// as large as fits the screen's width (96 px, down to 56)
+			float ax, ay, aw, ah;
+			rnds::screenArea(be, s, ax, ay, aw, ah);
+			const float room = aw + 2 * ax - 2 * HELP_X;	// (the same margin at the right as at the left)
+			float z = px(96), w = 0;
+			for (; z >= px(56); z -= px(8)) if ((w = textWith(t, M, "|m", z, 0, 0, c, false, 0, true)) <= room) break;
+			return textWith(t, M, "|m", std::max(z, px(56)), HELP_X, px(250), c);
+		}
+		const Color vc = (c.r == p.accent.r && c.g == p.accent.g && c.b == p.accent.b) ? p.ink : c;
+		float x = crumbEnd;
+		{ AsNamed raw(*this); x += textWith("  \xc2\xb7  ", IR, "|ir", crumbSize, x, crumbY, mcol("ink2")); }
+		float w = textWith(t, IR, "|ir", crumbSize, x, crumbY, vc);
+		crumbEnd = x + w;
+		return w;
 	}
 
 	// UTF-32 back to UTF-8 (a laid out line, a cut: for the cache's keys and text())
@@ -2325,8 +2393,15 @@ namespace banana
 		rnds::TextStyle st;
 		st.font = B ? B : R; st.size = size;
 		if (!st.font) return;
-		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
 		float lh = std::round(size * 1.4f);
+		if (material())
+		{
+			// (Inter at the look's size, lines one and a half high)
+			bool up = false; float ls = 0;
+			role(false, st.size, st.font, up, ls);
+			lh = std::round(st.size * 1.5f);
+		}
+		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
 		bodyNow = true;	// (in the theme's body font, when it has one)
 		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
 		bodyNow = false;
@@ -2339,6 +2414,13 @@ namespace banana
 		auto it = cache.find("icon:" + name);
 		if (it == cache.end() || !it->second.tex) return;
 		int k = std::max(1, (int)std::lround(scale * s));
+		if (const float rk = shift.rk(); rk != 1 || iconPx > 0)
+		{
+			const int ks = iconPx > 0 ? iconPx : std::max(1, (int)std::lround(scale * s * rk));
+			const float w = it->second.tex->w * ks / rk;
+			be->draw(it->second.tex, X(cx) - w / 2, X(y), w, it->second.tex->h * ks / rk, Color(1, 1, 1, 1));
+			return;
+		}
 		float w = (float)it->second.tex->w * k;	// device px
 		be->draw(it->second.tex, std::round(X(cx) - w / 2), std::round(X(y)), w, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
 	}
@@ -2361,6 +2443,12 @@ namespace banana
 			it = put(key, c, b);
 		}
 		if (!keep(it).tex) return;
+		if (const float rk = shift.rk(); rk != 1)
+		{
+			const int ks = std::max(1, (int)std::lround(scale * s * rk));	// (whole pixels of the screen)
+			be->draw(it->second.tex, X(x), X(y), it->second.tex->w * ks / rk, it->second.tex->h * ks / rk, Color(1, 1, 1, 1));
+			return;
+		}
 		int k = std::max(1, (int)std::lround(scale * s));	// whole device px per icon pixel
 		be->draw(it->second.tex, std::round(X(x)), std::round(X(y)), (float)it->second.tex->w * k, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
 	}
@@ -2368,6 +2456,12 @@ namespace banana
 	// the engine's ◀ ▶: a stepped triangle on the look's pixel grid
 	void Settings::arrow(bool right, float x, float y, const Color& c)
 	{
+		if (material() && hasGlyph(right ? "next" : "prev", 32))
+		{
+			// (a 32 px chevron in the accent, its middle where the triangle's was)
+			glyph(right ? "next" : "prev", 32, x + 3.5f - px(16), y + 6.5f - px(16), mcol("ring"));
+			return;
+		}
 		int u = std::max(1, (int)std::lround(s));
 		int rows = std::max(3, (int)std::lround(13 * s / u)) | 1;
 		std::string key = std::string("arrow:") + (right ? "r" : "l") + std::to_string(rows) + ":" + std::to_string(u);
@@ -2394,6 +2488,7 @@ namespace banana
 
 	float Settings::faceWidth(const std::string& key, const std::string& label, float most)
 	{
+		if (material()) return std::min(most, px(12) + keycapWidth(key) + px(12) + text(label, true, px(30) / 0.92f, 0, 0, Color(), false, 0, true) + px(28));
 		// at most FACE_MAX wide (three fit in the bar; most: a bar with fewer): a longer label (a translation) scrolls in it (face)
 		return std::min(most, 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18);
 	}
@@ -2402,6 +2497,20 @@ namespace banana
 	void Settings::face(const std::string& key, const std::string& label, float x, float w, float y)
 	{
 		SPal p = pal(light);
+		if (material())
+		{
+			// a pill of the material 72 px high, the key shaped like its button (the main action's on the plate), the
+			// label in the ink; at the page's foot it goes to the screen's (the stage's chips)
+			const bool was = shift.chips;
+			if (y >= 416) shift.chips = true;
+			const float h = px(72), kw = keycapWidth(key), ty = y >= 416 ? y : y + 2;
+			mpaint("pill", x, ty, w, h);
+			keycap(key, x + px(12), ty + px(12), key == "A" ? 1 : 0);
+			const float z = px(30) / 0.92f;
+			textFit(label, true, z, x + px(12) + kw + px(12), ty + (h - z * 1.18f) / 2, w - (px(12) + kw + px(12)) - px(24), p.ink, true);
+			shift.chips = was;
+			return;
+		}
 		if (rnds::themeFiles.setHints == "pill")
 		{
 			// (settings.hints "pill") a pill with a hairline, the key a round chip in it; A's in the accent
@@ -2430,8 +2539,9 @@ namespace banana
 		for (size_t i = 0; i < cs.size(); i++)
 		{
 			ws[i] = faceWidth(cs[i].face, cs[i].label);
-			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= 8; }
-			else { xs[i] = left; left += ws[i] + 8; }
+			const float gap = material() ? px(24) : 8;
+			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= gap; }
+			else { xs[i] = left; left += ws[i] + gap; }
 		}
 		return xs;
 	}
@@ -2569,6 +2679,7 @@ namespace banana
 	// that runs from when it was first drawn picked. Returns the width drawn (the box's or less)
 	float Settings::textFit(const std::string& t, bool medium, float size, float x, float top, float width, const Color& c, bool picked, bool right)
 	{
+		if (material() && lay() && shift.screen == 0 && x == 170 && !right) return text(fit(t, medium, size, width), medium, size, x, top, c);	// (the header: headText)
 		float w = text(t, medium, size, 0, 0, c, false, 0, true);
 		if (w <= width) { text(t, medium, size, right ? x + width - w : x, top, c); return w; }
 		if (!picked) { std::string f = fit(t, medium, size, width); float fw = text(f, medium, size, 0, 0, c, false, 0, true); text(f, medium, size, right ? x + width - fw : x, top, c); return fw; }
@@ -2630,10 +2741,10 @@ namespace banana
 		text(groups[g0], true, 30, 170, 88, p.ink);
 		char n[32];
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
-		text(n, true, 22, 170, 130, p.accent);
+		text(n, true, 22, 170, 130, material() ? p.muted : p.accent);
 		std::string all;
 		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		wrapped(all + ".", 20, 50, material() && lay() ? HELP_TOP : 196, 540, 7, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -2645,9 +2756,36 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
-		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
-		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		if (material())
+		{
+			// the pause grid's tiles: the material, the picked one the accent's plate with its text in the plate's ink;
+			// the group's pixel icon, its name in the pixel face, what is in it under that
+			const Measures m = measures();
+			const Color sub = mcol("dim"), onInk = mcol("plateInk");
+			for (int g = 0; g < (int)groups.size() && g < 6; g++) box("tileM", false, 18 + (g % 3) * m.gridPX, m.gridY + (g / 3) * m.gridPY, m.gridW, m.gridH);
+			box("plate", true, 18 + aCol * m.gridPX, m.gridY + aRow * m.gridPY, m.gridW, m.gridH);
+			for (int g = 0; g < (int)groups.size() && g < 6; g++)
+			{
+				const bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
+				const float x = 18 + (g % 3) * m.gridPX, y = m.gridY + (g / 3) * m.gridPY, cx = x + m.gridW / 2;
+				iconPx = std::max(1, (int)std::lround(3 * shift.px()));
+				iconCentred(groupIcon[items[groupStart(g)].section], cx, y + px(52), 2);
+				iconPx = 0;
+				auto centred = [&](const std::string& t, bool med, float size, float top, float w, const Color& c)
+				{
+					float tw = text(t, med, size, 0, 0, c, false, 0, true);
+					if (tw <= w) text(t, med, size, cx - tw / 2, top, c);
+					else textFit(t, med, size, cx - w / 2, top, w, c, on);
+				};
+				centred(groups[g], true, std::max(21.6f, px(40)), y + px(168), m.gridW - px(32), on ? onInk : p.ink);
+				std::string hint = groupHint(g);
+				if (text(hint, false, px(28), 0, 0, sub, false, 0, true) > m.gridW - px(40)) hint = groupHint(g, 1);
+				centred(hint, false, px(28), y + px(228), m.gridW - px(40), on ? onInk : sub);
+			}
+		}
+		else for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		if (!material()) box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
+		for (int g = 0; g < (int)groups.size() && g < 6 && !material(); g++)
 		{
 			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
@@ -2849,10 +2987,12 @@ namespace banana
 		// the header (icon, section, name, value) kept tight so the help under it has ten lines (user feedback 2026-10-25: the
 		// Shader row's was cut at seven)
 		icon(cur.icon, 50, HEAD_ICON_Y, 3);
-		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
+		const bool crumbs = material() && lay();	// (the crumb "Settings · <section>"; the value is on the row)
+		if (crumbs) { text("Settings", true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f); text(cur.section, true, 22, 170, HEAD_VALUE_Y, p.muted); }
+		else text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(cur.label, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
 		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
-		if (!value.empty()) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
+		if (!value.empty() && !crumbs) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
 		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
 		{
@@ -2884,7 +3024,7 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		// the count only when the group has more rows than the five in view (it is the only sign of the others)
 		float titleW = 564;
-		if (ge - gb > ROWS)
+		if (ge - gb > listRows())
 		{
 			char count[32];
 			snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
@@ -2913,15 +3053,16 @@ namespace banana
 		// the rows, the highlight and the scroll where their easing has them; rows clipped to the list's band, so one
 		// scrolling in slides from under the header or the buttons
 		advance();
-		be->pushClip(0, X(76), X(640), X(ROWS * 64 + 4));
-		int r0 = std::max(gb, (int)std::floor(aTop)), r1 = std::min(ge, (int)std::ceil(aTop) + ROWS);
-		for (int i = r0; i < r1; i++) box("slot", false, 18, 82 + (i - aTop) * 64, 604, 56);
-		box("pick", true, 18, 82 + (aPick - aTop) * 64, 604, 56);
+		const Measures lm = measures();
+		be->pushClip(0, X(lm.rowY - 6), X(640), X(listRows() * lm.rowPitch + 4));
+		int r0 = std::max(gb, (int)std::floor(aTop)), r1 = std::min(ge, (int)std::ceil(aTop) + listRows());
+		for (int i = r0; i < r1; i++) box("slot", false, 18, lm.rowY + (i - aTop) * lm.rowPitch, 604, lm.rowH);
+		box("pick", true, 18, lm.rowY + (aPick - aTop) * lm.rowPitch, 604, lm.rowH);
 		for (int i = r0; i < r1; i++)
 		{
 			const Item& it = items[i];
 			bool on = std::fabs(i - aPick) < 0.5f;
-			float y = 82 + (i - aTop) * 64;
+			float y = lm.rowY + (i - aTop) * lm.rowPitch;
 			std::string v;
 			bool nameValue = false;	// (the value is a network's or the DS's name: as it is)
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
@@ -2956,6 +3097,7 @@ namespace banana
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
 			// (no arrows on Language: A opens its list, nothing steps left or right)
 			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO) && it.key != "language";
+			if (material()) { AsNamed named(*this, nameValue); listRow(it, y, lm.rowH, on, v, arrows, armed == i); continue; }
 			const float vmax = 260, vright = arrows ? 566 : 586;
 			float vw;
 			{ AsNamed named(*this, nameValue); vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true)); }
@@ -3421,6 +3563,7 @@ namespace banana
 		// alone: measured with text() a character at a time, each cut was a texture in the cache, dozens for a long name
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
+		if (material()) role(medium, st.size, st.font, st.upper, st.letterSpacing);
 		if (!st.font) return "...";
 		rnds::Verbatim vb(rawText);
 		std::u32string u = rnds::utf8to32(lang::active() && !rawText ? lang::tr(t) : t);
@@ -3443,6 +3586,7 @@ namespace banana
 		rnds::Verbatim vb(rawText);
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
+		if (material()) role(medium, st.size, st.font, st.upper, st.letterSpacing);
 		std::u32string u = rnds::utf8to32(t);
 		if (!st.font || u.size() < 2) return t;
 		size_t fits = 1, over = u.size();	// (the last fits characters fit, or the one; the last over don't)
@@ -6788,7 +6932,7 @@ namespace banana
 		if (wizardBoot) { mOpen = false; setupEnded = true; return; }
 		// from Settings: back on its row in System's list
 		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == "setup") { sel = i; inGroups = false; }
-		top = std::max(0, sel - ROWS + 1);
+		top = std::max(0, sel - listRows() + 1);
 		top = std::max(groupStart(groupOf(sel)), top);
 	}
 

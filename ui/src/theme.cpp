@@ -246,7 +246,7 @@ namespace banana
 		f.wallTop = themeImage(dir, kv["background.top"]);
 		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
-		f.panels = kv["panels"] == "flat" ? "flat" : "";
+		f.panels = kv["panels"] == "flat" || kv["panels"] == "material" ? kv["panels"] : "";
 		// Settings' own look (its "settings" member)
 		f.setTop = kv["settings.top"] == "open" ? "open" : "";
 		f.setLeft = -1;
@@ -255,6 +255,9 @@ namespace banana
 		f.setPick = kv["settings.pick"] == "outline" ? "outline" : "";
 		f.setHints = kv["settings.hints"] == "pill" ? "pill" : "";
 		f.setHeader = kv["settings.header"] == "rule" ? "rule" : "";
+		f.setLayout = kv["settings.layout"] == "screen" ? "screen" : "";
+		f.setGlyphs.clear();
+		if (!kv["settings.glyphs"].empty() && kv["settings.glyphs"].find("..") == std::string::npos && !dir.empty()) f.setGlyphs = dir + "/" + kv["settings.glyphs"];
 		{
 			// a font of the theme's (a .ttf beside it) or a built-in name (Inter's: the menu's fonts folder, found by Settings)
 			const std::string& bf = kv["settings.bodyFont"];

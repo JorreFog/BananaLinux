@@ -13,30 +13,41 @@
   "stage": "screen",
   "font": "pixel",
 
-  // Settings, the keyboard and the game panel: the same black, surfaces and accent, flat panels with a hairline edge
+  // Settings, the setup, the lists, the keyboard, the quick menu and the game panel in the same language: the
+  // "material" look (every surface the dark gradient with a lit top line and a hairline, the selection on the accent's
+  // plate or in an accent ring, hints as pills with keys shaped like the Thor's buttons, labels in Inter)...
   "base": "dark",
-  "panels": "flat",
-  // ...laid out as the mockup's secondary screens: on the top screen the text straight on the black (no card), its
-  // column 58 units from the screen's left edge, the icon on a lit tile, the help in Inter; the picked row outlined in
-  // the accent with its glow, the button hints as pills, a page's title over a hairline. screens.settings below draws
-  // the status bar and the accent's glow under them
-  "settings": { "top": "open", "left": 58, "icons": "tile", "pick": "outline", "hints": "pill", "header": "rule", "bodyFont": "inter" },
+  "panels": "material",
+  // ...laid out on each screen's own shape ("layout": "screen"): on the top screen a crumb, the title large and the
+  // help under it, straight on the black, 160 px (71 units) from the left edge, no icon; on the bottom one the page
+  // from edge to edge with 64 px margins, its title at the top and the hints at the foot. "glyphs": the line icons of
+  // rows and tiles. screens.settings below draws the status bar over them
+  "settings": { "top": "open", "left": 71.1, "icons": "none", "pick": "outline", "hints": "pill", "bodyFont": "inter",
+                "layout": "screen", "glyphs": "thor-oled/ui" },
   // smooth fades between the boot, the menu, a game and the shutdown, in place of the iris
   "transitions": "fade",
   "background": { "dither": false },
+  // the palette: the engine's names, then the material look's own (docs/THEMES.md lists them; the plate's are the
+  // accent's unless given here)
   "colors": {
     "screenBg": "#000000", "screenFrame": "#000000", "screenBand": "#000000",
     "ditherA": "#00000000", "ditherB": "#00000000",
-    "ink": "#f1ede2", "muted": "#8f897c", "line": "#3a3a40", "edge": "#2a2a30", "navy": "#ffffff", "red": "#ff4b5a",
-    "panelBand": "#2a2a31", "panelBody": "#111115", "panelLow": "#08080a",
-    "chipBand": "#1b1b21", "chipBody": "#0b0b0d",
-    "bubbleBand": "#2a2a31", "bubbleBody": "#0f0f12", "bubbleLow": "#08080a",
-    "frameBorder": "#2a2a30", "frameBg": "#0b0b0d",
-    "meterBg": "#1b1b21", "brandBg": "#0b0b0d", "rule": "#2a2a30",
-    "trackBg": "#0b0b0d", "trackHi": "#1b1b21", "railBg": "#0b0b0d", "faceMuted": "#2a2a30",
-    "favBorder": "#ff4b5a", "favBand": "#3a1218", "favBody": "#1e0a0d", "favInk": "#ff8a96",
+    "ink": "#efe9de", "muted": "#aaa398", "line": "#2a2824", "edge": "#23211e", "navy": "#ffffff", "red": "#f0767c",
+    "panelBand": "#1f1e1b", "panelBody": "#141311", "panelLow": "#100f0e",
+    "chipBand": "#1f1e1b", "chipBody": "#141311",
+    "bubbleBand": "#1f1e1b", "bubbleBody": "#141311", "bubbleLow": "#100f0e",
+    "frameBorder": "#23211e", "frameBg": "#0f0e0d",
+    "meterBg": "#23211e", "brandBg": "#0f0e0d", "rule": "#23211e",
+    "trackBg": "#0a0a09", "trackHi": "#23211e", "railBg": "#0f0e0d", "faceMuted": "#23211e",
+    "favBorder": "#f27fb2", "favBand": "#3a1828", "favBody": "#1e0c15", "favInk": "#f27fb2",
     "blackish": "#000000", "shade35": "#00000059", "shade40": "#00000066", "shade45": "#00000073",
-    "slotDark": "#000000", "slotLip": "#2a2a30"
+    "slotDark": "#000000", "slotLip": "#23211e",
+    "kbdBg": "#efe9de", "kbdInk": "#141312",
+    "matTop": "#1f1e1b", "matMid": "#141311", "matLow": "#100f0e", "selTop": "#2a2824", "selLow": "#1d1c19",
+    "lit": "#fffaf012", "hair": "#efe9de14", "hair2": "#efe9de24", "tileEdge": "#efe9de1a",
+    "ink2": "#aaa398", "dim": "#8a847a", "surface": "#0f0e0d", "raised": "#181715", "raised2": "#23211e",
+    "danger": "#c93338", "dangerText": "#f0767c", "fav": "#f27fb2", "ok": "#4cc38a",
+    "keyTop": "#fffaf0", "keyInk": "#141312", "dots": "#fffaf00b"
   },
 
   // the theme's own words for the systems: the short name on the tab strip and in the bubble (else the id in
