@@ -443,6 +443,16 @@ UXFX=$UXFX_SAVE
 pm_green=$(convert "$OUT/$size-ux-pm-top.png" -fx '(g > 0.6 && r < 0.2 && b < 0.3) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)
 [ "$pm_green" = 1 ] || { echo "FAIL $size: a port's own cover (its gameinfo.xml) isn't its art"; fail=1; }
 
+# PortMaster's own entry: its app icon (the ship on a sky blue tile) as its picture
+PMIFX=$OUT/ux-pmi-fixture-$size
+rm -rf "$PMIFX"; "$HERE/tests/fixture.sh" "$PMIFX" >/dev/null
+mkdir -p "$PMIFX/roms/ports"; printf '#!/bin/bash\n' > "$PMIFX/roms/ports/PortMaster.sh"
+UXFX_SAVE=$UXFX; UXFX=$PMIFX
+ux_run pmi "lib ports 0; wait 2400; shot ux-pmi"
+UXFX=$UXFX_SAVE
+pmi_sky=$(convert "$OUT/$size-ux-pmi-top.png" -fx '(r > 0.22 && r < 0.4 && g > 0.65 && g < 0.85 && b > 0.85) ? 1 : 0' -format '%[fx:mean > 0.01]' info: 2>/dev/null)
+[ "$pmi_sky" = 1 ] || { echo "FAIL $size: PortMaster's entry without its icon"; fail=1; }
+
 # Glass: an app on the Apps tile is the tile it was on the home row (its own colour and icon), not a game's card:
 # BShare (left of Files) a blue tile, where a game's card is dark. And PICO-8's Splore (an empty Splore.p8) has its own
 # picture, a globe and a magnifier (the globe's blue on the top screen), in Glass and in the default theme

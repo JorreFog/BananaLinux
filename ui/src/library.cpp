@@ -734,6 +734,14 @@ namespace banana
 						if (g.box.empty()) g.box = g.toolIcon;
 						if (g.marquee.empty()) g.marquee = g.toolIcon;
 					}
+					// PortMaster's own entry: a tool too, its picture PortMaster's app icon (the ship and "PM", from its
+					// release's trimui/icon.png, MIT, cropped to the tile)
+					if (def.id == "ports" && rel == "PortMaster.sh")
+					{
+						g.toolIcon = assets + "/portmaster.png";
+						if (g.box.empty()) g.box = g.toolIcon;
+						if (g.marquee.empty()) g.marquee = g.toolIcon;
+					}
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
 					if (g.marquee.empty()) g.marquee = media.find(dir, "marquee", stem);
