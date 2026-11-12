@@ -61,6 +61,7 @@ namespace banana
 		case BTN_SELECT: case KEY_TAB: return Key::SELECT;
 		case BTN_MODE: case KEY_F1: return Key::MENU;
 		case BTN_Z: case BTN_THUMBL: case BTN_THUMBR: return Key::OTHER;
+		case BTN_BACK: return Key::OTHER;	// (the AYN Thor's pad's spare key: the Home button if hw.conf's HW_HOME_KEY says so)
 		default: return Key::NONE;
 		}
 	}

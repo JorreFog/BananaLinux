@@ -133,6 +133,10 @@ both), and the menu, which owns the lease, puts its own picture on the panels an
 page flip each way. `home_switch = off` in `banana/settings.conf` gives a game the display device directly, as
 before, with the Home button off.
 
+Which button it is comes from the hardware profile (`HW_HOME_KEY` in `etc/banana/hw/thor.conf`, a kernel key code).
+It is set to the pad driver's "mode" key; the driver has one other spare key, and if that one turns out to be the
+button under the screen the line says what to change it to.
+
 ## The web browser
 
 WPE WebKit with Cog: one full-screen page on the top screen, no desktop toolkit under it. An on-screen keyboard

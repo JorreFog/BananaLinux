@@ -2718,13 +2718,15 @@ int main(int argc, char** argv)
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
 	// (the Home button over a game: its state, used by the menu's own key handling too; the rest is further down)
 	const bool homeKey = getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY");
+	// (which button it is: hw.conf's HW_HOME_KEY, the kernel's key code; the pad's "mode" button, 316, when it names none)
+	const int homeCode = std::max(1, atoi(getConfValue("/etc/banana/hw.conf", "HW_HOME_KEY", "316").c_str()));
 	struct { bool on = false, quick = false, resume = false, end = false; pid_t pid = 0; std::string rom, next; } home;
 	std::function<void(const bool&)> mainLoop;	// (the menu's own loop, below: run here until the game is gone back to)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		// the Home button over a stopped game: back into it
-		if (home.on && ev.code == BTN_MODE) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
+		if (home.on && ev.code == homeCode) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
 		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
@@ -2947,11 +2949,12 @@ int main(int argc, char** argv)
 	// the Home button while a game runs: its press and release timed (a tap: the menu; three seconds: the quick menu)
 	struct HomeTap
 	{
+		int code = BTN_MODE;	// (the Home button's key code)
 		double down = 0;
 		int ask = 0;	// 1 the menu, 2 the quick menu
 		void event(const InputEvent& ev)
 		{
-			if (ev.code != BTN_MODE) return;
+			if (ev.code != code) return;
 			if (ev.type == InputEvent::PRESS) down = nowMs();
 			else if (ev.type == InputEvent::RELEASE && down > 0) { down = 0; ask = 1; }
 		}
@@ -2963,6 +2966,7 @@ int main(int argc, char** argv)
 	{
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		HomeTap tap;
+		tap.code = homeCode;
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -2973,6 +2977,7 @@ int main(int argc, char** argv)
 				homeMenu(pid, game, a == 2);
 				// (the presses made in the menu aren't the game's Home presses)
 				tap = HomeTap();
+				tap.code = homeCode;
 				continue;
 			}
 			pollfd fds[40];
@@ -2988,6 +2993,7 @@ int main(int argc, char** argv)
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName, int game)
 	{
 		HomeTap homeTap;
+		homeTap.code = homeCode;
 		const int panelScreen = 1 - gameScreen;
 		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
@@ -3025,6 +3031,7 @@ int main(int argc, char** argv)
 				// (the quick menu wants the bottom screen: the menu's own already when the panel is there)
 				homeMenu(pid, game, a == 2);
 				homeTap = HomeTap();
+				homeTap.code = homeCode;
 				bottomIdle.activity(nowMs());
 				want = true;
 				continue;
@@ -3125,7 +3132,7 @@ int main(int argc, char** argv)
 					{
 						// the buttons are the game's; F and a Companion button (the back button's job by default) also
 						// switch the panel between its menu and the companion
-						if (homeKey && ev.code == BTN_MODE) { homeTap.event(ev); return; }	// (the Home button: the menu's)
+						if (homeKey && ev.code == homeCode) { homeTap.event(ev); return; }	// (the Home button: the menu's)
 						if (ev.type == InputEvent::PRESS)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
