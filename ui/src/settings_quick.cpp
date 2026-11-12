@@ -140,12 +140,22 @@ namespace banana
 		// above and below), the rows as tall as fit between the header and the chips
 		float ax, ay, aw, ah;
 		rnds::screenArea(be, s, ax, ay, aw, ah);
-		const float top = ay + 14, chipY = ay + ah - 58;
+		float top = ay + 14, chipY = ay + ah - 58;
 		qY = top + 62;
 		const int n = std::max(1, (int)qRows.size());
 		qPitch = std::min(64.0f, std::floor((chipY - 10 - qY) / n));
+		float rh = qPitch - 6;
+		const bool mat = material();
+		if (mat && lay())
+		{
+			// (a screen layout: the title and the hints where every page has them, the rows the list's, closer when
+			// there are more than fit)
+			const Measures m = measures();
+			top = 14; chipY = 422; qY = m.rowY;
+			qPitch = std::min(m.rowPitch, ((968 + 14 - 16) * shift.u1 - qY) / n);
+			rh = qPitch - (m.rowPitch - m.rowH);
+		}
 		qChipY = chipY;
-		const float rh = qPitch - 6;
 		// the header: the page's name, a hairline, the game
 		box("bubble", false, 18, top, 604, 54);
 		float tw = text("Quick menu", true, 22, 38, top + 14, p.ink);
@@ -176,6 +186,24 @@ namespace banana
 				const int n = (int)it.values.size();
 				frac = n > 1 ? (float)std::max(0, it.at) / (n - 1) : 0;
 				if (it.kind == Item::BRIGHTNESS) frac = n > 0 ? (float)(std::max(0, it.at) + 1) / n : 0;	// (10% is its lowest)
+			}
+			if (mat)
+			{
+				// the list's row: its icon tile and label; a level as a 12 px bar filled with the plate and the
+				// percentage after it, a choice as the list's value between chevrons
+				Item tmp;
+				const Item& it = q < 0 ? tmp : items[q];
+				if (q < 0) { tmp.key = "perf"; tmp.kind = Item::ACTION; tmp.names = { value }; tmp.values = { value }; }
+				tmp.label = label;
+				Item shown = it;
+				shown.label = label;
+				if (!slider) { listRow(shown, y, Q_H, on, value, true, false); continue; }
+				listRow(shown, y, Q_H, on, "", false, false);
+				mbar(Q_SLIDER_X, y + Q_H / 2 - px(6), Q_SLIDER_W, frac);
+				const float z = px(34);
+				float vw = text(value, true, z / 0.92f, 0, 0, ink, false, 0, true);
+				text(value, true, z / 0.92f, 622 - px(24) - vw, y + (Q_H - z * 1.2f) / 2, on ? p.ink : mcol("ink2"));
+				continue;
 			}
 			const float ty0 = y + Q_H / 2 - 11;	// (the line's top: the text centred in the row)
 			textFit(label, true, 19, 40, ty0, Q_SLIDER_X - 40 - 16, ink, on);

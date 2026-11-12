@@ -256,7 +256,7 @@ namespace banana
 		else if (kind == "kbd") mpaint("kbkey", x, y, w, h);
 		else if (kind == "tile") mpaint("icon", x, y, w, h);
 		else if (kind == "qrcard") mpaint("qr", x, y, w, h);
-		else if (kind == "plate" || kind == "danger" || kind == "card" || kind == "row" || kind == "rowsel" || kind == "tileM") mpaint(kind == "tileM" ? "tile" : kind, x, y, w, h);
+		else if (kind == "plate" || kind == "danger" || kind == "card" || kind == "row" || kind == "rowsel" || kind == "tileM" || kind == "kbkey" || kind == "kbkeyOn" || kind == "raised" || kind == "black") mpaint(kind == "tileM" ? "tile" : kind, x, y, w, h);
 		else return false;
 		return true;
 	}
@@ -300,6 +300,13 @@ namespace banana
 		const Cached& g = cache.find("glyph:" + name + ":" + std::to_string(size))->second;
 		const float w = X(px((float)size));
 		be->draw(g.tex, X(x), X(y), w, w * g.tex->h / g.tex->w, c);
+	}
+
+	void Settings::glyphAt(const std::string& name, int size, float x, float y, float w, const Color& c)
+	{
+		if (!hasGlyph(name, size)) return;
+		const Cached& g = cache.find("glyph:" + name + ":" + std::to_string(size))->second;
+		be->draw(g.tex, X(x), X(y), X(w), X(w) * g.tex->h / g.tex->w, c);
 	}
 
 	// ---- the hints' keys ----------------------------------------------------------------------------------------

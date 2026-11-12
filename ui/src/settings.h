@@ -700,6 +700,8 @@ namespace banana
 		void mpaint(const std::string& style, float x, float y, float w, float h);	// one of the look's surfaces by name (canvas units)
 		void glyph(const std::string& name, int size, float x, float y, const rnds::Color& c);	// a line icon (design px size: 32, 88), tinted
 		bool hasGlyph(const std::string& name, int size);
+		void glyphAt(const std::string& name, int size, float x, float y, float w, const rnds::Color& c);	// (drawn w units wide)
+		void gameTile(int i, int n, float& x, float& y, float& w, float& h) const;	// the game panel's tile i of n
 		float keycapWidth(const std::string& key);	// a button hint's key in the shape of the button (units)
 		void keycap(const std::string& key, float x, float y, int state);	// state: 0 plain, 1 the main action's (plate), 2 a warning's (pink)
 		void mswitch(float x, float y, bool on);	// a switch (88 x 48 design px)

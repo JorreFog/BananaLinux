@@ -2256,13 +2256,16 @@ namespace banana
 		const float roomW = ax + aw - 12 - (colRight + 8), roomH = bottom - top;
 		const bool right = roomW >= 180;
 		const float roomU = right ? std::min(roomW, roomH) : std::min(260.0f, bottom - textY);
-		const int pad = std::max(4, (int)std::lround(X(6)));
+		const int pad = material() ? std::max(4, (int)std::lround(X(px(24)))) : std::max(4, (int)std::lround(X(6)));	// (the quiet zone)
 		const int target = std::min(560, (int)std::floor(X(roomU)));
 		const int k = std::max(1, (target - 2 * pad) / N);
 		steamQrK = k;
 		const int cardPx = k * N + 2 * pad;
 		const float cardU = cardPx / s;
 		const float cx = right ? colRight + 8 + (roomW - cardU) / 2 : textX, cy = right ? top + (roomH - cardU) / 2 : textY;
+		// (a screen layout moves what is under the header down: the card and its modules stay where they were worked out)
+		const float bodyDy = shift.bodyDy;
+		shift.bodyDy = 0;
 		box("qrcard", false, cx, cy, cardU, cardU);
 		const float ox = std::round(X(cx)) + pad, oy = std::round(X(cy)) + pad;
 		const Color dark = Color::hex(0x000000);
@@ -2278,6 +2281,7 @@ namespace banana
 				c = e;
 			}
 		}
+		shift.bodyDy = bodyDy;
 		// the steps
 		const float sx = right ? textX : textX + cardU + 20, sw = right ? HELP_W : HELP_X + HELP_W - sx;
 		const char* steps[] = { "1. Open the Steam app on your phone", "2. Tap the shield (Steam Guard)", "3. Scan this code and approve" };
@@ -3907,8 +3911,17 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME || entry == ENTRY_SERVER ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
+		if (material() && lay())
+		{
+			// (what is being typed as the title, its note as the crumb over it)
+			text(entrySub.empty() ? "Keyboard" : entrySub, true, 17, 170, 62, p.muted, true, 1.4f);
+			text(fit(entryTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		}
+		else
+		{
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
+		}
 		box("slot", true, 50, 150, 540, 56);
 		// the end of the password when it is longer than the field
 		float w = 0;
@@ -3978,8 +3991,17 @@ namespace banana
 			{
 				float x = KX + c * KPITCH, y = KY + r * KROW;
 				bool on = r == krow && c == kcol;
-				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
 				std::string k(1, KEYS[layer][r][c]);
+				if (material())
+				{
+					// a key: a tile of the material, the one picked the plate; its letter in Inter
+					box(on ? "kbkeyOn" : "kbkey", on, x, y, KPITCH - 6, KH);
+					const float z = 21.4f;
+					float tw = text(k, true, z, 0, 0, p.ink, false, 0, true);
+					text(k, true, z, x + (KPITCH - 6 - tw) / 2, y + (KH - z * 1.25f) / 2, on ? mcol("plateInk") : p.ink);
+					continue;
+				}
+				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
 				float tw = text(k, true, 28, 0, 0, p.ink, false, 0, true);
 				text(k, true, 28, x + std::round((KPITCH - 6 - tw) / 2), y + 13, on ? p.onPick : p.ink);
 			}
@@ -3988,10 +4010,19 @@ namespace banana
 		{
 			float x = KX + FKEYS[i].c0 * KPITCH, y = KY + 4 * KROW, kw = FKEYS[i].span * KPITCH - 6;
 			bool on = i == fsel;
-			box(on ? "pick" : "slot", on, x, y, kw, KH);
 			std::string k = i == 1 && layer == 2 ? "abc" : i == 0 && layer == 1 ? "SHIFT" : FKEYS[i].name;
 			if (i == 4) k = entry == ENTRY_WIFI ? "Join" : "Done";
 			bool lit = (i == 0 && layer == 1) || (i == 1 && layer == 2);
+			if (material())
+			{
+				// (the wide keys a step lighter; one that is on says so in the accent)
+				box(on ? "kbkeyOn" : "raised", on, x, y, kw, KH);
+				const float z = 20;
+				float tw = text(k, true, z, 0, 0, p.ink, false, 0, true);
+				text(k, true, z, x + (kw - tw) / 2, y + (KH - z * 1.2f) / 2, on ? mcol("plateInk") : lit ? mcol("ring") : p.ink);
+				continue;
+			}
+			box(on ? "pick" : "slot", on, x, y, kw, KH);
 			float tw = text(k, true, 21, 0, 0, p.ink, false, 0, true);
 			text(k, true, 21, x + std::round((kw - tw) / 2), y + 17, on ? p.onPick : lit ? p.accent : p.ink);
 		}
@@ -7353,7 +7384,7 @@ namespace banana
 		rawText = false;
 		text(titles[sl], true, 30, 170, 84, p.ink);
 		if (!status.empty()) text(fit(status, true, 22, 420), true, 22, 170, 126, p.accent);
-		float y = 186;
+		float y = material() && lay() ? HELP_TOP : 186;
 		if (sl == SL_DONE)
 		{
 			// the summary: each step's outcome (closer together when the handheld has more steps than the RG DS's)
@@ -7460,7 +7491,14 @@ namespace banana
 		{
 			float dw = 12, gap = 8, wide = 28, w = (nSteps - 1) * (dw + gap) + wide;
 			float x = 602 - w;
-			for (int i = 0; i < nSteps; i++)
+			if (material())
+			{
+				// (a scrub bar: the track, the step now as its thumb, flat in the accent)
+				const float tw = px(360), th = px(8), ty = 28 + (22 * 1.2f - th) / 2;
+				mpaint("scrub", 622 - tw, ty, tw, th);
+				mpaint("thumb", 622 - tw + tw * wsel / std::max(1, nSteps), ty, tw / std::max(1, nSteps), th);
+			}
+			else for (int i = 0; i < nSteps; i++)
 			{
 				float ww = i == wsel ? wide : dw;
 				be->fill(std::round(X(x)), std::round(X(35)), std::round(X(ww)), std::round(X(12)), i == wsel ? p.accent : i < wsel ? p.ink : p.line);

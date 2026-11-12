@@ -632,6 +632,7 @@ namespace banana
 
 	Settings::GameAction Settings::gameTouch(float x, float y, bool down)
 	{
+		shift.untouch(x, y);
 		float lx = x / s, ly = y / s;
 		int hit = -1;
 		// the on-screen keyboard (the Keys tile): a key types on the press, the bar's pages and Done on the release
@@ -698,11 +699,11 @@ namespace banana
 			}
 		}
 		const int ntiles = vkbd && gTouch ? 6 : 5;
-		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
 		for (int i = 0; i < ntiles; i++)
 		{
-			float tx = 18 + i * tstep;
-			if (lx >= tx && lx < tx + tw && ly >= 300 && ly < 420) hit = i;
+			float tx, ty, tw, th;
+			gameTile(i, ntiles, tx, ty, tw, th);
+			if (lx >= tx && lx < tx + tw && ly >= ty && ly < ty + th) hit = i;
 		}
 		// the game companion's pages: the tab bar, a page's screens (the pager), a list's row opened or closed (the menu
 		// has the tiles alone, below)
@@ -793,9 +794,26 @@ namespace banana
 		text("The game keeps running on the other screen. Done brings the tiles back.", false, 15, 12, 384, p.muted);
 	}
 
+	// the panel's tiles (canvas units): five or six in a row under the achievements; in a screen layout two rows of
+	// the design's grid buttons down to the screen's foot (three, then the rest)
+	void Settings::gameTile(int i, int n, float& x, float& y, float& w, float& h) const
+	{
+		if (rnds::themeFiles.panels == "material" && shift.lay && shift.u1 > 0)
+		{
+			const float u = shift.u1, gap = 24 * u;
+			const int row = i < 3 ? 0 : 1, cols = row == 0 ? 3 : n - 3, col = row == 0 ? i : i - 3;
+			w = (604 - (cols - 1) * gap) / cols; h = 220 * u;
+			x = 18 + col * (w + gap); y = (537 + 14) * u + row * (h + gap);
+			return;
+		}
+		const float tstep = n == 6 ? 102 : 122;
+		x = 18 + i * tstep; y = 300; w = n == 6 ? 96 : 114; h = 120;
+	}
+
 	void Settings::gameRender()
 	{
 		frame++;	// (a frame of the cache's, as render()'s: evict() after it)
+		loadBody();
 		gameFrame();
 		evict();
 	}
@@ -951,7 +969,30 @@ namespace banana
 		// ---- the tiles: RetroArch's commands by touch, and their buttons
 		const int ntiles = vkbd && gTouch ? 6 : 5;
 		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
-		for (int i = 0; i < ntiles; i++)
+		for (int i = 0; i < ntiles && material(); i++)
+		{
+			// the material look's grid buttons: a line icon, the name in the pixel face, the buttons under it; a tile
+			// pressed is the plate (Quit's the danger's), Quit's icon and name in the danger's text colour
+			static const char* const GLYPHS[6] = { "save", "load", "menu", "fast", "quit", "keys" };
+			float x, y, w, h;
+			gameTile(i, ntiles, x, y, w, h);
+			const bool on = gFlash == i, quit = i == 4;
+			box(on ? (quit ? "danger" : "plate") : "tileM", on, x, y, w, h);
+			const Color fg = on ? (quit ? mcol("dangerInk") : mcol("plateInk")) : quit ? mcol("dangerText") : p.ink;
+			const Color ic = on ? fg : quit ? mcol("dangerText") : mcol("ink2");
+			const std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
+			const std::string kk = getenv("BANANA_ROCKNIX") ? std::string(i == 5 ? "Tap" : "") : std::string(GTILES[i].keys);
+			const bool tall = h >= px(200);
+			const float icon = px(tall ? 80 : 40), nameZ = std::max(21.6f, px(tall ? 40 : 30)), keyZ = px(tall ? 28 : 22);
+			const float all = icon + px(12) + nameZ * 1.2f + (kk.empty() ? 0 : px(6) + keyZ * 1.2f), y0 = y + (h - all) / 2;
+			glyphAt(GLYPHS[i], 88, x + (w - icon) / 2, y0, icon, ic);
+			float lw = text(lb, true, nameZ, 0, 0, fg, false, 0, true);
+			if (lw <= w - px(24)) text(lb, true, nameZ, x + w / 2 - lw / 2, y0 + icon + px(12), fg);
+			else textFit(lb, true, nameZ, x + px(12), y0 + icon + px(12), w - px(24), fg, false);
+			float kw = text(kk, false, keyZ, 0, 0, fg, false, 0, true);
+			text(kk, false, keyZ, x + w / 2 - kw / 2, y0 + icon + px(12) + nameZ * 1.2f + px(6), on ? fg : mcol("dim"));
+		}
+		for (int i = 0; i < ntiles && !material(); i++)
 		{
 			float x = 18 + i * tstep, y = 300;
 			bool on = gFlash == i;
@@ -973,7 +1014,9 @@ namespace banana
 		}
 		std::string hint = getenv("BANANA_ROCKNIX") ? "Tap a tile" : gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
-		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
+		float hintY = 438;
+		if (material() && lay()) hintY = (1024 + 14) * shift.u1;	// (under the grid, at the screen's foot)
+		text(hint, false, 15, 320 - hw / 2, hintY, material() ? mcol("dim") : p.muted);
 		if (compOn()) compIcon();
 		be->endScreen();
 	}
