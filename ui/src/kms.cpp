@@ -481,6 +481,7 @@ namespace banana
 		pending = 0;
 		leased = -1;
 		borrowMask = 0;
+		theirPlanes.clear();
 	}
 
 	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
@@ -627,6 +628,23 @@ namespace banana
 		return l;
 	}
 
+	// a plane's property by name (the kernel's plane state: where it is on the screen and what part of its picture)
+	static uint64_t planeProp(int fd, uint32_t plane, const char* name)
+	{
+		uint64_t v = 0;
+		if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, plane, DRM_MODE_OBJECT_PLANE))
+		{
+			for (uint32_t k = 0; k < pp->count_props; k++)
+				if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+				{
+					if (!strcmp(q->name, name)) v = pp->prop_values[k];
+					drmModeFreeProperty(q);
+				}
+			drmModeFreeObjectProperties(pp);
+		}
+		return v;
+	}
+
 	bool Display::borrow(int mask)
 	{
 		if (sdl || fd < 0 || leased < 0) return false;
@@ -644,7 +662,27 @@ namespace banana
 				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
 			pn.missed[0] = pn.missed[1] = Damage();	// (the caller draws everything afresh: its backend invalidated)
 			if (drmModeSetCrtc(fd, pn.crtc, pn.buf[pn.front].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode) == 0) any = true;
-			else { borrowMask &= ~(1 << s); theirFb[s] = 0; }
+			else { borrowMask &= ~(1 << s); theirFb[s] = 0; continue; }
+			// what the program has lit over its picture on this panel (an overlay, a cursor) would stay over the menu's:
+			// off, and remembered for giveBack
+			const uint32_t primary = primaryPlane(fd, pn.crtc);
+			if (drmModePlaneRes* pr = drmModeGetPlaneResources(fd))
+			{
+				for (uint32_t j = 0; j < pr->count_planes; j++)
+					if (drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]))
+					{
+						if (pl->crtc_id == pn.crtc && pl->fb_id && pl->plane_id != primary)
+						{
+							const uint32_t id = pl->plane_id;
+							TheirPlane t = { id, pl->crtc_id, pl->fb_id, (int32_t)planeProp(fd, id, "CRTC_X"), (int32_t)planeProp(fd, id, "CRTC_Y"),
+								(uint32_t)planeProp(fd, id, "CRTC_W"), (uint32_t)planeProp(fd, id, "CRTC_H"), (uint32_t)planeProp(fd, id, "SRC_X"),
+								(uint32_t)planeProp(fd, id, "SRC_Y"), (uint32_t)planeProp(fd, id, "SRC_W"), (uint32_t)planeProp(fd, id, "SRC_H") };
+							if (drmModeSetPlane(fd, id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) == 0) theirPlanes.push_back(t);
+						}
+						drmModeFreePlane(pl);
+					}
+				drmModeFreePlaneResources(pr);
+			}
 		}
 		return any;
 	}
@@ -661,6 +699,9 @@ namespace banana
 			if (theirFb[s]) drmModeSetCrtc(fd, p[s].crtc, theirFb[s], 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 			theirFb[s] = 0;
 		}
+		for (const TheirPlane& t : theirPlanes)
+			drmModeSetPlane(fd, t.plane, t.crtc, t.fb, 0, t.x, t.y, t.w, t.h, t.sx, t.sy, t.sw, t.sh);
+		theirPlanes.clear();
 		borrowMask = 0;
 	}
 }
