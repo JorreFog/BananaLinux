@@ -228,7 +228,11 @@ if boot prompt && wait_ssh prompt; then
     done
     vm 'banana-sync saves' > "$OUT/saves-1.tsv"
     head -n 1 "$OUT/saves-1.tsv" | grep -q "^conflict	$C2/" && ok "Cut 2 held, first on the list" || bad "Cut 2 not held first: $(head -n 3 "$OUT/saves-1.tsv")"
-    key s pgdn pgdn pgdn ret up up ret down down down down down down down down down down ret
+    # (Home server's page on RomM 5.4, opened on its first row: Up goes round to the last, Forget this server, and on
+    # past Save slot, Device name and Systems to Manage saves. Counted from the end, which those rows are, not from the
+    # top, where rows come and go with the second card; counted down from the top when Manage saves was the last row,
+    # the presses ended on Forget, twice)
+    key s pgdn pgdn pgdn ret up up ret up up up up up ret
     # (the page reads banana-sync saves in the background, which takes the VM a few seconds or more)
     wait_for "saves: the list read" 60 "Saves: the page has read the card"; sleep 1; shot saves-list
     key ret; sleep 1; shot saves-game
