@@ -18,6 +18,14 @@ rm -rf "$P/sources/ui"
 mkdir -p "$P/sources/ui"
 (cd "$HERE/ui" && tar --exclude='./tests/out' --exclude='./banana-ui' --exclude='./banana-*' --exclude='*.o' -cf - .) |
     tar -C "$P/sources/ui" -xf -
+# BananaOS's system scripts the menu runs, in their services mode on ROCKNIX (see the package)
+rm -rf "$P/sources/libexec" "$P/sources/sleep.d"
+mkdir -p "$P/sources/libexec" "$P/sources/sleep.d"
+for f in wifi wifi-nm bluetooth volume update ssh share sd2 sound-server hw-probe ra-reset ra-secrets nds-saves nds-reset \
+         nds-buttons nds-game-option nds-game-shader saves-flat systems-merge kv-env; do
+    [ -f "$HERE/system/rootfs/usr/libexec/banana/$f" ] && cp "$HERE/system/rootfs/usr/libexec/banana/$f" "$P/sources/libexec/"
+done
+cp "$HERE/system/rootfs/etc/banana/sleep.d/20-sound" "$P/sources/sleep.d/"
 O=$R/projects/ROCKNIX/devices/$DEV/options
 grep -q 'banana-frontend' "$O" ||
     sed -i 's/^\([[:space:]]*ADDITIONAL_PACKAGES="\)/\1banana-frontend /' "$O"

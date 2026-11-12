@@ -1,0 +1,84 @@
+#!/bin/sh
+# The menu's Wi-Fi (usr/libexec/banana/wifi's interface: scan, status, test, up, down, restart) over NetworkManager
+# (nmcli), on a system whose services own the network (hw.conf's HW_SERVICES=systemd: ROCKNIX, whose wifictl drives
+# it the same way); wifi hands over to this. The network to join is the first
+# block of the menu's wifi.conf (ssid=, psk=, as Settings > Network writes it); ROCKNIX's wifi.ssid / wifi.key settings
+# are kept the same, so its own menus and services agree.
+#   wifi up | down | restart | scan | status | test
+BDATA=${BANANA_DATA:-/data/banana}
+# ROCKNIX's own settings (its profile's set_setting; a host test: $ROCKNIX_SETTINGS, the same key=value file)
+setting() {
+    if [ -z "$ROCKNIX_SETTINGS" ] && [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; setting "$@" ) >/dev/null 2>&1
+    elif [ -n "$ROCKNIX_SETTINGS" ]; then { grep -v "^$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"; fi
+}
+NM=${BANANA_NMCLI:-nmcli}
+CONF=$BDATA/wifi.conf
+# the first network block's ssid and psk (wpa_supplicant's quoting)
+conf_get() { sed -n "/network={/,/}/s/^[[:space:]]*$1=\"\(.*\)\"[[:space:]]*\$/\1/p" "$CONF" 2>/dev/null | head -n 1; }
+dev() { $NM -t -f DEVICE,TYPE device 2>/dev/null | awk -F: '$2 == "wifi" { print $1; exit }'; }
+
+# nmcli's terse fields: ":" separates, "\:" is a colon in a value
+split() { sed 's/\\:/\x01/g' | awk -F: -v OFS='\t' '{ for (i = 1; i <= NF; i++) gsub("\x01", ":", $i); $1 = $1; print }'; }
+
+case $1 in
+up)
+    $NM radio wifi on >/dev/null 2>&1
+    setting wifi.enabled 1
+    ssid=$(conf_get ssid)
+    [ -n "$ssid" ] || exit 0
+    psk=$(conf_get psk)
+    setting wifi.ssid "$ssid"; setting wifi.key "$psk"
+    d=$(dev); [ -n "$d" ] || exit 1
+    if ! $NM -w 30 connection up id "$ssid" ifname "$d" >/dev/null 2>&1; then
+        $NM connection delete id "$ssid" >/dev/null 2>&1
+        if [ -n "$psk" ]; then $NM -w 60 device wifi connect "$ssid" password "$psk" ifname "$d" >/dev/null 2>&1
+        else $NM -w 60 device wifi connect "$ssid" ifname "$d" >/dev/null 2>&1; fi
+    fi
+    ;;
+down)
+    $NM radio wifi off >/dev/null 2>&1
+    setting wifi.enabled 0
+    ;;
+restart)
+    "${BANANA_LIBEXEC:-/usr/libexec/banana}/wifi-nm" up
+    ;;
+scan)
+    # wpa_cli's scan_results: bssid, frequency, signal (dBm), flags, ssid. nmcli gives a 0-100 strength (dBm/2 + 100
+    # the other way) and its security words, made into wpa_supplicant's flags
+    $NM radio wifi on >/dev/null 2>&1
+    printf 'bssid / frequency / signal level / flags / ssid\n'
+    $NM -t -f BSSID,FREQ,SIGNAL,SECURITY,SSID device wifi list --rescan yes 2>/dev/null | split |
+        awk -F'\t' -v OFS='\t' '{
+            f = $2; sub(/ .*/, "", f); s = int($3 / 2) - 100; sec = $4; fl = ""
+            if (sec ~ /802\.1X/) fl = "[WPA2-EAP-CCMP]"
+            else if (sec ~ /WPA3/ && sec ~ /WPA2/) fl = "[WPA2-PSK+SAE-CCMP]"
+            else if (sec ~ /WPA3/) fl = "[RSN-SAE-CCMP]"
+            else if (sec ~ /WPA2|WPA1|WPA/) fl = "[WPA2-PSK-CCMP]"
+            else if (sec ~ /WEP/) fl = "[WEP]"
+            print $1, f, s, fl "[ESS]", $5 }'
+    ;;
+status)
+    d=$(dev)
+    st=$($NM -t -f GENERAL.STATE device show "$d" 2>/dev/null | sed 's/^[^:]*://')
+    case $st in
+    100*)
+        ssid=$($NM -t -f GENERAL.CONNECTION device show "$d" 2>/dev/null | sed 's/^[^:]*://')
+        ip=$($NM -t -f IP4.ADDRESS device show "$d" 2>/dev/null | sed -n '1s/^[^:]*:\([^/]*\).*/\1/p')
+        bssid=$($NM -t -f ACTIVE,BSSID device wifi list ifname "$d" 2>/dev/null | sed -n 's/^yes://p' | sed 's/\\:/:/g' | head -n 1)
+        printf 'bssid=%s\nssid=%s\nwpa_state=COMPLETED\nip_address=%s\n' "$bssid" "$ssid" "$ip"
+        ;;
+    *) printf 'wpa_state=%s\n' "$( [ -n "$st" ] && echo SCANNING || echo INTERFACE_DISABLED )" ;;
+    esac
+    ;;
+test)
+    # the setup's check: the link with its address, the internet, the clock from the network
+    ip=$("${BANANA_LIBEXEC:-/usr/libexec/banana}/wifi-nm" status | sed -n 's/^ip_address=//p')
+    [ -n "$ip" ] || { echo "link fail"; exit 0; }
+    echo "link ok $ip"
+    if curl -s -m 8 -o /dev/null https://www.google.com/generate_204 2>/dev/null; then echo "internet ok"; else echo "internet fail"; fi
+    if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then echo "time ok"
+    elif command -v ntpdate >/dev/null && ntpdate -s pool.ntp.org 2>/dev/null; then echo "time ok"; else echo "time fail"; fi
+    ;;
+*) echo "wifi up | down | restart | scan | status | test" >&2; exit 2 ;;
+esac
+exit 0

@@ -35,7 +35,9 @@ if [ "$CARD" = pipewire ]; then
     pget() { v=$(wpctl get-volume "$CONTROL" 2>/dev/null | sed -n 's/^Volume: \([0-9.]*\).*/\1/p'); [ -n "$v" ] || exit 1
         awk -v v="$v" 'BEGIN { p = int(v * 100 + 0.5); if (p > 100) p = 100; print p }'; }
     pset() { p=$1; case "$p" in ''|*[!0-9-]*) echo "volume: not a level: $p" >&2; exit 2 ;; esac
-        [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100; wpctl set-volume "$CONTROL" $p% >/dev/null 2>&1 || exit 1; }
+        [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100; wpctl set-volume "$CONTROL" $p% >/dev/null 2>&1 || exit 1
+        # (ROCKNIX's own setting too, where the menu is its frontend: the level it restores at boot)
+        [ -r /etc/profile.d/001-functions ] && ( . /etc/profile.d/001-functions; set_setting audio.volume $p ) >/dev/null 2>&1; :; }
     case $1 in
     get) pget ;;
     set) pset "${2:-0}" ;;

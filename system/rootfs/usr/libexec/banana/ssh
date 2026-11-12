@@ -5,6 +5,22 @@
 #   ssh up | down
 D=/data/banana/ssh
 R=/run/banana/ssh
+# a system whose services own SSH (hw.conf's HW_SERVICES=systemd: ROCKNIX, where the menu is the frontend): its sshd,
+# its own setting, and the card's keys as root's (/storage/.ssh on ROCKNIX)
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+setting() { [ -r /etc/profile.d/001-functions ] && ( . /etc/profile.d/001-functions; set_setting "$@" ) >/dev/null 2>&1; }
+if [ "$HW_SERVICES" = systemd ]; then
+    case $1 in
+    up)
+        mkdir -p $D "$HOME/.ssh"
+        [ -f $D/authorized_keys ] || printf '# public keys (one per line) that may log in as root over SSH\n' > $D/authorized_keys
+        cp $D/authorized_keys "$HOME/.ssh/authorized_keys"; chmod 700 "$HOME/.ssh"; chmod 600 "$HOME/.ssh/authorized_keys"
+        setting ssh.enabled 1; systemctl start sshd ;;
+    down) systemctl stop sshd; setting ssh.enabled 0 ;;
+    *) echo "usage: ssh up|down" >&2; exit 1 ;;
+    esac
+    exit 0
+fi
 case $1 in
 up)
     [ -f /run/banana/dropbear.pid ] && kill -0 $(cat /run/banana/dropbear.pid) 2>/dev/null && exit 0

@@ -16,5 +16,6 @@ want 'run = %ROM%'
 want 'run = banana:files'
 bash -n "$HERE/packages/ui/banana-frontend/sources/start_banana.sh" || { echo "FAIL rocknix: start_banana.sh"; fail=1; }
 sh -n "$HERE/../tools/rocknix-banana.sh" || { echo "FAIL rocknix: rocknix-banana.sh"; fail=1; }
+sh "$HERE/tests/services.sh" || fail=1
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

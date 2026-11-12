@@ -2,7 +2,7 @@
 # The RG DS's Wi-Fi (RTL8821CS on SDIO) doesn't come back from a suspend by itself: unload it before, load it after
 # and start it again when it was on. "post" runs in the background, after the game and the menu are back.
 # (the module from the hardware profile, /etc/banana/hw.conf: a handheld whose Wi-Fi sleeps well names none)
-[ -r /etc/banana/hw.conf ] && . /etc/banana/hw.conf
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
 M=${HW_WIFI_MODULE-rtw88_8821cs}
 [ -n "$M" ] || exit 0
 [ -d /sys/module/$M ] || [ -f /run/banana/wifi-unloaded ] || exit 0	# no Wi-Fi: nothing to do, at once

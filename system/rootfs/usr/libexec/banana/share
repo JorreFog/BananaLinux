@@ -15,6 +15,18 @@ CONF=/run/banana/ksmbd.conf
 DB=/run/banana/ksmbdpwd.db
 # a value from accounts.conf as Settings reads it (spaces around the key and the value, quotes, the last line)
 acct() { sed -n "s/^[ \t]*$1[ \t]*=[ \t]*//p" /data/banana/accounts.conf 2>/dev/null | tail -n 1 | sed 's/[ \t\r]*$//; s/^"\(.*\)"$/\1/'; }
+# a system whose services own file sharing (hw.conf's HW_SERVICES=systemd: ROCKNIX): its Samba (smbd, nmbd) with its own
+# shares and login, switched by its own setting
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+setting() { [ -r /etc/profile.d/001-functions ] && ( . /etc/profile.d/001-functions; set_setting "$@" ) >/dev/null 2>&1; }
+if [ "$HW_SERVICES" = systemd ]; then
+    case $1 in
+    up|restart) setting samba.enabled 1; systemctl restart nmbd smbd ;;
+    down) systemctl stop smbd nmbd; setting samba.enabled 0 ;;
+    *) echo "usage: share up|down|restart" >&2; exit 1 ;;
+    esac
+    exit 0
+fi
 case $1 in
 restart)
     pidof ksmbd.mountd >/dev/null || exit 0

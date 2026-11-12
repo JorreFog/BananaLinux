@@ -7,9 +7,12 @@
 # the same setup EmulationStation's start gets (sway's outputs, the device's quirks)
 [ -x /usr/bin/es_settings ] && . /usr/bin/es_settings
 
-DATA=/storage/.config/banana
+DATA=/data/banana	# (/storage/.config/banana: the package's /data links)
 RUN=/run/banana
+export BANANA_DATA=$DATA BANANA_RUN=$RUN
 mkdir -p "${DATA}/logs" "${RUN}"
+# the volume keys' and Settings' volume: the server's default sink (the volume script's PipeWire branch)
+echo "pipewire @DEFAULT_AUDIO_SINK@" > "$RUN/mixer"
 LOG=${DATA}/logs/banana-ui.log
 [ -f "${LOG}" ] && mv -f "${LOG}" "${LOG}.1"
 
@@ -23,4 +26,4 @@ python3 /usr/share/banana/rocknix/es-systems-to-banana.py "${ES}" "${RUN}/system
 export BANANA_DISPLAY=sdl SDL_VIDEODRIVER=wayland
 export BANANA_TOP="${WLR_CON:-DSI-2}"
 
-exec /usr/bin/banana-ui --systems "${RUN}/systems.conf" --roms /storage/roms --data "${DATA}" >>"${LOG}" 2>&1
+exec /usr/bin/banana-ui --systems "${RUN}/systems.conf" --roms /data/roms --data "${DATA}" >>"${LOG}" 2>&1

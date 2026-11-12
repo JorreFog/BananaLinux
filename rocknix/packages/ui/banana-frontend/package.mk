@@ -39,6 +39,18 @@ makeinstall_target() {
     touch ${INSTALL}/usr/share/banana/apps/files/Files.app
   mkdir -p ${INSTALL}/usr/share/banana/rocknix
     cp ${PKG_DIR}/sources/es-systems-to-banana.py ${INSTALL}/usr/share/banana/rocknix/
+  # BananaOS's system scripts the menu runs (Wi-Fi, Bluetooth, volume, updates, SSH, sharing, the DS's saves...), in
+  # their services mode (HW_SERVICES=systemd in this hardware profile: ROCKNIX's units and settings underneath)
+  mkdir -p ${INSTALL}/usr/libexec/banana ${INSTALL}/etc/banana/sleep.d
+    cp -a ${PKG_DIR}/sources/libexec/. ${INSTALL}/usr/libexec/banana/
+    cp -a ${PKG_DIR}/sources/sleep.d/. ${INSTALL}/etc/banana/sleep.d/
+    cp ${PKG_DIR}/sources/hw.conf ${INSTALL}/etc/banana/hw.conf
+    echo rocknix > ${INSTALL}/etc/banana/board
+  # the paths BananaOS's scripts and the menu know, on ROCKNIX's writable /storage
+  mkdir -p ${INSTALL}/data
+    ln -sf /storage/.config/banana ${INSTALL}/data/banana
+    ln -sf /storage/roms ${INSTALL}/data/roms
+    ln -sf /storage/roms/bios ${INSTALL}/data/bios
 }
 
 post_install() {
