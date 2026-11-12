@@ -36,7 +36,7 @@ config BR2_PACKAGE_BANANA_THOR_EMULATORS
 	imply BR2_PACKAGE_AZAHAR
 	imply BR2_PACKAGE_PPSSPP
 	imply BR2_PACKAGE_VITA3K
-	imply BR2_PACKAGE_XEMU
+	# (not xemu: it needs desktop OpenGL, which the Thor's GLES-only image doesn't have; package/xemu)
 	imply BR2_PACKAGE_FLYCAST
 	imply BR2_PACKAGE_SCUMMVM
 	# the libretro cores (RetroArch's, beside the ones under it in retroarch/cores.in)
@@ -86,7 +86,7 @@ config BR2_PACKAGE_BANANA_THOR_EMULATORS
 	  (board/thor/systems.conf) runs beyond the ones BananaOS has
 	  on both handhelds: RetroArch's cores for the 2D, 3D and
 	  computer systems, Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K,
-	  xemu, Flycast and ScummVM. docs/THOR-EMULATORS.md says which
+	  Flycast and ScummVM. docs/THOR-EMULATORS.md says which
 	  system runs on what and what isn't there.
 
 menu "AYN Thor emulators"

@@ -1,8 +1,9 @@
 # BananaOS's menu on ROCKNIX: the AYN Thor
 
-**Decided 2026-11-12:** the AYN Thor version is ROCKNIX's SM8550 image with BananaOS's dual-screen menu as its
-frontend. It is not BananaOS's own system on the Thor. (`docs/THOR-PORT.md` describes the BananaOS-on-Buildroot board
-that came first. It stays in the tree as reference and as a fallback; its hardware findings hold either way.)
+One of the two routes to the AYN Thor in this repository: ROCKNIX's SM8550 image with BananaOS's dual-screen menu as
+its frontend. It is not BananaOS's own system on the Thor. The other route is BananaOS's own Buildroot image
+(`make thor`: `docs/THOR-OS.md`, `docs/BUILD-THOR-IMAGE.md`, `docs/THOR-PORT.md`), which is the one being brought up
+now; this one stays as the alternative. The hardware findings hold either way.
 
 ## Why
 
@@ -136,8 +137,8 @@ Still to make use of the extra room, view by view:
 
 - **`panelfit`.** It fits the canvas in the SDL windows exactly as it does on KMS panels.
 - **The hardware research and `hw-probe`.** Both are useful on ROCKNIX too.
-- **The Buildroot board (`make thor`) and its imports from Banana Pocket.** They're a fallback if the ROCKNIX route
-  hits a wall, and a reference for the kernel and sound facts.
+- **The Buildroot board (`make thor`) and its imports from Banana Pocket.** It has since grown into BananaOS's own
+  image for the Thor (`docs/THOR-OS.md`), and is the reference for the kernel and sound facts.
 
 ## To make it complete
 

@@ -8,6 +8,7 @@
 #   tune io <disk>     (rcS, and udev when a card goes in) one disk's I/O scheduler and read-ahead
 #   tune protect       (rcS) the daemons listed in HW_OOM_PROTECT never chosen by the OOM killer
 #   tune recompress    one pass: zram's pages idle since the last pass recompressed with the stronger algorithm
+#   tune sleep pre|post  (sleep.d/80-cpuidle) the idle states kept off allowed for the length of a sleep, off again after
 # (host tests: BANANA_SYS for /sys, BANANA_PROC for /proc, BANANA_HW_CONF, BANANA_RUN)
 SYS=${BANANA_SYS:-/sys}
 PROC=${BANANA_PROC:-/proc}
@@ -45,11 +46,14 @@ recompress() {
     [ -e "$z/recompress" ] && [ -n "$HW_ZRAM_RECOMPRESS" ] || return 0
     grep -q zram0 "$PROC/swaps" 2>/dev/null || return 0
     # the pages marked idle last time and not touched since, recompressed (priority 1: the second algorithm, as the
-    # kernel's documentation advises over naming it); only those over 1 KB compressed, where there is something to win.
-    # Then every page marked idle again for the next pass
-    put "$z/recompress" "type=idle threshold=1024 priority=1"
+    # kernel's documentation advises over naming it). No threshold: the kernel also throws away every result that is
+    # not under it, and never tries that page again. Then every page marked idle again for the next pass
+    put "$z/recompress" "type=idle priority=1"
     put "$z/idle" all
 }
+
+# cpuidle_off <1|0>: HW_CPUIDLE_OFF's states ("cpu0/state1") kept off, or allowed again
+cpuidle_off() { for c in $HW_CPUIDLE_OFF; do put "$SYS/devices/system/cpu/${c%%/*}/cpuidle/${c#*/}/disable" "$1"; done; }
 
 case $1 in
 boot)
@@ -66,7 +70,7 @@ boot)
     t=$SYS/kernel/mm/transparent_hugepage
     [ -n "$HW_THP_DEFRAG" ] && grep -qw "$HW_THP_DEFRAG" "$t/defrag" 2>/dev/null && put "$t/defrag" "$HW_THP_DEFRAG"
     # an idle state to keep off (HW_CPUIDLE_OFF "cpu0/state1": ROCKNIX's SM8550 quirk)
-    for c in $HW_CPUIDLE_OFF; do put "$SYS/devices/system/cpu/${c%%/*}/cpuidle/${c#*/}/disable" 1; done
+    cpuidle_off 1
     # zswap would compress every page twice in front of zram
     [ -n "$HW_ZRAM" ] && [ -w "$SYS/module/zswap/parameters/enabled" ] && put "$SYS/module/zswap/parameters/enabled" N
     for d in "$SYS"/block/*; do [ -d "$d/queue" ] && io "${d##*/}"; done
@@ -116,6 +120,12 @@ protect)
 recompress)
     recompress
     ;;
-*) echo "usage: tune boot | zram | io <disk> | protect | recompress" >&2; exit 2 ;;
+sleep)
+    # a state kept off is skipped in a suspend-to-idle too: with cpu0's power-collapse state off, cpu0 would wait the
+    # whole sleep out in WFI and its cluster and the SoC could never reach their sleep states. So the states are allowed
+    # while the handheld sleeps and off again when it is back
+    case $2 in pre) cpuidle_off 0 ;; post) cpuidle_off 1 ;; *) exit 2 ;; esac
+    ;;
+*) echo "usage: tune boot | zram | io <disk> | protect | recompress | sleep pre|post" >&2; exit 2 ;;
 esac
 exit 0

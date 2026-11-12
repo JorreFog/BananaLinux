@@ -65,7 +65,7 @@ jobs:
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
-          make BUILDROOT_DIR=/tmp/br buildroot-patched   # (Turnip and Mesa 26.2.6: buildroot/buildroot-patches)
+          make BUILDROOT_DIR=/tmp/br buildroot-patched   # (Turnip, Mesa 26.2.6, libxkbcommon's xkbregistry: buildroot/buildroot-patches)
           for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig banana_thor_defconfig; do
             make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
             grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do

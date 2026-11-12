@@ -4,16 +4,19 @@ What each system on the AYN Thor's shelf runs, where its files go, and how far e
 `buildroot/board/thor/systems.conf`; the packages are under `buildroot/package/` and are all turned on by
 `BR2_PACKAGE_BANANA_THOR_EMULATORS` (`buildroot/package/thor-emulators/Config.in`).
 
-**Status: on paper.** Every package below passes Buildroot's Kconfig and `show-info` with the Thor's defconfig, every
-pinned commit exists upstream, and every patch taken from ROCKNIX applies to its pinned source (checked file by file).
-None of them has been compiled for aarch64 yet, and none has run on a Thor.
+**Status: partly built, never run.** Every package below passes Buildroot's Kconfig and `show-info` with the Thor's
+defconfig, every pinned commit exists upstream, and every patch taken from ROCKNIX applies to its pinned source
+(checked file by file). 30 of the 35 new cores have been cross-compiled for the Thor; no standalone emulator has
+("Build state" below says which). None has run on a Thor.
 
 ## How a game starts
 
 - **libretro cores** run in RetroArch through `run-retroarch <core> <game>`, as on the RG DS: KMS, GLES, no compositor.
   RetroArch here has no Vulkan driver, so the cores use their GLES renderers. Settings > Other systems > Emulators
   picks another installed core for a system (the "other cores" in the table; `core.<system>` in
-  `banana/settings.conf`), and shows the one the systems list starts while no choice is made.
+  `banana/settings.conf`), and shows the one the systems list starts while no choice is made. It has rows only for
+  systems whose shelf entry starts a core: not for the Dreamcast or the PSP, whose entries start standalone
+  emulators (their cores are reached another way, below the table).
 - **Standalone emulators** each have a launcher, `/usr/libexec/banana/run-<emulator>`. The launcher:
   - copies ROCKNIX's SM8550 settings from `/usr/share/<emulator>` to `/data/<emulator>` on the first run, and leaves
     them alone after that;
@@ -26,8 +29,8 @@ None of them has been compiled for aarch64 yet, and none has run on a Thor.
   `sdmc` and `nand`) has them in BananaOS's `saves/` and `states/`. The card's data partition is exFAT, which has no
   symbolic links, so the launcher binds the folder there while the game runs (`usr/libexec/banana/data-link`; a link
   on a card formatted ext4).
-- **RetroAchievements.** One login, in the first-time setup or Settings > Accounts, reaches every emulator that has
-  achievements: RetroArch's cores as on the RG DS, and PPSSPP, Dolphin, Flycast and ARMSX2 through
+- **RetroAchievements.** One login, in the first-time setup or Settings > System > Accounts, reaches every emulator
+  that has achievements: RetroArch's cores as on the RG DS, and PPSSPP, Dolphin, Flycast and ARMSX2 through
   `usr/libexec/banana/ra-standalone`, which writes the account's name and login token into each one's own settings
   as its game starts and takes the token out again when it ends (file sharing shows those files). ROCKNIX leaves
   each of these to its own login screen.
@@ -56,25 +59,25 @@ and patches. Each patch keeps its origin on its first line. ROCKNIX is GPL-2.0. 
 | Switch (switch) | — | — | — | — | **Left out**: see below |
 | Game Boy (`gb`, gb) | Gambatte | core | libretro-gambatte | none | BananaOS |
 | Game Boy Color (`gbc`, gbc) | Gambatte | core | libretro-gambatte | none | BananaOS |
-| Game Boy Advance (`gba`, gba) | BananaGBA (mGBA, gpSP) | core | libretro-bananagba, -mgba, -gpsp | none (`gba_bios.bin` optional) | BananaOS |
+| Game Boy Advance (`gba`, gba) | BananaGBA (mGBA, gpSP) | core | libretro-bananagba, -mgba, -gpsp | none (`gba_bios.bin` optional) | BananaOS. The Thor's settings template says `core.gba = bananagba` (post-build writes it; the RG DS's says gpSP) |
 | Virtual Boy (`virtualboy`, vb) | Beetle VB | core | libretro-beetle-vb | none | ROCKNIX |
 | Nintendo DS (`nds`, nds) | DraStic (SuperDrastic) or BananaDS (`run-nds`) | standalone | drastic, superdrastic, bananads | none | BananaOS. melonDS's own front end is not packaged: see below |
-| Nintendo 3DS (`3ds`, 3ds) | Azahar (Qt 6), both panels | standalone | azahar | the 3DS's SD and NAND (installed titles, saves, system files the user dumped) in saves/3ds/sdmc and saves/3ds/nand | ROCKNIX (2126.2), adapted: Buildroot's Qt (`USE_SYSTEM_QT`), Wayland not XWayland |
+| Nintendo 3DS (`3ds`, 3ds) | Azahar (Qt 6), both panels | standalone | azahar | the 3DS's SD and NAND (installed titles, saves, system files the user dumped) in saves/3ds/sdmc and saves/3ds/nand | ROCKNIX (2126.2), adapted: Buildroot's Qt (`USE_SYSTEM_QT`), Wayland not XWayland; the pad bound as an SDL game controller on every pad, not by the GUID of the pad ROCKNIX's InputPlumber makes |
 | Pokémon mini (`pokemini`, pmini) | PokeMini | core | libretro-pokemini | optional `bios.min` | ROCKNIX |
 | Game & Watch (`gameandwatch`, gw) | MAME (mame-gnw) | standalone | mame-gnw | the games' MAME zips and artwork | BananaOS (made for the RG DS's panels: not checked on the Thor's) |
 | PlayStation (`psx`, psx) | SwanStation (PCSX-ReARMed, Beetle PSX) | core | libretro-swanstation, -pcsx-rearmed, -beetle-psx | `scph5501.bin` etc. in /data/bios | ROCKNIX; PCSX-ReARMed: BananaOS |
-| PlayStation 2 (`ps2`, ps2) | ARMSX2, SDL 3 front end | standalone | armsx2 (+ sdl3, shaderc, plutovg, plutosvg, extra-cmake-modules) | a PS2 BIOS in `/data/bios/ps2`; memory cards in saves/ps2 | ROCKNIX's commit and patch, adapted: ARMSX2's SDL 3 front end instead of Qt, GCC instead of clang, the system's Turnip instead of ARMSX2's own |
+| PlayStation 2 (`ps2`, ps2) | ARMSX2, SDL 3 front end | standalone | armsx2 (+ sdl3, shaderc, plutovg, plutosvg, extra-cmake-modules) | a PS2 BIOS in `/data/bios/ps2`; memory cards in saves/ps2; its settings in `/data/armsx2/ARMSX2` (`inis/PCSX2.ini`) | ROCKNIX's commit and patch, adapted: ARMSX2's SDL 3 front end instead of Qt, GCC instead of clang, the system's Turnip instead of ARMSX2's own |
 | PlayStation 3 (ps3) | — | — | — | — | **Left out**: see below |
-| PSP (`psp`, psp) | PPSSPP standalone (PPSSPP core) | standalone | ppsspp, libretro-ppsspp | none; saves in saves/psp, the memory stick in /data/roms/psp | ROCKNIX (v1.20.2; core v1.20.4), adapted: no cheat database or extra font, the states folder is states/psp |
-| PS Vita (`psvita`, vita) | Vita3K | standalone | vita3k | the Vita firmware (`PSVUPDAT.PUP`, installed from Vita3K's menu); storage in /data/roms/psvita/vita3k | ROCKNIX |
-| Xbox (`xbox`, xbox) | xemu | standalone | xemu (+ sdl3) | `/data/bios/xemu/bios/mcpx_1.0.bin`, `.../Complex_4627v1.03.bin`, `hdd/xbox_hdd.qcow2` (saves are on it) | ROCKNIX, adapted: SDL 3 from package/sdl3, no GTK, no hard-disk-image download |
+| PSP (`psp`, psp) | PPSSPP standalone (PPSSPP core, by hand: below) | standalone | ppsspp, libretro-ppsspp | none for the standalone. The memory stick is /data/roms/psp, and saves/psp is bound onto its `PSP/SAVEDATA` while a game runs, so a `PSP` folder appears in roms/psp | ROCKNIX (v1.20.2; core v1.20.4), adapted: no cheat database or extra font, the states folder is states/psp |
+| PS Vita (`psvita`, vita) | Vita3K | standalone | vita3k | the Vita firmware (`PSVUPDAT.PUP`, installed from Vita3K's menu); storage in /data/roms/psvita/vita3k; its settings in `/data/Vita3K/config.yml` | ROCKNIX, adapted: Buildroot's Boost (filesystem) and libcurl instead of the bundled ones, and its ffmpeg as the prebuilt archive Vita3K's own build fetches (below) |
+| Xbox (xbox) | — | — | — | — | **Left out**: see below |
 | Xbox 360 (x360) | — | — | — | — | **Left out**: no aarch64 Linux emulator |
 | Master System (`mastersystem`, sms) | Genesis Plus GX | core | libretro-genesis-plus-gx | none | ROCKNIX |
 | Mega Drive (`megadrive`, md) | PicoDrive (Genesis Plus GX) | core | libretro-picodrive, -genesis-plus-gx | none | BananaOS; GPX: ROCKNIX |
 | Mega-CD (`segacd`, segacd) | Genesis Plus GX | core | libretro-genesis-plus-gx | `bios_CD_U.bin`, `bios_CD_E.bin`, `bios_CD_J.bin` | ROCKNIX |
 | 32X (`sega32x`, 32x) | PicoDrive | core | libretro-picodrive | none | BananaOS |
 | Saturn (`saturn`, saturn) | YabaSanshiro (Beetle Saturn) | core | libretro-yabasanshiro, -beetle-saturn | `saturn_bios.bin` / `sega_101.bin`, `mpr-17933.bin` | ROCKNIX; YabaSanshiro adapted: two more `-Wno-` flags for GCC 14 |
-| Dreamcast (`dreamcast`, dc) | Flycast standalone (Flycast core) | standalone | flycast, libretro-flycast | `dc_boot.bin`, `dc_flash.bin` in `/data/bios/dc` (optional: HLE BIOS) | ROCKNIX (v2.7), adapted: ALSA, no breakpad/libao |
+| Dreamcast (`dreamcast`, dc) | Flycast standalone (Flycast core, by hand: below) | standalone | flycast, libretro-flycast | `dc_boot.bin`, `dc_flash.bin` in `/data/bios/dc` (optional: HLE BIOS) | ROCKNIX (v2.7), adapted: ALSA, no breakpad/libao. Its settings template picks the Vulkan renderer (`pvr.rend = 4`); a card that already has `/data/flycast/emu.cfg` keeps what it says |
 | Game Gear (`gamegear`, gg) | Genesis Plus GX | core | libretro-genesis-plus-gx | none | ROCKNIX |
 | Atari 2600 (`atari2600`, a2600) | Stella | core | libretro-stella | none | ROCKNIX |
 | Atari 5200 (`atari5200`, a5200) | a5200 | core | libretro-a5200 | `5200.rom` (optional) | ROCKNIX |
@@ -96,7 +99,7 @@ and patches. Each patch keeps its origin on its first line. ROCKNIX is GPL-2.0. 
 | Intellivision (`intellivision`, intv) | FreeIntv | core | libretro-freeintv | `exec.bin`, `grom.bin` | ROCKNIX |
 | Vectrex (`vectrex`, vectrex) | vecx (GLES) | core | libretro-vecx | none | ROCKNIX |
 | Odyssey² (`odyssey2`, o2) | O2EM | core | libretro-o2em | `o2rom.bin` | ROCKNIX |
-| CD-i (`cdi`, cdi) | SAME_CDI | core | libretro-same-cdi | `cdimono1.zip` in /data/bios/same_cdi/bios | ROCKNIX |
+| CD-i (`cdi`, cdi) | SAME_CDI | core | libretro-same-cdi | `cdimono1.zip` in /data/bios/same_cdi/bios | ROCKNIX's commit and patches; adapted: at that commit the tree's `Makefile.libretro` is a plain makefile (no MAME genie build), given the cross `CC`, `CXX` and `AR`; it needs no library |
 | MSX (`msx`, msx) | blueMSX | core | libretro-bluemsx | blueMSX's `Machines` and `Databases` folders in /data/bios | ROCKNIX |
 | Commodore 64 (`c64`, c64) | VICE x64sc | core | libretro-vice | none | BananaOS |
 | Amiga (`amiga`, amiga) | PUAE 2021 | core | libretro-puae2021 | Kickstart ROMs (AROS without them) | ROCKNIX (installed as `puae2021`, libretro's name) |
@@ -109,6 +112,16 @@ and patches. Each patch keeps its origin on its first line. ROCKNIX is GPL-2.0. 
 | PC games (pc) | — | — | — | — | not part of this work (Box64 + Wine) |
 
 The shelf ends with BananaOS's own entries, as on the RG DS: Döda Kvarter, Bshare, Store, Activity, Apps, Ports, Files.
+
+**The Flycast and PPSSPP cores** are installed (RetroArch's netplay and achievements) but no shelf entry starts them
+and Settings has no row for them. To use one, change the system's line in the card's `banana/systems.conf`:
+`run = /usr/libexec/banana/run-retroarch flycast %ROM%` (or `ppsspp`). The PPSSPP core looks for PPSSPP's assets
+(`compat.ini`, the `flash0` fonts) in `/data/bios/PPSSPP`, which the image doesn't fill, and shows "Core system files
+missing, expect bugs" without them. Its saves are in RetroArch's save folder (`<saves>/PSP/SAVEDATA`), not shared
+with the standalone's saves/psp.
+
+**File types.** A shelf lists what its default core opens: the Saturn, Neo Geo CD and 3DO shelves take no `.m3u`,
+the Amstrad CPC shelf takes `dsk sna zip 7z` (CrocoDS reads no tapes), and the PC Engine shelf no `.sgx`.
 
 ## Left out, and why
 
@@ -125,6 +138,10 @@ The shelf ends with BananaOS's own entries, as on the RG DS: Döda Kvarter, Bsha
 - **Switch.** ROCKNIX ships nothing for it on the SM8550, so there is no tested aarch64 Linux build to port. Eden
   and Citron (the design's names) are not packaged here. The yuzu lineage's legal history also makes packaging one the
   owner's decision, not a default.
+- **Xbox (xemu).** `package/xemu` is in the tree but not in the image. xemu links desktop OpenGL (`-lGL`) and opens
+  an OpenGL 4.0 core context beside its Vulkan renderer; the Thor's Mesa gives GLES and EGL only. The package now
+  depends on a libGL provider, so it can't be switched on in this image. Possible later: libglvnd in front of Mesa,
+  linking `-lOpenGL`, and SDL 3 built with OpenGL.
 - **Xbox 360.** No Xbox 360 emulator runs on aarch64 Linux (Xenia is x86-64 and Windows-first; the Android names in the
   design have no Linux build).
 - **DuckStation.** Its licence since 2024 (CC BY-NC-ND 4.0) forbids redistributing modified builds and packaging it.
@@ -137,15 +154,44 @@ The shelf ends with BananaOS's own entries, as on the RG DS: Döda Kvarter, Bsha
   as `mednafen_psx`.
 - **ScummVM's libretro core.** Its build clones its dependencies while it compiles. The standalone ScummVM is used.
 
+## Build state
+
+What has been cross-compiled for the Thor so far (Buildroot's aarch64 toolchain, this repository's configuration),
+from the build stamps of one output tree. "Built" means compiled and installed into the target folder, nothing more:
+none of it has run. Some recipes changed after they were built; those are marked.
+
+| Package | State |
+|---|---|
+| libretro-a5200, -beetle-ngp, -beetle-pce-fast, -beetle-vb, -beetle-wswan, -beetle-saturn, -bluemsx, -cap32, -crocods, -freeintv, -gearcoleco, -genesis-plus-gx, -handy, -neocd, -nestopia, -o2em, -opera, -pokemini, -prosystem, -puae2021, -px68k, -stella, -virtualjaguar | built |
+| libretro-beetle-pcfx, -beetle-psx, -dosbox-pure | built, after a fix: their makefiles asked the build machine's `uname` or `strip` |
+| libretro-vecx, -parallel-n64, -yabasanshiro | built, after a fix: the GLES libraries were missing from their dependencies |
+| libretro-swanstation | compiled, but that build can't be loaded: its own parts came out as shared libraries left in the build folder. The recipe has `BUILD_SHARED_LIBS=OFF` now; not rebuilt |
+| libretro-fbneo, -mame2003-plus | not built yet |
+| libretro-same-cdi | not built yet. Its recipe was rewritten from reading the source (a plain `Makefile.libretro` at the pin) |
+| libretro-flycast | not built yet. Now with `BUILD_SHARED_LIBS=OFF` and its bundled libzip (zlib is the system's), from reading its CMake |
+| libretro-ppsspp | not built yet |
+| the 14 cores the RG DS image has too (`package/retroarch/cores.in`) and RetroArch | not built in this tree with the Thor's toolchain; they build for the RG DS |
+| box64 | built; its recipe changed since (the x86 helper libraries are installed now), not rebuilt |
+| mesa3d (26.2.6, Turnip), wlroots, sway-lite, wvkbd, the kernel with its device tree | built |
+| libxkbcommon | built before its xkbregistry option was added; not rebuilt |
+| dolphin, armsx2, azahar, ppsspp, vita3k, flycast, scummvm | not built yet |
+| xemu | not in the image (above) |
+| Qt 6, WPE WebKit and Cog, PipeWire and WirePlumber | not built yet |
+
 ## Known gaps
 
 **Not built or run yet**
 
-- Nothing above has been compiled for aarch64 or started on a Thor. The likely build problems are in the big C++
-  emulators:
+- Nothing above has started on a Thor. The likely build problems are in the big C++ emulators, none of which has
+  been compiled:
   - ARMSX2 with GCC (upstream builds it with clang);
   - Azahar against Qt 6.9 (it downloads Qt 6.10 when not told to use the system's);
   - Dolphin's and Vita3K's bundled dependencies cross-compiled.
+- The latest changes to Flycast (both), Vita3K, Box64 and libxkbcommon were made from reading their sources and are
+  unproven until a build.
+- ARMSX2 and Azahar don't set `BUILD_SHARED_LIBS`. After their first build, `readelf -d` on each binary must show no
+  `NEEDED` library that isn't in the image (Flycast's bundled libraries were left behind in the build folder that
+  way).
 - Each standalone launcher's options, folders and quit path come from ROCKNIX's start scripts and the emulators'
   sources, not from a run.
 
@@ -159,28 +205,31 @@ The shelf ends with BananaOS's own entries, as on the RG DS: Döda Kvarter, Bsha
 
 **Downloads**
 
-- **xemu needs the network while it builds.** Its Meson subprojects (imgui, implot, genconfig, glslang, volk,
-  SPIRV-Reflect, VulkanMemoryAllocator, tomlplusplus, xxhash, softfloat...) are wrap files that Meson downloads at
-  configure time. ROCKNIX's build does the same. They aren't Buildroot downloads, so they have no hashes.
+- **Vita3K's ffmpeg is a prebuilt archive.** Vita3K's own build downloads the libraries its project built
+  (`Vita3K/ffmpeg-core`, release `ccce45f`) instead of compiling ffmpeg. Here that archive is a declared download of
+  the package, with its hash in `vita3k.hash`. It exists for aarch64 and x86_64 only.
+- **xemu, if it is ever switched on, needs the network while it builds.** Its Meson subprojects (imgui, implot,
+  genconfig, glslang, volk, SPIRV-Reflect, VulkanMemoryAllocator, tomlplusplus, xxhash, softfloat...) are wrap files
+  that Meson downloads at configure time. ROCKNIX's build does the same. They aren't Buildroot downloads, so they
+  have no hashes.
 - **Large git downloads.** Dolphin, Azahar, Vita3K, Flycast and PPSSPP come with their submodules.
-- **No `.hash` files.** None of the new packages has one, because no source was downloaded here (the sandbox can't fetch
-  GitHub archives).
+- **Few `.hash` files.** The emulator and core packages' git downloads have none, because no source was downloaded
+  where they were written. Buildroot warns and goes on.
 
 **Things the image doesn't include**
 
-- **Not in the image:** PPSSPP's cheat database, xemu's free hard-disk image, and ARMSX2's PS2 patch archive (ROCKNIX
-  downloads it at install). The xemu launcher says where its files go.
-- **RetroArch has no Vulkan driver here.** ParaLLEl N64, Beetle PSX HW and SwanStation therefore use their GLES paths.
+- **Not in the image:** PPSSPP's cheat database and ARMSX2's PS2 patch archive (ROCKNIX downloads it at install).
+- **RetroArch has no Vulkan driver here.** ParaLLEl N64 and SwanStation therefore use their GLES paths.
   Turning on Vulkan in RetroArch is a change to `package/retroarch`.
 
 **Licences**
 
 - Genesis Plus GX, FinalBurn Neo, MAME 2003-Plus and parts of Opera allow non-commercial distribution only, like the
   Snes9x already in the image.
-- ARMSX2 is GPL-3.0+ and LGPL-3.0+, Azahar GPL-2.0+, Dolphin GPL-2.0+, xemu GPL-2.0+.
+- ARMSX2 is GPL-3.0+ and LGPL-3.0+, Azahar GPL-2.0+, Dolphin GPL-2.0+.
 - Each package's `_LICENSE` says which licence applies.
 
 **Settings screens**
 
-- The Thor's Settings screen doesn't know the new cores or the standalone emulators' options. `core.<system>` in
-  `banana/settings.conf` switches a system's core by hand.
+- Settings has no pages for the standalone emulators' own options: each one's settings are changed in its own menu
+  or its file under `/data/<emulator>`. The cores are picked in Settings > Other systems > Emulators (above).

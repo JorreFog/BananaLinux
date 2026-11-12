@@ -30,6 +30,9 @@ AZAHAR_CONF_OPTS = \
 	-DCITRA_WARNINGS_AS_ERRORS=OFF -DCITRA_USE_PRECOMPILED_HEADERS=OFF \
 	-DCMAKE_C_FLAGS="$(TARGET_CFLAGS) -Wno-error=incompatible-pointer-types"
 
+# the emulator and ROCKNIX's settings (config/qt-config.ini). Its pad bindings aren't ROCKNIX's, which name the one
+# pad InputPlumber makes there (a virtual DualSense, by its GUID and raw button numbers): they are SDL game-controller
+# buttons and axes on every pad (api:controller, maptype:all), mapped by the list run-azahar hands SDL
 define AZAHAR_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/buildroot-build/bin/Release/azahar $(TARGET_DIR)/usr/bin/azahar
 	$(call THOR_EMULATORS_INSTALL_TEMPLATES,azahar)

@@ -1,6 +1,7 @@
 # What to ask ROCKNIX for
 
-BananaOS on the AYN Thor is ROCKNIX's SM8550 image with BananaOS's menu as its frontend (docs/THOR-ROCKNIX.md).
+One of BananaOS's two routes to the AYN Thor is ROCKNIX's SM8550 image with BananaOS's menu as its frontend
+(docs/THOR-ROCKNIX.md).
 Today `tools/rocknix-banana.sh` edits a ROCKNIX checkout to get there. Each edit below is a place where ROCKNIX could
 offer a hook instead, so a frontend like ours would be an add-on package rather than a fork. This page is the text for
 that conversation: an issue (or a discussion) on ROCKNIX/distribution, one point per heading, each with what we do now.

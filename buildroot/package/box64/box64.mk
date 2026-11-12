@@ -21,9 +21,14 @@ BOX64_CONF_OPTS = \
 	-DBOX32=ON \
 	-DBOX32_BINFMT=OFF \
 	-DNOGIT=ON \
-	-DNO_LIB_INSTALL=ON \
 	-DNO_CONF_INSTALL=ON \
 	-DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+# Box64 installs the x86 libraries it runs as x86 code instead of handing over to the system's (x64lib and x86lib in
+# its sources: libunwind, which Wine's ntdll needs, libgcc_s, libstdc++...) where it looks for them by itself. They
+# aren't the target's architecture, which Buildroot's check of every installed program would refuse
+# (and with them its own x86_64 bash, /usr/bin/box64-bash, which it runs a game's shell scripts with)
+BOX64_BIN_ARCH_EXCLUDE = /usr/lib/box64-x86_64-linux-gnu /usr/lib/box64-i386-linux-gnu /usr/bin/box64-bash
 
 # its settings per program (box64.box64rc: the known-good switches for Wine, Steam and many games) where it looks
 define BOX64_INSTALL_RC

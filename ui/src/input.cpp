@@ -116,6 +116,12 @@ namespace banana
 			ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
 			Dev dv;
 			dv.fd = fd;
+			{
+				unsigned long sw[SW_MAX / (8 * sizeof(long)) + 1] = {};
+				ioctl(fd, EVIOCGBIT(EV_SW, sizeof sw), sw);
+				for (unsigned long w : sw) if (w) dv.shared = true;
+				if (testBit(keys, KEY_POWER) || testBit(keys, KEY_VOLUMEUP) || testBit(keys, KEY_VOLUMEDOWN)) dv.shared = true;
+			}
 			// a touchscreen (multitouch, or single-touch with BTN_TOUCH), or an absolute pointer (QEMU's tablet, a
 			// graphics tablet: BTN_LEFT on ABS_X/Y, and not a pad's stick)
 			bool mt = testBit(abs, ABS_MT_POSITION_X) && testBit(abs, ABS_MT_POSITION_Y);
@@ -173,6 +179,42 @@ namespace banana
 			devs.push_back(dv);
 		}
 		closedir(d);
+		if (grabbed) grab(true);
+	}
+
+	// nothing held on a device: no key down (a finger on a touchscreen is BTN_TOUCH), no stick, trigger or d-pad pushed
+	static bool atRest(int fd, bool touch)
+	{
+		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = {};
+		if (ioctl(fd, EVIOCGKEY(sizeof keys), keys) < 0) return true;
+		for (unsigned long w : keys) if (w) return false;
+		if (touch) return true;
+		unsigned long abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
+		ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
+		static const int axes[] = { ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ, ABS_HAT0X, ABS_HAT0Y };
+		for (int a : axes)
+		{
+			input_absinfo ai = {};
+			if (!testBit(abs, a) || ioctl(fd, EVIOCGABS(a), &ai) != 0 || ai.maximum <= ai.minimum) continue;
+			// (a trigger rests at its lowest value, a stick and the d-pad in the middle; pushed: over half way out)
+			const bool trigger = (a == ABS_Z || a == ABS_RZ) && ai.minimum >= 0;
+			const long range = (long)ai.maximum - ai.minimum;
+			const long out = trigger ? 2 * ((long)ai.value - ai.minimum) : labs(2L * ai.value - ai.minimum - ai.maximum);
+			if (2 * out > range) return false;
+		}
+		return true;
+	}
+
+	void Input::grab(bool on)
+	{
+		grabbed = on;
+		for (auto& d : devs)
+		{
+			if (d.shared || d.ours == on) continue;
+			// (a device another program has grabbed already says EBUSY: left, it sends the menu nothing either)
+			if (!on) { ioctl(d.fd, EVIOCGRAB, 0); d.ours = false; }
+			else if (atRest(d.fd, d.touch)) d.ours = ioctl(d.fd, EVIOCGRAB, 1) == 0;
+		}
 	}
 
 	void Input::close()
@@ -297,5 +339,7 @@ namespace banana
 				}
 			}
 		}
+		// (a grab that waited for this device to be let go)
+		if (grabbed) grab(true);
 	}
 }

@@ -1,5 +1,7 @@
 #!/bin/sh
 # Shutdown: stop what writes to the card, then unmount it cleanly
+# (the hardware profile: init runs this without rcS's environment, and the backlights' names are in it)
+. /usr/libexec/banana/hw-env
 # no sleep from here on (#46): bananad won't suspend while this flag is there, so the lid still shut while the games
 # save and the card is unmounted can't put the handheld to sleep instead of off (bananad itself still runs: it TERMs
 # a game on its own shutdown and waits for it)
@@ -45,7 +47,7 @@ if [ -f /run/banana/dim ] && read dt db < /run/banana/dim && [ "${dt:-0}" -ge 50
     cp /run/banana/dim /data/banana/backlight 2>/dev/null
 else
     read old_t old_b 2>/dev/null < /data/banana/backlight
-    t=$(bl_pm backlight1); b=$(bl_pm backlight0)
+    t=$(bl_pm "${BANANA_BACKLIGHT_TOP:-backlight1}"); b=$(bl_pm "${BANANA_BACKLIGHT_BOTTOM:-backlight0}")
     t=${t:-$old_t}; b=${b:-${old_b:-$old_t}}
     [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
     [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight

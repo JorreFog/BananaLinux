@@ -1,13 +1,13 @@
 #!/bin/sh
 # PlayStation 2: ARMSX2 (package/armsx2: PCSX2 with ARM64 recompilers, its SDL 3 front end), Vulkan, on a compositor of
-# its own on the top panel (run-wayland). Settings in /data/armsx2/PCSX2 (ARMSX2's data folder under XDG_CONFIG_HOME),
+# its own on the top panel (run-wayland). Settings in /data/armsx2/ARMSX2 (ARMSX2's data folder under XDG_CONFIG_HOME),
 # from ROCKNIX's settings in /usr/share/armsx2 on the first run. The BIOS (a PS2 BIOS image, any region) in
 # /data/bios/ps2; memory cards in saves/ps2, states in states/ps2. Quit: the hotkeys in its settings (Guide + North
 # opens its pause menu) or the menu's quit (SIGTERM: ARMSX2's front end stops the game and writes its memory cards).
 #   run-armsx2 <game>        (.iso .chd .cso .zso .bin .cue .m3u .gz)
 ROM="$1"
 X=/data/armsx2
-D=$X/PCSX2
+D=$X/ARMSX2
 T=/usr/share/armsx2
 LOGS=/data/banana/logs/armsx2
 mkdir -p "$D/inis" "$LOGS" /data/bios/ps2 /data/saves/ps2 /data/states/ps2

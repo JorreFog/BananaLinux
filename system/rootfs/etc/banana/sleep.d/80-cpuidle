@@ -1,0 +1,11 @@
+#!/bin/sh
+# A board that keeps an idle state off (hw.conf's HW_CPUIDLE_OFF: the AYN Thor's cpu0/state1, ROCKNIX's quirk): the
+# state is allowed for the length of a sleep and off again after (usr/libexec/banana/tune sleep). Off, the kernel skips
+# it in a suspend-to-idle as well, cpu0 never powers down and the SoC stays out of its sleep state. Late among the
+# "pre" hooks, so the state is back only just before the sleep; "post" runs in the background already.
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+[ -n "$HW_CPUIDLE_OFF" ] || exit 0
+case $1 in
+pre|post) /usr/libexec/banana/tune sleep "$1" ;;
+esac
+exit 0

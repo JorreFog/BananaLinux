@@ -2,7 +2,8 @@
 # usr/libexec/banana/run-wayland under a headless sway with two outputs: the program runs inside the compositor with
 # Wayland's environment set, its exit status comes back, the compositor is gone after it, the configuration names the
 # top output as the main one and has the second-screen rule; --keep-bottom powers the bottom output off; SIGTERM
-# reaches the program. Needs sway and swaymsg; skipped otherwise.
+# reaches the program, also when the launcher's whole process group gets it; --keyboard starts the keyboard on the
+# bottom output. Needs sway and swaymsg; skipped otherwise.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 W=$HERE/rootfs/usr/libexec/banana/run-wayland
 for t in sway swaymsg; do command -v $t >/dev/null || { echo "run-wayland test skipped (no $t)"; exit 0; }; done
@@ -44,5 +45,41 @@ sleep 3
 kill -TERM "$(pgrep -f "run-wayland -- $T/slow" | head -n 1)"; wait $P; rc=$?
 [ -f "$T/term" ] || bad "SIGTERM didn't reach the program"
 [ $rc = 3 ] || bad "after SIGTERM the status was $rc"
+# the menu's Quit: SIGTERM to the launcher's whole process group (the launcher a session leader, run-wayland its
+# background job, as the launchers start it). The compositor is not in that group: the program saves first and its
+# status comes back
+printf '#!/bin/sh\ntrap "trap \\"\\" TERM; sleep 2; echo saved > %s/saved; exit 3" TERM\nsleep 30 &\nwait\n' "$T" > "$T/saves"; chmod +x "$T/saves"
+{
+    echo "echo \$\$ > '$T/lpid'"
+    echo "sh '$W' -- '$T/saves' &"
+    echo 'PID=$!'
+    echo "trap 'kill -TERM \$PID 2>/dev/null' TERM INT HUP"
+    echo 'wait $PID; RC=$?'
+    echo 'while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done'
+    echo "echo \"\$RC \$(cat '$T/saved' 2>/dev/null)\" > '$T/lrc'"
+} > "$T/launcher"
+( export BANANA_RUN="$T/run" BANANA_DATA="$T/data" BANANA_HW_CONF=/nonexistent BANANA_WL_OUTPUTS="HEADLESS-1 HEADLESS-2" \
+      WLR_BACKENDS=headless WLR_HEADLESS_OUTPUTS=2 WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman LIBSEAT_BACKEND=noop
+  setsid sh "$T/launcher" ) &
+sleep 3
+kill -TERM -"$(cat "$T/lpid")"
+i=0; while [ ! -f "$T/lrc" ] && [ $i -lt 10 ]; do sleep 1; i=$((i + 1)); done
+[ "$(cat "$T/lrc" 2>/dev/null)" = "3 saved" ] || bad "after SIGTERM to the launcher's group: '$(cat "$T/lrc" 2>/dev/null)' (want the program's status, after it saved)"
+pgrep -f "sway -c $T/run/wl/sway.conf" >/dev/null && bad "the compositor is still running after the group's SIGTERM"
+# --keyboard: the on-screen keyboard is started shown, with the bottom output focused (where the compositor puts a
+# layer surface that names no output), and the top one is focused again when the program starts (a stand-in keyboard
+# that writes down its arguments and the focused output)
+mkdir "$T/bin"
+printf '#!/bin/sh\necho "$*" > "%s/kbd.args"\nswaymsg -t get_outputs > "%s/kbd.json"\nsleep 5\n' "$T" "$T" > "$T/bin/wvkbd-mobintl"; chmod +x "$T/bin/wvkbd-mobintl"
+focused() { python3 -I -c "
+import json, sys
+print(' '.join(x['name'] for x in json.load(open(sys.argv[1])) if x.get('focused')))" "$1" 2>/dev/null; }
+rm -f "$T/outputs.json"
+PATH=$T/bin:$PATH run --keyboard -- "$T/prog" x >/dev/null 2>&1
+case $(cat "$T/kbd.args" 2>/dev/null) in *hidden*|"") bad "the keyboard wasn't started shown: '$(cat "$T/kbd.args" 2>/dev/null)'" ;; esac
+[ "$(focused "$T/kbd.json")" = HEADLESS-2 ] || bad "the keyboard came up with '$(focused "$T/kbd.json")' focused, not the bottom output"
+[ "$(focused "$T/outputs.json")" = HEADLESS-1 ] || bad "the program started with '$(focused "$T/outputs.json")' focused, not the top output"
+grep -q wvkbd "$T/run/wl/sway.conf" && bad "a window rule for the keyboard (a layer surface: no rule applies to it)"
+pgrep -x wvkbd-mobintl >/dev/null && bad "the keyboard is still running"
 [ $fail = 0 ] && echo "run-wayland: all passed"
 exit $fail

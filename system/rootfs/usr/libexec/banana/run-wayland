@@ -10,7 +10,8 @@
 #   - each panel turned as the kernel says it is mounted (the Thor's are portrait panels on their side), or as
 #     hw.conf's HW_WL_ROTATE says ("90", or "90,270": top,bottom);
 #   - with --keep-bottom the bottom panel is left dark and unused (a one-screen program: the AMOLED off);
-#   - with --keyboard an on-screen keyboard can come up on the bottom panel (the browser: wvkbd, if installed).
+#   - with --keyboard an on-screen keyboard is on the bottom panel for as long as the program runs (the browser:
+#     wvkbd, if installed).
 # The program gets WAYLAND_DISPLAY, XDG_RUNTIME_DIR, SDL_VIDEODRIVER=wayland, QT_QPA_PLATFORM=wayland and friends; this
 # script ends when it does, with its exit status. SIGTERM (the menu's Quit) is passed on to it.
 #
@@ -82,7 +83,6 @@ CFG=$RUN/wl/sway.conf
             echo "workspace 2 output $BOT"
             # (the second window of a two-screen program: by its title, as ROCKNIX's rule)
             echo 'for_window [title=".*(Secondary|\[w2\]|Sub|Bottom|Screen 2|GamePad).*"] move window to output '"$BOT"', fullscreen enable'
-            [ -n "$keyboard" ] && echo 'for_window [app_id="wvkbd.*"] move window to output '"$BOT"
         fi
         # each touchscreen to its own panel (hw.conf's names; without them sway spreads a touch over both outputs)
         [ -n "$HW_WL_TOUCH_TOP" ] && echo "input \"$HW_WL_TOUCH_TOP\" map_to_output $TOP"
@@ -105,7 +105,16 @@ ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid"
     # (the menu's lease shim is the compositor's, which opens the display device; a program in it has no use for it,
     # and Box64 would try to load it into a Windows game as an x86 library)
     echo 'case "$LD_PRELOAD" in */banana-leaseshim.so) unset LD_PRELOAD ;; esac'
-    [ -n "$keyboard" ] && echo 'command -v wvkbd-mobintl >/dev/null && wvkbd-mobintl --hidden -L 300 &'
+    # the keyboard, shown from the start (nothing would bring a hidden one up). It is a layer surface that names no
+    # output, and the compositor puts such a one on the focused output (no window rule applies to it): the bottom
+    # panel focused while it comes up, the top one again before the program opens its window
+    if [ -n "$keyboard" ]; then
+        echo 'if command -v wvkbd-mobintl >/dev/null; then'
+        [ -n "$BOT" ] && [ -z "$keepbottom" ] && echo "    swaymsg focus output $BOT >/dev/null 2>&1"
+        echo '    wvkbd-mobintl -L 300 &'
+        [ -n "$BOT" ] && [ -z "$keepbottom" ] && echo "    sleep 1; swaymsg focus output $TOP >/dev/null 2>&1"
+        echo 'fi'
+    fi
     printf 'setsid'
     for a in "$@"; do printf " '%s'" "$(printf '%s' "$a" | sed "s/'/'\\\\''/g")"; done
     echo ' &'
@@ -125,7 +134,9 @@ export WLR_NO_HARDWARE_CURSORS=1
 # Quit from the menu: the program first (it saves), the compositor follows it out
 trap 'p=$(cat "$RUN/wl/pid" 2>/dev/null); [ -n "$p" ] && kill -TERM -"$p" 2>/dev/null' TERM INT HUP
 say "$* (top $TOP $RT, bottom ${BOT:-none} ${keepbottom:+off}${two:+ two-screens})"
-"$SWAY" -c "$CFG" >> "$LOG" 2>&1 &
+# (the compositor in a session of its own: the menu's Quit signals the launcher's whole process group, and the
+# compositor must not end on it before the program has saved; the trap above is what the group's signal does here)
+setsid "$SWAY" -c "$CFG" >> "$LOG" 2>&1 &
 SP=$!
 wait $SP
 while kill -0 $SP 2>/dev/null; do wait $SP; done

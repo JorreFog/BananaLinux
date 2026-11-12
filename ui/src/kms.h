@@ -88,6 +88,7 @@ namespace banana
 		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;	// (leased: 0 or 1 that screen, 2 both)
 		int borrowMask = 0;			// the leased screens the menu draws on for now (borrow)
 		uint32_t theirFb[2] = { 0, 0 };	// what the lease's program showed there
+		bool theirOff[2] = { false, false };	// (it had the panel off: a PC game's bottom screen)
 		// (and the planes it had lit over its picture, an overlay or a cursor: off while the menu is over it, back after)
 		struct TheirPlane { uint32_t plane, crtc, fb; int32_t x, y; uint32_t w, h, sx, sy, sw, sh; };
 		std::vector<TheirPlane> theirPlanes;

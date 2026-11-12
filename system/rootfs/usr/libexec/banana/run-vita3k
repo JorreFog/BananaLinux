@@ -29,7 +29,8 @@ done
 for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
     [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
 done
-export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+# (XDG_CONFIG_HOME: Vita3K reads config.yml from $XDG_CONFIG_HOME/Vita3K, and from $HOME/.config/Vita3K without it)
+export HOME=$D XDG_CONFIG_HOME=/data XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
 BEFORE=$(ls "$V/ux0/app" 2>/dev/null)
 
 # run <Vita3K arguments>: Vita3K on its compositor; the launcher waits, and passes a quit on

@@ -21,8 +21,9 @@ done
 . "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
 # PPSSPP's fonts, shaders and translations, read from /data/ppsspp/assets (the build's folder)
 link_dir "$T/assets" "$D/assets"
-# the memory stick's saves in BananaOS's saves folder (a folder PPSSPP made before is moved there once)
-link_dir /data/saves/psp "$D/PSP/SAVEDATA"
+# the memory stick's saves in BananaOS's saves folder (a folder PPSSPP made before is moved there once). The memory
+# stick is /data/roms/psp in this build, so a game writes ms0:/PSP/SAVEDATA there, not under /data/ppsspp
+link_dir /data/saves/psp /data/roms/psp/PSP/SAVEDATA
 # the pad mapping PPSSPP's build reads (/data/SDL-GameControllerDB/gamecontrollerdb.txt), when the image or the card
 # has one for the Thor's pad
 for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do

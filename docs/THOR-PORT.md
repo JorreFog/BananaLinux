@@ -1,8 +1,10 @@
 # BananaOS on the AYN Thor
 
-> **The direction changed on 2026-11-12.** The Thor version is ROCKNIX's image with BananaOS's dual-screen menu as
-> its frontend: see [`docs/THOR-ROCKNIX.md`](THOR-ROCKNIX.md). This page is the BananaOS-on-Buildroot board that came
-> first (`make thor`). It stays as reference and as a fallback, and its hardware findings hold either way.
+> **There are two routes to the Thor in this repository.** BananaOS's own Buildroot image (`make thor`) is the one
+> being brought up: [`docs/THOR-OS.md`](THOR-OS.md) says what it is and
+> [`docs/BUILD-THOR-IMAGE.md`](BUILD-THOR-IMAGE.md) how to build it. ROCKNIX's image with BananaOS's menu as its
+> frontend ([`docs/THOR-ROCKNIX.md`](THOR-ROCKNIX.md)) is the alternative. This page keeps the board's hardware
+> facts, the OpenABL step and the milestones, which hold for the first route and mostly for both.
 
 The plan, and where it stands, for BananaOS on the AYN Thor (Snapdragon 8 Gen 2, SM8550: the Base, Pro and Max).
 The Thor Lite is a different handheld (Snapdragon 865, SM8250) and isn't covered here.
@@ -42,7 +44,8 @@ hardware layer the same way, from ROCKNIX's SM8550 work (`tools/sync-rocknix-sm8
 Two more things come from the same layering:
 
 - **The hardware profile.** Every board now has `system/rootfs/etc/banana/hw/<board>.conf`. post-build installs it as
-  `/etc/banana/hw.conf`, and rcS reads it through `usr/libexec/banana/hw-env`. It holds:
+  `/etc/banana/hw.conf`, read through `usr/libexec/banana/hw-env` by rcS (for what it starts), by
+  `banana-ui-session` (for the menu and every game: init starts it beside rcS, not from it) and by rcK. It holds:
   - the top panel's connector
   - the touchscreen
   - the panels' mounting
@@ -51,7 +54,10 @@ Two more things come from the same layering:
   - the Wi-Fi module to unload around sleep
 
   It replaces RG DS values that were written into the scripts. The RG DS's profile reproduces exactly what was
-  there before.
+  there before. The Thor's values, all from the device tree and the drivers' sources and none seen on a Thor:
+  `HW_TOP=DSI-2`, `HW_TOUCH=98c000.i2c` (the bus the I2C hub puts the bottom touchscreen on),
+  `HW_BACKLIGHT_TOP=ae96000.dsi.0`, `HW_BACKLIGHT_BOTTOM=ae94000.dsi.0`, and for the compositor `HW_WL_ROTATE=90`,
+  `HW_WL_TOUCH_TOP="0:0:top_touchscreen"`, `HW_WL_TOUCH_BOTTOM="0:0:bottom_touchscreen"`.
 - **`usr/libexec/banana/hw-probe`**. It runs on any board and writes a report of everything the kernel sees: DRM
   connectors and modes, input devices, ALSA cards and controls, power supplies, LEDs, remote processors, firmware
   requests and errors. Its output on a Thor answers every *(check)*.
@@ -74,9 +80,10 @@ Two more things come from the same layering:
 - `buildroot/external.mk`:
   - the RG DS's kernel drivers, device trees and patches go into an RG DS kernel only (`BANANA_BOARD`)
   - the Thor's device trees go into the kernel's `qcom` directory
-  - the Adreno and WCN7850 firmware the Buildroot options miss
-- `package/openabl` (v1.2, ROCKNIX's pin) and `package/rocknix-extra-firmware` (the Thor's files, from the same
-  commit as the RG DS Plus's).
+  - the WCN7850's Bluetooth firmware, which Buildroot's linux-firmware options miss (the Adreno 740's three files
+    come only from `package/thor-gpu-firmware`: linux-firmware's Adreno option has none of them and is off)
+- `package/openabl` (v1.2, ROCKNIX's pin) and `package/rocknix-extra-firmware` (the Thor's files at `55718b86`,
+  later than ROCKNIX's pin `925dfb5e`, which has no `AYN-Thor-tplg.bin`; the RG DS Plus's stay at `925dfb5e`).
 - **banana-ui on panels that differ**. Before, `kms.cpp` refused to start ("the two panels have different modes").
   Now:
   - The menu draws one canvas: the panels' own size on the RG DS (unchanged), 4:3 elsewhere (1440x1080 on the Thor).
@@ -116,9 +123,10 @@ Each milestone ends with something you can check on the handheld.
 1. Run `/usr/libexec/banana/hw-probe` and commit its report under `docs/thor/` for reference.
 2. Fix `etc/banana/hw/thor.conf` from it:
    - the connector names (is the top `DSI-2`?)
-   - the bottom touchscreen's sysfs path
+   - the bottom touchscreen's sysfs path (set to `98c000.i2c`)
    - the panels' "panel orientation" (expected `Right Side Up`, which banana-ui turns 90°)
-   - the backlight names (AMOLED panels: the DSI panels' own backlight devices)
+   - the backlight names (AMOLED panels: the DSI panels' own backlight devices; set to `ae96000.dsi.0` and
+     `ae94000.dsi.0`)
    - the Wi-Fi module
 3. Done when: every *(check)* in `thor.conf` and on this page is gone.
 
@@ -165,12 +173,13 @@ Each milestone ends with something you can check on the handheld.
      - A VT switch on suspend wedged it until `SEATD_VTBOUND=0`.
      - Its SoundWire patch 0039 is a lead (`board/thor/linux-patches-banana/README.md`).
    - The lid is `SW_LID` as on the RG DS.
-4. **Wi-Fi.** ath12k with `wpa_supplicant`, interface `wlan0` (check). Does it need to be unloaded around sleep?
+4. **Wi-Fi.** ath12k with `wpa_supplicant`, interface `wlan0`: `etc/udev/rules.d/80-net-name-slot.rules` hides
+   eudev's rule that would rename it `wlp1s0`. Does it need to be unloaded around sleep?
    (`HW_WIFI_MODULE`, empty for now)
 5. **Bluetooth.** The `bluetooth` script assumes the RTL8821CS on uart1 through hci_uart H5. The WCN7850 is QCA on
    uart14 (`qca/hmtbtfw20.tlv`). Make the script's chip setup a profile value.
-6. **Fan.** pwm-fan with the device tree's thermal trips. It's built in and works without help. Expose a fan curve
-   later.
+6. **Fan.** pwm-fan. The device tree maps no thermal zone to it, so `handheld`'s loop (ROCKNIX's curves, by the CPU
+   and GPU zones' mean) is its only control. Check the sensor and PWM paths.
 7. Done when: a day's use has sound, charging, the lid and Wi-Fi working, and the battery reads right.
 
 ### M4: games (needs M3)
@@ -178,12 +187,13 @@ Each milestone ends with something you can check on the handheld.
 1. **GPU.**
    - freedreno GLES: RetroArch, SuperDrastic's shaders, BananaFront.
    - Turnip (Vulkan) is in the image now, from Banana Pocket's Buildroot patches (`buildroot/buildroot-patches`:
-     the option, and Mesa 26.2.6). The Makefile applies them to Buildroot. Use it for PPSSPP, Dolphin and the like.
+     0001 the option, 0002 Mesa 26.2.6; 0003, libxkbcommon's xkbregistry option for Wine's Wayland driver, is
+     this repository's). The Makefile applies them to Buildroot. Use it for PPSSPP, Dolphin and the like.
 2. **CPU.**
    - Builds are for the Cortex-A710 (`BR2_cortex_a710`) with SVE off (`external.mk`: the Snapdragon 8 Gen 2 has no
      SVE, and GCC emits it for `-mcpu=cortex-a710` at `-O2`). BananaDS and BananaFront follow the board's CPU.
-   - `banana-perf` caps `policy0` at RK3568 clocks. The Thor has three policies (A510, A715/A710, X3); give each
-     profile per-policy caps.
+   - Done: `banana-perf` has per-cluster profiles for the Thor's three policies (A510, A715/A710, X3;
+     `/usr/bin/banana-perf`). Their values are still to be checked on a Thor.
 3. **The panels in games.** The DS emulators, the SDL2 panels patch and RetroArch's monitor index all address the
    panels by connector. They each take the panel's own mode. Check each one draws the right size on the 1080x1920 and
    1080x1240 portrait panels: they'll need the same turn the menu does, or the DPU's rotation.
@@ -241,7 +251,8 @@ From the survey of the tree; each one is cheap once M1 has the facts:
   - `run-ps1`, `run-gw` and `run-bank` read the first `card0-*` mode.
   - `nds/overlay.cpp` has the panels' millimetres.
 - **Rockchip-only tools.**
-  - `panel-tune` and `banana-panel-tune` (generic-DSI timings, VOP clocks)
+  - `panel-tune` and `banana-panel-tune` (generic-DSI timings, VOP clocks). `panel-tune` now exits at once on any
+    board but `rgds*` and `universal`
   - `one-panel` (Rockchip DSI addresses)
   - `kms.cpp`'s VOP interrupt-storm check (harmless: it finds no `fe040000.vop`)
   - `run-drastic`'s refresh from `dclk_vop*`
@@ -263,5 +274,6 @@ From the survey of the tree; each one is cheap once M1 has the facts:
 
 - ROCKNIX `distribution` at `6cf94dba` (`projects/ROCKNIX/devices/SM8550`: `options`, `linux/`, `patches/linux/`,
   `config/kernel-firmware.dat`, `bootloader/update.sh`; `packages/linux/package.mk`; `packages/tools/openabl`)
-- ROCKNIX `extra-firmware` at `925dfb5e` (`SM8550/`)
+- ROCKNIX `extra-firmware` at `55718b86` (`SM8550/`, with the Thor's sound topology); the RG DS's files at `925dfb5e`
+- linux-firmware 20260622 for the Adreno 740's three files (`package/thor-gpu-firmware`)
 - https://rocknix.org/devices/ayn/thor-sm8550 and https://github.com/OpenHandheldCollective/OpenABL

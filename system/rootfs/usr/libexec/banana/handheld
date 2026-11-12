@@ -11,7 +11,8 @@
 #                                         green, blue, purple, pink, cyan, white
 #   handheld leds-effect none|breathe     the lights breathing (a slow pulse) or steady
 #   handheld leds-system <system>         (run-rocknix) the lights in the system's colour, when "system" is chosen
-#   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz)
+#   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz), where the kernel
+#                                         has the higher clock
 #   handheld boot                         (rcS, BananaOS's own image) the fan, the lights and the GPU as Settings keeps them
 #   handheld sleep                        (sleep.d/30-handheld, BananaOS's own image) the lights off and the fan stopped
 #                                         for a sleep; "boot" puts them back after it
@@ -31,7 +32,9 @@ conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.
 has_fan() { ls "$SYS"/class/hwmon/hwmon*/pwm1 >/dev/null 2>&1; }
 has_leds() { [ -d "$LED/multi-ledl1" ] && [ -d "$LED/multi-ledr1" ]; }
 GPUFREQ=$SYS/class/devfreq/3d00000.gpu
-has_gpu() { [ -x "$TOOLS/gpu_overclock" ] || [ -e "$GPUFREQ/max_freq" ]; }
+# (max_freq is only a ceiling: a boost is there to offer only if the kernel's table has the 1 GHz clock. Linux 7.2's
+# for the Adreno 740 ends at 680 MHz, so BananaOS's Thor image has none until its device tree adds one)
+has_gpu() { [ -x "$TOOLS/gpu_overclock" ] || grep -qw 1000000000 "$GPUFREQ/available_frequencies" 2>/dev/null; }
 # ROCKNIX's tools where the system is ROCKNIX; on BananaOS's own image the same things done here (native: the fan's
 # curve in a loop of this script, the rings' and the GPU's sysfs files written directly)
 rocknix() { [ -x "$TOOLS/analog_sticks_ledcontrol" ] || [ -x "$TOOLS/gpu_overclock" ]; }
@@ -59,20 +62,21 @@ battery_loop() {
     ) </dev/null >/dev/null 2>&1 &
     mkdir -p "$RUN"; echo $! > "$RUN/leds-battery.pid"
 }
-# the fan by the SoC's temperature (the CPU thermal zones' mean), ROCKNIX's SM8550 curves: a speed (0-255) for each
-# step of temperature, the profile moving the steps
+# the fan by the SoC's temperature (the mean of the CPU and GPU thermal zones, cpu* and gpuss*, as ROCKNIX's
+# fancontrol takes it), ROCKNIX's SM8550 curves: a speed (0-255) for each step of temperature, the profile moving the
+# steps. Nothing else drives the fan: the device tree maps no thermal zone to it
 fan_loop() {
     stop_loop fan
     pwm=$(ls "$SYS"/class/hwmon/hwmon*/pwm1 2>/dev/null | head -n 1)
     [ -n "$pwm" ] || return 0
     case $1 in aggressive) base=50 ;; quiet) base=60 ;; *) base=55 ;; esac
-    # the CPU zones' temperature files, found once; each look reads them with the shell's own read and sums them in its
+    # the zones' temperature files, found once; each look reads them with the shell's own read and sums them in its
     # arithmetic (it used to take a pipeline and three programs per zone every 3 s, some sixty processes on the SM8550's
-    # CPU zones: now none, only the sleep)
+    # zones: now none, only the sleep)
     zones=
     for z in "$SYS"/class/thermal/thermal_zone*; do
         read -r ty < "$z/type" 2>/dev/null || continue
-        case $ty in [Cc][Pp][Uu]*) zones="$zones $z/temp" ;; esac
+        case $ty in [Cc][Pp][Uu]*|gpuss*) zones="$zones $z/temp" ;; esac
     done
     (
         echo 1 > "${pwm}_enable" 2>/dev/null
@@ -196,8 +200,9 @@ boot)
 sleep)
     # ROCKNIX turns the SM8550's stick lights off before a sleep (quirks/platforms/SM8550/sleep.d/pre/001-led: lit, they
     # keep the handheld from sleeping), and lit they draw from the battery all night. The fan's loop stops too (it
-    # would be frozen at whatever speed it last set) and the fan with it: asleep, the SoC cools by itself, and the
-    # kernel's own thermal trips still have the fan. ROCKNIX's system does this in its own sleep hooks
+    # would be frozen at whatever speed it last set) and the fan with it: asleep, the SoC cools by itself. (No thermal
+    # zone is mapped to the fan, so nothing spins it while the loop is gone; the SoC's own passive and critical trips
+    # are what is left.) ROCKNIX's system does this in its own sleep hooks
     rocknix && exit 0
     stop_effect; stop_loop leds-battery; stop_loop fan
     has_leds && rings 0 0 0 0

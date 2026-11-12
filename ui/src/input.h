@@ -45,11 +45,19 @@ namespace banana
 		// fraction of its touchscreen's range and whether that range is wider than tall, to the canvas; false in the
 		// bars around the picture. Unset: the touchscreen spans the canvas (the RG DS)
 		void mapTouch(std::function<bool(int, float, float, bool, float&, float&)> toCanvas) { touchToCanvas = std::move(toCanvas); }
+		// the buttons and touchscreens the menu's alone (EVIOCGRAB) while it is up over a stopped game: the game has the
+		// same devices open, and what is pressed in the menu would wait there for it. Not a device with the power or a
+		// volume key or a switch (the lid): bananad reads those too, and a grab would take them from it. A device with
+		// something held (the Home button itself, a stick pushed) is taken once it is let go: the game must get that
+		// release, or the button stays down in it. Kept over a rescan (open() again)
+		void grab(bool on);
 
 	private:
 		struct Dev
 		{
 			int fd = -1;
+			bool shared = false;	// (bananad's too: never grabbed)
+			bool ours = false;		// grabbed now
 			bool touch = false, pointer = false;	// pointer: an absolute pointer whose button is BTN_LEFT
 			int screen = 1;
 			int minX = 0, maxX = 0, minY = 0, maxY = 0;
@@ -67,6 +75,6 @@ namespace banana
 		int pw = 640, ph = 480;
 		std::function<bool(int, float, float, bool, float&, float&)> touchToCanvas;
 		int watch = -1;
-		bool rescan = false;
+		bool rescan = false, grabbed = false;
 	};
 }

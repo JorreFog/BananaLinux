@@ -10,6 +10,11 @@ trap 'kill $SRV 2>/dev/null; rm -rf "$T"' EXIT
 fail=0
 bad() { echo "FAIL steam: $*"; fail=1; }
 command -v python3 >/dev/null && command -v curl >/dev/null || { echo "steam test skipped (no python3 or curl)"; exit 0; }
+# the image's sed and cut are busybox's (bytes, no \xHH): used here too where the machine has busybox
+if command -v busybox >/dev/null; then
+    mkdir "$T/bb"; for a in sed cut; do ln -s "$(command -v busybox)" "$T/bb/$a"; done
+    PATH=$T/bb:$PATH; export PATH
+fi
 # the downloader's stand-in: its token store written as DepotDownloader writes it (a raw-deflated protocol-buffers
 # message, the accounts' tokens in field 4), its QR code drawn as it draws one for a terminal
 cat > "$T/store.py" <<'PY'
@@ -71,10 +76,16 @@ elif [ "$app" = 480 ]; then
     echo " Done!"; echo "Got 3 licenses for account!"
     sleep 30
 else
+    # (as DepotDownloader: every file made at its full size first, then filled)
     mkdir -p "$dir/bin"
     echo "Downloading depot 621"
+    echo "Pre-allocating $dir/bin/game.exe"
     head -c 4000 /dev/zero > "$dir/bin/game.exe"; head -c 9000 /dev/zero > "$dir/unins000.exe"
+    echo " 42.17% $dir/unins000.exe"
+    if [ -e "$T/dl-fail" ]; then echo "Failed to find any server with chunk 0a for depot 621. Aborting."; exit 1; fi
+    if [ -e "$T/dl-hang" ]; then : > "$T/dl-hung"; sleep 30; exit 1; fi
     echo "100.00% $dir/bin/game.exe"
+    echo "Total downloaded: 13000 bytes (13000 bytes uncompressed) from 1 depots"
 fi
 DD
 chmod +x "$T/dd"
@@ -92,7 +103,8 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         u = urllib.parse.urlparse(self.path); q = urllib.parse.parse_qs(u.query)
         if u.path.startswith("/IPlayerService/GetOwnedGames"):
-            games = [{"appid": 620, "name": "Portal 2"}, {"appid": 400, "name": "Portal"}, {"appid": 9, "name": "What: A \"Game\"?™"}] if q.get("access_token") == ["ACCESS"] else []
+            games = [{"appid": 620, "name": "Portal 2"}, {"appid": 400, "name": "Portal"}, {"appid": 9, "name": "What: A \"Game\"?™"},
+                     {"appid": 10, "name": "Pokémon™ It’s"}, {"appid": 11, "name": "長い名前" * 40 + "."}] if q.get("access_token") == ["ACCESS"] else []
             self.send(json.dumps({"response": {"game_count": len(games), "games": games}}).encode())
         elif u.path == "/api/storesearch/":
             hit = q.get("term") == ["Half-Life 2"]
@@ -130,16 +142,41 @@ grep -q right "$T/data/accounts.conf" "$T/data/logs/steam.log" 2>/dev/null && ba
 mkdir -p "$T/roms/Half-Life 2"; head -c 100 /dev/zero > "$T/roms/Half-Life 2/hl2.exe"; echo "exe = Half-Life 2/hl2.exe" > "$T/roms/Half-Life 2.pc"
 echo "exe = banana:steam" > "$T/roms/Steam.pc"
 out=$(sh "$S" library 2>&1) || bad "library failed: $out"
-[ "$(echo "$out" | tail -n 1)" = "games 3" ] || bad "library's last line: $out"
+[ "$(echo "$out" | tail -n 1)" = "games 5" ] || bad "library's last line: $out"
 [ "$(cat "$T/roms/Portal 2.pc" 2>/dev/null)" = "steam = 620" ] || bad "no entry for Portal 2"
 [ -f "$T/roms/What A Game.pc" ] || bad "a name with signs the card refuses: $(ls "$T/roms")"
+# (letters of more than one byte stay whole: the ones that share a byte with a trademark sign, and the last of a long
+# name, cut to 200 bytes)
+[ "$(cat "$T/roms/Pokémon It’s.pc" 2>/dev/null)" = "steam = 10" ] || bad "a name with an accent and a curly apostrophe: $(ls "$T/roms")"
+python3 - "$T/roms" <<'PY' || bad "a long name in letters of three bytes: $(ls "$T/roms")"
+import os, sys
+d = os.fsencode(sys.argv[1])
+n = [f for f in os.listdir(d) if f.endswith(b".pc") and open(os.path.join(d, f), "rb").read() == b"steam = 11\n"]
+sys.exit(0 if len(n) == 1 and n[0].decode("utf-8") == "長い名前" * 16 + "長い.pc" else 1)
+PY
 [ -s "$T/roms/media/box/Portal 2.jpg" ] || bad "no cover for Portal 2"
 grep -q header "$T/roms/media/box/Portal.jpg" 2>/dev/null || bad "no header picture where there is no upright cover"
 grep -q /cdn/220/ "$T/roms/media/box/Half-Life 2.jpg" 2>/dev/null || bad "a game copied by hand got no cover by its name"
 [ -e "$T/roms/media/box/What A Game.jpg.none" ] || bad "a game without art isn't marked"
 [ -e "$T/roms/media/box/Steam.jpg" ] || [ -e "$T/roms/media/box/Steam.jpg.none" ] && bad "the shelf's own entry was looked up"
 # again: nothing twice
-sh "$S" library >/dev/null 2>&1; [ "$(ls "$T/roms"/*.pc | wc -l)" = 5 ] || bad "a second run added entries: $(ls "$T/roms")"
+sh "$S" library >/dev/null 2>&1; [ "$(ls "$T/roms"/*.pc | wc -l)" = 7 ] || bad "a second run added entries: $(ls "$T/roms")"
+# a download that breaks off (the program is on the card already, at its full size and empty): no program written
+# into the entry, so picking the game again downloads on
+: > "$T/dl-fail"
+sh "$S" install "$T/roms/Portal 2.pc" > "$T/inst.out" 2>&1 && bad "a download that broke off said it worked"
+[ "$(cat "$T/roms/Portal 2.pc")" = "steam = 620" ] || bad "a download that broke off wrote the entry: $(tr '\n' '|' < "$T/roms/Portal 2.pc")"
+[ "$(cat "$T/run/steam.progress")" = "620 42 failed the download did not finish" ] || bad "the progress of a download that broke off: $(cat "$T/run/steam.progress")"
+rm -f "$T/dl-fail"
+# one stopped: said so (whatever line of the downloader's was still to be read), the entry as it was
+: > "$T/dl-hang"
+sh "$S" install "$T/roms/Portal 2.pc" > "$T/inst.out" 2>&1 & IP=$!
+for i in $(seq 1 60); do [ -e "$T/dl-hung" ] && break; sleep 0.1; done
+sh "$S" stop 620; wait $IP && bad "a stopped download said it worked"
+[ "$(cat "$T/run/steam.progress")" = "620 0 stopped" ] || bad "the progress of a stopped download: $(cat "$T/run/steam.progress")"
+[ "$(cat "$T/roms/Portal 2.pc")" = "steam = 620" ] || bad "a stopped download wrote the entry: $(tr '\n' '|' < "$T/roms/Portal 2.pc")"
+[ -e "$T/run/steam.stop.620" ] && bad "stop's flag was left behind"
+rm -f "$T/dl-hang"
 # a download: the game's folder, its program guessed (not the uninstaller)
 sh "$S" install "$T/roms/Portal 2.pc" > "$T/inst.out" 2>&1 || bad "install failed: $(tail -n 2 "$T/inst.out")"
 [ "$(sed -n 's/^exe = //p' "$T/roms/Portal 2.pc")" = "Portal 2/bin/game.exe" ] || bad "the program after a download: $(cat "$T/roms/Portal 2.pc")"
@@ -167,7 +204,7 @@ sh "$S" status | grep -q '^user=Scanner$' || bad "status after the scan: $(sh "$
 grep -q "$(printf '\342\226\210')" "$T/data/logs/steam.log" && bad "the code's picture went into the log"
 # (the library is asked with that account's token, not the other's: the stand-in's site knows only the first's id)
 sh "$S" library 2>&1 | grep -q "Steam gave no list of games: the last one kept" || bad "the library wasn't asked with the scanning account's token"
-[ "$(ls "$T/roms"/*.pc | wc -l)" = 5 ] || bad "entries changed after the second account's (empty) library"
+[ "$(ls "$T/roms"/*.pc | wc -l)" = 7 ] || bad "entries changed after the second account's (empty) library"
 # cancelled before a scan
 rm -f "$T/qr-change" "$T/qr-scan"
 sh "$S" login-qr >/dev/null 2>&1 & QP=$!

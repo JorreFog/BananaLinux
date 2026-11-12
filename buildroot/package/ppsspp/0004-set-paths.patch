@@ -1,4 +1,4 @@
-Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/standalone/ppsspp-sa/patches/004-set-paths.patch at 6cf94dba (GPL-2.0). The /storage paths it names are written as BananaOS's /data ones (the same folders; the states in /data/states/psp).
+Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/standalone/ppsspp-sa/patches/004-set-paths.patch at 6cf94dba (GPL-2.0). The /storage paths it names are written as BananaOS's /data ones (the same folders; the states in /data/states/psp). One differs: DIRECTORY_SAVEDATA is the folder games really save in (ms0:/PSP/SAVEDATA, the memory stick being /data/roms/psp), where ROCKNIX's names the memory stick's root.
 
 diff --git a/Core/Config.cpp b/Core/Config.cpp
 index 4f6ee43dce..188bbca207 100644
@@ -39,7 +39,7 @@ index a82bc95fe6..4c1a926cd8 100644
  		return pspDirectory / "GAME";
  	case DIRECTORY_SAVEDATA:
 -		return pspDirectory / "SAVEDATA";
-+		return Path("/data/roms/psp/");
++		return Path("/data/roms/psp/PSP/SAVEDATA/");
  	case DIRECTORY_SCREENSHOT:
 -		return pspDirectory / "SCREENSHOT";
 +		return Path("/data/screenshots/");

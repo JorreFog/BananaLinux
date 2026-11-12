@@ -6,6 +6,7 @@ config BR2_PACKAGE_XEMU
 	depends on BR2_USE_MMU # libglib2
 	depends on BR2_TOOLCHAIN_HAS_THREADS
 	depends on BR2_PACKAGE_HAS_LIBGBM && BR2_PACKAGE_HAS_LIBEGL && BR2_PACKAGE_HAS_LIBGLES
+	depends on BR2_PACKAGE_HAS_LIBGL # links -lGL, draws with desktop OpenGL (a 4.0 core context)
 	select BR2_PACKAGE_LIBGLIB2
 	select BR2_PACKAGE_PIXMAN
 	select BR2_PACKAGE_ZLIB
@@ -21,6 +22,8 @@ config BR2_PACKAGE_XEMU
 	help
 	  xemu, the original Xbox emulator (SDL 3, Vulkan, on Wayland).
 	  The Xbox BIOS, EEPROM and hard disk image come from the
-	  user. Launcher: /usr/libexec/banana/run-xemu.
+	  user. Launcher: /usr/libexec/banana/run-xemu. Needs desktop
+	  OpenGL beside Vulkan, which a GLES-only image (the AYN
+	  Thor's) doesn't have.
 
 	  https://xemu.app

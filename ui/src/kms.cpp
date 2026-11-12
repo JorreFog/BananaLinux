@@ -654,6 +654,7 @@ namespace banana
 			if (!(mask & (1 << s)) || !theirs(s)) continue;
 			drmModeCrtc* c = drmModeGetCrtc(fd, p[s].crtc);
 			theirFb[s] = c ? c->buffer_id : 0;
+			theirOff[s] = c && !c->mode_valid;
 			if (c) drmModeFreeCrtc(c);
 			borrowMask |= 1 << s;
 			Panel& pn = p[s];
@@ -662,7 +663,7 @@ namespace banana
 				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
 			pn.missed[0] = pn.missed[1] = Damage();	// (the caller draws everything afresh: its backend invalidated)
 			if (drmModeSetCrtc(fd, pn.crtc, pn.buf[pn.front].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode) == 0) any = true;
-			else { borrowMask &= ~(1 << s); theirFb[s] = 0; continue; }
+			else { borrowMask &= ~(1 << s); theirFb[s] = 0; theirOff[s] = false; continue; }
 			// what the program has lit over its picture on this panel (an overlay, a cursor) would stay over the menu's:
 			// off, and remembered for giveBack
 			const uint32_t primary = primaryPlane(fd, pn.crtc);
@@ -697,7 +698,11 @@ namespace banana
 		{
 			if (!(borrowMask & (1 << s))) continue;
 			if (theirFb[s]) drmModeSetCrtc(fd, p[s].crtc, theirFb[s], 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			// a panel the program had switched off (run-wayland's "power off" for a PC game's bottom screen) goes off
+			// again: its compositor draws nothing there, and the menu's last picture would stay lit for the whole game
+			else if (theirOff[s]) drmModeSetCrtc(fd, p[s].crtc, 0, 0, 0, nullptr, 0, nullptr);
 			theirFb[s] = 0;
+			theirOff[s] = false;
 		}
 		for (const TheirPlane& t : theirPlanes)
 			drmModeSetPlane(fd, t.plane, t.crtc, t.fb, 0, t.x, t.y, t.w, t.h, t.sx, t.sy, t.sw, t.sh);

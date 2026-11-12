@@ -23,6 +23,8 @@
 #   steam library             the account's games as <Game>.pc entries on the shelf, then their box art
 #   steam install <file.pc>   download that game (its "steam = <app id>" line), then guess its program; how far it
 #                             is in /run/banana/steam.progress: <app id> <percent> downloading | done | failed <why>
+#                             | stopped. A download that didn't end well leaves the entry as it was: picking the
+#                             game again goes on from what is on the card
 #   steam stop <app id>       stop that download (what is on the card stays; install goes on from it)
 #   steam art                 box art for the shelf's games that have none: Steam's by app id; a game copied by hand
 #                             by its name from Steam's store search, then SteamGridDB when the owner has a key
@@ -121,8 +123,18 @@ token() {
     tokens | awk -F '\t' -v u="$(acc steam_user)" 'tolower($1) == tolower(u) { t = $2 } { last = $2 } END { print t != "" ? t : last }'
 }
 
-# a file name the card takes: Steam's name without what exFAT refuses, the trademark signs or a dot at the end
-fname() { printf '%s' "$1" | tr -d '\r\n' | sed 's/[™®©]//g; s/[\\/:*?"<>|]/ /g; s/  */ /g; s/^ //; s/[ .]*$//' | cut -c1-120; }
+# a file name the card takes: Steam's name without what exFAT refuses, the trademark signs or a dot at the end.
+# busybox's sed and cut work on bytes: the signs are taken out one whole sign at a time (in a bracket their bytes
+# would go from other letters too), and a long name is cut by letters in python (half a letter at the end is a name
+# the card refuses): 120 of them, and 200 bytes (with ".pc" or the cover's ending, under the 255 a name can have)
+fname() {
+    n=$(printf '%s' "$1" | tr -d '\r\n' | sed 's/™//g; s/®//g; s/©//g; s/[\\/:*?"<>|]/ /g; s/  */ /g; s/^ //; s/[ .]*$//')
+    [ ${#n} -gt 120 ] && n=$(printf '%s' "$n" |
+        python3 -c 'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read()[:200].decode("utf-8", "ignore")[:120].encode())' | sed 's/[ .]*$//')
+    printf '%s' "$n"
+}
+# the block character the downloader draws a QR code with, as sed reads it (busybox's sed knows no \xHH)
+BLOCK=$(printf '\342\226\210')
 
 case $1 in
 status)
@@ -204,7 +216,7 @@ login-qr)
         # one, a line a row, after the same sentence each time (the first code, and each one Steam changes it to)
         codes=$(printf '%s\n' "$t" | grep -c 'sign in with this QR code')
         if [ "$codes" -gt "$shown" ]; then
-            printf '%s\n' "$t" | LC_ALL=C sed 's/\xe2\x96\x88\xe2\x96\x88/1/g; s/  /0/g' | awk '
+            printf '%s\n' "$t" | LC_ALL=C sed "s/$BLOCK$BLOCK/1/g; s/  /0/g" | awk '
                 /sign in with this QR code/ { rows = 0; on = 1; next }
                 on && /^[01]+$/ { r[rows++] = $0; next }
                 { on = 0 }
@@ -237,7 +249,7 @@ login-qr)
         sleep 0.25
     done
     kill $pid 2>/dev/null
-    LC_ALL=C sed '/\xe2\x96\x88/d; /^ *$/d' "$OUT" >> "$LOG" 2>/dev/null
+    LC_ALL=C sed "/$BLOCK/d; /^ *\$/d" "$OUT" >> "$LOG" 2>/dev/null
     rm -f "$OUT" "$RUN/steam.pid" "$RUN/steam.qr" "$RUN/steam.qr.new"
     rm -rf "${RUN:?}/steam-480"
     exit $rc
@@ -316,19 +328,39 @@ install)
     # how far it is, for the menu's PC games page: "<app id> <percent> <downloading | done | failed ... | stopped>"
     PROG=$RUN/steam.progress
     mkdir -p "$RUN"; prog() { echo "$id $*" > "$PROG.new" && mv "$PROG.new" "$PROG"; }
+    # how it ended: the downloader's exit status and its last line (the loop below is the pipe's other end, and
+    # knows neither afterwards), and "stop"'s flag (not the progress file: a line still in the pipe writes over it)
+    END=$RUN/steam.end.$id
+    STOP=$RUN/steam.stop.$id
+    rm -f "$END.rc" "$END.all" "$STOP"
     prog 0 downloading
-    "$DD" -app "$id" -os windows -osarch 64 -username "$U" -remember-password -dir "$dir" -max-downloads 4 < /dev/null 2>&1 |
+    { "$DD" -app "$id" -os windows -osarch 64 -username "$U" -remember-password -dir "$dir" -max-downloads 4 < /dev/null 2>&1
+      echo $? > "$END.rc"; } |
         while IFS= read -r line; do
             printf '%s\n' "$line" >> "$LOG"
             case $line in
             *[0-9].[0-9][0-9]%\ *) p=${line%%.*}; p=${p##* }; prog "${p:-0}" downloading ;;	# (" 42.17% <file>")
+            Total\ downloaded:*) : > "$END.all" ;;
             esac
             case $line in Got\ *|Using\ *|Pre-allocating\ *|Validating\ *) ;; *) printf '%s\n' "$line" ;; esac
         done
-    [ "$(cut -d' ' -f3 "$PROG" 2>/dev/null)" = stopped ] && die "the download of $stem was stopped (what is on the card stays: picking it again goes on from there)"
+    rc=$(cat "$END.rc" 2>/dev/null); [ -f "$END.all" ] && all=1 || all=0
+    p=$(cut -d' ' -f2 "$PROG" 2>/dev/null)
+    rm -f "$END.rc" "$END.all"
+    if [ -e "$STOP" ]; then
+        rm -f "$STOP"; prog 0 stopped
+        die "the download of $stem was stopped (what is on the card stays: picking it again goes on from there)"
+    fi
     if [ -z "$(find "$dir" -type f -iname '*.exe' 2>/dev/null | head -n 1)" ]; then
         prog 0 failed nothing was downloaded
         die "nothing was downloaded for $stem: no Windows build, or the login ran out (log in again in Settings)"
+    fi
+    # the downloader makes every file at its full size before it fetches any of them: a program on the card says
+    # nothing. Only its own word does (it ends well and counts what it downloaded); else the entry stays without
+    # its "exe" line, and picking the game again goes on (the downloader checks what is there)
+    if [ "$rc" != 0 ] || [ $all = 0 ]; then
+        prog "${p:-0}" failed the download did not finish
+        die "the download of $stem did not finish (no internet, or the card is full?): picking it again goes on from there"
     fi
     exe=$("$L/pc-games" guess "$dir")
     [ -n "$exe" ] || { prog 100 failed its program was not found; die "$stem is on the card, but its program wasn't found: write \"exe = ...\" in $stem.pc"; }
@@ -340,6 +372,8 @@ install)
 stop)
     # stop <app id>: a download under way (the files it has stay; "install" goes on from them)
     [ -n "$2" ] || die "usage: steam stop <app id>"
+    # (the flag is what "install" believes: the progress file can be written over by a line it still had to read)
+    mkdir -p "$RUN"; : > "$RUN/steam.stop.$2"
     echo "$2 0 stopped" > "$RUN/steam.progress"
     pkill -f -- "-app $2 -os windows" 2>/dev/null
     ;;

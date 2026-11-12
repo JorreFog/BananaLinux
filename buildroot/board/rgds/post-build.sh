@@ -29,6 +29,13 @@ if [ -f "$(dirname "$0")/../${2:-rgds}/systems.conf" ]; then
     # (its history of old defaults is the RG DS's list's: not this one's)
     rm -f "$T/etc/banana/systems.history"
 fi
+# the settings template is every board's, and its core.gba (gpSP, the RG DS's choice) would win over the Thor's list,
+# whose Game Boy Advance core is BananaGBA: the launchers and the menu both read the template for the default
+if [ "${2:-rgds}" = thor ]; then
+    sed -i 's/^core\.gba = .*/core.gba = bananagba/' "$T/etc/banana/settings.conf"
+    grep -qx 'core.gba = bananagba' "$T/etc/banana/settings.conf" || {
+        echo "post-build: no core.gba line in etc/banana/settings.conf" >&2; exit 1; }
+fi
 # who we are, for programs that ask (PortMaster names the firmware from it)
 V=$(cat "$(dirname "$0")/../../../VERSION")
 printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \

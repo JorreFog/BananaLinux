@@ -5,7 +5,9 @@
 # "phone" waits for the approval in the Steam app (then logs in); anything else fails. The state goes to
 # $BANANA_RUN/steam.state as the real tool writes it; the account logged in is kept in $BANANA_RUN/fake-steam.user.
 # login-qr writes a code to $BANANA_RUN/steam.qr as the real tool does (below). Each call goes to
-# $BANANA_RUN/fake-steam.log (never the password).
+# $BANANA_RUN/fake-steam.log (never the password). $FAKE_STEAM_FETCH: login-qr first "fetches the downloader" for that
+# many seconds, as the real tool's first sign-in does: cancel can't stop that (no $BANANA_RUN/steam.pid yet, which the
+# real tool writes once the downloader runs), and the sign-in's pid is in $BANANA_RUN/fake-steam.fetching meanwhile.
 RUN=${BANANA_RUN:-/run/banana}
 ST=$RUN/steam.state
 echo "$1 $2" >> "$RUN/fake-steam.log"
@@ -47,6 +49,8 @@ login-qr)
     # the sign-in with the Steam app: a code (a fixed 25 x 25 matrix), a new one ($FAKE_STEAM_QR_ROUNDS of them, 2 by
     # default, 1 s apart), then ok as the account the app approved ($FAKE_STEAM_QR=fail: failed)
     echo starting > "$ST"
+    if [ -n "$FAKE_STEAM_FETCH" ]; then echo $$ > "$RUN/fake-steam.fetching"; sleep "$FAKE_STEAM_FETCH"; rm -f "$RUN/fake-steam.fetching"; fi
+    echo $$ > "$RUN/steam.pid"; trap 'rm -f "$RUN/steam.pid"' EXIT
     sleep 0.1
     rounds=${FAKE_STEAM_QR_ROUNDS:-2}; n=1
     while [ $n -le "$rounds" ]; do

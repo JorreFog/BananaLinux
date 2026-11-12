@@ -3,6 +3,9 @@
 # Kernel parameters (extlinux.conf's APPEND, or tools/qemu-boot.sh): banana.console=1 sends the log to the console
 # (the RG DS's UART, QEMU's serial) instead; banana.top=<connector> names the top panel's connector (DSI-2) and
 # banana.touch=<device> the bottom panel's touchscreen (part of its sysfs path), for a display other than the RG DS's.
+# The hardware profile first: init starts this beside rcS, so nothing of rcS's environment is here, and the menu and
+# every game it starts need it (the panels, the bottom touchscreen, the backlights, the sound server's socket).
+. /usr/libexec/banana/hw-env
 LOG=/data/banana/logs/banana-ui.log
 mkdir -p /data/banana/logs 2>/dev/null && touch $LOG.w 2>/dev/null && rm -f $LOG.w || LOG=/run/banana/banana-ui.log
 for a in $(cat /proc/cmdline); do

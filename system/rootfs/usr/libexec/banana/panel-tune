@@ -4,6 +4,9 @@
 # has ROCKNIXDS's measured timing (60.0013 Hz) and is left alone; the RG DS Plus's is tuned here. The report is in
 # /data/banana/panel-tune.txt; delete that file to tune again.
 REPORT=/data/banana/panel-tune.txt
+# only the RG DS family's panels have their timing in the device tree: any other board (the AYN Thor) has nothing to
+# tune, and its boot partition stays read-only
+case $(cat /etc/banana/board 2>/dev/null) in rgds*|universal) ;; *) exit 0 ;; esac
 [ -f $REPORT ] && exit 0
 sleep 5     # the panels lit and the menu up first
 grep -qs ' /sys/kernel/debug ' /proc/mounts || mount -t debugfs debugfs /sys/kernel/debug

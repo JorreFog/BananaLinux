@@ -1,7 +1,7 @@
 #!/bin/sh
 # usr/libexec/banana/tune against a made-up /sys and /proc with the AYN Thor's profile: the sysctls, MGLRU, huge pages,
 # the idle-state quirk, the card's scheduler and read-ahead, zram sized by the RAM (the Base's 8 GB and the Max's 16 GB)
-# with its second algorithm and limit, the recompression pass, the daemons' OOM protection; and a profile with none of
+# with its second algorithm and limit, the recompression pass, the quirk lifted for a sleep, the daemons' OOM protection; and a profile with none of
 # the keys (the RG DS's) touching nothing.
 #   sh system/tests/tune-test.sh
 cd "$(dirname "$0")/../.." || exit 1
@@ -85,8 +85,18 @@ echo "tune recompress: one pass"
 mk 7680000; : > "$S/block/zram0/idle"
 run recompress; check "$(v "$S/block/zram0/recompress")" "" "no zram swap yet: nothing"
 echo '/dev/zram0 partition 4 0 100' >> "$P/swaps"; run recompress
-check "$(v "$S/block/zram0/recompress")" "type=idle threshold=1024 priority=1" "the idle pages over 1 KB recompressed"
+check "$(v "$S/block/zram0/recompress")" "type=idle priority=1" "the idle pages recompressed, no threshold (the kernel would drop what stays over it)"
 check "$(v "$S/block/zram0/idle")" all "every page marked idle again"
+
+echo "tune sleep: the idle-state quirk lifted for a sleep"
+run boot; run sleep pre
+check "$(v "$S/devices/system/cpu/cpu0/cpuidle/state1/disable")" 0 "pre: cpu0's state1 allowed"
+run sleep post
+check "$(v "$S/devices/system/cpu/cpu0/cpuidle/state1/disable")" 1 "post: off again"
+run sleep 2>/dev/null; check $? 2 "neither pre nor post is refused"
+HOOK=$PWD/system/rootfs/etc/banana/sleep.d/80-cpuidle
+[ -x "$HOOK" ]; check $? 0 "sleep.d/80-cpuidle can be run"
+grep -q 'tune sleep "\$1"' "$HOOK"; check $? 0 "... and hands pre and post to tune"
 
 echo "tune protect"
 run protect
@@ -96,9 +106,9 @@ echo "a profile without the keys (the RG DS's): nothing touched"
 HW=$PWD/system/rootfs/etc/banana/hw/rgds.conf
 mk 2000000
 before=$(cd "$T" && find sys proc -type f | sort | while read -r f; do printf '%s=%s\n' "$f" "$(cat "$f")"; done)
-run boot; run zram; run protect; run recompress
+run boot; run zram; run protect; run recompress; run sleep pre; run sleep post
 after=$(cd "$T" && find sys proc -type f | sort | while read -r f; do printf '%s=%s\n' "$f" "$(cat "$f")"; done)
-check "$([ "$before" = "$after" ] && echo same)" same "boot, zram, protect and recompress change nothing"
+check "$([ "$before" = "$after" ] && echo same)" same "boot, zram, protect, recompress and sleep change nothing"
 [ ! -f "$T/run/zram-recompress.pid" ]; check $? 0 "no recompression loop"
 run nonsense 2>/dev/null; check $? 2 "an unknown step is refused"
 

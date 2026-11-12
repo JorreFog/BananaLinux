@@ -38,7 +38,8 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 ## While it runs
 
 - **Sleep**: closing the lid (or the power button) sends `SIGSTOP` to the game's process group, then suspends;
-  on waking, `SIGCONT`, within a millisecond of the kernel returning. The emulator sees nothing but a gap in time:
+  on waking, `SIGCONT`, within a millisecond of the kernel returning (a game held behind the Home button's menu
+  stays stopped after the wake until the menu lets it go on). The emulator sees nothing but a gap in time:
   don't drop audio on a timing jump, and don't treat a vblank that took seconds as an error. The panels come
   back on by themselves (the kernel's DRM resume restores the last framebuffer), so no modeset is needed on wake.
 - **Quitting**: a hotkey of the emulator's own (SuperDrastic: F + Start). On exit, banana-ui reopens the panels

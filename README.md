@@ -362,7 +362,7 @@ The first build fetches Buildroot and everything it builds, and takes an hour or
 
 ### AYN Thor (in bring-up)
 
-There is an image for the AYN Thor (Snapdragon 8 Gen 2) in this tree: `make thor`. It has not been built end to end or booted on a Thor yet, so it is for people who want to bring it up, not to play on. It adds the Thor's emulators (56 systems), Windows games through Box64 and Wine with your Steam library, a web browser, a Home button that brings the menu up over a running game, and its own theme. Start at [docs/THOR-OS.md](docs/THOR-OS.md); building and the first boot are in [docs/BUILD-THOR-IMAGE.md](docs/BUILD-THOR-IMAGE.md).
+There is an image for the AYN Thor (Snapdragon 8 Gen 2) in this tree: `make thor`. It has not been built end to end or booted on a Thor yet, so it is for people who want to bring it up, not to play on. It adds the Thor's emulators (54 systems), Windows games through Box64 and Wine with your Steam library, a web browser, a Home button that brings the menu up over a running game, and its own theme. Start at [docs/THOR-OS.md](docs/THOR-OS.md); building and the first boot are in [docs/BUILD-THOR-IMAGE.md](docs/BUILD-THOR-IMAGE.md).
 
 ### Work on the menu
 

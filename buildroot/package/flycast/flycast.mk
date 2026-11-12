@@ -18,8 +18,10 @@ FLYCAST_LICENSE = GPL-2.0+
 FLYCAST_LICENSE_FILES = LICENSE
 FLYCAST_SUPPORTS_IN_SOURCE_BUILD = NO
 FLYCAST_DEPENDENCIES = host-pkgconf sdl2 libzip libcurl libminiupnpc lua alsa-lib libegl libgles vulkan-headers
-FLYCAST_CONF_OPTS = -DCMAKE_BUILD_TYPE=Release -DUSE_GLES=ON -DUSE_OPENGL=ON -DUSE_VULKAN=ON -DUSE_OPENMP=ON \
-	-DUSE_HOST_SDL=ON -DUSE_HOST_LIBZIP=ON -DUSE_ALSA=ON -DUSE_PULSEAUDIO=OFF -DUSE_LIBAO=OFF -DUSE_LUA=ON \
+# BUILD_SHARED_LIBS off (Flycast's own default; Buildroot passes ON): its bundled libraries (nowide, xxHash...) would
+# otherwise be built as shared objects that stay in the build folder, and flycast wouldn't start without them
+FLYCAST_CONF_OPTS = -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DUSE_GLES=ON -DUSE_OPENGL=ON -DUSE_VULKAN=ON \
+	-DUSE_OPENMP=ON -DUSE_HOST_SDL=ON -DUSE_HOST_LIBZIP=ON -DUSE_ALSA=ON -DUSE_PULSEAUDIO=OFF -DUSE_LIBAO=OFF -DUSE_LUA=ON \
 	-DUSE_BREAKPAD=OFF -DUSE_DISCORD=OFF -DLIBRETRO=OFF \
 	-DCMAKE_CXX_FLAGS="$(TARGET_CXXFLAGS) -Wno-error=array-bounds"
 

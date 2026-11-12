@@ -1,8 +1,9 @@
 #!/bin/sh
 # The handheld's hardware profile (/etc/banana/hw.conf, the board's file from etc/banana/hw/) as the environment the
-# menu, bananad and the launchers read: sourced by rcS (". /usr/libexec/banana/hw-env") so everything it starts has it.
-# What a variable is already set to wins (the host tests, tools/qemu-boot.sh's kernel options through
-# banana-ui-session).
+# menu, bananad and the launchers read: sourced by rcS (". /usr/libexec/banana/hw-env") so everything it starts has it,
+# by banana-ui-session for the menu and every game (init starts it beside rcS, not from it) and by rcK.
+# What a variable is already set to wins (the host tests); banana-ui-session's kernel options (tools/qemu-boot.sh)
+# are set after it.
 HW_CONF=${BANANA_HW_CONF:-/etc/banana/hw.conf}
 [ -r "$HW_CONF" ] && . "$HW_CONF"
 [ -n "$HW_TOP" ] && export BANANA_TOP=${BANANA_TOP:-$HW_TOP}

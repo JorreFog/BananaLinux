@@ -25,8 +25,9 @@ $(BUILDROOT_DIR)/Makefile:
 
 # Buildroot itself is downloaded, not vendored, so the few changes Banana makes to Buildroot (rather than to a
 # package's sources: those are in buildroot/patches/) sit in buildroot/buildroot-patches/ and are applied here: Mesa's
-# Turnip (Vulkan for the AYN Thor's Adreno) and a newer Mesa, as Banana Pocket has them. Idempotent: a patch already
-# in place is left alone. (A board's packages built before a new patch here: make <pkg>-dirclean-<board> first.)
+# Turnip (Vulkan for the AYN Thor's Adreno) and a newer Mesa, as Banana Pocket has them, and libxkbcommon's xkbregistry
+# as an option (Wine's Wayland driver needs it). Idempotent: a patch already in place is left alone. (A board's
+# packages built before a new patch here: make <pkg>-dirclean-<board> first.)
 BUILDROOT_PATCHES = $(wildcard $(CURDIR)/buildroot/buildroot-patches/*.patch)
 $(BUILDROOT_DIR)/.banana-patched: $(BUILDROOT_DIR)/Makefile $(BUILDROOT_PATCHES)
 	@for p in $(BUILDROOT_PATCHES); do \

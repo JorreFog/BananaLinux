@@ -489,6 +489,7 @@ namespace banana
 		gStateBase.clear();
 		gStateRoot.clear();
 		gStateName.clear();
+		gRomFile.clear();	// (the quick menu's Performance row is the next game's, never this one's)
 		gBadges.clear();
 		gbaRelease();
 	}

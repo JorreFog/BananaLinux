@@ -31,8 +31,8 @@ BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_BANANA_PATH)/board/thor/post-image.
 BR2_ROOTFS_POST_SCRIPT_ARGS="thor"
 
 # kernel: mainline with ROCKNIX's SM8550 patches (board/thor/ROCKNIX, tools/sync-rocknix-sm8550.sh), the version ROCKNIX
-# builds for SM8550, from kernel.org. An EFI-stub Image: OpenABL (the bootloader, board/thor/README) starts it as an EFI
-# application, uncompressed
+# builds for SM8550, from kernel.org. An EFI-stub Image: OpenABL (the bootloader, board/thor/openabl-README.txt) starts
+# it as an EFI application, uncompressed
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.tar.xz"
@@ -59,11 +59,11 @@ BR2_PACKAGE_HOST_GENIMAGE=y
 BR2_PACKAGE_HOST_DOSFSTOOLS=y
 BR2_PACKAGE_HOST_MTOOLS=y
 
-# firmware: the Adreno 740's (its zap shader and GMU's come by external.mk), the WCN7850's Wi-Fi and Bluetooth, and
-# the Thor's own: the audio DSP and compute DSP, the speaker amplifiers' tuning, the sound topology
+# firmware: the WCN7850's Wi-Fi and Bluetooth (linux-firmware; its Bluetooth files come by external.mk), the Adreno
+# 740's three files (thor-gpu-firmware: linux-firmware's Adreno option has none of them, only other chips'), and the
+# Thor's own: the audio DSP and compute DSP, the speaker amplifiers' tuning, the sound topology
 # (rocknix-extra-firmware, at the commit ROCKNIX pins)
 BR2_PACKAGE_LINUX_FIRMWARE=y
-BR2_PACKAGE_LINUX_FIRMWARE_QCOM_ADRENO=y
 BR2_PACKAGE_LINUX_FIRMWARE_QUALCOMM_WCN7850=y
 BR2_PACKAGE_ROCKNIX_EXTRA_FIRMWARE=y
 BR2_PACKAGE_THOR_GPU_FIRMWARE=y
@@ -197,6 +197,9 @@ BR2_PACKAGE_FOOT=y
 # PC games (usr/libexec/banana/pc-games, run-pc): Box64 runs Wine's x86_64 build, fetched once onto the card with DXVK
 # and VKD3D-Proton (xz and zstd unpack them), in an ext4 image there (e2fsprogs makes and checks it)
 BR2_PACKAGE_BOX64=y
+# (Wine's Wayland driver links libxkbregistry, which Box64 hands over to the system's: an option of libxkbcommon that
+# buildroot/buildroot-patches adds, Buildroot's own package building it without)
+BR2_PACKAGE_LIBXKBCOMMON_XKBREGISTRY=y
 # every system the Thor runs (package/thor-emulators: the cores and the standalone emulators, docs/THOR-EMULATORS.md)
 BR2_PACKAGE_BANANA_THOR_EMULATORS=y
 BR2_PACKAGE_XZ=y

@@ -35,22 +35,31 @@ sh "$H" poweroff-after 60; ok system.cfg "system.shutdown_delay=3600"; ok system
 sh "$H" poweroff-after 0; ok system.cfg "system.suspend.enable_timed_shutdown=0"
 # a handheld with none of it: nothing listed, nothing done
 [ -z "$(BANANA_SYS="$T/none" BANANA_TOOLS="$T/none" sh "$H" caps)" ] || bad "caps on a plain handheld"
-# BananaOS's own image (none of ROCKNIX's tools): the same commands done here. The fan's speed from the CPU zones'
-# temperature by the profile's curve, the rings' files written (blue, green, red), the GPU's top clock, the battery's colour
-N=$T/native; mkdir -p "$N/sys/class/hwmon/hwmon1" "$N/sys/class/thermal/thermal_zone0" "$N/sys/class/thermal/thermal_zone1" \
+# BananaOS's own image (none of ROCKNIX's tools): the same commands done here. The fan's speed from the CPU and GPU
+# zones' mean temperature by the profile's curve, the rings' files written (blue, green, red), the GPU's top clock, the battery's colour
+N=$T/native; mkdir -p "$N/sys/class/hwmon/hwmon1" "$N/sys/class/thermal/thermal_zone0" "$N/sys/class/thermal/thermal_zone1" "$N/sys/class/thermal/thermal_zone2" \
     "$N/sys/class/devfreq/3d00000.gpu" "$N/sys/class/power_supply/battery" "$N/tools" "$N/run" "$N/data"
 echo 0 > "$N/sys/class/hwmon/hwmon1/pwm1"; echo 0 > "$N/sys/class/hwmon/hwmon1/pwm1_enable"
 echo cpu-0-0 > "$N/sys/class/thermal/thermal_zone0/type"; echo 70000 > "$N/sys/class/thermal/thermal_zone0/temp"
 echo battery > "$N/sys/class/thermal/thermal_zone1/type"; echo 20000 > "$N/sys/class/thermal/thermal_zone1/temp"
+echo gpuss-0 > "$N/sys/class/thermal/thermal_zone2/type"; echo 80000 > "$N/sys/class/thermal/thermal_zone2/temp"
 echo 680000000 > "$N/sys/class/devfreq/3d00000.gpu/max_freq"
 echo 12 > "$N/sys/class/power_supply/battery/capacity"; echo Discharging > "$N/sys/class/power_supply/battery/status"
 for s in l r; do for n in 1 2 3 4; do d=$N/sys/devices/platform/multi-led$s$n/leds/rgb:$s$n; mkdir -p "$d"; echo 0 > "$d/brightness"; : > "$d/multi_intensity"; done; done
 nat() { env BANANA_SYS="$N/sys" BANANA_TOOLS="$N/tools" BANANA_DATA="$N/data" BANANA_RUN="$N/run" BANANA_FAN_INTERVAL=0.2 ROCKNIX_SETTINGS= sh "$H" "$@"; }
 L1="$N/sys/devices/platform/multi-ledl1/leds/rgb:l1"
+# a GPU whose table ends at 680 MHz (Linux 7.2's Adreno 740): no boost to offer, and none set
+echo "220000000 310000000 680000000" > "$N/sys/class/devfreq/3d00000.gpu/available_frequencies"
+[ "$(nat caps | tr '\n' ' ')" = "fan leds " ] || bad "native caps, no 1 GHz clock: $(nat caps | tr '\n' ' ')"
+nat gpu on; [ "$(cat "$N/sys/class/devfreq/3d00000.gpu/max_freq")" = 680000000 ] || bad "a boost set with no 1 GHz clock"
+echo "220000000 310000000 680000000 1000000000" > "$N/sys/class/devfreq/3d00000.gpu/available_frequencies"
 [ "$(nat caps | tr '\n' ' ')" = "fan leds gpuboost " ] || bad "native caps: $(nat caps | tr '\n' ' ')"
+# (the CPU zone at 70 and the GPU's at 80: their mean, 75, is the next step up; the battery's zone doesn't count)
 nat fan moderate; sleep 0.6
+[ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 119 ] || bad "native fan at 70 and 80 degrees, moderate: $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
+echo 70000 > "$N/sys/class/thermal/thermal_zone2/temp"; sleep 0.6
 [ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 102 ] || bad "native fan at 70 degrees, moderate: $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
-echo 40000 > "$N/sys/class/thermal/thermal_zone0/temp"; sleep 0.6
+echo 40000 > "$N/sys/class/thermal/thermal_zone0/temp"; echo 40000 > "$N/sys/class/thermal/thermal_zone2/temp"; sleep 0.6
 [ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 0 ] || bad "native fan at 40 degrees: $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
 kill "$(cat "$N/run/fan.pid")" 2>/dev/null
 nat leds blue high
@@ -63,7 +72,7 @@ nat gpu on; [ "$(cat "$N/sys/class/devfreq/3d00000.gpu/max_freq")" = 1000000000 
 # a sleep: the rings dark and every loop gone (the fan's, the battery colour's, the breathing), the fan stopped; then
 # boot's restore brings the fan's loop and the rings back as Settings keeps them
 printf 'fan = moderate\nleds = blue\nleds_effect = breathe\n' > "$N/data/settings.conf"
-echo 70000 > "$N/sys/class/thermal/thermal_zone0/temp"
+echo 70000 > "$N/sys/class/thermal/thermal_zone0/temp"; echo 70000 > "$N/sys/class/thermal/thermal_zone2/temp"
 nat boot; sleep 0.6
 [ -f "$N/run/fan.pid" ] && [ -f "$N/run/leds-effect.pid" ] || bad "native boot: the fan's loop and the breathing"
 nat sleep

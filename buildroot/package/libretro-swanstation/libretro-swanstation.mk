@@ -18,7 +18,9 @@ LIBRETRO_SWANSTATION_DEPENDENCIES = libgles libegl
 # - 0001-vulkan-warm-only-active-filter.patch (ROCKNIX's 001-vulkan-warm-only-active-filter.patch): ROCKNIX's;
 #   only touches the Vulkan renderer, which RetroArch here doesn't have (kept so the tree matches ROCKNIX's)
 
-LIBRETRO_SWANSTATION_CONF_OPTS = -DBUILD_LIBRETRO_CORE=ON -DCMAKE_BUILD_TYPE=Release
+# BUILD_SHARED_LIBS=OFF: Buildroot's cmake default is ON, which makes the core's own parts (libcore.so, libcommon.so,
+# libvixl.so...) shared libraries left in the build folder, and the core then cannot be loaded.
+LIBRETRO_SWANSTATION_CONF_OPTS = -DBUILD_LIBRETRO_CORE=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
 
 define LIBRETRO_SWANSTATION_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0644 $$(find $(@D) -name swanstation_libretro.so | head -1) $(TARGET_DIR)/usr/lib/libretro/swanstation_libretro.so

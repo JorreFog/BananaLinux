@@ -1055,7 +1055,12 @@ static void shutdown_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
+		/* (one the Home menu holds: frozen in its control group, banana-ui's gameFreeze, and stopped by a sleep before
+		 * this, it would get the signal only once the menu let it go; thawed and continued for its saves) */
+		int held = access("/run/banana/game.held", F_OK) == 0;
+		if (held) write_file("/sys/fs/cgroup/banana-game/cgroup.freeze", "0");
 		kill(pg > 0 ? -pg : game, SIGTERM);	/* let the emulator write its saves */
+		if (held) kill(pg > 0 ? -pg : game, SIGCONT);
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
 	}
 	sync();
@@ -1783,6 +1788,26 @@ static int quiet_pushed(const struct quiet *q, int code, int value)
 	return 0;
 }
 
+/* The Home button's menu over a stopped game (banana-ui writes game.held, and takes it away as the game goes on): for
+ * the idle timers that is the menu, not a game. The menu holds the buttons and touchscreens for itself then (the
+ * stopped game would read every press later), so none of them is heard here: banana-ui sets the file's time at a
+ * press or a touch instead, and a time that moved is the last input */
+static int game_held(void)
+{
+	static struct timespec seen;
+	struct stat st;
+	if (stat("/run/banana/game.held", &st) != 0) return 0;
+	if (st.st_mtim.tv_sec != seen.tv_sec || st.st_mtim.tv_nsec != seen.tv_nsec) {
+		struct timespec rt;
+		seen = st.st_mtim;
+		clock_gettime(CLOCK_REALTIME, &rt);
+		double age = (rt.tv_sec - st.st_mtim.tv_sec) + (rt.tv_nsec - st.st_mtim.tv_nsec) / 1e9;
+		double t = mono() - (age > 0 ? age : 0);	/* (the clock set back meanwhile: now) */
+		if (t > last_input) { last_input = t; undim(); }
+	}
+	return 1;
+}
+
 /* 1 when it moved last_input on */
 static int quiet_scan(void)
 {
@@ -2123,7 +2148,8 @@ int main(int argc, char **argv)
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
-		int game = pid_of("/run/banana/game.pid") != 0;
+		int held = game_held();
+		int game = pid_of("/run/banana/game.pid") != 0 && !held;	/* (held behind the Home menu: the menu's timers) */
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
@@ -2140,6 +2166,7 @@ int main(int argc, char **argv)
 		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
 		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
 		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
+		if (dimmed && held && wait > 0.2) wait = 0.2;	/* (the menu's presses over a held game: game.held's time) */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
@@ -2204,8 +2231,8 @@ int main(int argc, char **argv)
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
-		game = pid_of("/run/banana/game.pid") != 0;
+		/* idle in the menu (no game running, or one held behind the Home menu): the panels dim, then it sleeps */
+		game = pid_of("/run/banana/game.pid") != 0 && !game_held();
 		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
 		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
 		 * changed what it recorded); quiet_scan records them only while the recorder is on */

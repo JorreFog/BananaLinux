@@ -27,9 +27,12 @@ ARMSX2_CONF_OPTS = \
 
 # PACKAGE_MODE installs armsx2-sdl in /usr/bin and its resources (game database, shaders, fonts) in /usr/share/PCSX2;
 # then ROCKNIX's settings (PCSX2.ini: Vulkan, the pad, the BIOS, memory card and state folders as BananaOS has them)
-# as /usr/share/armsx2
+# as /usr/share/armsx2. And ARMSX2's game fixes for mobile GPUs (Adreno among them), which it reads from its resources
+# folder when they are there: its build copies that file beside the built program only, PACKAGE_MODE doesn't install it
 define ARMSX2_INSTALL_BANANA
 	$(call THOR_EMULATORS_INSTALL_TEMPLATES,armsx2)
+	$(INSTALL) -D -m 0644 $(@D)/bin/resources-overlay/armsx2_overrides.yaml \
+		$(TARGET_DIR)/usr/share/PCSX2/resources/armsx2_overrides.yaml
 endef
 ARMSX2_POST_INSTALL_TARGET_HOOKS += ARMSX2_INSTALL_BANANA
 

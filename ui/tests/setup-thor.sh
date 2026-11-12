@@ -32,6 +32,24 @@ ts_check slides "setupstate: slide=homeserver pick=0 choices=Pair|Skip for now "
 ts_check slides "setupstate: slide=homeserver pick=0 choices=Next|Pair with another server "
 grep -q '^fan = ' "$TS/data/settings.conf" || { echo "FAIL thor setup: the Controls slide's fan wasn't saved"; fail=1; }
 grep -q '"token": "rh1_test"' "$TS/data/romsync.json" 2>/dev/null || { echo "FAIL thor setup: the Home server slide didn't pair"; fail=1; }
+# the pairing code's keyboard left with B (nothing typed): not pairing any more, the slide offers Pair again and A
+# starts it again (the keyboard is back); unpaired for this run, the pairing above put back after it
+mv "$TS/data/romsync.json" "$TS/romsync.kept" 2>/dev/null
+ts_run homeback "home 0; setupat homeserver; press a; sleep 50; press b; setupstate; press a; sleep 50; setupstate"
+ts_check homeback "setupstate: slide=homeserver pick=0 choices=Pair|Skip for now "
+ts_check homeback "setupstate: closed page="
+if [ -f "$TS/data/romsync.json" ]; then echo "FAIL thor setup: B on the pairing code paired"; fail=1; fi
+mv "$TS/romsync.kept" "$TS/data/romsync.json" 2>/dev/null
+# the RG DS's setup is not the Thor's: no Steam step though its tool is in every image's files (no stand-in named:
+# the real one, by BANANA_LIBEXEC), and no Home server step, on the universal card either
+for b in rgds universal; do
+    ts_run "board-$b" "home 0; setup; setupstate; setupat steam; setupstate; setupat homeserver; setupstate" BANANA_BOARD=$b BANANA_STEAM= \
+        BANANA_LIBEXEC="$HERE/../system/rootfs/usr/libexec/banana"
+    ts_check "board-$b" "setupstate: slide=language .* steps=8"
+    ts_not "board-$b" "slide=steam"
+    ts_not "board-$b" "slide=homeserver"
+    ts_not "board-$b" " steam="
+done
 # Steam: the password straight through (logged in, the library read: 3 games), never in the tool's log
 ts_run steam "home 0; setupat steam; setupstate; shot steam; press down; press a; type joar; press start; type right; press start; sleep 300; sleep 300; sleep 300; setupstate; \
     sleep 300; sleep 300; shot steam-ok; setupstate"
@@ -81,6 +99,17 @@ rm -f "$TS/run/fake-steam.user"
 ts_run qrcancel "home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; press b; sleep 300; sleep 300; sleep 300; setupstate"
 ts_check qrcancel "setupstate: slide=steam pick=0 choices=Sign in with the Steam app|Type the name and password|Skip for now .*steam=0"
 grep -q '^cancel' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: B didn't stop the sign-in (steam cancel)"; fail=1; }
+# B while the downloader is still being fetched (the first sign-in: the tool's cancel has nothing to stop yet): the
+# sign-in itself is ended, the choices come back, and it doesn't go on to show a code later
+ts_run qrfetch "home 0; setupat steam; press a; sleep 300; setupstate; press b; sleep 300; sleep 300; setupstate" FAKE_STEAM_FETCH=5
+ts_check qrfetch "setupstate: slide=steam pick=0 choices=Asking Steam for a code|"
+ts_check qrfetch "setupstate: slide=steam pick=0 choices=Sign in with the Steam app|Type the name and password|Skip for now .*steam=0"
+# (gone, or ended and not collected yet: Z)
+case $(awk '{ print $3 }' "/proc/$(cat "$TS/run/fake-steam.fetching" 2>/dev/null)/stat" 2>/dev/null) in
+""|Z) ;;
+*) echo "FAIL thor setup: B left the sign-in running while it fetched"; fail=1 ;;
+esac
+rm -f "$TS/run/fake-steam.fetching" "$TS/run/steam.pid" "$TS/run/fake-steam.cancel"
 ts_run qrfail "home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot steam-qr-failed" FAKE_STEAM_QR=fail FAKE_STEAM_QR_ROUNDS=1
 ts_check qrfail "setupstate: slide=steam pick=0 choices=Try again|Type the name and password|Skip for now .*steam=2"
 # the summary lists the new steps

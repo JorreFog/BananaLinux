@@ -8,7 +8,8 @@ images in this repository:
 - **B. ROCKNIX's image with BananaOS's menu as its frontend** (`docs/THOR-ROCKNIX.md`): everything ROCKNIX ships,
   with more running under the menu. Its steps are at the end.
 
-Neither has been built end to end or booted. The first build will need fixes, and they belong in this repository.
+Neither has been built end to end or booted. Parts of A have been cross-compiled (below). The first build will need
+fixes, and they belong in this repository.
 
 ## A. BananaOS's own image
 
@@ -18,8 +19,7 @@ Neither has been built end to end or booted. The first build will need fixes, an
   in it; WebKit and Dolphin want 1.5-2 GB per compiler).
 - Buildroot's host packages: `build-essential git rsync cpio unzip bc file wget python3 libssl-dev libncurses-dev`
   (Debian's names). Buildroot says what else it misses when it starts.
-- Network for the whole build: sources are downloaded as they are needed, and xemu's build fetches its Meson
-  subprojects while it configures.
+- Network for the whole build: sources are downloaded as they are needed.
 - Many hours for the first build (a day on a small machine). Later builds reuse `.buildroot/dl` and the output
   folder.
 
@@ -32,8 +32,10 @@ git checkout claude/pensive-rubin-cy7ro4     # or main once it's merged
 make thor
 ```
 
-`make thor` clones Buildroot 2026.02.3 into `.buildroot`, applies `buildroot/buildroot-patches` to it (a newer Mesa
-with Turnip), loads `buildroot/configs/banana_thor_defconfig` into `output/thor` and builds. The image is
+`make thor` clones Buildroot 2026.02.3 into `.buildroot`, applies `buildroot/buildroot-patches` to it (0001 and
+0002: a newer Mesa with Turnip; 0003: libxkbcommon's xkbregistry option, `BR2_PACKAGE_LIBXKBCOMMON_XKBREGISTRY`,
+which Wine's Wayland driver needs through Box64), loads `buildroot/configs/banana_thor_defconfig` into `output/thor`
+and builds. The image is
 `output/thor/images/banana-thor.img.gz`, with the update package beside it.
 
 One package at a time: `make <package>-thor` (`make libretro-fbneo-thor`), and Buildroot's own targets the same way
@@ -43,20 +45,28 @@ One package at a time: `make <package>-thor` (`make libretro-fbneo-thor`), and B
 setting changed (SVE off, `buildroot/external.mk`), and Buildroot doesn't notice that by itself. Programs built with
 the old setting would crash on the Thor.
 
+An output folder where libxkbcommon was built before patch 0003 needs `make libxkbcommon-dirclean-thor` once, so it
+is built again with xkbregistry.
+
 ### What has been compiled already, and what hasn't
 
 Checked on a PC, with this repository's configuration and Buildroot's cross compiler for the Thor:
 
 - the configuration loads and keeps every option; every package's dependencies resolve;
-- Box64 (the PC games' x86 translator) builds;
-- the new RetroArch cores: see the table in `docs/THOR-EMULATORS.md` ("Build state"), which says for each one
-  whether it was compiled;
-- the menu (`banana-ui`) builds for a PC and passes its tests there; it has not been cross-built with the Thor's
-  toolchain in this configuration.
+- cross-compiled, never run: the kernel with ROCKNIX's patches and the Thor's device tree, Mesa 26.2.6 with the
+  Turnip patches, wlroots, sway-lite, wvkbd, Box64, and 30 of the 35 new RetroArch cores. The table in
+  `docs/THOR-EMULATORS.md` ("Build state") says for each package whether it was compiled, and which recipes changed
+  after they were;
+- the menu (`banana-ui`) builds for a PC and passes its tests there.
 
-Not compiled at all: the kernel with ROCKNIX's patches in this tree, Mesa with the Turnip patches for ARM64, Qt 6,
-WPE WebKit, sway and wlroots, PipeWire, and the eight standalone emulators (Dolphin, ARMSX2, Azahar, PPSSPP,
-Vita3K, xemu, Flycast, ScummVM).
+Not compiled at all: Qt 6, WPE WebKit, PipeWire, RetroArch with the Thor's toolchain, five of the new cores, and the
+seven standalone emulators (Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K, Flycast, ScummVM). xemu (the Xbox) is not in
+the image: it needs desktop OpenGL, which this GLES-only image doesn't have.
+
+Changed from reading sources and unproven until a build: Flycast and its core, Vita3K (Buildroot's Boost and
+libcurl, a prebuilt ffmpeg archive), Box64 (its x86 helper libraries installed) and the libxkbcommon option. After the
+first build of ARMSX2 and Azahar, check `readelf -d` on their binaries for a `NEEDED` library that isn't in the image:
+neither recipe sets `BUILD_SHARED_LIBS`, and Buildroot's default makes bundled libraries shared.
 
 ### When a package fails to build
 
@@ -67,11 +77,11 @@ Expect it. The packages are ordered here by how likely they are to need work:
 | `armsx2` | `buildroot/package/armsx2` | upstream builds with clang; this recipe uses GCC and its SDL 3 front end instead of Qt |
 | `azahar` | `buildroot/package/azahar` | Qt 6.9 from Buildroot instead of its bundled Qt; Wayland instead of X11 |
 | `dolphin`, `vita3k` | `buildroot/package/...` | their bundled libraries cross-compiled; 17 ROCKNIX patches on Dolphin |
-| `xemu` | `buildroot/package/xemu` | Meson downloads subprojects while configuring; system SDL 3, no GTK |
-| `mesa3d` | `buildroot/patches/mesa3d` | five Turnip patches (4,000 lines) that apply cleanly but were never built for ARM64 |
-| `sway-lite`, `wvkbd` | `buildroot/package/...` | written here (Buildroot's sway needs systemd); built on a PC only as far as their dependencies resolving |
-| `linux` | `buildroot/board/thor` | ROCKNIX's patch series on 7.2 with two config fragments on top |
-| the cores | `buildroot/package/libretro-*` | a compiler flag one core's makefile doesn't take |
+| `flycast`, `libretro-flycast` | `buildroot/package/...` | their bundled libraries: built static now (`BUILD_SHARED_LIBS=OFF`), from reading the CMake |
+| the cores not built yet | `buildroot/package/libretro-*` | a compiler flag one core's makefile doesn't take; SAME_CDI and FinalBurn Neo are the long ones |
+| `mesa3d` | `buildroot/patches/mesa3d` | cross-compiled with the five Turnip patches (4,000 lines); never run |
+| `sway-lite`, `wvkbd` | `buildroot/package/...` | written here (Buildroot's sway needs systemd); cross-compiled, never run |
+| `linux` | `buildroot/board/thor` | ROCKNIX's patch series on 7.2 with two config fragments on top; cross-compiled, never booted |
 
 How to deal with one:
 
@@ -84,8 +94,8 @@ How to deal with one:
    set`, `# BR2_PACKAGE_LIBRETRO_FBNEO is not set`).
    The shelf for a system whose emulator is missing shows its games and fails to start them; take its section
    out of `buildroot/board/thor/systems.conf` if the image is to be handed on that way.
-3. No `.hash` files come with the new packages (their archives couldn't be downloaded where they were written), so
-   Buildroot warns that a download isn't checked and goes on. Adding them is a good first contribution: Buildroot
+3. Most of the new packages have no `.hash` file (their archives couldn't be downloaded where they were written),
+   so Buildroot warns that a download isn't checked and goes on. Adding them is a good first contribution: Buildroot
    prints the hash it saw.
 
 Before pushing a fix: `make test`, and the scripts' own checks (`for t in system/tests/*-test.sh; do sh $t; done`,
@@ -97,7 +107,9 @@ Before pushing a fix: `make test`, and the scripts' own checks (`for t in system
    `gunzip -c banana-thor.img.gz | sudo dd of=/dev/sdX bs=4M conv=fsync`).
 2. Once per handheld, the Thor needs OpenABL in its `abl_a`/`abl_b` partitions so it can boot from the card:
    `buildroot/board/thor/openabl-README.txt` and `docs/THOR-PORT.md`. **Back up the stock ABL first.** Nothing else
-   on the Thor's internal storage is touched: Android stays, and without the card the Thor boots it.
+   on the Thor's internal storage is touched: Android stays installed. OpenABL starts Linux unless told otherwise, so
+   with no card in it opens its menu and says that nothing booted. To start Android, hold Volume Up while powering
+   on, or set "Boot mode" to Android in that menu (Volume Up and Down move, Power selects).
 3. Card in, power on. The first boot makes the data partition on the rest of the card, then the first-time setup comes
    up (language, Wi-Fi, time zone, the Thor's name, RetroAchievements, home server, Steam, the fan and the lights,
    box art).
@@ -107,8 +119,16 @@ Before pushing a fix: `make test`, and the scripts' own checks (`for t in system
 Nothing here has run on a Thor, so the first boot is a bring-up. The `thor-bringup` skill
 (`.claude/skills/thor-bringup`) turns what the handheld reports into fixes; `docs/THOR-PORT.md` has the milestones.
 The quickest way in is the USB cable: this build has USB debugging on (`docs/THOR-OS.md`), so a computer plugged
-into the Thor gets a network card (`ssh root@10.55.0.1`, no password), a serial console and adb. Failing that, SSH
-over Wi-Fi, or a USB keyboard and `console=tty0`:
+into the Thor gets a network card (`ssh root@10.55.0.1`, no password), a serial console and adb. Failing that:
+
+- SSH over Wi-Fi, once the setup has joined a network;
+- the Thor's debug UART, where the kernel's console is (the device tree's `stdout-path`, 115200 8N1). There is no
+  console on the screens and a USB keyboard reaches nothing: the kernel is built without virtual terminals, and no
+  `console=` is passed;
+- the card in a computer: `banana/logs/dmesg.txt` and `banana/logs/boot.txt` on the data partition hold the last
+  boot's kernel log and boot messages.
+
+On the Thor:
 
 - `/usr/libexec/banana/hw-probe` prints what the kernel found (panels, touchscreens, the pad, sound cards, the fan
   and the lights), to set against `etc/banana/hw/thor.conf`;
@@ -192,7 +212,9 @@ Before pushing a fix, run this repository's checks: `make test` (or at least `sh
 1. Write the image to a microSD card (Raspberry Pi Imager, balenaEtcher or `dd`).
 2. Once per handheld, the Thor needs OpenABL in its `abl_a`/`abl_b` partitions so it can boot from the card. Follow
    ROCKNIX's Thor page (https://rocknix.org/devices/ayn/thor-sm8550). **Back up the stock ABL first.** Nothing else on
-   the Thor's internal storage is touched; Android stays, and without the card the Thor boots it.
+   the Thor's internal storage is touched; Android stays installed. With OpenABL's default boot mode (Linux) and no
+   card in, OpenABL opens its menu instead of booting; Android starts by holding Volume Up at power-on or from that
+   menu's "Boot mode".
 3. Card in, power on. The first boot is ROCKNIX's (it makes its storage partition), then Banana's menu comes up on
    both screens. `banana.frontend=0` in ROCKNIX's settings goes back to EmulationStation.
 

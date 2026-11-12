@@ -4,8 +4,12 @@
 #
 ################################################################################
 
-# PPSSPP's libretro core at v1.20.4 (ROCKNIX's pin). The PSP shelf uses the standalone PPSSPP (Vulkan); this is the
-# choice in Settings. FFmpeg: PPSSPP's own prebuilt one (its ffmpeg submodule), not the system's, as the standalone.
+# PPSSPP's libretro core at v1.20.4 (ROCKNIX's pin). The PSP shelf uses the standalone PPSSPP (Vulkan) and Settings
+# has no choice for it: this one is reached by a "run-retroarch ppsspp" line in the card's systems.conf.
+# Only the core is installed, as in ROCKNIX: it looks for PPSSPP's assets (compat.ini, the flash0 fonts) in
+# <system_directory>/PPSSPP, /data/bios/PPSSPP here, and says "Core system files missing" without them; and it keeps
+# its saves in RetroArch's save folder (<saves>/PSP), not the standalone's.
+# FFmpeg: PPSSPP's own prebuilt one (its ffmpeg submodule), not the system's, as the standalone.
 # Ported from ROCKNIX's ppsspp-lr (packages/emulators/libretro/ppsspp-lr at 6cf94dba, GPL-2.0):
 # the same commit, build options and patches.
 LIBRETRO_PPSSPP_VERSION = fa50bb1976065c4f8b1b47af227d367fe9771555

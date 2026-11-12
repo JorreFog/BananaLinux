@@ -13,6 +13,9 @@
 # VulkanMemoryAllocator, tomlplusplus, xxhash, berkeley-softfloat, keycodemapdb...) are wrap files that Meson downloads
 # when xemu configures (--enable-download); they aren't Buildroot downloads, so this build needs the network. QEMU's
 # ROM submodules aren't needed and aren't fetched (the tarball, not git).
+# Not in the Thor's image yet: xemu links libGL and opens an OpenGL 4.0 core context for its window and menus whatever
+# the renderer, and the image has GLES only (Config.in asks for libGL; ROCKNIX's SM8550 build has libglvnd's). Getting
+# there: libglvnd with Mesa (libOpenGL.so.0, no X11), xemu's meson.build linking -lOpenGL, package/sdl3 with OpenGL.
 XEMU_VERSION = 6095054b7d02dfac25fdc4a8ba9300358046e860
 XEMU_SITE = $(call github,xemu-project,xemu,$(XEMU_VERSION))
 XEMU_LICENSE = GPL-2.0+
@@ -23,11 +26,14 @@ XEMU_DEPENDENCIES = host-pkgconf host-python3 host-meson host-ninja libglib2 pix
 # xemu doesn't build with NDEBUG (ROCKNIX's note)
 XEMU_CFLAGS = $(filter-out -DNDEBUG,$(TARGET_CFLAGS))
 
+# configure is called as xemu's own build.sh calls it (ROCKNIX runs build.sh): with -DXBOX=1, which nothing else
+# defines and without which QEMU's main() is built beside xemu's and the Xbox's code paths are left out. No --meson:
+# configure has no such option, it makes its own Meson (a Python venv in the build folder, from the host Python's)
 define XEMU_CONFIGURE_CMDS
 	cd $(@D) && $(TARGET_CONFIGURE_OPTS) CFLAGS="$(XEMU_CFLAGS)" CXXFLAGS="$(filter-out -DNDEBUG,$(TARGET_CXXFLAGS))" \
 		PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" PATH=$(BR_PATH) \
 		./configure --target-list=i386-softmmu --cross-prefix=$(TARGET_CROSS) \
-		--python=$(HOST_DIR)/bin/python3 --meson=$(HOST_DIR)/bin/meson --ninja=$(HOST_DIR)/bin/ninja \
+		--python=$(HOST_DIR)/bin/python3 --ninja=$(HOST_DIR)/bin/ninja --extra-cflags="-DXBOX=1" \
 		--enable-download --enable-sdl --enable-opengl --disable-gtk --enable-alsa --disable-pa \
 		--enable-trace-backends=nop --disable-kvm --disable-xen --disable-werror --disable-curl \
 		--disable-vnc --disable-docs --disable-tools --disable-guest-agent --disable-tpm --disable-replication \

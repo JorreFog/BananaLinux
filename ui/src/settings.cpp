@@ -140,6 +140,13 @@ namespace banana
 		return readLine("/etc/banana/board");
 	}
 
+	// the RG DS family: rgds, rgds-plus, and the universal card (one image for both)
+	static bool rgdsBoard_()
+	{
+		const std::string b = board_();
+		return b.compare(0, 4, "rgds") == 0 || b == "universal";
+	}
+
 	// a program in the background, not waited for (Wi-Fi coming up takes seconds)
 	static void spawn(const char* path, const char* arg, const char* arg2 = nullptr)
 	{
@@ -268,12 +275,14 @@ namespace banana
 		const char* run = getenv("BANANA_RUN");
 		runDir = run ? run : "/run/banana";
 		updatesDir = data + "/updates";
-		// Steam's tool where the image has it (BANANA_STEAM: the tests' stand-in; BANANA_LIBEXEC: another libexec)
+		// Steam's tool where the image has it (BANANA_STEAM: the tests' stand-in; BANANA_LIBEXEC: another libexec). Not
+		// on the RG DS, which has no PC games shelf: the tool is in the files every image is made from
 		{
 			const char* st = getenv("BANANA_STEAM");
 			const char* lx = getenv("BANANA_LIBEXEC");
-			std::string path = st && *st ? st : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/steam";
-			steamTool = access(path.c_str(), X_OK) == 0 ? path : "";
+			const bool asked = st && *st;
+			std::string path = asked ? st : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/steam";
+			steamTool = (asked || !rgdsBoard_()) && access(path.c_str(), X_OK) == 0 ? path : "";
 		}
 		build();
 	}
@@ -3356,6 +3365,7 @@ namespace banana
 		case Key::B:
 			if (pw.empty() && entry == ENTRY_SEARCH) { close(); return CLOSED; }
 			if (pw.empty() && entry == ENTRY_STEAM_CODE) { steamRun("cancel"); steamCodeOpen = false; }	// (no code: the login stopped)
+			if (pw.empty() && entry == ENTRY_HS_CODE) hsStep = 0;	// (no code: not pairing any more, Pair is offered again)
 			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
 			popChar(pw);
 			return MOVED;
@@ -6694,8 +6704,7 @@ namespace banana
 		if (itemByKey("fan") || itemByKey("leds")) r.push_back(SL_CONTROLS);
 		r.push_back(SL_NAME);
 		// the home server: banana-sync on a handheld other than the RG DS (whose setup stays its six steps)
-		const std::string b = board_();
-		if (b.compare(0, 4, "rgds") != 0 && !b.empty() && access(syncTool().c_str(), X_OK) == 0) r.push_back(SL_HOME);
+		if (!rgdsBoard_() && !board_().empty() && access(syncTool().c_str(), X_OK) == 0) r.push_back(SL_HOME);
 		r.push_back(SL_RA);
 		if (!steamTool.empty()) r.push_back(SL_STEAM);
 		r.push_back(SL_ART);
@@ -7515,6 +7524,10 @@ namespace banana
 		if (steamPid <= 0) return;
 		steamCancelled = true;
 		steamRun("cancel");
+		// the tool's cancel stops the downloader it started (steam.pid), and the sign-in tidies up after it. Before that,
+		// while the downloader itself is still being fetched (the first sign-in, a slow or dead network), there is
+		// nothing for it to stop: the sign-in's own shell and its curl then, a session of their own
+		if (access((runDir + "/steam.pid").c_str(), F_OK) != 0) kill(-steamPid, SIGTERM);
 	}
 
 	void Settings::startSteamLogin(const std::string& user, const std::string& pass)

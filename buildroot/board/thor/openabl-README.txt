@@ -2,8 +2,10 @@ BananaOS on the AYN Thor: OpenABL
 =================================
 
 The Thor's own bootloader (ABL) only starts Android. BananaOS boots through OpenABL, an open replacement for it
-(https://github.com/OpenHandheldCollective/OpenABL, the release ROCKNIX uses). It is flashed ONCE; Android keeps
-working (OpenABL starts it when no card is in, or from its menu).
+(https://github.com/OpenHandheldCollective/OpenABL, the release ROCKNIX uses). It is flashed ONCE; Android stays
+installed. OpenABL starts Linux unless told otherwise: with no BananaOS card in, it opens its menu and says that nothing
+booted. To start Android, hold Volume Up while powering on, or set "Boot mode" to Android in that menu (Volume Up and
+Down move, Power selects).
 
 THIS WRITES THE THOR'S BOOTLOADER PARTITIONS. Back up the old ABL first and keep the backup off the handheld.
 
