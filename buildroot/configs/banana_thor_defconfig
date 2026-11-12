@@ -1,7 +1,8 @@
 # Banana for the AYN Thor (Snapdragon 8 Gen 2, SM8550: the Base, Pro and Max; not the Lite, an SM8250).
 # Build: make thor (docs/THOR-PORT.md). Everything past the hardware is the RG DS's build, option for option.
 BR2_aarch64=y
-# (the Thor's cores: one Cortex-X3, two A715, two A710, three A510, all ARMv9.0)
+# (the Thor's cores: one Cortex-X3, two A715, two A710, three A510, all ARMv9.0; external.mk turns SVE off, which the
+# Snapdragon 8 Gen 2 doesn't have)
 BR2_cortex_a710=y
 BR2_OPTIMIZE_2=y
 # a handheld that runs its own games for one person: no stack protector in every function and no eager binding of
@@ -47,9 +48,12 @@ BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
 # reads the card's boot partition
 BR2_PACKAGE_OPENABL=y
 
-# the root filesystem: squashfs, LZ4
+# the root filesystem: squashfs, zstd (the RG DS's is LZ4). The Thor's cores unpack zstd faster than a card reads, so
+# the card is the limit, and zstd's image is smaller: 38% under LZ4HC's on a part of the Thor's root (90 MB: glibc,
+# Box64; measured on a PC, docs/THOR-TUNING.md). Less to read at every start, a smaller update to download, more room
+# in the 3 GB slot. mksquashfs's own level (15): 19 saved 1.6% more for three times the build time
 BR2_TARGET_ROOTFS_SQUASHFS=y
-BR2_TARGET_ROOTFS_SQUASHFS4_LZ4=y
+BR2_TARGET_ROOTFS_SQUASHFS4_ZSTD=y
 # BR2_TARGET_ROOTFS_TAR is not set
 BR2_PACKAGE_HOST_GENIMAGE=y
 BR2_PACKAGE_HOST_DOSFSTOOLS=y

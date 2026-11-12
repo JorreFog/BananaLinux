@@ -36,6 +36,9 @@ up)
         setsid wireplumber </dev/null >/dev/null 2>&1 &
         say "wireplumber started"
     fi
+    # never the OOM killer's choice (ROCKNIX gives both -500 in their units): a game short of memory is ended, the
+    # sound goes on
+    for p in $(pidof pipewire wireplumber); do echo -900 > /proc/$p/oom_score_adj; done 2>/dev/null
     ;;
 down)
     pkill -x wireplumber 2>/dev/null

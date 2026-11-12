@@ -14,10 +14,12 @@ BANANAFRONT_LICENSE = GPL-3.0+, MIT (libretro.h, rcheevos, bcomp), public domain
 BANANAFRONT_LICENSE_FILES = LICENSE src/third_party/rcheevos/LICENSE
 BANANAFRONT_DEPENDENCIES = libdrm alsa-lib zlib
 
+# tuned for the RG DS's Cortex-A55; on the AYN Thor for its own cores (the compiler's -mcpu with SVE off, external.mk)
+BANANAFRONT_CPU = $(if $(filter thor,$(BANANA_BOARD)),$(GCC_TARGET_CPU),cortex-a55)
 define BANANAFRONT_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) device OUT=$(@D)/build/target \
 		CC="$(TARGET_CC)" AR="$(TARGET_AR)" \
-		A55_CFLAGS="$(TARGET_CFLAGS) -mcpu=cortex-a55 -O2" A55_LDFLAGS="$(TARGET_LDFLAGS)" \
+		A55_CFLAGS="$(TARGET_CFLAGS) -mcpu=$(BANANAFRONT_CPU) -O2" A55_LDFLAGS="$(TARGET_LDFLAGS)" \
 		A55_DRM_CFLAGS="-I$(STAGING_DIR)/usr/include/libdrm" VERSION=$(BANANAFRONT_VERSION)
 endef
 

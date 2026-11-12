@@ -56,6 +56,8 @@ jobs:
         run: sudo system/bananad/tests/sleep-test.sh
       - name: DS launchers (run-drastic's drastic.cfg changes, nds-saves, against a made-up card)
         run: sh system/tests/launchers-test.sh
+      - name: Kernel tunables (tune against a made-up /sys and /proc; the RG DS's profile touches nothing)
+        run: sh system/tests/tune-test.sh
       - name: The AYN Thor's launchers (PC games' setup and runs and the Steam login, library and box art against stand-ins; the compositor wrapper, where sway is)
         run: sh system/tests/pc-games-test.sh && sh system/tests/steam-test.sh && sh system/tests/run-wayland-test.sh
       - name: Shell scripts parse

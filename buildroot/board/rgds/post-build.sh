@@ -18,6 +18,10 @@ else
     echo "post-build: no hardware profile etc/banana/hw/${2:-rgds}.conf" >&2; exit 1
 fi
 rm -rf "$T/etc/banana/hw"
+# the serial console's login is the RG DS's UART (ttyS2). The AYN Thor has no port there (its kernel's 8250 driver
+# still makes /dev/ttyS2, with nothing behind it): getty would fail to open it, and busybox init starts a respawn entry
+# again every second, for good, with a line in the log each time. Its shell is SSH
+[ "${2:-rgds}" = thor ] && sed -i '/^ttyS2::respawn:/d' "$T/etc/inittab"
 # a board with its own systems list (board/<board>/systems.conf: the AYN Thor's, with every system its chip runs)
 # has it as /etc/banana/systems.conf; the others keep the overlay's (the RG DS's)
 if [ -f "$(dirname "$0")/../${2:-rgds}/systems.conf" ]; then

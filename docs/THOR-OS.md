@@ -54,8 +54,10 @@ What keeps it there:
 - **No compositor at idle**, and none under RetroArch. sway exists only around a program that needs it.
 - **Nothing resident for features not in use**: the browser, Wine, Box64, the Store and file sharing start when asked
   for and leave nothing behind. PC games' runtime isn't even in the image (below).
-- **zram.** 2 GB of compressed swap in memory (`HW_ZRAM` in `hw.conf`), for the heaviest emulators and PC games. It
-  costs nothing while unused.
+- **zram.** Compressed swap in memory, half the RAM (4 GB on the Base, 8 GB on the Max; `HW_ZRAM` in `hw.conf`), for
+  the heaviest emulators and PC games. LZ4 going out, zstd for pages that stay idle. It costs nothing while unused.
+  This and the other memory, CPU, card and sound settings, with what ROCKNIX does and how to measure each on a Thor,
+  are in `docs/THOR-TUNING.md`.
 - **The sound server stays.** Plain ALSA would save about 25 MB, but the Thor's sound is a DSP graph that PipeWire
   sets up from ROCKNIX's UCM profile, with the jack and Bluetooth codecs handled. That is worth the memory.
 

@@ -1,0 +1,11 @@
+#!/bin/sh
+# A handheld with a fan and lights round its sticks (hw.conf's HW_HANDHELD=yes: the AYN Thor): the lights off and the
+# fan stopped before a sleep (usr/libexec/banana/handheld sleep: ROCKNIX does the same, lit LEDs keep the SM8550 from
+# sleeping), both back as Settings keeps them after ("post" runs in the background already).
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+[ "$HW_HANDHELD" = yes ] && [ -x /usr/libexec/banana/handheld ] || exit 0
+case $1 in
+pre) /usr/libexec/banana/handheld sleep ;;
+post) /usr/libexec/banana/handheld boot >/dev/null 2>&1 ;;
+esac
+exit 0

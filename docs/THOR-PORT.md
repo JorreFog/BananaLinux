@@ -180,8 +180,8 @@ Each milestone ends with something you can check on the handheld.
    - Turnip (Vulkan) is in the image now, from Banana Pocket's Buildroot patches (`buildroot/buildroot-patches`:
      the option, and Mesa 26.2.6). The Makefile applies them to Buildroot. Use it for PPSSPP, Dolphin and the like.
 2. **CPU.**
-   - Builds are for the Cortex-A710 (`BR2_cortex_a710`).
-   - `bananads.mk`'s and `bananafront.mk`'s `-mcpu=cortex-a55` should follow the board.
+   - Builds are for the Cortex-A710 (`BR2_cortex_a710`) with SVE off (`external.mk`: the Snapdragon 8 Gen 2 has no
+     SVE, and GCC emits it for `-mcpu=cortex-a710` at `-O2`). BananaDS and BananaFront follow the board's CPU.
    - `banana-perf` caps `policy0` at RK3568 clocks. The Thor has three policies (A510, A715/A710, X3); give each
      profile per-policy caps.
 3. **The panels in games.** The DS emulators, the SDL2 panels patch and RetroArch's monitor index all address the

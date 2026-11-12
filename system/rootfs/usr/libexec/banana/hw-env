@@ -14,4 +14,11 @@ if [ "$HW_SOUND" = pipewire ]; then
     export BANANA_SOUND=pipewire PIPEWIRE_RUNTIME_DIR=${PIPEWIRE_RUNTIME_DIR:-/run/banana/pipewire}
 fi
 [ -n "$HW_BACKLIGHT_BOTTOM" ] && export BANANA_BACKLIGHT_BOTTOM=${BANANA_BACKLIGHT_BOTTOM:-$HW_BACKLIGHT_BOTTOM}
+# the board's own environment (HW_ENV's "NAME=value" words: the AYN Thor's cache folder and malloc tunable), each only
+# where it isn't set already
+for kv in $HW_ENV; do
+    k=${kv%%=*}
+    case $k in ''|*[!A-Za-z0-9_]*|[0-9]*) continue ;; esac
+    eval "[ -n \"\${$k+x}\" ]" || export "$kv"
+done
 :

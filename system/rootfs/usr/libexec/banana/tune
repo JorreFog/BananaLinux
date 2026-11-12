@@ -1,0 +1,121 @@
+#!/bin/sh
+# The kernel's tunables for this handheld, from its hardware profile (/etc/banana/hw.conf): memory and reclaim, swap in
+# memory, an idle state to keep off, the cards' I/O, the daemons out of the OOM killer's way. Each step reads its own
+# keys and does nothing without them, so a board that sets none (the RG DS) is left as it was. Every write checks its
+# file first and nothing here can stop the boot. What each value is for, and how to measure it: docs/THOR-TUNING.md.
+#   tune boot          (rcS, before the menu) the sysctls, MGLRU, huge pages, idle states, the disks present
+#   tune zram          (rcS, after the menu is up) compressed swap in memory, sized by the RAM, and its recompression
+#   tune io <disk>     (rcS, and udev when a card goes in) one disk's I/O scheduler and read-ahead
+#   tune protect       (rcS) the daemons listed in HW_OOM_PROTECT never chosen by the OOM killer
+#   tune recompress    one pass: zram's pages idle since the last pass recompressed with the stronger algorithm
+# (host tests: BANANA_SYS for /sys, BANANA_PROC for /proc, BANANA_HW_CONF, BANANA_RUN)
+SYS=${BANANA_SYS:-/sys}
+PROC=${BANANA_PROC:-/proc}
+RUN=${BANANA_RUN:-/run/banana}
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+# put <file> <value>: only into a file that is there (a kernel without the feature has none)
+put() { [ -e "$1" ] && echo "$2" > "$1" 2>/dev/null; }
+# a number, or nothing
+num() { case $1 in ''|*[!0-9]*) return 1 ;; esac; }
+# MB of RAM (MemTotal)
+ram_mb() { sed -n 's/^MemTotal: *\([0-9]*\) kB/\1/p' "$PROC/meminfo" 2>/dev/null | awk '{ printf "%d", $1 / 1024 }'; }
+# size <MB or N%>: in MB (N% of the RAM: the Base's 8 GB and the Max's 16 GB each get their own share)
+size() {
+    case $1 in
+    *%) p=${1%\%}; num "$p" || return 1; echo $(( $(ram_mb) * p / 100 )) ;;
+    *) num "$1" || return 1; echo "$1" ;;
+    esac
+}
+
+io() {   # io <disk>: HW_IO's "<name prefix>=<scheduler>:<read-ahead KB>" rules, the first that matches
+    q=$SYS/block/$1/queue
+    [ -d "$q" ] || return 0
+    for r in $HW_IO; do
+        case $1 in "${r%%=*}"*) ;; *) continue ;; esac
+        v=${r#*=}; s=${v%%:*}; ra=${v#*:}; [ "$ra" = "$v" ] && ra=
+        # (a scheduler the kernel lists for this queue, else the queue keeps its own)
+        [ -n "$s" ] && grep -qw "$s" "$q/scheduler" 2>/dev/null && put "$q/scheduler" "$s"
+        num "$ra" && put "$q/read_ahead_kb" "$ra"
+        return 0
+    done
+}
+
+recompress() {
+    z=$SYS/block/zram0
+    [ -e "$z/recompress" ] && [ -n "$HW_ZRAM_RECOMPRESS" ] || return 0
+    grep -q zram0 "$PROC/swaps" 2>/dev/null || return 0
+    # the pages marked idle last time and not touched since, recompressed (priority 1: the second algorithm, as the
+    # kernel's documentation advises over naming it); only those over 1 KB compressed, where there is something to win.
+    # Then every page marked idle again for the next pass
+    put "$z/recompress" "type=idle threshold=1024 priority=1"
+    put "$z/idle" all
+}
+
+case $1 in
+boot)
+    # sysctls: HW_SYSCTL's "name=value" (vm.dirty_bytes=...), each into /proc/sys/<name with / for .>
+    for kv in $HW_SYSCTL; do
+        k=${kv%%=*}; v=${kv#*=}
+        [ "$k" != "$kv" ] && put "$PROC/sys/$(echo "$k" | tr . /)" "$v"
+    done
+    # MGLRU: the pages used in the last HW_MGLRU_TTL_MS are never evicted; a game that would thrash on them is ended by
+    # the OOM killer instead of freezing the handheld for minutes
+    num "$HW_MGLRU_TTL_MS" && put "$SYS/kernel/mm/lru_gen/min_ttl_ms" "$HW_MGLRU_TTL_MS"
+    # transparent huge pages: where a program asks for them (madvise), and how a page fault may get one
+    # (HW_THP_DEFRAG=defer: never by compacting memory in the fault itself, kcompactd does it in the background)
+    t=$SYS/kernel/mm/transparent_hugepage
+    [ -n "$HW_THP_DEFRAG" ] && grep -qw "$HW_THP_DEFRAG" "$t/defrag" 2>/dev/null && put "$t/defrag" "$HW_THP_DEFRAG"
+    # an idle state to keep off (HW_CPUIDLE_OFF "cpu0/state1": ROCKNIX's SM8550 quirk)
+    for c in $HW_CPUIDLE_OFF; do put "$SYS/devices/system/cpu/${c%%/*}/cpuidle/${c#*/}/disable" 1; done
+    # zswap would compress every page twice in front of zram
+    [ -n "$HW_ZRAM" ] && [ -w "$SYS/module/zswap/parameters/enabled" ] && put "$SYS/module/zswap/parameters/enabled" N
+    for d in "$SYS"/block/*; do [ -d "$d/queue" ] && io "${d##*/}"; done
+    ;;
+zram)
+    mb=$(size "$HW_ZRAM") && [ "$mb" -gt 0 ] || exit 0
+    z=$SYS/block/zram0
+    [ -e "$z/disksize" ] || modprobe zram 2>/dev/null
+    [ -e "$z/disksize" ] || exit 0
+    grep -q zram0 "$PROC/swaps" 2>/dev/null && exit 0
+    # LZ4 for the pages going out (the fastest to compress and to read back: it is a game's memory), and the stronger
+    # algorithm as the second, for pages that stay idle (recompress, below)
+    # (the algorithms this kernel has, e.g. "lzo-rle [lz4] zstd")
+    have=" $(tr -d '[]' < "$z/comp_algorithm" 2>/dev/null) "
+    a=${HW_ZRAM_ALGO:-lz4}
+    case $have in *" $a "*) put "$z/comp_algorithm" "$a" ;; esac
+    r=$HW_ZRAM_RECOMPRESS
+    case $have in *" $r "*) [ -n "$r" ] && put "$z/recomp_algorithm" "algo=$r priority=1" ;; *) r= ;; esac
+    put "$z/disksize" "${mb}M" || exit 0
+    # the RAM zram may take at most, compressed (HW_ZRAM_LIMIT: MB or N%): past it the kernel looks elsewhere
+    l=$(size "$HW_ZRAM_LIMIT") && [ "$l" -gt 0 ] && put "$z/mem_limit" "${l}M"
+    if [ -z "$BANANA_SYS" ]; then mkswap /dev/zram0 >/dev/null 2>&1 && swapon -p 100 /dev/zram0 2>/dev/null || exit 0; fi
+    # swapped to eagerly, as zram is meant to be, and one page read at a time (it is memory, not a disk)
+    put "$PROC/sys/vm/swappiness" 100
+    put "$PROC/sys/vm/page-cluster" 0
+    # recompression every HW_ZRAM_RECOMPRESS_MIN minutes (10), in the background
+    if [ -n "$r" ] && [ -e "$z/recomp_algorithm" ]; then
+        m=${HW_ZRAM_RECOMPRESS_MIN:-10}; num "$m" && [ "$m" -gt 0 ] || m=10
+        mkdir -p "$RUN" 2>/dev/null
+        [ -f "$RUN/zram-recompress.pid" ] && kill "$(cat "$RUN/zram-recompress.pid")" 2>/dev/null
+        ( put "$z/idle" all; while sleep $((m * 60)); do recompress; done ) </dev/null >/dev/null 2>&1 &
+        echo $! > "$RUN/zram-recompress.pid"
+    fi
+    ;;
+io)
+    [ -n "$2" ] && io "$2"
+    ;;
+protect)
+    # oom_score_adj -900: the kernel would kill these last, after the game (the menu itself stays at 0: the games it
+    # starts would inherit anything lower, and the kernel picks the largest process, the game, anyway)
+    [ -n "$HW_OOM_PROTECT" ] || exit 0
+    for c in "$PROC"/[0-9]*/comm; do
+        read -r n < "$c" 2>/dev/null || continue
+        case " $HW_OOM_PROTECT " in *" $n "*) put "${c%/comm}/oom_score_adj" -900 ;; esac
+    done
+    ;;
+recompress)
+    recompress
+    ;;
+*) echo "usage: tune boot | zram | io <disk> | protect | recompress" >&2; exit 2 ;;
+esac
+exit 0

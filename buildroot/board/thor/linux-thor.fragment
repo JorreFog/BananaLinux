@@ -57,3 +57,8 @@ CONFIG_EXT4_FS=y
 CONFIG_NTSYNC=y
 # pads and keyboards made in software (the menu's on-screen keyboard for a computer's game, Steam Input's)
 CONFIG_INPUT_UINPUT=y
+# the root's squashfs in zstd (banana_thor_defconfig), and zram's second algorithm (zstd, for the pages that stay idle:
+# usr/libexec/banana/tune recompresses them)
+CONFIG_SQUASHFS_ZSTD=y
+CONFIG_ZRAM_BACKEND_ZSTD=y
+CONFIG_ZRAM_MULTI_COMP=y

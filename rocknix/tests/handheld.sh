@@ -60,5 +60,20 @@ nat leds battery; sleep 0.3
 nat leds off; [ "$(cat "$L1/brightness")" = 0 ] || bad "native leds off"
 [ -f "$N/run/leds-battery.pid" ] && bad "the battery's loop outlived leds off"
 nat gpu on; [ "$(cat "$N/sys/class/devfreq/3d00000.gpu/max_freq")" = 1000000000 ] || bad "native gpu boost"
+# a sleep: the rings dark and every loop gone (the fan's, the battery colour's, the breathing), the fan stopped; then
+# boot's restore brings the fan's loop and the rings back as Settings keeps them
+printf 'fan = moderate\nleds = blue\nleds_effect = breathe\n' > "$N/data/settings.conf"
+echo 70000 > "$N/sys/class/thermal/thermal_zone0/temp"
+nat boot; sleep 0.6
+[ -f "$N/run/fan.pid" ] && [ -f "$N/run/leds-effect.pid" ] || bad "native boot: the fan's loop and the breathing"
+nat sleep
+[ -f "$N/run/fan.pid" ] || [ -f "$N/run/leds-effect.pid" ] || [ -f "$N/run/leds-battery.pid" ] && bad "a loop outlived the sleep"
+sleep 0.3
+[ "$(cat "$L1/brightness")" = 0 ] && [ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 0 ] || bad "asleep: rings $(cat "$L1/brightness"), fan $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
+nat boot; sleep 0.6
+[ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 102 ] && [ "$(cat "$L1/multi_intensity")" = "255 0 0" ] || bad "after the sleep: fan $(cat "$N/sys/class/hwmon/hwmon1/pwm1"), rings $(cat "$L1/multi_intensity")"
+for l in fan leds-effect leds-battery; do [ -f "$N/run/$l.pid" ] && kill "$(cat "$N/run/$l.pid")" 2>/dev/null; done
+# on ROCKNIX its own sleep hooks do it: nothing here
+n=$(wc -l < "$T/log"); sh "$H" sleep; [ "$(wc -l < "$T/log")" = "$n" ] || bad "sleep under ROCKNIX called its tools"
 [ $fail = 0 ] && echo "handheld: all passed"
 exit $fail

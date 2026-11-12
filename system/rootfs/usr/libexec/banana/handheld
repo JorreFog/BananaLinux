@@ -13,6 +13,8 @@
 #   handheld leds-system <system>         (run-rocknix) the lights in the system's colour, when "system" is chosen
 #   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz)
 #   handheld boot                         (rcS, BananaOS's own image) the fan, the lights and the GPU as Settings keeps them
+#   handheld sleep                        (sleep.d/30-handheld, BananaOS's own image) the lights off and the fan stopped
+#                                         for a sleep; "boot" puts them back after it
 #   handheld poweroff-after <minutes>     asleep this long, the handheld turns off (ROCKNIX's sleep: its timed shutdown,
 #                                         in a game or not); 0 never
 # (host tests: BANANA_SYS for /sys, BANANA_TOOLS for ROCKNIX's tools, ROCKNIX_SETTINGS for its settings file)
@@ -64,13 +66,21 @@ fan_loop() {
     pwm=$(ls "$SYS"/class/hwmon/hwmon*/pwm1 2>/dev/null | head -n 1)
     [ -n "$pwm" ] || return 0
     case $1 in aggressive) base=50 ;; quiet) base=60 ;; *) base=55 ;; esac
+    # the CPU zones' temperature files, found once; each look reads them with the shell's own read and sums them in its
+    # arithmetic (it used to take a pipeline and three programs per zone every 3 s, some sixty processes on the SM8550's
+    # CPU zones: now none, only the sleep)
+    zones=
+    for z in "$SYS"/class/thermal/thermal_zone*; do
+        read -r ty < "$z/type" 2>/dev/null || continue
+        case $ty in [Cc][Pp][Uu]*) zones="$zones $z/temp" ;; esac
+    done
     (
         echo 1 > "${pwm}_enable" 2>/dev/null
         last=
         while :; do
-            t=$(cat "$SYS"/class/thermal/thermal_zone*/type 2>/dev/null | grep -n -i '^cpu' | cut -d: -f1 | while read -r i; do
-                    cat "$(ls -d "$SYS"/class/thermal/thermal_zone* | sed -n "${i}p")/temp" 2>/dev/null; done |
-                awk '{ s += $1; n++ } END { if (n) printf "%d", s / n / 1000; else print 0 }')
+            s=0; n=0
+            for f in $zones; do read -r c < "$f" 2>/dev/null && [ -n "$c" ] && { s=$((s + c)); n=$((n + 1)); }; done
+            t=0; [ "$n" -gt 0 ] && t=$((s / n / 1000))
             # (quiet's top step is later still, as ROCKNIX's: 95 degrees)
             top=$((base + 30)); [ "$base" = 60 ] && top=95
             if [ "$t" -gt "$top" ]; then v=255
@@ -183,6 +193,16 @@ boot)
     l=$(conf leds); has_leds && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds "${l:-system}"
     [ "$(conf gpu_boost)" = on ] && has_gpu && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" gpu on
     ;;
+sleep)
+    # ROCKNIX turns the SM8550's stick lights off before a sleep (quirks/platforms/SM8550/sleep.d/pre/001-led: lit, they
+    # keep the handheld from sleeping), and lit they draw from the battery all night. The fan's loop stops too (it
+    # would be frozen at whatever speed it last set) and the fan with it: asleep, the SoC cools by itself, and the
+    # kernel's own thermal trips still have the fan. ROCKNIX's system does this in its own sleep hooks
+    rocknix && exit 0
+    stop_effect; stop_loop leds-battery; stop_loop fan
+    has_leds && rings 0 0 0 0
+    for p in "$SYS"/class/hwmon/hwmon*/pwm1; do [ -e "$p" ] && echo 0 > "$p" 2>/dev/null; done
+    ;;
 poweroff-after)
     case $2 in ''|*[!0-9]*) exit 2 ;; esac
     if [ "$2" = 0 ]; then
@@ -193,6 +213,6 @@ poweroff-after)
         setting system.shutdown_delay_running_game $(($2 * 60))
     fi
     ;;
-*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off | poweroff-after <minutes>" >&2; exit 2 ;;
+*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off | boot | sleep | poweroff-after <minutes>" >&2; exit 2 ;;
 esac
 exit 0

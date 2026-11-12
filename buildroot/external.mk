@@ -23,6 +23,16 @@ BANANA_BOARD_DIR = $(BR2_EXTERNAL_BANANA_PATH)/board/thor
 else
 BANANA_BOARD_DIR = $(BANANA_RGDS)
 endif
+
+# The AYN Thor's CPU for every package: the Cortex-A710 (BR2_cortex_a710; the X3, A715 and A510 beside it are the same
+# ARMv9.0) with SVE off. The Snapdragon 8 Gen 2 has SVE disabled, and GCC 14 with -mcpu=cortex-a710 vectorises plain
+# loops with SVE at -O2 already (16 SVE instructions in a two-loop test file; none with +nosve), which would end the
+# program with SIGILL on the handheld. ROCKNIX builds SM8550 with +nosve+nosve2 (devices/SM8550/options), Box64's SD8G2
+# target too. Buildroot has no option for it: the compiler wrapper's -mcpu (BR_CPU) is GCC_TARGET_CPU, set from
+# arch/arch.mk before this file, and read again when the wrapper and the packages build.
+ifeq ($(BR2_cortex_a710)$(BANANA_BOARD),ythor)
+GCC_TARGET_CPU := cortex-a710+nosve+nosve2
+endif
 # ROCKNIX's kernel patches, applied as ROCKNIX applies them (patch -p1, fuzz allowed): a few of them were written
 # against a slightly different kernel and only fit with fuzz, which Buildroot's own patch step (-F0) refuses. Then the
 # board's own (linux-patches-banana: kept apart, as the ROCKNIX sync replaces linux-patches; the AYN Thor's are from
@@ -71,6 +81,23 @@ define BANANA_LINUX_THOR_DTS
 endef
 ifeq ($(BANANA_BOARD),thor)
 LINUX_POST_PATCH_HOOKS += BANANA_LINUX_THOR_DTS
+endif
+
+# Turnip's render-pass autotuner corrected by measured pass times (ROCKNIX's drirc file, 01-rocknix-turnip.conf; the
+# option comes with patches/mesa3d, ROCKNIX's autotune patches): TU_AUTOTUNE_FLAGS in a game's environment still wins
+define BANANA_MESA3D_THOR_DRIRC
+	$(INSTALL) -D -m 0644 $(BANANA_THOR)/turnip-drirc.conf $(TARGET_DIR)/usr/share/drirc.d/01-banana-turnip.conf
+endef
+ifeq ($(BANANA_BOARD)$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO),thory)
+MESA3D_POST_INSTALL_TARGET_HOOKS += BANANA_MESA3D_THOR_DRIRC
+endif
+# PipeWire's quantum floor for the Thor's DSP (board/thor/pipewire/50-banana-thor.conf says why)
+define BANANA_PIPEWIRE_THOR_CONF
+	$(INSTALL) -D -m 0644 $(BANANA_THOR)/pipewire/50-banana-thor.conf \
+		$(TARGET_DIR)/etc/pipewire/pipewire.conf.d/50-banana-thor.conf
+endef
+ifeq ($(BANANA_BOARD)$(BR2_PACKAGE_PIPEWIRE),thory)
+PIPEWIRE_POST_INSTALL_TARGET_HOOKS += BANANA_PIPEWIRE_THOR_CONF
 endif
 
 # The RTL8821CS's Bluetooth firmware (btrtl, through hci_uart's H5): rtl_bt/rtl8821cs_fw.bin and the config it needs
