@@ -16,7 +16,7 @@ SRC += src/settings_bshare.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 # (the Achievements page: a game's list from RetroAchievements, the game identified with rcheevos' rhash)
-SRC += src/achievements.cpp
+SRC += src/achievements.cpp src/settings_achievements.cpp
 PKGS = freetype2 libdrm zlib
 UI_FLAGS = -Isrc
 ifeq ($(ALSA),1)

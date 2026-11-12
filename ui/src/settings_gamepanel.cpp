@@ -85,36 +85,6 @@ namespace banana
 			cu.cleanup(h);
 			return ok ? body : "";
 		}
-		bool fetchFile(const std::string& url, const std::string& path)
-		{
-			Curl cu;
-			if (!cu.load()) return false;
-			void* h = cu.init();
-			if (!h) return false;
-			enum { WRITEDATA = 10001, URL = 10002, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99, RESPONSE_CODE = 0x200002 };
-			std::string body;
-			long status = 0;
-			cu.setopt(h, URL, url.c_str());
-			cu.setopt(h, USERAGENT, "BananaOS/0.2 rcheevos");
-			cu.setopt(h, NOSIGNAL, 1L);
-			cu.setopt(h, TIMEOUT, 20L);
-			cu.setopt(h, WRITEFUNCTION, onBody);
-			cu.setopt(h, WRITEDATA, &body);
-			bool ok = cu.perform(h) == 0;
-			if (ok) cu.getinfo(h, RESPONSE_CODE, &status);
-			cu.cleanup(h);
-			if (!ok || status != 200 || body.size() < 8) return false;
-			std::string tmp = path + ".part";
-			FILE* f = fopen(tmp.c_str(), "wb");
-			if (!f) return false;
-			bool wrote = fwrite(body.data(), 1, body.size(), f) == body.size();
-			wrote &= fflush(f) == 0;
-			wrote &= fsync(fileno(f)) == 0;
-			wrote &= fclose(f) == 0;
-			if (!wrote || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
-			return true;
-		}
-		const char* const BADGES = "/data/banana/cache/ra-badges";
 		const char* const IC_SAVE[12] = { "##########..", "#..#####.##.", "#..#####..##", "#..#####...#", "#..........#", "#..........#",
 			"#.########.#", "#.#......#.#", "#.#......#.#", "#.#......#.#", "#.########.#", "############" };
 		const char* const IC_LOAD[12] = { "............", ".####.......", "#....#......", "#.....######", "#..........#", "#....##....#",
@@ -179,7 +149,13 @@ namespace banana
 		uint32_t gameId = 0;
 		std::vector<RaAch> all;
 		std::map<uint32_t, long long> unlocked;		// id -> when (unix time)
-		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
+		std::map<uint32_t, long long> hardAt;		// the hardcore ones among them -> when (the list's Hardcore)
+		int sessionHard = -1;		// the emulator's session is hardcore (1) or not (0); -1 not known (RetroArch's log)
+		std::string rom, cacheDir;	// the game's file and the Achievements page's cache (achievements.h): what the panel
+									// learns is kept for the library's list (the id, the unlock times the server's
+									// read-only list hasn't)
+		std::map<std::string, bool> badgeReady;		// badge name -> its file is in badgeDir
+		std::string badgeDir;	// the badges' files: the menu's cache (/data/banana/cache/ra-badges), the page's too
 		int gen = 0;
 		int awards = 0;		// achievements unlocked while the game runs (each one wakes a dimmed bottom panel)
 		std::string user, token;
@@ -196,13 +172,12 @@ namespace banana
 		void wantBadge(const std::shared_ptr<RaWatch>& self, const std::string& name)
 		{
 			if (name.empty() || badgeReady.count(name)) return;
-			std::string path = std::string(BADGES) + "/" + name + ".png";
+			std::string path = badgeDir + "/" + name + ".png";
 			if (access(path.c_str(), R_OK) == 0) { badgeReady[name] = true; return; }
 			badgeReady[name] = false;
-			std::thread([self, name, path]
+			std::thread([self, name, dir = badgeDir]
 			{
-				if (system((std::string("mkdir -p ") + BADGES).c_str()) != 0) {}
-				bool ok = fetchFile("https://media.retroachievements.org/Badge/" + name + ".png", path);
+				bool ok = ach::fetchBadge(name, dir);	// (the Achievements page's way: the tests' stand-in too)
 				std::lock_guard<std::mutex> l(self->mu);
 				if (ok) { self->badgeReady[name] = true; self->gen++; }
 			}).detach();
@@ -243,15 +218,59 @@ namespace banana
 			// (softcore: the panel only reads; RetroArch keeps its own session, and a hardcore one from a client the
 			// server doesn't know gets its warning)
 			std::string sess = raPost("r=startsession&u=" + user + "&t=" + token + "&g=" + g + "&h=0" + (hash.empty() ? "" : "&m=" + hash));
-			std::map<uint32_t, long long> un;
+			std::map<uint32_t, long long> un, hard;
 			for (const char* k : { "Unlocks", "HardcoreUnlocks" })
 				for (auto& o : jsonObjects(sess, k))
-					un[(uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10)] = atoll(jsonField(o, "When").c_str());
-			std::lock_guard<std::mutex> l(w->mu);
-			w->all = all;
-			for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
-			w->state = all.empty() ? 3 : 2;
-			w->gen++;
+				{
+					const uint32_t aid = (uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10);
+					const long long when = atoll(jsonField(o, "When").c_str());
+					un[aid] = when;
+					if (!strcmp(k, "HardcoreUnlocks")) hard[aid] = when;
+				}
+			{
+				std::lock_guard<std::mutex> l(w->mu);
+				w->all = all;
+				for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
+				for (auto& u : hard) if (!w->hardAt.count(u.first)) w->hardAt[u.first] = u.second;
+				w->state = all.empty() ? 3 : 2;
+				w->gen++;
+			}
+			save(w);
+		}
+		// what the panel knows, as the Achievements page's cache: the game's list with the unlock times, and the ROM's id
+		// (on the fetch's thread, or one of its own at the game's end; the times the cache had for the rest kept)
+		ach::List asList()
+		{
+			ach::List l;
+			l.gameId = gameId;
+			l.title = game;
+			l.fetched = (long long)time(nullptr);
+			for (auto& a : all)
+			{
+				ach::Item it;
+				it.id = a.id; it.title = a.title; it.desc = a.desc; it.badge = a.badge; it.points = a.points;
+				auto h = hardAt.find(a.id);
+				auto u = unlocked.find(a.id);
+				if (h != hardAt.end()) it.hard = h->second > ach::UNKNOWN ? h->second : ach::UNKNOWN;
+				if (u != unlocked.end()) it.soft = u->second > ach::UNKNOWN ? u->second : ach::UNKNOWN;
+				l.items.push_back(it);
+			}
+			return l;
+		}
+		static void save(const std::shared_ptr<RaWatch>& w)
+		{
+			ach::List l;
+			std::string dir, rom, hash;
+			{
+				std::lock_guard<std::mutex> g(w->mu);
+				if (w->state != 2 || !w->gameId || w->all.empty() || w->cacheDir.empty()) return;
+				l = w->asList();
+				dir = w->cacheDir; rom = w->rom; hash = w->hash;
+			}
+			ach::List old;
+			if (ach::readList(dir, l.gameId, old)) { ach::keepTimes(l, old); if (l.title.empty()) l.title = old.title; }
+			ach::writeList(dir, l);
+			if (!rom.empty()) ach::writeId(dir, ach::romKey(rom), hash, l.gameId);
 		}
 		// the emulator's RetroAchievements block (bcomp.h, COMPANION-SPEC section 4): its client (rcheevos) identified the
 		// game and unlocks; the list and the badges still come from the server, as for RetroArch's log
@@ -262,6 +281,7 @@ namespace banana
 			int st = ra.state == BCOMP_RA_LOGIN || ra.state == BCOMP_RA_LOADING ? 0 : ra.state == BCOMP_RA_NO_SET || ra.state == BCOMP_RA_UNKNOWN_GAME ? 3 :
 				ra.state == BCOMP_RA_LOGIN_FAILED ? 4 : -1;
 			if (st >= 0 && st != state && gameId == 0) { state = st; gen++; }
+			sessionHard = ra.hardcore ? 1 : 0;
 			if (ra.game_id && ra.game_id != gameId && (ra.state == BCOMP_RA_ACTIVE || ra.state == BCOMP_RA_OFFLINE))
 			{
 				gameId = ra.game_id;
@@ -281,7 +301,12 @@ namespace banana
 			for (uint32_t i = from; i < ra.ev_head; i++)
 			{
 				const bcomp_ra_event& e = ra.ev[i % BCOMP_RA_EVENTS];
-				if (e.type == BCOMP_EV_UNLOCK) { unlocked[e.id] = (long long)time(nullptr); gen++; awards++; }
+				if (e.type == BCOMP_EV_UNLOCK)
+				{
+					unlocked[e.id] = (long long)time(nullptr);
+					if (sessionHard == 1) hardAt[e.id] = unlocked[e.id];
+					gen++; awards++;
+				}
 			}
 			evSeen = ra.ev_head;
 		}
@@ -366,8 +391,12 @@ namespace banana
 		}
 		gIconTex = nullptr;
 		gIconBadge = -1;
+		gAchOpen = false; gAchPage = 0; gAchBtnW = 0; gAchCache = ach::List();
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
+		raw->rom = gRomPath;
+		raw->cacheDir = achCacheDir();
+		raw->badgeDir = achBadgeDir();
 		std::string cfg = "/data/retroarch/retroarch.cfg";
 		raw->user = cfgValue(cfg, "cheevos_username");
 		raw->token = cfgValue(cfg, "cheevos_token");
@@ -386,6 +415,7 @@ namespace banana
 		if (dot != std::string::npos && dot > 0) b.erase(dot);
 		gStateRoot = stateDir;
 		gStateName = b;
+		gRomPath = rom;
 		gStateBase = stateDir + "/" + b;
 	}
 
@@ -480,9 +510,89 @@ namespace banana
 		}
 	}
 
+	// ---- the panel's achievements list: the game's whole list, a page of four rows at a time (each with two lines of its
+	// description: there is no other panel for it here), the pager, Back. From the watch once the server answered (the
+	// unlocks of this run with it), else the card's cache (the last list the menu or this panel saw), "as of"
+	void Settings::gameAchOpen()
+	{
+		gAchOpen = true;
+		gAchPage = 0;
+		gAchCache = ach::List();
+		uint32_t id = 0;
+		if (raw) { std::lock_guard<std::mutex> l(raw->mu); id = raw->gameId; }
+		std::string h;
+		if (!id) ach::readId(achCacheDir(), ach::romKey(gRomPath), h, id);
+		if (id) ach::readList(achCacheDir(), id, gAchCache);	// (a few KB, once, as the list opens)
+		fprintf(stderr, "game panel: achievements list (game %u, %zu cached)\n", id, gAchCache.items.size());
+	}
+
+	ach::List Settings::gameAchList(int& state, bool& cached)
+	{
+		cached = false;
+		state = ach::Loader::LOADING;
+		if (raw)
+		{
+			std::lock_guard<std::mutex> l(raw->mu);
+			if (raw->state == 2 && !raw->all.empty())
+			{
+				state = ach::Loader::READY;
+				ach::List list = raw->asList();
+				if (!gAchCache.items.empty()) ach::keepTimes(list, gAchCache);
+				return list;
+			}
+			state = raw->state == 3 ? ach::Loader::NO_GAME : raw->state == 4 ? ach::Loader::NO_ACCOUNT : raw->state == 5 ? ach::Loader::NO_CONNECTION : ach::Loader::LOADING;
+		}
+		if (!gAchCache.items.empty()) { state = ach::Loader::READY; cached = true; return gAchCache; }
+		if (state == ach::Loader::NO_GAME && !gSysId.empty() && !ach::consoleFor(gSysId)) state = ach::Loader::NO_SYSTEM;
+		return ach::List();
+	}
+
+	void Settings::gameAchFrame(const SPal& p)
+	{
+		int st;
+		bool cached;
+		const ach::List l = gameAchList(st, cached);
+		const int n = (int)l.items.size();
+		AsNamed named(*this);	// (the lines below translated as they were made, or the server's)
+		box("bubble", false, 18, 14, 604, 54);
+		const float hw = text(lang::tr("Achievements"), true, 22, 38, 28, p.ink);
+		if (st == ach::Loader::READY && n)
+		{
+			const std::string c = fit(achCounts(l), true, 15, 560 - hw - 20);
+			const float cw = text(c, true, 15, 0, 0, p.accent, false, 0, true);
+			text(c, true, 15, 602 - cw, 33, p.accent);
+			const int pages = std::max(1, (n + GACH_ROWS - 1) / GACH_ROWS);
+			gAchPage = std::min(pages - 1, std::max(0, gAchPage));
+			for (int i = 0; i < GACH_ROWS; i++)
+			{
+				const int at = gAchPage * GACH_ROWS + i;
+				if (at >= n) break;
+				const ach::Item& it = l.items[at];
+				const std::string name = it.unlocked() ? it.badge : it.badge + "_lock";
+				rnds::TexPtr tex;
+				if (!name.empty() && access((achBadgeDir() + "/" + name + ".png").c_str(), R_OK) == 0) tex = achBadge(achBadgeDir() + "/" + name + ".png", gBadges);
+				else if (raw) { std::lock_guard<std::mutex> g(raw->mu); raw->wantBadge(raw, name); }
+				achRow(p, it, GACH_Y + i * GACH_PITCH, GACH_H, 2, false, tex);
+			}
+			pager(p, gAchPage, pages, cached ? achAsOf(l) : "");
+		}
+		else
+		{
+			box("slot", false, 18, 80, 604, 206);
+			wrapped(achStateText((ach::Loader::State)st), 18, 40, 102, 560, 5, p.muted);
+		}
+		box("slot", false, 18, 424, 604, 44);
+		const std::string back = lang::tr("Back to the game");
+		const float bw = text(back, true, 19, 0, 0, p.ink, false, 0, true);
+		text(back, true, 19, 320 - bw / 2, 435, p.ink);
+	}
+
 	void Settings::gameClose()
 	{
+		// the unlocks of this game's run kept for the library's list (on a thread: the card's write isn't the menu's wait)
+		if (raw) { auto w = raw; std::thread([w] { RaWatch::save(w); }).detach(); }
 		raw.reset();
+		gAchOpen = false; gAchCache = ach::List(); gRomPath.clear(); gSysId.clear();
 		gStates = false; gSlotSel = gSlotPick = -1;
 		for (auto& f : gStateFiles) f = StateFile();
 		gStateBase.clear();
@@ -508,6 +618,7 @@ namespace banana
 
 	std::string Settings::gamePanelView() const
 	{
+		if (gAchOpen) return "achievements";
 		if (gbaPanel.active() || !gameComp || !gameComp->active()) return gbaPanel.view();
 		return gcView == GC_GAME ? "game" : std::string("gc:") + gcomp::pageIdName(gcView);
 	}
@@ -674,9 +785,31 @@ namespace banana
 		}
 		bool gamePage = !(gameComp && gameComp->active() && gcView != GC_GAME);
 		// the corner: the icon on the menu, Menu on the game companion's pages - the switch (on the release)
-		if (compOn() && compCorner(lx, ly) && !(gamePage && gStates))
+		if (compOn() && compCorner(lx, ly) && !(gamePage && gStates) && !gAchOpen)
 		{
 			if (!down) compToggle();
+			gDown = gFlash = -1;
+			return G_NONE;
+		}
+		// the achievements list (the List button): its pager and Back; the whole panel while it is up
+		if (gAchOpen)
+		{
+			if (!down)
+			{
+				if (ly >= 420) gAchOpen = false;
+				else if (ly >= PAGER.y - 4 && ly < PAGER.y + PAGER.h + 6)
+				{
+					int st; bool cached;
+					const int n = (int)gameAchList(st, cached).items.size(), pages = std::max(1, (n + GACH_ROWS - 1) / GACH_ROWS);
+					gAchPage = std::min(pages - 1, std::max(0, gAchPage + pagerStep(lx, ly, PAGER)));
+				}
+			}
+			gDown = gFlash = -1;
+			return G_NONE;
+		}
+		if (gamePage && !gStates && gAchBtnW > 0 && lx >= gAchBtnX - 6 && lx < gAchBtnX + gAchBtnW + 6 && ly >= 80 && ly < 124)
+		{
+			if (!down) gameAchOpen();
 			gDown = gFlash = -1;
 			return G_NONE;
 		}
@@ -832,6 +965,7 @@ namespace banana
 		be->beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
 		if (gKeysOpen) { gameKeysFrame(p); be->endScreen(); return; }	// (the panel is the keyboard while it is open)
+		if (gAchOpen) { gameAchFrame(p); be->endScreen(); return; }	// (and the achievements list while it is)
 		bool pk = companion && companion->active();
 		if (gbaPanel.pagesShown())
 		{
@@ -874,11 +1008,28 @@ namespace banana
 			text("Tap: save states", false, 13, 600 - hw, 264, p.muted);
 		}
 		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
+		// the List button: the game's whole list in the panel (a touch panel's: the buttons are the game's)
+		float countRight = 600;
+		gAchBtnW = 0;
+		if (gTouch)
+		{
+			const std::string lb = lang::tr("All achievements");
+			const float lw = text(lb, true, 15, 0, 0, p.accent, false, 0, true);
+			gAchBtnW = lw + 28 + 18; gAchBtnX = 606 - gAchBtnW;
+			box("bubble", false, gAchBtnX, 86, gAchBtnW, 30);
+			int k = std::max(1, (int)std::lround(1 * s));
+			float ix = std::round(X(gAchBtnX + 12)), iy = std::round(X(95));
+			for (int r = 0; r < 12; r++)
+				for (int c = 0; c < 12; c++)
+					if (IC_LIST[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, p.accent);
+			{ AsNamed named(*this); text(lb, true, 15, gAchBtnX + 30, 93, p.accent); }
+			countRight = gAchBtnX - 12;
+		}
 		if (state == 2 && total)
 		{
 			std::string v = std::to_string(got) + " / " + std::to_string(total);
 			float vw = text(v, true, 15, 0, 0, p.muted, false, 0, true);
-			text(v, true, 15, 600 - vw, 96, p.accent);
+			text(v, true, 15, countRight - vw, 96, p.accent);
 			float bx = 40, bw = 560, by = 122;
 			be->fill(X(bx), X(by), X(bw), X(10), p.line);
 			be->fill(X(bx + 2), X(by + 2), X((bw - 4) * got / total), X(6), p.accent);
@@ -897,7 +1048,7 @@ namespace banana
 					{ std::lock_guard<std::mutex> l(raw->mu); auto b = raw->badgeReady.find(r.badge); ready = b != raw->badgeReady.end() && b->second; }
 					if (ready)
 					{
-						rnds::Bitmap b = rnds::decodeFile(std::string(BADGES) + "/" + r.badge + ".png");
+						rnds::Bitmap b = rnds::decodeFile(raw->badgeDir + "/" + r.badge + ".png");
 						if (!b.empty()) { tex = be->upload(b, true); gBadges[r.badge] = tex; }
 					}
 				}

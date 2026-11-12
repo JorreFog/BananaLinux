@@ -373,7 +373,7 @@ for size in 640x480 1024x768; do
     alog2=$OUT/$size-boxart.log; SL=$OUT/$size-fake-scrape.txt; rm -f "$SL"
     BANANA_SCRAPE="$HERE/tests/fake-scrape.sh" FAKE_SCRAPE_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "lib 0 4; press x; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
+        --script "lib 0 4; press x; press up; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
         || { echo "FAIL $size: banana-ui (box art) exited $?"; fail=1; }
     [ "$(cat "$SL" 2>/dev/null)" = "nds|$FX/roms/nds/Yellow Planet [!].zip|Yellow Planet - Second Orbit (Europe)" ] || { echo "FAIL $size: --match: $(cat "$SL" 2>/dev/null)"; fail=1; }
     grep -q 'titles nds/Yellow Planet' "$alog2" || { echo "FAIL $size: closing the page didn't read the library again"; fail=1; }
@@ -1039,6 +1039,8 @@ PY
     grep -q "rablock .*: state 3 rp 'Lv 23 Charmeleon, Viridian Forest, 3 badges' near 2" "$OUT/$size-rablock.log" || { echo "FAIL $size: the RA block wasn't read"; fail=1; }
     [ "$(convert "$OUT/$size-ra-block-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the RA block panel is blank"; fail=1; }
 done
+# the Achievements page and the game panel's list against made-up RetroAchievements replies, at both sizes
+OUT="$OUT" sh "$HERE/tests/achievements.sh" || fail=1
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
 OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
