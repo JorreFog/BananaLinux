@@ -12,6 +12,13 @@
   // Settings, the keyboard and the game panel: the same black, surfaces and accent, flat panels with a hairline edge
   "base": "dark",
   "panels": "flat",
+  // ...laid out as the mockup's secondary screens: on the top screen the text straight on the black (no card), its
+  // column 58 units from the screen's left edge, the icon on a lit tile, the help in Inter; the picked row outlined in
+  // the accent with its glow, the button hints as pills, a page's title over a hairline. screens.settings below draws
+  // the status bar and the accent's glow under them
+  "settings": { "top": "open", "left": 58, "icons": "tile", "pick": "outline", "hints": "pill", "header": "rule", "bodyFont": "inter" },
+  // smooth fades between the boot, the menu, a game and the shutdown, in place of the iris
+  "transitions": "fade",
   "background": { "dither": false },
   "colors": {
     "screenBg": "#000000", "screenFrame": "#000000", "screenBand": "#000000",
@@ -41,8 +48,8 @@
     "R": 16
   },
 
-  // the shelf moves softly, as the mockup's springs (approximated by easing)
-  "behavior": { "scrollMs": 110, "settleMs": 700, "launchMs": 700, "cues": { "insert": 420 } },
+  // the shelf moves softly, as the mockup's springs (approximated by easing); A on a game starts it within 240 ms
+  "behavior": { "scrollMs": 110, "settleMs": 700, "launchMs": 240, "cues": { "insert": 140 } },
   "hints": { "home": [["Y", "Fav"]], "library": [["B", "Back"], ["X", "Options"], ["Y", "Fav"]] },
 
   "components": {
@@ -175,17 +182,8 @@
     // L and R: the neighbours' names either side of a hairline
     "lrline": { "type": "rect", "x": "=W * 0.3", "w": "=W * 0.4", "y": "=lrY", "h": 1,
                 "gradient": { "angle": 90, "stops": [ "#ffffff00", "=hair2", "#ffffff00" ] } },
-    // the top screen's coloured light: two soft blobs of the selection's colour on the black
-    "ambient": { "type": "group", "children": [
-      { "use": "glow", "x": "=W / 2 - 49", "y": 231, "w": 230, "h": 140, "with": { "blur": 120, "c": "=alpha(tint, 0.26)" } },
-      { "use": "glow", "x": "=W / 2 + 151", "y": 302, "w": 150, "h": 90, "with": { "blur": 95, "c": "=alpha(tint, 0.15)" } }
-    ] }
-  },
-
-  "screens": {
-    // the status bar over every view: Wi-Fi, the battery, the BANANA OS chip and the version; the date and the clock
-    "all": {
-      "top": [
+    // the status bar: Wi-Fi, the battery, the BANANA OS chip and the version; the date and the clock
+    "statusbar": { "type": "group", "children": [
         { "type": "group", "layout": "row", "align": "center", "gap": 11.6, "x": 25.3, "y": 0, "h": 41,
           "children": [
             { "type": "image", "src": "thor-oled/wifi.png", "fit": "contain", "w": 17, "h": 17, "tint": "=online ? ink : muted",
@@ -217,6 +215,24 @@
             { "type": "rect", "w": 0.9, "h": 13.3, "fill": "=hair2" },
             { "type": "text", "text": "{clock}", "size": 15, "color": "=ink" }
           ] }
+    ] },
+    // the top screen's coloured light: two soft blobs of the selection's colour on the black
+    "ambient": { "type": "group", "children": [
+      { "use": "glow", "x": "=W / 2 - 49", "y": 231, "w": 230, "h": 140, "with": { "blur": 120, "c": "=alpha(tint, 0.26)" } },
+      { "use": "glow", "x": "=W / 2 + 151", "y": 302, "w": 150, "h": 90, "with": { "blur": 95, "c": "=alpha(tint, 0.15)" } }
+    ] }
+  },
+
+  "screens": {
+    // the status bar over every view: Wi-Fi, the battery, the BANANA OS chip and the version; the date and the clock
+    "all": { "top": [ { "use": "statusbar" } ] },
+
+    // under Settings, the setup, the keyboard and the lists (the engine's own pages): the status bar, and the accent's
+    // light behind the top screen's text
+    "settings": {
+      "top": [
+        { "use": "glow", "x": "=W * 0.32", "y": 250, "w": 360, "h": 170, "with": { "blur": 150, "c": "=alpha(a, 0.10)" } },
+        { "use": "statusbar" }
       ]
     },
 

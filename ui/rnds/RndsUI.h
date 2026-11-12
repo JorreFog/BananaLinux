@@ -165,6 +165,17 @@ namespace rnds
 		// Settings' panels: "" the Pixel look (banded, thick outlines, hard shadows), "flat" flat ones with a hairline
 		// edge and a highlight along the top (the Thor OLED theme: lit surfaces on true black)
 		std::string panels;
+		// Settings, the setup, the keyboard and the game panel in a theme's own way (its "settings" member; empty: the
+		// Pixel look's, as the RG DS's themes have it):
+		std::string setTop;			// "open": the top screen's text on the screen itself, no card round it
+		float setLeft = -1;			// the top screen's text column's left edge from the screen's left (layout units); < 0: the canvas's
+		std::string setIcons;		// "tile": the top screen's pixel icons on a lit tile, "none": none
+		std::string setPick;		// "outline": the picked row the surface with an accent edge and glow (its text the ink)
+		std::string setHints;		// "pill": B / A as pills with a round key, A's edge in the accent
+		std::string setHeader;		// "rule": a page's title over a hairline instead of in a box
+		std::string bodyFont;		// the help texts' font (.ttf; "" the theme's regular one)
+		// the moments between screens ("transitions": "fade"): smooth fades instead of the iris and the stepped fades
+		std::string transitions;
 	};
 	extern ThemeFiles themeFiles;
 	bool themeColor(const char* name, Color& c);	// c replaced by the theme's colour of that name: true

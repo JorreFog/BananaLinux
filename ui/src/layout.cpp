@@ -1473,6 +1473,33 @@ namespace banana
 			lastFrame = monoMs();
 		}
 
+		bool renderChrome(const std::string& name, int screen)
+		{
+			auto it = screens.find(name + (screen == 0 ? ".top" : ".bottom"));
+			if (it == screens.end() || it->second.empty()) return false;
+			Scope root;
+			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
+			float ax, ay, aw, ah;
+			rnds::screenArea(m->be, s, ax, ay, aw, ah);
+			const float w0 = scrW, h0 = scrH;
+			scrW = screenStage ? aw : W; scrH = screenStage ? ah : H;
+			float a0[4] = { scrArea[0], scrArea[1], scrArea[2], scrArea[3] };
+			scrArea[0] = screenStage ? 0 : ax; scrArea[1] = screenStage ? 0 : ay; scrArea[2] = aw; scrArea[3] = ah;
+			Scope vs;
+			vs.parent = &root;
+			for (auto& v : vars) vs.set(v.first, v.second.eval(vs));
+			Scope ss;
+			ss.parent = &vs;
+			ss.set("screen", EV((double)screen));
+			Frame f{ screenStage ? ax : 0, screenStage ? ay : 0, 1, 1, screen };
+			const size_t hits0 = hits.size();
+			for (size_t i = 0; i < it->second.size(); i++) renderNode(it->second[i].get(), ss, f, scrW, scrH, name + std::to_string(screen) + "." + std::to_string(i));
+			hits.erase(hits.begin() + hits0, hits.end());	// (nothing of it is the menu's to tap)
+			scrW = w0; scrH = h0;
+			for (int i = 0; i < 4; i++) scrArea[i] = a0[i];
+			return true;
+		}
+
 		void drawErrors()
 		{
 			auto f = font("pixel");
@@ -1810,6 +1837,7 @@ namespace banana
 	}
 
 	void LayoutMenu::render() { d->render(); }
+	bool LayoutMenu::renderChrome(const std::string& name, int screen) { return d->renderChrome(name, screen); }
 
 	bool LayoutMenu::animating() const
 	{

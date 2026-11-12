@@ -247,6 +247,20 @@ namespace banana
 		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
 		f.panels = kv["panels"] == "flat" ? "flat" : "";
+		// Settings' own look (its "settings" member)
+		f.setTop = kv["settings.top"] == "open" ? "open" : "";
+		f.setLeft = -1;
+		if (!kv["settings.left"].empty()) { char* end = nullptr; double v = strtod(kv["settings.left"].c_str(), &end); if (end && !*end && v >= 0 && v <= 400) f.setLeft = (float)v; }
+		f.setIcons = kv["settings.icons"] == "tile" || kv["settings.icons"] == "none" ? kv["settings.icons"] : "";
+		f.setPick = kv["settings.pick"] == "outline" ? "outline" : "";
+		f.setHints = kv["settings.hints"] == "pill" ? "pill" : "";
+		f.setHeader = kv["settings.header"] == "rule" ? "rule" : "";
+		{
+			// a font of the theme's (a .ttf beside it) or a built-in name (Inter's: the menu's fonts folder, found by Settings)
+			const std::string& bf = kv["settings.bodyFont"];
+			f.bodyFont = bf.compare(0, 5, "inter") == 0 && bf.find('.') == std::string::npos ? "builtin:" + bf : themeFile(dir, bf);
+		}
+		f.transitions = kv["transitions"] == "fade" ? "fade" : "";
 		for (auto& e : kv)
 		{
 			if (e.first.compare(0, 6, "icons.") == 0) { std::string p = themeImage(dir, e.second); if (!p.empty()) f.icons[e.first.substr(6)] = p; }

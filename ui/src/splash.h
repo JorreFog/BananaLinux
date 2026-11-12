@@ -26,7 +26,8 @@ namespace banana
 		// both screens at t ms after the start; ready: the menu is ready to take over (stops the waiting loop)
 		void draw(uint32_t* top, uint32_t* bot, double t, bool ready);
 		// the intro has played to its end and the menu is ready: time to hand over
-		bool finished(double t, bool ready) const { return ready && t >= INTRO_END; }
+		// (the OLED boot never holds the boot up: it ends as soon as the menu is ready, the menu fading in over it)
+		bool finished(double t, bool ready) const { return ready && (oled || t >= INTRO_END); }
 		bool played() const { return W > 0; }
 		// ms until the next frame is different (16 while anything moves)
 		int nextFrame(double t, bool ready) const;

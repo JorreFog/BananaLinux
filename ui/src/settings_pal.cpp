@@ -36,6 +36,9 @@ namespace banana
 		// the text on the picked row (the accent): dark or light by contrast, and its second line (a hint, a value) in
 		// the accent's own hue, darker or lighter until it reads (was always a brown: right on yellow only)
 		p.onPick = Color::hex(rnds::inkOn(rnds::accent.base)); p.onPickAccent = Color::hex(rnds::subInkOn(rnds::accent.base));
+		// a theme's outlined pick (settings.pick "outline"): the row stays the surface, so its text is the ink's and a
+		// marked value the accent's
+		if (rnds::themeFiles.setPick == "outline") { p.onPick = p.ink; p.onPickAccent = p.accent; }
 		// a user theme's colours by the same names as the engine's palette (RndsUI.cpp), and two of this screen's own
 		struct { const char* n; Color SPal::* m; } names[] = {
 			{ "ink", &SPal::ink }, { "muted", &SPal::muted }, { "line", &SPal::line }, { "edge", &SPal::edge },

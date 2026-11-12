@@ -39,6 +39,9 @@ namespace banana
 		void touchCancel() override { mDown = false; }
 		void update(double nowMs) override;
 		void render() override;
+		// the theme's screens.<name>.<top|bottom> drawn into the screen being drawn now (the host's other screens: the
+		// settings' status bar and glow, under the settings' own drawing); false when the theme has none for it
+		bool renderChrome(const std::string& name, int screen);
 		int nextWake() const override;
 		bool workOnce() override;
 		void finishWork() override { while (workOnce()) {} }

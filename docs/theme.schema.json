@@ -26,6 +26,24 @@
       "enum": ["", "flat"],
       "description": "Settings, the keyboard and the game panel's boxes: \"\" (the default) the Pixel look (banded, thick outlines, hard shadows); \"flat\" flat surfaces with a hairline edge (colors.edge, the accent's on the one that's on), a light line along the top (panelBand) and a darker one along the bottom (panelLow)."
     },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Settings, the first-time setup, the keyboard, the lists and the game panel in the theme's own way (the engine draws them; these say how). Missing: the Pixel look's, as the RG DS's themes have it.",
+      "properties": {
+        "top": { "enum": ["", "open"], "description": "\"open\": the top screen's text straight on the screen (no card round it)." },
+        "left": { "type": "number", "minimum": 0, "maximum": 400, "description": "The top screen's text column's left edge, in units from the screen's own left edge (on a wider screen than the canvas: the AYN Thor's top). Missing: where the canvas puts it." },
+        "icons": { "enum": ["", "tile", "none"], "description": "The top screen's pixel icons: \"tile\" on a lit tile as the home screen's, \"none\" left out." },
+        "pick": { "enum": ["", "outline"], "description": "\"outline\": the picked row stays the surface, with an edge and a glow in the accent (its text the ink)." },
+        "hints": { "enum": ["", "pill"], "description": "\"pill\": the B / A button hints as pills with a round key, A's edge and label in the accent." },
+        "header": { "enum": ["", "rule"], "description": "\"rule\": a page's title over a hairline instead of in a box." },
+        "bodyFont": { "type": "string", "description": "The help texts' font: \"inter\", \"inter-medium\", \"inter-semibold\" or a .ttf beside the theme. Missing: fonts.regular (Pixelify Sans)." }
+      }
+    },
+    "transitions": {
+      "enum": ["", "fade"],
+      "description": "\"fade\": smooth, eased fades between the boot animation and the menu, a game and the menu, the first boot's arrival and the setup, and into the shutdown, instead of the iris and the stepped fades. Screens of another shape than the canvas (the AYN Thor's) always fade."
+    },
     "base": {
       "enum": ["dark", "light"],
       "description": "The palette the theme starts from (the Settings screen's look). Defaults to \"dark\"."
@@ -95,12 +113,13 @@
     "behavior": { "$ref": "#/$defs/behavior" },
     "screens": {
       "type": "object",
-      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar).",
+      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar). \"settings\" is drawn under Settings' own pages (the setup, the lists, the keyboard, the game panel), over each screen's background: a status bar, a glow.",
       "properties": {
         "home": { "$ref": "#/$defs/screen" },
         "library": { "$ref": "#/$defs/screen" },
         "launch": { "$ref": "#/$defs/screen" },
-        "all": { "$ref": "#/$defs/screen" }
+        "all": { "$ref": "#/$defs/screen" },
+        "settings": { "$ref": "#/$defs/screen" }
       },
       "additionalProperties": false
     },

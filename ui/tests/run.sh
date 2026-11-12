@@ -98,6 +98,9 @@ if command -v identify >/dev/null; then
     convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
         awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
 fi
+# the AYN Thor's own setup slides (Controls, Home server, Steam), Settings > System > Accounts, the quick menu and the
+# Thor OLED theme's fades
+. "$HERE/tests/setup-thor.sh"
 # a ROCKNIX game's page (BANANA_ROCKNIX, its run line through run-rocknix): the For row, the emulator and the options
 # rocknix-options lists from es_systems.cfg / es_features.cfg; a game's emulator and ratio, then the system's emulator,
 # kept in ROCKNIX's settings as EmulationStation keeps them

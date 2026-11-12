@@ -393,7 +393,7 @@ static bool openPage(Settings& st, const std::string& page)
 	if (page == "bshare") { st.openBshare(); return true; }
 	// the quick menu (the Home button held while a game runs): the screens' brightness, the volume, the game's
 	// performance mode, the fan and the stick lights (settings_quick.cpp), on the bottom screen
-	if (page == "quick") { st.openSection("handheld"); return true; }
+	if (page == "quick") { st.openQuick(); return true; }
 	return false;
 }
 
@@ -881,6 +881,70 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	return 0;
 }
 
+// ---- the theme's transitions ("transitions": "fade"; and any screen of another shape than the canvas, where the
+// iris's circle would be drawn on the canvas, not the screens): smooth eased fades between whole screens, at their
+// own sizes. The frames are worked out here (the headless "trans" op draws them too); the loops are by the iris's
+static bool fadeTransitions(SoftBackend& be) { return be.staged(0) || be.staged(1) || rnds::themeFiles.transitions == "fade"; }
+
+static void grabScreens(SoftBackend& be, std::vector<uint32_t>* pic)
+{
+	for (int sc = 0; sc < 2; sc++) pic[sc].assign(be.pixels(sc), be.pixels(sc) + (size_t)be.screenWidth(sc) * be.screenHeight(sc));
+}
+
+static inline uint32_t lerpPx(uint32_t a, uint32_t b, uint32_t k)	// k 0..256 of b
+{
+	uint32_t rb = ((a & 0xff00ffu) * (256 - k) + (b & 0xff00ffu) * k) >> 8;
+	uint32_t g = ((a & 0x00ff00u) * (256 - k) + (b & 0x00ff00u) * k) >> 8;
+	return 0xff000000u | (rb & 0xff00ffu) | (g & 0x00ff00u);
+}
+
+static inline float easeInOutF(float t) { t = std::min(1.0f, std::max(0.0f, t)); return t < 0.5f ? 4 * t * t * t : 1 - std::pow(-2 * t + 2, 3.0f) / 2; }
+
+// both screens t (0..1) of the way from a to b (null: black)
+static void mixScreens(SoftBackend& be, const std::vector<uint32_t>* a, const std::vector<uint32_t>* b, float t)
+{
+	const uint32_t k = (uint32_t)std::lround(std::min(1.0f, std::max(0.0f, t)) * 256);
+	for (int sc = 0; sc < 2; sc++)
+	{
+		const size_t n = (size_t)be.screenWidth(sc) * be.screenHeight(sc);
+		uint32_t* d = be.screenPixels(sc);
+		const uint32_t* pa = a && a[sc].size() == n ? a[sc].data() : nullptr;
+		const uint32_t* pb = b && b[sc].size() == n ? b[sc].data() : nullptr;
+		for (size_t i = 0; i < n; i++) d[i] = lerpPx(pa ? pa[i] : 0xff000000u, pb ? pb[i] : 0xff000000u, k);
+	}
+}
+
+// the first boot's arrival in the fades' look: the boot animation's last frame stays, "Welcome to" rises in over it on
+// the top screen, holds, and all of it goes to black (the setup fades in after it)
+static constexpr double ARRIVAL_IN = 420, ARRIVAL_HOLD = 1500, ARRIVAL_END = 1900;
+static void arrivalFrame(SoftBackend& be, const std::vector<uint32_t>* boot, const std::vector<uint32_t>* caption, double t)
+{
+	const float in = easeInOutF((float)(t / ARRIVAL_IN));
+	const float out = t <= ARRIVAL_HOLD ? 1 : 1 - easeInOutF((float)((t - ARRIVAL_HOLD) / (ARRIVAL_END - ARRIVAL_HOLD)));
+	for (int sc = 0; sc < 2; sc++)
+	{
+		const int W = be.screenWidth(sc), H = be.screenHeight(sc);
+		const size_t n = (size_t)W * H;
+		uint32_t* d = be.screenPixels(sc);
+		const int rise = (int)std::lround((1 - in) * H * 0.02f);	// (the caption comes up 2% of the screen)
+		const uint32_t kc = (uint32_t)std::lround(in * 256), ko = (uint32_t)std::lround(out * 256);
+		for (int y = 0; y < H; y++)
+			for (int x = 0; x < W; x++)
+			{
+				size_t i = (size_t)y * W + x;
+				uint32_t p = boot[sc].size() == n ? boot[sc][i] : 0xff000000u;
+				int cy = y - rise;
+				if (sc == 0 && cy >= 0 && caption[sc].size() == n)
+				{
+					uint32_t c = lerpPx(0xff000000u, caption[sc][(size_t)cy * W + x], kc);
+					uint32_t r = std::max(p & 0xff0000u, c & 0xff0000u), g = std::max(p & 0xff00u, c & 0xff00u), b = std::max(p & 0xffu, c & 0xffu);
+					p = 0xff000000u | r | g | b;
+				}
+				d[i] = lerpPx(0xff000000u, p, ko);
+			}
+	}
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -904,6 +968,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.chrome = [&ui](int sc) { if (auto* lm = dynamic_cast<LayoutMenu*>(&ui)) lm->renderChrome("settings", sc); };
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -1027,6 +1092,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
 		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
+		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
+		else if (op == "section") { std::string sec; std::getline(cs >> std::ws, sec); if (!settings.isOpen()) settings.open(); settings.openSection(sec); logf("section %s open", sec.c_str()); }	// section <name>: a settings page
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
 		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
@@ -1433,6 +1500,29 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
 		}
+		else if (op == "trans")
+		{
+			// trans <kind> <name> <ms>: a frame of the theme's fades (fadeTransitions): game (black to the menu, a game
+			// ended), boot (the boot animation's end to the menu), arrival (the first boot's), outro (the menu to black)
+			std::string kind, name; double t = 0;
+			cs >> kind >> name >> t;
+			std::vector<uint32_t> menu[2], other[2], caption[2];
+			settle(); be.invalidate(); ui.render(); grabScreens(be, menu);
+			if (kind == "boot" || kind == "arrival")
+			{
+				Splash sp;
+				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf")) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
+				grabScreens(be, other);
+			}
+			if (kind == "arrival") { settings.renderCard("Welcome to", "", 112, 26); grabScreens(be, caption); arrivalFrame(be, other, caption, t); }
+			else if (kind == "game") mixScreens(be, nullptr, menu, easeInOutF((float)(t / 220)));
+			else if (kind == "boot") mixScreens(be, other, menu, easeInOutF((float)(t / 260)));
+			else if (kind == "outro") mixScreens(be, menu, nullptr, easeInOutF((float)(t / 200)));
+			else { logf("trans: no %s", kind.c_str()); return 2; }
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("trans %s %s at %.0f ms (fades %d)", kind.c_str(), name.c_str(), t, fadeTransitions(be) ? 1 : 0);
+		}
 		else if (op == "outro")
 		{
 			// outro <name> <ms>: the shutdown animation at that time
@@ -1690,23 +1780,50 @@ struct Iris
 
 static void fadeSteps(Display& disp, SoftBackend& be, const std::vector<uint32_t>* pic, int from, int to, double ms);
 
+// the theme's fade (fadeTransitions): both screens from a to b (null: black) over ms, eased, a frame each refresh; b is
+// left on the screens and the next frame is drawn in full
+static void crossFade(Display& disp, SoftBackend& be, const std::vector<uint32_t>* a, const std::vector<uint32_t>* b, double ms)
+{
+	const double t0 = nowMs();
+	for (;;)
+	{
+		double p = (nowMs() - t0) / ms;
+		if (p >= 1) break;
+		mixScreens(be, a, b, easeInOutF((float)p));
+		showFrame(disp, be, -1);
+	}
+	mixScreens(be, a, b, 1);
+	showFrame(disp, be, -1);
+	be.invalidate();
+}
+
+// the menu's first frame as it will be in a moment, drawn now and taken (the screens put back as they were)
+static void menuFrame(SoftBackend& be, Menu& ui, std::vector<uint32_t>* pic)
+{
+	std::vector<uint32_t> was[2];
+	grabScreens(be, was);
+	ui.update(nowMs() + 100);
+	ui.finishWork();
+	be.invalidate();
+	ui.render();
+	grabScreens(be, pic);
+	for (int sc = 0; sc < 2; sc++) std::copy(was[sc].begin(), was[sc].end(), be.screenPixels(sc));
+}
+
 // the splash hands over to the menu through the iris: closing over the splash's last frame to black, holding, then
 // opening on the menu
 static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 {
 	if (!gSplash.played()) return;
 	Iris iris(disp, be);
-	if (be.staged(0) || be.staged(1))
+	if (fadeTransitions(be))
 	{
-		// screens of another shape than the canvas (the AYN Thor's): the screens' pixels aren't the canvas's for the
-		// iris, so the OLED boot fades to black over 300 ms and the menu comes in on the black (its first frame drawn
-		// meanwhile, as below)
-		std::vector<uint32_t> last[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
-		gSplash.draw(last[0].data(), last[1].data(), Splash::INTRO_END, true);
-		ui.update(nowMs());
-		ui.finishWork();
-		fadeSteps(disp, be, last, 4, 0, 300);
-		be.invalidate();
+		// the theme's fades (and screens of another shape than the canvas, the AYN Thor's, where the iris would be the
+		// canvas's): the boot animation's frame as it is cross-fades into the menu's first
+		std::vector<uint32_t> was[2], menu[2];
+		grabScreens(be, was);
+		menuFrame(be, ui, menu);
+		crossFade(disp, be, was, menu, 260);
 		return;
 	}
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
@@ -1771,9 +1888,57 @@ static void grab(SoftBackend& be, std::vector<uint32_t>* pic)
 
 // The first boot's arrival (arrival.h), from the boot animation's last frame to black. A or START skips to the setup;
 // a signal (a shutdown, a wake from sleep) ends it too. Its frame times go to the log.
+// the arrival in the theme's fades (arrivalFrame): no pictures needed, any screen shape. A or START skips it (to black);
+// a shutdown ends it; the other signals go back in the pipe for the menu's loop
+static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound& sound, Settings& sv, int sig, const std::function<void()>& frameTick)
+{
+	std::vector<uint32_t> boot[2], caption[2];
+	grabScreens(be, boot);
+	sv.renderCard("Welcome to", "", 112, 26);
+	grabScreens(be, caption);
+	sound.play("ready");
+	const double t0 = nowMs();
+	bool skip = false, interrupted = false;
+	std::string held;
+	int frames = 0;
+	while (!skip && !interrupted)
+	{
+		double t = nowMs() - t0;
+		if (t >= ARRIVAL_END) break;
+		pollfd fds[40];
+		int in[32], ni = input.fds(in, 32), nf = 0;
+		fds[nf++] = { sig, POLLIN, 0 };
+		for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+		if (poll(fds, nf, 0) > 0)
+		{
+			char c;
+			if (fds[0].revents & POLLIN)
+				while (read(sig, &c, 1) == 1) { held.push_back(c); if (c == SIGTERM || c == SIGINT) interrupted = true; }
+			for (int i = 1; i < nf; i++)
+				if (fds[i].revents & POLLIN)
+					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
+		}
+		if (t > ARRIVAL_IN && t < ARRIVAL_HOLD) { usleep(4000); continue; }	// (still: nothing to draw)
+		frameTick();
+		arrivalFrame(be, boot, caption, t);
+		showFrame(disp, be, -1);
+		frames++;
+	}
+	if (!held.empty() && write(sigPipe[1], held.data(), held.size()) < 0) {}
+	logf("arrival (fades): %s after %.0f ms, %d frames", skip ? "skipped" : interrupted ? "interrupted" : "played", nowMs() - t0, frames);
+	if (skip || interrupted)
+	{
+		std::vector<uint32_t> pic[2];
+		grabScreens(be, pic);
+		crossFade(disp, be, pic, nullptr, 200);
+	}
+	be.invalidate();
+}
+
 static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input& input, Sound& sound, Settings& sv, int sig,
 	const std::function<void()>& frameTick)
 {
+	if (fadeTransitions(be)) { playArrivalFade(disp, be, input, sound, sv, sig, frameTick); return; }
 	Arrival a;
 	if (!a.load(o.splash, be.width(), be.height())) { logf("arrival: no pictures in %s", o.splash.c_str()); return; }
 	a.setStart(be.pixels(0), be.pixels(1));
@@ -1852,6 +2017,13 @@ static void fadeInSettings(Display& disp, SoftBackend& be, Settings& sv)
 	be.invalidate();
 	sv.update(nowMs());
 	sv.render();
+	if (fadeTransitions(be))
+	{
+		std::vector<uint32_t> pic[2];
+		grabScreens(be, pic);
+		crossFade(disp, be, nullptr, pic, 260);
+		return;
+	}
 	std::vector<uint32_t> pic[2];
 	grab(be, pic);
 	fadeSteps(disp, be, pic, 0, 4, 400);
@@ -1863,6 +2035,22 @@ static void fadeInSettings(Display& disp, SoftBackend& be, Settings& sv)
 static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv, Sound& sound)
 {
 	std::vector<uint32_t> pic[2], card[2];
+	if (fadeTransitions(be))
+	{
+		// the theme's fades: the setup out, the Welcome card in, held, and the menu in over it
+		grabScreens(be, pic);
+		crossFade(disp, be, pic, nullptr, 220);
+		sv.renderCard("Welcome", sv.ownerName(), 196, 30);
+		grabScreens(be, card);
+		sound.play("ready");
+		crossFade(disp, be, nullptr, card, 300);
+		const double hold = nowMs() + 1200;
+		std::vector<uint32_t> menu[2];
+		menuFrame(be, ui, menu);
+		while (nowMs() < hold) usleep(5000);
+		crossFade(disp, be, card, menu, 300);
+		return;
+	}
 	grab(be, pic);
 	fadeSteps(disp, be, pic, 4, 0, 320);
 	usleep(250000);
@@ -1891,9 +2079,18 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height(), o.assets + "/fonts/PixelifySans-Regular.ttf")) return;
 	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
 	Iris iris(disp, be);
+	if (fadeTransitions(be))
+	{
+		// the theme's fades: the menu cross-fades into the shutdown's first frame (the OLED boot's: black)
+		std::vector<uint32_t> was[2], first[2];
+		grabScreens(be, was);
+		sp.drawOutro(be.canvas(0), be.canvas(1), 0);
+		grabScreens(be, first);
+		crossFade(disp, be, was, first, 200);
+	}
 	// (screens of another shape than the canvas (the AYN Thor's): their pixels aren't the canvas's, so no iris over
 	// them; the OLED boot's shutdown starts from black)
-	if (!be.staged(0) && !be.staged(1))
+	else if (!be.staged(0) && !be.staged(1))
 	{
 		std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 		std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
@@ -1916,6 +2113,17 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 // does after the boot animation
 static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 {
+	if (fadeTransitions(be))
+	{
+		// the theme's fades (and the AYN Thor's screens, where the iris was drawn on the canvas, not the screens): the
+		// menu comes up out of black in 220 ms
+		std::vector<uint32_t> menu[2];
+		for (int sc = 0; sc < 2; sc++) std::fill(be.screenPixels(sc), be.screenPixels(sc) + (size_t)be.screenWidth(sc) * be.screenHeight(sc), 0xff000000u);
+		showFrame(disp, be, -1);
+		menuFrame(be, ui, menu);
+		crossFade(disp, be, nullptr, menu, 220);
+		return;
+	}
 	Iris iris(disp, be);
 	for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + iris.n, 0xff000000u);
 	be.invalidate();
@@ -2317,6 +2525,8 @@ int main(int argc, char** argv)
 	settingsView.setSystems(shelfSystems(lib));
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
+	// a layout theme's own layer under the settings' pages (its screens.settings: the status bar, a glow)
+	settingsView.chrome = [&ui](int sc) { if (auto* lm = dynamic_cast<LayoutMenu*>(ui)) lm->renderChrome("settings", sc); };
 	settingsView.setLibraryPaths(o.systems, o.roms);
 	settingsView.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
@@ -2644,10 +2854,40 @@ int main(int argc, char** argv)
 	// the bottom screen instead (brightness, speed, the fan, the lights), the game's picture kept on the top one.
 	// Both are a page flip: the menu never gave the display device away (the game draws through a DRM lease), so no
 	// mode is set and no program starts. Another game picked from the menu ends the stopped one first.
+	// The game stopped and let go again. Its launcher's process group alone isn't all of it: a program started inside
+	// the compositor (run-wayland) is in a session of its own and would play on. So the game runs in a control group of
+	// its own (rcS mounts the hierarchy; the child joins /sys/fs/cgroup/banana-game before it starts anything) and the
+	// kernel freezes every process in it at once. Without the hierarchy: SIGSTOP to the launcher's group, as before.
+	static const char* const GAME_CG = "/sys/fs/cgroup/banana-game";
+	auto cgWrite = [&](const char* file, const char* value)
+	{
+		const int f = ::open((std::string(GAME_CG) + "/" + file).c_str(), O_WRONLY | O_CLOEXEC);
+		if (f < 0) return false;
+		const bool ok = ::write(f, value, strlen(value)) == (ssize_t)strlen(value);
+		::close(f);
+		return ok;
+	};
+	auto gameFreeze = [&](pid_t pid, bool on)
+	{
+		if (cgWrite("cgroup.freeze", on ? "1" : "0"))
+		{
+			// (frozen before the menu draws over it: the kernel says so in cgroup.events, within a few ms)
+			for (int i = 0; on && i < 100; i++)
+			{
+				std::ifstream ev(std::string(GAME_CG) + "/cgroup.events");
+				std::string k; int v = 0; bool frozen = false;
+				while (ev >> k >> v) if (k == "frozen") frozen = v == 1;
+				if (frozen) break;
+				usleep(1000);
+			}
+			return;
+		}
+		kill(-pid, on ? SIGSTOP : SIGCONT);
+	};
 	auto homeMenu = [&](pid_t pid, int game, bool quick)
 	{
 		const double t0 = nowMs();
-		kill(-pid, SIGSTOP);
+		gameFreeze(pid, true);
 		// (bananad: a sleep's end leaves this game stopped)
 		{ std::ofstream f("/run/banana/game.held"); f << pid << "\n"; }
 		const int wasBorrowed = disp.borrowed();
@@ -2686,7 +2926,7 @@ int main(int argc, char** argv)
 		{
 			// another game picked, or the menu is going (a shutdown): this one ends, writing its saves
 			kill(-pid, SIGTERM);
-			kill(-pid, SIGCONT);
+			gameFreeze(pid, false);
 			logf("home: the stopped game ended (%s)", quit ? "the menu is closing" : "another game was picked");
 			return;
 		}
@@ -2696,7 +2936,7 @@ int main(int argc, char** argv)
 			const std::string gp = settingsView.gamePerf(gameRomPath.substr(gameRomPath.rfind('/') + 1));
 			if (system(("banana-perf " + shellQuote(!gp.empty() ? gp : sd.perf.empty() ? "balanced" : sd.perf) + " &").c_str()) != 0) {}
 		}
-		kill(-pid, SIGCONT);
+		gameFreeze(pid, false);
 		be.invalidate();
 		logf("home: back in the game in %.0f ms", nowMs() - t1);
 	};
@@ -3153,6 +3393,12 @@ int main(int argc, char** argv)
 		const char* PROGRESS = "/run/banana/ra-progress";	// "<unlocked> <total>", from the emulator (docs/EMULATORS.md)
 		unlink(PROGRESS);
 		double start = nowMs();
+		if (homeKey)
+		{
+			// the game's control group (gameFreeze): made here, thawed in case the last game ended frozen
+			mkdir(GAME_CG, 0755);
+			cgWrite("cgroup.freeze", "0");
+		}
 		pid_t pid = fork();
 		// The parent lets go of its copy of the lease right away, whether the fork worked or not: the child has its own
 		// through the fd table it inherited, and a fork that failed (pid < 0) would otherwise leak the lease fd, which
@@ -3163,6 +3409,12 @@ int main(int argc, char** argv)
 		if (pid == 0)
 		{
 			setsid();
+			if (homeKey)
+			{
+				// (into the game's control group before anything is started: every process of the game is born in it)
+				const int cg = ::open("/sys/fs/cgroup/banana-game/cgroup.procs", O_WRONLY);
+				if (cg >= 0) { if (::write(cg, "0", 1) != 1) {} ::close(cg); }
+			}
 			signal(SIGPIPE, SIG_DFL);
 			sigset_t none;
 			sigemptyset(&none);

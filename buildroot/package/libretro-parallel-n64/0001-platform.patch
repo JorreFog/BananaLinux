@@ -2,19 +2,19 @@ Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/libretro/parallel-n64-lr/pa
 With its @DEVICE@ placeholder (the device it builds for) written as "thor": the aarch64 dynarec and the ARM fixes for platform=thor
 
 diff --git a/Makefile b/Makefile
-index bca3454e..a00977d7 100644
+index d046f4c..576075c 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -60,6 +60,8 @@ else ifneq (,$(findstring rpi,$(platform)))
+@@ -62,6 +62,8 @@ else ifneq (,$(findstring odroid,$(platform)))
     override platform += unix
- else ifneq (,$(findstring odroid,$(platform)))
+ else ifneq (,$(findstring webos,$(platform)))
     override platform += unix
 +else ifneq (,$(findstring thor,$(platform)))
 +   override platform += unix
  endif
  
  # system platform
-@@ -171,6 +173,20 @@ ifneq (,$(findstring unix,$(platform)))
+@@ -172,6 +174,20 @@ ifneq (,$(findstring unix,$(platform)))
  
     endif
     

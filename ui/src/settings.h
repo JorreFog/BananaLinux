@@ -1,5 +1,7 @@
 #pragma once
 #include "complink.h"
+#include <sys/types.h>
+#include <cmath>
 // banana-ui: the settings screen (Start in the menu), drawn in ROCKNIXDS Pixel's look with the engine's own pieces
 // (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
 // row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
@@ -45,10 +47,18 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
+		// a layout theme's own layer behind the pages (its screens.settings: a status bar, a glow), drawn by the host's
+		// layout engine over each screen's background; null: none
+		std::function<void(int screen)> chrome;
 		// the library's systems.conf and ROM folder (Files: the card is the ROM folder's parent, the systems' folders stay put)
 		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
+		// the quick menu (the AYN Thor's Home held in a game; settings_quick.cpp): the screens' brightness, the volume, the
+		// running game's performance mode (gameRom's game: per-game-perf.conf, as its game page's Performance row) and
+		// the handheld's fan and stick lights where it has them, on the bottom screen only; B closes it
+		void openQuick();
+		std::string quickState();	// (the tests) its rows and their values, as a line
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
@@ -218,6 +228,40 @@ namespace banana
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
+		// the backend the pages draw through: the host's, the top screen's drawing moved sideways by dx device px while a
+		// theme puts Settings' text column elsewhere on a wider screen (settings.left; renderPage only)
+		struct StageShift : rnds::Backend
+		{
+			rnds::Backend* real = nullptr;
+			float dx = 0, cw = 640, ch = 480;	// (the canvas, device px)
+			float left = -1, k = 1;				// the column's edge from the screen's (units; < 0 none), device px a unit
+			int screen = -1;
+			float off() const { return screen == 0 ? dx : 0; }
+			rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override { return real->upload(b, smooth); }
+			void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override { real->draw(t, x + off(), y, w, h, tint); }
+			void fill(float x, float y, float w, float h, const rnds::Color& c) override { real->fill(x + off(), y, w, h, c); }
+			void pushClip(float x, float y, float w, float h) override { real->pushClip(x + off(), y, w, h); }
+			void popClip() override { real->popClip(); }
+			void beginScreen(int sc) override
+			{
+				screen = sc;
+				real->beginScreen(sc);
+				// the text column (x 50 of the canvas) put at `left` from the screen's own left edge
+				dx = 0;
+				float ax = 0, ay, aw, ah;
+				if (sc == 0 && left >= 0) { if (!real->stageArea(ax, ay, aw, ah)) ax = 0; dx = std::round(ax + (left - 50) * k); }
+			}
+			void endScreen() override { screen = -1; real->endScreen(); }	// (the host's overlay, drawn in it, isn't moved)
+			bool stageArea(float& x, float& y, float& w, float& h) const override
+			{
+				bool r = real->stageArea(x, y, w, h);
+				if (!off()) return r;
+				if (!r) { x = 0; y = 0; w = cw; h = ch; }
+				x -= off();
+				return true;
+			}
+		};
+		StageShift shift;
 		rnds::Backend* be;
 		std::string assets, data;
 		float s;
@@ -246,7 +290,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, QUICK } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -320,7 +364,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER, ENTRY_STEAM_USER, ENTRY_STEAM_PASS, ENTRY_STEAM_CODE, ENTRY_SGDB_KEY } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -347,9 +391,11 @@ namespace banana
 		// the first-time setup (owner, 2026-10-27: "one thing at a time"): a slide per step, each a title, what it is
 		// for, the result so far and its choices (bottom panel), B back and A on a choice, START past it. Run once after
 		// the installation (banana/setup-done written at the end) and from Settings > System > First-time setup
-		enum Slide { SL_LANG, SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE };
-		enum SetupAct { SA_NEXT, SA_SKIP, SA_LANG, SA_NETWORKS, SA_TEST, SA_TZ, SA_NAME, SA_RA, SA_RACHECK, SA_ART, SA_FINISH, SA_WAIT };
-		struct Choice { std::string label, value; SetupAct act; };
+		// (Home server, Steam and the handheld's controls only where their tool or hardware is: setupSlides())
+		enum Slide { SL_LANG, SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE, SL_HOME, SL_STEAM, SL_CONTROLS };
+		enum SetupAct { SA_NEXT, SA_SKIP, SA_LANG, SA_NETWORKS, SA_TEST, SA_TZ, SA_NAME, SA_RA, SA_RACHECK, SA_ART, SA_FINISH, SA_WAIT,
+			SA_HOME, SA_STEAM, SA_ITEM };
+		struct Choice { std::string label, value; SetupAct act; std::string key = ""; };	// key: SA_ITEM's settings row
 		std::vector<Slide> slides;
 		std::vector<bool> wskipped;		// the slides passed with Skip (the summary says so)
 		bool wizard = false, wizardBoot = false, setupEnded = false;
@@ -376,6 +422,29 @@ namespace banana
 		void renderSetup();
 		void setupDone();
 		static const char* slideKey(Slide s);
+		// the slides this handheld gets: the RG DS's six and the summary; Home server where banana-sync is and the board
+		// isn't an RG DS, Steam where its tool is, Controls where the handheld tool has a fan or stick lights
+		std::vector<Slide> setupSlides();
+		std::string hhCaps;				// usr/libexec/banana/handheld caps (build(): "" none)
+		std::vector<std::string> controlKeys() const;	// the Controls slide's rows (settings keys), those this handheld has
+		// Steam (usr/libexec/banana/steam: steam status / login / code / cancel / logout / library). The login runs in the
+		// background, its password on its stdin; its state is the one-line runDir/steam.state
+		std::string steamTool;			// "" no Steam on this handheld
+		pid_t steamPid = -1, steamLibPid = -1;
+		std::string steamState;			// the state file's line as last read
+		std::string steamUser;			// the account logged in ("" none), from steam status or the login's ok
+		std::string steamAcct;			// the account being logged in
+		bool steamReady = false;		// the downloader is installed (steam status's ready=yes)
+		int steamKind = 0;				// 0 not tried, 1 logged in, 2 failed, 3 logging in
+		std::string steamLine;			// the failure's reason
+		std::string steamGames;			// the library's size ("" not known)
+		double steamPoll = 0;
+		bool steamCodeOpen = false;		// the Steam Guard code's entry is up for the state it asked in
+		void steamStatus();				// steam status, read now
+		void startSteamLogin(const std::string& user, const std::string& pass);
+		void steamRun(const std::string& args);	// steam <args> in the background, not waited for
+		bool pollSteam();				// true: something to show changed
+		std::string deviceName() const;	// "DS", or the handheld's own short name (the AYN Thor: "Thor")
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;
@@ -539,6 +608,11 @@ namespace banana
 		std::shared_ptr<rnds::Font> R, M;
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
+		std::shared_ptr<rnds::Font> B;	// the help texts' font (a theme's settings.bodyFont), else R
+		std::string bodyLoaded;
+		bool bodyNow = false;			// wrapped() is drawing: text() takes B
+		void loadBody();				// B as the theme says (again when it changed)
+		void iconTile(float x, float y, float w, float h);	// a theme's lit tile behind a top screen icon (settings.icons "tile")
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
 		std::string drawnLook;	// what the cache's pictures were drawn for (setVariant): the same look again keeps them
 		// what the pages draw, by what it is (a box's kind and size, a line's text and style, an icon): its texture, and a
@@ -707,6 +781,15 @@ namespace banana
 		int gSlotSel = -1, gSlotPick = -1;
 		std::string gStateBase;			// <state dir>/<the game's name> (the dir found at each scan)
 		std::string gStateRoot, gStateName;	// /data/states, the game's name
+		std::string gRomFile;			// the game's file name (gameRom): its per-game settings' key
+		// the quick menu's rows: a settings row (its index in items) or the game's performance mode (-1)
+		std::vector<int> qRows;
+		int qSel = 0, qPerf = 0;
+		float qY = 76, qPitch = 49, qChipY = 422;	// where renderQuick put the rows and the chips (the whole screen's height)
+		Result pressQuick(Key k);
+		Result touchQuick(float cx, float cy);
+		Result quickStep(int row, int dir, int to = -1);	// a row one step either way, or a slider to step to
+		void renderQuick();
 		struct StateFile { long long mtime = 0; rnds::TexPtr tex; };
 		StateFile gStateFiles[10];
 		double gStatesScan = 0;
@@ -791,7 +874,7 @@ namespace banana
 		void icon(const std::string& name, float x, float y, int scale);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
-		void face(const std::string& key, const std::string& label, float x, float w);
+		void face(const std::string& key, const std::string& label, float x, float w, float y = 422);
 		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
 		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).

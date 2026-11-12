@@ -525,7 +525,7 @@ namespace banana
 				for (int mx = 0; mx < device.w; mx++)
 					if (uint8_t a = device.a[(size_t)my * device.w + mx]) fill(bot, x + mx, y + my, 1, 1, withAlpha(muted, q * a / 255.0));
 		}
-		if (t >= OFF_AT) { crtOff(top, t - OFF_AT); crtOff(bot, t - OFF_AT); }
+		// (no CRT switch-off here: the OLED's ends on black, the logo and its line faded out)
 	}
 
 	int Splash::nextFrame(double t, bool ready) const

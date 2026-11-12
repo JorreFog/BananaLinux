@@ -34,6 +34,9 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "font": "inter",              // the default font of text elements
   "stage": "screen",            // lay out on each screen's own size (below); default "canvas"
   "panels": "flat",             // Settings' boxes flat with a hairline edge (below); default the Pixel look
+  "settings": { "top": "open", "left": 58, "icons": "tile", "pick": "outline", "hints": "pill", "header": "rule",
+                "bodyFont": "inter" },   // Settings' own pages laid out the theme's way (below)
+  "transitions": "fade",        // eased fades between the boot, the menu, a game and the shutdown (below)
   "vars": { "bg": "#10131c", "hi": "=accent" },          // names for values, usable in any expression
   "components": { "chip": { ...an element... } },        // reusable elements ("use": "chip")
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
@@ -44,7 +47,8 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
     "home":    { "top": [ ...elements... ], "bottom": [ ... ] },
     "library": { "top": [ ... ], "bottom": [ ... ] },
     "launch":  { "top": [ ... ], "bottom": [ ... ] },   // optional: the library's screens are used if it is missing
-    "all":     { "top": [ ... ] }                       // drawn over every view (a status bar)
+    "all":     { "top": [ ... ] },                      // drawn over every view (a status bar)
+    "settings": { "top": [ ... ], "bottom": [ ... ] }   // drawn under Settings' own pages (below)
   }
 }
 ```
@@ -68,6 +72,30 @@ on the Thor's top, 640 x 557.4 on its bottom; 640 x 480 on the RG DS), and 0,0 i
 written with `W` and `H` (`"x": "=W / 2"`, `"y": "=H * 0.5"`, `"w": "100%"`) fills every shape. `vars` are worked out
 for each screen, so a var can read `W` and `H`. `thor-oled.json` is one: the AYN Thor starts in it (the board's default
 for `theme` in `settings.conf`, `user:thor-oled`; the RG DS keeps Dark), and it reflows on the RG DS's 4:3 panels.
+
+## Settings, the setup and the moments between screens
+
+Settings, the first-time setup, the lists (networks, languages), the keyboard, the dialogs, the game panel and the quick
+menu are drawn by the engine, not from `screens`. A theme still decides how they look:
+
+| `settings.` | |
+|---|---|
+| `top` | `"open"`: the top screen's text straight on the screen, no card round it |
+| `left` | the top screen's text column's left edge, in units from the screen's own left edge (on the Thor's 16:9 top, where the 4:3 canvas would leave it in the middle) |
+| `icons` | the top screen's pixel icons: `"tile"` on a lit tile as the home screen's system, `"none"` left out |
+| `pick` | `"outline"`: the picked row stays the surface with an edge and a glow in the accent, its text the ink (default: filled with the accent) |
+| `hints` | `"pill"`: the B / A hints as pills with a round key, A's edge and label in the accent |
+| `header` | `"rule"`: a page's title over a hairline instead of in a box |
+| `bodyFont` | the help texts' font: `inter`, `inter-medium`, `inter-semibold` or a `.ttf` beside the theme (default: `fonts.regular`) |
+
+`screens.settings` (a layout theme's) is drawn over each screen's background under those pages: `thor-oled.json`
+puts its status bar and a soft accent light there, so Settings and the setup have the same header as the shelf.
+
+`"transitions": "fade"` replaces the iris and the stepped fades with eased cross-fades of the whole screens: the boot
+animation into the menu (260 ms), a game ending (the menu out of black, 220 ms), the first boot's arrival ("Welcome
+to" rising over the boot animation's last frame, then black), the setup in and the Welcome card into the menu, and the
+menu into the shutdown (200 ms). On screens of another shape than the canvas (the AYN Thor's) they are used whatever
+the theme, since the iris works on the canvas. A game starts after `behavior.launchMs` (Thor OLED: 240 ms).
 
 ## Values: literals, expressions, templates
 
@@ -209,7 +237,7 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
 - Masks other than rounded corners.
 - Dragging a list with a finger (a tap selects).
 - Lists of other things than systems, games and hints (achievements, the settings).
-- Settings and the keyboard keep their own look (the theme's `colors`, `accent` and `fonts` still apply to them, and
+- Settings and the keyboard keep their own layout (the theme's `colors`, `accent`, `fonts` and `settings` above apply to them, and
   `"panels": "flat"` makes their boxes flat: the surface's colour `panelBody` (`bubbleBody` for the bubbles), a
   hairline edge in `edge` (`line` for the bubbles, the accent's on the one that's on), a light line along the top in
   `panelBand` and a darker one along the bottom in `panelLow`; the picked row in the accent, `onPick` on it; the

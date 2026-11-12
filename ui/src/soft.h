@@ -84,6 +84,15 @@ namespace banana
 			return cbuf[screen].data();
 		}
 
+		// a screen's own pixels at its own size to draw on directly (a fade over what was drawn there): all of it counts
+		// as changed, and the engine's next frame is drawn over all of it
+		uint32_t* screenPixels(int screen)
+		{
+			flushCanvas(screen);
+			dmg[screen] = { 0, 0, SW[screen], SH[screen] }; last[screen].clear(); full[screen] = true; dropBase(screen);
+			return scr[screen].data();
+		}
+
 		// (touches nothing of the backend's but the new texture: callable from the picture workers)
 		rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override;
 		void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override;

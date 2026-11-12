@@ -387,6 +387,7 @@ namespace banana
 		gStateRoot = stateDir;
 		gStateName = b;
 		gStateBase = stateDir + "/" + b;
+		gRomFile = rom.substr(rom.find_last_of('/') + 1);
 	}
 
 	void Settings::gameStatesScan()
