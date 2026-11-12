@@ -603,7 +603,26 @@ namespace banana
 			if (!plane) return -1;
 			objs[n++] = p[s].conn; objs[n++] = p[s].crtc; objs[n++] = plane;
 		}
-		int l = drmModeCreateLease(fd, objs, n, 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
+		// every other plane the two panels can use as well (overlays, cursors): the game finds what it would with the
+		// device to itself. A driver that refuses that set gets the panels and their primary planes alone.
+		std::vector<uint32_t> all(objs, objs + n);
+		{
+			drmModeRes* res = drmModeGetResources(fd);
+			drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
+			uint32_t bits = 0;
+			for (int i = 0; res && i < res->count_crtcs; i++)
+				if (res->crtcs[i] == p[0].crtc || res->crtcs[i] == p[1].crtc) bits |= 1u << i;
+			for (uint32_t j = 0; pr && j < pr->count_planes; j++)
+				if (drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]))
+				{
+					if ((pl->possible_crtcs & bits) && std::find(all.begin(), all.end(), pl->plane_id) == all.end()) all.push_back(pl->plane_id);
+					drmModeFreePlane(pl);
+				}
+			if (pr) drmModeFreePlaneResources(pr);
+			if (res) drmModeFreeResources(res);
+		}
+		int l = drmModeCreateLease(fd, all.data(), (int)all.size(), 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
+		if (l < 0 && (int)all.size() > n) l = drmModeCreateLease(fd, objs, n, 0, &lessee);
 		if (l >= 0) leased = 2;
 		return l;
 	}
