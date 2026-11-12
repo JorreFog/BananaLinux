@@ -35,5 +35,30 @@ sh "$H" poweroff-after 60; ok system.cfg "system.shutdown_delay=3600"; ok system
 sh "$H" poweroff-after 0; ok system.cfg "system.suspend.enable_timed_shutdown=0"
 # a handheld with none of it: nothing listed, nothing done
 [ -z "$(BANANA_SYS="$T/none" BANANA_TOOLS="$T/none" sh "$H" caps)" ] || bad "caps on a plain handheld"
+# BananaOS's own image (none of ROCKNIX's tools): the same commands done here. The fan's speed from the CPU zones'
+# temperature by the profile's curve, the rings' files written (blue, green, red), the GPU's top clock, the battery's colour
+N=$T/native; mkdir -p "$N/sys/class/hwmon/hwmon1" "$N/sys/class/thermal/thermal_zone0" "$N/sys/class/thermal/thermal_zone1" \
+    "$N/sys/class/devfreq/3d00000.gpu" "$N/sys/class/power_supply/battery" "$N/tools" "$N/run" "$N/data"
+echo 0 > "$N/sys/class/hwmon/hwmon1/pwm1"; echo 0 > "$N/sys/class/hwmon/hwmon1/pwm1_enable"
+echo cpu-0-0 > "$N/sys/class/thermal/thermal_zone0/type"; echo 70000 > "$N/sys/class/thermal/thermal_zone0/temp"
+echo battery > "$N/sys/class/thermal/thermal_zone1/type"; echo 20000 > "$N/sys/class/thermal/thermal_zone1/temp"
+echo 680000000 > "$N/sys/class/devfreq/3d00000.gpu/max_freq"
+echo 12 > "$N/sys/class/power_supply/battery/capacity"; echo Discharging > "$N/sys/class/power_supply/battery/status"
+for s in l r; do for n in 1 2 3 4; do d=$N/sys/devices/platform/multi-led$s$n/leds/rgb:$s$n; mkdir -p "$d"; echo 0 > "$d/brightness"; : > "$d/multi_intensity"; done; done
+nat() { env BANANA_SYS="$N/sys" BANANA_TOOLS="$N/tools" BANANA_DATA="$N/data" BANANA_RUN="$N/run" BANANA_FAN_INTERVAL=0.2 ROCKNIX_SETTINGS= sh "$H" "$@"; }
+L1="$N/sys/devices/platform/multi-ledl1/leds/rgb:l1"
+[ "$(nat caps | tr '\n' ' ')" = "fan leds gpuboost " ] || bad "native caps: $(nat caps | tr '\n' ' ')"
+nat fan moderate; sleep 0.6
+[ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 102 ] || bad "native fan at 70 degrees, moderate: $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
+echo 40000 > "$N/sys/class/thermal/thermal_zone0/temp"; sleep 0.6
+[ "$(cat "$N/sys/class/hwmon/hwmon1/pwm1")" = 0 ] || bad "native fan at 40 degrees: $(cat "$N/sys/class/hwmon/hwmon1/pwm1")"
+kill "$(cat "$N/run/fan.pid")" 2>/dev/null
+nat leds blue high
+[ "$(cat "$L1/multi_intensity")" = "255 0 0" ] && [ "$(cat "$L1/brightness")" = 255 ] || bad "native leds blue: $(cat "$L1/multi_intensity") $(cat "$L1/brightness")"
+nat leds battery; sleep 0.3
+[ "$(cat "$L1/multi_intensity")" = "0 0 255" ] || bad "native battery colour at 12 %: $(cat "$L1/multi_intensity")"
+nat leds off; [ "$(cat "$L1/brightness")" = 0 ] || bad "native leds off"
+[ -f "$N/run/leds-battery.pid" ] && bad "the battery's loop outlived leds off"
+nat gpu on; [ "$(cat "$N/sys/class/devfreq/3d00000.gpu/max_freq")" = 1000000000 ] || bad "native gpu boost"
 [ $fail = 0 ] && echo "handheld: all passed"
 exit $fail

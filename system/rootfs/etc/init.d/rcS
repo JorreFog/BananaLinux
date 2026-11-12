@@ -130,6 +130,8 @@ mark "rcS: bananad ready"
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
     modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null
+    # a handheld with a fan, lights round its sticks or a GPU boost (the AYN Thor): as Settings keeps them
+    [ "$HW_HANDHELD" = yes ] && /usr/libexec/banana/handheld boot &
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
