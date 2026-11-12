@@ -23,12 +23,14 @@ port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0));
 waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null && return 0; sleep 0.1; done; return 1; }
 
 # the library: GBA games enough for the conformance cases (one ROM each, ids from 101) and the checks of the
-# stand-in's faults (119, 120), a zipped one, a hack named with its tag, an NDS game
+# stand-in's faults (119, 120), a zipped one, a hack named with its tag, one for the slot the conformance cases name
+# themselves (the last, so no other check meets what they leave in it), an NDS game
 L=$OUT/lib
 mkdir -p "$L/gba" "$L/nds"
 for i in $(seq 20); do printf 'gba rom %s' "$i" > "$L/gba/Game $i (USA).gba"; done
 python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Zip Game (USA).gba", b"gba rom zipped " * 300); z.writestr("Zip Game (USA) [b].gba", b"second member" * 10)' "$L/gba/Zip Game (USA).zip"
 printf 'gba rom hacked' > "$L/gba/Zz Hack (USA) [Hack by Someone v1.0].gba"
+printf 'gba rom of the named slot' > "$L/gba/Zzz Slots (USA).gba"
 head -c 4096 /dev/urandom > "$L/nds/Peel Quest (USA).nds"
 P=$(port)
 python3 "$HERE/tests/fake-romm.py" "$P" "$L" 2> "$OUT/fake-romm.log" & PIDS="$PIDS $!"

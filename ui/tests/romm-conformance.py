@@ -159,7 +159,7 @@ def gba_roms():
 
 
 ROMS = gba_roms()
-check(len(ROMS) >= 18, f"the server has {len(ROMS)} GBA ROMs, the cases need 18")
+check(len(ROMS) >= 23, f"the server has {len(ROMS)} GBA ROMs, the cases need 23")
 DEV = {n: ok(*device(TOK[n], f"conformance-{RUN}-{n.lower()}"), "device")["device_id"] for n in "ABC"}
 A, B, C = DEV["A"], DEV["B"], DEV["C"]
 TA, TB, TC = TOK["A"], TOK["B"], TOK["C"]
@@ -292,7 +292,9 @@ def custom_slot():
     """a slot of the client's naming, a space in it, is a slot as autosave is: a version per upload named with the
     server's time, the upload guard, 50 versions kept per lineage; slot=<name> lists that slot alone, and autosave's
     listing none of it"""
-    rom, name = ROMS[5], f"my slot {RUN}"
+    # (a ROM no other case and no card of the interoperability table has: on a server kept from run to run every
+    # run's slot stays, and a negotiation for the ROM offers each one's head as a download)
+    rom, name = ROMS[22], f"my slot {RUN}"
     sl = lambda tok: ok(*call("GET", "/api/saves", token=tok, query={"rom_id": rom, "slot": name}), "custom listing")
     s = ok(*upload(TA, A, rom, f"{RUN} custom 0".encode(), slot=name), "first upload")
     check(s["slot"] == name, f"slot {s['slot']!r}")
