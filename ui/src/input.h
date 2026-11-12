@@ -24,6 +24,8 @@ namespace banana
 	// Pressed past half way out, let go back under a third (a deadzone, and no flicker at the edge); flicked straight
 	// to the other side, the other direction
 	int stickStep(int dir, int v, int half);
+	// a button's evdev code as the menu's key (the face buttons by BANANA_CONFIRM, as a press is read)
+	Key inputKey(int code);
 
 	class Input
 	{

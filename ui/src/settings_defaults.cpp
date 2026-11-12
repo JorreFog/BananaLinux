@@ -42,6 +42,7 @@ namespace banana
 		const char* const LEDS_LEVEL[] = { "low", "medium", "high", nullptr };
 		const char* const LEDS_EFFECT[] = { "none", "breathe", nullptr };
 		const char* const BOTTOM_GAMES[] = { "auto", "on", "off", nullptr };
+		const char* const CONFIRM[] = { "right", "bottom", nullptr };
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
@@ -112,6 +113,7 @@ namespace banana
 			{ "leds_effect", "none", ENUM, LEDS_EFFECT, 0, 0 },
 			{ "gpu_boost", "off", ENUM, ON_OFF, 0, 0 },
 			{ "bottom_in_games", "auto", ENUM, BOTTOM_GAMES, 0, 0 },
+			{ "confirm_button", "right", ENUM, CONFIRM, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
 			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },

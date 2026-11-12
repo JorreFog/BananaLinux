@@ -478,6 +478,9 @@ namespace banana
 		// (as ROCKNIX's frontend, where its games are started by run-rocknix: start_banana.sh says so)
 		if (getenv("BANANA_ROCKNIX"))
 		{
+			add(D, "gamepad", "Confirm button", "Which face button confirms in the menu, the other going back.", menu, "confirm_button",
+				{ "Right", "Bottom" }, { "right", "bottom" });
+			items.back().hints = { "The right button confirms, as on a Nintendo pad (and the RG DS).", "The bottom button confirms, as on an Xbox or PlayStation pad." };
 			add(D, "picture", "Bottom screen in games", "Whether the bottom screen stays lit while a game plays.", menu, "bottom_in_games",
 				{ "Auto", "On", "Off" }, { "auto", "on", "off" });
 			items.back().hints = { "Lit for the two-screen systems (DS, 3DS, Game & Watch), dark for the rest: saves battery.", "Always lit.", "Always dark while a game plays." };
@@ -1300,6 +1303,7 @@ namespace banana
 			spawn("/usr/libexec/banana/handheld", "leds", leds.c_str());
 		}
 		if (it.key == "gpu_boost") spawn("/usr/libexec/banana/handheld", "gpu", v.c_str());
+		if (it.key == "confirm_button") setenv("BANANA_CONFIRM", v == "bottom" ? "south" : "east", 1);	// (input.cpp reads it at every press)
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
 		if (it.key == "sd2_roms") spawn("/usr/libexec/banana/sd2", "scan");

@@ -33,6 +33,12 @@ set -- $(BANANA_TOP="${WLR_CON:-DSI-2}" /usr/libexec/banana/backlight names)
 conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "${DATA}/settings.conf" 2>/dev/null | tail -n 1; }
 /usr/libexec/banana/handheld leds "$(conf leds || true)" >/dev/null 2>&1
 [ "$(conf gpu_boost)" = on ] && /usr/libexec/banana/handheld gpu on >/dev/null 2>&1
+# the buttons and touch: the bottom touchscreen by its name (the Thor's device tree labels); the face buttons as
+# Settings > System > Confirm button says (the right one, as on the RG DS, or the bottom one); while ROCKNIX's
+# InputPlumber merges the pad and the AYN key into its virtual pad, the menu reads that one only
+export BANANA_TOUCH=bottom_touchscreen
+[ "$(conf confirm_button)" = bottom ] && export BANANA_CONFIRM=south
+systemctl is-active -q inputplumber 2>/dev/null && export BANANA_INPUT_IGNORE="rsinput-gamepad,gpio-keys-ayn"
 # Settings' rows for a frontend whose games run through run-rocknix
 export BANANA_ROCKNIX=1
 

@@ -25,8 +25,26 @@ namespace banana
 		return (bits[n / (8 * sizeof(long))] >> (n % (8 * sizeof(long)))) & 1;
 	}
 
+	// the face buttons by where they sit: A is the right one (the RG DS's, Nintendo's), unless BANANA_CONFIRM=south (a
+	// pad labelled the other way: Settings > Other systems' Confirm button, or the handheld's start script), where A is
+	// the bottom one and X and Y swap with it. Read at every press: a change in Settings counts at once
+	static bool southConfirm()
+	{
+		const char* e = getenv("BANANA_CONFIRM");
+		return e && !strcmp(e, "south");
+	}
+
 	static Key mapKey(int code)
 	{
+		if (southConfirm())
+			switch (code)
+			{
+			case BTN_SOUTH: return Key::A;
+			case BTN_EAST: return Key::B;
+			case BTN_WEST: return Key::X;
+			case BTN_NORTH: return Key::Y;
+			default: break;
+			}
 		switch (code)
 		{
 		case BTN_DPAD_LEFT: case KEY_LEFT: return Key::LEFT;
@@ -46,6 +64,8 @@ namespace banana
 		default: return Key::NONE;
 		}
 	}
+
+	Key inputKey(int code) { return mapKey(code); }
 
 	// the device's path in sysfs (to tell the bottom panel's touchscreen from the top one)
 	static std::string sysPath(const char* node)
@@ -70,6 +90,26 @@ namespace banana
 			std::string path = std::string("/dev/input/") + e->d_name;
 			int fd = ::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 			if (fd < 0) continue;
+			// devices another program merges into one of its own (ROCKNIX's InputPlumber: the AYN Thor's RSInput pad and
+			// AYN key as a virtual DualSense): BANANA_INPUT_IGNORE's comma-separated parts of their names or phys paths,
+			// so a press isn't read twice
+			if (const char* ign = getenv("BANANA_INPUT_IGNORE"))
+			{
+				char nm[256] = "", ph[256] = "";
+				ioctl(fd, EVIOCGNAME(sizeof nm - 1), nm);
+				ioctl(fd, EVIOCGPHYS(sizeof ph - 1), ph);
+				bool skip = false;
+				std::string list = ign;
+				for (size_t a = 0; a <= list.size() && !skip; )
+				{
+					size_t b = list.find(',', a);
+					if (b == std::string::npos) b = list.size();
+					std::string part = list.substr(a, b - a);
+					if (!part.empty() && (strstr(nm, part.c_str()) || strstr(ph, part.c_str()))) skip = true;
+					a = b + 1;
+				}
+				if (skip) { ::close(fd); continue; }
+			}
 			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = {}, abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
 			ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys);
 			ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
@@ -94,7 +134,11 @@ namespace banana
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y) && ioctl(fd, EVIOCGABS(ABS_X), &px) == 0 && ioctl(fd, EVIOCGABS(ABS_Y), &py) == 0)
 				{ dv.x = px.value; dv.y = py.value; }
 				else { dv.x = ax.value; dv.y = ay.value; }
-				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
+				// the bottom panel's: bottomTouch is part of its sysfs path ("fe5e0000.i2c", the RG DS's) or of its name
+				// (the AYN Thor's are named by their device tree labels, "top_touchscreen" and "bottom_touchscreen")
+				char tn[256] = "";
+				ioctl(fd, EVIOCGNAME(sizeof tn - 1), tn);
+				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos || (!bottomTouch.empty() && strstr(tn, bottomTouch.c_str())) ? 1 : 0;
 			}
 			else
 			{
