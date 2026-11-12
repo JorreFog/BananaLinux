@@ -29,7 +29,7 @@ exit 0
 BOX
 chmod +x "$T/fetch" "$T/box64"
 export BANANA_PC="$T/pc" BANANA_PC_MNT="$T/mnt" BANANA_PC_ROMS="$T/roms" BANANA_PC_NOMOUNT=1 BANANA_PC_FETCH="$T/fetch" \
-    BANANA_BOX64="$T/box64" BANANA_DATA="$T/data"
+    BANANA_BOX64="$T/box64" BANANA_DATA="$T/data" BANANA_PC_NOART=1
 [ "$(sh "$P" status | head -n 1)" = "not set up" ] || bad "status before setup"
 # a wrong checksum: nothing unpacked
 BANANA_PC_SUMS="0000 $(sum "$T/dxvk.tar.gz") $(sum "$T/vkd3d.tar.zst")" sh "$P" setup >/dev/null 2>&1 && bad "a wrong checksum was taken"

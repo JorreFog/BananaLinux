@@ -2,10 +2,19 @@
 # A PC game from the shelf (systems.conf's [pc]: "run-pc %ROM%"), on the AYN Thor: pc-games inside run-wayland (Wine
 # draws through Wayland), the top screen the game's, the bottom one dark. Two entries the shelf has besides the games
 # (pc-games scan makes them): "Set up PC games" (the runtime fetched, in a terminal that shows it happen) and "Steam".
+# A game of the owner's Steam library ("steam = <app id>", usr/libexec/banana/steam) is downloaded the first time.
 #   run-pc <file.pc>
 F=$1
 L=${BANANA_LIBEXEC:-/usr/libexec/banana}
 exe=$(sed -n 's/^[[:space:]]*exe[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+steam=$(sed -n 's/^[[:space:]]*steam[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+if [ -z "$exe" ] && [ -n "$steam" ]; then
+    # a game of the Steam library that isn't on the card yet: downloaded (and the runtime fetched, the first time) in
+    # a terminal that shows it happen, then started
+    "$L/run-wayland" --keep-bottom -- foot -F -e sh -c "'$L/pc-games' status | head -n 1 | grep -q ready || '$L/pc-games' setup; '$L/steam' install \"\$1\" || { echo; echo 'Press B or wait...'; sleep 10; }" sh "$F"
+    exe=$(sed -n 's/^[[:space:]]*exe[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+    [ -n "$exe" ] || { "$L/pc-games" umount; exit 1; }
+fi
 case $exe in
 banana:setup)
     "$L/run-wayland" --keep-bottom -- foot -F -e sh -c "'$L/pc-games' setup; echo; echo 'Press B or wait...'; sleep 8"
