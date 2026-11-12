@@ -1,10 +1,10 @@
 Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/standalone/dolphin-sa/patches/002-savestate-names.patch at 6cf94dba (GPL-2.0).
 
 diff --git a/Source/Core/Core/BootManager.cpp b/Source/Core/Core/BootManager.cpp
-index fc93d01a1e..915e77da77 100644
+index 85444ef..cb7b6a3 100644
 --- a/Source/Core/Core/BootManager.cpp
 +++ b/Source/Core/Core/BootManager.cpp
-@@ -66,6 +66,11 @@ bool BootCore(Core::System& system, std::unique_ptr<BootParameters> boot,
+@@ -56,6 +56,11 @@ bool BootCore(Core::System& system, std::unique_ptr<BootParameters> boot,
    if (!StartUp.SetPathsAndGameMetadata(system, *boot))
      return false;
  
@@ -17,10 +17,10 @@ index fc93d01a1e..915e77da77 100644
    auto& movie = system.GetMovie();
    if (movie.IsPlayingInput() && movie.IsConfigSaved())
 diff --git a/Source/Core/Core/ConfigManager.cpp b/Source/Core/Core/ConfigManager.cpp
-index 5a123c87cd..06890be2dd 100644
+index 8404cff..de63081 100644
 --- a/Source/Core/Core/ConfigManager.cpp
 +++ b/Source/Core/Core/ConfigManager.cpp
-@@ -183,6 +183,10 @@ void SConfig::SetRunningGameMetadata(const std::string& game_id)
+@@ -202,6 +202,10 @@ void SConfig::SetRunningGameMetadata(const std::string& game_id)
    SetRunningGameMetadata(game_id, "", 0, 0, DiscIO::Region::Unknown);
  }
  
@@ -32,10 +32,10 @@ index 5a123c87cd..06890be2dd 100644
                                       u64 title_id, u16 revision, DiscIO::Region region)
  {
 diff --git a/Source/Core/Core/ConfigManager.h b/Source/Core/Core/ConfigManager.h
-index d21b087a51..f0ce0b7e71 100644
+index 39dbc6d..2000cf2 100644
 --- a/Source/Core/Core/ConfigManager.h
 +++ b/Source/Core/Core/ConfigManager.h
-@@ -63,6 +63,8 @@ struct SConfig
+@@ -59,6 +59,8 @@ struct SConfig
    // TODO: remove this as soon as the ticket view hack in IOS/ES/Views is dropped.
    bool m_disc_booted_from_game_list = false;
  
@@ -44,7 +44,7 @@ index d21b087a51..f0ce0b7e71 100644
    const std::string GetGameID() const;
    const std::string GetGameTDBID() const;
    const std::string GetTitleName() const;
-@@ -118,6 +120,7 @@ private:
+@@ -124,6 +126,7 @@ private:
    static SConfig* m_Instance;
    mutable std::recursive_mutex m_metadata_lock;
  
@@ -53,10 +53,10 @@ index d21b087a51..f0ce0b7e71 100644
    std::string m_gametdb_id;
    std::string m_title_name;
 diff --git a/Source/Core/Core/State.cpp b/Source/Core/Core/State.cpp
-index a244fda1b6..13d5baa453 100644
+index 040c60f..ef0f380 100644
 --- a/Source/Core/Core/State.cpp
 +++ b/Source/Core/Core/State.cpp
-@@ -248,11 +248,10 @@ static std::string SystemTimeAsDoubleToString(double time)
+@@ -302,11 +302,10 @@ static std::string SystemTimeAsDoubleToString(double time)
    return fmt::format(std::locale{""}, "{:%x %X}", *local_time);
  }
  
@@ -72,7 +72,7 @@ index a244fda1b6..13d5baa453 100644
  
  static std::vector<SlotWithTimestamp> GetUsedSlotsWithTimestamp()
  {
-@@ -256,7 +259,7 @@ static std::vector<SlotWithTimestamp> GetUsedSlotsWithTimestamp()
+@@ -314,7 +313,7 @@ static std::vector<SlotWithTimestamp> GetUsedSlotsWithTimestamp()
    StateHeader header;
    for (int i = 1; i <= int(NUM_STATES); ++i)
    {
@@ -81,7 +81,7 @@ index a244fda1b6..13d5baa453 100644
      if (!File::Exists(filename) || !ReadHeader(filename, header))
        continue;
  
-@@ -525,7 +528,7 @@ std::string GetInfoStringOfSlot(int slot, bool translate)
+@@ -610,7 +609,7 @@ std::string GetInfoStringOfSlot(int slot, bool translate)
  {
    std::lock_guard lk{s_state_saves_in_progress};
  
@@ -90,7 +90,8 @@ index a244fda1b6..13d5baa453 100644
    if (!File::Exists(filename))
      return translate ? Common::GetStringT("Empty") : "Empty";
  
-@@ -538,6 +541,6 @@ u64 GetUnixTimeOfSlot(int slot)
+@@ -626,7 +625,7 @@ u64 GetUnixTimeOfSlot(int slot)
+   std::lock_guard lk{s_state_saves_in_progress};
  
    State::StateHeader header;
 -  if (!ReadHeader(MakeStateFilename(slot), header))
@@ -98,7 +99,7 @@ index a244fda1b6..13d5baa453 100644
      return 0;
  
    constexpr u64 MS_PER_SEC = 1000;
-@@ -703,52 +706,88 @@ void Shutdown()
+@@ -899,14 +898,50 @@ void Shutdown()
    s_flush_unsaved_data_hook.reset();
  }
  
@@ -151,19 +152,7 @@ index a244fda1b6..13d5baa453 100644
  }
  
  void LoadLastSaved(Core::System& system, int i)
- {
-   if (!CheckIfStateLoadIsAllowed(system))
-     return;
- 
-   Core::RunOnCPUThread(system, [&system, i] {
-     // Data must reach the filesystem for up to date "UsedSlots".
-     s_compress_and_dump_thread.WaitForCompletion();
- 
-     std::vector<SlotWithTimestamp> used_slots = GetUsedSlotsWithTimestamp();
-     if (std::size_t(i) > used_slots.size())
-     {
-       Core::DisplayMessage("State doesn't exist", 2000);
-       return;
+@@ -926,7 +961,7 @@ void LoadLastSaved(Core::System& system, int i)
      }
  
      std::ranges::stable_sort(used_slots, std::ranges::greater{}, &SlotWithTimestamp::timestamp);
@@ -172,18 +161,7 @@ index a244fda1b6..13d5baa453 100644
    });
  }
  
- void SaveFirstSaved(Core::System& system)
- {
-   Core::RunOnCPUThread(system, [&system, lock = GetStateSaveTaskLock()] {
-     // Data must reach the filesystem for up to date "UsedSlots".
-     s_compress_and_dump_thread.WaitForCompletion();
- 
-     std::vector<SlotWithTimestamp> used_slots = GetUsedSlotsWithTimestamp();
-     auto slot = GetEmptySlot(used_slots);
-     if (!slot.has_value())
-     {
-       // overwrite the oldest state
-       std::ranges::stable_sort(used_slots, {}, &SlotWithTimestamp::timestamp);
+@@ -945,7 +980,7 @@ void SaveFirstSaved(Core::System& system)
        slot = used_slots.front().slot;
      }
  
@@ -191,3 +169,4 @@ index a244fda1b6..13d5baa453 100644
 +    SaveAsFromCore(system, MakeStateFilename(false, *slot));
    });
  }
+ 

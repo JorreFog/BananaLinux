@@ -1,10 +1,12 @@
 Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/standalone/flycast-sa/patches/001-fix-building-with-gcc15.patch at 6cf94dba (GPL-2.0).
 
+diff --git a/core/deps/glslang/SPIRV/SpvBuilder.h b/core/deps/glslang/SPIRV/SpvBuilder.h
+index 56c2684..59d5925 100644
 --- a/core/deps/glslang/SPIRV/SpvBuilder.h
 +++ b/core/deps/glslang/SPIRV/SpvBuilder.h
-@@ -63,6 +63,7 @@
- #include <stack>
+@@ -67,6 +67,7 @@ namespace spv {
  #include <unordered_map>
+ #include <unordered_set>
  #include <map>
 +#include <cstdint>
  

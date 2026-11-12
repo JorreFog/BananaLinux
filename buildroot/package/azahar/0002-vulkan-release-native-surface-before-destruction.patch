@@ -12,9 +12,10 @@ Upstreaming as azahar-emu/azahar#1155 fix
 
 ---
 diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
+index 79997e4..33aa5ba 100644
 --- a/src/citra_qt/bootmanager.cpp
 +++ b/src/citra_qt/bootmanager.cpp
-@@ -211,7 +211,14 @@ public:
+@@ -213,7 +213,14 @@ public:
              LOG_ERROR(Frontend, "Unable to create shared OpenGL context");
          }
  
@@ -30,7 +31,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
      }
  
      ~OpenGLSharedContext() {
-@@ -261,12 +268,35 @@ class DummyContext : public Frontend::GraphicsContext {};
+@@ -263,12 +270,35 @@ class DummyContext : public Frontend::GraphicsContext {};
  
  class RenderWidget : public QWidget {
  public:
@@ -67,7 +68,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
  };
  
  #ifdef ENABLE_OPENGL
-@@ -287,7 +317,7 @@ public:
+@@ -289,7 +319,7 @@ public:
      }
  
      void Present() {
@@ -76,7 +77,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
              return;
          }
          if (!system.IsPoweredOn()) {
-@@ -646,6 +676,9 @@ bool GRenderWindow::InitRenderTarget() {
+@@ -648,6 +678,9 @@ bool GRenderWindow::InitRenderTarget() {
          const RenderWidget dummy_widget{this};
      }
  
@@ -86,7 +87,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
      first_frame = false;
  
      const auto graphics_api = Settings::GetWorkingGraphicsAPI();
-@@ -703,6 +736,21 @@ bool GRenderWindow::InitRenderTarget() {
+@@ -705,6 +738,21 @@ bool GRenderWindow::InitRenderTarget() {
      return true;
  }
  
@@ -108,7 +109,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
  void GRenderWindow::ReleaseRenderTarget() {
      if (child_widget) {
          layout()->removeWidget(child_widget);
-@@ -755,8 +803,11 @@ bool GRenderWindow::InitializeOpenGL() {
+@@ -757,8 +805,11 @@ bool GRenderWindow::InitializeOpenGL() {
          main_context = std::make_unique<OpenGLSharedContext>();
      }
  
@@ -122,7 +123,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
  
      auto format = child_widget->windowHandle()->format();
      format.setSwapInterval(Settings::values.use_vsync.GetValue());
-@@ -838,10 +889,10 @@ std::unique_ptr<Frontend::GraphicsContext> GRenderWindow::CreateSharedContext()
+@@ -840,10 +891,10 @@ std::unique_ptr<Frontend::GraphicsContext> GRenderWindow::CreateSharedContext()
      const auto graphics_api = Settings::GetWorkingGraphicsAPI();
      if (graphics_api == Settings::GraphicsAPI::OpenGL) {
          auto gl_context = static_cast<OpenGLSharedContext*>(main_context.get());
@@ -138,6 +139,7 @@ diff --git a/src/citra_qt/bootmanager.cpp b/src/citra_qt/bootmanager.cpp
  #endif
      return std::make_unique<DummyContext>();
 diff --git a/src/citra_qt/bootmanager.h b/src/citra_qt/bootmanager.h
+index 9bd922e..b5fac28 100644
 --- a/src/citra_qt/bootmanager.h
 +++ b/src/citra_qt/bootmanager.h
 @@ -124,6 +124,10 @@ public:
@@ -152,6 +154,7 @@ diff --git a/src/citra_qt/bootmanager.h b/src/citra_qt/bootmanager.h
      void MakeCurrent() override;
      void DoneCurrent() override;
 diff --git a/src/video_core/renderer_base.h b/src/video_core/renderer_base.h
+index 4102e18..5837610 100644
 --- a/src/video_core/renderer_base.h
 +++ b/src/video_core/renderer_base.h
 @@ -64,6 +64,10 @@ public:
@@ -166,9 +169,10 @@ diff --git a/src/video_core/renderer_base.h b/src/video_core/renderer_base.h
      u32 GetResolutionScaleFactor();
  
 diff --git a/src/video_core/renderer_vulkan/renderer_vulkan.cpp b/src/video_core/renderer_vulkan/renderer_vulkan.cpp
+index 5221fdf..97edc23 100644
 --- a/src/video_core/renderer_vulkan/renderer_vulkan.cpp
 +++ b/src/video_core/renderer_vulkan/renderer_vulkan.cpp
-@@ -1492,4 +1492,14 @@ void RendererVulkan::NotifySurfaceChanged(bool is_second_window) {
+@@ -1496,4 +1496,14 @@ void RendererVulkan::NotifySurfaceChanged(bool is_second_window) {
      }
  }
  
@@ -184,6 +188,7 @@ diff --git a/src/video_core/renderer_vulkan/renderer_vulkan.cpp b/src/video_core
 +
  } // namespace Vulkan
 diff --git a/src/video_core/renderer_vulkan/renderer_vulkan.h b/src/video_core/renderer_vulkan/renderer_vulkan.h
+index 2f1c261..581190d 100644
 --- a/src/video_core/renderer_vulkan/renderer_vulkan.h
 +++ b/src/video_core/renderer_vulkan/renderer_vulkan.h
 @@ -79,6 +79,7 @@ public:
@@ -195,9 +200,10 @@ diff --git a/src/video_core/renderer_vulkan/renderer_vulkan.h b/src/video_core/r
      void SwapBuffers() override;
      void TryPresent(int timeout_ms, bool is_secondary) override {}
 diff --git a/src/video_core/renderer_vulkan/vk_present_window.cpp b/src/video_core/renderer_vulkan/vk_present_window.cpp
+index 91ceba7..7b5d019 100644
 --- a/src/video_core/renderer_vulkan/vk_present_window.cpp
 +++ b/src/video_core/renderer_vulkan/vk_present_window.cpp
-@@ -278,7 +278,10 @@ Frame* PresentWindow::GetRenderFrame() {
+@@ -285,7 +285,10 @@ Frame* PresentWindow::GetRenderFrame() {
  void PresentWindow::Present(Frame* frame) {
      if (!use_present_thread) {
          scheduler.WaitWorker();
@@ -209,8 +215,8 @@ diff --git a/src/video_core/renderer_vulkan/vk_present_window.cpp b/src/video_co
          free_queue.push(frame);
          return;
      }
-@@ -342,9 +345,34 @@ void PresentWindow::NotifySurfaceChanged() {
-     std::scoped_lock lock{recreate_surface_mutex};
+@@ -367,9 +370,34 @@ void PresentWindow::NotifySurfaceChanged() {
+ 
      next_surface = CreateSurface(instance.GetInstance(), emu_window);
      recreate_surface_cv.notify_one();
 +#else
@@ -244,7 +250,7 @@ diff --git a/src/video_core/renderer_vulkan/vk_present_window.cpp b/src/video_co
  void PresentWindow::CopyToSwapchain(Frame* frame) {
      const auto recreate_swapchain = [&] {
  #ifdef ANDROID
-@@ -360,6 +388,14 @@ void PresentWindow::CopyToSwapchain(Frame* frame) {
+@@ -385,6 +413,14 @@ void PresentWindow::CopyToSwapchain(Frame* frame) {
      };
  
  #ifndef ANDROID
@@ -260,6 +266,7 @@ diff --git a/src/video_core/renderer_vulkan/vk_present_window.cpp b/src/video_co
      const bool size_changed =
          swapchain.GetWidth() != frame->width || swapchain.GetHeight() != frame->height;
 diff --git a/src/video_core/renderer_vulkan/vk_present_window.h b/src/video_core/renderer_vulkan/vk_present_window.h
+index 3773d37..2a1a87d 100644
 --- a/src/video_core/renderer_vulkan/vk_present_window.h
 +++ b/src/video_core/renderer_vulkan/vk_present_window.h
 @@ -55,6 +55,9 @@ public:
@@ -283,6 +290,7 @@ diff --git a/src/video_core/renderer_vulkan/vk_present_window.h b/src/video_core
  
  } // namespace Vulkan
 diff --git a/src/video_core/renderer_vulkan/vk_swapchain.cpp b/src/video_core/renderer_vulkan/vk_swapchain.cpp
+index 14b9a57..6b60a59 100644
 --- a/src/video_core/renderer_vulkan/vk_swapchain.cpp
 +++ b/src/video_core/renderer_vulkan/vk_swapchain.cpp
 @@ -258,15 +258,22 @@ void Swapchain::SetSurfaceProperties() {
@@ -312,6 +320,7 @@ diff --git a/src/video_core/renderer_vulkan/vk_swapchain.cpp b/src/video_core/re
      image_acquired.clear();
      present_ready.clear();
 diff --git a/src/video_core/renderer_vulkan/vk_swapchain.h b/src/video_core/renderer_vulkan/vk_swapchain.h
+index f274995..b78586b 100644
 --- a/src/video_core/renderer_vulkan/vk_swapchain.h
 +++ b/src/video_core/renderer_vulkan/vk_swapchain.h
 @@ -23,6 +23,9 @@ public:
