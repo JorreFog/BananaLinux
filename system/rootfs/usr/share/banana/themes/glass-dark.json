@@ -6,7 +6,7 @@
   "author": "BananaOS",
   "base": "dark",
   "accent": "#ff9f0a",
-  // Settings > Display & sound > Accent colour picks one of these (Apple's system colours); the one above for any other
+  // Settings > Look & sound > Accent colour picks one of these (Apple's system colours); the one above for any other
   "accents": { "yellow": "#ff9f0a", "orange": "#ff6b1f", "green": "#30d158", "blue": "#0a84ff", "pink": "#ff375f", "purple": "#bf5af2" },
   "colors": { "screenBg": "#0a0c18", "ink": "#ffffff", "muted": "#b8bccc" },
   "font": "inter",
@@ -38,8 +38,9 @@
     "psx": "glass/icons/psx.png", "n64": "glass/icons/n64.png", "ports": "glass/icons/ports.png",
     "pico-8": "glass/icons/pico-8.png", "recently-played": "glass/icons/recently-played.png",
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
-    "bshare": "glass/icons/bshare.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
-    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png"
+    "bshare": "glass/icons/bshare.png", "together": "glass/icons/together.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
+    "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png",
+    "ereaderds": "glass/icons/ereaderds.png"
   },
 
   "vars": {
@@ -62,7 +63,7 @@
     "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0"           // a game starting
   },
 
-  "behavior": { "launchMs": 650, "scrollMs": 420, "scrollEase": "bounce", "settleMs": 520 },
+  "behavior": { "launchMs": 650, "scrollMs": 420, "scrollEase": "bounce", "settleMs": 520, "wrap": true },
 
   "components": {
     // a screen's picture, its panels' frost baked in
@@ -96,12 +97,12 @@
         { "use": "hint", "opacity": 0, "visible": "=view == 'home'", "with": { "key": "A", "label": "Open", "tap": "" } },
         { "type": "group", "layout": "row", "gap": 11, "align": "center",
           "children": [
-            { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
-            { "use": "hint", "visible": "=view != 'home' && !empty", "with": { "key": "X", "label": "Options", "tap": "x" } },
+            { "use": "hint", "visible": "=(view == 'home' || !empty) && !sys.apps", "with": { "key": "Y", "label": "Favorite", "tap": "y" } },
+            { "use": "hint", "visible": "=view != 'home' && !empty && !sys.apps", "with": { "key": "X", "label": "Options", "tap": "x" } },
             { "use": "hint", "visible": "=view == 'home'", "with": { "key": "START", "label": "Settings", "tap": "" } },
             { "use": "hint", "with": { "key": "SELECT", "label": "Search", "tap": "" } }
           ] },
-        { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' ? 'Open' : 'Play'", "tap": "a" } },
+        { "use": "hint", "visible": "=view == 'home' || !empty", "with": { "key": "A", "label": "=view == 'home' || sys.apps ? 'Open' : 'Play'", "tap": "a" } },
         { "use": "hint", "opacity": 0, "visible": "=view != 'home' && empty", "with": { "key": "B", "label": "Back", "tap": "" } }
       ]
     },
@@ -132,7 +133,7 @@
     },
     // the neighbours at the top of the bottom screen: L and the one before, the one after and R (clear of the middle)
     "sides": {
-      "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 0, "w": 640, "h": 40, "range": 1,
+      "type": "list", "source": "systems", "direction": "free", "x": 0, "y": 0, "w": 640, "h": 40, "range": 1, "loop": true,
       "item": {
         "type": "group", "visible": "=rel == -1 || rel == 1", "w": 640, "h": 40,
         "children": [
@@ -165,7 +166,7 @@
           "children": [
             { "type": "group", "w": 105, "h": 50, "children": [
               { "type": "text", "w": 105, "align": "center", "text": "=sys.app ? '—' : sys.games", "font": "inter-semibold", "size": 23, "color": "=ink" },
-              { "type": "text", "w": 105, "y": 30, "align": "center", "text": "=sys.games == 1 ? 'Game' : 'Games'", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] },
+              { "type": "text", "w": 105, "y": 30, "align": "center", "text": "=sys.apps ? (sys.games == 1 ? 'App' : 'Apps') : sys.games == 1 ? 'Game' : 'Games'", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] },
             { "type": "group", "w": 105, "h": 50, "children": [
               { "type": "text", "w": 105, "align": "center", "text": "=either(sys.played, '0')", "font": "inter-semibold", "size": 23, "color": "=ink" },
               { "type": "text", "w": 105, "y": 30, "align": "center", "text": "Played", "font": "inter-medium", "size": 12.5, "color": "=soft" } ] },
@@ -192,7 +193,7 @@
                           "size": 14, "color": "=ink" } ] },
         { "use": "sides", "x": 15, "y": 11, "w": 610 },
         // the shelf: a glass tray as iOS's dock, the selection raised and lit in its colour
-        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": "=156 + rise", "w": 640, "h": 138, "range": 3,
+        { "type": "list", "source": "systems", "direction": "free", "x": 0, "y": "=156 + rise", "w": 640, "h": 138, "range": 3, "loop": true,
           "item": {
             "type": "group", "w": 640, "h": 138, "visible": "=abs(pos) < 2.7", "opacity": "=clamp(2.7 - abs(pos), 0, 1)",
             "children": [
@@ -208,7 +209,7 @@
             ]
           } },
         { "type": "text", "x": 0, "w": 640, "y": 304, "align": "center", "text": "{sys.name}", "font": "inter-semibold", "size": 19, "color": "=ink" },
-        { "type": "text", "x": 0, "w": 640, "y": 330, "align": "center", "text": "=sys.app ? 'App' : plural(sys.games, 'game')",
+        { "type": "text", "x": 0, "w": 640, "y": 330, "align": "center", "text": "=sys.app ? 'App' : plural(sys.games, sys.apps ? 'app' : 'game')",
           "font": "inter-medium", "size": 12.5, "color": "=soft" },
         // one dot a system, as iOS's pages
         { "type": "list", "source": "range", "count": "=count", "direction": "free", "x": 0, "y": 362, "w": 640, "h": 14,
@@ -266,15 +267,20 @@
             "type": "group", "w": 590, "h": 200, "visible": "=abs(pos) < 3", "opacity": "=clamp(3 - abs(pos), 0, 1) * (sel ? 1 : 1 - go)",
             "children": [
               { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 155, "h": 110, "anchor": "center", "radius": 15,
-                "fill": "=alpha(sys.color, 0)", "visible": "=sel", "scale": "=1 + 0.18 * go",
-                "shadow": { "blur": "=26 + 16 * lit + 30 * go", "spread": "=3 + 8 * lit + 10 * go", "color": "=alpha(sys.color, 0.55 + 0.45 * max(lit, go))" } },
-              { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 124, "h": 88, "anchor": "center", "radius": 12, "fill": "=card",
+                "fill": "=alpha(item.color, 0)", "visible": "=sel", "scale": "=1 + 0.18 * go",
+                "shadow": { "blur": "=26 + 16 * lit + 30 * go", "spread": "=3 + 8 * lit + 10 * go", "color": "=alpha(item.color, 0.55 + 0.45 * max(lit, go))" } },
+              { "type": "rect", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": 124, "h": 88, "anchor": "center", "radius": 12, "fill": "=card", "visible": "=!sys.apps && !item.tool",
                 "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 420 }, "ease": "bounce" },
               { "type": "image", "src": "{item.marquee}", "fallback": "{item.art}", "fit": "=item.marquee != '' ? 'contain' : 'cover'",
                 "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": "=item.marquee != '' ? 104 : 124", "h": "=item.marquee != '' ? 68 : 88", "anchor": "center", "radius": "=item.marquee != '' ? 0 : 12",
-                "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 420 }, "ease": "bounce" },
+                "visible": "=!sys.apps && !item.tool", "scale": "=sel ? 1.25 + 0.25 * go : 1", "smooth": { "scale": 420 }, "ease": "bounce" },
+              // an app (on the Apps tile), or a tool among the games (PICO-8's Splore): a tile as the home row's, its colour and icon
+              { "use": "tile", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1)", "y": 100, "w": "=sel ? 105 : 70", "h": "=sel ? 105 : 70",
+                "anchor": "center", "visible": "=sys.apps || item.tool", "scale": "=1 + 0.25 * go", "smooth": { "w": 420, "h": 420 }, "ease": "bounce",
+                "shadow": { "y": 4, "blur": 8, "color": "=shade" },
+                "with": { "c": "=item.color", "src": "=item.icon", "r": "=sel ? 24 : 16", "z": "=sel ? 1.5 : 1", "f": "=sel ? lit : 0" } },
               { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) - 56", "w": 112, "y": 88, "align": "center", "text": "{item.title}", "font": "inter-semibold",
-                "size": 13, "color": "=ink", "visible": "=item.marquee == '' && item.art == ''", "scale": "=sel ? 1.25 : 1" },
+                "size": 13, "color": "=ink", "visible": "=!sys.apps && !item.tool && item.marquee == '' && item.art == ''", "scale": "=sel ? 1.25 : 1" },
               { "type": "text", "x": "=295 + pos * 136 + (pos > 0 ? 15.5 : pos < 0 ? -15.5 : 0) * min(abs(pos), 1) + (sel ? 64 : 50)", "y": "=sel ? 40 : 52", "text": "★", "size": 13, "color": "=hi", "visible": "=item.fav" }
             ]
           } },
