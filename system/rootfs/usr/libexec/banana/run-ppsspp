@@ -17,29 +17,32 @@ echo "run-ppsspp: $ROM"
 for f in ppsspp.ini controls.ini; do
     [ -f "$D/PSP/SYSTEM/$f" ] || cp "$T/PSP/SYSTEM/$f" "$D/PSP/SYSTEM/$f"
 done
+# (the card's exFAT has no symbolic links: data-link's link_dir binds a folder where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
 # PPSSPP's fonts, shaders and translations, read from /data/ppsspp/assets (the build's folder)
-[ -e "$D/assets" ] || ln -s "$T/assets" "$D/assets"
+link_dir "$T/assets" "$D/assets"
 # the memory stick's saves in BananaOS's saves folder (a folder PPSSPP made before is moved there once)
-if [ -d "$D/PSP/SAVEDATA" ] && [ ! -L "$D/PSP/SAVEDATA" ]; then
-    cp -a "$D/PSP/SAVEDATA/." /data/saves/psp/ && rm -rf "$D/PSP/SAVEDATA"
-fi
-ln -sfn /data/saves/psp "$D/PSP/SAVEDATA"
+link_dir /data/saves/psp "$D/PSP/SAVEDATA"
 # the pad mapping PPSSPP's build reads (/data/SDL-GameControllerDB/gamecontrollerdb.txt), when the image or the card
 # has one for the Thor's pad
 for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
     if [ -f "$f" ]; then
-        mkdir -p /data/SDL-GameControllerDB && ln -sfn "$f" /data/SDL-GameControllerDB/gamecontrollerdb.txt
+        mkdir -p /data/SDL-GameControllerDB && cp -f "$f" /data/SDL-GameControllerDB/gamecontrollerdb.txt
         export SDL_GAMECONTROLLERCONFIG_FILE="$f"
         break
     fi
 done
 export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
 
+# the RetroAchievements account logged in in BananaOS, for this emulator's own achievements (ra-standalone)
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" ppsspp "$D/PSP/SYSTEM"
 /usr/libexec/banana/run-wayland -- /usr/bin/ppsspp --fullscreen "$ROM" &
 PID=$!
 trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
 wait $PID
 RC=$?
 while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" scrub ppsspp "$D/PSP/SYSTEM"
 echo "run-ppsspp: exit $RC"
 exit $RC

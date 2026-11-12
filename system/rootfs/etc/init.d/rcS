@@ -48,6 +48,11 @@ banana-perf performance
 # the board's own kernel tunables (hw.conf's HW_SYSCTL, HW_IO...: the AYN Thor's memory, idle and card settings,
 # docs/THOR-TUNING.md); a board with none doesn't run it
 [ -n "$HW_SYSCTL$HW_IO$HW_CPUIDLE_OFF$HW_MGLRU_TTL_MS$HW_THP_DEFRAG" ] && /usr/libexec/banana/tune boot
+# a board with a Home button (hw.conf's HW_HOME=yes: the AYN Thor): the control-group hierarchy, for one thing only.
+# The menu puts a game in a group of its own and has the kernel freeze every process of it when Home is pressed
+# (a program inside the compositor is in a session of its own: a signal to the launcher's group would miss it).
+# No controller is turned on: nothing is accounted or limited.
+[ "$HW_HOME" = yes ] && [ -d /sys/fs/cgroup ] && mount -t cgroup2 -o nosuid,nodev,noexec cgroup2 /sys/fs/cgroup 2>/dev/null
 # the loopback up (127.0.0.1): nothing brought it up, so a program that talks to itself on localhost (a port, a tool,
 # a helper's local server) couldn't even bind there
 ip link set lo up 2>/dev/null

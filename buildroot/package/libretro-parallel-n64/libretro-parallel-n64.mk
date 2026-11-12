@@ -11,6 +11,8 @@ LIBRETRO_PARALLEL_N64_VERSION = 804135cf2fa14e26e73b889c4362c6cda624c842
 LIBRETRO_PARALLEL_N64_SITE = $(call github,libretro,parallel-n64,$(LIBRETRO_PARALLEL_N64_VERSION))
 LIBRETRO_PARALLEL_N64_LICENSE = GPL-2.0+
 LIBRETRO_PARALLEL_N64_LICENSE_FILES = README.md mupen64plus-core/LICENSES
+# (its GLES renderer is built against the image's GLES headers and library: Mesa's, built first)
+LIBRETRO_PARALLEL_N64_DEPENDENCIES = libgles libegl
 # Patches (beside this file, applied by Buildroot in order; each says where it comes from):
 # - 0001-platform.patch (ROCKNIX's 002-platform.patch): with its @DEVICE@ placeholder (the device it builds for)
 #   written as "thor": the aarch64 dynarec and the ARM fixes for platform=thor

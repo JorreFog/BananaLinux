@@ -51,7 +51,7 @@ acc() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$ACC" 2>/dev/nul
 acc_set() {	# acc_set <key> [value]: the line replaced, or gone with no value
     mkdir -p "${ACC%/*}"; touch "$ACC"; chmod 600 "$ACC" 2>/dev/null
     grep -v "^[[:space:]]*$1[[:space:]]*=" "$ACC" > "$ACC.new"
-    [ -n "$2" ] && echo "$1 = $2" >> "$ACC.new"
+    [ -n "$2" ] && echo "$1=$2" >> "$ACC.new"	# ("key=value", as the other tools read the file)
     mv "$ACC.new" "$ACC"
 }
 val() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$2" 2>/dev/null | tail -n 1 | tr -d '\r'; }

@@ -1,0 +1,39 @@
+# Sourced by the launchers (". /usr/libexec/banana/data-link"): a folder shown at a second place on the card.
+#
+# An emulator with fixed folders of its own (PPSSPP's PSP/SAVEDATA, Dolphin's GC and Wii) keeps them in BananaOS's
+# (saves/, states/, screenshots/), and reads the image's read-only ones (assets, shaders) from where it looks. A
+# symbolic link would do it, but the card's data partition is exFAT, which has none. So: a symbolic link where the
+# file system takes one (a card formatted ext4), else a bind mount for as long as the launcher runs.
+#
+#   link_dir <folder> <at>    <at> shows <folder>. What a program left in <at> before (a folder of its own) is moved
+#                             into <folder> first, once; when <folder> is the image's (read-only), a folder of the
+#                             card's own at <at> is used as it is.
+#   unlink_dirs               the bind mounts made here undone (at the launcher's end)
+# (host tests: BANANA_NOLINK=1 for the bind mount where a link would work)
+BANANA_BOUND=
+link_dir() {
+    _s=$1; _a=$2
+    mkdir -p "$_s" "${_a%/*}" 2>/dev/null
+    if [ -L "$_a" ]; then
+        [ "$(readlink "$_a")" = "$_s" ] && return 0
+        rm -f "$_a"
+    fi
+    # (still bound: a run before this one was cut off)
+    grep -q " $_a " /proc/mounts 2>/dev/null && return 0
+    if [ -d "$_a" ]; then
+        if [ -n "$(ls -A "$_a" 2>/dev/null)" ]; then
+            # (written to, to know: busybox's "test -w" says yes for root on a read-only file system)
+            ( : > "$_s/.banana-w.$$" ) 2>/dev/null || return 0
+            rm -f "$_s/.banana-w.$$"
+            cp -a "$_a/." "$_s/" || return 1
+            rm -rf "${_a:?}"/* "${_a:?}"/.[!.]* 2>/dev/null
+        fi
+        rmdir "$_a" 2>/dev/null
+    fi
+    [ -z "$BANANA_NOLINK" ] && ln -s "$_s" "$_a" 2>/dev/null && return 0
+    mkdir -p "$_a" && mount --bind "$_s" "$_a" && BANANA_BOUND="$BANANA_BOUND $_a"
+}
+unlink_dirs() {
+    for _a in $BANANA_BOUND; do umount -l "$_a" 2>/dev/null; done
+    BANANA_BOUND=
+}

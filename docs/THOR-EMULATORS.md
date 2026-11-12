@@ -19,11 +19,23 @@ None of them has been compiled for aarch64 yet, and none has run on a Thor.
   - starts the emulator through `run-wayland`, a compositor of its own on the top panel. For the 3DS it uses
     `--two-screens`: Azahar's second window goes full screen on the bottom panel;
   - writes the log to `/data/banana/logs/<emulator>/last.log` (the previous one is `last.log.1`);
-  - passes the menu's SIGTERM on to the emulator and exits with its status.
+  - passes the menu's SIGTERM on to the emulator and exits with its status;
+  - hands the emulator the RetroAchievements account logged in in BananaOS (below).
+- **Folders.** An emulator with fixed folders of its own (PPSSPP's `PSP/SAVEDATA`, Dolphin's `GC` and `Wii`, Azahar's
+  `sdmc` and `nand`) has them in BananaOS's `saves/` and `states/`. The card's data partition is exFAT, which has no
+  symbolic links, so the launcher binds the folder there while the game runs (`usr/libexec/banana/data-link`; a link
+  on a card formatted ext4).
+- **RetroAchievements.** One login, in the first-time setup or Settings > Accounts, reaches every emulator that has
+  achievements: RetroArch's cores as on the RG DS, and PPSSPP, Dolphin, Flycast and ARMSX2 through
+  `usr/libexec/banana/ra-standalone`, which writes the account's name and login token into each one's own settings
+  as its game starts and takes the token out again when it ends (file sharing shows those files). ROCKNIX leaves
+  each of these to its own login screen.
 - **Sound** is ALSA's `default` everywhere (SDL's ALSA driver, Dolphin's ALSA back end, Flycast's `alsa`, cubeb on ALSA).
 - **Pads** are read through SDL. Each launcher sets `SDL_GAMECONTROLLERCONFIG_FILE` from
-  `/data/banana/gamecontrollerdb.txt` or `/usr/share/banana/gamecontrollerdb.txt` when either exists. The Thor's
-  own pad needs a line in one of them if SDL's built-in database doesn't know it (see the gaps below).
+  `/data/banana/gamecontrollerdb.txt` (the card's own, when there is one) or the image's
+  `/usr/share/banana/gamecontrollerdb.txt`, which has the Thor's own pad. Its line was worked out from the kernel
+  driver's key list and the device tree's ids, and its id agrees with the one ROCKNIX recorded on a real handheld; the
+  buttons' places were not tried on one.
 - **Card layout:** games in `/data/roms/<id>`, BIOS files in `/data/bios`, saves in `/data/saves/<id>`, states in
   `/data/states/<id>`. Where an emulator keeps these elsewhere, the table says so.
 
@@ -138,13 +150,11 @@ The shelf ends with BananaOS's own entries, as on the RG DS: Döda Kvarter, Bsha
 
 **Image changes needed (outside these packages)**
 
-- **Vulkan through SDL 2.** Buildroot builds SDL 2 with `--disable-video-vulkan`. Flycast and Vita3K create their Vulkan
-  surfaces through SDL, so they need SDL 2's Vulkan support. One line in `buildroot/external.mk`:
-  `SDL2_CONF_OPTS += --enable-video-vulkan`. It does nothing on the RG DS beyond the option.
-- **The Thor's pad in SDL's database.** The Thor's pad ("AYN Odin2 Gamepad", an evdev device) needs a mapping line if
-  SDL's own database lacks it, in `/usr/share/banana/gamecontrollerdb.txt` or on the card. Dolphin's profiles use the
-  first joystick's evdev name as the SDL device name. ROCKNIX's face-button swap for pads whose SDL mapping puts A on
-  the right is not carried over.
+- **Vulkan through SDL 2** is on (`buildroot/external.mk`: Buildroot builds SDL 2 without it, and Flycast and Vita3K
+  make their Vulkan surfaces through SDL).
+- **The Thor's pad** is in the image's SDL database (above). Dolphin's profiles use the first joystick's evdev name
+  as the SDL device name. ROCKNIX's face-button swap for pads whose SDL mapping puts A on the right is not carried
+  over.
 
 **Downloads**
 

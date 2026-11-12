@@ -1,18 +1,134 @@
 # Building the AYN Thor's SD card image
 
-This is the hand-off for whoever builds the Thor's image, a person or an AI on their own machine. The image is
-ROCKNIX's SM8550 build with BananaOS put into it (`docs/THOR-ROCKNIX.md` says what that means and where every part
-stands). Nothing below has been run yet. The first build will likely need fixes in this repository's ROCKNIX packages,
-and those fixes belong here, under `rocknix/`, not in the ROCKNIX checkout.
+This is the hand-off for whoever builds the Thor's image, a person or an AI on their own machine. There are two
+images in this repository:
 
-## What you need
+- **A. BananaOS's own image** (Buildroot, `docs/THOR-OS.md`): the menu on the panels with no compositor and no
+  systemd under it, its own emulator packages, PC games, the browser. This is the one to build.
+- **B. ROCKNIX's image with BananaOS's menu as its frontend** (`docs/THOR-ROCKNIX.md`): everything ROCKNIX ships,
+  with more running under the menu. Its steps are at the end.
+
+Neither has been built end to end or booted. The first build will need fixes, and they belong in this repository.
+
+## A. BananaOS's own image
+
+### What you need
+
+- Linux x86_64, about 120 GB of free disk and 16 GB of RAM or more (Qt 6, WebKit, Mesa, Dolphin and the kernel are
+  in it; WebKit and Dolphin want 1.5-2 GB per compiler).
+- Buildroot's host packages: `build-essential git rsync cpio unzip bc file wget python3 libssl-dev libncurses-dev`
+  (Debian's names). Buildroot says what else it misses when it starts.
+- Network for the whole build: sources are downloaded as they are needed, and xemu's build fetches its Meson
+  subprojects while it configures.
+- Many hours for the first build (a day on a small machine). Later builds reuse `.buildroot/dl` and the output
+  folder.
+
+### Steps
+
+```sh
+git clone https://github.com/JorreFog/BananaLinux
+cd BananaLinux
+git checkout claude/pensive-rubin-cy7ro4     # or main once it's merged
+make thor
+```
+
+`make thor` clones Buildroot 2026.02.3 into `.buildroot`, applies `buildroot/buildroot-patches` to it (a newer Mesa
+with Turnip), loads `buildroot/configs/banana_thor_defconfig` into `output/thor` and builds. The image is
+`output/thor/images/banana-thor.img.gz`, with the update package beside it.
+
+One package at a time: `make <package>-thor` (`make libretro-fbneo-thor`), and Buildroot's own targets the same way
+(`make dolphin-dirclean-thor`, `make linux-menuconfig-thor`, `make menuconfig-thor`).
+
+**An output folder from before the tuning commit must be thrown away** (`rm -rf output/thor`): the compiler's CPU
+setting changed (SVE off, `buildroot/external.mk`), and Buildroot doesn't notice that by itself. Programs built with
+the old setting would crash on the Thor.
+
+### What has been compiled already, and what hasn't
+
+Checked on a PC, with this repository's configuration and Buildroot's cross compiler for the Thor:
+
+- the configuration loads and keeps every option; every package's dependencies resolve;
+- Box64 (the PC games' x86 translator) builds;
+- the new RetroArch cores: see the table in `docs/THOR-EMULATORS.md` ("Build state"), which says for each one
+  whether it was compiled;
+- the menu (`banana-ui`) builds for a PC and passes its tests there; it has not been cross-built with the Thor's
+  toolchain in this configuration.
+
+Not compiled at all: the kernel with ROCKNIX's patches in this tree, Mesa with the Turnip patches for ARM64, Qt 6,
+WPE WebKit, sway and wlroots, PipeWire, and the eight standalone emulators (Dolphin, ARMSX2, Azahar, PPSSPP,
+Vita3K, xemu, Flycast, ScummVM).
+
+### When a package fails to build
+
+Expect it. The packages are ordered here by how likely they are to need work:
+
+| Package | Where | Likely trouble |
+|---|---|---|
+| `armsx2` | `buildroot/package/armsx2` | upstream builds with clang; this recipe uses GCC and its SDL 3 front end instead of Qt |
+| `azahar` | `buildroot/package/azahar` | Qt 6.9 from Buildroot instead of its bundled Qt; Wayland instead of X11 |
+| `dolphin`, `vita3k` | `buildroot/package/...` | their bundled libraries cross-compiled; 17 ROCKNIX patches on Dolphin |
+| `xemu` | `buildroot/package/xemu` | Meson downloads subprojects while configuring; system SDL 3, no GTK |
+| `mesa3d` | `buildroot/patches/mesa3d` | five Turnip patches (4,000 lines) that apply cleanly but were never built for ARM64 |
+| `sway-lite`, `wvkbd` | `buildroot/package/...` | written here (Buildroot's sway needs systemd); built on a PC only as far as their dependencies resolving |
+| `linux` | `buildroot/board/thor` | ROCKNIX's patch series on 7.2 with two config fragments on top |
+| the cores | `buildroot/package/libretro-*` | a compiler flag one core's makefile doesn't take |
+
+How to deal with one:
+
+1. Read the end of the log (`output/thor/build/<package>-<version>/` has the tree; Buildroot prints the failing
+   command). Fix the recipe in `buildroot/package/<package>/` and build again with
+   `make <package>-dirclean-thor && make <package>-thor`.
+2. A package that can't be made to work quickly can be left out so the rest of the image builds. Each emulator has
+   its own switch (`buildroot/package/thor-emulators/Config.in` only turns them on by default): set it off with
+   `make menuconfig-thor`, or put `# BR2_PACKAGE_<NAME> is not set` in the defconfig (`# BR2_PACKAGE_ARMSX2 is not
+   set`, `# BR2_PACKAGE_LIBRETRO_FBNEO is not set`).
+   The shelf for a system whose emulator is missing shows its games and fails to start them; take its section
+   out of `buildroot/board/thor/systems.conf` if the image is to be handed on that way.
+3. No `.hash` files come with the new packages (their archives couldn't be downloaded where they were written), so
+   Buildroot warns that a download isn't checked and goes on. Adding them is a good first contribution: Buildroot
+   prints the hash it saw.
+
+Before pushing a fix: `make test`, and the scripts' own checks (`for t in system/tests/*-test.sh; do sh $t; done`,
+`sh rocknix/tests/run.sh`). `.github/workflows/ci.yml` runs the same.
+
+### Putting it on the Thor
+
+1. Write `banana-thor.img.gz` to a microSD card (Raspberry Pi Imager, balenaEtcher, or
+   `gunzip -c banana-thor.img.gz | sudo dd of=/dev/sdX bs=4M conv=fsync`).
+2. Once per handheld, the Thor needs OpenABL in its `abl_a`/`abl_b` partitions so it can boot from the card:
+   `buildroot/board/thor/openabl-README.txt` and `docs/THOR-PORT.md`. **Back up the stock ABL first.** Nothing else
+   on the Thor's internal storage is touched: Android stays, and without the card the Thor boots it.
+3. Card in, power on. The first boot makes the data partition on the rest of the card, then the first-time setup comes
+   up (language, Wi-Fi, time zone, the Thor's name, RetroAchievements, home server, Steam, the fan and the lights,
+   box art).
+
+### What to look at on the first boot
+
+Nothing here has run on a Thor, so the first boot is a bring-up. The `thor-bringup` skill
+(`.claude/skills/thor-bringup`) turns what the handheld reports into fixes; `docs/THOR-PORT.md` has the milestones.
+Over SSH (or a USB keyboard and `console=tty0`):
+
+- `/usr/libexec/banana/hw-probe` prints what the kernel found (panels, touchscreens, the pad, sound cards, the fan
+  and the lights), to set against `etc/banana/hw/thor.conf`;
+- the menu's log is `/data/banana/logs/banana-ui.log`;
+- `docs/THOR-OS.md` ends with the list of what was never run, in the order to try it; `docs/THOR-TUNING.md` has the
+  command that measures each tuning.
+
+Two switches for a first boot that goes wrong, both in `banana/settings.conf` on the card's data partition (it is
+exFAT: any computer can edit it): `home_switch = off` gives a game the display the plain way if a standalone
+emulator or a PC game doesn't start, and `theme = dark` goes back to the RG DS's look if the Thor's theme draws
+wrong.
+
+## B. ROCKNIX's image with BananaOS's menu
+
+### What you need
 
 - Linux x86_64 with Docker (ROCKNIX builds in its own build container), about 150 GB free disk and plenty of RAM
   (16 GB or more; some packages, MAME's among them, take 1-2 GB per compiler).
 - Several hours for the first build. Later builds reuse ROCKNIX's `sources/` downloads and its build folders.
 - git and python3 on the host.
 
-## Steps
+### Steps
 
 1. This repository at the Thor branch (or `main` once it's merged):
 
@@ -49,7 +165,7 @@ and those fixes belong here, under `rocknix/`, not in the ROCKNIX checkout.
 CI does steps 2-4 too: `.github/workflows/ci.yml`'s `rocknix-thor` job, started by hand (Actions > CI > Run workflow,
 with "thor_image" ticked). It puts the image up as an artifact.
 
-## When a package fails to build
+### When a package fails to build
 
 The packages most likely to need work on a first build, and where they live here:
 
@@ -69,7 +185,7 @@ work on the first try can be left out by taking it off the list in `tools/rockni
 
 Before pushing a fix, run this repository's checks: `make test` (or at least `sh rocknix/tests/run.sh`).
 
-## Putting it on the Thor
+### Putting it on the Thor
 
 1. Write the image to a microSD card (Raspberry Pi Imager, balenaEtcher or `dd`).
 2. Once per handheld, the Thor needs OpenABL in its `abl_a`/`abl_b` partitions so it can boot from the card. Follow
@@ -78,7 +194,7 @@ Before pushing a fix, run this repository's checks: `make test` (or at least `sh
 3. Card in, power on. The first boot is ROCKNIX's (it makes its storage partition), then Banana's menu comes up on
    both screens. `banana.frontend=0` in ROCKNIX's settings goes back to EmulationStation.
 
-## What to look at on the first boot
+### What to look at on the first boot
 
 `docs/THOR-ROCKNIX.md`'s "What only the Thor can tell", and the `thor-bringup` skill (`.claude/skills/thor-bringup`),
 which turns what the handheld reports into fixes. The menu's log is

@@ -123,6 +123,9 @@ The button under the bottom screen is the menu's while a game runs:
 - **Held for three seconds**, it opens the quick menu on the bottom screen (brightness, performance mode, the fan,
   the stick lights) with the game's picture kept on the top one. The Home button or B closes it.
 
+The freeze is the kernel's: the game runs in a control group of its own and every process in it stops at once, an
+emulator inside the compositor included (a signal to the launcher alone would have left it playing).
+
 It is quick because nothing is started or torn down. The menu never gives the display device away: a game draws
 through a DRM lease of the panels (RetroArch on one panel beside the game panel, as on the RG DS; everything else on
 both), and the menu, which owns the lease, puts its own picture on the panels and later the game's back. That is one

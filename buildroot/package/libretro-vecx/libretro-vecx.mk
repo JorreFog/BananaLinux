@@ -11,6 +11,8 @@ LIBRETRO_VECX_VERSION = dccff5402a16d1ea7c112095a8e42632bf149506
 LIBRETRO_VECX_SITE = $(call github,libretro,libretro-vecx,$(LIBRETRO_VECX_VERSION))
 LIBRETRO_VECX_LICENSE = GPL-3.0+
 LIBRETRO_VECX_LICENSE_FILES = LICENSE.md
+# (its GLES renderer is built against the image's GLES headers and library: Mesa's, built first)
+LIBRETRO_VECX_DEPENDENCIES = libgles libegl
 
 define LIBRETRO_VECX_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) -f Makefile.libretro platform=unix HAS_GPU=1 HAS_GLES=1 CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)"

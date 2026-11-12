@@ -20,8 +20,10 @@ exec >"$LOGS/last.log" 2>&1
 echo "run-vita3k: $ROM"
 
 [ -f "$D/config.yml" ] || cp "$T/config.yml" "$D/config.yml"
+# (the card's exFAT has no symbolic links: data-link's link_dir binds the image's folders where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
 for d in shaders-builtin data lang; do
-    [ -e "$D/$d" ] || ln -s "$T/$d" "$D/$d"
+    link_dir "$T/$d" "$D/$d"
 done
 [ -d "$V/vs0" ] || echo "run-vita3k: no firmware installed yet (Vita3K's menu: install PSVUPDAT.PUP)"
 for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
@@ -38,6 +40,7 @@ run() {
     wait $PID
     RC=$?
     while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
     trap - TERM INT HUP
     return $RC
 }

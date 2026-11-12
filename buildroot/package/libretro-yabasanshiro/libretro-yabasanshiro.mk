@@ -15,6 +15,8 @@ LIBRETRO_YABASANSHIRO_SITE_METHOD = git
 LIBRETRO_YABASANSHIRO_GIT_SUBMODULES = YES
 LIBRETRO_YABASANSHIRO_LICENSE = GPL-2.0+
 LIBRETRO_YABASANSHIRO_LICENSE_FILES = LICENSE
+# (its GLES renderer is built against the image's GLES headers and library: Mesa's, built first)
+LIBRETRO_YABASANSHIRO_DEPENDENCIES = libgles libegl
 # Patches (beside this file, applied by Buildroot in order; each says where it comes from):
 # - 0001-optimization.patch (ROCKNIX's 01-optimization.patch): the aarch64 dynarec (USE_AARCH64_DRC) for
 #   rockpro64, without its Cortex-A72 flags

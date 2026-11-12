@@ -17,10 +17,9 @@ echo "run-azahar: $ROM"
 
 C=$D/qt-config.ini
 [ -f "$C" ] || cp "$T/qt-config.ini" "$C"
-link() {
-    if [ -d "$D/$1" ] && [ ! -L "$D/$1" ]; then cp -a "$D/$1/." "$2/" && rm -rf "$D/$1"; fi
-    ln -sfn "$2" "$D/$1"
-}
+# (the card's exFAT has no symbolic links: data-link's link_dir binds the folder where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
+link() { link_dir "$2" "$D/$1"; }
 link sdmc /data/saves/3ds/sdmc
 link nand /data/saves/3ds/nand
 link states /data/states/3ds
@@ -48,5 +47,6 @@ trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
 wait $PID
 RC=$?
 while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
 echo "run-azahar: exit $RC"
 exit $RC
