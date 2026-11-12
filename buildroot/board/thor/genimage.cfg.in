@@ -27,13 +27,15 @@ image banana-@BOARD@.img {
 		image = "boot.vfat"
 		offset = 16M
 	}
+	# (the Thor's system is far bigger than the RG DS's 512 MB slots: Qt and the standalone emulators, WebKit, Mesa
+	# with Turnip; 3 GB a slot leaves room to grow)
 	partition banana-root-a {
 		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
 		image = "rootfs.squashfs"
-		size = 512M
+		size = 3072M
 	}
 	partition banana-root-b {
 		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
-		size = 512M
+		size = 3072M
 	}
 }

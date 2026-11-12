@@ -17,4 +17,7 @@ source "$BR2_EXTERNAL_BANANA_PATH/package/openabl/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/alsa-ucm-conf/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/retroarch/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/mame-gnw/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/sway-lite/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/wvkbd/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/box64/Config.in"
 endmenu

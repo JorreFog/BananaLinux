@@ -115,6 +115,18 @@ mark "rcS: bananad ready"
 # not needed for the menu's first frame
 (
     hwclock -s 2>/dev/null
+    # compressed swap in memory (hw.conf's HW_ZRAM, MB; the AYN Thor: the big emulators and Wine beside their shader
+    # caches get room past the RAM without touching the card): one zram device, LZ4, swapped to eagerly as zram is
+    # meant to be, and a few pages read at a time (it is memory, not a disk)
+    if [ -n "$HW_ZRAM" ] && [ "$HW_ZRAM" -gt 0 ] 2>/dev/null; then
+        modprobe zram 2>/dev/null
+        if [ -e /sys/block/zram0/disksize ]; then
+            echo lz4 > /sys/block/zram0/comp_algorithm 2>/dev/null
+            echo "${HW_ZRAM}M" > /sys/block/zram0/disksize && mkswap /dev/zram0 >/dev/null 2>&1 && swapon -p 100 /dev/zram0 2>/dev/null
+            echo 100 > /proc/sys/vm/swappiness 2>/dev/null
+            echo 0 > /proc/sys/vm/page-cluster 2>/dev/null
+        fi
+    fi
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
     modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null

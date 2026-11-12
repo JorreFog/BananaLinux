@@ -1,0 +1,13 @@
+config BR2_PACKAGE_BOX64
+	bool "box64"
+	depends on BR2_aarch64
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	help
+	  Runs x86_64 Linux programs on ARM64 with a dynamic
+	  recompiler, handing their calls into system libraries
+	  (Vulkan, Wayland, ALSA, SDL) to the ARM64 ones. BananaOS's
+	  PC games on the AYN Thor: Wine's x86_64 build runs under it
+	  (usr/libexec/banana/pc-games), with its 32-bit side (Box32)
+	  for Windows programs that are 32-bit.
+
+	  https://github.com/ptitSeb/box64

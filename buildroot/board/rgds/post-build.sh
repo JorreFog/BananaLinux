@@ -18,6 +18,13 @@ else
     echo "post-build: no hardware profile etc/banana/hw/${2:-rgds}.conf" >&2; exit 1
 fi
 rm -rf "$T/etc/banana/hw"
+# a board with its own systems list (board/<board>/systems.conf: the AYN Thor's, with every system its chip runs)
+# has it as /etc/banana/systems.conf; the others keep the overlay's (the RG DS's)
+if [ -f "$(dirname "$0")/../${2:-rgds}/systems.conf" ]; then
+    cp "$(dirname "$0")/../${2:-rgds}/systems.conf" "$T/etc/banana/systems.conf"
+    # (its history of old defaults is the RG DS's list's: not this one's)
+    rm -f "$T/etc/banana/systems.history"
+fi
 # who we are, for programs that ask (PortMaster names the firmware from it)
 V=$(cat "$(dirname "$0")/../../../VERSION")
 printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \

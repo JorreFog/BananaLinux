@@ -1,0 +1,22 @@
+#!/bin/sh
+# A PC game from the shelf (systems.conf's [pc]: "run-pc %ROM%"), on the AYN Thor: pc-games inside run-wayland (Wine
+# draws through Wayland), the top screen the game's, the bottom one dark. Two entries the shelf has besides the games
+# (pc-games scan makes them): "Set up PC games" (the runtime fetched, in a terminal that shows it happen) and "Steam".
+#   run-pc <file.pc>
+F=$1
+L=${BANANA_LIBEXEC:-/usr/libexec/banana}
+exe=$(sed -n 's/^[[:space:]]*exe[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+case $exe in
+banana:setup)
+    "$L/run-wayland" --keep-bottom -- foot -F -e sh -c "'$L/pc-games' setup; echo; echo 'Press B or wait...'; sleep 8"
+    rc=$?
+    "$L/pc-games" scan
+    exit $rc ;;
+banana:steam)
+    "$L/run-wayland" --keep-bottom -- "$L/pc-games" steam ;;
+*)
+    "$L/run-wayland" --keep-bottom -- "$L/pc-games" run "$F" ;;
+esac
+rc=$?
+"$L/pc-games" umount
+exit $rc

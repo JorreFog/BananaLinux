@@ -162,3 +162,34 @@ BR2_PACKAGE_OPENAL=y
 BR2_PACKAGE_LIBVORBIS=y
 BR2_PACKAGE_LIBTHEORA=y
 BR2_PACKAGE_MPG123=y
+
+# ---- the AYN Thor's own additions over the RG DS's build ----
+# A compositor only around a program that needs one (usr/libexec/banana/run-wayland: the standalone emulators with a
+# window of their own, the browser, Wine): sway with no bar or tray (package/sway-lite), libseat's own backend (the
+# menu runs as root: no seat daemon), and it is gone when the program ends. The menu itself and RetroArch draw on the
+# panels with no compositor.
+BR2_PACKAGE_WAYLAND=y
+BR2_PACKAGE_WLROOTS=y
+BR2_PACKAGE_SEATD=y
+BR2_PACKAGE_SEATD_BUILTIN=y
+# BR2_PACKAGE_SEATD_DAEMON is not set
+BR2_PACKAGE_SWAY_LITE=y
+BR2_PACKAGE_SDL2_WAYLAND=y
+# the web browser (usr/libexec/banana/run-browser): WPE WebKit with Cog, its small launcher, on Wayland; an on-screen
+# keyboard for it on the bottom screen (package/wvkbd); fonts for the web
+BR2_PACKAGE_WPEWEBKIT=y
+BR2_PACKAGE_COG=y
+BR2_PACKAGE_COG_PLATFORM_FDO=y
+BR2_PACKAGE_WVKBD=y
+BR2_PACKAGE_FONTCONFIG=y
+BR2_PACKAGE_DEJAVU=y
+BR2_PACKAGE_LIBERATION=y
+# a terminal under run-wayland (the PC games' setup shows its downloads in it)
+BR2_PACKAGE_FOOT=y
+# PC games (usr/libexec/banana/pc-games, run-pc): Box64 runs Wine's x86_64 build, fetched once onto the card with DXVK
+# and VKD3D-Proton (xz and zstd unpack them), in an ext4 image there (e2fsprogs makes and checks it)
+BR2_PACKAGE_BOX64=y
+BR2_PACKAGE_XZ=y
+BR2_PACKAGE_ZSTD=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_E2FSPROGS_FSCK=y

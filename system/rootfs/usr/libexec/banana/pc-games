@@ -1,0 +1,264 @@
+#!/bin/sh
+# PC games on the AYN Thor: Windows games through Wine's x86_64 build, run by Box64 (the x86_64 code recompiled for the
+# Thor's ARM64 cores, its calls into Vulkan, Wayland and ALSA handed to the system's own libraries), with DXVK and
+# VKD3D-Proton turning Direct3D 8-12 into Vulkan for Turnip (the Adreno 740's driver). What GameNative and Winlator do
+# on Android, without Android under it.
+#
+# The image carries Box64 and the compositor (run-wayland); Wine, DXVK and VKD3D-Proton are fetched once, by "setup",
+# with their checksums checked. They and Wine's prefix (the Windows side's C: drive) need a file system with symbolic
+# links and permissions, which the card's exFAT has not: they live in one ext4 image file on the card
+# (/data/pc/pc.ext4, mounted on /run/banana/pc while this runs). The games themselves stay ordinary folders on the card.
+#
+#   pc-games status                what is installed ("ready" on the first line when a game can run)
+#   pc-games setup                 fetch and unpack the runtime, make the prefix (needs Wi-Fi; ~1 GB, a few minutes)
+#   pc-games scan                  a <Game>.pc entry for every game folder in /data/roms/pc that has none (the shelf's
+#                                  "changed" hook): its main .exe guessed (the biggest that isn't an installer or a helper)
+#   pc-games run <file.pc|.exe>    run a game (run-pc: inside run-wayland)
+#   pc-games install <setup.exe>   run an installer (it installs into the prefix's C: drive; "scan" then finds nothing
+#                                  to add: make a .pc for it, or use the Start menu entry it prints)
+#   pc-games steam                 Steam's Windows client in the prefix (installed on the first run): your own library,
+#                                  downloaded and started by Steam itself
+#   pc-games shell [command]       a shell (or one command) with Wine's environment set, for trying things over SSH
+#   pc-games umount                let go of the image (after the last game)
+#
+# A <Game>.pc file is a few "key = value" lines:
+#   exe  = Game Folder/bin/game.exe     (from /data/roms/pc, or from C: when it starts with C:)
+#   args = -windowed                    (optional)
+#   env  = DXVK_HUD=fps                 (optional: variables for this game, space separated)
+#   d3d  = dxvk | wined3d               (optional: wined3d for a game DXVK draws wrong; default dxvk)
+#
+# (host tests: BANANA_PC for /data/pc, BANANA_PC_MNT for the mount point, BANANA_PC_ROMS, BANANA_PC_NOMOUNT=1 to use
+# the mount point as a plain folder, BANANA_PC_FETCH for the downloader, BANANA_PC_SUMS for three stand-in archives'
+# checksums, BANANA_BOX64 for box64)
+PC=${BANANA_PC:-/data/pc}
+MNT=${BANANA_PC_MNT:-/run/banana/pc}
+ROMS=${BANANA_PC_ROMS:-/data/roms/pc}
+IMG=$PC/pc.ext4
+IMG_MB=${BANANA_PC_IMG_MB:-6144}
+BOX64=${BANANA_BOX64:-/usr/bin/box64}
+LOG=${BANANA_DATA:-/data/banana}/logs/pc-games.log
+# the runtime: what, where from, its SHA-256
+WINE_VER=11.0
+WINE_URL=https://github.com/Kron4ek/Wine-Builds/releases/download/$WINE_VER/wine-$WINE_VER-amd64-wow64.tar.xz
+WINE_SUM=39574efa1132c3ca0d5c77dd2eddbe4a49cca0d6cc2c290ff4924493a1c40314
+DXVK_VER=3.1.1
+DXVK_URL=https://github.com/doitsujin/dxvk/releases/download/v$DXVK_VER/dxvk-$DXVK_VER.tar.gz
+DXVK_SUM=40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608
+VKD3D_VER=3.0.1
+VKD3D_URL=https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v$VKD3D_VER/vkd3d-proton-$VKD3D_VER.tar.zst
+VKD3D_SUM=3cf2315522af5e43605ef6d3c41dad91387040bf97199934f3f7ab76caaa2f0c
+STEAM_URL=https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe
+
+# (tests: stand-in archives with their own checksums)
+[ -n "$BANANA_PC_SUMS" ] && { set -- $BANANA_PC_SUMS "$@"; WINE_SUM=$1; DXVK_SUM=$2; VKD3D_SUM=$3; shift 3; }
+WINE=$MNT/wine-$WINE_VER
+export WINEPREFIX=$MNT/prefix
+say() { mkdir -p "${LOG%/*}" 2>/dev/null; echo "$(date '+%H:%M:%S') pc-games: $*" >> "$LOG" 2>/dev/null; echo "$*"; }
+die() { say "$*"; exit 1; }
+val() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$2" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+
+# the ext4 image, made on the first setup and mounted while PC games are in use
+mounted() { [ -n "$BANANA_PC_NOMOUNT" ] || grep -q " $MNT ext4 " /proc/mounts; }
+mount_img() {
+    mkdir -p "$MNT" "$PC"
+    mounted && return 0
+    [ -f "$IMG" ] || return 1
+    e2fsck -p "$IMG" >/dev/null 2>&1
+    mount -o loop,noatime "$IMG" "$MNT" || return 1
+}
+make_img() {
+    [ -n "$BANANA_PC_NOMOUNT" ] && { mkdir -p "$MNT"; return 0; }
+    [ -f "$IMG" ] && return 0
+    free=$(df -m "$PC" 2>/dev/null | awk 'NR==2 { print $4 }')
+    [ "${free:-0}" -gt $((IMG_MB + 512)) ] || die "not enough room on the card: $IMG_MB MB needed for PC games, ${free:-0} MB free"
+    say "making $IMG ($IMG_MB MB)"
+    # (exFAT has no sparse files: the whole size is written once)
+    dd if=/dev/zero of="$IMG.new" bs=1M count="$IMG_MB" 2>/dev/null && mke2fs -q -t ext4 -m 0 -L BANANA-PC "$IMG.new" &&
+        mv -f "$IMG.new" "$IMG" || { rm -f "$IMG.new"; die "couldn't make the image"; }
+}
+# x86_64 and 32-bit x86 programs handed to Box64 by the kernel (Wine starts its own server and helpers by path)
+binfmt() {
+    [ -n "$BANANA_PC_NOMOUNT" ] && return 0
+    [ -d /proc/sys/fs/binfmt_misc ] || return 0
+    [ -e /proc/sys/fs/binfmt_misc/register ] || mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null
+    [ -e /proc/sys/fs/binfmt_misc/box64 ] ||
+        printf '%s' ':box64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00:\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'"$BOX64"':' > /proc/sys/fs/binfmt_misc/register 2>/dev/null
+    [ -e /proc/sys/fs/binfmt_misc/box32 ] ||
+        printf '%s' ':box32:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x03\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'"$BOX64"':' > /proc/sys/fs/binfmt_misc/register 2>/dev/null
+}
+ready() { [ -x "$WINE/bin/wine" ] && [ -f "$MNT/dxvk-$DXVK_VER/x64/d3d11.dll" ] && [ -f "$WINEPREFIX/system.reg" ]; }
+
+# Wine's environment: Box64's switches for it, the Wayland driver (no X server in the image), Vulkan through Turnip,
+# sound through ALSA, the game's saves and settings in the prefix
+wine_env() {
+    export PATH=$WINE/bin:$PATH
+    export WINEDEBUG=${WINEDEBUG:--all} WINEESYNC=0 WINEFSYNC=0
+    export WINEDLLOVERRIDES="winemenubuilder.exe=d;mscoree=d;mshtml=d${WINEDLLOVERRIDES:+;$WINEDLLOVERRIDES}"
+    export BOX64_LOG=${BOX64_LOG:-0} BOX64_NOBANNER=1 BOX64_DYNAREC_BIGBLOCK=${BOX64_DYNAREC_BIGBLOCK:-2}
+    export BOX64_DYNAREC_STRONGMEM=${BOX64_DYNAREC_STRONGMEM:-1} BOX64_DYNAREC_CALLRET=${BOX64_DYNAREC_CALLRET:-1}
+    export BOX64_LD_LIBRARY_PATH=$WINE/lib/wine/x86_64-unix:$WINE/lib
+    export DXVK_STATE_CACHE_PATH=$MNT/cache VKD3D_SHADER_CACHE_PATH=$MNT/cache DXVK_LOG_LEVEL=${DXVK_LOG_LEVEL:-none}
+    export MESA_SHADER_CACHE_DIR=$MNT/cache TU_DEBUG=${TU_DEBUG:-noconform}
+    mkdir -p "$MNT/cache"
+    # (the Wayland driver is chosen in the prefix's registry at setup; without a compositor there is nothing to draw on)
+    unset DISPLAY
+}
+w() { "$BOX64" "$WINE/bin/wine" "$@"; }
+
+fetch() {	# fetch <url> <file> <sha256>
+    if [ -n "$BANANA_PC_FETCH" ]; then "$BANANA_PC_FETCH" "$1" "$2" || return 1
+    else curl -fL --retry 3 -o "$2" "$1" || return 1
+    fi
+    [ "$(sha256sum "$2" | cut -d' ' -f1)" = "$3" ] || { say "the download's checksum is wrong: ${1##*/}"; rm -f "$2"; return 1; }
+}
+# DXVK's and VKD3D-Proton's DLLs into the prefix (64-bit ones into system32, 32-bit into syswow64), natives first
+dlls() {
+    for d in d3d8 d3d9 d3d10core d3d11 dxgi; do
+        cp -f "$MNT/dxvk-$DXVK_VER/x64/$d.dll" "$WINEPREFIX/drive_c/windows/system32/" 2>/dev/null
+        cp -f "$MNT/dxvk-$DXVK_VER/x32/$d.dll" "$WINEPREFIX/drive_c/windows/syswow64/" 2>/dev/null
+    done
+    for d in d3d12 d3d12core; do
+        cp -f "$MNT/vkd3d-proton-$VKD3D_VER/x64/$d.dll" "$WINEPREFIX/drive_c/windows/system32/" 2>/dev/null
+        cp -f "$MNT/vkd3d-proton-$VKD3D_VER/x86/$d.dll" "$WINEPREFIX/drive_c/windows/syswow64/" 2>/dev/null
+    done
+}
+
+case $1 in
+status)
+    if mount_img && ready; then echo ready; else echo "not set up"; fi
+    echo "box64: $([ -x "$BOX64" ] && echo yes || echo missing)"
+    echo "image: $([ -f "$IMG" ] && echo "$IMG" || echo none)"
+    echo "wine: $([ -x "$WINE/bin/wine" ] && echo "$WINE_VER" || echo none)"
+    echo "dxvk: $([ -d "$MNT/dxvk-$DXVK_VER" ] && echo "$DXVK_VER" || echo none)"
+    echo "vkd3d-proton: $([ -d "$MNT/vkd3d-proton-$VKD3D_VER" ] && echo "$VKD3D_VER" || echo none)"
+    ;;
+setup)
+    [ -x "$BOX64" ] || die "this image has no box64"
+    make_img; mount_img || die "couldn't mount $IMG"
+    T=$PC/download; mkdir -p "$T"
+    if [ ! -x "$WINE/bin/wine" ]; then
+        say "fetching Wine $WINE_VER"
+        fetch "$WINE_URL" "$T/wine.tar.xz" "$WINE_SUM" || die "Wine's download failed"
+        rm -rf "$WINE" "$MNT/wine.new"; mkdir -p "$MNT/wine.new"
+        xzcat "$T/wine.tar.xz" | tar -xf - -C "$MNT/wine.new" --strip-components=1 && mv "$MNT/wine.new" "$WINE" || die "couldn't unpack Wine"
+        rm -f "$T/wine.tar.xz"
+    fi
+    if [ ! -d "$MNT/dxvk-$DXVK_VER" ]; then
+        say "fetching DXVK $DXVK_VER"
+        fetch "$DXVK_URL" "$T/dxvk.tar.gz" "$DXVK_SUM" || die "DXVK's download failed"
+        zcat "$T/dxvk.tar.gz" | tar -xf - -C "$MNT" || die "couldn't unpack DXVK"
+        rm -f "$T/dxvk.tar.gz"
+    fi
+    if [ ! -d "$MNT/vkd3d-proton-$VKD3D_VER" ]; then
+        say "fetching VKD3D-Proton $VKD3D_VER"
+        fetch "$VKD3D_URL" "$T/vkd3d.tar.zst" "$VKD3D_SUM" || die "VKD3D-Proton's download failed"
+        zstd -dc "$T/vkd3d.tar.zst" | tar -xf - -C "$MNT" || die "couldn't unpack VKD3D-Proton"
+        rm -f "$T/vkd3d.tar.zst"
+    fi
+    rmdir "$T" 2>/dev/null
+    binfmt; wine_env
+    if [ ! -f "$WINEPREFIX/system.reg" ]; then
+        say "making the Windows side (Wine's prefix): a minute or two"
+        w wineboot -i >> "$LOG" 2>&1
+        "$BOX64" "$WINE/bin/wineserver" -w 2>/dev/null
+        [ -f "$WINEPREFIX/system.reg" ] || die "Wine didn't make its prefix (see $LOG)"
+        # draw through Wayland; Direct3D from DXVK and VKD3D-Proton's DLLs; the card as drive D:
+        w reg add 'HKCU\Software\Wine\Drivers' /v Graphics /d wayland,x11 /f >> "$LOG" 2>&1
+        for d in d3d8 d3d9 d3d10core d3d11 dxgi d3d12 d3d12core; do
+            w reg add 'HKCU\Software\Wine\DllOverrides' /v $d /d native,builtin /f >> "$LOG" 2>&1
+        done
+        ln -sfn "$ROMS" "$WINEPREFIX/dosdevices/d:"
+        "$BOX64" "$WINE/bin/wineserver" -w 2>/dev/null
+    fi
+    dlls
+    mkdir -p "$ROMS"
+    say "PC games are set up: put a game's folder in roms/pc on the card"
+    ;;
+scan)
+    mkdir -p "$ROMS" || exit 0
+    for d in "$ROMS"/*/; do
+        [ -d "$d" ] || continue
+        name=$(basename "$d")
+        [ -f "$ROMS/$name.pc" ] && continue
+        # the main program: the biggest .exe that isn't an installer, an uninstaller, a crash reporter or a redistributable
+        exe=$(find "$d" -type f -iname '*.exe' 2>/dev/null | grep -viE '(unins|setup|install|redist|vcredist|dxsetup|dotnet|crash|report|launcher_helper|ue4prereq|uninst|touchup|cleanup|activation|easyanticheat|battleye|/_commonredist/|/redist/|/support/)' |
+            while IFS= read -r f; do printf '%s\t%s\n' "$(wc -c < "$f")" "$f"; done | sort -rn | head -n 1 | cut -f2-)
+        [ -n "$exe" ] || continue
+        printf 'exe = %s\n' "${exe#"$ROMS"/}" > "$ROMS/$name.pc"
+    done
+    # the shelf's own two entries: the setup until it has run, Steam after (run-pc knows them by their "exe")
+    if mount_img 2>/dev/null && ready; then
+        rm -f "$ROMS/Set up PC games.pc"
+        [ -f "$ROMS/Steam.pc" ] || echo "exe = banana:steam" > "$ROMS/Steam.pc"
+    else
+        [ -f "$ROMS/Set up PC games.pc" ] || echo "exe = banana:setup" > "$ROMS/Set up PC games.pc"
+    fi
+    ;;
+run)
+    [ -n "$2" ] || die "run what?"
+    mount_img && ready || die "PC games aren't set up yet: open PC games > Set up PC games (Wi-Fi needed)"
+    binfmt; wine_env
+    f=$2; args=; d3d=dxvk
+    case $f in
+    *.pc)
+        exe=$(val exe "$f"); args=$(val args "$f"); d3d=$(val d3d "$f"); [ -n "$d3d" ] || d3d=dxvk
+        [ -n "$exe" ] || die "$f names no exe"
+        # shellcheck disable=SC2046
+        e=$(val env "$f"); [ -n "$e" ] && export $e
+        case $exe in [Cc]:*) path=$exe ;; /*) path=$exe ;; *) path=$ROMS/$exe ;; esac ;;
+    *) path=$f ;;
+    esac
+    case $path in [Cc]:*) dir= ;; *) [ -f "$path" ] || die "no such program: $path"; dir=$(dirname "$path") ;; esac
+    if [ "$d3d" = wined3d ]; then export WINEDLLOVERRIDES="$WINEDLLOVERRIDES;d3d8,d3d9,d3d10core,d3d11,dxgi=b"; fi
+    say "run $path $args ($d3d)"
+    [ -n "$dir" ] && cd "$dir"
+    # shellcheck disable=SC2086
+    w "$path" $args >> "$LOG" 2>&1
+    rc=$?
+    "$BOX64" "$WINE/bin/wineserver" -k 2>/dev/null
+    say "ended ($rc)"
+    exit $rc
+    ;;
+install)
+    [ -f "$2" ] || die "no such installer: $2"
+    mount_img && ready || die "PC games aren't set up yet"
+    binfmt; wine_env
+    say "install $2"
+    w "$2" >> "$LOG" 2>&1
+    "$BOX64" "$WINE/bin/wineserver" -w 2>/dev/null
+    find "$WINEPREFIX/drive_c/users" -iname '*.lnk' -newer "$WINEPREFIX/system.reg" 2>/dev/null | sed 's/^/installed: /'
+    ;;
+steam)
+    mount_img && ready || die "PC games aren't set up yet"
+    binfmt; wine_env
+    S="$WINEPREFIX/drive_c/Program Files (x86)/Steam/steam.exe"
+    if [ ! -f "$S" ]; then
+        say "fetching Steam's installer"
+        mkdir -p "$PC/download"
+        curl -fL --retry 3 -o "$PC/download/SteamSetup.exe" "$STEAM_URL" || die "Steam's download failed"
+        w "$PC/download/SteamSetup.exe" /S >> "$LOG" 2>&1
+        "$BOX64" "$WINE/bin/wineserver" -w 2>/dev/null
+        rm -f "$PC/download/SteamSetup.exe"; rmdir "$PC/download" 2>/dev/null
+        [ -f "$S" ] || die "Steam didn't install (see $LOG)"
+    fi
+    say "steam"
+    # (its web views on the CPU and with no sandbox: Chromium's GPU process and sandbox don't run under Wine here)
+    w "$S" -no-cef-sandbox -cef-disable-gpu -cef-disable-gpu-compositing >> "$LOG" 2>&1
+    rc=$?
+    "$BOX64" "$WINE/bin/wineserver" -k 2>/dev/null
+    exit $rc
+    ;;
+shell)
+    mount_img || die "no image yet: pc-games setup"
+    binfmt; wine_env
+    shift
+    if [ $# -gt 0 ]; then "$@"; else exec "${SHELL:-/bin/sh}"; fi
+    ;;
+umount)
+    [ -n "$BANANA_PC_NOMOUNT" ] && exit 0
+    [ -x "$WINE/bin/wineserver" ] && "$BOX64" "$WINE/bin/wineserver" -k 2>/dev/null
+    mounted && umount "$MNT" 2>/dev/null
+    ;;
+*) echo "usage: pc-games status|setup|scan|run <file>|install <setup.exe>|steam|shell [command]|umount" >&2; exit 2 ;;
+esac
+exit 0
