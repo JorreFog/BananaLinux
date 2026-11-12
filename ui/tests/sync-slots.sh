@@ -723,6 +723,19 @@ dsv "$OUT/qd2.sav" "$QD" version; head -c 8192 /dev/urandom > "$Q"; cp "$Q" "$OU
 # (a kept copy with DraStic's footer put back: cut to the raw save, as a download would be)
 dsv "$OUT/qd2.sav" "$QV/20200101T000000Z-feedface.sav"; cat "$OUT/qd2.sav" > "$QD"; ndsrun
 [ "$("$BIN" --root "$C" --run "$C/run" restore "$QV/20200101T000000Z-feedface.sav" | tail -1)" = ok ] && cmp -s "$Q" "$OUT/qd2.sav" || bad "a kept .dsv restored with its footer"
+# (a kept copy in the flat saves/, which doesn't say its system: the card's game of that name does, and a copy of a size
+# its system's saves don't come in isn't put in place; games of two systems under the name, and it goes unchecked)
+mkdir -p "$C/roms/snes" "$C/roms/megadrive" "$C/banana/save-vault/saves/Size Check (USA)"; printf 'snes rom size' > "$C/roms/snes/Size Check (USA).sfc"
+head -c 8192 /dev/urandom > "$C/saves/Size Check (USA).srm"; cp "$C/saves/Size Check (USA).srm" "$OUT/sz.srm"
+SV="$C/banana/save-vault/saves/Size Check (USA)"; head -c 3001 /dev/urandom > "$SV/20200101T000000Z-0badc0de.srm"; head -c 8192 /dev/urandom > "$SV/20200102T000000Z-600dc0de.srm"
+r=$("$BIN" --root "$C" --run "$C/run" restore "$SV/20200101T000000Z-0badc0de.srm" 2>/dev/null | tail -1)
+[ "$r" = "error not a size this system's saves come in" ] && cmp -s "$C/saves/Size Check (USA).srm" "$OUT/sz.srm" || bad "a kept copy of no SNES save's size restored over a flat save: $r"
+r=$("$BIN" --root "$C" --run "$C/run" restore "$SV/20200102T000000Z-600dc0de.srm" 2>/dev/null | tail -1)
+[ "$r" = ok ] && cmp -s "$C/saves/Size Check (USA).srm" "$SV/20200102T000000Z-600dc0de.srm" || bad "a kept copy of an SNES save's size not restored: $r"
+printf 'md rom size' > "$C/roms/megadrive/Size Check (USA).md"
+"$BIN" --root "$C" --run "$C/run" restore "$SV/20200101T000000Z-0badc0de.srm" > "$OUT/sz.log" 2>&1
+[ "$(tail -1 "$OUT/sz.log")" = ok ] && grep -q 'games of more than one system have that name' "$OUT/sz.log" || bad "a kept copy two systems' games could own: $(cat "$OUT/sz.log")"
+rm -f "$C/roms/snes/Size Check (USA).sfc" "$C/roms/megadrive/Size Check (USA).md" "$C/saves/Size Check (USA).srm"
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
 # a .dsv whose footer doesn't add up, or of a size no DS save has: neither touched (DraStic's may hold what BananaDS's
 # doesn't), said with its own exit, and the sync holds the game, saying why, with nothing to choose

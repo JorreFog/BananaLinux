@@ -67,10 +67,12 @@
 #include "sync_util.h"
 #include <arpa/inet.h>
 #include <cerrno>
+#include <dirent.h>
 #include <ctime>
 #include <fcntl.h>
 #include <fstream>
 #include <memory>
+#include <set>
 #include <signal.h>
 #include <sstream>
 #include <sys/file.h>
@@ -1100,6 +1102,39 @@ namespace
 		auto i = c.held.find(key);
 		return i != c.held.end() && i->second.why == NDS_DIVERGED;
 	}
+	// the system a save is, for the checks its size and form get before it is put in place. Its folder says it for the
+	// DS and the GBA; the flat saves/ holds every other RetroArch system's, so there the game's path says it when it
+	// is known, and otherwise the card's games of the save's name do, when they are all one system's. "" when no game
+	// has the name, or games of two systems share it: the save is put in place unchecked, as one of a system with no
+	// checks is, and the log says so
+	std::string systemOfSave(const std::string& rel, const std::string& rom)
+	{
+		std::string folder = saveFolder(rel);
+		if (!folder.empty()) return folder;
+		if (!rom.empty() && rom.find('/') != std::string::npos) return systemOfFolder(rom.substr(0, rom.find('/')));
+		std::set<std::string> found;
+		std::string stem = stemOf(baseOf(rel));
+		for (const std::string& top : { ROMS, sd2Roms() })
+		{
+			DIR* d = top.empty() ? nullptr : opendir(top.c_str());
+			if (!d) continue;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] == '.') continue;
+				DIR* g = opendir((top + "/" + e->d_name).c_str());
+				if (!g) continue;
+				std::string sys = systemOfFolder(e->d_name);
+				while (dirent* f = readdir(g))
+					if (!sys.empty() && f->d_name[0] != '.' && stemOf(f->d_name) == stem) found.insert(sys);
+				closedir(g);
+			}
+			closedir(d);
+		}
+		if (found.size() == 1) return *found.begin();
+		say("  %s: %s, its size not checked", rel.c_str(), found.empty() ? "no game of that name on the card" : "games of more than one system have that name");
+		return "";
+	}
+
 	// a copy in the vault put in place as the save at rel, in this handheld's form as the sync would take it (a .dsv's
 	// footer cut off, the sizes checked), with DraStic's in step. expect: what the save held when this was chosen; rom:
 	// the game's path under the ROMs folder, when known
@@ -1110,7 +1145,7 @@ namespace
 		if (!ok) return "that copy can't be read";
 		// (a blank save here says nothing of the game's size, as in the sync's download)
 		bool sized = had && !blankSave(local, saveFolder(rel));
-		if (rel.compare(0, 6, "saves/") == 0) why = adaptIn(saveFolder(rel), data, sized ? &local : nullptr);
+		if (rel.compare(0, 6, "saves/") == 0) why = adaptIn(systemOfSave(rel, rom), data, sized ? &local : nullptr);
 		if (!why.empty()) return why;
 		std::string dl = RUN + "/sync-dl." + std::to_string(getpid()), err;
 		if (!writeAtomic(dl, data)) return "can't write the copy";
