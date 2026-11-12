@@ -10,12 +10,53 @@ trap 'kill $SRV 2>/dev/null; rm -rf "$T"' EXIT
 fail=0
 bad() { echo "FAIL steam: $*"; fail=1; }
 command -v python3 >/dev/null && command -v curl >/dev/null || { echo "steam test skipped (no python3 or curl)"; exit 0; }
-# the downloader's stand-in
-cat > "$T/dd" <<'DD'
+# the downloader's stand-in: its token store written as DepotDownloader writes it (a raw-deflated protocol-buffers
+# message, the accounts' tokens in field 4), its QR code drawn as it draws one for a terminal
+cat > "$T/store.py" <<'PY'
+import sys, zlib, base64, json
+def vi(n):
+    o = b""
+    while True:
+        b = n & 0x7f; n >>= 7
+        if n: o += bytes([b | 0x80])
+        else: return o + bytes([b])
+def ld(f, p): return vi((f << 3) | 2) + vi(len(p)) + p
+msg = ld(2, ld(1, b"cm1.example") + vi((2 << 3) | 0) + vi(3))   # (a field before it: the servers' penalties)
+for a in sys.argv[2:]:
+    name, sid = a.split("=")
+    pay = base64.urlsafe_b64encode(json.dumps({"sub": sid}).encode()).decode().rstrip("=")
+    tok = "eyAidHlwIjogIkpXVCIgfQ." + pay + "." + ("sig" + name) * 4
+    msg += ld(4, ld(1, name.encode()) + ld(2, tok.encode()))
+c = zlib.compressobj(9, zlib.DEFLATED, -15)
+open(sys.argv[1], "wb").write(c.compress(msg) + c.flush())
+PY
+cat > "$T/qr.py" <<'PY'
+import sys
+n, seed = 29, int(sys.argv[1])
+for y in range(n):
+    print("".join("\u2588\u2588" if 4 <= x < n - 4 and 4 <= y < n - 4 and (x * 7 + y * 3 + seed) % 3 == 0 else "  " for x in range(n)))
+PY
+cat > "$T/dd" <<DD
 #!/bin/sh
-app=; dir=
+T="$T"
+DD
+cat >> "$T/dd" <<'DD'
+app=; dir=; qr=
+for a in "$@"; do [ "$a" = -qr ] && qr=1; done
 while [ $# -gt 0 ]; do case $1 in -app) app=$2; shift ;; -dir) dir=$2; shift ;; esac; shift; done
-if [ "$app" = 480 ]; then
+store=$HOME/.local/share/IsolatedStorage/x/y/account.config
+if [ -n "$qr" ]; then
+    echo "Logging in with QR code..."
+    echo "Use the Steam Mobile App to sign in with this QR code:"; python3 "$T/qr.py" 1
+    while [ ! -e "$T/qr-change" ] && [ ! -e "$T/qr-scan" ]; do sleep 0.1; done
+    if [ -e "$T/qr-change" ]; then
+        echo; echo "The QR code has changed:"; echo "Use the Steam Mobile App to sign in with this QR code:"; python3 "$T/qr.py" 2
+        while [ ! -e "$T/qr-scan" ]; do sleep 0.1; done
+    fi
+    mkdir -p "${store%/*}"; python3 "$T/store.py" "$store" u=76561190000000001 Scanner=76561190000000002
+    echo " Done!"; echo "Got 5 licenses for account!"
+    sleep 30
+elif [ "$app" = 480 ]; then
     printf 'Enter account password for "u": '
     IFS= read -r pass
     echo "Logging 'u' into Steam3..."
@@ -26,12 +67,7 @@ if [ "$app" = 480 ]; then
         [ "$code" = 12345 ] && break
         echo "The previous 2-factor auth code you have provided is incorrect." >&2
     done
-    # (the token store: raw deflate, the token as plain text in it)
-    mkdir -p "$HOME/.local/share/IsolatedStorage/x/y"
-    python3 -c 'import zlib,sys,base64,json
-p=base64.urlsafe_b64encode(json.dumps({"sub":"76561190000000001"}).encode()).decode().rstrip("=")
-t=("eyAidHlwIjogIkpXVCIgfQ."+p+".c2lnbmF0dXJlc2lnbmF0dXJl").encode()
-c=zlib.compressobj(9,zlib.DEFLATED,-15); sys.stdout.buffer.write(c.compress(b"\x22\x05u\x12"+t+b"\x00")+c.flush())' > "$HOME/.local/share/IsolatedStorage/x/y/account.config"
+    mkdir -p "${store%/*}"; python3 "$T/store.py" "$store" u=76561190000000001
     echo " Done!"; echo "Got 3 licenses for account!"
     sleep 30
 else
@@ -108,6 +144,31 @@ sh "$S" library >/dev/null 2>&1; [ "$(ls "$T/roms"/*.pc | wc -l)" = 5 ] || bad "
 sh "$S" install "$T/roms/Portal 2.pc" > "$T/inst.out" 2>&1 || bad "install failed: $(tail -n 2 "$T/inst.out")"
 [ "$(sed -n 's/^exe = //p' "$T/roms/Portal 2.pc")" = "Portal 2/bin/game.exe" ] || bad "the program after a download: $(cat "$T/roms/Portal 2.pc")"
 grep -q '^steam = 620$' "$T/roms/Portal 2.pc" || bad "the app id was lost from the entry"
+# the QR sign-in, on top of the account already there: the code as squares (the downloader's 29 by 29, its light
+# border kept), written again when Steam changes it, and the account that scanned it found by its new token
+sh "$S" login-qr >/dev/null 2>&1 & QP=$!
+until_state "qr 1" || bad "no 'qr 1' state: $(st)"
+[ "$(grep -c . "$T/run/steam.qr")" = 29 ] && [ "$(head -n 1 "$T/run/steam.qr")" = 00000000000000000000000000000 ] &&
+    ! grep -q '[^01]' "$T/run/steam.qr" && grep -q 1 "$T/run/steam.qr" || bad "the code's squares: $(head -n 6 "$T/run/steam.qr" | tr '\n' '|')"
+[ "$(sed -n 5p "$T/run/steam.qr")" = "$(python3 -c 'print("".join("1" if 4 <= x < 25 and (x * 7 + 4 * 3 + 1) % 3 == 0 else "0" for x in range(29)))')" ] || bad "the code's fifth row: $(sed -n 5p "$T/run/steam.qr")"
+cp "$T/run/steam.qr" "$T/qr1"; : > "$T/qr-change"
+until_state "qr 2" || bad "no 'qr 2' state after Steam changed the code: $(st)"
+cmp -s "$T/run/steam.qr" "$T/qr1" && bad "the changed code wasn't written"
+: > "$T/qr-scan"
+wait $QP || bad "the QR sign-in failed: $(st)"
+[ "$(st)" = "ok Scanner" ] || bad "the state after the scan: $(st)"
+sh "$S" status | grep -q '^user=Scanner$' || bad "status after the scan: $(sh "$S" status | tr '\n' ' ')"
+[ -e "$T/run/steam.qr" ] && bad "the code was left behind"
+grep -q "$(printf '\342\226\210')" "$T/data/logs/steam.log" && bad "the code's picture went into the log"
+# (the library is asked with that account's token, not the other's: the stand-in's site knows only the first's id)
+sh "$S" library 2>&1 | grep -q "Steam gave no list of games: the last one kept" || bad "the library wasn't asked with the scanning account's token"
+[ "$(ls "$T/roms"/*.pc | wc -l)" = 5 ] || bad "entries changed after the second account's (empty) library"
+# cancelled before a scan
+rm -f "$T/qr-change" "$T/qr-scan"
+sh "$S" login-qr >/dev/null 2>&1 & QP=$!
+until_state "qr 1" || bad "no code the second time: $(st)"
+sh "$S" cancel; wait $QP && bad "a cancelled sign-in said it worked"
+sh "$S" status | grep -q '^user=Scanner$' || bad "a cancelled sign-in changed the account"
 # logout: the token and the account gone, the games stay
 sh "$S" logout >/dev/null
 sh "$S" status | grep -q '^user=$' || bad "still logged in after logout"

@@ -98,8 +98,9 @@ What GameNative and Winlator do on Android, without Android underneath:
 - **Your games**: copy a game's folder into `roms/pc` on the card. The shelf shows it; its main program is guessed
   (the largest `.exe` that isn't an installer or a helper) and written to a small `<Game>.pc` file you can edit
   (`exe`, `args`, `env`, `d3d = wined3d` for a game DXVK draws wrong).
-- **Your Steam library**: log in to Steam in the first-time setup or in Settings (account name, password, then the
-  Steam Guard code or a tap in the Steam app on your phone). Your games appear on the PC games shelf with Steam's own
+- **Your Steam library**: sign in to Steam in the first-time setup or in Settings by scanning a QR code with the
+  Steam app on your phone (nothing to type), or with the account name, password and Steam Guard code. Your games
+  appear on the PC games shelf with Steam's own
   box art; picking one that isn't on the card downloads its Windows build to `roms/pc/<Game>` and starts it. The
   login and the downloads are DepotDownloader's (a native ARM64 program, fetched once with its SHA-256 checked, no
   Wine under it). A login token is kept on the card, never the password. `usr/libexec/banana/steam` is the tool.
@@ -175,7 +176,9 @@ Not checked, and the first things to look at on a Thor:
 - the whole image has never been built end to end, and never booted;
 - the panels' rotation and the touchscreens' mapping under sway (`HW_WL_ROTATE`, `HW_WL_TOUCH_*` in `hw.conf`);
 - Wine under Box64 on this kernel and Mesa; Steam's client in Wine;
-- a real Steam login: the library's list comes from Steam's web API with the downloader's token, which was written
+- a real Steam login, by QR code or by password: the code is read out of what the downloader draws for a terminal
+  and the account out of its token store, both written from its source and tried only on stand-ins. The library's
+  list comes from Steam's web API with the downloader's token, which was written
   from how those are documented to work and never run against an account. If the list doesn't come,
   `pc/steam/library.tsv` (`<app id><tab><name>` lines) can be written by hand and the rest works from it;
 - the Home button. It needs a display device with leases, which a PC without the panels doesn't give, so none of it

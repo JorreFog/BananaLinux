@@ -9,6 +9,11 @@
 # Steam entry instead: Steam's own client in Wine.
 #
 #   steam status              ready=yes|no (the downloader is on the card), user=<account>, games=<in the library>
+#   steam login-qr            sign in by scanning a code with the Steam app on a phone (nothing to type). Runs until
+#                             the login ends, its state in /run/banana/steam.state: starting | qr <n> | ok <account>
+#                             | failed <why>. While it says "qr <n>" the code is in /run/banana/steam.qr, a row a
+#                             line, 1 a dark square and 0 a light one, the light border included; Steam changes the
+#                             code every half minute, and <n> counts up each time the file is written again.
 #   steam login <account>     the password on stdin (one line); runs until the login ends, its state in
 #                             /run/banana/steam.state: starting | code app | code email <address> | confirm |
 #                             wrong-code | ok <account> | failed <why>
@@ -70,19 +75,48 @@ need() {
     [ -x "$DD" ]
 }
 
-# the login token the downloader keeps (a raw-deflated store with the token as plain text in it), for the web API
-token() {
+# the downloader's token store: "<account><tab><token>" lines. The file is a raw-deflated protocol-buffers message
+# whose field 4 is the accounts' tokens (DepotDownloader's AccountSettingsStore.LoginTokens: an entry per account,
+# its name in field 1 and its token in field 2); a store that doesn't read that way gives its longest token alone.
+tokens() {
     python3 - "$HOME" <<'EOF' 2>/dev/null
 import sys, os, re, zlib
-best = b''
+def varint(b, i):
+    v = s = 0
+    while True:
+        c = b[i]; i += 1; v |= (c & 0x7f) << s; s += 7
+        if not c & 0x80: return v, i
+def fields(b):
+    i = 0
+    while i < len(b):
+        k, i = varint(b, i); f, w = k >> 3, k & 7
+        if w == 0: v, i = varint(b, i)
+        elif w == 2: n, i = varint(b, i); v = b[i:i + n]; i += n
+        elif w == 1: v = b[i:i + 8]; i += 8
+        elif w == 5: v = b[i:i + 4]; i += 4
+        else: raise ValueError(w)
+        yield f, w, v
+out = {}; best = b''
 for d, _, fs in os.walk(sys.argv[1]):
-    if 'account.config' in fs:
-        try: raw = zlib.decompress(open(os.path.join(d, 'account.config'), 'rb').read(), -15)
-        except Exception: continue
-        for m in re.findall(rb'ey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}', raw):
-            if len(m) > len(best): best = m
-print(best.decode())
+    if 'account.config' not in fs: continue
+    try: raw = zlib.decompress(open(os.path.join(d, 'account.config'), 'rb').read(), -15)
+    except Exception: continue
+    try:
+        for f, w, v in fields(raw):
+            if f == 4 and w == 2:
+                e = {ff: vv for ff, ww, vv in fields(v) if ww == 2}
+                if e.get(1) and e.get(2): out[e[1].decode()] = e[2].decode()
+    except Exception: pass
+    for m in re.findall(rb'ey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}', raw):
+        if len(m) > len(best): best = m
+if out:
+    for k, v in out.items(): print(k + '\t' + v)
+elif best: print('\t' + best.decode())
 EOF
+}
+# the token for the web API: the logged-in account's (names compared as Steam does, without case)
+token() {
+    tokens | awk -F '\t' -v u="$(acc steam_user)" 'tolower($1) == tolower(u) { t = $2 } { last = $2 } END { print t != "" ? t : last }'
 }
 
 # a file name the card takes: Steam's name without what exFAT refuses, the trademark signs or a dot at the end
@@ -146,6 +180,63 @@ login)
     exec 3>&-
     grep -v -i 'password' "$OUT" >> "$LOG" 2>/dev/null
     rm -f "$IN" "$OUT" "$RUN/steam.pid" "$RUN/steam.codes"
+    rm -rf "${RUN:?}/steam-480"
+    exit $rc
+    ;;
+login-qr)
+    mkdir -p "$RUN"
+    state starting
+    need || { state "failed the downloader couldn't be fetched (no internet?)"; exit 1; }
+    rm -f "$OUT" "$RUN/steam.qr"
+    before=$(tokens)
+    : > "$OUT"
+    # (as "login": something for the downloader to do once it is in)
+    "$DD" -qr -remember-password -app 480 -manifest-only -dir "$RUN/steam-480" < /dev/null > "$OUT" 2>&1 &
+    pid=$!
+    echo $pid > "$RUN/steam.pid"
+    rc=1; n=0; shown=0
+    while :; do
+        kill -0 $pid 2>/dev/null && alive=1 || alive=0
+        t=$(tr '\r' '\n' < "$OUT")
+        # the code: the downloader draws it for a terminal, two block characters a dark square and two spaces a light
+        # one, a line a row, after the same sentence each time (the first code, and each one Steam changes it to)
+        codes=$(printf '%s\n' "$t" | grep -c 'sign in with this QR code')
+        if [ "$codes" -gt "$shown" ]; then
+            printf '%s\n' "$t" | LC_ALL=C sed 's/\xe2\x96\x88\xe2\x96\x88/1/g; s/  /0/g' | awk '
+                /sign in with this QR code/ { rows = 0; on = 1; next }
+                on && /^[01]+$/ { r[rows++] = $0; next }
+                { on = 0 }
+                END { if (rows > 20 && length(r[0]) == rows) for (i = 0; i < rows; i++) print r[i] }' > "$RUN/steam.qr.new"
+            # (whole and square, or it is still being written: looked at again in a moment)
+            if [ -s "$RUN/steam.qr.new" ]; then mv "$RUN/steam.qr.new" "$RUN/steam.qr"; shown=$codes; state "qr $shown"; fi
+        fi
+        s=$(printf '%s\n' "$t" | awk '
+            /Failed to authenticate with Steam: / { a = $0; sub(/.*Failed to authenticate with Steam: /, "", a); s = "failed " a }
+            /Unable to login to Steam3: / { a = $0; sub(/.*Unable to login to Steam3: /, "", a); s = "failed " a }
+            /Could not connect to Steam/ { s = "failed no connection to Steam" }
+            /Got [0-9]+ licenses for account/ { s = "ok" }
+            END { print s }')
+        case $s in
+        ok)
+            # who it was: the account whose token is new in the store (the downloader names it only sometimes)
+            U=$(tokens | while IFS="$(printf '\t')" read -r name tok; do
+                    [ -n "$name" ] || continue
+                    printf '%s\n' "$before" | grep -qxF "$name$(printf '\t')$tok" || { echo "$name"; break; }
+                done)
+            [ -n "$U" ] || U=$(printf '%s\n' "$t" | sed -n 's/.*login with -username \([^ ]*\) -remember-password.*/\1/p' | tail -n 1)
+            [ -n "$U" ] || U=$(tokens | cut -f1 | grep . | tail -n 1)
+            if [ -n "$U" ]; then acc_set steam_user "$U"; state "ok $U"; rc=0
+            else state "failed signed in, but Steam didn't say as whom: log in with the name and password"; fi
+            break ;;
+        failed*) state "$s"; break ;;
+        esac
+        [ $alive = 1 ] || { state "failed the login ended early"; break; }
+        n=$((n + 1)); [ $n -gt 1200 ] && { state "failed no scan in five minutes"; break; }
+        sleep 0.25
+    done
+    kill $pid 2>/dev/null
+    LC_ALL=C sed '/\xe2\x96\x88/d; /^ *$/d' "$OUT" >> "$LOG" 2>/dev/null
+    rm -f "$OUT" "$RUN/steam.pid" "$RUN/steam.qr" "$RUN/steam.qr.new"
     rm -rf "${RUN:?}/steam-480"
     exit $rc
     ;;
