@@ -18,6 +18,14 @@
       "type": "boolean",
       "description": "true: theme errors are also drawn in red on the top screen, not only logged."
     },
+    "stage": {
+      "enum": ["canvas", "screen"],
+      "description": "What a layout theme lays out on. \"canvas\" (the default): the 640 x 480 canvas on both screens, staged in the middle of a screen of another shape. \"screen\": each screen's own size, its top-left at 0,0 (on the AYN Thor 853 x 480 on the 16:9 top and 640 x 557 on the bottom; on the RG DS 640 x 480 as before), read with W and H."
+    },
+    "panels": {
+      "enum": ["", "flat"],
+      "description": "Settings, the keyboard and the game panel's boxes: \"\" (the default) the Pixel look (banded, thick outlines, hard shadows); \"flat\" flat surfaces with a hairline edge (colors.edge, the accent's on the one that's on), a light line along the top (panelBand) and a darker one along the bottom (panelLow)."
+    },
     "base": {
       "enum": ["dark", "light"],
       "description": "The palette the theme starts from (the Settings screen's look). Defaults to \"dark\"."

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <time.h>
@@ -48,7 +49,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "screenX", "screenY", "screenW", "screenH", "day" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -159,6 +160,12 @@ namespace banana
 		LayoutMenu* m;
 		float s;						// device px per layout px (a screen is 480 high)
 		float W = 640, H = 480;			// the screens in layout px
+		// "stage": "screen": each screen laid out on its own size (the AYN Thor's 16:9 top and near-square bottom), its
+		// top-left corner at 0,0; otherwise on the 640x480 canvas staged in its middle. W and H are the screen's being
+		// drawn (scrW, scrH), screenX..screenH its whole area in the layout's units (scrArea: the canvas's 0,0 is
+		// the canvas's top-left, so a canvas theme reaches the rest of the screen at negative x and past 640)
+		bool screenStage = false;
+		float scrW = 640, scrH = 480, scrArea[4] = { 0, 0, 640, 480 };
 		std::string path, dir;
 		JPtr doc;
 		std::map<std::string, JPtr> components;
@@ -180,7 +187,7 @@ namespace banana
 		// data
 		std::vector<rnds::SysInfo> systems;
 		std::vector<rnds::GameInfo> games;
-		std::string clock, date;
+		std::string clock, date, day;
 		double now = 0, last = 0, start = -1;
 		double movedAt = -1e9, enteredAt = -1e9;
 		int moveDir = 1;
@@ -417,6 +424,7 @@ namespace banana
 			}
 			else cues.emplace_back("insert", 560);
 			debug = doc->flag("debug");
+			screenStage = doc->str("stage", "canvas") == "screen";
 			const JVal* sc = doc->get("screens");
 			for (auto& e : sc->obj)
 			{
@@ -530,8 +538,13 @@ namespace banana
 			std::string rest;
 			if (nId == HOOK("time")) { usedTime = true; out = EV(now - start); return true; }
 			if (nId == HOOK("view")) { out = EV(viewName()); return true; }
-			if (nId == HOOK("W")) { out = EV((double)W); return true; }
-			if (nId == HOOK("H")) { out = EV((double)H); return true; }
+			if (nId == HOOK("W")) { out = EV((double)scrW); return true; }
+			if (nId == HOOK("H")) { out = EV((double)scrH); return true; }
+			if (nId == HOOK("screenX")) { out = EV((double)scrArea[0]); return true; }
+			if (nId == HOOK("screenY")) { out = EV((double)scrArea[1]); return true; }
+			if (nId == HOOK("screenW")) { out = EV((double)scrArea[2]); return true; }
+			if (nId == HOOK("screenH")) { out = EV((double)scrArea[3]); return true; }
+			if (nId == HOOK("day")) { out = EV(day); return true; }
 			if (nId == HOOK("clock")) { out = EV(clock); return true; }
 			if (nId == HOOK("date")) { out = EV(date); return true; }
 			if (nId == HOOK("battery"))
@@ -1432,22 +1445,28 @@ namespace banana
 			smoothMoving = false;
 			Scope root;
 			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
-			Scope vs;
-			vs.parent = &root;
-			for (auto& v : vars) vs.set(v.first, v.second.eval(vs));
 			for (int screen = 0; screen < 2; screen++)
 			{
 				const char* side = screen == 0 ? "top" : "bottom";
 				m->be->beginScreen(screen);
+				// the screen's whole area (the canvas itself on the RG DS), and the size the theme lays out on
+				float ax, ay, aw, ah;
+				rnds::screenArea(m->be, s, ax, ay, aw, ah);
+				scrW = screenStage ? aw : W; scrH = screenStage ? ah : H;
+				scrArea[0] = screenStage ? 0 : ax; scrArea[1] = screenStage ? 0 : ay; scrArea[2] = aw; scrArea[3] = ah;
+				// (the vars for each screen: they may read its W and H)
+				Scope vs;
+				vs.parent = &root;
+				for (auto& v : vars) vs.set(v.first, v.second.eval(vs));
 				Scope ss;
 				ss.parent = &vs;
 				ss.set("screen", EV((double)screen));
-				Frame f{ 0, 0, 1, 1, screen };
+				Frame f{ screenStage ? ax : 0, screenStage ? ay : 0, 1, 1, screen };
 				if (const auto* nodes = screenFor(viewName(), side))
-					for (size_t i = 0; i < nodes->size(); i++) renderNode((*nodes)[i].get(), ss, f, W, H, std::string(side) + std::to_string(i));
+					for (size_t i = 0; i < nodes->size(); i++) renderNode((*nodes)[i].get(), ss, f, scrW, scrH, std::string(side) + std::to_string(i));
 				auto all = screens.find(std::string("all.") + side);
 				if (all != screens.end())
-					for (size_t i = 0; i < all->second.size(); i++) renderNode(all->second[i].get(), ss, f, W, H, std::string("all.") + side + std::to_string(i));
+					for (size_t i = 0; i < all->second.size(); i++) renderNode(all->second[i].get(), ss, f, scrW, scrH, std::string("all.") + side + std::to_string(i));
 				if (debug && screen == 0 && !m->mErrors.empty()) drawErrors();
 				m->be->endScreen();
 			}
@@ -1766,6 +1785,14 @@ namespace banana
 		d->take();
 		d->clock = src->clockText();
 		d->date = src->dateText();
+		{
+			// the day of the week ("Thu"), beside the date
+			static const char* const DAYS[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+			const char* fixed = getenv("BANANA_NOW");	// (the clock's own: the tests' fixed time)
+			time_t tt = fixed && *fixed ? (time_t)atoll(fixed) : time(nullptr);
+			struct tm lt;
+			d->day = localtime_r(&tt, &lt) ? DAYS[lt.tm_wday % 7] : "";
+		}
 		float to = (float)d->cursor();
 		float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));
 		d->scroll += (to - d->scroll) * k;

@@ -242,10 +242,47 @@ namespace banana
 			return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
 		}
 
+		// the handheld (/etc/banana/board: rgds, rgds-plus, thor); BANANA_BOARD stands in for it in the host tests
+		std::string board()
+		{
+			if (const char* b = getenv("BANANA_BOARD")) return b;
+			std::ifstream f("/etc/banana/board");
+			std::string s;
+			std::getline(f, s);
+			return trim(s);
+		}
+
+		// a board's own default over the template's and the schema's: the AYN Thor starts in the Thor OLED theme
+		// (its two AMOLED panels: true black around lit surfaces), the RG DS in the template's Dark
+		bool boardDefault(const std::string& key, std::string& value)
+		{
+			if (key == "theme" && board() == "thor") { value = "user:thor-oled"; return true; }
+			return false;
+		}
+
 		std::string defaultFor(const std::string& key)
 		{
+			std::string b;
+			if (boardDefault(key, b)) return b;
 			if (const KeyDef* k = find(key)) return k->def;
 			return "";
+		}
+
+		// the template's text with the board's defaults in place of its values (first boot copies it, comments and all)
+		std::string withBoardDefaults(const std::string& text)
+		{
+			std::string out, ln, key, value, b;
+			size_t at = 0;
+			while (at < text.size())
+			{
+				size_t e = text.find('\n', at);
+				ln = text.substr(at, e == std::string::npos ? std::string::npos : e - at);
+				at = e == std::string::npos ? text.size() : e + 1;
+				if (split(ln, key, value) && boardDefault(key, b)) ln = key + " = " + b;
+				out += ln;
+				if (e != std::string::npos) out += "\n";
+			}
+			return out;
 		}
 
 		// The template's keys in its own order (the compiled table when the image's file isn't there, as in the host test)
@@ -258,6 +295,7 @@ namespace banana
 				if (split(ln, key, value)) out.emplace_back(key, value);
 			if (!f && out.empty())
 				for (const auto& k : KEYS) out.emplace_back(k.key, k.def);
+			for (auto& kv : out) boardDefault(kv.first, kv.second);
 			return out;
 		}
 
@@ -279,6 +317,8 @@ namespace banana
 		std::map<std::string, std::string> t;
 		readConf("/etc/banana/settings.conf", t);
 		auto it = t.find(key);
+		std::string b;
+		if (boardDefault(key, b)) return b;
 		return it == t.end() ? defaultFor(key) : it->second;
 	}
 
@@ -300,6 +340,7 @@ namespace banana
 		std::map<std::string, std::string> r;
 		for (const auto& k : KEYS) r[k.key] = k.def;
 		readConf("/etc/banana/settings.conf", r);
+		for (auto& kv : r) boardDefault(kv.first, kv.second);
 		readConf(dataDir + "/settings.conf", r);
 		return r;
 	}
@@ -322,7 +363,7 @@ namespace banana
 		// schema's values written out plainly
 		if (access(path.c_str(), F_OK) != 0)
 		{
-			std::string text = readAll("/etc/banana/settings.conf");
+			std::string text = withBoardDefaults(readAll("/etc/banana/settings.conf"));
 			if (text.empty())
 				for (const auto& d : defs)
 					if (validKey(d.first, d.second)) text += d.first + " = " + d.second + "\n";

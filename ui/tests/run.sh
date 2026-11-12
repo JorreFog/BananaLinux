@@ -67,6 +67,37 @@ if command -v identify >/dev/null; then
         done
     done
 fi
+# the Thor OLED theme, the AYN Thor's default (BANANA_BOARD=thor and no theme chosen: settings.conf without its line),
+# laid out on the screens' own sizes ("stage": "screen"): it loads (no theme errors, not Dark instead: its black corner),
+# both screens drawn (the accent's plate under the selected system), Settings and the game panel black, and the OLED
+# boot animation drawn at these shapes (no pictures for them). The PNGs are $OUT/thor-oled-*.png
+TO=$OUT/thor-oled-data; rm -rf "$TO"; cp -r "$FX/data" "$TO"; echo "setup 2" > "$TO/setup-done"
+[ ! -f "$TO/settings.conf" ] || sed -i '/^theme *=/d' "$TO/settings.conf"
+BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+"$HERE/banana-ui" --headless "$OUT/thor-oled-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+    --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel" \
+    2> "$OUT/thor-oled.log" || { echo "FAIL thor-oled: banana-ui exited $?"; fail=1; }
+grep -qx 'theme = user:thor-oled' "$TO/settings.conf" || { echo "FAIL thor-oled: the Thor's settings.conf has $(grep '^theme' "$TO/settings.conf")"; fail=1; }
+grep -q 'theme' "$OUT/thor-oled.log" && { echo "FAIL thor-oled: $(grep -m2 theme "$OUT/thor-oled.log")"; fail=1; }
+grep -q 'splash boot at 1390 ms' "$OUT/thor-oled.log" || { echo "FAIL thor-oled: no boot animation at the Thor's shapes ($(grep -m1 splash "$OUT/thor-oled.log"))"; fail=1; }
+if command -v identify >/dev/null; then
+    for v in home lib settings panel boot; do
+        [ "$(identify -format '%wx%h' "$OUT/thor-oled-$v-top.png" 2>/dev/null)" = 1920x1080 ] || { echo "FAIL thor-oled: $v's top isn't 1920x1080"; fail=1; }
+        [ "$(identify -format '%wx%h' "$OUT/thor-oled-$v-bot.png" 2>/dev/null)" = 1240x1080 ] || { echo "FAIL thor-oled: $v's bottom isn't 1240x1080"; fail=1; }
+    done
+    for c in "home-top 4 1075" "home-bot 4 4" "lib-top 1915 1075" "settings-bot 4 540" "panel-bot 4 540" "boot-top 4 4"; do
+        set -- $c
+        [ "$(convert "$OUT/thor-oled-$1.png" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null)" = "srgb(0,0,0)" ] ||
+            { echo "FAIL thor-oled: $1 isn't true black at $2,$3"; fail=1; }
+    done
+    for v in home-top home-bot lib-top lib-bot boot-top; do
+        awk "BEGIN { exit !($(convert "$OUT/thor-oled-$v.png" -fill white +opaque black -format '%[fx:mean]' info: 2>/dev/null || echo 0) > 0.01) }" ||
+            { echo "FAIL thor-oled: $v is (nearly) all black: not drawn"; fail=1; }
+    done
+    convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
+        awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
+fi
 # a ROCKNIX game's page (BANANA_ROCKNIX, its run line through run-rocknix): the For row, the emulator and the options
 # rocknix-options lists from es_systems.cfg / es_features.cfg; a game's emulator and ratio, then the system's emulator,
 # kept in ROCKNIX's settings as EmulationStation keeps them

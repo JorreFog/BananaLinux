@@ -32,6 +32,8 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "name": "My theme",
   "base": "dark", "accent": "#7c9cff", "colors": { ... }, "fonts": { ... },   // as a colour theme: the Settings screen
   "font": "inter",              // the default font of text elements
+  "stage": "screen",            // lay out on each screen's own size (below); default "canvas"
+  "panels": "flat",             // Settings' boxes flat with a hairline edge (below); default the Pixel look
   "vars": { "bg": "#10131c", "hi": "=accent" },          // names for values, usable in any expression
   "components": { "chip": { ...an element... } },        // reusable elements ("use": "chip")
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
@@ -51,6 +53,21 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
 
 Each screen is 480 units high and 640 wide on both handhelds. The RG DS Plus's 1024 x 768 panels scale it by 1.6,
 and text and shapes are drawn sharp at that size.
+
+### Screens of another shape (the AYN Thor)
+
+The AYN Thor's top screen is 16:9 (1920 x 1080) and its bottom one nearly square (1240 x 1080). By default a theme still
+lays out on the 640 x 480 canvas, and the canvas is placed in the middle of each screen, as large as it fits: the top
+has 107 units more on each side, the bottom 39 more above and below. Nothing is cut off there: an element can go past
+the canvas's edges into the rest of the screen. `screenX`, `screenY`, `screenW` and `screenH` are the whole screen in
+the canvas's units (on the Thor's top `-106.7, 0, 853.3, 480`), so `{ "type": "rect", "x": "=screenX", "y": "=screenY",
+"w": "=screenW", "h": "=screenH", "fill": "#000" }` fills it. On the RG DS they are the canvas, `0, 0, 640, 480`.
+
+With `"stage": "screen"` the theme lays out on each screen's own size instead: `W` and `H` are the screen's (853.3 x 480
+on the Thor's top, 640 x 557.4 on its bottom; 640 x 480 on the RG DS), and 0,0 is its top-left corner. A theme
+written with `W` and `H` (`"x": "=W / 2"`, `"y": "=H * 0.5"`, `"w": "100%"`) fills every shape. `vars` are worked out
+for each screen, so a var can read `W` and `H`. `thor-oled.json` is one: the AYN Thor starts in it (the board's default
+for `theme` in `settings.conf`, `user:thor-oled`; the RG DS keeps Dark), and it reflows on the RG DS's 4:3 panels.
 
 ## Values: literals, expressions, templates
 
@@ -78,9 +95,10 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | name | |
 |---|---|
 | `view` | `"home"`, `"library"` or `"launch"` |
-| `W`, `H`, `screen` | the screen's size in units (640 x 480), 0 for the top screen and 1 for the bottom one |
+| `W`, `H`, `screen` | the screen's size in units (640 x 480; with `"stage": "screen"` its own), 0 for the top screen and 1 for the bottom one |
+| `screenX`, `screenY`, `screenW`, `screenH` | the whole screen in the layout's units: past the canvas on a screen of another shape (above) |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
-| `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
+| `clock`, `date`, `day` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"`, `"Thu"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
 | `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's) |
@@ -191,5 +209,11 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
 - Masks other than rounded corners.
 - Dragging a list with a finger (a tap selects).
 - Lists of other things than systems, games and hints (achievements, the settings).
-- Settings and the keyboard keep their own look (the theme's `colors`, `accent` and `fonts` still apply to them).
+- Settings and the keyboard keep their own look (the theme's `colors`, `accent` and `fonts` still apply to them, and
+  `"panels": "flat"` makes their boxes flat: the surface's colour `panelBody` (`bubbleBody` for the bubbles), a
+  hairline edge in `edge` (`line` for the bubbles, the accent's on the one that's on), a light line along the top in
+  `panelBand` and a darker one along the bottom in `panelLow`; the picked row in the accent, `onPick` on it; the
+  screens `screenBg` with the dots only when `background.dither` isn't false).
+- Glow is a box's `shadow` with no fill (a blur round its shape, in the shadow's colour), not a blur of pictures:
+  pictures and text don't glow, and nothing behind an element is blurred.
 - 3D: the Carts theme's rendered cartridges aren't available as an element.

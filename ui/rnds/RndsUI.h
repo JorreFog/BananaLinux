@@ -162,6 +162,9 @@ namespace rnds
 		std::map<std::string, std::string> icons;	// system id -> .png
 		std::map<std::string, std::string> sounds;	// scroll, select, back, fav, ready, insert -> .wav, or "off"
 		bool dither = true;							// the screens' dot pattern
+		// Settings' panels: "" the Pixel look (banded, thick outlines, hard shadows), "flat" flat ones with a hairline
+		// edge and a highlight along the top (the Thor OLED theme: lit surfaces on true black)
+		std::string panels;
 	};
 	extern ThemeFiles themeFiles;
 	bool themeColor(const char* name, Color& c);	// c replaced by the theme's colour of that name: true

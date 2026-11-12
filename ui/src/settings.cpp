@@ -275,7 +275,7 @@ namespace banana
 			for (uint32_t c : { a.base, a.light, a.dark, a.band, a.low }) look += "|" + std::to_string(c);
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
-			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + "|" + f.panels;
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
@@ -2006,6 +2006,33 @@ namespace banana
 					c.bg = Color::hex(kind == "hero" ? 0x191a1f : 0x1f2126);
 					c.border = hair;
 					c.borderColor = on ? p.pick : Color(1, 1, 1, kind == "osd" ? 0.5f : 0.08f);
+				}
+				st = c;
+			}
+			else if (rnds::themeFiles.panels == "flat" && kind != "osd")
+			{
+				// a theme's flat panels: the surface's colour, a hairline edge (the accent's on the one that's on), a
+				// thin light along the top edge and a darker one along the bottom, no bands, dither or hard shadow;
+				// the picked one in the accent, lit along its top. Corners by size: a tile's round (34 px of a 1080-line
+				// screen), a row's tighter (22)
+				rnds::BoxStyle c;
+				float hair = std::max(1.0f, std::round(s));
+				float corner = X(h >= 60 ? 16 : 11);
+				if (kind == "screen") { c.bg = p.screenBg; c.dither = rnds::themeFiles.dither; c.ditherScale = s; c.ditherA = p.ditherA; c.ditherB = p.ditherB; }
+				else if (kind == "kbd") { c.radius = X(6); c.bg = p.kbdBg; }
+				else if (kind == "pick")
+				{
+					c.radius = corner; c.bg = p.pick;
+					c.shadows = { inset(0, 2 * hair, 0, Color(1, 1, 1, 0.4f)), inset(0, -X(3), 0, p.pickLow) };
+				}
+				else
+				{
+					bool bubble = kind == "bubble";
+					c.radius = kind == "face" ? X(10) : corner;
+					c.bg = bubble ? p.bubbleBody : p.panelBody;
+					c.border = hair;
+					c.borderColor = on ? p.pick : bubble ? p.line : p.edge;
+					c.shadows = { inset(0, hair, 0, bubble ? p.bubbleBand : p.panelBand), inset(0, -hair, 0, bubble ? p.bubbleLow : p.panelLow) };
 				}
 				st = c;
 			}

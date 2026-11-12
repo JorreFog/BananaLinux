@@ -1043,7 +1043,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!loaded)
 			{
 				Splash sp;
-				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h) || !ar.load(o.splash, o.w, o.h)) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf") || !ar.load(o.splash, o.w, o.h)) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
 				ar.setStart(be.pixels(0), be.pixels(1));
 				settings.renderCard("Welcome to", "", 174, 26);
@@ -1424,7 +1424,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> name >> t >> ready;
 			static Splash sp;
 			static bool loaded = false;
-			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf"))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 			sp.draw(be.canvas(0), be.canvas(1), t, ready != 0);
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
@@ -1436,7 +1436,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> name >> t;
 			static Splash sp;
 			static bool loaded = false;
-			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf"))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 			sp.onCue = [](const std::string& n) { logf("outro cue %s", n.c_str()); };
 			sp.drawOutro(be.canvas(0), be.canvas(1), t);
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
@@ -1575,7 +1575,7 @@ static Splash gSplash;
 static void playSplash(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, bool on,
 	std::atomic<bool>& ready, Sound& sound, int sig)
 {
-	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height()))
+	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height(), o.assets + "/fonts/PixelifySans-Regular.ttf"))
 	{
 		while (!ready) usleep(2000);
 		return;
@@ -1684,12 +1684,27 @@ struct Iris
 	}
 };
 
+static void fadeSteps(Display& disp, SoftBackend& be, const std::vector<uint32_t>* pic, int from, int to, double ms);
+
 // the splash hands over to the menu through the iris: closing over the splash's last frame to black, holding, then
 // opening on the menu
 static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 {
 	if (!gSplash.played()) return;
 	Iris iris(disp, be);
+	if (be.staged(0) || be.staged(1))
+	{
+		// screens of another shape than the canvas (the AYN Thor's): the screens' pixels aren't the canvas's for the
+		// iris, so the OLED boot fades to black over 300 ms and the menu comes in on the black (its first frame drawn
+		// meanwhile, as below)
+		std::vector<uint32_t> last[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
+		gSplash.draw(last[0].data(), last[1].data(), Splash::INTRO_END, true);
+		ui.update(nowMs());
+		ui.finishWork();
+		fadeSteps(disp, be, last, 4, 0, 300);
+		be.invalidate();
+		return;
+	}
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 	// the menu's first frame drawn now, before the circle closes (its first draw takes ~130 ms: the glyphs and boxes
 	// made; with the splash's last frame still and on screen that wait doesn't show), the splash's put back
@@ -1869,14 +1884,19 @@ static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv
 static void playOutro(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, Sound& sound)
 {
 	Splash sp;
-	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
+	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height(), o.assets + "/fonts/PixelifySans-Regular.ttf")) return;
 	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
 	Iris iris(disp, be);
-	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
-	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
-	sp.drawOutro(first[0].data(), first[1].data(), 0);
-	iris.close(was, 280);
-	iris.open(first, nowMs() + Iris::HOLD, 300);
+	// (screens of another shape than the canvas (the AYN Thor's): their pixels aren't the canvas's, so no iris over
+	// them; the OLED boot's shutdown starts from black)
+	if (!be.staged(0) && !be.staged(1))
+	{
+		std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
+		std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
+		sp.drawOutro(first[0].data(), first[1].data(), 0);
+		iris.close(was, 280);
+		iris.open(first, nowMs() + Iris::HOLD, 300);
+	}
 	const double t0 = nowMs();
 	for (;;)
 	{

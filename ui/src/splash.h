@@ -7,6 +7,9 @@
 // The shutdown plays it backwards (drawOutro): the power light out, the cartridge ejected and lifted away, BANANAOS
 // typed out from its end, the bunch hopping and falling off, then both panels switching off like a CRT (the picture
 // squeezed to a line, the line to a dot, black).
+// A screen shape the pictures aren't made for (the AYN Thor's: the canvas is 1440x1080) gets the OLED boot instead,
+// drawn here on true black: the bunch popping in with a glow and rings of light pulsing out of it, BANANA OS rising
+// letter by letter in the accent, a thin accent line filling under it; AYN THOR small on the bottom screen.
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -17,8 +20,9 @@ namespace banana
 	class Splash
 	{
 	public:
-		// dir: the splash assets; banana: the pixel bunch (assets/banana/banana-48.png); variant: dark or light
-		bool load(const std::string& dir, const std::string& banana, const std::string& variant, int w, int h);
+		// dir: the splash assets; banana: the pixel bunch (assets/banana/banana-48.png); variant: dark or light; font:
+		// Pixelify Sans (the OLED boot's bottom line; without it that line isn't drawn)
+		bool load(const std::string& dir, const std::string& banana, const std::string& variant, int w, int h, const std::string& font = "");
 		// both screens at t ms after the start; ready: the menu is ready to take over (stops the waiting loop)
 		void draw(uint32_t* top, uint32_t* bot, double t, bool ready);
 		// the intro has played to its end and the menu is ready: time to hand over
@@ -38,10 +42,20 @@ namespace banana
 		int W = 0, H = 0, K = 2, KW = 6, KL = 2;	// device px per sprite pixel: the bunch, the word, LOADING
 		float s = 1;
 		bool light = false, cued = false, ejected = false;
+		bool oled = false;		// the OLED boot (no pictures for this size)
 		std::vector<uint32_t> bgTop, bgBot, tmp;
 		Rgba cart, lip, bunch;
 		Mask word, loading;
 		uint32_t ink = 0, muted = 0;
+		Mask device;			// the OLED boot's "AYN THOR" (coverage, a byte a pixel)
+
+		bool loadOled(const std::string& dir, const std::string& banana, const std::string& font);
+		void drawOled(uint32_t* top, uint32_t* bot, double t);
+		void drawOledOutro(uint32_t* top, uint32_t* bot, double t);
+		void oledTop(uint32_t* top, double logoScale, double logoAlpha, int letters, double letterT, double letterOut, double bar, double t, bool rings);
+		void drawBunchAt(uint32_t* d, float cx, float cy, float k, double alpha) const;
+		void glow(uint32_t* d, float cx, float cy, float r, uint32_t colour, float strength) const;
+		void ring(uint32_t* d, float cx, float cy, float r, float th, uint32_t colour, float alpha) const;
 
 		int X(float v) const;
 		void drawBunch(uint32_t* d, int x, int y, double shine) const;
