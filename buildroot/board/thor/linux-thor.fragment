@@ -8,6 +8,10 @@ CONFIG_EXPERT=y
 # OpenABL starts the kernel as an EFI application (the EFI stub), with the device tree it was given
 CONFIG_EFI=y
 CONFIG_EFI_STUB=y
+# (the plain Image is what boots, as on ROCKNIX, whose build makes that one target. Buildroot makes the kernel's default
+# targets first, and with the compressed EFI image on, that default is vmlinuz.efi, whose rule needs hexdump on the
+# build machine: the build stopped there on one without it)
+# CONFIG_EFI_ZBOOT is not set
 # the display: the msm DRM driver (DPU, both DSI hosts) and the two AMOLED panels built in: the menu draws on them
 # straight from rcS (ROCKNIX's 0057 patches add the panel drivers)
 CONFIG_DRM_MSM=y
