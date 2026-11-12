@@ -12,8 +12,10 @@ LIBRETRO_DOSBOX_PURE_SITE = $(call github,schellingb,dosbox-pure,$(LIBRETRO_DOSB
 LIBRETRO_DOSBOX_PURE_LICENSE = GPL-2.0+
 LIBRETRO_DOSBOX_PURE_LICENSE_FILES = LICENSE
 
+# (STRIP: its Makefile strips the core itself, with the build machine's strip unless told the target's)
 define LIBRETRO_DOSBOX_PURE_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) platform=unix CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)"
+	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) platform=unix CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" AR="$(TARGET_AR)" \
+		STRIP="$(TARGET_STRIP)"
 endef
 
 define LIBRETRO_DOSBOX_PURE_INSTALL_TARGET_CMDS
