@@ -1158,7 +1158,8 @@ printf '#: language = Test\n#: translated-by = nobody\nmenu\t\tPeel %%s\tZZ %%s\
 for l in en xx; do
     "$HERE/tests/fixture.sh" "$VX/fx-$l" >/dev/null
     printf 'language = %s\n' $l >> "$VX/fx-$l/data/settings.conf"
-    vrun() { BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
+    # (one fixed time for both languages' runs: a minute turning between them changed the clock in the status bar)
+    vrun() { BANANA_NOW=1767225600 BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
         "$HERE/banana-ui" --headless "$VX/$l-" --size 640x480 --assets "$VX/assets/rnds" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$VX/fx-$l/roms" --data "$VX/fx-$l/data" "$@" 2>> "$VX/$l.log" ||
         { echo "FAIL: banana-ui (verbatim, $l) exited $?"; fail=1; }; }

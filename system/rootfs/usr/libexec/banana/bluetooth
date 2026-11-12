@@ -20,7 +20,7 @@
 # default device at them (/run/banana/asound.conf), and back at the speakers or the jack when it goes. While
 # /run/banana/bt/hold is there (headphones being called back after a wake, or a codec change) and they aren't yet,
 # bananad plays nowhere audible instead (the codec, its speaker amplifier off): a game waits quietly, at its pace.
-RUN=/run/banana
+RUN=${BANANA_RUN:-/run/banana}
 # a board whose sound is a server (hw.conf's HW_SOUND=pipewire: the AYN Thor): PipeWire's BlueZ plugin is the headphones'
 # A2DP source and routes to them itself, so no bluez-alsa here, and the D-Bus system bus is rcS's (PipeWire's too)
 [ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
@@ -30,14 +30,14 @@ PW=; [ "$HW_SOUND" = pipewire ] && PW=1
 # them; the devices, pairing and connecting below are the same
 SD=; [ "$HW_SERVICES" = systemd ] && SD=1
 setting() { [ -r /etc/profile.d/001-functions ] && ( . /etc/profile.d/001-functions; set_setting "$@" ) >/dev/null 2>&1; }
-STORE=/data/banana/bluetooth.tar
-LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
+STORE=${BANANA_DATA:-/data/banana}/bluetooth.tar
+LAST=${BANANA_DATA:-/data/banana}/bluetooth-audio	# the headphones played last: called back after a wake or a boot
 HOLD=$RUN/bt/hold
 WOKE=$RUN/bt-woke	# down sleep: "speakers" when no headphones were playing as the sleep began
 # the same for the next boot, on the card: every plain down (rcK's at a shutdown, Settings turning Bluetooth off)
 # writes "speakers" or "headphones" (playing, or held for them through a sleep), so the boot's call back holds the
 # sound only when headphones were what played. Without it (the first boot, a battery pulled): held, as before
-WOKE_KEPT=/data/banana/bt-woke
+WOKE_KEPT=${BANANA_DATA:-/data/banana}/bt-woke
 # (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
 CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
@@ -82,7 +82,7 @@ save() {
 bluealsa_start() {
     have=$(bluealsa --help 2>&1 | sed -n 's/^[[:space:]]*a2dp-source:[[:space:]]*//p' | tr ',' ' ')
     codec() { for c in $have; do [ "$(echo $c | tr A-Z a-z)" = "$(echo $1 | tr A-Z a-z)" ] && echo "-c $c"; done; }
-    mode=$(sed -n 's/^[[:space:]]*bt_audio[[:space:]]*=[[:space:]]*//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    mode=$(sed -n 's/^[[:space:]]*bt_audio[[:space:]]*=[[:space:]]*//p' ${BANANA_DATA:-/data/banana}/settings.conf 2>/dev/null | tail -n 1)
     if [ "$mode" = quality ]; then
         args="$(codec LDAC) $(codec aptX-HD) $(codec aptX) --sbc-quality=xq"
         case " $have " in *" LDAC "*) args="$args --ldac-abr --ldac-quality=standard" ;; esac

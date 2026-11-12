@@ -18,10 +18,11 @@ policy 0 307200 1094400 1497600 2016000
 policy 3 499200 1209600 1900800 2803200
 policy 7 595200 1440000 2208000 3187200
 mkdir -p "$T/devfreq/3d00000.gpu"; : > "$T/devfreq/3d00000.gpu/governor"
-run() { env BANANA_CPUFREQ="$T/cpufreq" BANANA_DEVFREQ="$T/devfreq" sh "$BP" "$1"; }
+run() { env BANANA_CPUFREQ="$T/cpufreq" BANANA_DEVFREQ="$T/devfreq" BANANA_RUN="$T/run" sh "$BP" "$1"; }
 v() { cat "$T/cpufreq/policy$1/$2"; }
 run performance
 for p in 0 3 7; do [ "$(v $p scaling_governor)" = performance ] || bad "performance: policy$p's governor $(v $p scaling_governor)"; done
+[ "$(cat "$T/run/perf" 2>/dev/null)" = "performance performance" ] || bad "performance: run-rocknix not told ($(cat "$T/run/perf" 2>/dev/null))"
 [ "$(v 7 scaling_max_freq)" = 3187200 ] || bad "performance: policy7's max"
 [ "$(cat "$T/devfreq/3d00000.gpu/governor")" = performance ] || bad "performance: the GPU"
 run powersave

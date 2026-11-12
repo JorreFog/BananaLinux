@@ -987,9 +987,17 @@ namespace banana
 		return r;
 	}
 
+	// the clock's time: now, or BANANA_NOW's (seconds since 1970) for the tests that compare two runs' pictures (a minute
+	// turning between them changed the status bar)
+	static time_t clockNow()
+	{
+		const char* n = getenv("BANANA_NOW");
+		return n && *n ? (time_t)atoll(n) : time(nullptr);
+	}
+
 	std::string Library::clockText()
 	{
-		time_t now = time(nullptr);
+		time_t now = clockNow();
 		struct tm t;
 		localtime_r(&now, &t);
 		char b[16];
@@ -999,7 +1007,7 @@ namespace banana
 
 	std::string Library::dateText()
 	{
-		time_t now = time(nullptr);
+		time_t now = clockNow();
 		struct tm t;
 		localtime_r(&now, &t);
 		char b[16];

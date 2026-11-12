@@ -46,8 +46,8 @@ if [ $# -gt 2 ]; then
     done
     case $mode in ui) gpu powersave ;; performance) gpu performance ;; *) gpu simple_ondemand ;; esac
     # (what run-rocknix tells ROCKNIX's runemu.sh: its governor and GPU level for the game)
-    mkdir -p /run/banana 2>/dev/null
-    case $mode in performance|superdrastic) echo "performance performance" ;; ui) ;; *) echo "schedutil auto" ;; esac > /run/banana/perf 2>/dev/null
+    mkdir -p "${BANANA_RUN:-/run/banana}" 2>/dev/null
+    case $mode in performance|superdrastic) echo "performance performance" ;; ui) ;; *) echo "schedutil auto" ;; esac > "${BANANA_RUN:-/run/banana}/perf" 2>/dev/null
     exit 0
 fi
 CPU=/sys/devices/system/cpu/cpufreq/policy0

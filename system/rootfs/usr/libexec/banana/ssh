@@ -3,8 +3,8 @@
 # in banana/ssh/authorized_keys on the card and no passwords. The keys are copied to /run (dropbear wants them
 # readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is made once per card.
 #   ssh up | down
-D=/data/banana/ssh
-R=/run/banana/ssh
+D=${BANANA_DATA:-/data/banana}/ssh
+R=${BANANA_RUN:-/run/banana}/ssh
 # a system whose services own SSH (hw.conf's HW_SERVICES=systemd: ROCKNIX, where the menu is the frontend): its sshd,
 # its own setting, and the card's keys as root's (/storage/.ssh on ROCKNIX)
 [ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
@@ -23,18 +23,18 @@ if [ "$HW_SERVICES" = systemd ]; then
 fi
 case $1 in
 up)
-    [ -f /run/banana/dropbear.pid ] && kill -0 $(cat /run/banana/dropbear.pid) 2>/dev/null && exit 0
+    [ -f ${BANANA_RUN:-/run/banana}/dropbear.pid ] && kill -0 $(cat ${BANANA_RUN:-/run/banana}/dropbear.pid) 2>/dev/null && exit 0
     mkdir -p $D $R
     chmod 700 $R
     [ -f $D/authorized_keys ] || printf '# public keys (one per line) that may log in as root over SSH\n' > $D/authorized_keys
     cp $D/authorized_keys $R/authorized_keys
     chmod 600 $R/authorized_keys
     [ -s $D/host_key_ed25519 ] || dropbearkey -t ed25519 -f $D/host_key_ed25519 >/dev/null 2>&1 || exit 1
-    dropbear -s -r $D/host_key_ed25519 -P /run/banana/dropbear.pid
+    dropbear -s -r $D/host_key_ed25519 -P ${BANANA_RUN:-/run/banana}/dropbear.pid
     ;;
 down)
-    [ -f /run/banana/dropbear.pid ] && kill $(cat /run/banana/dropbear.pid) 2>/dev/null
-    rm -f /run/banana/dropbear.pid
+    [ -f ${BANANA_RUN:-/run/banana}/dropbear.pid ] && kill $(cat ${BANANA_RUN:-/run/banana}/dropbear.pid) 2>/dev/null
+    rm -f ${BANANA_RUN:-/run/banana}/dropbear.pid
     ;;
 *) echo "usage: ssh up|down" >&2; exit 1 ;;
 esac

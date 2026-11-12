@@ -9,12 +9,12 @@
 # one run at a time (Settings starts it on every change, sd2 when a card goes in or out): a down landing after another
 # run's up left the share off, or with the wrong login; restart's own down and up inherit the lock. -o: the server up
 # starts doesn't get the lock's descriptor (it kept the lock for as long as it ran, and every later run waited forever)
-[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock -o /run/banana/share.lock "$0" "$@"
+[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock -o ${BANANA_RUN:-/run/banana}/share.lock "$0" "$@"
 export SHARE_LOCKED
-CONF=/run/banana/ksmbd.conf
-DB=/run/banana/ksmbdpwd.db
+CONF=${BANANA_RUN:-/run/banana}/ksmbd.conf
+DB=${BANANA_RUN:-/run/banana}/ksmbdpwd.db
 # a value from accounts.conf as Settings reads it (spaces around the key and the value, quotes, the last line)
-acct() { sed -n "s/^[ \t]*$1[ \t]*=[ \t]*//p" /data/banana/accounts.conf 2>/dev/null | tail -n 1 | sed 's/[ \t\r]*$//; s/^"\(.*\)"$/\1/'; }
+acct() { sed -n "s/^[ \t]*$1[ \t]*=[ \t]*//p" ${BANANA_DATA:-/data/banana}/accounts.conf 2>/dev/null | tail -n 1 | sed 's/[ \t\r]*$//; s/^"\(.*\)"$/\1/'; }
 # a system whose services own file sharing (hw.conf's HW_SERVICES=systemd: ROCKNIX): its Samba (smbd, nmbd) with its own
 # shares and login, switched by its own setting
 [ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
@@ -66,7 +66,7 @@ CONF
     if grep -q ' /run/sd2 ' /proc/mounts; then
         sed -n '/^\[banana\]/,$p' $CONF | sed 's/^\[banana\]/[sd2]/; s|^\tcomment = .*|\tcomment = The second SD card|; s|^\tpath = /data|\tpath = /run/sd2|' >> $CONF
     fi
-    login=$(sed -n 's/^ *share_login *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    login=$(sed -n 's/^ *share_login *= *//p' ${BANANA_DATA:-/data/banana}/settings.conf 2>/dev/null | tail -n 1)
     (umask 077; : > $DB)
     if [ "$login" = guest ]; then
         sed -i 's/MAPGUEST/bad user/; s/GUESTOK/yes/; /VALIDUSERS/d' $CONF
