@@ -95,6 +95,34 @@ menu are drawn by the engine, not from `screens`. A theme still decides how they
 | `header` | `"rule"`: a page's title over a hairline instead of in a box |
 | `bodyFont` | the help texts' font: `inter`, `inter-medium`, `inter-semibold` or a `.ttf` beside the theme (default: `fonts.regular`) |
 
+| `layout` | `"screen"`: the pages laid out on each screen's own shape instead of in the 4:3 canvas (the AYN Thor's screens). Bottom screen: the page from edge to edge with 64 px margins (of a 1080-line screen), its title at the top, the button hints at the foot, seven rows of 96 px in a Settings list, the groups and the game panel's tiles as a grid; a touch anywhere on the screen counts. Top screen: a crumb, the title large (96 px, smaller when it is long) and the help under it, from `left` |
+| `glyphs` | a folder beside the theme with line icons, `<name>-32.png` for a row and `<name>-88.png` for a tile (white on transparent; they are tinted): `save load menu fast quit keys` for the game panel, `sun speaker palette drop motion clock globe wifi info user trophy cloud text toggle sliders open bolt power` for rows, `next prev` for the chevrons |
+
+`"panels": "material"` is Thor OLED's look for all of these pages: every surface one dark gradient with a 2 px lit line
+along its top edge and a hairline inside it (cards also carry a dot texture), a picked row a lighter surface in a 4 px
+ring of the accent with its icon on the accent's plate, a picked tile or dialog button the plate itself, the button
+hints 72 px pills whose keys are shaped like the buttons (round for A B X Y with a 5 x 7 pixel letter, a shoulder for
+L R, a box with the word for Start and Select; the main action's key on the plate), switches for on/off rows, a
+five-bar meter for levels, a 12 px bar for the quick menu's sliders, the keyboard's keys as tiles. Names, titles and
+numbers stay in the theme's pixel face; labels, values and hints are Inter in sentence case. Its colours are `colors`
+entries (all optional; Thor OLED's are the defaults):
+
+| `colors.` | |
+|---|---|
+| `matTop` `matMid` `matLow` | the surface's gradient (top, 70 %, bottom); `selTop` `selLow` a picked row's |
+| `lit` `litLow` | the line along a surface's top edge, and one along its bottom (none by default) |
+| `hair` `hair2` `tileEdge` | the hairline inside rows and cards, the stronger one (switch, swatch), a tile's |
+| `ink2` `dim` | secondary and tertiary text |
+| `surface` `raised` `raised2` | flat steps: a switch's track, a meter's dark bars, the wide keys, a scrub's track |
+| `iconTop` `iconLow` `iconInk` | a row's icon tile and its icon (default `raised2`, `ink2`) |
+| `plateTop` `plateMid` `plateLow` `plateInk` `plateLit` `plateLip` | the plate: by default the accent mixed in OKLab with white (18 %) and black (14 %), its text the accent at 12 %; a theme with a fixed plate (a white key cap) gives them |
+| `stateTop` `stateMid` `stateLow` `stateInk` | what says "on" (a switch, a bar's fill, the main hint's key): the plate unless given |
+| `ring` | the focus ring, chevrons, scrub thumb and accent dot (default: the accent) |
+| `keyTop` `keyLow` `keyInk` `keyLip` `keyLit` | a hint's key: gradient, letter, the lip inside its bottom, a line along its top |
+| `keyA` `keyB` `keyX` `keyY` (+ `keyAInk` ...) | a face button's own colour (it wins over the main action's plate) |
+| `danger` `dangerTop` `dangerLow` `dangerText` `dangerInk` | Quit: its text, and its tile when pressed |
+| `fav` `favTop` `ok` `dots` `track` `knobTop` `qrGround` | the pink, the green, the cards' dots, a bar's track, a switch's dark knob, the ground of the Steam sign-in code |
+
 `screens.settings` (a layout theme's) is drawn over each screen's background under those pages: `thor-oled.json`
 puts its status bar there, so Settings and the setup have the same header as the shelf.
 

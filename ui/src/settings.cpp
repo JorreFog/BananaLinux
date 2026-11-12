@@ -3020,6 +3020,7 @@ namespace banana
 			else drawSteamQr(HELP_X, HELP_TOP);
 		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
+		if (crumbs && (cur.key == "theme" || cur.key == "accent")) listExtras(cur);
 		be->endScreen();
 
 		// ---- bottom: the list ----
@@ -5782,15 +5783,22 @@ namespace banana
 		};
 		const std::string Q = "Change the menu's language?", N = "No, keep it", Y = "Yes, change it";
 
+		// (the material look: a card in the middle of the screen, whatever the pages' column)
+		const bool mat = material();
+		const float left0 = shift.left;
+		if (mat) shift.left = -1;
 		be->beginScreen(0);
+		shift.bodyDy = 0;
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
+		if (mat) box("card", false, 70, 84, 500, 332);
 		centred(here(Q), true, 26, 120, p.ink);
 		centred(there(Q), true, 26, 168, p.ink);
-		centred(fromName + "  >  " + toName, true, 24, 250, p.accent);
+		centred(fromName + "  >  " + toName, true, 24, 250, mat ? p.ink : p.accent);
 		centred(here("The menu starts again in the new language."), false, 18, 330, p.muted);
 		centred(there("The menu starts again in the new language."), false, 18, 360, p.muted);
 		be->endScreen();
+		shift.left = left0;
 
 		askButtons(toName, here(N), there(N), here(Y), there(Y), langYes);
 	}
@@ -5813,10 +5821,12 @@ namespace banana
 		{
 			bool on = yes == (b == 1);
 			float y = 150 + b * 96;
-			box(on ? "pick" : "slot", on, 60, y, 520, 80);
+			if (material()) box(on ? "plate" : "tileM", on, 60, y, 520, 80);	// (the one picked on the plate)
+			else box(on ? "pick" : "slot", on, 60, y, 520, 80);
 			const std::string& t1 = b ? yes1 : no1;
 			const std::string& t2 = b ? yes2 : no2;
 			Color c = on ? p.onPick : p.ink;
+			if (material() && on) c = mcol("plateInk");
 			if (t2.empty()) centred(t1, true, 22, y + 28, c);
 			else { centred(t1, true, 22, y + 12, c); centred(t2, true, 22, y + 44, c); }
 		}

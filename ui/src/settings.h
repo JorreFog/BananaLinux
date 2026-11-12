@@ -716,6 +716,7 @@ namespace banana
 		// for a level, the accent's dot), chevrons either side of it on the picked row
 		void listRow(const Item& it, float y, float h, bool on, const std::string& value, bool arrows, bool armedNow);
 		std::string rowGlyph(const Item& it) const;
+		void listExtras(const Item& it);	// the top screen's swatches (Theme) and caps (Accent colour)
 		int iconPx = 0;		// (iconCentred: screen px an icon pixel, when a page says)
 		float crumbEnd = 0;		// (the top screen's header: where the crumb ended, for the value after it)
 		float px(float v) const { return v * shift.px() / (s * shift.rk()); }	// design px (of 1080 lines) in the page's units

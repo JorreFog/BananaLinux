@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 // banana-ui: Settings in a theme's "material" look ("panels": "material"; Thor OLED's): every surface one dark gradient
 // with a lit line along its top edge and a hairline inside it, the selection on the accent's plate (tiles) or in an
@@ -224,6 +226,21 @@ namespace banana
 			else if (style == "raised") { radius(12); m.stops = { { 0, mcol("raised2") } }; m.lit = 2 * q; m.litC = mcol("lit"); }
 			else if (style == "kbkey") { radius(14); mat(); m.ring = 2 * q; m.ringC = mcol("hair"); }
 			else if (style == "kbkeyOn") { radius(14); plate("plateTop", "plateMid", "plateLow", 0.38f); m.low = 4 * q; }
+			else if (style.compare(0, 3, "sw#") == 0 || style.compare(0, 4, "cap#") == 0)
+			{
+				// a swatch of the palette (flat, a hairline ring) or an accent's cap (round, lit as the plate)
+				const bool cap = style[0] == 'c';
+				const Color c = Color::hex((uint32_t)strtoul(style.c_str() + (cap ? 4 : 3), nullptr, 16));
+				if (cap)
+				{
+					radius(1000);
+					m.stops = { { 0, oklabMix(c, 0.82f, Color(1, 1, 1)) }, { 0.4f, c }, { 1, oklabMix(c, 0.86f, Color(0, 0, 0)) } };
+					m.lit = 3 * q; m.litC = Color(1, 1, 1, 0.4f); m.low = 6 * q; m.lowC = Color(0, 0, 0, 0.2f);
+				}
+				else { radius(32); m.stops = { { 0, c } }; m.ring = 2 * q; m.ringC = mcol("hair2"); }
+			}
+			else if (style == "capring") { radius(1000); m.stops = { { 0, mcol("ink") } }; }
+			else if (style == "caphole") { radius(1000); m.stops = { { 0, pal(light).screenBg } }; }
 			else if (style == "qr") { radius(32); m.stops = { { 0, mcol("qrGround") } }; }
 			else if (style == "black") { radius(16); m.stops = { { 0, Color(0, 0, 0) } }; m.ring = 2 * q; m.ringC = mcol("hair2"); }
 			else { radius(24); mat(); }
@@ -497,5 +514,40 @@ namespace banana
 			}
 		}
 		textFit(it.label, true, z / 0.92f, lx, tyText, vleft - px(24) - lx, p.ink, on);
+	}
+
+	// the top screen under the help: the Theme row's palette as six swatches, the Accent colour row's choices as round
+	// caps, the one in use ringed
+	void Settings::listExtras(const Item& it)
+	{
+		SPal p = pal(light);
+		auto hex = [](const Color& c) { char b[16]; snprintf(b, sizeof b, "%02x%02x%02x", (int)std::lround(c.r * 255), (int)std::lround(c.g * 255), (int)std::lround(c.b * 255)); return std::string(b); };
+		const float y = px(720) - shift.bodyDy / s, z = px(28);
+		if (it.key == "theme")
+		{
+			const struct { const char* name; Color c; } S[] = { { "Background", p.screenBg }, { "Surface", mcol("surface") }, { "Raised", mcol("raised") },
+				{ "Selected", mcol("raised2") }, { "Text", p.ink }, { "Accent", mcol("ring") } };
+			for (int i = 0; i < 6; i++)
+			{
+				const float x = HELP_X + i * px(192);
+				mpaint("sw#" + hex(S[i].c), x, y, px(160), px(160));
+				textWith(S[i].name, IR, "|ir", z, x, y + px(176), mcol("dim"));
+			}
+			return;
+		}
+		const rnds::Accent keepA = rnds::accent;
+		float x = HELP_X;
+		for (int i = 0; i < (int)it.values.size() && i < 8; i++)
+		{
+			if (!rnds::setAccent(it.values[i])) { rnds::setAccent(keepA); continue; }
+			const Color c = Color::hex(rnds::accent.base);
+			rnds::setAccent(keepA);
+			const bool cur = i == it.at;
+			const float nw = textWith(it.names[i], IR, "|ir", z, 0, 0, p.ink, false, 0, true), cell = std::max(px(96), nw);
+			if (cur) { mpaint("capring", x + cell / 2 - px(60), y - px(12), px(120), px(120)); mpaint("caphole", x + cell / 2 - px(56), y - px(8), px(112), px(112)); }
+			mpaint("cap#" + hex(c), x + cell / 2 - px(48), y, px(96), px(96));
+			textWith(it.names[i], IR, "|ir", z, x + cell / 2 - nw / 2, y + px(120), cur ? p.ink : mcol("dim"));
+			x += cell + px(32);
+		}
 	}
 }
