@@ -440,7 +440,8 @@ namespace banana
 	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
-	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
+	// (listed: a row only where the systems list has the system, started by run-retroarch: the AYN Thor's systems)
+	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; bool listed = false; } RA_SYSTEMS[] = {
 		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
 		{ "gb", "Game Boy", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
@@ -452,10 +453,47 @@ namespace banana
 		{ "zxspectrum", "ZX Spectrum", { { "fuse", "Fuse" } } },
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
+		{ "saturn", "Saturn", { { "yabasanshiro", "YabaSanshiro" }, { "mednafen_saturn", "Beetle Saturn" } }, true },
+		{ "mastersystem", "Master System", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "gamegear", "Game Gear", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "segacd", "Mega-CD", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "arcade", "Arcade", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" } }, true },
+		{ "neogeo", "Neo Geo", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" } }, true },
+		{ "amstradcpc", "Amstrad CPC", { { "crocods", "CrocoDS" }, { "cap32", "Caprice32" } }, true },
 	};
+	// the core the systems list starts a system with ("run = .../run-retroarch <core> %ROM%"), "" when it has no such
+	// system: what runs while Settings' own choice (core.<system>) isn't made
+	static std::string g_systemsList;
+	void Settings::useSystemsList(const std::string& path) { g_systemsList = path; }
+	static std::string systemsCore(const std::string& systemsConf, const std::string& id)
+	{
+		std::string out;
+		for (const std::string& path : { systemsConf, g_systemsList, std::string("/run/banana/systems.conf"), std::string("/etc/banana/systems.conf") })
+		{
+			if (path.empty()) continue;
+			std::ifstream f(path);
+			if (!f) continue;
+			std::string ln;
+			bool in = false;
+			while (std::getline(f, ln))
+			{
+				size_t a = ln.find_first_not_of(" \t");
+				if (a == std::string::npos || ln[a] == '#') continue;
+				if (ln[a] == '[') { in = ln.compare(a, id.size() + 2, "[" + id + "]") == 0; continue; }
+				size_t r = ln.find("run-retroarch ");
+				if (!in || ln.compare(a, 3, "run") != 0 || r == std::string::npos) continue;
+				std::istringstream is(ln.substr(r + 14));
+				is >> out;
+			}
+			break;	// (the first list there is: the menu's own, else the merged one, else the image's)
+		}
+		return out;
+	}
 	static bool coreInstalled(const std::string& core)
 	{
-		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
+		// (tests: BANANA_LIBRETRO, a folder standing for the image's)
+		const char* t = getenv("BANANA_LIBRETRO");
+		return access(((t ? std::string(t) : std::string("/usr/lib/libretro")) + "/" + core + "_libretro.so").c_str(), F_OK) == 0
 			|| access(("/data/retroarch/cores/" + core + "_libretro.so").c_str(), F_OK) == 0;
 	}
 	static void coreChoices(const RaSystem& sys, std::vector<std::string>& names, std::vector<std::string>& values)
@@ -814,6 +852,7 @@ namespace banana
 				std::vector<std::string> names, values;
 				coreChoices(sys, names, values);
 				if (names.size() < 2) continue;
+				if (sys.listed && systemsCore(systemsConf, sys.id).empty()) continue;
 				const char* help = std::string(sys.id) == "gba"
 					? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
 					: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
@@ -1169,6 +1208,13 @@ namespace banana
 		if (it.kind != Item::CHOICE) return;
 		// the schema's default (settings_defaults.cpp), else the row's first choice
 		std::string def = settingDefault(it.key);
+		// a system's core with no default of the schema's: the one the systems list starts it with, which is what runs
+		// while no choice is made (the AYN Thor's SwanStation for the PlayStation; this table's first is another)
+		if (def.empty() && it.key.rfind("core.", 0) == 0)
+		{
+			const std::string c = systemsCore(systemsConf, it.key.substr(5));
+			if (std::find(it.values.begin(), it.values.end(), c) != it.values.end()) def = c;
+		}
 		if (def.empty()) def = it.values[0];
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);

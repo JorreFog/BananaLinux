@@ -967,6 +967,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		return stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3) != 0;
 	};
 	ui.setHome(0);
+	Settings::useSystemsList(o.systems);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
 	settings.chrome = [&ui](int sc) { if (auto* lm = dynamic_cast<LayoutMenu*>(&ui)) lm->renderChrome("settings", sc); };
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
@@ -2520,6 +2521,7 @@ int main(int argc, char** argv)
 	Input input;
 	openInput(input, disp, be, o.touch);
 	float scale = disp.height() / 480.0f;
+	Settings::useSystemsList(o.systems);
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)

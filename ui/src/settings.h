@@ -52,6 +52,9 @@ namespace banana
 		std::function<void(int screen)> chrome;
 		// the library's systems.conf and ROM folder (Files: the card is the ROM folder's parent, the systems' folders stay put)
 		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
+		// the systems list, said before a Settings is made (its Emulators rows are made with it: which systems there are,
+		// and the core each one starts with)
+		static void useSystemsList(const std::string& path);
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		// the quick menu (the AYN Thor's Home held in a game; settings_quick.cpp): the screens' brightness, the volume, the

@@ -11,8 +11,9 @@ None of them has been compiled for aarch64 yet, and none has run on a Thor.
 ## How a game starts
 
 - **libretro cores** run in RetroArch through `run-retroarch <core> <game>`, as on the RG DS: KMS, GLES, no compositor.
-  RetroArch here has no Vulkan driver, so the cores use their GLES renderers. `core.<system>` in
-  `banana/settings.conf` picks another installed core for a system (the "other cores" in the table).
+  RetroArch here has no Vulkan driver, so the cores use their GLES renderers. Settings > Other systems > Emulators
+  picks another installed core for a system (the "other cores" in the table; `core.<system>` in
+  `banana/settings.conf`), and shows the one the systems list starts while no choice is made.
 - **Standalone emulators** each have a launcher, `/usr/libexec/banana/run-<emulator>`. The launcher:
   - copies ROCKNIX's SM8550 settings from `/usr/share/<emulator>` to `/data/<emulator>` on the first run, and leaves
     them alone after that;
