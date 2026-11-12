@@ -15,6 +15,8 @@ SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nd
 SRC += src/settings_bshare.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
+# (the Achievements page: a game's list from RetroAchievements, the game identified with rcheevos' rhash)
+SRC += src/achievements.cpp
 PKGS = freetype2 libdrm zlib
 UI_FLAGS = -Isrc
 ifeq ($(ALSA),1)
@@ -25,8 +27,20 @@ endif
 UI_FLAGS += $(shell $(PKG_CONFIG) --cflags $(PKGS))
 UI_LIBS = $(shell $(PKG_CONFIG) --libs $(PKGS))
 
-banana-ui: $(SRC) $(wildcard src/*.h src/fetch/*.h rnds/*.h)
-	$(CXX) $(CXXFLAGS) $(UI_FLAGS) $(LDFLAGS) -o $@ $(SRC) $(UI_LIBS) $(LDLIBS)
+# rcheevos' rhash (third_party/rcheevos: only its hashing): C, so built with CC, its objects linked in (no archive: the
+# host's ar may not index a cross build's objects); a folder per compiler, so a host build's objects never go into a
+# device build. Upstream code: its warnings off
+RC = third_party/rcheevos
+RC_SRC = $(wildcard $(RC)/src/rhash/*.c) $(RC)/src/rc_compat.c
+RC_DIR = rc-obj/$(notdir $(CC))
+RC_OBJ = $(patsubst $(RC)/src/%.c,$(RC_DIR)/%.o,$(RC_SRC))
+$(RC_DIR)/%.o: $(RC)/src/%.c $(wildcard $(RC)/include/*.h $(RC)/src/*.h $(RC)/src/rhash/*.h)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -O2 -I$(RC)/include -w -c -o $@ $<
+UI_FLAGS += -I$(RC)/include
+
+banana-ui: $(SRC) $(wildcard src/*.h src/fetch/*.h rnds/*.h) $(RC_OBJ)
+	$(CXX) $(CXXFLAGS) $(UI_FLAGS) $(LDFLAGS) -o $@ $(SRC) $(RC_OBJ) $(UI_LIBS) $(LDLIBS)
 
 # box art, title screens, genres and years from libretro's free collections (Settings and the first-time setup)
 banana-scrape: src/scrape.cpp
@@ -83,6 +97,12 @@ tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src
 tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/lang-raw-test.cpp src/lang.cpp -lpthread
 
+# the Achievements page's data: the systems' consoles, the replies, the card's cache, the ROM's hash, the loader's
+# states (tests/run.sh runs it)
+ACH_SRC = tests/ach-test.cpp src/achievements.cpp src/json.cpp src/zipdir.cpp
+tests/ach-test: $(ACH_SRC) src/achievements.h src/settings_curl.h $(RC_OBJ)
+	$(CXX) $(CXXFLAGS) -Isrc -I$(RC)/include -o $@ $(ACH_SRC) $(RC_OBJ) -lz -lpthread -ldl
+
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
@@ -127,7 +147,8 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
+	rm -rf rc-obj
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items tests/ach-test
 
 .PHONY: host install clean
 

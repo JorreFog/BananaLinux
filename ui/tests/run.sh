@@ -45,6 +45,9 @@ make -s -C "$HERE" tests/nds-romfile-test >/dev/null && "$HERE/tests/nds-romfile
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-test" 2> "$OUT/soft-base-test.log" || { echo "FAIL the software backend's background copy: $(grep FAIL "$OUT/soft-base-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
+# the Achievements page's data: the systems' consoles, the server's replies, the card's cache, the ROM's hash (a .zip's
+# too), the loader's states against made-up replies (never a session started)
+make -s -C "$HERE" tests/ach-test >/dev/null && "$HERE/tests/ach-test" "$OUT" 2> "$OUT/ach-test.log" || { echo "FAIL the achievements list's data: $(grep FAIL "$OUT/ach-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # the translations: a line's %d takes a number only, not a game's or a file's name
