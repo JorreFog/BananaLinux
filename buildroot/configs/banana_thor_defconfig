@@ -78,14 +78,20 @@ BR2_PACKAGE_ALSA_LIB=y
 BR2_PACKAGE_ALSA_UTILS=y
 BR2_PACKAGE_ALSA_UTILS_AMIXER=y
 BR2_PACKAGE_ALSA_UTILS_ALSACTL=y
+# the Thor's sound card (AudioReach on the ADSP) is set up by its UCM profile (ROCKNIX's, patches/alsa-ucm-conf):
+# alsa-lib's UCM, the ucm2 tree and alsaucm (bananad's sound setup for the Thor: docs/THOR-PORT.md, M3)
+BR2_PACKAGE_ALSA_LIB_UCM=y
+BR2_PACKAGE_ALSA_UCM_CONF=y
+BR2_PACKAGE_ALSA_UTILS_ALSAUCM=y
 BR2_PACKAGE_FREETYPE=y
 BR2_PACKAGE_LIBDRM=y
 # bring-up: modetest (the connectors, their modes and panel orientation; usr/libexec/banana/hw-probe runs it)
 BR2_PACKAGE_LIBDRM_INSTALL_TESTS=y
-# the GPU: Buildroot's Mesa with freedreno for the Adreno 740 (no LLVM); Vulkan (Turnip) is for later, Buildroot's
-# mesa3d has no option for it yet (docs/THOR-PORT.md)
+# the GPU: Buildroot's Mesa with freedreno for the Adreno 740 (no LLVM): GLES, and Vulkan through Turnip (the option
+# and Mesa 26.2.6 come from buildroot/buildroot-patches, applied by the Makefile, as Banana Pocket has them)
 BR2_PACKAGE_MESA3D=y
 BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
 BR2_PACKAGE_MESA3D_GBM=y

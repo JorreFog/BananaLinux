@@ -1,0 +1,62 @@
+From: Banana <banana@localhost>
+Date: Sat, 31 Oct 2026 04:00:00 +0000
+Subject: [PATCH] ASoC: q6apm: report the graph close, and how long it took
+
+The graph behind a frontend is torn down by the ADSP, not by the CPU:
+audioreach_graph_mgmt_cmd(APM_CMD_GRAPH_CLOSE) goes through
+audioreach_send_cmd_sync(), which waits up to 5 s for the DSP's
+GPR_BASIC_RSP_RESULT. q6apm_put_audioreach_graph() threw that result away,
+so a close the DSP never acknowledged -- the state a frontend opened right
+afterwards sees as a half-built graph, and the AW88166 amps then fail to
+start ("start failure") -- was completely silent in dmesg. The handover
+between the menu and a game (MultiMedia1 released, a game opened into the
+same graph id) is exactly where that costs sound.
+
+Log the failure, and the close round-trip when it is slow (>= 50 ms) so the
+window is measurable on the unit without CONFIG_DYNAMIC_DEBUG (which Banana
+does not set). Ordinary closes stay at dev_dbg: the menu reopens its frontend
+on every cue, so anything louder would be spam.
+
+This changes no behaviour -- it only makes the one quiet failure visible,
+which is what decides whether the userspace "wait one beat" handover still
+earns its keep or can come out.
+
+Signed-off-by: Banana <banana@localhost>
+---
+--- a/sound/soc/qcom/qdsp6/q6apm.c
++++ b/sound/soc/qcom/qdsp6/q6apm.c
+@@ -124,14 +124,31 @@ static void q6apm_put_audioreach_graph(struct kref *ref)
+ {
+ 	struct audioreach_graph *graph;
+ 	struct q6apm *apm;
++	unsigned long t0;
++	unsigned int ms;
++	int ret;
+ 
+ 	graph = container_of(ref, struct audioreach_graph, refcount);
+ 	apm = graph->apm;
+ 
+-	audioreach_graph_mgmt_cmd(graph, APM_CMD_GRAPH_CLOSE);
++	/*
++	 * The graph is torn down by the ADSP: audioreach_graph_mgmt_cmd() waits for the DSP's
++	 * APM_CMD_GRAPH_CLOSE response (audioreach_send_cmd_sync(), 5 s). That result was thrown
++	 * away, so a close the DSP never acknowledged -- the very state a frontend opened right
++	 * afterwards sees as a half-built graph (the amps then fail to start) -- was silent.
++	 */
++	t0 = jiffies;
++	ret = audioreach_graph_mgmt_cmd(graph, APM_CMD_GRAPH_CLOSE);
++	ms = jiffies_to_msecs(jiffies - t0);
++	if (ret)
++		dev_err(apm->dev, "graph %d: close failed (%d) after %u ms\n", graph->id, ret, ms);
++	else if (ms >= 50)
++		dev_info(apm->dev, "graph %d: close took %u ms\n", graph->id, ms);
++	else
++		dev_dbg(apm->dev, "graph %d: closed after %u ms\n", graph->id, ms);
+ 
+ 	mutex_lock(&apm->lock);
+ 	graph = idr_remove(&apm->graph_idr, graph->id);
+ 	mutex_unlock(&apm->lock);
+ 
+ 	kfree(graph->graph);
+ 	kfree(graph);
+ }
