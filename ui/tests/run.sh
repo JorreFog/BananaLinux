@@ -91,10 +91,13 @@ if command -v identify >/dev/null; then
         [ "$(convert "$OUT/thor-oled-$1.png" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null)" = "srgb(0,0,0)" ] ||
             { echo "FAIL thor-oled: $1 isn't true black at $2,$3"; fail=1; }
     done
-    for v in home-top home-bot lib-top lib-bot boot-top; do
+    for v in home-top home-bot lib-top lib-bot; do
         awk "BEGIN { exit !($(convert "$OUT/thor-oled-$v.png" -fill white +opaque black -format '%[fx:mean]' info: 2>/dev/null || echo 0) > 0.01) }" ||
             { echo "FAIL thor-oled: $v is (nearly) all black: not drawn"; fail=1; }
     done
+    # the boot is the bunch (144 px, in the middle), BananaOS under it and the accent's line, on black
+    [ "$(convert "$OUT/thor-oled-boot-top.png" -crop 144x144+888+382 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor-oled: no bunch in the boot"; fail=1; }
+    [ "$(convert "$OUT/thor-oled-boot-top.png" -crop 400x60+760+580 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor-oled: no BananaOS in the boot"; fail=1; }
     convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
         awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
 fi

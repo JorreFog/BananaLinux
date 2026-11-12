@@ -41,6 +41,7 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "components": { "chip": { ...an element... } },        // reusable elements ("use": "chip")
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
   "hints": { "home": [["A", "Open"], ["Y", "Favorite"]] }, // the "hints" list's buttons per view
+  "systems": { "nds": { "short": "DS", "year": "2004" } }, // the theme's own words for systems: sys.short, sys.year
   "behavior": { "launchMs": 900, "scrollMs": 70, "settleMs": 600, "fps": 30, "wrap": false,
                 "extraHints": true, "cues": { "insert": 560 } },
   "screens": {
@@ -71,7 +72,13 @@ With `"stage": "screen"` the theme lays out on each screen's own size instead: `
 on the Thor's top, 640 x 557.4 on its bottom; 640 x 480 on the RG DS), and 0,0 is its top-left corner. A theme
 written with `W` and `H` (`"x": "=W / 2"`, `"y": "=H * 0.5"`, `"w": "100%"`) fills every shape. `vars` are worked out
 for each screen, so a var can read `W` and `H`. `thor-oled.json` is one: the AYN Thor starts in it (the board's default
-for `theme` in `settings.conf`, `user:thor-oled`; the RG DS keeps Dark), and it reflows on the RG DS's 4:3 panels.
+for `theme` in `settings.conf`, `user:thor-oled`; the RG DS keeps Dark). Its measures are the design's, in the
+panels' pixels: its vars `u` and `v` are the units a pixel of the bottom and of the top screen (`"x": "=160 * v"`), so
+it shrinks to fit the RG DS's 4:3 panels.
+
+The Thor's bottom screen is narrower than the canvas, so the canvas is drawn smaller on it (1 unit is 1.9375 px
+there, 2.25 on the top). A layout theme's boxes, text and pictures are made for each screen's own pixels: nothing is
+drawn at one size and scaled to another, and pixel art stays whole multiples of its pixels on both.
 
 ## Settings, the setup and the moments between screens
 
@@ -89,13 +96,14 @@ menu are drawn by the engine, not from `screens`. A theme still decides how they
 | `bodyFont` | the help texts' font: `inter`, `inter-medium`, `inter-semibold` or a `.ttf` beside the theme (default: `fonts.regular`) |
 
 `screens.settings` (a layout theme's) is drawn over each screen's background under those pages: `thor-oled.json`
-puts its status bar and a soft accent light there, so Settings and the setup have the same header as the shelf.
+puts its status bar there, so Settings and the setup have the same header as the shelf.
 
 `"transitions": "fade"` replaces the iris and the stepped fades with eased cross-fades of the whole screens: the boot
 animation into the menu (260 ms), a game ending (the menu out of black, 220 ms), the first boot's arrival ("Welcome
 to" rising over the boot animation's last frame, then black), the setup in and the Welcome card into the menu, and the
 menu into the shutdown (200 ms). On screens of another shape than the canvas (the AYN Thor's) they are used whatever
-the theme, since the iris works on the canvas. A game starts after `behavior.launchMs` (Thor OLED: 240 ms).
+the theme, since the iris works on the canvas. A game starts after `behavior.launchMs` (Thor OLED: 290 ms: the plate under the game is
+pressed, then the menu rises away and fades).
 
 ## Values: literals, expressions, templates
 
@@ -127,6 +135,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `screenX`, `screenY`, `screenW`, `screenH` | the whole screen in the layout's units: past the canvas on a screen of another shape (above) |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
 | `clock`, `date`, `day` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"`, `"Thu"` |
+| `monthDay`, `month` | the date's parts, for a theme that writes it its own way: `12`, `"Nov"` (`"{day} {monthDay} {month}"`) |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
 | `paused` | the title of the game stopped behind the menu (a handheld with a Home button, pressed in a game), `""` when there is none |
@@ -137,10 +146,16 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `launch.progress`, `launch.t` | 0..1 and ms through the launch view |
 | `empty`, `empty.title`, `empty.hint` | a library with no games, and what to say about it |
 | `systems.count`, `games.count` | |
-| `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index` |
+| `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeWhen resumeArt resumeBox resumeCart resumeLabel recent1Art recent2Art index`, and the theme's own `systems` words (`sys.short`) |
 | `game.*` | the selected game (library and launch): `title sub plays last time art box cart label icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
 | `item.*`, `i`, `n`, `sel`, `rel`, `pos`, `first`, `last`, `ix`, `iy` | inside a list item: its own system's or game's fields (as above; `key label` for hints), its index, the count, whether it is selected, its distance from the selection (`rel` whole, `pos` eased), and where the list put it |
 | your `vars`, a component's `with` | |
+
+`sys.resumeWhen` is when the last game was played (`"Today"`, `"Yesterday"`, `"Last week"`..., `""` never);
+`sys.recent1Art` and `sys.recent2Art` are the covers of the two games played before it (else the shelf's first ones
+with a cover), for a theme that shows more than one. The theme's `"systems": { "<id>": { "<key>": "..." } }` adds its
+own hooks by system: `sys.<key>` and, in a list, `item.<key>` (`""` for a system it doesn't name; Thor OLED's short
+names for its tab strip and the years beside the makers).
 
 Pictures from hooks (`sys.icon`, `game.art`...) are full paths. A theme's own files are relative to its JSON file.
 `game.romIcon` is a DS game's own icon from its ROM.
@@ -185,9 +200,22 @@ Fonts are named in the theme's `fonts` (`"title": "mine/Title.ttf"`) or are buil
 ### image
 
 `src`, `fallback` (another source when `src` is empty or doesn't load), `fit` (`cover`, `contain`, `fill`, `coverTop`,
-`pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels), `radius`, `tint` (multiplied),
+`pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels, `tile` repeated at its own pixel
+size: a texture), `radius`, `tint` (multiplied),
 `crop` (`cardLabel`: a real DS card scan's artwork, `noStrip`: a DS box without its white strip), `placeholder` (a
 colour shown while it loads or when there is nothing). Pictures are decoded and fitted off the main thread.
+
+What can be done to the fitted picture (once, when it is made; an animated value makes it again each frame):
+
+| | |
+|---|---|
+| `blur` | blurred by this much (units; the deviation of a Gaussian blur, as CSS's `blur()`). With a low `opacity` and a `mask`, a cover becomes a soft light of its own colours |
+| `saturate` | its colours stronger (above 1) or greyer (0 is grey) |
+| `mask` | it fades out: `"radial"` from its middle to its nearest side, or `{ "shape": "linear", "angle": 90, "from": 0.2, "to": 0.9 }`: whole up to `from`, gone at `to` (0..1 of the way; a radial one takes `from` and `to` too) |
+| `rotate`, `pivot` | turned by degrees, clockwise, about `pivot` (`[0.5, 1]`: the middle of its bottom edge; default its middle) |
+| `tilt`, `perspective`, `pivot` | swung by degrees round the upright line through `pivot`, as a door (CSS's `rotateY`), seen from `perspective` units away (default 1000): `"tilt": 9, "pivot": [0, 0.5]` is a game's case seen a little from the side |
+
+Only the picture turns: an image's children and the boxes round it stay upright.
 
 ### group
 
@@ -233,8 +261,9 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
 
 ## What it can't do (yet)
 
-- Rotation and skew: elements stay upright rectangles.
-- Blur of what's behind an element, and blend modes other than normal.
+- Rotation and skew of anything but a picture (an image's `rotate` and `tilt`): boxes, text and groups stay upright
+  rectangles.
+- Blur of what's behind an element (an image's `blur` blurs the picture itself), and blend modes other than normal.
 - Masks other than rounded corners.
 - Dragging a list with a finger (a tap selects).
 - Lists of other things than systems, games and hints (achievements, the settings).
@@ -243,6 +272,6 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
   hairline edge in `edge` (`line` for the bubbles, the accent's on the one that's on), a light line along the top in
   `panelBand` and a darker one along the bottom in `panelLow`; the picked row in the accent, `onPick` on it; the
   screens `screenBg` with the dots only when `background.dither` isn't false).
-- Glow is a box's `shadow` with no fill (a blur round its shape, in the shadow's colour), not a blur of pictures:
-  pictures and text don't glow, and nothing behind an element is blurred.
+- Glow is a box's `shadow` with no fill (a blur round its shape, in the shadow's colour): pictures and text don't
+  glow, and nothing behind an element is blurred.
 - 3D: the Carts theme's rendered cartridges aren't available as an element.

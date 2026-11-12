@@ -90,7 +90,7 @@
     "kTop": "#fffaf0", "kBot": "#efe9de", "kInk": "#141312", "wTop": "#f79ac1",
     // a view arriving (it rises 12 px and fades in over 300 ms), the top screen changing as the selection moves (a
     // 150 ms fade), and the menu leaving for a game (after the plate's press: up 12 px and out in 150 ms)
-    "in": "=easeOut(progress(entered, 300))",
+    "in": "=easeOut(progress(view == 'launch' ? 9999 : entered, 300))",
     "xf": "=easeOut(progress(moved, 150))",
     "press": "=view == 'launch' ? easeOut(progress(launch.t, 120)) : 0",
     "leave": "=view == 'launch' ? easeOut(progress(launch.t - 140, 150)) : 0"
@@ -174,7 +174,7 @@
       "type": "group", "x": "=96 * u", "y": "=128 * u", "w": "=(PW - 192) * u", "h": "=192 * u",
       "children": [
         { "use": "card", "with": { "hp": 192 } },
-        { "type": "image", "src": "thor-oled/tail.png", "fit": "fill", "x": "50%", "ax": 0.5, "y": "=192 * u", "w": "=48 * u", "h": "=16 * u" },
+        { "type": "image", "src": "thor-oled/tail.png", "fit": "fill", "x": "50%", "ax": 0.5, "y": "=192 * u", "w": "=48 * u", "h": "=24 * u" },
         { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=39 * u", "h": "=63 * u", "align": "center", "valign": "middle", "text": "{t}",
           "size": "=52 * u", "color": "=ink" },
         { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=114 * u", "h": "=39 * u", "align": "center", "valign": "middle", "text": "{s}",
@@ -310,8 +310,8 @@
             "lineHeight": "=max(56, min(112, floor(880 / (max(1, len(sys.name)) * 0.56) / 4) * 4)) * 1.1 * v" },
           { "type": "group", "layout": "row", "gap": "=64 * v", "x": "=160 * v", "y": "=501 * v",
             "children": [
-              { "use": "stat", "with": { "n": "=round(sys.games * easeOut(progress(entered, 600)))", "l": "=sys.games == 1 ? 'Game' : 'Games'", "big": 64 } },
-              { "use": "stat", "with": { "n": "=round(sys.played * easeOut(progress(entered, 600)))", "l": "Played", "big": 64 } },
+              { "use": "stat", "with": { "n": "=round(sys.games * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=sys.games == 1 ? 'Game' : 'Games'", "big": 64 } },
+              { "use": "stat", "with": { "n": "=round(sys.played * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "Played", "big": 64 } },
               { "use": "stat", "with": { "n": "=either(sys.time, '0m')", "l": "Play time", "big": 64 } }
             ] },
           // the last game played: X takes you back to it
@@ -323,15 +323,15 @@
                 "visible": "=sys.resumeArt != ''" },
               { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=84 * v", "y": "=84 * v", "w": "=96.5 * v", "h": "=96.5 * v", "anchor": "center",
                 "visible": "=sys.resumeArt == ''" },
-              { "type": "text", "x": "=176 * v", "y": "=38 * v", "w": "=460 * v", "h": "=34 * v", "valign": "middle", "font": "inter", "size": "=28 * v", "color": "=ink2",
+              { "type": "text", "x": "=176 * v", "y": "=40 * v", "w": "=460 * v", "h": "=34 * v", "valign": "middle", "font": "inter", "size": "=28 * v", "color": "=ink2",
                 "text": "=sys.resumeWhen != '' ? 'Last played · ' + lower(sys.resumeWhen) : either(sys.resumeEyebrow, 'Last played')" },
               { "type": "text", "x": "=176 * v", "y": "=83 * v", "w": "=460 * v", "h": "=44 * v", "valign": "middle", "font": "inter-medium", "size": "=36 * v", "color": "=ink",
                 "text": "{sys.resumeTitle}" },
               { "use": "chip", "right": "=32 * v", "y": "=60 * v", "with": { "k": "X", "label": "Continue", "mode": 0, "fs": 30, "u": "=v" } }
             ] },
           // the fan: the game played before the last one, the last one over them, the one before that
-          { "type": "group", "x": "=1088 * v", "y": "=(236 + 24 * (1 - easeOut(progress(entered - 100, 500)))) * v", "w": "=704 * v", "h": "=640 * v",
-            "opacity": "=easeOut(progress(entered - 100, 300))", "visible": "=sys.hasResume && sys.resumeArt != ''",
+          { "type": "group", "x": "=1088 * v", "y": "=(236 + 24 * (1 - easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 500)))) * v", "w": "=704 * v", "h": "=640 * v",
+            "opacity": "=easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 300))", "visible": "=sys.hasResume && sys.resumeArt != ''",
             "children": [
               { "type": "image", "src": "{sys.recent1Art}", "fit": "cover", "x": "=40 * v", "y": "=48 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
                 "rotate": -9, "pivot": [ 0.5, 1 ], "visible": "=sys.recent1Art != ''" },
@@ -409,7 +409,7 @@
               { "type": "text", "x": 0, "w": "100%", "y": "=278 * v", "h": "=44 * v", "valign": "middle", "text": "{game.sub}", "font": "inter", "size": "=36 * v", "color": "=ink2" },
               { "type": "group", "layout": "row", "gap": "=64 * v", "y": "=378 * v",
                 "children": [
-                  { "use": "stat", "with": { "n": "=round(num(either(game.plays, '0')) * easeOut(progress(entered, 600)))", "l": "=game.plays == '1' ? 'Play' : 'Plays'", "big": 56 } },
+                  { "use": "stat", "with": { "n": "=round(num(either(game.plays, '0')) * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=game.plays == '1' ? 'Play' : 'Plays'", "big": 56 } },
                   { "use": "stat", "with": { "n": "=either(game.last, 'Never')", "l": "Last played", "big": 56 } },
                   { "use": "stat", "with": { "n": "=either(game.time, '0m')", "l": "Play time", "big": 56 } }
                 ] },
@@ -421,7 +421,7 @@
                     { "type": "text", "text": "{game.achA} of {game.achB}", "font": "inter-medium", "size": "=30 * v", "color": "=ink" },
                     { "type": "text", "text": " · {round(game.achProgress * 100)}%", "font": "inter", "size": "=30 * v", "color": "=ink2" } ] },
                   { "type": "rect", "x": 0, "right": 0, "y": "=52 * v", "h": "=12 * v", "radius": "=6 * v", "fill": "#0a0a09" },
-                  { "type": "rect", "x": 0, "y": "=52 * v", "w": "=max(0.013, game.achProgress * easeOut(progress(entered - 120, 600))) * 100 + '%'", "h": "=12 * v", "radius": "=6 * v",
+                  { "type": "rect", "x": 0, "y": "=52 * v", "w": "=max(0.013, game.achProgress * easeOut(progress((view == 'launch' ? 9999 : entered) - 120, 600))) * 100 + '%'", "h": "=12 * v", "radius": "=6 * v",
                     "gradient": { "angle": 180, "stops": [ "=pTop", "=a + ' 38%'", "=pBot" ] } }
                 ] },
               { "type": "text", "x": 0, "w": "100%", "y": "=538 * v", "h": "=36 * v", "valign": "middle", "text": "{game.achLabel}", "font": "inter", "size": "=30 * v", "color": "=ink2",

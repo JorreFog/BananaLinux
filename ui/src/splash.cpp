@@ -357,41 +357,45 @@ namespace banana
 	}
 
 	// ---- the OLED boot ------------------------------------------------------------------------------------------------
-	// Laid out in px of a 1080-line screen (k: the canvas's px per those), centred: the bunch in a 200 px box, 40 px,
-	// the word 64 px high, 40 px, the line 420 x 6. Timings (ms): the bunch pops in over 800, a ring of light leaves it
-	// every 600 from 300, the letters rise 50 apart from 350, the line fills from 300 to 1350
-	static constexpr double O_POP = 800, O_RING_AT = 300, O_RING = 1600, O_LETTER_AT = 350, O_LETTER = 50, O_RISE = 400;
-	static constexpr double O_BAR_AT = 300, O_BAR = 1050, O_SUB_AT = 500, O_SUB = 600;
-	static constexpr float O_LOGO_Y = 458, O_WORD_Y = 615, O_BAR_Y = 716, O_BAR_W = 420, O_BAR_H = 6;
+	// Laid out in px of a 1080-line screen (k: the canvas's px per those), centred: the bunch 144 px, 40 px, BananaOS
+	// 72 px high in the ink, 40 px, the line 416 x 6 in the accent. Nothing glows and nothing loops. Timings (ms): the
+	// bunch rises 12 px as it fades in over 600, the word 120 later, the device's name on the bottom screen 300 later;
+	// the line fills from 200 to 1350
+	static constexpr double O_IN = 600, O_WORD_AT = 120, O_SUB_AT = 300, O_BAR_AT = 200, O_BAR = 1150;
+	static constexpr float O_LOGO_Y = 454, O_WORD_Y = 609, O_BAR_Y = 692, O_BAR_W = 416, O_BAR_H = 6, O_RISE = 12;
 	static double easeOut(double p) { p = std::min(1.0, std::max(0.0, p)); return 1 - (1 - p) * (1 - p) * (1 - p); }
-	static double easeOutBack(double p) { p = std::min(1.0, std::max(0.0, p)); const double c = 1.70158; return 1 + (c + 1) * std::pow(p - 1, 3) + c * std::pow(p - 1, 2); }
 	static uint32_t withAlpha(uint32_t rgb, double a) { return mul255(0xff000000u | (rgb & 0xffffff), (uint32_t)std::lround(255 * std::min(1.0, std::max(0.0, a)))); }
+
+	// a line of text as coverage (a byte a pixel)
+	static bool textMask(const std::string& fontFile, const std::u32string& text, float size, int& w, int& h, std::vector<uint8_t>& a)
+	{
+		std::shared_ptr<rnds::Font> f = fontFile.empty() ? nullptr : rnds::Font::load(fontFile);
+		if (!f) return false;
+		rnds::TextStyle st;
+		st.font = f;
+		st.size = size;
+		rnds::TextLine l = rnds::layoutLine(text, st);
+		rnds::TextBitmap tb = rnds::renderLine(l, st, 1, f->ascent(st.size));
+		const rnds::Bitmap& b = tb.bmp;
+		if (b.empty()) return false;
+		w = b.w; h = b.h;
+		a.resize((size_t)b.w * b.h);
+		for (size_t i = 0; i < a.size(); i++) a[i] = b.alpha ? b.px[i] : b.px[i * 4 + 3];
+		return true;
+	}
 
 	bool Splash::loadOled(const std::string& dir, const std::string& banana, const std::string& font)
 	{
+		(void)dir;
 		if (!loadRgba(banana, bunch.px, bunch.w, bunch.h)) return false;
-		if (!loadMask(dir + "/word.png", word.w, word.h, word.a, word.letters)) return false;
-		ink = 0xfff1ede2u;
-		muted = 0xff55514au;
-		device = Mask();
-		// "AYN THOR" in Pixelify Sans, 34 px of the bottom screen's 1240 across (the canvas is drawn on it narrower), spaced
-		std::shared_ptr<rnds::Font> f = font.empty() ? nullptr : rnds::Font::load(font);
-		if (f)
-		{
-			rnds::TextStyle st;
-			st.font = f;
-			st.size = 34.0f * W / 1240;
-			st.letterSpacing = st.size * 0.2f;
-			rnds::TextLine l = rnds::layoutLine(U"AYN THOR", st);
-			rnds::TextBitmap tb = rnds::renderLine(l, st, 1, f->ascent(st.size));
-			const rnds::Bitmap& b = tb.bmp;
-			if (!b.empty())
-			{
-				device.w = b.w; device.h = b.h;
-				device.a.resize((size_t)b.w * b.h);
-				for (size_t i = 0; i < device.a.size(); i++) device.a[i] = b.alpha ? b.px[i] : b.px[i * 4 + 3];
-			}
-		}
+		ink = 0xffefe9deu;
+		muted = 0xff6a655du;
+		// BananaOS in Pixelify Sans, 72 px of a 1080-line screen; the device's name in Inter (beside the banana's
+		// picture: <banana>/fonts), 34 px of the bottom screen's 1240 across (the canvas is drawn on it narrower)
+		word = Mask(); device = Mask();
+		textMask(font, U"BananaOS", 72.0f * H / 1080, word.w, word.h, word.a);
+		const std::string inter = banana.substr(0, banana.rfind('/') + 1) + "fonts/Inter-Regular.ttf";
+		if (!textMask(inter, U"AYN Thor", 34.0f * W / 1240, device.w, device.h, device.a)) textMask(font, U"AYN Thor", 34.0f * W / 1240, device.w, device.h, device.a);
 		return true;
 	}
 
@@ -414,118 +418,57 @@ namespace banana
 		}
 	}
 
-	// a soft round light, strongest in the middle (the CSS drop-shadow glow round the bunch)
-	void Splash::glow(uint32_t* d, float cx, float cy, float r, uint32_t colour, float strength) const
+	// a mask in a colour, its middle at cx, cy
+	static void maskAt(uint32_t* d, int W, int H, const std::vector<uint8_t>& a, int mw, int mh, float cx, float cy, uint32_t colour, double alpha)
 	{
-		if (strength <= 0 || r <= 0) return;
-		for (int y = std::max(0, (int)(cy - r)); y < std::min(H, (int)(cy + r) + 1); y++)
-			for (int x = std::max(0, (int)(cx - r)); x < std::min(W, (int)(cx + r) + 1); x++)
-			{
-				float dd = std::sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy)) / r;
-				if (dd >= 1) continue;
-				float q = 1 - dd;
-				d[(size_t)y * W + x] = over(withAlpha(colour, strength * q * q), d[(size_t)y * W + x]);
-			}
+		if (a.empty() || alpha <= 0) return;
+		int x0 = (int)std::lround(cx - mw / 2.0f), y0 = (int)std::lround(cy - mh / 2.0f);
+		for (int my = std::max(0, -y0); my < mh && y0 + my < H; my++)
+			for (int mx = std::max(0, -x0); mx < mw && x0 + mx < W; mx++)
+				if (uint8_t c = a[(size_t)my * mw + mx]) d[(size_t)(y0 + my) * W + x0 + mx] = over(withAlpha(colour, alpha * c / 255.0), d[(size_t)(y0 + my) * W + x0 + mx]);
 	}
 
-	// a circle's outline, anti-aliased
-	void Splash::ring(uint32_t* d, float cx, float cy, float r, float th, uint32_t colour, float alpha) const
-	{
-		if (alpha <= 0) return;
-		float ro = r + th / 2 + 1;
-		for (int y = std::max(0, (int)(cy - ro)); y < std::min(H, (int)(cy + ro) + 1); y++)
-			for (int x = std::max(0, (int)(cx - ro)); x < std::min(W, (int)(cx + ro) + 1); x++)
-			{
-				float dist = std::sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
-				float cov = std::min(1.0f, std::max(0.0f, th / 2 + 0.5f - std::fabs(dist - r)));
-				if (cov > 0) d[(size_t)y * W + x] = over(withAlpha(colour, alpha * cov), d[(size_t)y * W + x]);
-			}
-	}
-
-	// the top screen: the bunch (its scale and opacity), the first letters of BANANA OS (the last one letterT ms into
-	// its rise; letterOut: all of them that far into their fall, the shutdown's), the line filled to bar (0..1)
-	void Splash::oledTop(uint32_t* top, double logoScale, double logoAlpha, int letters, double letterT, double letterOut, double bar, double t, bool rings)
+	// the top screen: the bunch and the word (each 0..1 in: it has risen and faded in that far), the line filled to
+	// bar (0..1; < 0: no line)
+	void Splash::oledTop(uint32_t* top, double logo, double wordIn, double bar)
 	{
 		const float k = H / 1080.0f, cx = W / 2.0f;
 		const uint32_t acc = rnds::accent.base & 0xffffff;
 		std::fill(top, top + (size_t)W * H, 0xff000000u);
-		// the glow, then the rings of light (two, 600 ms apart, each growing from 0.7 to 2.2 of the 200 px box, fading)
-		glow(top, cx, O_LOGO_Y * k, 170 * k * (float)logoScale, acc, 0.5f * (float)logoAlpha);
-		if (rings)
-			for (double start : { O_RING_AT, O_RING_AT + 600 })
-			{
-				if (t < start) continue;
-				double p = std::fmod(t - start, O_RING) / O_RING;
-				ring(top, cx, O_LOGO_Y * k, 100 * k * (float)(0.7 + 1.5 * p), std::max(1.0f, 3 * k), acc, 0.7f * (float)(1 - p) * (float)logoAlpha);
-			}
-		drawBunchAt(top, cx, O_LOGO_Y * k, (float)(150.0 / 48) * k * (float)logoScale, logoAlpha);
-		// BANANA OS: the word's pixel letters 6 px a pixel at 1080 lines, 2 more pixels between letters (CSS letter-spacing
-		// .18em) and a space before OS, each rising 26 px as it fades in
-		int kw = std::max(1, (int)std::lround(6 * k)), gap = 2 * kw, n = (int)word.letters.size();
-		int total = word.w * kw + (n - 1) * gap + 3 * kw;
-		int x = (W - total) / 2, y = (int)std::lround(O_WORD_Y * k);
-		for (int i = 0; i < n; i++)
-		{
-			int c0 = word.letters[i], c1 = i + 1 < n ? word.letters[i + 1] : word.w;
-			int lx = x + c0 * kw + i * gap + (i >= n - 2 ? 3 * kw : 0);
-			if (i >= letters) continue;
-			double lt = i == letters - 1 ? letterT : 1e9;
-			double q = std::min(easeOut(lt / O_RISE), 1 - easeOut(letterOut / O_RISE));
-			if (q <= 0) continue;
-			int dy = (int)std::lround(26 * k * (1 - q));
-			for (int my = 0; my < word.h; my++)
-				for (int mx = c0; mx < c1; mx++)
-					if (word.a[(size_t)my * word.w + mx]) fill(top, lx + (mx - c0) * kw, y + dy + my * kw, kw, kw, withAlpha(acc, q));
-		}
-		// the line: its track, the accent filling it, a faint light round the filled part
+		drawBunchAt(top, cx, (O_LOGO_Y + O_RISE * (float)(1 - logo)) * k, 3 * k, logo);
+		maskAt(top, W, H, word.a, word.w, word.h, cx, (O_WORD_Y + O_RISE * (float)(1 - wordIn)) * k, ink, wordIn);
+		// the line: its track (its ends round), the accent filling it from the left
 		int bw = (int)std::lround(O_BAR_W * k), bh = std::max(2, (int)std::lround(O_BAR_H * k)), bx = (W - bw) / 2, by = (int)std::lround(O_BAR_Y * k);
-		fill(top, bx, by, bw, bh, 0xff1a1a1du);
-		int fw = (int)std::lround(bw * std::min(1.0, std::max(0.0, bar)));
-		if (fw > 0)
+		if (bar < 0) return;
+		auto line = [&](int w, uint32_t c)
 		{
-			for (int g = 1; g <= 4; g++) fill(top, bx - g, by - g, fw + 2 * g, bh + 2 * g, withAlpha(acc, 0.09));
-			fill(top, bx, by, fw, bh, 0xff000000u | acc);
-		}
+			if (w <= 0) return;
+			int r = std::min(bh / 2, w / 2);
+			fill(top, bx + r, by, w - 2 * r, bh, c);
+			if (r > 0) { fill(top, bx, by + r, r, bh - 2 * r, c); fill(top, bx + w - r, by + r, r, bh - 2 * r, c); }
+			if (r > 1) { fill(top, bx + 1, by + 1, r - 1, bh - 2, c); fill(top, bx + w - r, by + 1, r - 1, bh - 2, c); }
+		};
+		line(bw, withAlpha(0x1a1a1d, std::min(1.0, logo * 2)));
+		line((int)std::lround(bw * std::min(1.0, bar)), 0xff000000u | acc);
 	}
 
 	void Splash::drawOled(uint32_t* top, uint32_t* bot, double t)
 	{
-		int n = (int)word.letters.size();
-		int shown = t < O_LETTER_AT ? 0 : std::min(n, 1 + (int)((t - O_LETTER_AT) / O_LETTER));
-		double lastT = shown ? t - (O_LETTER_AT + (shown - 1) * O_LETTER) : 0;
-		// (every letter but the last has risen O_LETTER more than the one after it: the last one's rise is enough to
-		// tell the others' apart, as they rise together)
-		oledTop(top, 0.4 + 0.6 * easeOutBack(t / O_POP), std::min(1.0, t / 250), shown, lastT, 0, easeOut((t - O_BAR_AT) / O_BAR), t, true);
+		oledTop(top, easeOut(t / O_IN), easeOut((t - O_WORD_AT) / O_IN), easeOut((t - O_BAR_AT) / O_BAR));
 		std::fill(bot, bot + (size_t)W * H, 0xff000000u);
-		if (!device.a.empty() && t >= O_SUB_AT)
-		{
-			double q = easeOut((t - O_SUB_AT) / O_SUB);
-			int x = (W - device.w) / 2, y = (H - device.h) / 2 + (int)std::lround(26 * H / 1080.0f * (1 - q));
-			for (int my = 0; my < device.h; my++)
-				for (int mx = 0; mx < device.w; mx++)
-					if (uint8_t a = device.a[(size_t)my * device.w + mx]) fill(bot, x + mx, y + my, 1, 1, withAlpha(muted, q * a / 255.0));
-		}
+		double q = easeOut((t - O_SUB_AT) / O_IN);
+		maskAt(bot, W, H, device.a, device.w, device.h, W / 2.0f, H / 2.0f + O_RISE * H / 1080.0f * (float)(1 - q), muted, q);
 	}
 
-	// the shutdown: the line empties, the letters fall away from the end, the bunch shrinks into the dark, then both
-	// screens switch off like the RG DS's
+	// the shutdown: the line empties, then the word and the bunch fade into the black
 	void Splash::drawOledOutro(uint32_t* top, uint32_t* bot, double t)
 	{
-		int n = (int)word.letters.size();
 		double bar = 1 - easeOut(t / 400);
-		double out = t < 200 ? 0 : (t - 200);
-		double logo = t < 600 ? 1 : 1 - easeOut((t - 600) / 300);
-		oledTop(top, 0.4 + 0.6 * logo, logo, n, 1e9, out, bar, INTRO_END, false);
+		double out = t < 400 ? 1 : 1 - easeOut((t - 400) / 360);
+		oledTop(top, out, out, out < 1 ? -1 : bar);
 		std::fill(bot, bot + (size_t)W * H, 0xff000000u);
-		if (!device.a.empty() && t < 400)
-		{
-			double q = 1 - t / 400;
-			int x = (W - device.w) / 2, y = (H - device.h) / 2;
-			for (int my = 0; my < device.h; my++)
-				for (int mx = 0; mx < device.w; mx++)
-					if (uint8_t a = device.a[(size_t)my * device.w + mx]) fill(bot, x + mx, y + my, 1, 1, withAlpha(muted, q * a / 255.0));
-		}
-		// (no CRT switch-off here: the OLED's ends on black, the logo and its line faded out)
+		if (t < 400) maskAt(bot, W, H, device.a, device.w, device.h, W / 2.0f, H / 2.0f, muted, 1 - t / 400);
+		// (no CRT switch-off here: the OLED's ends on black)
 	}
 
 	int Splash::nextFrame(double t, bool ready) const

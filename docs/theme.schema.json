@@ -111,9 +111,14 @@
       "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/hintItem" } }
     },
     "behavior": { "$ref": "#/$defs/behavior" },
+    "systems": {
+      "type": "object",
+      "description": "The theme's own words for systems, by id: { \"nds\": { \"short\": \"DS\", \"year\": \"2004\" } }. Each key is a hook: sys.short, sys.year, item.short in a list (\"\" for a system the theme doesn't name).",
+      "additionalProperties": { "type": "object", "additionalProperties": { "type": ["string", "number"] } }
+    },
     "screens": {
       "type": "object",
-      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar). \"settings\" is drawn under Settings' own pages (the setup, the lists, the keyboard, the game panel), over each screen's background: a status bar, a glow.",
+      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar). \"settings\" is drawn under Settings' own pages (the setup, the lists, the keyboard, the game panel), over each screen's background: a status bar.",
       "properties": {
         "home": { "$ref": "#/$defs/screen" },
         "library": { "$ref": "#/$defs/screen" },
@@ -354,7 +359,7 @@
         "fit": {
           "description": "How the picture fits its box.",
           "anyOf": [
-            { "enum": ["cover", "contain", "fill", "coverTop", "pixel", "pixelContain"] },
+            { "enum": ["cover", "contain", "fill", "coverTop", "pixel", "pixelContain", "tile"] },
             { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
           ]
         },
@@ -367,6 +372,24 @@
         },
         "tint": { "$ref": "#/$defs/color", "description": "A colour multiplied into the picture." },
         "placeholder": { "$ref": "#/$defs/color", "description": "A colour shown while the picture loads or when there is nothing." },
+        "blur": { "$ref": "#/$defs/prop", "description": "An image blurred by this much (units; a Gaussian blur's deviation, as CSS's blur()). The picture is blurred, not what is behind it; its edges repeat." },
+        "saturate": { "$ref": "#/$defs/prop", "description": "An image's colours made stronger (above 1) or greyer (0: grey)." },
+        "mask": {
+          "description": "An image fading out: \"radial\" from its middle to its nearest side, or an object.",
+          "anyOf": [
+            { "enum": ["radial", "linear"] },
+            { "type": "object", "properties": {
+                "shape": { "enum": ["radial", "linear"] },
+                "angle": { "$ref": "#/$defs/prop", "description": "linear: the direction, a CSS angle (90 runs left to right)." },
+                "from": { "$ref": "#/$defs/prop", "description": "Whole up to here (0..1 of the way)." },
+                "to": { "$ref": "#/$defs/prop", "description": "Gone from here on (0..1 of the way)." } },
+              "additionalProperties": false }
+          ]
+        },
+        "rotate": { "$ref": "#/$defs/prop", "description": "An image turned by this many degrees clockwise about its pivot." },
+        "tilt": { "$ref": "#/$defs/prop", "description": "An image swung by this many degrees round the upright line through its pivot, as a door (CSS rotateY), seen from \"perspective\" away." },
+        "perspective": { "$ref": "#/$defs/prop", "description": "How far away a tilted image is seen from (units; default 1000)." },
+        "pivot": { "type": "array", "items": { "$ref": "#/$defs/prop" }, "minItems": 2, "maxItems": 2, "description": "The point an image turns or tilts about, [x, y] in 0..1 of its box (default the middle, [0.5, 0.5])." },
         "source": {
           "description": "A list's data.",
           "anyOf": [

@@ -8,8 +8,8 @@
 // typed out from its end, the bunch hopping and falling off, then both panels switching off like a CRT (the picture
 // squeezed to a line, the line to a dot, black).
 // A screen shape the pictures aren't made for (the AYN Thor's: the canvas is 1440x1080) gets the OLED boot instead,
-// drawn here on true black: the bunch popping in with a glow and rings of light pulsing out of it, BANANA OS rising
-// letter by letter in the accent, a thin accent line filling under it; AYN THOR small on the bottom screen.
+// drawn here on true black: the bunch and BananaOS (in the ink) rising a little as they fade in, a thin line in the
+// accent filling under them; AYN Thor small on the bottom screen. Nothing glows and nothing loops.
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -48,15 +48,13 @@ namespace banana
 		Rgba cart, lip, bunch;
 		Mask word, loading;
 		uint32_t ink = 0, muted = 0;
-		Mask device;			// the OLED boot's "AYN THOR" (coverage, a byte a pixel)
+		Mask device;			// the OLED boot's "AYN Thor" (coverage, a byte a pixel)
 
 		bool loadOled(const std::string& dir, const std::string& banana, const std::string& font);
 		void drawOled(uint32_t* top, uint32_t* bot, double t);
 		void drawOledOutro(uint32_t* top, uint32_t* bot, double t);
-		void oledTop(uint32_t* top, double logoScale, double logoAlpha, int letters, double letterT, double letterOut, double bar, double t, bool rings);
+		void oledTop(uint32_t* top, double logo, double wordIn, double bar);
 		void drawBunchAt(uint32_t* d, float cx, float cy, float k, double alpha) const;
-		void glow(uint32_t* d, float cx, float cy, float r, uint32_t colour, float strength) const;
-		void ring(uint32_t* d, float cx, float cy, float r, float th, uint32_t colour, float alpha) const;
 
 		int X(float v) const;
 		void drawBunch(uint32_t* d, int x, int y, double shine) const;
