@@ -2958,10 +2958,18 @@ int main(int argc, char** argv)
 		int status = 0;
 		if (pid > 0)
 		{
-			std::ofstream f("/run/banana/game.pid");	// bananad: the game to pause before a sleep
-			f << pid;
-			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
-			f << "\n";
+			{
+				// bananad: the game to pause before a sleep, and no idle dim or sleep while it runs. Written to a
+				// new file and renamed, and closed here: the stream used to stay open (unflushed) until the game
+				// ended, so the file was empty the whole session and bananad dimmed and slept mid-game (#242)
+				std::ofstream f("/run/banana/game.pid.new");
+				f << pid;
+				if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
+				f << "\n";
+				f.close();
+				if (!f || rename("/run/banana/game.pid.new", "/run/banana/game.pid") != 0)
+					logf("game.pid not written: %s", strerror(errno));
+			}
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
