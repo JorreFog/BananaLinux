@@ -14,7 +14,8 @@
 //   banana-sync probe --romm <url>             RomM at that base URL and nowhere else: "romm <url> RomM <version>" (and
 //                                              " old" before 5.4), or "fail <why> [detail]", why one of dns, refused,
 //                                              timeout, tls, clock (tls with the clock not set yet), ca, redirect
-//                                              <location>, access <location> (Cloudflare Access's login), denied
+//                                              <location> (the same API elsewhere), access <location> (another page
+//                                              in its place: a login in front of it), denied
 //                                              <status>, http <status>, notromm, noanswer <curl's message>
 //   banana-sync pair [--romm] <address> [code] Romhost: the code from Homeport. RomM: no code = the device flow (the
 //                                              status shows the code and the page that approves it, and the seconds
@@ -911,14 +912,14 @@ namespace
 		}
 		if (r.code >= 300 && r.code < 400)
 		{
+			// (a redirect that still ends at the heartbeat is the same API at another address, http to https or another
+			// port, which the form offers to take. One that leads to any other page is something answering in RomM's
+			// place, nearly always the sign-in of a proxy put in front of it (Cloudflare Access, Authelia, Authentik,
+			// oauth2-proxy and their like all answer so), told by where it leads and not by whose it is. Such a page is
+			// often handed the address asked for as its query, which is cut off before the path is looked at)
 			detail = r.hdr.count("location") ? r.hdr["location"] : "";
-			std::string host = lower(detail);
-			size_t h = host.find("://");
-			host = h == std::string::npos ? "" : host.substr(h + 3, host.find('/', h + 3) == std::string::npos ? std::string::npos : host.find('/', h + 3) - h - 3);
-			const std::string cf = ".cloudflareaccess.com";
-			bool cfa = (host.size() > cf.size() && host.compare(host.size() - cf.size(), cf.size(), cf) == 0)
-				|| detail.find("/cdn-cgi/access/") != std::string::npos;
-			return cfa ? "access" : "redirect";
+			const std::string to = detail.substr(0, detail.find_first_of("?#")), hb = "/api/heartbeat";
+			return to.size() >= hb.size() && to.compare(to.size() - hb.size(), hb.size(), hb) == 0 ? "redirect" : "access";
 		}
 		if (r.code == 401 || r.code == 403) { detail = std::to_string(r.code); return "denied"; }
 		JPtr j = r.code == 200 ? r.json() : nullptr;

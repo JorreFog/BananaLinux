@@ -246,8 +246,10 @@ it holds at once, and Server opens the form on the paired address, B there choos
 fills the rows it names, and its path is kept for a RomM served under a subpath. Connect runs `banana-sync probe --romm
 <url>`, which asks that URL's `/api/heartbeat` once, with no port guessed and no redirect followed, and answers `romm
 <url> RomM <version>` (with `old` before 5.4) or `fail <why>`: `dns`, `refused`, `timeout`, `tls`, `clock` (a
-certificate failure before Wi-Fi's first time sync, so the clock is the RTC's), `ca`, `redirect <location>`, `access
-<location>` (Cloudflare Access's login), `denied <status>`, `http <status>`, `notromm`, `noanswer` (the list is the
+certificate failure before Wi-Fi's first time sync, so the clock is the RTC's), `ca`, `redirect <location>` (one that still ends at the heartbeat:
+the same API at another address), `access <location>` (a redirect to any other page: something answers in RomM's place,
+nearly always the sign-in of a proxy in front of it, such as Cloudflare Access, Authelia, Authentik or oauth2-proxy,
+told by where it leads and not by whose it is), `denied <status>`, `http <status>`, `notromm`, `noanswer` (the list is the
 usage comment's at the top of `ui/src/sync.cpp`; `denied` is a 401 or a 403, and `noanswer` carries curl's message). The
 menu says each in words of its own, and offers to take the address a `redirect` went to. After `tls`, a certificate
 nothing vouches for, Y shows the certificate the server gave (`banana-sync cert <url>`, one request that checks
@@ -266,11 +268,11 @@ error, since it then takes any certificate from any server; the Server row's hel
 certificate is unchecked or trusted by hand. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line `pair <code> <url> <seconds>` is the
 pairing screen, the code large on the top panel with the approval page written out and the time left, and that page as a
 QR code on the bottom one (Nayuki's qrcodegen, `ui/src/qr`), for a phone where the owner is signed in to RomM, through
-Cloudflare Access's login when there is one; X takes a client token's pairing code instead, B stops the pairing (its pid
+the login of a proxy in front of it when there is one; X takes a client token's pairing code instead, B stops the pairing (its pid
 is in `sync.pid`, as a sync's). Only the approval page is ever opened in a browser: the handheld talks to the API alone,
-so a server behind Cloudflare Access needs a bypass for `/api`. Romhost's typed address still goes through `banana-sync
+so a server behind a login of that kind needs `/api` let through it. Romhost's typed address still goes through `banana-sync
 probe <address>`, which tries a bare name on http at 8092, 8080 and 80, then on https, and follows no redirect either
-(one to https on the same host is added to its tries). No pairing POST follows a redirect: Cloudflare answers 8080 with
+(one to https on the same host is added to its tries). No pairing POST follows a redirect: a proxy such as Cloudflare's answers 8080 with
 one to https, and a redirect followed turns the device flow's POST into a GET (405).
 
 A pairing turns Auto sync on (Leaving a game) when it was off, and the Paired screen says so: saves going to the server

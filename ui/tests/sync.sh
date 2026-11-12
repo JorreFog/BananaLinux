@@ -792,7 +792,11 @@ port, to, other = int(sys.argv[1]), sys.argv[2], sys.argv[3]
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(301)
-        self.send_header("Location", (other if self.path.startswith("/other") else to) + self.path.replace("/other", "", 1))
+        # (/login...: a proxy's sign-in in RomM's place, on another host with the page asked for as its query, on this
+        # host, and as Cloudflare Access sends it)
+        login = {"/login-away": "https://auth.example.com/?rd=http://127.0.0.1/api/heartbeat", "/login-here": "/oauth2/sign_in?rd=/api/heartbeat",
+                 "/login-cf": "https://team.cloudflareaccess.com/cdn-cgi/access/login/romm.example.com"}.get(self.path.replace("/api/heartbeat", ""))
+        self.send_header("Location", login or (other if self.path.startswith("/other") else to) + self.path.replace("/other", "", 1))
         self.send_header("Content-Length", "0")
         self.end_headers()
     def log_message(self, *a): pass
@@ -801,6 +805,12 @@ EOF
     waitport "$RP" / || true
     r=$(bs ta probe "http://127.0.0.1:$RP"); [ "$r" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "http:// redirected to https on the same host: $r"
     r=$(bs ta probe "http://127.0.0.1:$RP/other"); [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "a redirect to another host was followed: $r"
+    # RomM's own form asks the one address and follows nothing: a redirect that still ends at the heartbeat is the same
+    # API elsewhere (the form offers it), one to any other page is something in RomM's place, a login whoever's it is
+    r=$(bs ta probe --romm "http://127.0.0.1:$RP"); [ "$r" = "fail redirect https://127.0.0.1:$TP/api/heartbeat" ] || bad "a redirect to the same API not said as one: $r"
+    for w in away here cf; do
+        r=$(bs ta probe --romm "http://127.0.0.1:$RP/login-$w"); [ "$(echo "$r" | cut -d' ' -f1,2)" = "fail access" ] || bad "a login page in RomM's place ($w) not said as one: $r"
+    done
     # a pairing whose requests the server sends on elsewhere (its heartbeat answered, every POST redirected): none of
     # them follows, so neither the pairing code nor anything else reaches the other server
     RQ=$(port); RR=$(port)
@@ -1063,10 +1073,10 @@ if [ -x "$HERE/banana-ui" ]; then
     rlog redirect "home server: no RomM: redirect https://romm.example.com/api/heartbeat"
     rlog redirect "home server: code ABCD-EFGH"
     cmp -s "$OUT/ui-hs-redirected-top.png" "$OUT/ui-hs-cancelled-top.png" && bad "RomM: B on the pairing screen didn't go back"
-    # Cloudflare Access's login in the way: said, nothing paired; a pairing code instead (X on the pairing screen)
+    # a login page in front of RomM (a proxy's sign-in): said, nothing paired; a pairing code instead (X on the pairing screen)
     ur access "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; shot hs-access" FAKE_SYNC_PROBE=access
-    rlog access "home server: no RomM: access https://team.cloudflareaccess.com"
-    grep -q 'pair' "$SL" && bad "RomM: paired past Cloudflare Access's login: $(cat "$SL")"
+    rlog access "home server: no RomM: access https://auth.example.com/"
+    grep -q 'pair' "$SL" && bad "RomM: paired past a login page in front of it: $(cat "$SL")"
     # a sync running (a banana-sync's pid in sync.pid): the pairing says so and isn't started, and B leaves that sync be
     # (a sleep named banana-sync, in a folder of its own: $BIN, the real one, is used again after)
     mkdir -p "$OUT/busy-bin"; ln -sf "$(command -v sleep)" "$OUT/busy-bin/banana-sync"; "$OUT/busy-bin/banana-sync" 60 & BP=$!

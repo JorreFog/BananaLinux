@@ -3,16 +3,16 @@
 //   Romhost  as it always was: looked for on the LAN (its UDP answer), its address typed when none answers, then the
 //            6-digit code Homeport shows (settings.cpp's startPairing and pollSync)
 //   RomM     a form as Grout's (Protocol, Address, Port, Check certificate, Connect): its address is a URL, on the LAN
-//            or the internet (a Cloudflare tunnel, a reverse proxy), never guessed. Connect asks banana-sync probe
+//            or the internet (a tunnel, a reverse proxy), never guessed. Connect asks banana-sync probe
 //            --romm, which asks that URL's heartbeat alone, follows no redirect and says why it isn't RomM when it
-//            isn't (no such name, refused, no answer in time, the certificate, the clock, a redirect, Cloudflare
-//            Access's login, 401 or 403, something not RomM), each said here in words of its own. Then the pairing
+//            isn't (no such name, refused, no answer in time, the certificate, the clock, a redirect, a login
+//            page in front of it, 401 or 403, something not RomM), each said here in words of its own. Then the pairing
 //            screen: RomM's code large on the top panel with the page that approves it written out and the time left,
 //            and that page as a QR code on the bottom one, for the phone (where the owner is signed in to RomM, and
-//            through Cloudflare Access's login when there is one: the handheld only ever talks to the API). X types a
+//            through the login of a proxy in front of it when there is one: the handheld only ever talks to the API). X types a
 //            client token's pairing code instead.
 // On the device as on the first try (2026-11-05): a bare name made the old probe try http on 8092, 8080 and 80 before
-// https, and Cloudflare answers 8080 with a redirect to https that libcurl followed, so the handheld paired at
+// https, and the proxy in front of RomM (Cloudflare's) answers 8080 with a redirect to https that libcurl followed, so the handheld paired at
 // http://<name>:8080 and RomM's device pairing then answered 405 (the redirect turned its POST into a GET).
 #include "settings.h"
 #include "settings_draw.h"
@@ -428,11 +428,11 @@ namespace banana
 		if (cause == "tls") return "The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).";
 		if (cause == "clock") return "The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.";
 		if (cause == "ca") return "homesync_ca names a file that can't be read: check it in banana/settings.conf.";
-		if (cause == "access") return "Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for " + host + "/api in Access. Your phone still logs in, for the page that approves the handheld.";
+		if (cause == "access") return host + " answers with another page, not RomM: a login in front of it, most likely. The handheld can't log in there: let RomM's API (/api) through without one. Your phone still logs in, for the page that approves the handheld.";
 		if (cause == "redirect")
 			return !hsMoved.empty() ? "The server sends this address to " + hsMoved + ". Y uses that address."
 				: "The server sends this address elsewhere, not to RomM: " + detail;
-		if (cause == "denied") return host + " refused access (" + detail + "). Something in front of RomM may be blocking the handheld (a firewall, Cloudflare's bot protection, a login page): let /api through.";
+		if (cause == "denied") return host + " refused access (" + detail + "). Something in front of RomM may be blocking the handheld (a firewall, bot protection, a login page): let /api through.";
 		if (cause == "http") return host + " answered " + detail + " where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).";
 		if (cause == "notromm") return "Something answers at " + url + ", but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).";
 		if (cause == "noanswer") return detail.empty() ? "No answer from " + host + "." : "No answer from " + host + " (" + detail + ").";

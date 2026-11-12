@@ -59,7 +59,7 @@ while [ $# -gt 0 ]; do
         ok) echo "romm $3 RomM 5.4.1" ;;
         old) echo "romm $3 RomM 5.3.0 old" ;;
         redirect) case $3 in http://*) echo "fail redirect https://${3#http://}/api/heartbeat"; exit 1 ;; *) echo "romm $3 RomM 5.4.1" ;; esac ;;
-        access) echo "fail access https://team.cloudflareaccess.com/cdn-cgi/access/login/x"; exit 1 ;;
+        access) echo "fail access https://auth.example.com/?rd=https://romm.example.com/api/heartbeat"; exit 1 ;;
         *) echo "fail $FAKE_SYNC_PROBE"; exit 1 ;;
         esac
         exit 0 ;;

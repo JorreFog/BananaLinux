@@ -1791,10 +1791,10 @@ settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{hos
 settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} 未及时响应。能否从此 Wi-Fi 访问它？请检查端口，以及 HTTPS 或 HTTP。
 settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	暂时无法检查证书：时钟尚未通过互联网校准。请连接 Wi-Fi 等待一分钟后重试。
 settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca 指定的文件无法读取：请在 banana/settings.conf 中检查。
-settings		Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for {host}/api in Access. Your phone still logs in, for the page that approves the handheld.	Cloudflare Access 在那里要求登录。请放行 RomM 的 API：在 Access 中为 {host}/api 设置 Bypass 策略。你的手机仍需登录，以打开批准掌机的页面。
+settings		{host} answers with another page, not RomM: a login in front of it, most likely. The handheld can't log in there: let RomM's API (/api) through without one. Your phone still logs in, for the page that approves the handheld.	{host} 返回的是另一个页面，而不是 RomM：很可能是它前面的登录页。掌机无法在那里登录：请让 RomM 的 API（/api）无需登录即可通过。你的手机仍需登录，以打开批准掌机的页面。
 settings		The server sends this address to {hsMoved}. Y uses that address.	服务器将此地址转到 {hsMoved}。按 Y 使用该地址。
 settings		The server sends this address elsewhere, not to RomM: {detail}	服务器将此地址转到别处，而不是 RomM：{detail}
-settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, Cloudflare's bot protection, a login page): let /api through.	{host} 拒绝访问（{detail}）。RomM 前面的某些东西可能在阻止掌机（防火墙、Cloudflare 的机器人防护、登录页面）：请放行 /api。
+settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, bot protection, a login page): let /api through.	{host} 拒绝访问（{detail}）。RomM 前面的某些东西可能在阻止掌机（防火墙、机器人防护、登录页面）：请放行 /api。
 settings		{host} answered {detail} where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).	{host} 在 RomM 的 API 应在的位置返回了 {detail}。请检查主机，以及 RomM 部署在子路径下时的路径（https://example.com/romm）。
 settings		Something answers at {url}, but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).	{url} 有响应，但不是 RomM 的 API。请检查主机，以及 RomM 部署在子路径下时的路径（https://example.com/romm）。
 settings		No answer from {host}.	{host} 没有响应。
