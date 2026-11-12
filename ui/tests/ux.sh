@@ -221,6 +221,43 @@ for hl in en zh-cn ru it fi; do
         done
     done
 done
+# the Home server's Server row says what its paired server's certificate is checked against, a whole line for each case
+# and so one a language has: with the check off, with a certificate trusted on the handheld (the card's file, or the
+# one waiting in the run folder), for RomM and for Romhost, in every language (put together from two sentences, the
+# line matched none and the whole help came out in English)
+HSFX=$OUT/ux-hs-help-$size
+rm -rf "$HSFX"; "$HERE/tests/fixture.sh" "$HSFX" >/dev/null; mkdir -p "$HSFX/run"
+hs_help() {	# <language> <backend> <case>: the row's help
+    touch "$HSFX/data/settings.conf"; sed -i '/^language\b/d; /^homesync_tls\b/d' "$HSFX/data/settings.conf"
+    rm -f "$HSFX/data/homesync-server.pem" "$HSFX/run/server-trusted.pem"
+    printf 'language = %s\n' "$1" >> "$HSFX/data/settings.conf"
+    printf '{"backend": "%s", "server": "https://home.example.com:8443", "token": "t", "serverName": "Shelf", "name": "RG DS"}\n' "$2" > "$HSFX/data/romsync.json"
+    case $3 in
+    off) echo 'homesync_tls = off' >> "$HSFX/data/settings.conf" ;;
+    card) printf '# for https://home.example.com:8443\n-----BEGIN CERTIFICATE-----\n' > "$HSFX/data/homesync-server.pem" ;;
+    waiting) printf '# for https://home.example.com:8443\n-----BEGIN CERTIFICATE-----\n' > "$HSFX/run/server-trusted.pem" ;;
+    other) printf '# for https://other.example.com\n-----BEGIN CERTIFICATE-----\n' > "$HSFX/data/homesync-server.pem" ;;
+    esac
+    BANANA_RUN="$HSFX/run" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
+        --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$HSFX/roms" --data "$HSFX/data" \
+        --script "home 0; helpof hs_server" 2>&1 | sed -n 's/.*helpof hs_server: //p'
+}
+for hb in romm romhost; do
+    en_plain=$(hs_help en $hb plain); en_off=$(hs_help en $hb off); en_card=$(hs_help en $hb card)
+    case $en_plain in *Shelf*home.example.com:8443*) ;; *) echo "FAIL $size: the Server row's help ($hb) doesn't name the paired server: $en_plain"; fail=1 ;; esac
+    case $en_plain in *certificate\ is*|*"isn't checked"*) echo "FAIL $size: the Server row ($hb) says something of a certificate checked the usual way: $en_plain"; fail=1 ;; esac
+    case $en_off in *"isn't checked"*) ;; *) echo "FAIL $size: the Server row ($hb) doesn't say its certificate isn't checked: $en_off"; fail=1 ;; esac
+    case $en_card in *"one you trusted"*) ;; *) echo "FAIL $size: the Server row ($hb) doesn't say its certificate was trusted by hand: $en_card"; fail=1 ;; esac
+    [ "$(hs_help en $hb waiting)" = "$en_card" ] || { echo "FAIL $size: the Server row ($hb) doesn't count a certificate still waiting for its pairing: $(hs_help en $hb waiting)"; fail=1; }
+    [ "$(hs_help en $hb other)" = "$en_plain" ] || { echo "FAIL $size: the Server row ($hb) takes another server's certificate for this one's: $(hs_help en $hb other)"; fail=1; }
+    for hl in ru zh-cn fi it; do
+        for hc in plain off card; do
+            got=$(hs_help $hl $hb $hc); eval "en=\$en_$hc"
+            case $got in *Shelf*home.example.com:8443*) ;; *) got= ;; esac
+            { [ -n "$got" ] && [ "$got" != "$en" ]; } || { echo "FAIL $size: the Server row's help ($hb, $hc) isn't translated in $hl: $(hs_help $hl $hb $hc)"; fail=1; }
+        done
+    done
+done
 
 # the library's top screen (feedback 2026-10-25): a long title gets the lines it needs (not two), and the line under it,
 # the stats and the achievements stay put whatever the title's length (the block was centred: it jumped while browsing)

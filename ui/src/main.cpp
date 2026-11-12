@@ -1217,6 +1217,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		// helpcheck: every Settings row's help (and a game page's) laid out as the top panel would: fits or OVERFLOW
 		else if (op == "helpcheck") { int n = settings.helpCheck([&](const std::string& l) { logf("%s", l.c_str()); }); logf("helpcheck: %d texts", n); }
+		// helpof <key>: that Settings row's help as it is worded now, in the language loaded (a line put together from
+		// what the card holds, which helpcheck's layout doesn't read)
+		else if (op == "helpof") { std::string k; cs >> k; logf("helpof %s: %s", k.c_str(), settings.helpShown(k).c_str()); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
 		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
 		else if (op == "inkon")

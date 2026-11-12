@@ -43,6 +43,7 @@ namespace banana
 		// every Settings row's help and every game page row's (as the panel would lay it out now: the language's too)
 		// that doesn't fit its box at the smallest size, one line each to log; and how many were checked (ui/tests)
 		int helpCheck(const std::function<void(const std::string&)>& log);
+		std::string helpShown(const std::string& key);	// a row's help as the panel words it now, in the language loaded ("" for no such row)
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }

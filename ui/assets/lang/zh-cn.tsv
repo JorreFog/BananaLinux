@@ -1862,3 +1862,7 @@ settings		Still finishing the last search. Try Connect again in a moment.	上一
 settings		The pairing stopped by itself. A tries again.	配对自行停止了。按 A 重试。
 settings		The last name is still being set. Try again in a moment.	上一个名称仍在设置中。请稍后再试。
 settings		Couldn't unpair: the card didn't take the change. Try again.	无法取消配对：卡未能写入更改。请重试。
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again. Its certificate isn't checked (Check certificate is off).	已与 {n}（{hsPairedUrl}）配对。按 A 打开其地址与「检查证书」。在那里选择「连接」可重新配对。其证书未经检查（「检查证书」已关闭）。
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again. Its certificate is one you trusted on this handheld.	已与 {n}（{hsPairedUrl}）配对。按 A 打开其地址与「检查证书」。在那里选择「连接」可重新配对。其证书是你在此掌机上信任的那一张。
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate isn't checked (Check certificate is off).	已与 {n}（Romhost，{hsPairedUrl}）配对。按 A 重新配对。其证书未经检查（「检查证书」已关闭）。
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate is one you trusted on this handheld.	已与 {n}（Romhost，{hsPairedUrl}）配对。按 A 重新配对。其证书是你在此掌机上信任的那一张。

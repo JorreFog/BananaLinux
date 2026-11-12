@@ -2382,15 +2382,23 @@ namespace banana
 		if (cur.key == "hs_server")
 		{
 			std::string n = homeServer();
-			help = n.empty() ? "Not paired. A pairs this handheld with RomM or Romhost."
-				: hsBackend() == "romm" ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again."
-				: "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again.";
-			// (an https server taken without the usual check said here, where the pairing is looked at, not only in the log)
-			if (!n.empty() && hsPairedUrl.compare(0, 8, "https://") == 0)
-			{
-				if (getConfValue(data + "/settings.conf", "homesync_tls", "on") == "off") help += " Its certificate isn't checked (Check certificate is off).";
-				else if (hsTrusts(bsync::originOf(hsPairedUrl))) help += " Its certificate is one you trusted on this handheld.";
-			}
+			// (an https server taken without the usual check said here, where the pairing is looked at, not only in the
+			// log; each case a whole line, so a translation has the sentence entire: one put together from two is a line
+			// no language has, and the whole help fell back to English)
+			const bool https = !n.empty() && hsPairedUrl.compare(0, 8, "https://") == 0;
+			const bool unchecked = https && getConfValue(data + "/settings.conf", "homesync_tls", "on") == "off";
+			const bool trusted = https && !unchecked && hsTrusts(bsync::originOf(hsPairedUrl));
+			if (n.empty()) help = "Not paired. A pairs this handheld with RomM or Romhost.";
+			else if (hsBackend() == "romm")
+				help = unchecked ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again. Its certificate isn't checked (Check certificate is off)."
+					: trusted ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again. Its certificate is one you trusted on this handheld."
+					: "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again.";
+			else
+				// (Romhost's too: its own pairing never shows a certificate to trust, but one trusted on RomM's form for
+				// the same address is what its requests are then checked against)
+				help = unchecked ? "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again. Its certificate isn't checked (Check certificate is off)."
+					: trusted ? "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again. Its certificate is one you trusted on this handheld."
+					: "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again.";
 		}
 		if (cur.key == "hs_sync" && !syncLine.empty() && !syncing())
 		{
@@ -2467,6 +2475,13 @@ namespace banana
 		bool ok = helpFit(t, top, bottom, z, n);
 		int maxLines = ok ? n : std::max(1, (int)((bottom - top - z * 1.3f) / std::round(z * 1.4f)) + 1);
 		wrapped(t, z, HELP_X, top, HELP_W, maxLines, c);
+	}
+
+	std::string Settings::helpShown(const std::string& key)
+	{
+		if (!mOpen) open();
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == key) return lang::tr(helpOf(i));
+		return "";
 	}
 
 	int Settings::helpCheck(const std::function<void(const std::string&)>& log)
