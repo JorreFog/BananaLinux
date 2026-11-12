@@ -2385,6 +2385,12 @@ namespace banana
 			help = n.empty() ? "Not paired. A pairs this handheld with RomM or Romhost."
 				: hsBackend() == "romm" ? "Paired with " + n + " at " + hsPairedUrl + ". A opens its address and Check certificate. Connect there pairs again."
 				: "Paired with " + n + " (Romhost) at " + hsPairedUrl + ". A pairs again.";
+			// (an https server taken without the usual check said here, where the pairing is looked at, not only in the log)
+			if (!n.empty() && hsPairedUrl.compare(0, 8, "https://") == 0)
+			{
+				if (getConfValue(data + "/settings.conf", "homesync_tls", "on") == "off") help += " Its certificate isn't checked (Check certificate is off).";
+				else if (hsTrusts(bsync::originOf(hsPairedUrl))) help += " Its certificate is one you trusted on this handheld.";
+			}
 		}
 		if (cur.key == "hs_sync" && !syncLine.empty() && !syncing())
 		{
@@ -2927,7 +2933,7 @@ namespace banana
 	int Settings::pageWake(double t) const
 	{
 		// (Home server: a probe's or a pairing's answer, and the pairing screen's countdown)
-		if (hsStep == 4 || (hsStep && hsJob.running())) return 100;
+		if (hsBusy() || (hsStep && hsJob.running())) return 100;
 		if (hsStep == 3) return page == HOMESRV ? 250 : 500;
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
@@ -7785,6 +7791,8 @@ namespace banana
 				}
 			}
 			else if (hsStep == 4) hsProbed(out);
+			else if (hsStep == 5) hsCertRead(out);
+			else if (hsStep == 6) hsCertTrusted(out);
 			else if (hsStep == 2)
 			{
 				// probe: "romhost <url> <name>", "romm <url> RomM <version>", "none"

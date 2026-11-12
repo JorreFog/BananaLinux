@@ -24,6 +24,44 @@ namespace bsync
 	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana", CA;
 	bool dryRun = false, verbose = false, holdRoms = true, holdSaves = true;
 	std::string saveSlot = "autosave";
+	std::vector<Pin> PINS;
+	std::string pinPath() { return ROOT + "/banana/homesync-server.pem"; }
+	std::string stagedPinPath() { return RUN + "/server-trusted.pem"; }
+	std::string pinOrigin(const std::string& file)
+	{
+		std::string all = readFile(file), first = all.substr(0, all.find('\n'));
+		while (!first.empty() && (first.back() == '\r' || first.back() == ' ')) first.pop_back();
+		if (first.compare(0, 6, "# for ") != 0 || all.find("-----BEGIN CERTIFICATE-----") == std::string::npos) return "";
+		std::string o = originOf(first.substr(6));
+		return o.compare(0, 8, "https://") != 0 || o != first.substr(6) ? "" : o;
+	}
+	void loadPin()
+	{
+		PINS.clear();
+		// (the one waiting first: trusted later than the card's, it is the one meant should both be for one server, as
+		// after a write of the card's that failed, or a cut between a pairing and that write)
+		for (const std::string& f : { stagedPinPath(), pinPath() })
+		{
+			std::string o = pinOrigin(f);
+			if (!o.empty()) PINS.push_back({ f, o });
+		}
+	}
+	void settlePin(const std::string& origin)
+	{
+		const std::string staged = stagedPinPath(), card = pinOrigin(pinPath());
+		if (!origin.empty() && pinOrigin(staged) == origin)
+		{
+			// (not written: the one waiting still holds until the next start, and the form's Y trusts it again)
+			if (writeAtomic(pinPath(), readFile(staged))) unlink(staged.c_str());
+			else say("the certificate trusted for %s couldn't be kept on the card (%s)", origin.c_str(), pinPath().c_str());
+		}
+		else
+		{
+			if (!card.empty() && card != origin) unlink(pinPath().c_str());	// (the server paired with before: its pairing is gone)
+			unlink(staged.c_str());	// (one that waited for a pairing with some other server, which this one wasn't)
+		}
+		loadPin();
+	}
 	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
 	long connectTimeout = 10, callTimeout = 60;
 
@@ -297,7 +335,7 @@ namespace bsync
 		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
 		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
 		O_HTTPGET = 80, O_CAINFO = 10065, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002,
-		O_CERTINFO = 172, I_CERTINFO = 0x400022
+		O_CERTINFO = 172, I_CERTINFO = 0x400022, O_CAPATH = 10097
 	};
 	struct CertInfo { int n; struct Slist { char* data; Slist* next; }** certs; };	// (libcurl's curl_certinfo)
 	// a date as libcurl's certificate information gives it: OpenSSL's "Jan  1 00:00:00 2099 GMT", or its own
@@ -403,7 +441,13 @@ namespace bsync
 		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
 		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
 		cu.setopt(h, O_FOLLOWLOCATION, q.follow ? 1L : 0L);
-		if (!CA.empty()) cu.setopt(h, O_CAINFO, CA.c_str());	// (the owner's own CA, for a server with a certificate it signed)
+		// (the one certificate trusted for this server, when there is one: the only thing the server's is checked against,
+		// the folder of public CAs libcurl would also look in turned off, since with the name not compared any
+		// certificate a public CA signed, for any name, would otherwise pass)
+		const Pin* pin = nullptr;
+		for (auto& p : PINS) if (!pin && q.url.compare(0, p.origin.size() + 1, p.origin + "/") == 0) pin = &p;
+		if (pin) { cu.setopt(h, O_CAINFO, pin->file.c_str()); cu.setopt(h, O_CAPATH, (const char*)nullptr); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }
+		else if (!CA.empty()) cu.setopt(h, O_CAINFO, CA.c_str());	// (the owner's own CA, for a server with a certificate it signed)
 		if (!tlsVerify || q.certDates) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }	// (a self-signed one, the owner's choice)
 		if (q.certDates) cu.setopt(h, O_CERTINFO, 1L);
 		cu.setopt(h, O_HEADERFUNCTION, onHeader);
@@ -445,6 +489,9 @@ namespace bsync
 			{
 				if (strncmp(l->data, "Start date:", 11) == 0) r.certFrom = certTime(l->data + 11);
 				if (strncmp(l->data, "Expire date:", 12) == 0) r.certTo = certTime(l->data + 12);
+				if (strncmp(l->data, "Subject:", 8) == 0) r.certSubject = trim(l->data + 8);
+				if (strncmp(l->data, "Issuer:", 7) == 0) r.certIssuer = trim(l->data + 7);
+				if (strncmp(l->data, "Cert:", 5) == 0) r.certPem = l->data + 5;
 			}
 		if (rc != 0)
 		{

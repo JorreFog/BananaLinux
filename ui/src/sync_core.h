@@ -26,6 +26,23 @@ namespace bsync
 	extern bool dryRun, verbose;
 	extern std::string saveSlot;	// RomM 5.4's slot every game's save syncs with (settings: homesync_slot, homesync_slot_name)
 	extern bool tlsVerify;	// homesync_tls = off: an https server's certificate taken unchecked
+	// One server's certificate its owner chose to trust on the handheld (the form's "Trust it", for a certificate of the
+	// server's own making): the file it is kept in, banana/homesync-server.pem, whose first line names the server it was
+	// read from ("# for https://host:port"), and that server. A request to that server, and to no other, is checked
+	// against this one certificate and nothing else: no public CA, no homesync_ca, so another certificate shown there,
+	// whoever signed it, fails as untrusted. The name in it isn't compared with the address (a certificate of one's own
+	// making seldom names the address it is reached by): the certificate is the server's identity here.
+	// The card's file is the paired server's. A certificate trusted for another server while the card is paired (the
+	// form's address changed, before the pairing with it has gone through) is kept apart, in the run folder
+	// (server-trusted.pem, the same two parts), so the pairing there is still checked against its own: it becomes the
+	// card's only once that pairing is written (settlePin), and a pairing given up leaves the old server's as it was
+	struct Pin { std::string file, origin; };
+	extern std::vector<Pin> PINS;						// the certificates trusted by hand that hold now: the one waiting, then the card's
+	std::string pinPath();								// where the paired server's is on this card
+	std::string stagedPinPath();						// where one trusted for a server not yet paired with waits
+	std::string pinOrigin(const std::string& file);		// the server such a file is for, "" when it isn't a certificate for a server
+	void loadPin();										// PINS from the two files
+	void settlePin(const std::string& origin);			// paired with the server at origin: its waiting certificate the card's, any other server's gone, the card's and one waiting
 	extern bool logWanted;	// the next line said opens the report on the card, banana/logs/sync.log
 	// what of romsync.json this run may write: the games and the pairing while it holds sync.lock (holdRoms), the
 	// saves while it holds save.lock (holdSaves); the rest is written back as another run left it
@@ -117,6 +134,7 @@ namespace bsync
 		long code = 0;			// 0: no answer (err says why, curl is libcurl's code)
 		int curl = 0;
 		long long certFrom = 0, certTo = 0;	// Req's certDates: the server's certificate's own dates (unix time; 0 not read)
+		std::string certPem, certSubject, certIssuer;	// and the certificate itself (PEM), whom it names and who signed it
 		std::string body, err;
 		std::map<std::string, std::string> hdr;	// lower-case names
 		JPtr json() const { return banana::parseJson(body); }

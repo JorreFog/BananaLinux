@@ -4,7 +4,7 @@
 # failure: redirect, for an http:// address only, access, tls, dns), and pair --romm shows a code and is approved 2 s
 # later (FAKE_SYNC_PAIR=deny: refused; hang: no answer; tls, redirect: the pairing's own probe failing; slowstop: a
 # second to end once stopped; latepid: its sync.pid a second late), a code given pairs at once (FAKE_SYNC_FIND=romm: no Romhost
-# found, and RomM at the address typed instead); games lists two GBA games, one on the card; a sync run by hand leaves
+# found, and RomM at the address typed instead); cert shows a certificate and trust keeps it; games lists two GBA games, one on the card; a sync run by hand leaves
 # its status as it is, or with FAKE_SYNC_DONE says it is done a second later. Each call's arguments go to $FAKE_SYNC_LOG
 echo "$*" >> "$FAKE_SYNC_LOG"
 # what banana-sync saves lists, as $FAKE_SYNC_SAVES says (the sync before a game leaves the same in launch.conflict)
@@ -43,6 +43,15 @@ while [ $# -gt 0 ]; do
     forget) rm -f "$conf"; exit 0 ;;
     # (rename: the name kept as the pairing's, as banana-sync does once RomM has it)
     rename) sed -i "s/\"name\": \"[^\"]*\"/\"name\": \"$2\"/" "$conf"; echo ok; exit 0 ;;
+    # (the certificate an https server shows, for its owner to look at, and that one trusted: kept on the card with the
+    # server it is for, as banana-sync keeps it)
+    cert) printf '# for %s\n-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----\n' "$2" > "$run/server-cert.pem"
+        printf 'cert\t%s\tCN = romm.example.com\tCN = romm.example.com\t1794445673\t1794618473\t28:8E:52:6F:46:0D:17:FA:E0:2D:6B:60:A9:23:4C:02:87:36:FD:C1\n' "$2"; exit 0 ;;
+    # (for a server other than the one paired with: in the run folder, the card's once paired with it)
+    trust) [ -f "$run/server-cert.pem" ] || { echo 'error no certificate was shown to trust'; exit 1; }
+        for=$(sed -n '1s/^# for //p' "$run/server-cert.pem"); now=$(sed -n 's/.*"server": *"\([^"]*\)".*/\1/p' "$conf" 2>/dev/null)
+        case $now in ''|"$for"|"$for"/*) mv "$run/server-cert.pem" "${conf%/*}/homesync-server.pem" ;; *) mv "$run/server-cert.pem" "$run/server-trusted.pem" ;; esac
+        echo ok; exit 0 ;;
     probe)
         # (an address typed where Romhost's was asked for: RomM's there with FAKE_SYNC_FIND=romm)
         [ "$2" = --romm ] || { [ "${FAKE_SYNC_FIND:-}" = romm ] && { echo "romm http://$2 RomM 5.4.1"; exit 0; }; exit 1; }
@@ -59,7 +68,8 @@ while [ $# -gt 0 ]; do
         if [ "$2" = --romm ]; then
             # (the version the probe gave, kept as banana-sync keeps it)
             v=5.4.1; [ "${FAKE_SYNC_PROBE:-ok}" = old ] && v=5.3.0
-            romm() { printf '{"backend": "romm", "server": "%s", "token": "rmm_test", "serverName": "RomM %s", "serverVersion": "%s", "name": "RG DS"}\n' "$1" $v $v > "$conf"; st "paired RomM $v"; }
+            romm() { printf '{"backend": "romm", "server": "%s", "token": "rmm_test", "serverName": "RomM %s", "serverVersion": "%s", "name": "RG DS"}\n' "$1" $v $v > "$conf"
+                [ -f "$run/server-trusted.pem" ] && mv "$run/server-trusted.pem" "${conf%/*}/homesync-server.pem"; st "paired RomM $v"; }
             [ -n "${4:-}" ] && { romm "$3"; exit 0; }
             st "pair ABCD-EFGH $3/pair/device?user_code=ABCD-EFGH 600"
             case ${FAKE_SYNC_PAIR:-approve} in

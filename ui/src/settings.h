@@ -669,7 +669,8 @@ namespace banana
 		double syncNext = 0;
 		std::string hsUrl, hsName, hsKind;	// the server being paired with
 		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running,
-											// 4 asking RomM's address (probe --romm)
+											// 4 asking RomM's address (probe --romm), 5 reading its certificate
+											// (cert), 6 keeping the one its owner trusted (trust)
 		wifi::Job hsJob;
 		wifi::Job nameJob;	// banana-sync rename, from the Device name row
 		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
@@ -738,6 +739,15 @@ namespace banana
 		std::string hsBase() const;			// the form's parts as one base URL
 		void hsSetAddress(const std::string& typed);	// a URL typed (or pasted) into the parts
 		void hsConnect();					// probe --romm on the form's address
+		// a certificate nothing vouches for, shown for its owner to trust or not (Y on the form's error): what banana-sync
+		// cert read, asked about over the form until A (banana-sync trust, then Connect again) or B
+		bool hsCertAsk = false;
+		std::string hsCertFor, hsCertSubject, hsCertIssuer, hsCertDates, hsCertPrint;
+		void hsReadCert();
+		void hsCertRead(const std::string& out);
+		void hsCertTrusted(const std::string& out);
+		bool hsBusy() const { return hsStep >= 4; }	// the form waiting on banana-sync: its rows don't answer
+		bool hsTrusts(const std::string& origin) const;	// whether that server's certificate was trusted by hand
 		void hsProbed(const std::string& out);
 		void hsRommFound(const std::string& url, const std::string& ver, bool old);	// a probe's RomM, about to be paired
 		void hsStartPair(const std::string& code);	// banana-sync pair --romm (no code: the device flow)

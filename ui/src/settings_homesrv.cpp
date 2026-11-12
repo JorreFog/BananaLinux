@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <dirent.h>
 #include <fstream>
 #include <signal.h>
@@ -103,6 +104,7 @@ namespace banana
 			hsSel = hsHost.empty() ? 1 : (int)hsFormRows().size() - 1;
 		}
 		if (v != HS_PAIR) { hsMsg.clear(); hsCause.clear(); }
+		hsCertAsk = false;
 		message.clear();
 		fprintf(stderr, "home server: %s%s\n", v == HS_CHOOSE ? "choose a server" : v == HS_FORM ? "RomM's form at " : "pairing screen",
 			v == HS_FORM ? hsBase().c_str() : "");	// (what a test waits for)
@@ -111,7 +113,7 @@ namespace banana
 	// ---- RomM: the probe, the pairing ----------------------------------------------------------------------------------
 	void Settings::hsConnect()
 	{
-		if (hsStep == 4 || hsStep == 3) return;
+		if (hsBusy() || hsStep == 3) return;
 		if (hsHost.empty()) { hsMsg = "Type RomM's address first."; hsSel = 1; return; }
 		if (!wifiOn()) { hsMsg = "Wi-Fi is off: switch it on in Network first."; return; }
 		hsStep = 4;
@@ -127,6 +129,65 @@ namespace banana
 		hsKind = "romm"; hsUrl = url; hsName = "RomM " + ver;
 		hsNote = old ? "RomM " + ver + ": until it's 5.4 or newer, saves only come down from it, none go up." : "";
 		fprintf(stderr, "home server: RomM %s at %s\n", ver.c_str(), url.c_str());	// (what a test waits for)
+	}
+
+	// the certificate of the form's address, read for its owner to look at: the server it came from, whom it names, who
+	// signed it, its dates and its fingerprint, as banana-sync cert says them on one line
+	void Settings::hsReadCert()
+	{
+		if (hsBusy() || hsStep == 3) return;
+		hsStep = 5;
+		hsMsg = "Reading the server's certificate...";
+		hsJob.start(syncCmd("cert " + gamesync::shellQuote(hsBase())) + " 2>/dev/null", sync);
+	}
+	void Settings::hsCertRead(const std::string& out)
+	{
+		hsStep = 0;
+		std::string ln = out.substr(0, out.find('\n'));
+		std::vector<std::string> f = gamesync::splitTabs(ln);
+		if (f.size() < 7 || f[0] != "cert")
+		{
+			hsMsg = "The server's certificate couldn't be read. Check the address and try Connect again.";
+			fprintf(stderr, "home server: certificate not read: %s\n", ln.c_str());
+			return;
+		}
+		auto day = [](const std::string& unix)
+		{
+			time_t t = (time_t)atoll(unix.c_str());
+			struct tm tm;
+			char b[16] = "?";
+			if (t > 0 && gmtime_r(&t, &tm)) strftime(b, sizeof b, "%Y-%m-%d", &tm);
+			return std::string(b);
+		};
+		hsCertFor = f[1]; hsCertSubject = f[2]; hsCertIssuer = f[3]; hsCertDates = day(f[4]) + " to " + day(f[5]); hsCertPrint = f[6];
+		hsCertAsk = true;
+		hsMsg.clear();
+		fprintf(stderr, "home server: certificate of %s shown (%s)\n", hsCertFor.c_str(), hsCertPrint.c_str());	// (what a test waits for)
+	}
+	void Settings::hsCertTrusted(const std::string& out)
+	{
+		hsStep = 0;
+		hsCertAsk = false;
+		if (bsync::trim(out.substr(0, out.find('\n'))) != "ok")
+		{
+			hsMsg = "The certificate couldn't be kept on the card. Is the card full?";
+			fprintf(stderr, "home server: certificate not kept: %s\n", out.c_str());
+			return;
+		}
+		fprintf(stderr, "home server: certificate of %s trusted\n", hsCertFor.c_str());
+		hsCause.clear();
+		hsConnect();
+	}
+	// whether the server at origin is one whose certificate its owner trusted on this handheld, as the first line of the
+	// card's copy names it, or of the one that waits in the run folder for a pairing with another server to go through
+	bool Settings::hsTrusts(const std::string& origin) const
+	{
+		for (const std::string& f : { data + "/homesync-server.pem", runDir + "/server-trusted.pem" })
+		{
+			std::string first = firstLine(f);
+			if (!origin.empty() && first.compare(0, 6, "# for ") == 0 && bsync::trim(first.substr(6)) == origin) return true;
+		}
+		return false;
 	}
 
 	void Settings::hsProbed(const std::string& out)
@@ -359,7 +420,7 @@ namespace banana
 		if (cause == "dns") return "Can't find " + host + ". Check the address, and that this Wi-Fi reaches the network RomM is on.";
 		if (cause == "refused") return host + " refused the connection. Check the port, and HTTPS or HTTP.";
 		if (cause == "timeout") return host + " didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.";
-		if (cause == "tls") return "The server's certificate isn't trusted. For a certificate of your own making, Y turns off Check certificate (or put your CA's certificate on the card as homesync_ca).";
+		if (cause == "tls") return "The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).";
 		if (cause == "clock") return "The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.";
 		if (cause == "ca") return "homesync_ca names a file that can't be read: check it in banana/settings.conf.";
 		if (cause == "access") return "Cloudflare Access asks for a login there. Let RomM's API through: a Bypass policy for " + host + "/api in Access. Your phone still logs in, for the page that approves the handheld.";
@@ -394,7 +455,17 @@ namespace banana
 			std::vector<int> rows = hsFormRows();
 			hsSel = std::min(hsSel, (int)rows.size() - 1);
 			int row = rows[hsSel];
-			bool busy = hsStep == 4;
+			bool busy = hsBusy();
+			// (the certificate asked about: A trusts it, B leaves it, nothing else answers)
+			if (hsCertAsk)
+			{
+				if (busy) return NONE;
+				if (k == Key::B) { hsCertAsk = false; return MOVED; }
+				if (k != Key::A) return NONE;
+				hsStep = 6;
+				hsJob.start(syncCmd("trust") + " 2>/dev/null", sync);
+				return MOVED;
+			}
 			auto tlsOn = [&]() { return getConfValue(data + "/settings.conf", "homesync_tls", "on") != "off"; };
 			auto setTls = [&](bool on)
 			{
@@ -423,7 +494,10 @@ namespace banana
 			case Key::START: hsConnect(); return MOVED;
 			case Key::Y:
 				if (busy) return NONE;
-				if (hsCause == "tls" && hsHttps && tlsOn()) { setTls(false); hsMsg = "Check certificate is off: Connect tries again."; hsCause.clear(); return MOVED; }
+				// (the certificate shown first, and only that one trusted: the check itself stays on, where turning it
+				// off here, on the very error someone standing in for the server would cause, took any certificate
+				// from then on, for every server)
+				if (hsCause == "tls" && hsHttps && tlsOn()) { hsReadCert(); return MOVED; }
 				if (hsCause == "redirect" && !hsMoved.empty()) { hsSetAddress(hsMoved); hsSel = (int)hsFormRows().size() - 1; return MOVED; }
 				return NONE;
 			default: return NONE;
@@ -465,8 +539,9 @@ namespace banana
 		if (hsView == HS_CHOOSE) { cs.push_back({ Key::A, "A", "Choose", true }); return cs; }
 		if (hsView == HS_FORM)
 		{
-			if (hsStep == 4) return cs;
-			if ((hsCause == "tls" && hsHttps) || (hsCause == "redirect" && !hsMoved.empty())) cs.push_back({ Key::Y, "Y", hsCause == "tls" ? "Don't check" : "Use it" });
+			if (hsBusy()) return cs;
+			if (hsCertAsk) { cs.push_back({ Key::A, "A", "Trust it", true }); return cs; }
+			if ((hsCause == "tls" && hsHttps) || (hsCause == "redirect" && !hsMoved.empty())) cs.push_back({ Key::Y, "Y", hsCause == "tls" ? "Certificate" : "Use it" });	// ("See certificate" is wider than a chip of three)
 			std::vector<int> rows = hsFormRows();
 			int row = rows[std::min(hsSel, (int)rows.size() - 1)];
 			cs.push_back({ Key::A, "A", row == F_CONNECT ? "Connect" : row == F_PROTO || row == F_TLS ? "Change" : "Type", true });
@@ -483,7 +558,8 @@ namespace banana
 	{
 		(void)cx; (void)cy;
 		if (downY >= 418 && downY <= 466) return pressHome(chipAt(homeChips(), downX));
-		if (hsView == HS_PAIR) return NONE;
+		// (a certificate asked about: only its buttons answer, a touch on the form behind it trusts nothing)
+		if (hsView == HS_PAIR || hsCertAsk) return NONE;
 		int n = hsView == HS_CHOOSE ? 2 : (int)hsFormRows().size();
 		for (int r = 0; r < n && r < ROWS; r++)
 		{
@@ -520,11 +596,34 @@ namespace banana
 		}
 		else if (hsView == HS_FORM)
 		{
-			text("RomM's address", true, 30, 170, 88, p.ink);
+			text(hsCertAsk ? "Trust this certificate?" : "RomM's address", true, 30, 170, 88, p.ink);
 			rawText = true;
-			if (!hsHost.empty()) text(fit(hsBase(), true, 22, 420), true, 22, 170, 130, p.accent);
+			if (!hsHost.empty()) text(fit(hsCertAsk ? hsCertFor : hsBase(), true, 22, 420), true, 22, 170, 130, p.accent);
 			rawText = false;
 			int row = rows[hsSel];
+			if (hsCertAsk)
+			{
+				// (what the server showed, for its owner to hold against the server's own: the fingerprint is what
+				// openssl x509 -fingerprint -sha1 prints for the certificate there)
+				const char* label[] = { "Issued to", "Issued by", "Valid", "SHA-1" };
+				const std::string* value[] = { &hsCertSubject, &hsCertIssuer, &hsCertDates, &hsCertPrint };
+				float y = 186;
+				for (int i = 0; i < 4; i++)
+				{
+					text(label[i], true, 17, 50, y, p.muted);
+					rawText = true;
+					// (the fingerprint is 59 characters: on two lines, cut between two of its pairs)
+					std::string v = *value[i], more;
+					if (i == 3 && v.size() > 30) { more = v.substr(30); v = v.substr(0, 29); }
+					text(fit(v, false, 17, 400), false, 17, 170, y, p.ink);
+					if (!more.empty()) { y += 24; text(fit(more, false, 17, 400), false, 17, 170, y, p.ink); }
+					rawText = false;
+					y += 28;
+				}
+				wrapped("No authority vouches for it. Trust it only if it is your own server's: from then on this certificate, and no other, is accepted for this server.",
+					18, 50, y + 8, 540, 5, p.muted);
+			}
+			else {
 			std::string help = !hsMsg.empty() ? hsMsg
 				: row == F_PROTO ? "HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network."
 				: row == F_ADDR ? "As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm."
@@ -535,6 +634,7 @@ namespace banana
 			if (hsMsg.empty() && row == F_CONNECT && paired && !hsHost.empty())
 				help += hsBackend() == "romm" && hsBase() == hsPairedUrl ? " It pairs this handheld again." : " This replaces the pairing with " + homeServer() + ".";
 			wrapped(help, 20, 50, 196, 540, 10, hsMsg.empty() ? p.muted : p.ink);
+			}
 		}
 		else
 		{
@@ -648,8 +748,13 @@ namespace banana
 					if (row == F_PROTO) { label = "Protocol"; value = hsHttps ? "HTTPS" : "HTTP"; choice = true; }
 					else if (row == F_ADDR) { label = "Address"; value = hsHost.empty() ? "Not set" : hsHost + hsPath; warn = hsHost.empty(); }
 					else if (row == F_PORT) { label = "Port"; value = hsPort.empty() ? (hsHttps ? "Usual (443)" : "Usual (80)") : hsPort; }
-					else if (row == F_TLS) { label = "Check certificate"; value = getConfValue(data + "/settings.conf", "homesync_tls", "on") == "off" ? "Off" : "On"; choice = true; }
-					else { label = hsStep == 4 ? "Checking..." : "Connect"; }
+					// (On with this server's own certificate trusted by hand said as that: it is checked, against that one)
+					else if (row == F_TLS)
+					{
+						const bool off = getConfValue(data + "/settings.conf", "homesync_tls", "on") == "off";
+						label = "Check certificate"; value = off ? "Off" : !hsHost.empty() && hsTrusts(bsync::originOf(hsBase())) ? "On, its own trusted" : "On"; choice = true;
+					}
+					else { label = hsStep == 4 ? "Checking..." : hsBusy() ? "A moment..." : "Connect"; }
 				}
 				Color vc = warn ? (on ? p.onPickAccent : p.accent) : c;
 				rawText = hsView == HS_FORM && r < (int)rows.size() && rows[r] == F_ADDR && !hsHost.empty();

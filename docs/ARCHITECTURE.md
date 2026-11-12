@@ -249,8 +249,20 @@ fills the rows it names, and its path is kept for a RomM served under a subpath.
 certificate failure before Wi-Fi's first time sync, so the clock is the RTC's), `ca`, `redirect <location>`, `access
 <location>` (Cloudflare Access's login), `denied <status>`, `http <status>`, `notromm`, `noanswer` (the list is the
 usage comment's at the top of `ui/src/sync.cpp`; `denied` is a 401 or a 403, and `noanswer` carries curl's message). The
-menu says each in words of its own, offers to turn the check off after `tls` and to take the address a `redirect` went
-to. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line `pair <code> <url> <seconds>` is the
+menu says each in words of its own, and offers to take the address a `redirect` went to. After `tls`, a certificate
+nothing vouches for, Y shows the certificate the server gave (`banana-sync cert <url>`, one request that checks
+nothing and sends nothing but the heartbeat's question: whom it names, who signed it, its dates and its SHA-1
+fingerprint, as `openssl x509 -fingerprint` prints it) and A there trusts it (`banana-sync trust`): it is kept as
+`banana/homesync-server.pem`, its first line naming the server, and from then on a request to that server, and to no
+other, is checked against that one certificate and nothing else, no public CA among them, so another certificate shown
+at that address fails as untrusted whoever signed it. The name in it isn't compared with the address, which a
+certificate made for a LAN seldom carries. The check itself stays on; Forget removes the file. A certificate
+trusted for a server other than the one the card is paired with waits in `/run/banana/server-trusted.pem`, checking
+that server alone, and becomes the card's file when the pairing with it is written, so a pairing given up there
+leaves the paired server's certificate, and its syncs, as they were. Turning the check off
+(`homesync_tls = off`) is the form's Check certificate row or the settings file, a choice made there and not on the
+error, since it then takes any certificate from any server; the Server row's help says when the paired server's
+certificate is unchecked or trusted by hand. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line `pair <code> <url> <seconds>` is the
 pairing screen, the code large on the top panel with the approval page written out and the time left, and that page as a
 QR code on the bottom one (Nayuki's qrcodegen, `ui/src/qr`), for a phone where the owner is signed in to RomM, through
 Cloudflare Access's login when there is one; X takes a client token's pairing code instead, B stops the pairing (its pid

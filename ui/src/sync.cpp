@@ -41,11 +41,15 @@
 //                                              or the server's from the vault. Says "ok" or "error <why>" on its last
 //                                              line, as restore does
 //   banana-sync restore <file>                 a kept copy in the vault as the card's save; the next sync sends it
+//   banana-sync cert <address>                 an https server's certificate, read unchecked, for its owner to look at:
+//                                              "cert <server> <subject> <issuer> <from> <to> <SHA-1>" (tabs between)
+//   banana-sync trust                          the certificate cert last showed, trusted for that server from here on
 //   banana-sync blank <file> [<folder>]        exit 0 when the save is blank (a core's fresh one); folder: under saves/
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
 // --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto,
 // homesync_launch, homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate,
-// homesync_tls = off: no certificate checked; homesync_slot = custom with homesync_slot_name: the RomM slot saves sync
+// homesync_tls = off: no certificate checked (banana/homesync-server.pem, written by trust: the one certificate a
+// server of its own making is checked against); homesync_slot = custom with homesync_slot_name: the RomM slot saves sync
 // with instead of autosave).
 // The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
 // Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
@@ -905,6 +909,22 @@ namespace
 		return "romm";
 	}
 	// a RomM base URL as typed: a scheme (https when none), no slash at its end
+	// base64 as a PEM file holds it, its line ends and padding passed over
+	std::string unBase64(const std::string& in)
+	{
+		std::string out;
+		unsigned acc = 0;
+		int bits = 0;
+		for (unsigned char ch : in)
+		{
+			int v = ch >= 'A' && ch <= 'Z' ? ch - 'A' : ch >= 'a' && ch <= 'z' ? ch - 'a' + 26 : ch >= '0' && ch <= '9' ? ch - '0' + 52 : ch == '+' ? 62 : ch == '/' ? 63 : -1;
+			if (v < 0) continue;
+			acc = (acc << 6) | (unsigned)v;
+			bits += 6;
+			if (bits >= 8) { bits -= 8; out += (char)((acc >> bits) & 0xFF); }
+		}
+		return out;
+	}
 	std::string rommBase(std::string a)
 	{
 		a = trim(a);
@@ -949,8 +969,9 @@ namespace
 		if (kind == "none" && tls == CURL_UNTRUSTED)
 		{
 			status("error the server's certificate isn't trusted (homesync_ca)");
-			say("the HTTPS server at %s isn't trusted: its CA's certificate as homesync_ca, or homesync_tls = off (not "
-				"recommended: any certificate is then taken), in banana/settings.conf", addr.c_str());
+			say("the HTTPS server at %s isn't trusted: its certificate trusted on the handheld (the form's Y, for RomM), its "
+				"CA's certificate as homesync_ca, or homesync_tls = off (not recommended: any certificate is then taken), in "
+				"banana/settings.conf", addr.c_str());
 			return 1;
 		}
 		if (kind == "none") { status("error no server at " + addr); say("no Romhost or RomM answers at %s", addr.c_str()); return 1; }
@@ -1027,6 +1048,7 @@ namespace
 			if (!e.empty()) say("not registered as a device yet (%s): the next sync tries again", e.c_str());
 		}
 		if (!savePairing(n)) { status("error can't write " + CONF); return 1; }
+		settlePin(originOf(url));
 		if (!(c.server == url && c.backend == kind)) dropServerLists();	// (another server: what was asked of the last one isn't asked of this)
 		status("paired " + (n.serverName.empty() ? url : n.serverName));
 		say("paired with %s (%s) as \"%s\"", n.serverName.c_str(), url.c_str(), n.name.c_str());
@@ -1505,9 +1527,10 @@ int main(int argc, char** argv)
 		CA = set["homesync_ca"];
 		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
 		tlsVerify = set["homesync_tls"] != "off";
+		loadPin();
 		saveSlot = slotOf(set["homesync_slot"], set["homesync_slot_name"]);
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | get [--drop] <key>... | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | cert <address> | trust | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | get [--drop] <key>... | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
 	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
 	if (cmd == "blank" && args.size() > 1)
@@ -1535,6 +1558,45 @@ int main(int argc, char** argv)
 	{
 		for (auto& s : discover(2.0)) printf("ROMHOST\t%s\t%s\n", s.first.c_str(), s.second.c_str());
 		return 0;
+	}
+	// cert <address>: the certificate an https server shows, read without checking it and with nothing sent but the
+	// request for RomM's heartbeat, for its owner to look at on the handheld: kept in the run folder with the server it
+	// came from, and said on one line (the server, whom it names, who signed it, its dates, its SHA-1 fingerprint as
+	// openssl x509 -fingerprint prints it). trust: that certificate, the one just shown and no other read since, becomes
+	// the one this server is checked against (homesync-server.pem on the card; for a server other than the one paired
+	// with, kept in the run folder until the pairing with it is written, so a pairing given up leaves the paired
+	// server's certificate as it was)
+	if (cmd == "cert" && args.size() > 1)
+	{
+		std::string base = rommBase(args[1]), origin = originOf(base);
+		unlink((RUN + "/server-cert.pem").c_str());
+		if (origin.compare(0, 8, "https://") != 0) { printf("fail not an https address\n"); return 1; }
+		Req q; q.url = base + "/api/heartbeat"; q.timeout = 8; q.follow = false; q.certDates = true;
+		Resp r = http(q);
+		size_t b = r.certPem.find("-----BEGIN CERTIFICATE-----"), e = r.certPem.find("-----END CERTIFICATE-----");
+		if (b == std::string::npos || e == std::string::npos || e < b) { printf("fail %s\n", r.code == 0 && !r.err.empty() ? r.err.c_str() : "no certificate read"); return 1; }
+		std::string pem = r.certPem.substr(b, e + 25 - b), der = unBase64(pem.substr(27, e - b - 27)), fp;
+		std::string hex = hashStr(der, "sha1");
+		for (size_t i = 0; i + 1 < hex.size(); i += 2) { if (i) fp += ':'; fp += (char)toupper(hex[i]); fp += (char)toupper(hex[i + 1]); }
+		if (der.empty() || !writeAtomic(RUN + "/server-cert.pem", "# for " + origin + "\n" + pem + "\n")) { printf("fail the certificate couldn't be kept\n"); return 1; }
+		auto clean = [](std::string s) { for (char& ch : s) if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' '; return s; };
+		printf("cert\t%s\t%s\t%s\t%lld\t%lld\t%s\n", origin.c_str(), clean(r.certSubject).c_str(), clean(r.certIssuer).c_str(), r.certFrom, r.certTo, fp.c_str());
+		return 0;
+	}
+	if (cmd == "trust")
+	{
+		bool ok;
+		std::string shown = readFile(RUN + "/server-cert.pem", &ok);
+		if (!ok || shown.compare(0, 6, "# for ") != 0 || shown.find("-----BEGIN CERTIFICATE-----") == std::string::npos) return answer("no certificate was shown to trust");
+		const std::string origin = trim(shown.substr(6, shown.find('\n') - 6));
+		Conf c = loadConf();
+		const bool other = c.paired() && originOf(c.server) != origin;
+		const std::string to = other ? stagedPinPath() : pinPath();
+		if (!writeAtomic(to, shown)) return answer("can't write " + to);
+		unlink((RUN + "/server-cert.pem").c_str());
+		if (other) say("the certificate of %s is trusted, and kept on the card once paired with it (the card is paired with %s)", origin.c_str(), c.server.c_str());
+		else say("the certificate of %s is trusted from here on (banana/homesync-server.pem)", origin.c_str());
+		return answer("");
 	}
 	if (cmd == "probe" && args.size() > 2 && args[1] == "--romm")
 	{
@@ -1621,6 +1683,8 @@ int main(int argc, char** argv)
 		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
 		int rc = unlink(CONF.c_str()) != 0 && errno != ENOENT ? 1 : 0;
 		unlink((CONF + ".new").c_str());	// (a copy a cut rename left, which the state is otherwise read from)
+		unlink(pinPath().c_str());			// (and the certificate trusted for that server: the next pairing asks again)
+		unlink(stagedPinPath().c_str());	// (one trusted for a server never paired with, too)
 		if (lk >= 0) close(lk);
 		if (rc) return rc;
 		dropServerLists();

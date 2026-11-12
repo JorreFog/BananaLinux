@@ -192,6 +192,14 @@ namespace bsync
 		}
 		return r;
 	}
+	// "https://host:port" of a URL, its scheme and host as they are written ("" when it has no scheme)
+	inline std::string originOf(const std::string& url)
+	{
+		size_t s = url.find("://");
+		if (s == std::string::npos) return "";
+		size_t e = url.find('/', s + 3);
+		return e == std::string::npos ? url : url.substr(0, e);
+	}
 	inline std::string trim(const std::string& s)
 	{
 		size_t a = s.find_first_not_of(" \t\r\n"), b = s.find_last_not_of(" \t\r\n");

@@ -530,6 +530,77 @@ bs ru sync > "$OUT/romm-tls5.log" 2>&1 || bad "a sync with homesync_tls off: $(t
 cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/ru/roms/gba/Secure Run (USA).gba" || bad "a ROM with homesync_tls off: $(tail -3 "$OUT/romm-tls5.log")"
 grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls4.log" && grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls5.log" ||
     bad "certificate checks off not said"
+# a certificate of the server's own making trusted on the handheld (the form's Y: cert reads it for its owner to look
+# at, trust keeps that one): the server is checked against that certificate and no other, the check on and no
+# homesync_ca, whatever name the certificate carries (this one names another host, as one made for a LAN does)
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/pin1.key" -out "$OUT/pin1.pem" -days 2 -subj /CN=my-romm >/dev/null 2>&1 &&
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/pin2.key" -out "$OUT/pin2.pem" -days 2 -subj /CN=my-romm >/dev/null 2>&1 || bad "openssl made no certificate to trust"
+PP=$(port); UP=https://127.0.0.1:$PP
+FAKE_ROMM_TLS="$OUT/pin1.pem:$OUT/pin1.key" python3 "$HERE/tests/fake-romm.py" "$PP" "$LT" 2> "$OUT/fake-romm-pin.log" & PINPID=$!; PIDS="$PIDS $PINPID"
+for i in $(seq 50); do curl -sk "$UP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+card rp
+TP1=$(curl -sk -XPOST "$UP/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+r=$(bs rp cert "$UP")
+[ "$(echo "$r" | cut -f1,2)" = "cert	$UP" ] && [ "$(echo "$r" | cut -f7)" = "$(openssl x509 -in "$OUT/pin1.pem" -noout -fingerprint -sha1 | cut -d= -f2)" ] ||
+    bad "cert: the server's certificate not shown with its fingerprint: $r"
+echo "$r" | cut -f3 | grep -q 'my-romm' || bad "cert: whom the certificate names not shown: $r"
+[ ! -e "$OUT/rp/banana/homesync-server.pem" ] || bad "cert: a certificate only looked at was kept as trusted"
+bs rp pair "$UP" "$TP1" > "$OUT/pin0.log" 2>&1 && bad "a certificate only looked at was trusted"
+# (the card is paired with the server above: this one's certificate waits in the run folder until the pairing with it
+# is written, then it is the card's)
+[ "$(bs rp trust | tail -1)" = ok ] && [ "$(head -1 "$OUT/rp/run/server-trusted.pem")" = "# for $UP" ] && [ ! -e "$OUT/rp/banana/homesync-server.pem" ] ||
+    bad "trust: the certificate shown not kept for its server, waiting for its pairing: $(head -1 "$OUT/rp/run/server-trusted.pem" 2>&1)"
+[ "$(bs rp trust | tail -1)" = "error no certificate was shown to trust" ] || bad "trust with no certificate shown"
+bs rp pair "$UP" "$TP1" > "$OUT/pin1.log" 2>&1 || bad "pairing with the server's certificate trusted: $(st rp) $(cat "$OUT/pin1.log")"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem" 2>/dev/null)" = "# for $UP" ] && [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "paired: the certificate trusted for the server not the card's: $(ls "$OUT/rp/banana" "$OUT/rp/run")"
+bs rp sync > "$OUT/pin2.log" 2>&1 || bad "a sync with the server's certificate trusted: $(tail -3 "$OUT/pin2.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/rp/roms/gba/Secure Run (USA).gba" || bad "a ROM with the server's certificate trusted: $(tail -3 "$OUT/pin2.log")"
+grep -q 'certificate checks are off' "$OUT/pin1.log" "$OUT/pin2.log" && bad "certificate checks said off with one certificate trusted"
+# (it is that server's alone: another server, here the one above on its own port, is checked as ever, and refused)
+[ "$(bs rp probe --romm "$UT" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a certificate trusted for one server let another through: $(bs rp probe --romm "$UT")"
+# (and that certificate alone: the same address showing another, someone standing in for the server or the server's
+# made again, is refused, nothing sent; shown and trusted in its turn, it is the one from then on)
+kill "$PINPID" 2>/dev/null; wait "$PINPID" 2>/dev/null
+FAKE_ROMM_TLS="$OUT/pin2.pem:$OUT/pin2.key" python3 "$HERE/tests/fake-romm.py" "$PP" "$LT" 2>> "$OUT/fake-romm-pin.log" & PINPID=$!; PIDS="$PIDS $PINPID"
+for i in $(seq 50); do curl -sk "$UP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+bs rp sync > "$OUT/pin3.log" 2>&1 && bad "another certificate at the trusted server's address was taken: $(tail -3 "$OUT/pin3.log")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "another certificate at the trusted server's address not said as untrusted: $(bs rp probe --romm "$UP")"
+r=$(bs rp cert "$UP"); [ "$(echo "$r" | cut -f7)" = "$(openssl x509 -in "$OUT/pin2.pem" -noout -fingerprint -sha1 | cut -d= -f2)" ] || bad "cert: the new certificate not shown: $r"
+[ "$(bs rp trust | tail -1)" = ok ] && [ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "the new certificate, trusted in its turn, not taken: $(bs rp probe --romm "$UP")"
+# (another server's certificate trusted while this one is paired, the form's address changed and the pairing there not
+# gone through: this pairing's certificate stays the card's and its server still passes; the other's waits in the run
+# folder, checks that server meanwhile, and is the card's once paired with it)
+PQ=$(port); UQ=https://127.0.0.1:$PQ
+FAKE_ROMM_TLS="$OUT/pin1.pem:$OUT/pin1.key" python3 "$HERE/tests/fake-romm.py" "$PQ" "$LT" 2> "$OUT/fake-romm-pin-b.log" & PIDS="$PIDS $!"
+for i in $(seq 50); do curl -sk "$UQ/api/heartbeat" >/dev/null && break; sleep 0.1; done
+TQ=$(curl -sk -XPOST "$UQ/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+bs rp cert "$UQ" >/dev/null; [ "$(bs rp trust | tail -1)" = ok ] || bad "trust: another server's certificate, while paired"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UP" ] && [ "$(head -1 "$OUT/rp/run/server-trusted.pem" 2>/dev/null)" = "# for $UQ" ] ||
+    bad "another server's certificate trusted while paired went over the paired server's: $(head -1 "$OUT/rp/banana/homesync-server.pem")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "the paired server no longer passes after another server's certificate was trusted: $(bs rp probe --romm "$UP")"
+[ "$(bs rp probe --romm "$UQ" | cut -d' ' -f1)" = romm ] || bad "a certificate trusted for a server not yet paired with doesn't check it: $(bs rp probe --romm "$UQ")"
+bs rp pair "$UQ" "$TQ" > "$OUT/pin5.log" 2>&1 || bad "pairing with the other server, its certificate trusted: $(st rp) $(cat "$OUT/pin5.log")"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UQ" ] && [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "paired with the other server: its certificate not the card's: $(head -1 "$OUT/rp/banana/homesync-server.pem")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "the server paired with before is still trusted: $(bs rp probe --romm "$UP")"
+# (the card's file left for a server the card isn't paired with, as a cut between a pairing and its write leaves it, and
+# that server's certificate since changed: trusted again, the one waiting is the one it is checked against, not the
+# card's old one, which would refuse it and ask again without end)
+cp "$OUT/rp/banana/homesync-server.pem" "$OUT/pin-uq.keep"
+{ echo "# for $UP"; cat "$OUT/pin1.pem"; } > "$OUT/rp/banana/homesync-server.pem"
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "a certificate trusted again isn't the one checked while the card holds an older one for that server: $(bs rp probe --romm "$UP")"
+cp "$OUT/pin-uq.keep" "$OUT/rp/banana/homesync-server.pem"; rm -f "$OUT/rp/run/server-trusted.pem"
+# (and one trusted for a third server, the pairing made with this one again instead: it doesn't go on waiting)
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+[ "$(head -1 "$OUT/rp/run/server-trusted.pem" 2>/dev/null)" = "# for $UP" ] || bad "a certificate trusted for another server, while paired, isn't waiting"
+bs rp pair "$UQ" "$TQ" > "$OUT/pin6.log" 2>&1 || bad "pairing again with the paired server: $(st rp) $(cat "$OUT/pin6.log")"
+[ ! -e "$OUT/rp/run/server-trusted.pem" ] && [ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UQ" ] || bad "a certificate that waited for another server's pairing still waits after a pairing with this one: $(ls "$OUT/rp/run")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a server whose certificate waited, never paired with, is still trusted: $(bs rp probe --romm "$UP")"
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+# (Forget: the certificate goes with the pairing, and the next pairing asks again)
+bs rp forget; [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "forget left a certificate trusted for a server never paired with"
+[ ! -e "$OUT/rp/banana/homesync-server.pem" ] || bad "forget left the trusted certificate"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a server trusted before a Forget still trusted after it"
 # a RomM before 5.4 (whose slots and device records the other clients sync by): saves only come down, and the note
 # says to update it; a development build counts as new (its saves by slot)
 LV=$OUT/romm-old-lib; mkdir -p "$LV/gba"; printf 'gba rom down' > "$LV/gba/Down (USA).gba"; printf 'gba rom up' > "$LV/gba/Up (USA).gba"
@@ -958,14 +1029,24 @@ if [ -x "$HERE/banana-ui" ]; then
     ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
     rlog deny "home server: pairing failed: refused in RomM"
     [ "$(grep -c 'pair --romm' "$SL")" -ge 2 ] || bad "RomM: A after a refusal didn't ask again: $(cat "$SL")"
-    # (the pairing's own probe refusing the certificate, the form's having passed: back on the form, where Y turns off
-    # Check certificate and START connects again)
-    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"
-    ur pairtls "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-pairtls; press y; press start; sleep 300; wait 300" FAKE_SYNC_PAIR=tls
+    # (the pairing's own probe refusing the certificate, the form's having passed: back on the form, where Y shows the
+    # certificate the server gave, A there trusts that one and connects again, and Check certificate stays on; B there
+    # trusts nothing)
+    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"; rm -f "$FX/data/homesync-server.pem"
+    ur pairtls "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-pairtls; press y; sleep 300; wait 300; shot hs-cert; press a; sleep 300; wait 300; sleep 300; wait 300" FAKE_SYNC_PAIR=tls
     rlog pairtls "home server: pairing failed: tls"
-    grep -q '^homesync_tls = off' "$FX/data/settings.conf" || bad "RomM: Y after the pairing's certificate failure didn't turn Check certificate off: $(grep homesync_tls "$FX/data/settings.conf")"
-    [ "$(grep -c 'probe --romm https://romm.example.com$' "$SL")" -ge 2 ] || bad "RomM: START on the form after the pairing's failure didn't connect again: $(cat "$SL")"
-    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"
+    rlog pairtls "home server: certificate of https://romm.example.com shown (28:8E:52:6F:46:0D:17:FA:E0:2D:6B:60:A9:23:4C:02:87:36:FD:C1)"
+    rlog pairtls "home server: certificate of https://romm.example.com trusted"
+    grep -q '^homesync_tls = off' "$FX/data/settings.conf" && bad "RomM: trusting a certificate turned Check certificate off: $(grep homesync_tls "$FX/data/settings.conf")"
+    [ "$(head -1 "$FX/data/homesync-server.pem" 2>/dev/null)" = "# for https://romm.example.com" ] || bad "RomM: the certificate trusted isn't kept for its server: $(head -1 "$FX/data/homesync-server.pem" 2>&1)"
+    grep -q '^.* cert https://romm.example.com$' "$SL" && grep -q ' trust$' "$SL" || bad "RomM: Y and A on the certificate didn't read and trust it: $(cat "$SL")"
+    [ "$(grep -c 'probe --romm https://romm.example.com$' "$SL")" -ge 2 ] || bad "RomM: trusting the certificate didn't connect again: $(cat "$SL")"
+    rm -f "$FX/data/homesync-server.pem"
+    ur pairtlsno "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; press y; sleep 300; wait 300; press b; wait 100; shot hs-cert-left" FAKE_SYNC_PAIR=tls
+    rlog pairtlsno "home server: certificate of https://romm.example.com shown"
+    grep -q ' trust$' "$SL" && bad "RomM: B on the certificate trusted it: $(cat "$SL")"
+    [ ! -e "$FX/data/homesync-server.pem" ] || bad "RomM: B on the certificate kept it"
+    grep -q '^homesync_tls = off' "$FX/data/settings.conf" && bad "RomM: B on the certificate turned Check certificate off"
     # (a pairing stopped that takes a moment to end, and Connect pressed at once: no wait on the press, the new pairing
     # started once the old one is gone, not said as a sync running)
     mkdir -p "$OUT/slow-bin"; ln -sf "$HERE/tests/fake-sync.sh" "$OUT/slow-bin/banana-sync"
