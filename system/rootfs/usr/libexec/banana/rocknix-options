@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+# A game's (or a whole system's) emulator and options on ROCKNIX, for the menu's game page, kept where EmulationStation
+# keeps them so ROCKNIX's runemu.sh and setsettings.sh use them as they are: its settings file (system.cfg) with
+# "<system>.<key>" for a system and '<system>["<rom file>"].<key>' for one game, an empty choice falling back to the
+# next (game, system, ROCKNIX's global default). What there is to choose comes from ROCKNIX itself: each system's
+# emulators and cores from es_systems.cfg, each emulator's and core's options from es_features.cfg (its own <feature>s
+# and the shared ones its "features" attribute names: ratio, smooth, shaders, rewind, autosave...).
+#
+#   rocknix-options rows <system> <rom file|->     the rows, one a line, tab separated:
+#       key  label  help  current value ("" none here)  what "" means  name1 value1 name2 value2 ...
+#   rocknix-options set <system> <rom file|-> <key> [value]   (no value: back to the next level's; key "emulator"
+#       takes "<emulator>/<core>")
+#   rocknix-options resolve <system> <rom file> <emulator> <core>   the game's emulator and core: its own, else its
+#       system's, else those given (es_systems.cfg's default, as the systems.conf "run" line has them)
+#
+# (host tests: ROCKNIX_SETTINGS, ROCKNIX_ES_SYSTEMS, ROCKNIX_ES_FEATURES, ROCKNIX_SHADERS, ROCKNIX_LOCK)
+import os
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+
+def first(*paths):
+    for p in paths:
+        if p and os.path.exists(p):
+            return p
+    return paths[-1]
+
+
+SETTINGS = os.environ.get('ROCKNIX_SETTINGS') or '/storage/.config/system/configs/system.cfg'
+ES_SYSTEMS = os.environ.get('ROCKNIX_ES_SYSTEMS') or first('/storage/.config/emulationstation/es_systems.cfg',
+                                                           '/usr/config/emulationstation/es_systems.cfg')
+ES_FEATURES = os.environ.get('ROCKNIX_ES_FEATURES') or first('/storage/.config/emulationstation/es_features.cfg',
+                                                             '/usr/config/emulationstation/es_features.cfg')
+SHADERS = os.environ.get('ROCKNIX_SHADERS') or '/usr/share/common-shaders'
+LOCK = os.environ.get('ROCKNIX_LOCK') or '/tmp/.system.cfg.lock'
+
+# the shared features (an emulator's or core's features="..."), as setsettings.sh reads them: key, label, help, choices
+SHARED = {
+    'ratio': ('ratio', 'Aspect ratio', 'The picture\'s shape: the core\'s own, a fixed ratio, or the whole screen.',
+              [('Core\'s own', 'core'), ('4:3', '4/3'), ('16:9', '16/9'), ('16:10', '16/10'), ('3:2', '3/2'),
+               ('1:1', '1/1'), ('Square pixels', 'squarepixel'), ('Full screen', 'full')]),
+    'pixel_perfect': ('integerscale', 'Pixel perfect', 'Scales by whole steps only: every pixel the same size, a '
+                      'border round the picture.', [('Off', '0'), ('On', '1')]),
+    'smooth': ('smooth', 'Smoothing', 'Blurs the pixels\' edges a little as the picture is scaled.',
+               [('Off', '0'), ('On', '1')]),
+    'shaders': ('shaderset', 'Shader', 'A RetroArch shader over the picture (scanlines, an LCD\'s grid...).', None),
+    'latency_reduction': ('runahead', 'Run-ahead', 'Runs frames ahead to answer the buttons sooner; costs speed.',
+                          [('Off', '0'), ('1 frame', '1'), ('2 frames', '2')]),
+    'rewind': ('rewind', 'Rewind', 'Keeps the last moments to play back (RetroArch\'s rewind hotkey); costs speed.',
+               [('Off', '0'), ('On', '1')]),
+    'autosave': ('autosave', 'Auto save & load', 'Saves a state when the game is closed and loads it at the next '
+                 'start.', [('Off', '0'), ('On', '1')]),
+    'cheevos': ('retroachievements', 'RetroAchievements', 'The game\'s achievements, with the account set in '
+                'Settings.', [('Off', '0'), ('On', '1')]),
+    'decoration': ('bezel', 'Bezel', 'A picture round the game where the screen has room.',
+                   [('None', 'none'), ('The Bezel Project', 'thebezelproject')]),
+}
+SHARED_ORDER = ['ratio', 'pixel_perfect', 'smooth', 'shaders', 'decoration', 'latency_reduction', 'rewind',
+                'autosave', 'cheevos']
+
+
+# ---- ROCKNIX's settings file -----------------------------------------------------------------------------------
+def read_settings():
+    try:
+        with open(SETTINGS, encoding='utf-8', errors='replace') as f:
+            return f.read().splitlines()
+    except OSError:
+        return []
+
+
+def lookup(lines, key):
+    """the last non-empty value of key= (as get_setting: the first match wins, set_setting appends after deleting)"""
+    v = ''
+    pre = key + '='
+    for ln in lines:
+        if ln.startswith(pre) and ln[len(pre):]:
+            v = ln[len(pre):]
+    return v
+
+
+def keys_for(key, system, rom):
+    ks = []
+    if rom:
+        ks.append('%s["%s"].%s' % (system, rom, key))
+    ks += ['%s.%s' % (system, key), 'system.' + key, key, 'global.' + key]
+    return ks
+
+
+def get(lines, key, system, rom):
+    for k in keys_for(key, system, rom):
+        v = lookup(lines, k)
+        if v:
+            return v
+    return ''
+
+
+def scoped(system, rom, key):
+    return '%s["%s"].%s' % (system, rom, key) if rom else '%s.%s' % (system, key)
+
+
+def write(changes):
+    """changes: {full key: value or ''} into the settings file, under ROCKNIX's lock (its set_setting's flock)"""
+    import fcntl
+    d = os.path.dirname(SETTINGS)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    with open(LOCK, 'a') as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        lines = read_settings()
+        if not lines and os.path.exists('/usr/config/system/configs/system.cfg') and not os.path.exists(SETTINGS):
+            with open('/usr/config/system/configs/system.cfg', encoding='utf-8', errors='replace') as f:
+                lines = f.read().splitlines()
+        out = [ln for ln in lines if not any(ln.startswith(k + '=') for k in changes)]
+        out += ['%s=%s' % (k, v) for k, v in changes.items() if v]
+        tmp = SETTINGS + '.banana'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(out) + '\n')
+        os.replace(tmp, SETTINGS)
+
+
+# ---- es_systems.cfg and es_features.cfg -------------------------------------------------------------------------
+def system_emulators(system):
+    """[(emulator, core, default?)] in es_systems.cfg's order"""
+    try:
+        root = ET.parse(ES_SYSTEMS).getroot()
+    except (OSError, ET.ParseError):
+        return []
+    for s in root.findall('system'):
+        if (s.findtext('name') or '').strip() != system:
+            continue
+        out = []
+        for emu in s.findall('./emulators/emulator'):
+            for core in emu.findall('./cores/core'):
+                out.append((emu.get('name', ''), (core.text or '').strip(), core.get('default') == 'true'))
+        return out
+    return []
+
+
+def default_pair(emus):
+    for e, c, d in emus:
+        if d:
+            return e, c
+    return (emus[0][0], emus[0][1]) if emus else ('', '')
+
+
+def effective(lines, system, rom, emus):
+    de, dc = default_pair(emus)
+    for r in ([rom] if rom else []) + ['']:
+        e, c = lookup(lines, scoped(system, r, 'emulator')), lookup(lines, scoped(system, r, 'core'))
+        if e:
+            # (an emulator with no core named: its default core, else its first)
+            return e, c or next((x[1] for x in sorted(emus, key=lambda x: not x[2]) if x[0] == e), '')
+    return de, dc
+
+
+def split_shared(attr):
+    return [x.strip() for x in (attr or '').split(',') if x.strip()]
+
+
+def features_for(emu, core):
+    """(shared feature names, [(feature element)]) that apply to this emulator and core"""
+    try:
+        root = ET.parse(ES_FEATURES).getroot()
+    except (OSError, ET.ParseError):
+        return [], []
+    shared, own = [], []
+    for e in root.findall('emulator'):
+        if e.get('name') != emu:
+            continue
+        shared += split_shared(e.get('features'))
+        own += e.findall('./features/feature')
+        for c in e.findall('./cores/core'):
+            if c.get('name') == core:
+                shared += split_shared(c.get('features'))
+                own += c.findall('./features/feature')
+    # (a <feature> with no choices names a shared one, as features="..." does)
+    for f in list(own):
+        if not f.findall('choice'):
+            shared.append(f.get('name', ''))
+            own.remove(f)
+    return shared, own
+
+
+def shader_choices():
+    out = [('None', 'none')]
+    for dp, dn, fn in sorted(os.walk(SHADERS)):
+        dn.sort()
+        for n in sorted(fn):
+            if n.endswith(('.glslp', '.slangp')):
+                rel = os.path.relpath(os.path.join(dp, n), SHADERS)
+                out.append((os.path.splitext(rel)[0].replace('/', ' / '), rel))
+    return out
+
+
+def label_of(name):
+    name = name.replace('_', ' ').strip()
+    return name[:1].upper() + name[1:]
+
+
+def emu_name(e, c):
+    if e == 'retroarch':
+        return 'RetroArch: ' + c
+    if c.endswith('-sa'):
+        return c[:-3] + ' (standalone)'
+    if not c or c == e:
+        return e
+    return '%s: %s' % (e, c)
+
+
+# ---- the commands ----------------------------------------------------------------------------------------------
+def row(key, label, helptext, cur, inherit, choices):
+    cells = [key, label, helptext, cur, inherit]
+    for n, v in choices:
+        cells += [n, v]
+    print('\t'.join(c.replace('\t', ' ').replace('\n', ' ') for c in cells))
+
+
+def named(choices, v):
+    for n, cv in choices:
+        if cv == v:
+            return n
+    return v
+
+
+def rows(system, rom):
+    lines = read_settings()
+    emus = system_emulators(system)
+    if not emus:
+        return
+    de, dc = default_pair(emus)
+    # the emulator: this level's choice, and what's chosen above it
+    pairs = [(emu_name(e, c) + (' (default)' if d else ''), '%s/%s' % (e, c)) for e, c, d in emus]
+    ce, cc = lookup(lines, scoped(system, rom, 'emulator')), lookup(lines, scoped(system, rom, 'core'))
+    cur = '%s/%s' % (ce, cc or dc) if ce else ''
+    if rom:
+        ue, uc = effective(lines, system, '', emus)
+        inherit = 'As the system\'s (%s)' % emu_name(ue, uc)
+    else:
+        inherit = 'Default (%s)' % emu_name(de, dc)
+    if cur and cur not in [v for _, v in pairs]:
+        pairs.append((cur.replace('/', ': ') + ' (not installed)', cur))
+    row('emulator', 'Emulator', 'Which emulator and core run %s: ROCKNIX\'s choices for the system.'
+        % ('this game' if rom else 'this system\'s games'), cur, inherit, pairs)
+    # its options
+    e, c = effective(lines, system, rom, emus)
+    shared, own = features_for(e, c)
+    upper = (lambda k: get(lines, k, system, '')) if rom else (lambda k: get(lines, k, '', ''))
+    for name in SHARED_ORDER:
+        if name not in shared:
+            continue
+        key, label, helptext, choices = SHARED[name]
+        if choices is None:
+            choices = shader_choices()
+        up = upper(key)
+        inh = ('As the system\'s' if rom else 'ROCKNIX\'s') + (' (%s)' % named(choices, up) if up else '')
+        row(key, label, helptext, lookup(lines, scoped(system, rom, key)), inh, choices)
+    seen = set()
+    for f in own:
+        name = f.get('name', '')
+        key = name.replace(' ', '_')
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        choices = [(ch.get('name', ''), ch.get('value', ch.get('name', ''))) for ch in f.findall('choice')]
+        up = upper(key)
+        inh = ('As the system\'s' if rom else 'The emulator\'s') + (' (%s)' % named(choices, up) if up else '')
+        row(key, label_of(name), '%s\'s own option, as ROCKNIX sets it at the game\'s start.' % emu_name(e, c),
+            lookup(lines, scoped(system, rom, key)), inh, choices)
+
+
+def main(a):
+    if len(a) >= 3 and a[0] == 'rows':
+        rows(a[1], '' if a[2] == '-' else a[2])
+    elif len(a) >= 4 and a[0] == 'set':
+        system, rom, key = a[1], '' if a[2] == '-' else a[2], a[3]
+        value = a[4] if len(a) > 4 else ''
+        if not re.match(r'^[A-Za-z0-9_.-]+$', system) or not re.match(r'^[A-Za-z0-9_.-]+$', key) or '"' in rom \
+                or '\n' in rom or '\n' in value:
+            sys.exit('rocknix-options: bad name')
+        if key == 'emulator':
+            e, _, c = value.partition('/')
+            write({scoped(system, rom, 'emulator'): e, scoped(system, rom, 'core'): c if e else ''})
+        else:
+            write({scoped(system, rom, key): value})
+    elif len(a) >= 5 and a[0] == 'resolve':
+        lines = read_settings()
+        emus = [(a[3], a[4], True)] + [x for x in system_emulators(a[1]) if (x[0], x[1]) != (a[3], a[4])]
+        e, c = effective(lines, a[1], a[2], emus)
+        print(e, c)
+    else:
+        sys.exit('usage: rocknix-options rows|set|resolve ...')
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

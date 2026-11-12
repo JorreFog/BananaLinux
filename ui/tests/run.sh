@@ -67,6 +67,25 @@ if command -v identify >/dev/null; then
         done
     done
 fi
+# a ROCKNIX game's page (BANANA_ROCKNIX, its run line through run-rocknix): the For row, the emulator and the options
+# rocknix-options lists from es_systems.cfg / es_features.cfg; a game's emulator and ratio, then the system's emulator,
+# kept in ROCKNIX's settings as EmulationStation keeps them
+RX=$OUT/rx; rm -rf "$RX"; mkdir -p "$RX/roms/gba" "$RX/data"; : > "$RX/roms/gba/Zelda.gba"; echo "setup 2" > "$RX/data/setup-done"
+printf '[gba]\nname = Game Boy Advance\nfolder = %s\next = gba\nrun = /usr/libexec/banana/run-rocknix gba %%ROM%% --core=mgba --emulator=retroarch --controllers=""\n' \
+    "$RX/roms/gba" > "$RX/systems.conf"
+rxrun() {
+    env BANANA_ROCKNIX=1 BANANA_ROCKNIX_OPTIONS="$HERE/../system/rootfs/usr/libexec/banana/rocknix-options" ROCKNIX_SETTINGS="$RX/system.cfg" \
+        ROCKNIX_LOCK="$RX/lock" ROCKNIX_ES_SYSTEMS="$HERE/../rocknix/tests/es_systems.cfg" ROCKNIX_ES_FEATURES="$HERE/../rocknix/tests/es_features.cfg" \
+        "$HERE/banana-ui" --headless "$OUT/rx-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$RX/systems.conf" \
+        --roms "$RX/roms" --data "$RX/data" --script "$1" 2>> "$OUT/rx.log" || { echo "FAIL rocknix game page: banana-ui exited $?"; fail=1; }
+}
+: > "$OUT/rx.log"
+rxrun "lib 0 0; press x; press down; shot emu; press right; press down; press right; shot ratio; press a"
+grep -qxF 'gba["Zelda.gba"].emulator=retroarch' "$RX/system.cfg" && grep -qxF 'gba["Zelda.gba"].core=gpsp' "$RX/system.cfg" \
+    && grep -qxF 'gba["Zelda.gba"].ratio=core' "$RX/system.cfg" || { echo "FAIL rocknix game page: the game's choices: $(tr '\n' ' ' < "$RX/system.cfg" 2>/dev/null)"; fail=1; }
+rxrun "lib 0 0; press x; press right; press down; press left; shot system; press a"
+grep -qxF 'gba.emulator=retroarch' "$RX/system.cfg" && grep -qxF 'gba.core=mgba' "$RX/system.cfg" \
+    || { echo "FAIL rocknix game page: the system's emulator: $(tr '\n' ' ' < "$RX/system.cfg" 2>/dev/null)"; fail=1; }
 # banana-ui as ROCKNIX's frontend: the systems from its es_systems.cfg, and the menu under sway on the Thor's two
 # outputs (the SDL display; skipped without sway, grim or a banana-ui built with SDL=1)
 sh "$HERE/../rocknix/tests/run.sh" || fail=1
@@ -236,7 +255,7 @@ for size in 640x480 1024x768; do
     # touch, START; up to Name, one letter deleted, START: both in game-titles.tsv, and the game first on the shelf
     tlog=$OUT/$size-titles.log; T="$FX/data/game-titles.tsv"; rm -f "$T"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
             press up; press a; press b; press start; wait 300; shot titles-done" 2> "$tlog" || { echo "FAIL $size: banana-ui (titles) exited $?"; fail=1; }
     [ "$(cat "$T" 2>/dev/null)" = "$(printf 'nds/Yellow Planet [!].zip\tYellow Plane\ta')" ] || { echo "FAIL $size: game-titles.tsv: $(cat "$T" 2>/dev/null)"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
@@ -379,10 +398,10 @@ for size in 640x480 1024x768; do
     printf 'nds/Yellow Planet [!].zip\tCafé\t\n' > "$TT"
     run_r() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" || { echo "FAIL $size: banana-ui (review) exited $?"; fail=1; }; }
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
     [ "$(cat "$TT")" = "$(printf 'nds/Yellow Planet [!].zip\tCaf\t')" ] || { echo "FAIL $size: m7 UTF-8 delete: $(od -c "$TT" | head -2 | tr -s ' ')"; fail=1; }
     printf 'nds/Yellow Planet [!].zip\tCustom\t\n' > "$TT"
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
     [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
     rm -f "$TT" "$FX/data/accounts.conf"
     run_r "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; press b; press start; press b"

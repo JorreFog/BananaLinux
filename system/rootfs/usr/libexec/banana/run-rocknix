@@ -5,6 +5,8 @@
 #   sets its own governor and GPU level for the game from ROCKNIX's settings: the game's are made the menu's
 # - the bottom screen dark while a game that doesn't use it runs (settings.conf's bottom_in_games: auto, the default,
 #   for every system but the two-screen ones; on; off), and lit again after
+# - the emulator and core the game page chose (rocknix-options: the game's own, else its system's, both kept in
+#   ROCKNIX's settings as EmulationStation keeps them) in place of es_systems.cfg's default the run line names
 #   run-rocknix <system> <rom> [runemu.sh's options: --core=... --emulator=... --controllers=...]
 SYSTEM=$1; ROM=$2; shift 2
 DATA=${BANANA_DATA:-/data/banana}
@@ -13,9 +15,21 @@ LIB=${BANANA_LIBEXEC:-/usr/libexec/banana}
 RUNEMU=${BANANA_RUNEMU:-/usr/bin/runemu.sh}
 conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
 
+# the emulator and core
+emu=; core=
+for a in "$@"; do case $a in --emulator=*) emu=${a#--emulator=} ;; --core=*) core=${a#--core=} ;; esac; done
+if [ -n "$emu" ] && pick=$("$LIB/rocknix-options" resolve "$SYSTEM" "${ROM##*/}" "$emu" "$core" 2>/dev/null) && [ -n "$pick" ]; then
+    e=${pick%% *}; c=${pick#* }
+    for a in "$@"; do
+        shift
+        case $a in --emulator=*) a="--emulator=$e" ;; --core=*) a="--core=$c" ;; esac
+        set -- "$@" "$a"
+    done
+fi
+
 # the performance mode: ROCKNIX's per-game settings the same as what banana-perf just set (/run/banana/perf:
 # "<governor> <gpu level>")
-if read -r gov gpu < "$RUN/perf" 2>/dev/null && [ -n "$gov" ]; then
+if [ -r "$RUN/perf" ] && read -r gov gpu < "$RUN/perf" && [ -n "$gov" ]; then
     setting() {
         if [ -n "$ROCKNIX_SETTINGS" ]; then { grep -vF "$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
         elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$1" "$2" ) >/dev/null 2>&1; fi

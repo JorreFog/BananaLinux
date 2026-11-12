@@ -166,7 +166,7 @@ namespace banana
 		std::string gamePerf(const std::string& romName) { return perGame("per-game-perf.conf", romName); }
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
-			const std::string& scraped = "");
+			const std::string& scraped = "", const std::string& rocknixSystem = "");
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
@@ -294,7 +294,17 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0, pgPerf = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_PERF };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_PERF, PG_SCOPE,
+			PG_RX = 100, PG_RX_END = 255 };	// (PG_RX + i: pgRx[i])
+		// a ROCKNIX game (its system's run line through run-rocknix): its emulator and core and the options they have, as
+		// usr/libexec/banana/rocknix-options lists them from ROCKNIX's es_systems.cfg and es_features.cfg, for this game
+		// or (the For row) every game of its system; at is the choice shown, 0 the next level's ("As the system's")
+		struct RxRow { std::string key, label, help; std::vector<std::string> names, values; int at = 0; };
+		std::vector<RxRow> pgRx;
+		std::string pgRxSystem;	// "" for a game that isn't ROCKNIX's
+		bool pgRxWhole = false;	// the For row: the whole system's choices, not this game's
+		void loadRx();
+		void setRx(const RxRow& r);
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)

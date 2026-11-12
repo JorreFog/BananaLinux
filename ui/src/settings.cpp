@@ -144,6 +144,37 @@ namespace banana
 		if (p > 0) waitpid(p, nullptr, 0);
 	}
 
+	// a program waited for, its output back (no shell: the arguments as they are, a game's name with quotes in it too)
+	static std::string capture(const std::vector<std::string>& argv)
+	{
+		int fd[2];
+		if (argv.empty() || pipe(fd) != 0) return "";
+		pid_t p = fork();
+		if (p == 0)
+		{
+			dup2(fd[1], 1); ::close(fd[0]); ::close(fd[1]);
+			int nul = ::open("/dev/null", O_WRONLY); if (nul >= 0) dup2(nul, 2);
+			std::vector<char*> a;
+			for (auto& s : argv) a.push_back(const_cast<char*>(s.c_str()));
+			a.push_back(nullptr);
+			execv(a[0], a.data());
+			_exit(127);
+		}
+		::close(fd[1]);
+		std::string out;
+		char buf[4096];
+		ssize_t n;
+		while (p > 0 && (n = ::read(fd[0], buf, sizeof buf)) > 0) out.append(buf, n);
+		::close(fd[0]);
+		if (p > 0) waitpid(p, nullptr, 0);
+		return out;
+	}
+	static std::string rocknixOptions()
+	{
+		const char* o = getenv("BANANA_ROCKNIX_OPTIONS");	// (a stand-in for the tests)
+		return o && *o ? o : "/usr/libexec/banana/rocknix-options";
+	}
+
 	// bananad re-reads its settings on SIGHUP
 	static void poke(const char* comm)
 	{
@@ -5598,14 +5629,16 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped, const std::string& rocknixSystem)
 	{
 		open();
+		pgRxSystem = rocknixSystem; pgRxWhole = false; pgRx.clear();
 		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
 		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
+		if (!rocknixSystem.empty()) loadRx();	// (its rows: the For row, the emulator, its options)
 		pg3d = pgMic = pgRes = pgTiming = pgCpu = 0;
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
@@ -5650,6 +5683,41 @@ namespace banana
 		page = GAME;
 	}
 
+	// a ROCKNIX game's rows from rocknix-options (key, label, help, current, what "" means, then name and value pairs), in
+	// place of those listed before, after the For row; the row the cursor is on stays where it was
+	void Settings::loadRx()
+	{
+		pgRows.erase(std::remove_if(pgRows.begin(), pgRows.end(), [](PgRow r) { return r == PG_SCOPE || r >= PG_RX; }), pgRows.end());
+		pgRx.clear();
+		std::string out = capture({ rocknixOptions(), "rows", pgRxSystem, pgRxWhole ? "-" : pgRom });
+		std::istringstream in(out);
+		std::string ln;
+		while (std::getline(in, ln) && pgRx.size() < PG_RX_END - PG_RX)
+		{
+			std::vector<std::string> c;
+			size_t at = 0;
+			for (;;) { size_t t = ln.find('\t', at); c.push_back(ln.substr(at, t == std::string::npos ? t : t - at)); if (t == std::string::npos) break; at = t + 1; }
+			if (c.size() < 7) continue;
+			RxRow r;
+			r.key = c[0]; r.label = c[1]; r.help = c[2];
+			r.names.push_back(c[4]); r.values.push_back("");
+			for (size_t i = 5; i + 1 < c.size(); i += 2) { r.names.push_back(c[i]); r.values.push_back(c[i + 1]); }
+			for (size_t i = 1; i < r.values.size(); i++) if (r.values[i] == c[3] && !c[3].empty()) r.at = (int)i;
+			pgRx.push_back(r);
+		}
+		std::vector<PgRow> rx = { PG_SCOPE };
+		for (size_t i = 0; i < pgRx.size(); i++) rx.push_back((PgRow)(PG_RX + i));
+		pgRows.insert(pgRows.begin(), rx.begin(), rx.end());
+	}
+
+	void Settings::setRx(const RxRow& r)
+	{
+		std::vector<std::string> a = { rocknixOptions(), "set", pgRxSystem, pgRxWhole ? "-" : pgRom, r.key };
+		if (r.at > 0) a.push_back(r.values[r.at]);
+		capture(a);
+		pgChanged = true;
+	}
+
 	// the DS rows' values into their per-game files (only a row that changed is written: setPerGame keeps the rest)
 	void Settings::saveGameRows()
 	{
@@ -5682,6 +5750,22 @@ namespace banana
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
+			if (row == PG_SCOPE || row >= PG_RX)
+			{
+				if (row == PG_SCOPE) pgRxWhole = !pgRxWhole;
+				else
+				{
+					RxRow& r = pgRx[row - PG_RX];
+					int nv = (int)r.values.size();
+					r.at = (r.at + d + nv) % nv;
+					setRx(r);
+					if (r.key != "emulator") return MOVED;
+				}
+				// another emulator, or the other level: its rows (another emulator has other options)
+				loadRx();
+				pgRow = std::min(pgRow, (int)pgRows.size() - 1);
+				return MOVED;
+			}
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
 			else if (row == PG_RES)
@@ -5767,6 +5851,10 @@ namespace banana
 	std::string Settings::gameHelpOf(int row)
 	{
 		const bool plus = board_() == "rgds-plus";
+		if (row == PG_SCOPE)
+			return "Whether the rows below are this game's own, or every game's of its system (a game's own wins over its "
+				   "system's). Kept in ROCKNIX's settings, as EmulationStation keeps them.";
+		if (row >= PG_RX && row - PG_RX < (int)pgRx.size()) return !message.empty() ? message : pgRx[row - PG_RX].help;
 		return row == PG_EMU
 				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
@@ -5838,9 +5926,10 @@ namespace banana
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
+		auto label = [&](PgRow r) { return r == PG_SCOPE ? "For" : r >= PG_RX ? pgRx[r - PG_RX].label.c_str() : r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
 			: r == PG_PERF ? "Performance" : r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
+		auto value = [&](PgRow r) { return r == PG_SCOPE ? std::string(pgRxWhole ? "Every game of its system" : "This game")
+			: r >= PG_RX ? pgRx[r - PG_RX].names[pgRx[r - PG_RX].at] : r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
 			: r == PG_PERF ? vperf : r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
@@ -5849,7 +5938,14 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_PERF ? "This game's performance" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		std::string rxHead;
+		if (row >= PG_RX)
+		{
+			rxHead = pgRx[row - PG_RX].label;
+			for (auto& ch : rxHead) ch = (char)tolower((unsigned char)ch);
+			rxHead = (pgRxWhole ? "Its system's " : "This game's ") + rxHead;
+		}
+		text(row >= PG_RX ? rxHead.c_str() : row == PG_SCOPE ? "Where these choices go" : row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_PERF ? "This game's performance" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);

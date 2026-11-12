@@ -9,7 +9,7 @@ out=$(python3 -I "$C" "$HERE/tests/es_systems.cfg") || { echo "FAIL rocknix: the
 want() { printf '%s\n' "$out" | grep -qxF -- "$1" || { echo "FAIL rocknix: no line '$1'"; fail=1; }; }
 want '[nds]'
 want 'perf = steady'
-want 'run = /usr/libexec/banana/run-rocknix nds %ROM% --core=melonds-sa --emulator=melonds-sa --controllers=""'
+want 'run = /usr/libexec/banana/run-rocknix nds %ROM% --core=melonds-sa --emulator=melonds --controllers=""'
 want 'ext = nds zip 7z'
 want 'folder = /storage/roms/nds'
 want 'run = /usr/libexec/banana/run-rocknix gba %ROM% --core=mgba --emulator=retroarch --controllers=""'
@@ -21,6 +21,7 @@ sh "$HERE/tests/services.sh" || fail=1
 sh "$HERE/tests/backlight.sh" || fail=1
 sh "$HERE/tests/perf.sh" || fail=1
 sh "$HERE/tests/handheld.sh" || fail=1
+sh "$HERE/tests/options.sh" || fail=1
 bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

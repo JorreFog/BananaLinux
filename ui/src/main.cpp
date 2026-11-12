@@ -183,6 +183,13 @@ static std::string shellQuote(const std::string& s)
 	return r + "'";
 }
 
+// a system whose games ROCKNIX runs (as its frontend: its run line through run-rocknix), by its id, for the game page's
+// emulator and options rows; "" for the rest
+static std::string rocknixSystem(const banana::SystemDef& sys)
+{
+	return getenv("BANANA_ROCKNIX") && sys.run.find("run-rocknix") != std::string::npos ? sys.id : "";
+}
+
 static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
 {
 	for (size_t at = 0; (at = s.find(from, at)) != std::string::npos; at += to.size()) s.replace(at, from.size(), to);
@@ -944,7 +951,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				const std::string rx = rocknixSystem(lib.systemOf(ui.gameIndex()));
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds" && rx.empty(), key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped, rx);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -2493,7 +2501,8 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				const std::string rx = rocknixSystem(lib.systemOf(g));
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds" && rx.empty(), key, t.name, t.sort, path, lib.gameAt(g).scraped, rx);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
