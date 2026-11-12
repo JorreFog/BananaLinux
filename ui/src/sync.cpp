@@ -1346,6 +1346,7 @@ namespace
 		auto lock = [&]()
 		{
 			if (lockSaves(0)) return true;
+			say("saves: waiting for another sync's to end");
 			if (b->beforeGame) status("waiting 0 0 |saves");
 			bool had = lockSaves(onlyRom.empty() ? 60 : 10);
 			if (had && b->beforeGame) status(first);
@@ -1355,7 +1356,9 @@ namespace
 		if (gamesOnly) say("saves: left to the syncs for them (--games-only)");
 		else if (gameRunning()) errors.push_back(running);
 		else if (!lock()) errors.push_back("saves: another sync is saving, next time");
-		else if (gameRunning()) errors.push_back(running);
+		// (the lock let go with the saves left alone: kept, it would be held through the games asked for meanwhile, below,
+		// and the sync after this game, which waits 10 s for it, would leave the session's save unsent)
+		else if (gameRunning()) { unlockSaves(); errors.push_back(running); }
 		else
 		{
 			takeSaves(c, loadConf());

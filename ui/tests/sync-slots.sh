@@ -1229,6 +1229,26 @@ wait $_k; kill "$_g"; rm "$OUT/h-a/run/game.pid"
 grep -q 'saves: a game is running' "$OUT/hr-a.log" || bad "slots: the sync copying games took the saves with a game running: $(cat "$OUT/hr-a.log")"
 [ "$(rs a 'c["slots"]["'"$(rid4 "Solo (USA).gba")"'/autosave"]["md5"]')" = "$(m "$GA/Solo (USA).srm")" ] && [ "$(rs a '"gba/Conc B (USA).gba" in c["state"]["files"]')" = True ] ||
     bad "slots: the two runs' romsync.json: $(rs a 'c["slots"].get("'"$(rid4 "Solo (USA).gba")"'/autosave"), sorted(c["state"]["files"])') $(cat "$OUT/hr-a.log")"
+# a game started while the sync copying games waited for the saves (another sync had them): it has the lock with the
+# game already there, leaves the saves alone and lets the lock go at once, not at its end, after the games asked for
+# meanwhile: the sync after that game, which waits 10 s for the lock, has it while the first still copies
+printf 'gba rom conc c' > "$L4/gba/Conc C (USA).gba"
+python3 -c 'import fcntl, sys, time; f = open(sys.argv[1], "a"); fcntl.flock(f, fcntl.LOCK_EX); time.sleep(60)' "$OUT/h-a/run/save.lock" & _h=$!
+for i in $(seq 50); do python3 -c 'import fcntl, sys; fcntl.flock(open(sys.argv[1], "a"), fcntl.LOCK_EX | fcntl.LOCK_NB)' "$OUT/h-a/run/save.lock" 2>/dev/null || break; sleep 0.1; done
+hr a & _k=$!
+for i in $(seq 100); do grep -q "saves: waiting for another sync" "$OUT/hr-a.log" 2>/dev/null && break; sleep 0.1; done
+grep -q "saves: waiting for another sync" "$OUT/hr-a.log" || bad "slots: the sync copying games didn't wait for the saves' lock: $(cat "$OUT/hr-a.log")"
+sleep 30 & _g=$!; echo "$_g" > "$OUT/h-a/run/game.pid"
+"$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" get "gba/Conc C (USA).gba" >/dev/null
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/roms/.*/content/Conc(%20| )C", "kind": "delay", "arg": 6}' >/dev/null
+kill "$_h"; wait "$_h" 2>/dev/null
+sleep 1.5
+kill -0 "$_k" 2>/dev/null || bad "slots: the sync copying games ended before the lock could be looked at: $(cat "$OUT/hr-a.log")"
+python3 -c 'import fcntl, sys; fcntl.flock(open(sys.argv[1], "a"), fcntl.LOCK_EX | fcntl.LOCK_NB)' "$OUT/h-a/run/save.lock" 2>/dev/null ||
+    bad "slots: the saves' lock kept through the games asked for meanwhile, with a game running: $(cat "$OUT/hr-a.log")"
+wait "$_k"; kill "$_g"; rm "$OUT/h-a/run/game.pid"
+grep -q 'saves: a game is running' "$OUT/hr-a.log" && [ "$(rs a '"gba/Conc C (USA).gba" in c["state"]["files"]')" = True ] ||
+    bad "slots: a game started during the wait for the saves' lock: $(cat "$OUT/hr-a.log")"
 # one game's run stopped (as when the time before a game runs out): the status line says so, and another sync's
 # sync.pid, for the menu's Stop, stays
 echo 4242 > "$OUT/h-a/run/sync.pid"
