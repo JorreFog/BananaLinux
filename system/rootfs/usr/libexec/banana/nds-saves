@@ -59,11 +59,9 @@ VAULT="$DATA/banana/save-vault/saves/nds/$G"
 # ends .tmp, which the sync and the vault's listing never count as a save; a cut run's are cleared here, by the run's
 # number: one still running, a launcher's beside a sync's, is left its own)
 T=.nds-saves.$$.tmp
+case $0 in */*) . "${0%/*}/save-put.sh" ;; *) . /usr/libexec/banana/save-put.sh ;; esac
 mkdir -p "$DATA/drastic/backup" "$DATA/saves/nds"
-for _f in "$DSV".nds-saves.*.tmp "$SAV".nds-saves.*.tmp "$REC".nds-saves.*.tmp "$END".nds-saves.*.tmp "$VAULT"/*.nds-saves.*.tmp; do
-    _p=${_f##*.nds-saves.}; _p=${_p%.tmp}
-    [ -f "$_f" ] && [ ! -d "/proc/$_p" ] && rm -f "$_f"
-done
+stale_tmps nds-saves "$DSV".nds-saves.*.tmp "$SAV".nds-saves.*.tmp "$REC".nds-saves.*.tmp "$END".nds-saves.*.tmp "$VAULT"/*.nds-saves.*.tmp
 # a save from ROCKNIX, beside the game (roms/nds/<game>.dsv, on either card, #25): taken when Banana has no save for
 # the game yet, so a copy of the old file can never write over a game played here since; the file beside the game
 # stays as it is
@@ -72,7 +70,7 @@ if [ -s "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
     # (written beside and renamed over, the card synced each side, as every other file here is: a power cut can't leave a
     # .dsv cut short under the name DraStic reads, which no later start would take again, the file being there, and
     # which reads from then on as a save that can't be read)
-    if cp -p "$R" "$DSV$T" && sync && mv -f "$DSV$T" "$DSV" && sync; then echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"; else rm -f "$DSV$T"; fi
+    put_synced "$R" "$DSV" nds-saves && echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"
 fi
 # size <file>: its bytes, 0 when there is none
 size() { wc -c 2>/dev/null < "$1" || echo 0; }

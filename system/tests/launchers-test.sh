@@ -162,6 +162,35 @@ BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" s
 check "$(cat "$D/data/saves/cdata/game.p8d.txt" 2>/dev/null)" "cart" "PICO-8's cart data stays in saves/cdata"
 check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "new" "the newer core save is the flat one"
 check "$(cat "$D/data/banana/saves-legacy/replaced/Game.srm" 2>/dev/null)" "old" "the flat save it replaced is kept"
+# a core folder's saves go flat together, the card synced twice for the folder and not twice for each save (sync stood
+# in for, and counted: twice for the folder, once more for the marker); and a game two cores have a save of is weighed
+# folder by folder, the later folder's newer save against the flat one the earlier folder left, which is kept too
+D=$T/flat-batch; mkdir -p "$D/data/saves/Snes9x" "$D/data/saves/gpSP" "$D/data/saves/mGBA" "$D/run" "$D/etc" "$D/bin"
+printf '[gba]\n' > "$D/etc/systems.conf"
+printf '#!/bin/sh\necho sync >> "%s"\n' "$D/synced" > "$D/bin/sync"; chmod +x "$D/bin/sync"
+for g in One Two Three; do echo "snes $g" > "$D/data/saves/Snes9x/$g.srm"; done
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/One.srm" "$D/data/saves/Two.srm" "$D/data/saves/Three.srm" 2>/dev/null | tr '\n' ',')" "snes One,snes Two,snes Three," "a core folder's saves all flat"
+check "$(wc -l < "$D/synced" | tr -d ' ')" "3" "the card synced twice for the folder, not for each save"
+check "$(ls "$D/data/saves/Snes9x" "$D/data/saves" | grep -c '\.tmp$')" "0" "nothing left beside the flat saves"
+rm -f "$D/run/saves-flat"
+echo older > "$D/data/saves/gpSP/Game.srm"; touch -t 202601010000 "$D/data/saves/gpSP/Game.srm"; echo newer > "$D/data/saves/mGBA/Game.srm"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/gba/Game.srm" 2>/dev/null)" "newer" "two cores' saves of one game: the later folder's newer one is the flat one"
+check "$(cat "$D/data/banana/saves-legacy/replaced/gba/Game.srm" 2>/dev/null)" "older" "...and the earlier folder's, which it replaced, is kept"
+# the card's second sync failing (the flat saves under their names, not known to be on the card): the core folder's
+# files stay where they are and no marker is written; the next run finds the flat save as new as the core's, moves the
+# core's to the backup and keeps no second copy of a save it replaced
+D=$T/flat-sync2; mkdir -p "$D/data/saves/Snes9x" "$D/run" "$D/etc" "$D/bin"
+printf '[gba]\n' > "$D/etc/systems.conf"
+printf '#!/bin/sh\necho sync >> "%s"\n[ "$(wc -l < "%s")" != 2 ]\n' "$D/synced" "$D/synced" > "$D/bin/sync"; chmod +x "$D/bin/sync"
+echo was > "$D/data/saves/Game.srm"; touch -t 202601010000 "$D/data/saves/Game.srm"; echo now > "$D/data/saves/Snes9x/Game.srm"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Snes9x/Game.srm" 2>/dev/null)/$(cat "$D/data/saves/Game.srm")/$([ -e "$D/run/saves-flat" ] && echo marked)" "now/now/" "the second sync failed: the core folder's save stays, no marker"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Game.srm")/$(cat "$D/data/banana/saves-legacy/Snes9x/Game.srm" 2>/dev/null)/$([ -e "$D/run/saves-flat" ] && echo marked)" "now/now/marked" "...the next run finishes the move"
+check "$(ls "$D/data/banana/saves-legacy/replaced" | tr '\n' ',')/$(cat "$D/data/banana/saves-legacy/replaced/Game.srm")" "Game.srm,/was" "...with one copy of the save it replaced"
+check "$(ls "$D/data/saves/Snes9x" "$D/data/saves" | grep -c '\.tmp$')" "0" "...and nothing left beside the flat save"
 # a blank save (only 0xff or only 0x00 bytes: a core that never got to write one) never goes over one with data in it,
 # newer or not; a save with data goes over a blank one (fl: its first bytes, a blank one's as F or 0)
 fl() { head -c 4 "$1" 2>/dev/null | tr '\377\000' F0; }

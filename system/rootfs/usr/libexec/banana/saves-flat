@@ -7,16 +7,19 @@
 # /data/banana/saves-legacy/<core>/ as a backup. A run that moved everything writes a marker in /run/banana, so it
 # is once per boot; a failure, or two saves it can't give to one game, leaves the old file and writes no marker, so
 # the next start or sync of the same boot tries again, and the next boot's.
-# The flat save is written beside its name under a name of this script's own, the card synced, then renamed over and
-# the card synced again, so a power cut leaves no half-written save under the name the cores read; the name ends .tmp,
-# never counted as a save by the sync, and isn't the one the sync writes beside the same save. A cut run's is cleared
-# here, by the run's number, one still running left its own.
+# The flat saves are written beside their names (save-put.sh's names), the card synced, then renamed over and the card
+# synced again, so a power cut leaves no half-written save under the name the cores read, and only then do the core
+# folder's own files leave it. A core folder's saves go together: the card is synced twice for the folder, not twice
+# for each save, which on a card with a few hundred of them kept the first game after the update, or the first sync,
+# waiting on hundreds of whole-card syncs. Folder by folder and not all at once, since a save a later folder has too
+# is weighed against the flat one the earlier folder left.
 #
 # (BANANA_DATA / BANANA_RUN / BANANA_SYSTEMS: the tests' made-up card.)
 DATA=${BANANA_DATA:-/data}
 RUN=${BANANA_RUN:-/run/banana}
 SYSTEMS=${BANANA_SYSTEMS:-/etc/banana/systems.conf}
 MARK=$RUN/saves-flat
+case $0 in */*) . "${0%/*}/save-put.sh" ;; *) . /usr/libexec/banana/save-put.sh ;; esac
 [ -f "$MARK" ] && exit 0
 [ -d "$DATA/saves" ] || exit 0
 IDS=$(sed -n 's/^\[\(.*\)\]$/\1/p' "$SYSTEMS" 2>/dev/null)
@@ -67,11 +70,36 @@ core() {
     case $1 in cdata) return 1 ;; esac
     return 0
 }
+# legacy <file>: a core folder's file, done with, to the backup of its folder ($d) (one already there from an earlier
+# move is never overwritten: the new one gets the time in its name)
+legacy() {
+    _b="$DATA/banana/saves-legacy/$d/${1##*/}"
+    [ -e "$_b" ] && _b="$_b.$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null && mv -f "$1" "$_b" || FAIL=1
+}
+# flush <written beside> <flat name> <core folder's file>...: a core folder's saves, each written beside its flat name,
+# put under those names: the card synced, each renamed over, the card synced again, then the core folder's files to
+# the backup. One that can't be renamed stays in its core folder, as do all of them when the card can't be synced
+flush() {
+    [ $# -gt 0 ] || return 0
+    if ! sync; then
+        while [ $# -gt 0 ]; do rm -f "$1"; shift 3; done
+        FAIL=1; return
+    fi
+    _n=$(($# / 3))
+    while [ "$_n" -gt 0 ]; do
+        if mv -f "$1" "$2"; then set -- "$@" "$3"; else rm -f "$1"; FAIL=1; fi
+        shift 3; _n=$((_n - 1))
+    done
+    sync || { FAIL=1; return; }
+    for _f; do legacy "$_f"; done
+}
 SEEN=	# the core folders done, a line each
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
     core "$d" || continue
+    set --	# (the folder's saves written beside their flat names, for flush)
     for f in "$dir"*; do
         [ -f "$f" ] || continue
         n=${f##*/}
@@ -111,25 +139,19 @@ for dir in "$DATA"/saves/*/; do
                 [ -e "$r" ] && r="$r.$(date +%Y%m%d-%H%M%S)"
                 mkdir -p "${r%/*}" 2>/dev/null && cp -p "$dest/$n" "$r" || { FAIL=1; continue; }
             fi
-            for t in "$dest/$n.saves-flat."*.tmp; do
-                p=${t##*.saves-flat.}; p=${p%.tmp}
-                [ -f "$t" ] && [ ! -d "/proc/$p" ] && rm -f "$t"
-            done
+            stale_tmps saves-flat "$dest/$n.saves-flat."*.tmp
             t="$dest/$n.saves-flat.$$.tmp"
-            if cp -p "$f" "$t" && sync && mv -f "$t" "$dest/$n" && sync; then
-                :
+            if cp -p "$f" "$t"; then
+                set -- "$@" "$t" "$dest/$n" "$f"
             else
                 rm -f "$t"
                 FAIL=1
-                continue
             fi
+            continue
         fi
-        # (a backup already there from an earlier move is never overwritten: the new one gets the time in its name)
-        b="$DATA/banana/saves-legacy/$d/$n"
-        [ -e "$b" ] && b="$b.$(date +%Y%m%d-%H%M%S)"
-        mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null &&
-            mv -f "$f" "$b" || FAIL=1
+        legacy "$f"
     done
+    flush "$@"
     SEEN="$SEEN
 $d"
 done
