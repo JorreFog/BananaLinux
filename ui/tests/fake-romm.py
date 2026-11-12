@@ -237,7 +237,8 @@ def roms():
                 "summary": f"About {stem}.", "metadatum": {"rom_id": rid, "genres": ["Puzzle"], "publishers": ["Banana"],
                                                          "first_release_date": 1262304000000},
                 # (?ts= is RomM's updated_at as Python prints a datetime: a space and a "+" in it)
-                "path_cover_large": f"/assets/romm/resources/roms/{p['id']}/{rid}/cover/big.png?ts=2026-10-31 15:44:32.123456+00:00" if os.path.exists(cover) else "",
+                # (FAKE_ROMM_COVER_AT, the tests' own: the cover named as a whole URL on another server)
+                "path_cover_large": os.environ.get("FAKE_ROMM_COVER_AT", "") + f"/assets/romm/resources/roms/{p['id']}/{rid}/cover/big.png?ts=2026-10-31 15:44:32.123456+00:00" if os.path.exists(cover) else "",
                 "has_multiple_files": multi, "has_simple_single_file": not multi, "missing_from_fs": False,
                 "md5_hash": whole[0].hexdigest(), "sha1_hash": whole[1].hexdigest(), "crc_hash": format(whole[2], "08x"),
                 "files": files, "full_path": full})

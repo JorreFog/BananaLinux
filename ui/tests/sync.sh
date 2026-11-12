@@ -91,6 +91,33 @@ bs ro sync --systems "$OUT/ro/systems.conf" > "$OUT/own-covers.log" 2>&1 || bad 
 has "ro/roms/gba/Banana Run (USA).gba"
 [ -e "$OUT/ro/roms/gba/media/box/Banana Run (USA).png" ] && bad "covers = own: the server's cover was downloaded"
 grep -q '<image>' "$OUT/ro/roms/gba/gamelist.xml" && bad "covers = own: the gamelist names a cover that isn't there"
+# a cover the server names as a whole URL on another server: fetched there, without the paired server's token, which
+# goes to the paired server alone
+CP=$(port); RA=$(port)
+python3 - "$CP" "$OUT/cover-asked.txt" 2>> "$OUT/fake-romm.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path != "/":
+            open(sys.argv[2], "a").write((self.headers.get("Authorization") or "none") + "\n")
+        body = b"\x89PNG\r\n\x1a\nelsewhere"
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+EOF
+FAKE_ROMM_COVER_AT="http://127.0.0.1:$CP" python3 "$HERE/tests/fake-romm.py" "$RA" "$L" 2> "$OUT/fake-romm-cover.log" & PIDS="$PIDS $!"
+waitport "$CP" / || bad "the other server for covers didn't start"
+waitport "$RA" /api/heartbeat || bad "fake-romm (covers elsewhere) didn't start"
+card celse
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs celse pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "celse: pairing failed: $(st celse)"
+bs celse sync > "$OUT/cover-elsewhere.log" 2>&1 || bad "a cover on another server: $(tail -3 "$OUT/cover-elsewhere.log")"
+has "celse/roms/gba/media/box/Banana Run (USA).png"
+[ "$(sort -u "$OUT/cover-asked.txt" 2>/dev/null)" = none ] || bad "a cover on another server was asked for with the token: $(sort -u "$OUT/cover-asked.txt" 2>&1)"
 # a client token's pairing code (RomM: Profile > Client tokens > Pair) on a second card
 card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')

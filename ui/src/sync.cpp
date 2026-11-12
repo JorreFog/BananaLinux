@@ -613,7 +613,7 @@ namespace
 						}
 						return std::string();
 					};
-				ok = fetchTo(f->url, b.auth(), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members);
+				ok = fetchTo(f->url, b.authFor(f->url), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members);
 			}
 			progress = nullptr;
 			doneBytes += std::max(0LL, f->size);

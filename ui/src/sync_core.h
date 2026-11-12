@@ -275,6 +275,12 @@ namespace bsync
 		explicit Backend(Conf& conf) : c(conf) {}
 		virtual ~Backend() {}
 		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
+		// the same for a URL the server named itself (a cover's): the token goes to the paired server and nowhere else,
+		// a file kept on another host, or the same host on another port or scheme, asked for without it
+		std::vector<std::string> authFor(const std::string& url) const
+		{
+			return url.compare(0, c.server.size() + 1, c.server + "/") == 0 ? auth() : std::vector<std::string>();
+		}
 		Resp call(const std::string& method, const std::string& path, const std::string* body = nullptr, std::vector<std::string> h = {}) const
 		{
 			Req q; q.method = method; q.url = c.server + path; q.headers = auth();
