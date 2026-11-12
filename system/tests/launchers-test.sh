@@ -135,6 +135,7 @@ check "$(held)" "- - " "an empty ROCKNIX .dsv beside the game is not taken"
 head -c 8192 /dev/zero | tr '\0' r > "$T/roms/Game.dsv"
 BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
 check "$(held)" "8192r 8192r " "one with a save in it is"
+check "$(ls "$D/drastic/backup" | grep -c 'tmp$')" "0" "...through a file of its own beside it, renamed over, none left behind"
 
 # the save folders: RetroArch's per-core saves move to the one folder the Home server syncs; GBA stays in its own;
 # system folders (nds, megadrive) and their files are left alone

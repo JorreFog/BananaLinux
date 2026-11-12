@@ -69,7 +69,10 @@ done
 # stays as it is
 R="${1%.*}.dsv"
 if [ -s "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
-    cp -p "$R" "$DSV" && echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"
+    # (written beside and renamed over, the card synced each side, as every other file here is: a power cut can't leave a
+    # .dsv cut short under the name DraStic reads, which no later start would take again, the file being there, and
+    # which reads from then on as a save that can't be read)
+    if cp -p "$R" "$DSV$T" && sync && mv -f "$DSV$T" "$DSV" && sync; then echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"; else rm -f "$DSV$T"; fi
 fi
 # size <file>: its bytes, 0 when there is none
 size() { wc -c 2>/dev/null < "$1" || echo 0; }
