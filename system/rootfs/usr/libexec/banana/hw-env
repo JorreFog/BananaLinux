@@ -9,5 +9,9 @@ HW_CONF=${BANANA_HW_CONF:-/etc/banana/hw.conf}
 [ -n "$HW_TOUCH" ] && export BANANA_TOUCH=${BANANA_TOUCH:-$HW_TOUCH}
 [ -n "$HW_PANEL_ROTATE" ] && export BANANA_PANEL_ROTATE=${BANANA_PANEL_ROTATE:-$HW_PANEL_ROTATE}
 [ -n "$HW_BACKLIGHT_TOP" ] && export BANANA_BACKLIGHT_TOP=${BANANA_BACKLIGHT_TOP:-$HW_BACKLIGHT_TOP}
+# a sound server (HW_SOUND=pipewire): bananad's mode, and where every program finds the server's socket
+if [ "$HW_SOUND" = pipewire ]; then
+    export BANANA_SOUND=pipewire PIPEWIRE_RUNTIME_DIR=${PIPEWIRE_RUNTIME_DIR:-/run/banana/pipewire}
+fi
 [ -n "$HW_BACKLIGHT_BOTTOM" ] && export BANANA_BACKLIGHT_BOTTOM=${BANANA_BACKLIGHT_BOTTOM:-$HW_BACKLIGHT_BOTTOM}
 :

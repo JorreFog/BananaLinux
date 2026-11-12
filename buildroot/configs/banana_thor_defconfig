@@ -19,7 +19,8 @@ BR2_TARGET_GENERIC_HOSTNAME="banana"
 BR2_TARGET_GENERIC_ISSUE="Banana"
 BR2_INIT_BUSYBOX=y
 BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/busybox.fragment"
-BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
+# udev (eudev): the Thor's drivers are mostly modules, and PipeWire's ALSA support needs it (the RG DS has devtmpfs alone)
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 # BR2_TARGET_GENERIC_GETTY is not set
 # BR2_TARGET_GENERIC_REMOUNT_ROOTFS_RW is not set
 BR2_ENABLE_LOCALE_PURGE=y
@@ -83,6 +84,14 @@ BR2_PACKAGE_ALSA_UTILS_ALSACTL=y
 BR2_PACKAGE_ALSA_LIB_UCM=y
 BR2_PACKAGE_ALSA_UCM_CONF=y
 BR2_PACKAGE_ALSA_UTILS_ALSAUCM=y
+# the sound server: PipeWire with WirePlumber (its session manager, in Lua), which run the card from that UCM profile,
+# and with SBC and Opus its Bluetooth headphones (usr/libexec/banana/sound-server)
+BR2_PACKAGE_PIPEWIRE=y
+BR2_PACKAGE_WIREPLUMBER=y
+BR2_PACKAGE_LUA=y
+BR2_PACKAGE_LUA_5_4=y
+BR2_PACKAGE_SBC=y
+BR2_PACKAGE_OPUS=y
 BR2_PACKAGE_FREETYPE=y
 BR2_PACKAGE_LIBDRM=y
 # bring-up: modetest (the connectors, their modes and panel orientation; usr/libexec/banana/hw-probe runs it)
@@ -123,12 +132,10 @@ BR2_PACKAGE_BLUEZ5_UTILS=y
 BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
-BR2_PACKAGE_BLUEZ_ALSA=y
+# (no bluez-alsa: Bluetooth headphones are PipeWire's)
 # its codecs past SBC (the bluetooth script picks among them by Settings > Network > Bluetooth audio): aptX and
 # aptX HD (libopenaptx, GPL-3.0+), LDAC (Sony's AOSP encoder, Apache-2.0; package/ldacbt) and FastStream (external.mk).
 # No AAC: fdk-aac's licence grants no patent rights and can't be combined with libopenaptx's GPL-3.0.
-BR2_PACKAGE_LIBOPENAPTX=y
-BR2_PACKAGE_LDACBT=y
 BR2_PACKAGE_DROPBEAR=y
 # BR2_PACKAGE_DROPBEAR_CLIENT is not set
 BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y

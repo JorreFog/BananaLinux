@@ -21,6 +21,10 @@
 # /run/banana/bt/hold is there (headphones being called back after a wake, or a codec change) and they aren't yet,
 # bananad plays nowhere audible instead (the codec, its speaker amplifier off): a game waits quietly, at its pace.
 RUN=/run/banana
+# a board whose sound is a server (hw.conf's HW_SOUND=pipewire: the AYN Thor): PipeWire's BlueZ plugin is the headphones'
+# A2DP source and routes to them itself, so no bluez-alsa here, and the D-Bus system bus is rcS's (PipeWire's too)
+[ -r /etc/banana/hw.conf ] && . /etc/banana/hw.conf
+PW=; [ "$HW_SOUND" = pipewire ] && PW=1
 STORE=/data/banana/bluetooth.tar
 LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
 HOLD=$RUN/bt/hold
@@ -138,7 +142,9 @@ up() {
     # the adapter on the bus (AutoEnable powers it; the firmware download takes a second or two)
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do timeout 2 bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && break; sleep 0.25; done
     ctl power on >/dev/null
-    # headphones and speakers: bluez-alsa as the A2DP source (the handheld plays, they listen)
+    # headphones and speakers: bluez-alsa as the A2DP source (the handheld plays, they listen); PipeWire's own on a
+    # sound-server board
+    [ -n "$PW" ] && { callback; return 0; }
     bluealsa_start
     ( bluealsa-cli monitor 2>/dev/null | while read -r ev rest; do
         case $ev in PCMAdded|PCMRemoved|ServiceRunning|ServiceStopped) $SELF route ;; esac
@@ -170,11 +176,10 @@ down() {
     stop $RUN/bluetoothd.pid
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluetoothd bluealsa >/dev/null || break; sleep 0.1; done
     killall -9 bluetoothd bluealsa 2>/dev/null
-    stop /run/dbus-daemon.pid
-    rm -f /run/dbus/system_bus_socket
+    [ -z "$PW" ] && { stop /run/dbus-daemon.pid; rm -f /run/dbus/system_bus_socket; }
     # the chip's Bluetooth off (hci_uart's remove drops its enable GPIO), and the stack out of memory
     modprobe -r hci_uart hidp 2>/dev/null
-    modprobe -r btrtl bluetooth 2>/dev/null
+    modprobe -r btrtl btqca bluetooth 2>/dev/null
     return 0
 }
 

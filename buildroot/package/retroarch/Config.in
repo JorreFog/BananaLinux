@@ -8,7 +8,7 @@ config BR2_PACKAGE_RETROARCH
 	select BR2_PACKAGE_FREETYPE
 	select BR2_PACKAGE_ZLIB
 	select BR2_PACKAGE_XZ
-	select BR2_PACKAGE_LIBUDEV_ZERO
+	select BR2_PACKAGE_LIBUDEV_ZERO if !BR2_PACKAGE_HAS_UDEV
 	help
 	  RetroArch, for the systems other than the DS: on one panel through KMS and GLES (no compositor), ALSA,
 	  udev input (libudev-zero), and its RGUI menu, whose pixel look fits the menu's.

@@ -1066,6 +1066,15 @@ static double save_volume_at, save_backlight_at;	/* debounced: written a moment 
 
 /* ---- sound: which card plays ----------------------------------------------------------------------------------- */
 static int card_codec = -1, card_speaker = -1, card_play = 0;	/* rk817; aw88166 (RG DS Plus only); the one playing */
+/* a board whose sound is a server (BANANA_SOUND=pipewire, from its hardware profile through rcS: the AYN Thor):
+ * PipeWire owns the card (its routing, the jack, the levels, Bluetooth headphones), so "default" is the server and the
+ * volume is its default sink's (the volume script's wpctl); none of the cards' own setup below runs */
+static int sound_server(void)
+{
+	static int v = -1;
+	if (v < 0) { const char *e = getenv("BANANA_SOUND"); v = e && !strcmp(e, "pipewire"); }
+	return v;
+}
 #define BT_AUDIO_DIR "/run/banana/bt"
 static char bt_mac[18], bt_pcm[160];	/* Bluetooth headphones playing now ("" none): their address, bluez-alsa's PCM */
 
@@ -1149,6 +1158,16 @@ static void audio_route(void)
 	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) The plugin is named by its
 	 * path in the config, so a program with its own libasound (a port's, whose plugin folder may be elsewhere) finds
 	 * it too instead of failing to open the speakers. */
+	if (sound_server()) {
+		static const char conf[] = "# bananad: sound plays through the server (PipeWire)\n"
+			"pcm.!default { type pipewire }\nctl.!default { type pipewire }\n";
+		FILE *f = fopen("/run/banana/asound.conf.new", "w");
+		if (f) { fputs(conf, f); fclose(f); rename("/run/banana/asound.conf.new", "/run/banana/asound.conf"); }
+		f = fopen("/run/banana/mixer.new", "w");
+		if (f) { fputs("pipewire @DEFAULT_AUDIO_SINK@\n", f); fclose(f); rename("/run/banana/mixer.new", "/run/banana/mixer"); }
+		say("sound: playback and recording through the sound server (PipeWire)");
+		return;
+	}
 	static const char eq_lib[] = "/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so";
 	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
 	const int eq = speakers && access(eq_lib, R_OK) == 0;
@@ -1212,7 +1231,7 @@ static void audio_route(void)
 static void audio_setup(void)
 {
 	audio_find_cards();
-	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
+	if (card_codec < 0 || sound_server()) { audio_route(); return; }	/* no sound card at all (QEMU), or the server's */
 	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
 	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
@@ -1255,7 +1274,7 @@ static void boot_mark(const char *what)
  * (off if headphones were in then), and the route sets it from the jack as it is now */
 static void sound_setup(void)
 {
-	if (access("/data/banana/asound.state", R_OK) == 0) {
+	if (!sound_server() && access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);
 	}

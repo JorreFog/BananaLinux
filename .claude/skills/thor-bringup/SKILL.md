@@ -23,10 +23,20 @@ device tree; replace them with what the handheld reports, and delete the `(check
 - Boot: OpenABL v1.2 (flashed to `abl_a`/`abl_b`), EFI-stub kernel, reads BLS entries or extlinux from the card's
   first FAT partition; device tree from the entry or its device-model menu (`/dtbs`).
 - ROCKNIX: suspend is "fake suspend" only on SM8550.
-- Modules: no udev, so rcS loads them. `usr/libexec/banana/qcom-audio` loads the ADSP and audio stack in its order
-  before bananad (`HW_AUDIO=qcom-audioreach`), `coldplug` loads every other found device's module after the menu
-  (`HW_COLDPLUG=1`). The Wi-Fi's PCI driver is `ath12k_wifi7` in 7.2. Read `/run/banana/boot-times` (the steps) and
-  `/run/banana/coldplug.txt`.
+- The Thor uses the standard pieces ROCKNIX does, unlike the RG DS's minimal set:
+  - **udev (eudev).** `HW_DEVMGR=udev`: rcS starts udevd, which loads every module and its firmware.
+  - **PipeWire + WirePlumber.** `HW_SOUND=pipewire`, run by `usr/libexec/banana/sound-server`. They bring the card up
+    from ROCKNIX's UCM profile and handle the jack and Bluetooth headphones.
+  - **bananad's server mode.** bananad points ALSA's `default` at PipeWire, and the volume keys go through `wpctl`.
+
+  Debug with:
+  - `sound-server status`, `wpctl status`
+  - `/data/banana/logs/sound-server.log`
+  - `udevadm monitor`
+  - `/run/banana/boot-times`
+
+  If the DSP drops routes when a stream opens, the fallback is Banana Pocket's PipeWire patch 0002 (re-apply the UCM
+  verb before `snd_pcm_open`).
 
 ## The sibling port: Banana Pocket
 

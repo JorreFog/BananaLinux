@@ -28,6 +28,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do pidof bananad >/dev/null || break; sleep 0.1; 
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
 /usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
+[ -x /usr/libexec/banana/sound-server ] && /usr/libexec/banana/sound-server down 2>/dev/null   # (WirePlumber's state saved)
 hwclock -w 2>/dev/null
 # the panels' brightness as it is now, for bananad to restore at the next boot ("<top> <bottom>" in thousandths): only
 # the settings rows, F + volume and the DS emulators' menus wrote the file, so a level set any other way (or set a moment

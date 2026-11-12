@@ -50,6 +50,16 @@ banana-perf performance
 ip link set lo up 2>/dev/null
 hostname banana	# (before syslogd: it takes the name once, and the kernel's default is ROCKNIX's unfilled @DEVICENAME@)
 syslogd -O /run/banana/messages -s 256 -b 1
+# a board on udev (hw.conf's HW_DEVMGR=udev: the AYN Thor, whose drivers are mostly modules): udevd loads each device's
+# module and its firmware and runs the rules (a sound card's SOUND_INITIALIZED, the input devices' properties) as on
+# any Linux, devices found at boot ("trigger") and later alike. The boot doesn't wait for it. (The RG DS's drivers are
+# built in and it has none: devtmpfs alone.)
+if [ "$HW_DEVMGR" = udev ] && command -v udevd >/dev/null; then
+    udevd --daemon
+    udevadm trigger --type=subsystems --action=add
+    udevadm trigger --type=devices --action=add
+    mark "rcS: udev started"
+fi
 
 # the card we booted from: the system is one of its two root slots (partitions 2 and 3, banana-root-a and -b; the
 # kernel's root= says which one booted), the games and settings its fourth partition
@@ -84,9 +94,15 @@ data || {
 mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
-# a Qualcomm AudioReach board's sound (the AYN Thor: hw.conf's HW_AUDIO), its modules in their order, before bananad
-# reads the cards (the RG DS's sound is built into the kernel)
-[ "$HW_AUDIO" = qcom-audioreach ] && /usr/libexec/banana/qcom-audio
+# a board whose sound is a server (hw.conf's HW_SOUND=pipewire: the AYN Thor): D-Bus's system bus (PipeWire's
+# Bluetooth audio talks to bluetoothd over it), then PipeWire and WirePlumber, which bring the card up from its UCM
+# profile when udev has it; bananad points "default" at the server and doesn't wait for the card
+if [ "$HW_SOUND" = pipewire ]; then
+    mkdir -p /run/dbus /tmp/dbus
+    dbus-uuidgen --ensure 2>/dev/null
+    dbus-daemon --system 2>/dev/null
+    /usr/libexec/banana/sound-server up &
+fi
 
 bananad &
 # the power and volume keys live before the menu's boot animation (#87): bananad creates bananad-ready once its loop
@@ -102,8 +118,6 @@ mark "rcS: bananad ready"
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
     modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null
-    # a board whose drivers are mostly modules (hw.conf's HW_COLDPLUG): each device's own, as udev would
-    [ "$HW_COLDPLUG" = 1 ] && /usr/libexec/banana/coldplug
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then

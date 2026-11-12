@@ -8,7 +8,8 @@ RETROARCH_VERSION = v1.22.2
 RETROARCH_SITE = $(call github,libretro,RetroArch,$(RETROARCH_VERSION))
 RETROARCH_LICENSE = GPL-3.0+
 RETROARCH_LICENSE_FILES = COPYING
-RETROARCH_DEPENDENCIES = host-pkgconf alsa-lib libdrm libegl libgles libgbm freetype zlib xz libudev-zero
+RETROARCH_DEPENDENCIES = host-pkgconf alsa-lib libdrm libegl libgles libgbm freetype zlib xz \
+	$(if $(BR2_PACKAGE_HAS_UDEV),udev,libudev-zero)
 
 # The joypad autoconfigs live in libretro's own repository, not in RetroArch's tree; its udev driver reads them from
 # joypad_autoconfig_dir. The udev/ set is fetched here and installed below (8BitDo, Xbox and PlayStation pads); the

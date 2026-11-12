@@ -133,16 +133,22 @@ Each milestone ends with something you can check on the handheld.
 
 1. **Sound.**
    - bananad finds cards by name (`aw88166`, `rk817` in `/proc/asound/cards`).
-   - The Thor's card is "AYN-Thor" on the ADSP. With no udev, nothing loaded its modules.
-     `usr/libexec/banana/qcom-audio` (from Banana Pocket) now loads them in the order the DSP needs, before bananad
-     (`HW_AUDIO=qcom-audioreach`).
-   - Its routing is ROCKNIX's UCM profile, now in the image: `package/alsa-ucm-conf` with
-     `patches/alsa-ucm-conf/0001-Add-AYN-Thor.patch`, plus `alsaucm`. Bring the card up with
-     `alsaucm -c AYN-Thor set _verb HiFi` and choose bananad's Thor path from there.
-   - Banana Pocket found that the DSP builds a frontend's graph when it is opened, latches the mixer values it finds
-     then, and only the first frontend plays. Its answer was PipeWire with WirePlumber reading the UCM
-     (`sound-server`, and a libudev-zero patch so PipeWire sees the card). If bananad's single-opener ALSA setup runs
-     into the same wall, take that.
+   - The Thor runs ROCKNIX's sound stack:
+     - udev loads the drivers (`HW_DEVMGR=udev`).
+     - PipeWire and WirePlumber run the card from ROCKNIX's UCM profile (`HW_SOUND=pipewire`,
+       `usr/libexec/banana/sound-server`). The profile comes from `package/alsa-ucm-conf` with
+       `patches/alsa-ucm-conf/0001-Add-AYN-Thor.patch`.
+     - bananad's server mode points `default` at PipeWire, and the volume script uses `wpctl`.
+     - PipeWire's Bluetooth plugin replaces bluez-alsa.
+   - ROCKNIX ships no PipeWire patches and no WirePlumber config for the Thor, so start with these stock.
+   - Check:
+     - the speaker, and the jack switching over
+     - the microphone
+     - the volume keys
+     - Bluetooth headphones
+     - the 20 s Banana Pocket saw before the first sound (its kernel fixes are in)
+   - If the DSP drops a route once a stream is open, take Banana Pocket's PipeWire patch 0002, which re-applies the
+     UCM verb before the open.
 2. **Battery.** The charger and gauge are the ADSP's battery manager (`battmgr.jsn`), not the RK817. bananad finds
    power supplies by type. Check the "Discharging while charging" quirk, which is the RK817's only.
 3. **Sleep.**
@@ -202,7 +208,7 @@ same card and update. Taken from it at `2f4da8bf`:
 | Turnip option and Mesa 26.2.6 for Buildroot, and the Makefile step that applies Buildroot patches | `buildroot/buildroot-patches/`, `Makefile` (`buildroot-patched`), CI | apply to Buildroot 2026.02.3, idempotent; the Mesa hash; all four defconfigs keep every option |
 | `alsa-ucm-conf` package (ROCKNIX's Thor profile goes on top) | `buildroot/package/alsa-ucm-conf`, `buildroot/patches/alsa-ucm-conf` | the Thor profile applies to 1.2.16.1 and every file it includes is there |
 | 8 kernel patches: GENI UART RX restart (the pad), AW88166 start/format fixes (the ~20 s silent boot), battery manager, q6apm timing | `buildroot/board/thor/linux-patches-banana` (its README says which, and which were left out and why) | apply after ROCKNIX's 71; the drivers build for arm64 with the Thor's config |
-| The AudioReach module order | `usr/libexec/banana/qcom-audio`, `hw.conf`'s `HW_AUDIO*` | every module name exists in the Thor kernel |
+| The sound server's start and its sleep hook (simpler here: with real udev, its probe-retry workarounds and its libudev-zero patches aren't needed) | `usr/libexec/banana/sound-server`, `etc/banana/sleep.d/20-sound` | scripts parse; bananad's server mode builds |
 
 **Worth taking later:**
 - **The PipeWire sound server**, if the Thor's DSP needs it (M3).
@@ -212,8 +218,10 @@ same card and update. Taken from it at `2f4da8bf`:
 - **Its docs.** `docs/BOOT-SOUND.md` and `docs/RPC-PORT.md` cover the sound and sleep it already worked out on this
   stack.
 
-`coldplug` is new here, not from the Pocket. It loads each found device's module, as udev would. The Thor's drivers
-are mostly modules, and the Pocket names its modules one by one in rcS instead.
+**The Thor uses the standard pieces where the RG DS has minimal ones.** It has eight cores and 8-16 GB, so it runs
+what ROCKNIX runs on it: udev instead of devtmpfs alone, PipeWire and WirePlumber instead of bananad's own ALSA
+routing, and PipeWire's Bluetooth instead of bluez-alsa. RetroArch links the real libudev where there is one. The RG
+DS's profile leaves all of this off, so its image is unchanged.
 
 ## RG DS code paths still to make board-aware
 
