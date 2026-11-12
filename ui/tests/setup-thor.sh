@@ -33,35 +33,64 @@ ts_check slides "setupstate: slide=homeserver pick=0 choices=Next|Pair with anot
 grep -q '^fan = ' "$TS/data/settings.conf" || { echo "FAIL thor setup: the Controls slide's fan wasn't saved"; fail=1; }
 grep -q '"token": "rh1_test"' "$TS/data/romsync.json" 2>/dev/null || { echo "FAIL thor setup: the Home server slide didn't pair"; fail=1; }
 # Steam: the password straight through (logged in, the library read: 3 games), never in the tool's log
-ts_run steam "home 0; setupat steam; setupstate; shot steam; press a; type joar; press start; type right; press start; sleep 300; sleep 300; sleep 300; setupstate; \
+ts_run steam "home 0; setupat steam; setupstate; shot steam; press down; press a; type joar; press start; type right; press start; sleep 300; sleep 300; sleep 300; setupstate; \
     sleep 300; sleep 300; shot steam-ok; setupstate"
-ts_check steam "setupstate: slide=steam pick=0 choices=Log in|Skip for now .*steam=0"
+ts_check steam "setupstate: slide=steam pick=0 choices=Sign in with the Steam app|Type the name and password|Skip for now .*steam=0"
 ts_check steam "setupstate: slide=steam pick=0 choices=Next|Log in with another account .*steam=1 steamuser=joar "
 grep -q '^login joar$' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: no steam login: $(cat "$TS/run/fake-steam.log")"; fail=1; }
 grep -q '^library' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: the library wasn't read after the login"; fail=1; }
 if grep -q 'right' "$TS/run/fake-steam.log"; then echo "FAIL thor setup: the Steam password in the tool's arguments"; fail=1; fi
 # Steam Guard: the app's code asked for (the entry opens by itself), a wrong one asked again, the right one logs in
 rm -f "$TS/run/fake-steam.user"
-ts_run guard "home 0; setupat steam; press a; type joar; press start; type guard; press start; sleep 300; sleep 300; setupstate; shot steam-code; \
+ts_run guard "home 0; setupat steam; press down; press a; type joar; press start; type guard; press start; sleep 300; sleep 300; setupstate; shot steam-code; \
     type 11111; press start; sleep 300; sleep 300; setupstate; type 12345; press start; sleep 300; sleep 300; sleep 300; setupstate"
 ts_check guard "setupstate: closed page=2"
 ts_check guard "steam=1 steamuser=joar steamstate=ok joar"
 grep -q '^code 11111$' "$TS/run/fake-steam.log" && grep -q '^code 12345$' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: the Steam Guard codes weren't handed on"; fail=1; }
 # the approval on the phone (nothing typed), then a wrong password: Try again
 rm -f "$TS/run/fake-steam.user"
-ts_run phone "home 0; setupat steam; press a; type joar; press start; type phone; press start; sleep 300; setupstate; shot steam-confirm; sleep 300; sleep 300; sleep 300; setupstate"
+ts_run phone "home 0; setupat steam; press down; press a; type joar; press start; type phone; press start; sleep 300; setupstate; shot steam-confirm; sleep 300; sleep 300; sleep 300; setupstate"
 ts_check phone "steamstate=confirm"
 ts_check phone "steam=1 steamuser=joar"
 rm -f "$TS/run/fake-steam.user"
-ts_run wrong "home 0; setupat steam; press a; type joar; press start; type nope; press start; sleep 300; sleep 300; setupstate; shot steam-wrong"
-ts_check wrong "setupstate: slide=steam pick=0 choices=Try again|Skip for now .*steam=2"
+ts_run wrong "home 0; setupat steam; press down; press a; type joar; press start; type nope; press start; sleep 300; sleep 300; setupstate; shot steam-wrong"
+ts_check wrong "setupstate: slide=steam pick=0 choices=Try again|Sign in with the Steam app|Skip for now .*steam=2"
+# the sign-in with the Steam app: its code (the stand-in's 25 x 25) drawn on the top screen in whole px a module, a new
+# code (qr 2) read and drawn again, then ok as the account the app approved; B while it waits stops it (steam cancel)
+# and the slide's choices come back; a sign-in that fails offers Try again and the password's way
+rm -f "$TS/run/fake-steam.user"
+st_q="home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; shot steam-qr; setupstate"
+for i in 1 2 3 4 5 6 7 8; do st_q="$st_q; sleep 300; setupstate"; done
+ts_run qr "$st_q; shot steam-qr-later; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate" FAKE_STEAM_QR_ROUNDS=3
+ts_check qr "setupstate: slide=steam pick=0 choices=Waiting for the scan|Type the name and password instead|Skip for now .*steamstate=qr 1 qr=25x[0-9]* qrn=1"
+ts_check qr "steamstate=qr 2 qr=25x[0-9]* qrn=2"
+ts_check qr "steam=1 steamuser=scanned steamstate=ok scanned"
+k=$(grep -o 'qr=25x[0-9]*' "$OUT/thor-st-qr.log" | grep -v 'x0$' | head -n 1 | cut -dx -f2)
+[ -n "$k" ] && [ "$k" -ge 16 ] && [ "$k" -le 22 ] || { echo "FAIL thor setup: the code's modules are ${k:-?} px (16..22 for 400-560 px)"; fail=1; }
+grep -q '^login-qr' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: steam login-qr wasn't run"; fail=1; }
+# (the new code is the one read: its dark modules aren't the first's)
+d1=$(grep -o 'qrn=1 qrdark=[0-9]*' "$OUT/thor-st-qr.log" | head -n 1 | cut -d= -f3); d2=$(grep -o 'qrn=2 qrdark=[0-9]*' "$OUT/thor-st-qr.log" | head -n 1 | cut -d= -f3)
+[ -n "$d1" ] && [ -n "$d2" ] && [ "$d1" != "$d2" ] || { echo "FAIL thor setup: the new code wasn't read (${d1:-?} / ${d2:-?} dark modules)"; fail=1; }
+if command -v convert >/dev/null; then
+    # the card: pure white and pure black right of the text column, both a good part of it
+    hist=$(convert "$OUT/thor-st-steam-qr-top.png" -crop 600x900+1320+90 +repage -format %c histogram:info: 2>/dev/null)
+    wpx=$(echo "$hist" | grep -i '#FFFFFF' | awk '{ print $1 }' | tr -d ':'); bpx=$(echo "$hist" | grep -i '#000000 ' | awk '{ print $1 }' | tr -d ':')
+    [ "${wpx:-0}" -gt 60000 ] && [ "${bpx:-0}" -gt 40000 ] || { echo "FAIL thor setup: no code drawn on the top screen (white ${wpx:-0}, black ${bpx:-0})"; fail=1; }
+fi
+rm -f "$TS/run/fake-steam.user"
+ts_run qrcancel "home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; press b; sleep 300; sleep 300; sleep 300; setupstate"
+ts_check qrcancel "setupstate: slide=steam pick=0 choices=Sign in with the Steam app|Type the name and password|Skip for now .*steam=0"
+grep -q '^cancel' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: B didn't stop the sign-in (steam cancel)"; fail=1; }
+ts_run qrfail "home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; sleep 300; setupstate; shot steam-qr-failed" FAKE_STEAM_QR=fail FAKE_STEAM_QR_ROUNDS=1
+ts_check qrfail "setupstate: slide=steam pick=0 choices=Try again|Type the name and password|Skip for now .*steam=2"
 # the summary lists the new steps
 ts_run done "home 0; setupat done; setupstate; shot done"
 ts_check done "setupstate: slide=done pick=0 choices=Finish"
 # Settings > System > Accounts: Steam logged in, then out (A twice); SteamGridDB's key kept as the other accounts are
-ts_run accounts "home 0; section Accounts; press down; press a; type joar; press start; type right; press start; sleep 300; sleep 300; sleep 300; shot accounts; \
+ts_run accounts "home 0; section Accounts; press down; press a; sleep 300; sleep 300; shot accounts-qr; press a; type joar; press start; type right; press start; sleep 300; sleep 300; sleep 300; shot accounts; \
     press a; press a; press down; press a; type KEY123; press start"
 grep -q '^logout' "$TS/run/fake-steam.log" || { echo "FAIL thor accounts: Steam wasn't logged out"; fail=1; }
+[ "$(grep -c '^login-qr' "$TS/run/fake-steam.log")" -ge 2 ] || { echo "FAIL thor accounts: A on Steam didn't start the sign-in with the app"; fail=1; }
 grep -q '^sgdb_key=KEY123$' "$TS/data/accounts.conf" || { echo "FAIL thor accounts: no sgdb_key in accounts.conf"; fail=1; }
 # the quick menu (Home held in a game): its rows on the bottom screen, a step right on Performance kept for the game, a
 # tap on the top brightness's slider, B closes it
@@ -87,7 +116,7 @@ if command -v convert >/dev/null; then
     cmp -s "$OUT/thor-st-fade-game-110-top.png" "$OUT/thor-st-fade-game-220-top.png" && { echo "FAIL thor fades: the game's fade doesn't move"; fail=1; }
     # the setup at the Thor's shapes: true black, the status bar over the top screen (lit pixels in its first 90 lines),
     # every slide drawn
-    for s in lang controls home home-paired steam steam-ok steam-confirm steam-wrong done quick; do
+    for s in lang controls home home-paired steam steam-ok steam-confirm steam-wrong steam-qr steam-qr-failed accounts-qr done quick; do
         [ "$(convert "$OUT/thor-st-$s-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor setup: $s's bottom is blank"; fail=1; }
     done
     [ "$(convert "$OUT/thor-st-lang-top.png" -format '%[pixel:p{4,1075}]' info: 2>/dev/null)" = "srgb(0,0,0)" ] || { echo "FAIL thor setup: the top isn't true black"; fail=1; }

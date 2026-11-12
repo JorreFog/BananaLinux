@@ -1496,6 +1496,13 @@ namespace banana
 			if (it.key == "sgdb_key") { startEntry(ENTRY_SGDB_KEY, "SteamGridDB", "API key", LIST, account("sgdb_key")); return MOVED; }
 			if (it.key == "steam")
 			{
+				if (steamPid > 0 && steamQr)
+				{
+					// the app's code up: A takes the name and password's way instead
+					steamCancel();
+					startEntry(ENTRY_STEAM_USER, "Steam", "Account name", LIST, steamAcct);
+					return MOVED;
+				}
 				if (steamPid > 0) return NONE;	// (a login under way: its state on the top panel)
 				if (!steamUser.empty())
 				{
@@ -1507,8 +1514,9 @@ namespace banana
 					message = "Logged out of Steam. Its games on the card stay.";
 					return CHANGED;
 				}
-				steamKind = 0; steamLine.clear();
-				startEntry(ENTRY_STEAM_USER, "Steam", "Account name", LIST, steamAcct);
+				// logged out: the sign-in with the Steam app first (its code on the top screen)
+				steamKind = 0; steamLine.clear(); message.clear();
+				startSteamQr();
 				return MOVED;
 			}
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
@@ -1703,6 +1711,8 @@ namespace banana
 
 	Settings::Result Settings::press(Key k)
 	{
+		// (Accounts: the Steam app's code up, B stops that sign-in before it leaves the page)
+		if (k == Key::B && page == LIST && !inGroups && steamQrShown()) { steamCancel(); return MOVED; }
 		if (hotAsk) return pressHotAsk(k);
 		if (langPick >= 0) return pressLangPick(k);
 		if (page == NETWORKS) return pressNetworks(k);
@@ -2136,6 +2146,7 @@ namespace banana
 					c.shadows = { inset(0, hair, 0, p.bubbleBand) };
 				}
 				else if (kind == "pillkey" || kind == "pillkeyA") { c.radius = X(h / 2); c.bg = kind == "pillkeyA" ? p.pick : p.ink; }
+				else if (kind == "qrcard") { c.radius = X(10); c.bg = Color::hex(0xffffff); }	// (pure white: the code's light modules)
 				else if (kind == "tile")
 				{
 					// (settings.icons "tile") an icon's lit tile, as the home screen's
@@ -2154,6 +2165,7 @@ namespace banana
 				}
 				st = c;
 			}
+			if (kind == "qrcard") { st = rnds::BoxStyle(); st.radius = X(10); st.bg = Color::hex(0xffffff); }	// (any theme's: pure white)
 			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
 			Cached c;
 			c.tex = be->upload(pb.bmp, true);
@@ -2167,6 +2179,49 @@ namespace banana
 	}
 
 	void Settings::iconTile(float x, float y, float w, float h) { box("tile", false, x, y, w, h); }
+
+	// the Steam app's sign-in code on the top screen: dark modules on a pure white card with round corners, a whole number
+	// of device px a module (crisp), as large as the room allows up to 560 px: right of the text column where the screen
+	// is wider than the canvas (the AYN Thor's top), else under the heading with the steps beside it
+	void Settings::drawSteamQr(float textX, float textY)
+	{
+		SPal p = pal(light);
+		const int N = (int)steamQrRows.size();
+		if (N == 0) return;
+		float ax, ay, aw, ah;
+		rnds::screenArea(be, s, ax, ay, aw, ah);
+		const float colRight = HELP_X + HELP_W, top = 50, bottom = ay + ah - 14;
+		const float roomW = ax + aw - 12 - (colRight + 8), roomH = bottom - top;
+		const bool right = roomW >= 180;
+		const float roomU = right ? std::min(roomW, roomH) : std::min(260.0f, bottom - textY);
+		const int pad = std::max(4, (int)std::lround(X(6)));
+		const int target = std::min(560, (int)std::floor(X(roomU)));
+		const int k = std::max(1, (target - 2 * pad) / N);
+		steamQrK = k;
+		const int cardPx = k * N + 2 * pad;
+		const float cardU = cardPx / s;
+		const float cx = right ? colRight + 8 + (roomW - cardU) / 2 : textX, cy = right ? top + (roomH - cardU) / 2 : textY;
+		box("qrcard", false, cx, cy, cardU, cardU);
+		const float ox = std::round(X(cx)) + pad, oy = std::round(X(cy)) + pad;
+		const Color dark = Color::hex(0x000000);
+		for (int r = 0; r < N; r++)
+		{
+			const std::string& row = steamQrRows[r];
+			for (int c = 0; c < N;)
+			{
+				if (row[c] != '1') { c++; continue; }
+				int e = c;
+				while (e < N && row[e] == '1') e++;
+				be->fill(ox + c * k, oy + r * k, (float)((e - c) * k), (float)k, dark);
+				c = e;
+			}
+		}
+		// the steps
+		const float sx = right ? textX : textX + cardU + 20, sw = right ? HELP_W : HELP_X + HELP_W - sx;
+		const char* steps[] = { "1. Open the Steam app on your phone", "2. Tap the shield (Steam Guard)", "3. Scan this code and approve" };
+		for (int i = 0; i < 3; i++) text(fit(steps[i], false, 20, sw), false, 20, sx, textY + i * 34, p.ink);
+		wrapped("The code changes by itself every half minute. B stops.", 18, sx, textY + 3 * 34 + 10, sw, 2, p.muted);
+	}
 
 	float Settings::text(const std::string& t, bool medium, float size, float x, float top, const Color& c, bool upper, float ls, bool measureOnly)
 	{
@@ -2769,6 +2824,11 @@ namespace banana
 			helpText(help, HELP_TOP, HINT_TOP - 12, p.muted);
 			helpText(cur.hints[cur.at], HINT_TOP, HELP_BOTTOM, p.ink);
 		}
+		else if (cur.key == "steam" && steamQrShown())
+		{
+			if (steamQrRows.empty()) wrapped("Asking Steam for a code...", 20, HELP_X, HELP_TOP, HELP_W, 2, p.muted);
+			else drawSteamQr(HELP_X, HELP_TOP);
+		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
@@ -2839,7 +2899,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
-			else if (it.kind == Item::PAGE && it.key == "steam") { v = armed == i ? "Press A again" : steamPid > 0 ? "Logging in" : steamUser.empty() ? "Not logged in" : fit(steamUser, true, 19, 300); nameValue = armed != i && steamPid <= 0 && !steamUser.empty(); }
+			else if (it.kind == Item::PAGE && it.key == "steam") { v = armed == i ? "Press A again" : steamQrShown() ? "Scan the code" : steamPid > 0 ? "Logging in" : steamUser.empty() ? "Not logged in" : fit(steamUser, true, 19, 300); nameValue = armed != i && steamPid <= 0 && !steamUser.empty(); }
 			else if (it.kind == Item::PAGE && it.key == "ra_account") { v = account("ra_user").empty() ? "Not logged in" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
 			else if (it.kind == Item::PAGE && it.key == "sgdb_key") v = account("sgdb_key").empty() ? "Not set" : "Set";
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
@@ -2865,7 +2925,7 @@ namespace banana
 		be->popClip();
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.key == "steam" ? (steamPid > 0 ? "" : steamUser.empty() ? "Log in" : armed == sel ? "Confirm" : "Log out") : cur.kind == Item::PAGE ? "Open" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.key == "steam" ? (steamQrShown() ? "Use a password" : steamPid > 0 ? "" : steamUser.empty() ? "Log in" : armed == sel ? "Confirm" : "Log out") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			// (only B beside it: as wide as the bar leaves, so an action's name - "Reset RetroArch" - fits whole instead
@@ -3100,6 +3160,7 @@ namespace banana
 		if (testing) return 300;	// (the setup's Wi-Fi test: its lines as they come)
 		if (page == SETUP && wizard && (!joining.empty() || testAfterJoin)) return std::max(0, (int)(nextStatus - t));
 		if (page == SETUP && wizard && raCheck) return 250;	// (the dots going round)
+		if (steamPid > 0 || steamLibPid > 0) return 250;	// (Steam's login, its code, the library: the state file looked at, the dots)
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
 		return std::max(0, (int)(due - t));
@@ -6821,10 +6882,20 @@ namespace banana
 		}
 		case SL_STEAM:
 			// as RetroAchievements': the login under way, then Next or Try again
+			// the sign-in with the app (its code on the top screen) first, the name and password the other way
+			if (steamPid > 0 && steamQr)
+			{
+				r.push_back({ steamQrRows.empty() ? "Asking Steam for a code" : "Waiting for the scan", "", SA_WAIT });
+				r.push_back({ "Type the name and password instead", "", SA_STEAM });
+				r.push_back({ "Skip for now", "", SA_SKIP });
+				break;
+			}
 			if (steamPid > 0) { r.push_back({ steamState == "confirm" ? "Waiting for the approval" : "Logging in", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
-			if (steamKind == 1 || (steamKind == 0 && !steamUser.empty())) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_STEAM }); break; }
-			if (steamKind == 2) { r.push_back({ "Try again", "", SA_STEAM }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
-			r.push_back({ "Log in", "", SA_STEAM });
+			if (steamKind == 1 || (steamKind == 0 && !steamUser.empty())) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_STEAMQR }); break; }
+			if (steamKind == 2 && steamQr) { r.push_back({ "Try again", "", SA_STEAMQR }); r.push_back({ "Type the name and password", "", SA_STEAM }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (steamKind == 2) { r.push_back({ "Try again", "", SA_STEAM }); r.push_back({ "Sign in with the Steam app", "", SA_STEAMQR }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			r.push_back({ "Sign in with the Steam app", "", SA_STEAMQR });
+			r.push_back({ "Type the name and password", "", SA_STEAM });
 			r.push_back({ "Skip for now", "", SA_SKIP });
 			break;
 		case SL_CONTROLS:
@@ -6849,6 +6920,12 @@ namespace banana
 		for (size_t i = 0; i < ch.size(); i++) r += (i ? "|" : "") + ch[i].label;
 		r += " link=" + std::to_string(tLink) + " net=" + std::to_string(tNet) + " time=" + std::to_string(tTime) + " ra=" + std::to_string(raKind);
 		if (!steamTool.empty()) r += " steam=" + std::to_string(steamPid > 0 ? 3 : steamKind) + " steamuser=" + steamUser + " steamstate=" + steamState;
+		if (steamQrShown())
+		{
+			int dark = 0;
+			for (auto& row : steamQrRows) dark += (int)std::count(row.begin(), row.end(), '1');
+			r += " qr=" + std::to_string(steamQrRows.size()) + "x" + std::to_string(steamQrK) + " qrn=" + std::to_string(steamQrN) + " qrdark=" + std::to_string(dark);
+		}
 		r += " steps=" + std::to_string(slides.size());
 		return r;
 	}
@@ -6862,6 +6939,7 @@ namespace banana
 		{
 		case SA_WAIT: return NONE;
 		case SA_SKIP: case SA_NEXT:
+			if (sl == SL_STEAM) steamCancel();	// (a sign-in still waiting stops)
 			if (sl == SL_LANG && lg && langAt != lg->at)
 			{
 				// the language picked: saved, and the menu starts again in it on the next slide
@@ -6906,9 +6984,11 @@ namespace banana
 		case SA_ART: startScrape(); return MOVED;
 		case SA_HOME: message.clear(); startPairing(); return MOVED;
 		case SA_STEAM:
+			steamCancel();	// (the app's sign-in, if it is waiting: the password's way instead)
 			steamKind = 0; steamLine.clear();
 			startEntry(ENTRY_STEAM_USER, "Steam", "Account name", SETUP, steamUser.empty() ? steamAcct : "");	// (another account: typed afresh)
 			return MOVED;
+		case SA_STEAMQR: startSteamQr(); wpick = 0; return MOVED;
 		case SA_ITEM: return pressSetup(Key::RIGHT);	// (A steps it on, as right does)
 		}
 		return NONE;
@@ -6968,6 +7048,7 @@ namespace banana
 			for (auto& c : ch) if (c.act == SA_NEXT || c.act == SA_SKIP) return setupAct(c.act);
 			return setupAct(SA_SKIP);
 		case Key::B:
+			if (slides[wsel] == SL_STEAM && steamPid > 0) { steamCancel(); return MOVED; }	// (the sign-in stops: the slide's choices again)
 			if (wsel > 0) { setupGo(wsel - 1); return MOVED; }
 			if (!wizardBoot) { wizard = false; page = LIST; unlink((data + "/setup-step").c_str()); return MOVED; }	// out, back to Settings
 			return NONE;
@@ -7042,7 +7123,8 @@ namespace banana
 			help = "Your RomM or Romhost server at home: its games, box art and saves come to the card, your saves go back. A finds it on the network and asks for its code. No server? Skip this: Network > Home server pairs one later.";
 			break;
 		case SL_STEAM:
-			status = steamPid > 0 ? (steamState == "confirm" ? "Approve it on your phone" : "Logging in as " + steamAcct + "...") :
+			status = steamQrShown() ? (steamQrRows.empty() ? "Asking for a code..." : "Scan the code with the Steam app") :
+				steamPid > 0 ? (steamState == "confirm" ? "Approve it on your phone" : "Logging in as " + steamAcct + "...") :
 				steamKind == 1 || (steamKind == 0 && !steamUser.empty()) ? "Logged in as " + steamUser : steamKind == 2 ? "Not logged in" : "Not logged in";
 			help = "Your Steam library on the PC games shelf, its games downloaded straight to the card. The password isn't kept, only a login token. The first PC game fetches their runtime (about 100 MB).";
 			break;
@@ -7125,7 +7207,8 @@ namespace banana
 		{
 			// (Home server paired: the pairing's own words are done with)
 			const bool msg = !message.empty() && !(sl == SL_HOME && !homeServer().empty());
-			wrapped(msg ? message : help, 20, 50, y, 540, 4, p.muted);
+			if (sl == SL_STEAM && steamQrShown() && !steamQrRows.empty()) drawSteamQr(50, y);	// (the app's code and the steps instead)
+			else wrapped(msg ? message : help, 20, 50, y, 540, 4, p.muted);
 			y = 312;
 			if (sl == SL_WIFI && (testing || tLink >= 0))
 			{
@@ -7139,6 +7222,10 @@ namespace banana
 				check(raCheck ? -1 : raKind == 1 ? 1 : raKind == 4 ? -2 : 0, raCheck ? "Asking retroachievements.org..." : raLine, y);
 			else if (sl == SL_ART && scraping())
 				scrapeBar(50, y + 6, 540);
+			else if (sl == SL_STEAM && steamQrShown())
+			{
+				if (steamQrRows.empty()) check(-1, "Asking Steam for a code...", y);
+			}
 			else if (sl == SL_STEAM && (steamPid > 0 || steamKind))
 			{
 				// the login's state as the tool writes it, then the library being read
@@ -7361,12 +7448,47 @@ namespace banana
 		if (p > 0) waitpid(p, nullptr, 0);
 	}
 
-	void Settings::startSteamLogin(const std::string& user, const std::string& pass)
+	void Settings::startSteamQr()
 	{
 		if (steamTool.empty() || steamPid > 0) return;
 		unlink((runDir + "/steam.state").c_str());
 		steamState = "starting";
-		steamCodeOpen = false;
+		steamCodeOpen = false; steamCancelled = false;
+		steamQr = true; steamQrN = -1; steamQrRows.clear();
+		steamKind = 0; steamLine.clear();
+		std::string cmd = shellQuote(steamTool) + " login-qr";
+		pid_t p = fork();
+		if (p == 0) { quietFds(true); setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+		if (p < 0) { steamKind = 2; steamLine = "The sign-in couldn't be started"; return; }
+		steamPid = p;
+		steamPoll = 0;
+	}
+
+	void Settings::steamCancel()
+	{
+		if (steamPid <= 0) return;
+		steamCancelled = true;
+		steamRun("cancel");
+	}
+
+	void Settings::startSteamLogin(const std::string& user, const std::string& pass)
+	{
+		if (steamPid > 0 && steamCancelled)
+		{
+			// the app's sign-in stopped for this one: given up to 3 s to go
+			for (int i = 0; i < 300 && steamPid > 0; i++)
+			{
+				pid_t r = waitpid(steamPid, nullptr, WNOHANG);
+				if (r == steamPid || (r < 0 && errno == ECHILD)) steamPid = -1; else usleep(10000);
+			}
+			if (steamPid > 0) { kill(-steamPid, SIGTERM); waitpid(steamPid, nullptr, 0); steamPid = -1; }
+			steamCancelled = false; steamQrRows.clear(); steamQrN = -1;
+		}
+		if (steamTool.empty() || steamPid > 0) return;
+		unlink((runDir + "/steam.state").c_str());
+		steamState = "starting";
+		steamCodeOpen = false; steamCancelled = false;
+		steamQr = false;
 		steamKind = 0; steamLine.clear();
 		steamAcct = user;
 		int fd[2];
@@ -7410,8 +7532,28 @@ namespace banana
 				steamState = ln;
 				steamCodeOpen = false;
 				changed = true;
-				if (!wizard)	// (Settings > Accounts: its state on the top panel; the setup's slide shows its own lines)
+				if (!wizard && !steamQr)	// (Settings > Accounts: its state on the top panel; the setup's slide shows its own lines)
 					message = steamState == "confirm" ? "Approve the sign-in in the Steam app on your phone." : "Logging in to Steam as " + steamAcct + "...";
+			}
+			// the app's code: read again when Steam has made a new one ("qr <n>" counting up)
+			if (steamQr && steamState.compare(0, 3, "qr ") == 0)
+			{
+				int n = atoi(steamState.c_str() + 3);
+				if (n != steamQrN)
+				{
+					std::ifstream f(runDir + "/steam.qr");
+					std::vector<std::string> rows;
+					for (std::string ln; std::getline(f, ln);)
+					{
+						ln = trim(ln);
+						if (!ln.empty() && ln.find_first_not_of("01") == std::string::npos) rows.push_back(ln);
+					}
+					// (a square of whole rows, or nothing: a half-written one is never shown)
+					bool ok = rows.size() >= 11 && rows.size() <= 200;
+					for (auto& r : rows) if (r.size() != rows.size()) ok = false;
+					if (ok) { steamQrRows = rows; steamQrN = n; }
+					changed = true;
+				}
 			}
 			const bool askCode = steamState.compare(0, 5, "code ") == 0 || steamState == "wrong-code";
 			if (askCode && !steamCodeOpen && page != KEYBOARD)
@@ -7430,6 +7572,16 @@ namespace banana
 				steamPid = -1;
 				std::string last = readLine(runDir + "/steam.state");
 				if (!last.empty()) steamState = last;
+				steamQrRows.clear(); steamQrN = -1;
+				if (steamCancelled && steamState.compare(0, 3, "ok ") != 0)
+				{
+					// stopped by B or another choice: back to the choices as they were, no failure said
+					steamCancelled = false;
+					steamKind = 0; steamLine.clear();
+					if (!wizard) message.clear();
+					if (page == KEYBOARD && entry == ENTRY_STEAM_CODE) { pw.clear(); page = entryBack; }
+					return true;
+				}
 				if (steamState.compare(0, 3, "ok ") == 0 || (r == steamPid && WIFEXITED(st) && WEXITSTATUS(st) == 0 && steamState.compare(0, 6, "failed") != 0))
 				{
 					steamKind = 1;

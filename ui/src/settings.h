@@ -394,7 +394,7 @@ namespace banana
 		// (Home server, Steam and the handheld's controls only where their tool or hardware is: setupSlides())
 		enum Slide { SL_LANG, SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE, SL_HOME, SL_STEAM, SL_CONTROLS };
 		enum SetupAct { SA_NEXT, SA_SKIP, SA_LANG, SA_NETWORKS, SA_TEST, SA_TZ, SA_NAME, SA_RA, SA_RACHECK, SA_ART, SA_FINISH, SA_WAIT,
-			SA_HOME, SA_STEAM, SA_ITEM };
+			SA_HOME, SA_STEAM, SA_ITEM, SA_STEAMQR };
 		struct Choice { std::string label, value; SetupAct act; std::string key = ""; };	// key: SA_ITEM's settings row
 		std::vector<Slide> slides;
 		std::vector<bool> wskipped;		// the slides passed with Skip (the summary says so)
@@ -440,6 +440,18 @@ namespace banana
 		std::string steamGames;			// the library's size ("" not known)
 		double steamPoll = 0;
 		bool steamCodeOpen = false;		// the Steam Guard code's entry is up for the state it asked in
+		// the sign-in with the Steam app (steam login-qr): its code (runDir/steam.qr, a row of '1' and '0' a line, read
+		// again whenever the state's "qr <n>" counts up), and the way the last login went (the QR or the password)
+		bool steamQr = false, steamCancelled = false;
+		int steamQrN = -1;
+		std::vector<std::string> steamQrRows;
+		int steamQrK = 0;				// device px a module, as last drawn (the tests' setupstate)
+		void startSteamQr();
+		void steamCancel();				// steam cancel: the login stops, back to the choices (no failure shown)
+		bool steamQrShown() const { return steamPid > 0 && steamQr; }
+		// the code on the top screen in the room the page leaves (x, y, w, h: CSS px of the canvas), the steps beside or
+		// under it (from textX, textY)
+		void drawSteamQr(float textX, float textY);
 		void steamStatus();				// steam status, read now
 		void startSteamLogin(const std::string& user, const std::string& pass);
 		void steamRun(const std::string& args);	// steam <args> in the background, not waited for
