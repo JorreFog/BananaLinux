@@ -1,0 +1,3 @@
+#!/bin/sh
+[ "$1" = caps ] && printf "fan\nleds\ngpuboost\n"
+exit 0

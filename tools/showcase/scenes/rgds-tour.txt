@@ -1,0 +1,26 @@
+# the RG DS: the boot animation, the home row, a DS game's page (BananaDS's options), Settings
+splash
+raw home 0
+hold 1.8
+press right 1.0
+press right 1.0
+press left 0.9
+press left 1.0
+press a 1.8
+press right 1.1
+press right 1.1
+press x 1.8
+press down 1.2
+press right 1.3
+press down 1.1
+press down 1.1
+press right 1.3
+press b 1.0
+press b 1.4
+press start 1.6
+press a 1.5
+press down 0.9
+press down 0.9
+press down 1.2
+press b 1.0
+press b 1.5
