@@ -20,4 +20,5 @@ source "$BR2_EXTERNAL_BANANA_PATH/package/mame-gnw/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/sway-lite/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/wvkbd/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/box64/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/thor-emulators/Config.in"
 endmenu

@@ -1,0 +1,139 @@
+# The AYN Thor's emulators (docs/THOR-EMULATORS.md): the libretro cores RetroArch runs and the standalone emulators
+# the launchers in /usr/libexec/banana start (through run-wayland, on a compositor of their own), each a package of its
+# own, and what they need that Buildroot doesn't have. BR2_PACKAGE_BANANA_THOR_EMULATORS turns them all on.
+
+config BR2_PACKAGE_BANANA_THOR_EMULATORS
+	bool "the AYN Thor's emulators"
+	depends on BR2_aarch64
+	depends on BR2_PACKAGE_RETROARCH
+	depends on BR2_PACKAGE_HAS_LIBEGL && BR2_PACKAGE_HAS_LIBGLES && BR2_PACKAGE_HAS_LIBGBM
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_13
+	# Qt 6 for Azahar (its Wayland platform, widgets, multimedia, GLES)
+	select BR2_PACKAGE_QT6
+	select BR2_PACKAGE_QT6BASE_GUI
+	select BR2_PACKAGE_QT6BASE_WIDGETS
+	select BR2_PACKAGE_QT6BASE_OPENGL
+	select BR2_PACKAGE_QT6BASE_CONCURRENT
+	select BR2_PACKAGE_QT6BASE_DBUS
+	select BR2_PACKAGE_QT6BASE_NETWORK
+	select BR2_PACKAGE_QT6WAYLAND
+	select BR2_PACKAGE_QT6MULTIMEDIA
+	select BR2_PACKAGE_QT6MULTIMEDIA_ALSA
+	# SDL 2 on Wayland for PPSSPP, Flycast and ScummVM (run-wayland's compositor), Vulkan for everything that has it
+	select BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_WAYLAND_PROTOCOLS
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_SDL2_OPENGLES
+	select BR2_PACKAGE_SDL2_WAYLAND
+	select BR2_PACKAGE_VULKAN_HEADERS
+	select BR2_PACKAGE_VULKAN_LOADER
+	# the standalone emulators
+	select BR2_PACKAGE_DOLPHIN
+	select BR2_PACKAGE_ARMSX2
+	select BR2_PACKAGE_AZAHAR
+	select BR2_PACKAGE_PPSSPP
+	select BR2_PACKAGE_VITA3K
+	select BR2_PACKAGE_XEMU
+	select BR2_PACKAGE_FLYCAST
+	select BR2_PACKAGE_SCUMMVM
+	# the libretro cores (RetroArch's, beside the ones under it in retroarch/cores.in)
+	select BR2_PACKAGE_LIBRETRO_A5200
+	select BR2_PACKAGE_LIBRETRO_BEETLE_NGP
+	select BR2_PACKAGE_LIBRETRO_BEETLE_PCE_FAST
+	select BR2_PACKAGE_LIBRETRO_BEETLE_PCFX
+	select BR2_PACKAGE_LIBRETRO_BEETLE_PSX
+	select BR2_PACKAGE_LIBRETRO_BEETLE_SATURN
+	select BR2_PACKAGE_LIBRETRO_BEETLE_VB
+	select BR2_PACKAGE_LIBRETRO_BEETLE_WSWAN
+	select BR2_PACKAGE_LIBRETRO_BLUEMSX
+	select BR2_PACKAGE_LIBRETRO_CAP32
+	select BR2_PACKAGE_LIBRETRO_CROCODS
+	select BR2_PACKAGE_LIBRETRO_DOSBOX_PURE
+	select BR2_PACKAGE_LIBRETRO_FBNEO
+	select BR2_PACKAGE_LIBRETRO_FLYCAST
+	select BR2_PACKAGE_LIBRETRO_FREEINTV
+	select BR2_PACKAGE_LIBRETRO_GEARCOLECO
+	select BR2_PACKAGE_LIBRETRO_GENESIS_PLUS_GX
+	select BR2_PACKAGE_LIBRETRO_HANDY
+	select BR2_PACKAGE_LIBRETRO_MAME2003_PLUS
+	select BR2_PACKAGE_LIBRETRO_NEOCD
+	select BR2_PACKAGE_LIBRETRO_NESTOPIA
+	select BR2_PACKAGE_LIBRETRO_O2EM
+	select BR2_PACKAGE_LIBRETRO_OPERA
+	select BR2_PACKAGE_LIBRETRO_PARALLEL_N64
+	select BR2_PACKAGE_LIBRETRO_POKEMINI
+	select BR2_PACKAGE_LIBRETRO_PPSSPP
+	select BR2_PACKAGE_LIBRETRO_PROSYSTEM
+	select BR2_PACKAGE_LIBRETRO_PUAE2021
+	select BR2_PACKAGE_LIBRETRO_PX68K
+	select BR2_PACKAGE_LIBRETRO_SAME_CDI
+	select BR2_PACKAGE_LIBRETRO_STELLA
+	select BR2_PACKAGE_LIBRETRO_SWANSTATION
+	select BR2_PACKAGE_LIBRETRO_VECX
+	select BR2_PACKAGE_LIBRETRO_VIRTUALJAGUAR
+	select BR2_PACKAGE_LIBRETRO_YABASANSHIRO
+	# what they need that Buildroot 2026.02 doesn't have
+	select BR2_PACKAGE_SDL3
+	select BR2_PACKAGE_SHADERC
+	select BR2_PACKAGE_PLUTOVG
+	select BR2_PACKAGE_PLUTOSVG
+	select BR2_PACKAGE_EXTRA_CMAKE_MODULES
+	help
+	  Every emulator the AYN Thor's systems list
+	  (board/thor/systems.conf) runs beyond the ones BananaOS has
+	  on both handhelds: RetroArch's cores for the 2D, 3D and
+	  computer systems, Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K,
+	  xemu, Flycast and ScummVM. docs/THOR-EMULATORS.md says which
+	  system runs on what and what isn't there.
+
+menu "AYN Thor emulators"
+source "$BR2_EXTERNAL_BANANA_PATH/package/dolphin/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/armsx2/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/azahar/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/ppsspp/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/vita3k/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/xemu/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/flycast/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/scummvm/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-a5200/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-ngp/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-pce-fast/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-pcfx/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-psx/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-saturn/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-vb/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-beetle-wswan/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-bluemsx/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-cap32/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-crocods/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-dosbox-pure/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-fbneo/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-flycast/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-freeintv/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-gearcoleco/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-genesis-plus-gx/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-handy/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-mame2003-plus/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-neocd/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-nestopia/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-o2em/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-opera/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-parallel-n64/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-pokemini/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-ppsspp/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-prosystem/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-puae2021/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-px68k/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-same-cdi/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-stella/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-swanstation/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-vecx/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-virtualjaguar/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/libretro-yabasanshiro/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/sdl3/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/shaderc/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/plutovg/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/plutosvg/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/extra-cmake-modules/Config.in"
+endmenu

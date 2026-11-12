@@ -1,0 +1,36 @@
+#!/bin/sh
+# Dreamcast, Naomi and Atomiswave: Flycast standalone (package/flycast: ROCKNIX's SM8550 build), Vulkan, on a
+# compositor of its own on the top panel (run-wayland). Its folders are fixed in the build (ROCKNIX's patch, written as
+# BananaOS's): settings in /data/flycast (emu.cfg and the pad mappings, from /usr/share/flycast on the first run), its
+# data folder /data/bios/dc: the BIOS files (dc_boot.bin, dc_flash.bin; naomi.zip, awbios.zip for the arcade boards),
+# and also where Flycast keeps the VMU saves and states, as on ROCKNIX. Quit: the menu's quit (SIGTERM, passed on).
+#   run-flycast <game>       (.chd .cdi .gdi .cue .m3u .zip .7z .lst .dat)
+ROM="$1"
+D=/data/flycast
+T=/usr/share/flycast
+LOGS=/data/banana/logs/flycast
+mkdir -p "$D/mappings" "$LOGS" /data/bios/dc /data/screenshots
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-flycast: ${BANANA_SYSTEM:-dreamcast} $ROM"
+
+# emu.cfg: ROCKNIX's when the card's has no [config] section (ROCKNIX's own test); the mappings it doesn't have yet
+grep -q '^\[config\]' "$D/emu.cfg" 2>/dev/null || cp "$T/emu.cfg" "$D/emu.cfg"
+for f in "$T"/mappings/*; do
+    [ -f "$D/mappings/${f##*/}" ] || cp "$f" "$D/mappings/"
+done
+sed -i 's/^backend = .*/backend = alsa/' "$D/emu.cfg"
+[ -f /data/bios/dc/dc_boot.bin ] || echo "run-flycast: no dc_boot.bin in /data/bios/dc (Flycast's HLE BIOS is used)"
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+
+/usr/libexec/banana/run-wayland -- /usr/bin/flycast "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+echo "run-flycast: exit $RC"
+exit $RC

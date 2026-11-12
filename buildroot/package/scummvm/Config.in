@@ -1,0 +1,20 @@
+config BR2_PACKAGE_SCUMMVM
+	bool "scummvm"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on !BR2_STATIC_LIBS
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_SDL2_WAYLAND if BR2_PACKAGE_SDL2_OPENGLES && BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_SDL2_NET
+	select BR2_PACKAGE_FREETYPE
+	select BR2_PACKAGE_ZLIB
+	select BR2_PACKAGE_LIBPNG
+	select BR2_PACKAGE_JPEG
+	select BR2_PACKAGE_LIBOGG
+	select BR2_PACKAGE_LIBVORBIS
+	select BR2_PACKAGE_FLAC
+	select BR2_PACKAGE_LIBMAD
+	help
+	  ScummVM (SDL 2), for the adventure games it supports.
+	  Launcher: /usr/libexec/banana/run-scummvm.
+
+	  https://www.scummvm.org

@@ -1,0 +1,11 @@
+config BR2_PACKAGE_LIBRETRO_FLYCAST
+	bool "libretro-flycast"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_PACKAGE_HAS_LIBGLES
+	select BR2_PACKAGE_ZLIB
+	select BR2_PACKAGE_LIBZIP
+	help
+	  Dreamcast, Naomi and Atomiswave: Flycast as a libretro core
+	  (GLES).
+
+	  https://github.com/flyinghead/flycast

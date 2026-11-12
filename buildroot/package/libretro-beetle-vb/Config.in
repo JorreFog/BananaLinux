@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_VB
+	bool "libretro-beetle-vb"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Virtual Boy: Mednafen's VB (Beetle VB).
+
+	  https://github.com/libretro/beetle-vb-libretro

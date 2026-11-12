@@ -1,0 +1,6 @@
+config BR2_PACKAGE_EXTRA_CMAKE_MODULES
+	bool "extra-cmake-modules"
+	help
+	  KDE's extra CMake modules (build time only), without Qt 5.
+
+	  https://invent.kde.org/frameworks/extra-cmake-modules

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_PUAE2021
+	bool "libretro-puae2021"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Amiga: PUAE 2021 (Kickstart ROMs in /data/bios; its own AROS
+	  without them).
+
+	  https://github.com/libretro/libretro-uae

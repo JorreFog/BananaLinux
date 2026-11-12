@@ -189,6 +189,8 @@ BR2_PACKAGE_FOOT=y
 # PC games (usr/libexec/banana/pc-games, run-pc): Box64 runs Wine's x86_64 build, fetched once onto the card with DXVK
 # and VKD3D-Proton (xz and zstd unpack them), in an ext4 image there (e2fsprogs makes and checks it)
 BR2_PACKAGE_BOX64=y
+# every system the Thor runs (package/thor-emulators: the cores and the standalone emulators, docs/THOR-EMULATORS.md)
+BR2_PACKAGE_BANANA_THOR_EMULATORS=y
 BR2_PACKAGE_XZ=y
 BR2_PACKAGE_ZSTD=y
 BR2_PACKAGE_E2FSPROGS=y

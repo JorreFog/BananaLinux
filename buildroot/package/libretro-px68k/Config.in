@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_PX68K
+	bool "libretro-px68k"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Sharp X68000: PX68k (keropi/iplrom.dat and cgrom.dat in
+	  /data/bios).
+
+	  https://github.com/libretro/px68k-libretro

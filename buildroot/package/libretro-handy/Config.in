@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_HANDY
+	bool "libretro-handy"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Atari Lynx: Handy (lynxboot.img in /data/bios).
+
+	  https://github.com/libretro/libretro-handy

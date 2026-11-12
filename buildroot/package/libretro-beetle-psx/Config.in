@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_PSX
+	bool "libretro-beetle-psx"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  PlayStation: Beetle PSX (Mednafen), software renderer.
+
+	  https://github.com/libretro/beetle-psx-libretro

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_PPSSPP
+	bool "libretro-ppsspp"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_PACKAGE_HAS_LIBGLES
+	help
+	  PSP: PPSSPP as a libretro core (GLES), v1.20.4.
+
+	  https://github.com/hrydgard/ppsspp

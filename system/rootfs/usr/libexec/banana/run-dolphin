@@ -1,0 +1,61 @@
+#!/bin/sh
+# GameCube and Wii: Dolphin's nogui player (package/dolphin: ROCKNIX's SM8550 build), Vulkan, on a compositor of its own
+# on the top panel (run-wayland). Settings in /data/dolphin-emu (its user folder, -u), from ROCKNIX's SM8550 settings in
+# /usr/share/dolphin on the first run; the GameCube BIOS (optional: IPL.bin, skipped by default) in
+# /data/bios/GC/<USA|EUR|JAP>; memory cards in saves/gamecube, the Wii's NAND (its saves) in saves/wii, states in
+# states/<system>, screenshots in /data/screenshots. The pad: ROCKNIX's profiles (GameCube: A on the bottom face button;
+# Wii: the remote held upright) with the first pad's name. Quit: Dolphin's hotkey (Guide + Start, ROCKNIX's Hotkeys.ini)
+# or the menu's quit (SIGTERM, passed on; Dolphin writes its saves as it stops).
+#   run-dolphin <game>       (.iso .gcm .gcz .rvz .ciso .wbfs .wia .wad .dol .elf .m3u)
+ROM="$1"
+D=/data/dolphin-emu
+T=/usr/share/dolphin
+LOGS=/data/banana/logs/dolphin
+case $BANANA_SYSTEM in
+wii) SYS=wii ;;
+gamecube) SYS=gamecube ;;
+*) case $ROM in *.wbfs|*.WBFS|*.wad|*.WAD|*.wia|*.WIA) SYS=wii ;; *) SYS=gamecube ;; esac ;;
+esac
+mkdir -p "$D/Config" "$LOGS" /data/saves/gamecube /data/saves/wii /data/states/$SYS /data/screenshots \
+    /data/bios/GC/USA /data/bios/GC/EUR /data/bios/GC/JAP
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-dolphin: $SYS $ROM"
+
+# first run: ROCKNIX's settings (a file the card already has is left alone: changes made in it are kept)
+for f in Dolphin.ini GFX.ini Hotkeys.ini; do
+    [ -f "$D/Config/$f" ] || cp "$T/$f" "$D/Config/$f"
+done
+[ -f "$D/Config/GCPadNew.ini" ] || cp "$T/GamecubeControllerProfiles/GCPadNew.ini.south.inline" "$D/Config/GCPadNew.ini"
+[ -f "$D/Config/WiimoteNew.ini" ] || cp "$T/WiiControllerProfiles/vremote.ini" "$D/Config/WiimoteNew.ini"
+# BananaOS's folders on the card, every time (a folder Dolphin made before is moved there once)
+link() {
+    if [ -d "$D/$1" ] && [ ! -L "$D/$1" ]; then cp -a "$D/$1/." "$2/" && rm -rf "$D/$1"; fi
+    ln -sfn "$2" "$D/$1"
+}
+link GC /data/saves/gamecube
+link Wii /data/saves/wii
+link StateSaves /data/states/$SYS
+link ScreenShots /data/screenshots
+# ALSA, never PulseAudio (no sound server here)
+sed -i 's/^Backend = .*/Backend = ALSA/' "$D/Config/Dolphin.ini"
+# the pad, by the name SDL gives it: the first joystick's (the Thor's own pad, or one plugged in before the game)
+PAD=$(cat /sys/class/input/js0/device/name 2>/dev/null)
+[ -n "$PAD" ] && sed -i "s|^Device = .*|Device = SDL/0/$PAD|" "$D/Config/GCPadNew.ini" "$D/Config/WiimoteNew.ini" \
+    "$D/Config/Hotkeys.ini"
+sed -i "s|@SDL_DEVICE@|${PAD:-Gamepad}|" "$D/Config/GCPadNew.ini" "$D/Config/WiimoteNew.ini" "$D/Config/Hotkeys.ini"
+# the Thor's pad mapping for SDL, when the image or the card has one
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+# Mesa's shader cache on the card, not the read-only /
+export HOME=$D XDG_CACHE_HOME=$D/cache
+
+/usr/libexec/banana/run-wayland -- /usr/bin/dolphin-emu-nogui -u "$D" -p wayland -a HLE -e "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+echo "run-dolphin: exit $RC"
+exit $RC

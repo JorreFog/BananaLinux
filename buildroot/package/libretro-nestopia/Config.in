@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_NESTOPIA
+	bool "libretro-nestopia"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  NES and Famicom: Nestopia UE, the accurate one (FDS too).
+
+	  https://github.com/libretro/nestopia

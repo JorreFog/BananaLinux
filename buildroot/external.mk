@@ -7,6 +7,8 @@ SDL2_CONF_OPTS += --enable-video-dummy
 # and its offscreen driver: GL apps made for one window over both panels draw there, and Banana's SDL patch
 # (patches/sdl2) puts each frame on the panels (SDL_BANANA_PANELS)
 SDL2_CONF_OPTS += --enable-video-offscreen
+# and Vulkan surfaces (Buildroot builds SDL2 without): the Thor's Flycast and Vita3K draw through them
+SDL2_CONF_OPTS += --enable-video-vulkan
 
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two

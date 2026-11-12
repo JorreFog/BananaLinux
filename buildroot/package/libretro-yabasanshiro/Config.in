@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_YABASANSHIRO
+	bool "libretro-yabasanshiro"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Sega Saturn: YabaSanshiro, the fast one (GLES, aarch64
+	  dynarec).
+
+	  https://github.com/libretro/yabause

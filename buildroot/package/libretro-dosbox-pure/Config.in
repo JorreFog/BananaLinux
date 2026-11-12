@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_DOSBOX_PURE
+	bool "libretro-dosbox-pure"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  DOS: DOSBox Pure (games as .zip or folders; its own on-screen
+	  keyboard).
+
+	  https://github.com/schellingb/dosbox-pure

@@ -1,0 +1,35 @@
+#!/bin/sh
+# Xbox: xemu (package/xemu: ROCKNIX's SM8550 build), Vulkan, on a compositor of its own on the top panel
+# (run-wayland). Settings in /data/xemu/xemu.toml (from ROCKNIX's SM8550 one in /usr/share/xemu on the first run). The
+# user's files, in /data/bios/xemu as ROCKNIX has them: bios/mcpx_1.0.bin (the MCPX boot ROM),
+# bios/Complex_4627v1.03.bin (the flash BIOS), eeprom/eeprom.bin (made by xemu when missing) and hdd/xbox_hdd.qcow2
+# (the hard disk image: xqemu's free formatted one, github.com/xqemu/xqemu-hdd-image, or the user's own). The game
+# saves live on that hard disk image. Quit: the menu's quit (SIGTERM, passed on).
+#   run-xemu <game>          (.iso .xiso)
+ROM="$1"
+D=/data/xemu
+T=/usr/share/xemu
+B=/data/bios/xemu
+LOGS=/data/banana/logs/xemu
+mkdir -p "$D" "$LOGS" "$B/bios" "$B/eeprom" "$B/hdd" /data/screenshots
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-xemu: $ROM"
+
+[ -f "$D/xemu.toml" ] || cp "$T/xemu.toml" "$D/xemu.toml"
+for f in bios/mcpx_1.0.bin bios/Complex_4627v1.03.bin hdd/xbox_hdd.qcow2; do
+    [ -f "$B/$f" ] || echo "run-xemu: missing $B/$f"
+done
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export HOME=$D XDG_DATA_HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIO_DRIVER=alsa
+
+/usr/libexec/banana/run-wayland -- /usr/bin/xemu -full-screen -config_path "$D/xemu.toml" -dvd_path "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+echo "run-xemu: exit $RC"
+exit $RC

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_POKEMINI
+	bool "libretro-pokemini"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Pokemon mini: PokeMini (its free BIOS built in; bios.min from
+	  the card if there).
+
+	  https://github.com/libretro/pokemini

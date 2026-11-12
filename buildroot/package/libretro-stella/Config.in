@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_STELLA
+	bool "libretro-stella"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Atari 2600: Stella.
+
+	  https://github.com/stella-emu/stella

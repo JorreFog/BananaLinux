@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_FREEINTV
+	bool "libretro-freeintv"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Intellivision: FreeIntv (exec.bin and grom.bin in /data/bios).
+
+	  https://github.com/libretro/FreeIntv

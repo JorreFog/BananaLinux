@@ -1,0 +1,34 @@
+#!/bin/sh
+# PlayStation 2: ARMSX2 (package/armsx2: PCSX2 with ARM64 recompilers, its SDL 3 front end), Vulkan, on a compositor of
+# its own on the top panel (run-wayland). Settings in /data/armsx2/PCSX2 (ARMSX2's data folder under XDG_CONFIG_HOME),
+# from ROCKNIX's settings in /usr/share/armsx2 on the first run. The BIOS (a PS2 BIOS image, any region) in
+# /data/bios/ps2; memory cards in saves/ps2, states in states/ps2. Quit: the hotkeys in its settings (Guide + North
+# opens its pause menu) or the menu's quit (SIGTERM: ARMSX2's front end stops the game and writes its memory cards).
+#   run-armsx2 <game>        (.iso .chd .cso .zso .bin .cue .m3u .gz)
+ROM="$1"
+X=/data/armsx2
+D=$X/PCSX2
+T=/usr/share/armsx2
+LOGS=/data/banana/logs/armsx2
+mkdir -p "$D/inis" "$LOGS" /data/bios/ps2 /data/saves/ps2 /data/states/ps2
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-armsx2: $ROM"
+
+[ -f "$D/inis/PCSX2.ini" ] || cp "$T/inis/PCSX2.ini" "$D/inis/PCSX2.ini"
+if ! ls /data/bios/ps2/* >/dev/null 2>&1; then
+    echo "run-armsx2: no BIOS in /data/bios/ps2 (ARMSX2 needs a PS2 BIOS image there)"
+fi
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export XDG_CONFIG_HOME=$X HOME=$X XDG_CACHE_HOME=$X/cache SDL_AUDIO_DRIVER=alsa
+
+/usr/libexec/banana/run-wayland -- /usr/bin/armsx2-sdl "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+echo "run-armsx2: exit $RC"
+exit $RC

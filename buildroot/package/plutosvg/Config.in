@@ -1,0 +1,8 @@
+config BR2_PACKAGE_PLUTOSVG
+	bool "plutosvg"
+	select BR2_PACKAGE_PLUTOVG
+	select BR2_PACKAGE_FREETYPE
+	help
+	  A tiny SVG renderer with FreeType colour-font support.
+
+	  https://github.com/sammycage/plutosvg

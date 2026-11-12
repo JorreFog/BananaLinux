@@ -1,0 +1,37 @@
+Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/libretro/parallel-n64-lr/patches/002-platform.patch at 6cf94dba (GPL-2.0); @DEVICE@ written as thor.
+With its @DEVICE@ placeholder (the device it builds for) written as "thor": the aarch64 dynarec and the ARM fixes for platform=thor
+
+diff --git a/Makefile b/Makefile
+index bca3454e..a00977d7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -60,6 +60,8 @@ else ifneq (,$(findstring rpi,$(platform)))
+    override platform += unix
+ else ifneq (,$(findstring odroid,$(platform)))
+    override platform += unix
++else ifneq (,$(findstring thor,$(platform)))
++   override platform += unix
+ endif
+ 
+ # system platform
+@@ -171,6 +173,20 @@ ifneq (,$(findstring unix,$(platform)))
+ 
+    endif
+    
++   #thor
++   ifneq (,$(findstring thor,$(platform)))
++     ifeq (,$(findstring AMD64,$(platform)))
++       TARGET := $(TARGET_NAME)_libretro.so
++       CPUFLAGS += -DARM_FIX -DCLASSIC -DARM64
++       WITH_DYNAREC = aarch64
++     endif
++   endif
++   #AMD64
++   ifneq (,$(findstring AMD64,$(platform)))
++     TARGET := $(TARGET_NAME)_libretro.so
++     WITH_DYNAREC = x86_64
++   endif
++
+    # ODROIDs
+    ifneq (,$(findstring odroid,$(platform)))
+       BOARD ?= $(shell cat /proc/cpuinfo | grep -i odroid | awk '{print $$3}')

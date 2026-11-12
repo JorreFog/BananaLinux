@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_PCE_FAST
+	bool "libretro-beetle-pce-fast"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  PC Engine / TurboGrafx-16 and its CD: Beetle PCE FAST
+	  (syscard3.pce in /data/bios for CD games).
+
+	  https://github.com/libretro/beetle-pce-fast-libretro

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_PCFX
+	bool "libretro-beetle-pcfx"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  PC-FX: Beetle PC-FX (pcfx.rom in /data/bios).
+
+	  https://github.com/libretro/beetle-pcfx-libretro

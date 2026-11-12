@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_BLUEMSX
+	bool "libretro-bluemsx"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  MSX, MSX2 (and ColecoVision): blueMSX (its Machines and
+	  Databases folders in /data/bios).
+
+	  https://github.com/libretro/blueMSX-libretro
