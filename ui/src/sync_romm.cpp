@@ -498,6 +498,7 @@ namespace bsync
 			if (!list(skip, err)) { errors.push_back("saves: " + err); keepUnsent(errors); return false; }
 			if (!checkDevice(note)) return true;
 			if (!onlyRom.empty() && !sendOk) say("RomM %s: every save synced, not only %s's", c.serverVersion.c_str(), onlyRom.c_str());
+			if (sendOk && onlyRom.empty() && !dryRun) dropUnlisted();
 			if (scoped() && sendOk)
 			{
 				// (one game's save, or those waiting to be sent: the server's ROMs that are those games on the card, the only
@@ -525,6 +526,25 @@ namespace bsync
 			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors, note);
 			return ok;
 		}
+		// a save that waits under its ROM (played with the server out of reach, never synced from this card) whose game
+		// the server, now listed, doesn't have: a game of the card's own, or of a system set to Skip. No slot will ever
+		// be found for it, so it stops waiting here: left, it stayed on Manage saves for good and had every return of
+		// Wi-Fi list the server's games for it. Its copy stays in the vault. (Not for one game's run, which lists that
+		// game's system alone.) One whose game was on the second SD card goes on waiting while that card is out: its
+		// games aren't among the card's then, so none of them can be matched with the server's, and the save of a game
+		// the server does list would be dropped as one it doesn't; decided when the card is back
+		void dropUnlisted()
+		{
+			std::set<std::string> listed;
+			for (auto& r : roms) { std::string here = onCard(r); if (!here.empty()) listed.insert(here); }
+			const bool sd2Out = sd2Roms().empty();
+			for (auto it = c.queue.begin(); it != c.queue.end();)
+			{
+				if (it->first.compare(0, 4, "rom:") != 0 || listed.count(it->first.substr(4)) || (it->second.sd2 && sd2Out)) { ++it; continue; }
+				say("  no longer waiting to be sent, not a game the server lists (the copy stays in the vault): %s", it->first.c_str() + 4);
+				it = c.queue.erase(it);
+			}
+		}
 		// the game's save kept, the server out of reach, and left waiting to be sent, which the sync when Wi-Fi comes back
 		// sends: under its slot when this card has synced it before, else under its ROM
 		void keepUnsent(std::vector<std::string>& errors)
@@ -542,8 +562,11 @@ namespace bsync
 			// (a game never synced from this card: its slot isn't known until the server is reached, so it waits under its
 			// ROM, which the sync when Wi-Fi comes back looks up)
 			if (key.empty()) key = "rom:" + onlyRom;
+			const std::string sd2 = sd2Roms(), at = romPath(onlyRom);
+			const bool onSd2 = !sd2.empty() && at.compare(0, sd2.size() + 1, sd2 + "/") == 0;
 			QueueSt& w = c.queue[key];
-			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), !c.slots.count(key) ? g.rel : "" };
+			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), !c.slots.count(key) ? g.rel : "", onSd2 };
+			w.sd2 = onSd2;
 			say("  waiting to be sent, the server out of reach (a copy in the vault): %s", g.rel.c_str());
 			keptUnsent = true;
 			saveConf(c);

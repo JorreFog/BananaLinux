@@ -1209,7 +1209,14 @@ namespace
 			// (Wi-Fi back with only "Leaving a game": the saves that couldn't be sent then, sent now)
 			if (autoWhy == "wifi" && a != "both")
 			{
-				if (c.queue.empty() || c.backend != "romm") return 0;
+				// (one that waits for a game of the second SD card, never synced from here, while that card is out, isn't
+				// one to send now: its game isn't there to be matched with the server's. Alone, it doesn't bring the
+				// server's games listed at every return of Wi-Fi, for a card that may be out for weeks or for good; it
+				// waits at no cost, and is decided by the first return of Wi-Fi with the card in)
+				const bool sd2Out = sd2Roms().empty();
+				bool some = false;
+				for (auto& kv : c.queue) some = some || !(sd2Out && kv.second.sd2 && kv.first.compare(0, 4, "rom:") == 0);
+				if (!some || c.backend != "romm") return 0;
 				savesOnly = true;
 				queued = true;
 			}

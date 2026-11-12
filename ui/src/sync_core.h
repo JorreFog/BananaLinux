@@ -183,7 +183,9 @@ namespace bsync
 	// a save that couldn't be sent (no answer, the server's error): its bytes in the vault, sent by the next sync
 	// a save waiting to be sent, under its slot's key; or, for a game that has none yet (never synced from this card),
 	// under "rom:<its roms-relative path>" with rel, its save's path, until a sync that reaches the server finds its slot
-	struct QueueSt { std::string md5, vault; double since = 0; std::string rel; };
+	// (sd2: its game was on the second SD card when it was left waiting, so with that card out the game isn't one the
+	// card can be seen not to have)
+	struct QueueSt { std::string md5, vault; double since = 0; std::string rel; bool sd2 = false; };
 	struct Conf
 	{
 		std::string backend = "romhost", server, token, device, name, serverName, serverVersion, etag, last;	// serverVersion: RomM's, as its heartbeat says

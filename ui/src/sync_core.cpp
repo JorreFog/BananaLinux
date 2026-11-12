@@ -565,7 +565,7 @@ namespace bsync
 		readNotes(j->get("conflicts"), c.conflicts);
 		readNotes(j->get("held"), c.held);
 		if (const JVal* qu = j->get("queue")) if (qu->isObj())
-			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since"), kv.second->str("path") };
+			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since"), kv.second->str("path"), kv.second->flag("sd2") };
 		return c;
 	}
 	void takeSaves(Conf& to, const Conf& from)
@@ -688,7 +688,7 @@ namespace bsync
 		for (auto& kv : c.queue)
 		{
 			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since)
-				+ (kv.second.rel.empty() ? "" : ", \"path\": " + jsonStr(kv.second.rel)) + "}";
+				+ (kv.second.rel.empty() ? "" : ", \"path\": " + jsonStr(kv.second.rel)) + (kv.second.sd2 ? ", \"sd2\": true" : "") + "}";
 			first = false;
 		}
 		o += first ? "}" : "\n }";

@@ -401,6 +401,11 @@ BANANA_SYSTEMS=$OUT/sys-remap.conf bsq "sfc/Peel Kart (USA).sfc"
     bad "a system in a folder of another name, its save not kept out of reach: $(cat "$OUT/bs.log")"
 rm -r "$C/roms/sfc" "$C/saves/Peel Kart (USA).srm"
 python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["queue"].pop("rom:sfc/Peel Kart (USA).sfc"); json.dump(c, open(sys.argv[1], "w"))' "$C/banana/romsync.json"
+# a game of the card's own, which the server doesn't list, played with the server out of reach: its save waits under its
+# ROM like any never synced, and stops waiting at the first sync that has the server's list (below, when Wi-Fi is back)
+printf 'a game of the card own' > "$C/roms/gba/Own Game (USA).gba"; head -c 8192 /dev/urandom > "$S/Own Game (USA).srm"; cp "$S/Own Game (USA).srm" "$OUT/own.srm"
+bsq "gba/Own Game (USA).gba"
+"$BIN" --root "$C" --run "$C/run" saves | grep -q '^queued	rom:gba/Own Game (USA).gba	' || bad "a game of the card's own, the server out of reach: not waiting: $(cat "$OUT/bs.log")"
 # Romhost out of reach, the same: kept in the vault
 sed 's#"backend": "romm"#"backend": "romhost"#' "$C/banana/romsync.json" > "$OUT/rh.json"; cp "$C/banana/romsync.json" "$OUT/rm.json"; cp "$OUT/rh.json" "$C/banana/romsync.json"
 head -c 8192 /dev/urandom > "$S/Offline (USA).srm"
@@ -438,6 +443,14 @@ n=$(saves3 Killed); "$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.stat
 [ "$(saves3 Killed)" = $((n + 1)) ] && ! grep -q '"queue": {$' "$C/banana/romsync.json" || bad "the save left waiting not sent when Wi-Fi came back: $(cat "$OUT/bs.log")"
 [ "$(saves3 Offline)" = 1 ] || bad "a game never synced, left waiting, not sent when Wi-Fi came back: $(cat "$OUT/bs.log")"
 [ "$(saves3 "Not Queued")" = 0 ] || bad "the Wi-Fi sync sent more than the queue: $(cat "$OUT/bs.log")"
+# (the game of the card's own: no longer waiting, said, its copy still in the vault; and nothing left to bring the next
+# return of Wi-Fi to list the server's games again)
+grep -q 'no longer waiting to be sent, not a game the server lists.*gba/Own Game (USA).gba' "$OUT/bs.log" && [ "$(vaulted "Own Game" "$OUT/own.srm")" = 1 ] &&
+    ! "$BIN" --root "$C" --run "$C/run" saves | grep -q '^queued	rom:' || bad "a game the server doesn't list still waits to be sent: $("$BIN" --root "$C" --run "$C/run" saves | grep queued) $(cat "$OUT/bs.log")"
+n=$(curl -s "$U3/test/log" | jget '.__len__()')	# (each look at the log is in it: the next one is one more)
+"$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --auto wifi > "$OUT/bs-wifi2.log" 2>&1
+[ "$(curl -s "$U3/test/log" | jget '.__len__()')" = $((n + 1)) ] || bad "Wi-Fi back with nothing waiting: the server asked again: $(cat "$OUT/bs-wifi2.log")"
+rm -f "$C/roms/gba/Own Game (USA).gba" "$S/Own Game (USA).srm"
 rm "$S/Not Queued (USA).srm"
 # the server answering but not its save listing: the same, kept and waiting
 head -c 8192 /dev/urandom > "$S/Killed (USA).srm"; cp "$S/Killed (USA).srm" "$OUT/k6.srm"
@@ -499,6 +512,23 @@ cmp -s "$S/Second Card (USA).srm" "$OUT/sd2.srm" || bad "a second-card game's sa
 printf 'homesync_auto = quit\n' >> "$C/banana/settings.conf"
 head -c 8192 /dev/urandom > "$S/Second Card (USA).srm"; bsq "$OUT/sd2/roms/gba/Second Card (USA).gba"
 [ "$(saves3 "Second Card")" = 3 ] || bad "the sync after a second-card game didn't send its save: $(cat "$OUT/bs.log")"
+# a second-card game played with the server out of reach, never synced from this card, and the card out when Wi-Fi is
+# back: its save goes on waiting (with the card out none of its games can be matched with the server's, so it can't be
+# said the server doesn't list it), and is decided once the card is in again
+printf 'a game of the second card own' > "$OUT/sd2/roms/gba/Sd Own (USA).gba"; head -c 8192 /dev/urandom > "$S/Sd Own (USA).srm"
+cp "$C/banana/romsync.json" "$OUT/sd2.json"; sed -i "s#\"server\": \"$U3\"#\"server\": \"http://127.0.0.1:1\"#" "$C/banana/romsync.json"
+bsq "$OUT/sd2/roms/gba/Sd Own (USA).gba"
+sed -i "s#\"server\": \"http://127.0.0.1:1\"#\"server\": \"$U3\"#" "$C/banana/romsync.json"
+"$BIN" --root "$C" --run "$C/run" saves | grep -q '^queued	rom:gba/Sd Own (USA).gba	' || bad "a second-card game, the server out of reach: not waiting: $(cat "$OUT/bs.log")"
+rm "$C/run/sd2/roms"
+"$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --auto wifi > "$OUT/bs.log" 2>&1
+"$BIN" --root "$C" --run "$C/run" saves | grep -q '^queued	rom:gba/Sd Own (USA).gba	' || bad "a second-card game's save stopped waiting while the card was out: $(cat "$OUT/bs.log")"
+# (and with nothing else waiting, the return of Wi-Fi asks the server nothing for it: the card may be out for good)
+[ ! -s "$OUT/bs.log" ] || bad "a save waiting for the second card, out, still had the server's games listed: $(cat "$OUT/bs.log")"
+echo "$OUT/sd2/roms" > "$C/run/sd2/roms"
+"$BIN" --root "$C" --run "$C/run" --status "$C/run/sync.status" sync --auto wifi > "$OUT/bs.log" 2>&1
+grep -q 'no longer waiting to be sent, not a game the server lists.*gba/Sd Own (USA).gba' "$OUT/bs.log" || bad "a second-card game the server doesn't list still waits with the card back: $(cat "$OUT/bs.log")"
+rm -f "$OUT/sd2/roms/gba/Sd Own (USA).gba" "$S/Sd Own (USA).srm"
 sed -i '/^homesync_auto = quit/d' "$C/banana/settings.conf"
 # the same name, another dump: not the server's game, its save not sent, and said
 head -c 8192 /dev/urandom > "$S/Other Bytes (USA).srm"; bs
