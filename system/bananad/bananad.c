@@ -1336,6 +1336,14 @@ static void brightness(int dir)
  * bottom one (dsi0, DSI-1), as the device trees of both handhelds have it. The level kept in /data/banana/backlight is
  * "<top> <bottom>" in thousandths of the maximum; a file with one number (before 0.4.2) is both. */
 static const char *BL[2] = { "backlight1", "backlight0" };	/* top, bottom */
+/* another handheld's names, from its hardware profile (/etc/banana/hw.conf through rcS: BANANA_BACKLIGHT_TOP and
+ * _BOTTOM; the AYN Thor's AMOLED panels are their own backlights) */
+static void backlight_names(void)
+{
+	const char *t = getenv("BANANA_BACKLIGHT_TOP"), *b = getenv("BANANA_BACKLIGHT_BOTTOM");
+	if (t && *t && !strchr(t, '/')) BL[0] = t;
+	if (b && *b && !strchr(b, '/')) BL[1] = b;
+}
 static void backlight_set_one(int i, int pm)
 {
 	char p[96], v[32];
@@ -2033,6 +2041,7 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	backlight_names();
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();

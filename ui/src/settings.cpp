@@ -409,7 +409,14 @@ namespace banana
 		return sig;
 	}
 
-	static const char* BACKLIGHT[2] = { "backlight1", "backlight0" };
+	// the top and bottom panels' backlights: the RG DS's, or the hardware profile's (/etc/banana/hw.conf through rcS:
+	// BANANA_BACKLIGHT_TOP and _BOTTOM)
+	static const char* backlightName(int i)
+	{
+		const char* e = getenv(i == 0 ? "BANANA_BACKLIGHT_TOP" : "BANANA_BACKLIGHT_BOTTOM");
+		return e && *e && !strchr(e, '/') ? e : i == 0 ? "backlight1" : "backlight0";
+	}
+	static const char* const BACKLIGHT[2] = { backlightName(0), backlightName(1) };
 	static int backlightPair(const std::string& path, int i)
 	{
 		int t = 0, b = 0;

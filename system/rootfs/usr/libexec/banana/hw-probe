@@ -1,0 +1,115 @@
+#!/bin/sh
+# What this handheld is made of, as the running kernel sees it: one text report for bringing BananaOS up on a new
+# board (the AYN Thor first) and for a bug report. Read-only: it changes nothing, loads nothing.
+#
+#   hw-probe [out file]     (default: /data/banana/logs/hw-probe.txt, or stdout when there is no card)
+#
+# Each section names the sysfs or /proc path it read, so a line in the report can be looked up on another handheld.
+# It runs on any Linux (a PC too): what isn't there is skipped.
+OUT=${1:-}
+if [ -z "$OUT" ] && [ -d /data/banana ]; then mkdir -p /data/banana/logs && OUT=/data/banana/logs/hw-probe.txt; fi
+[ -n "$OUT" ] && exec > "$OUT" 2>&1
+
+sec() { printf '\n==== %s\n' "$*"; }
+# a sysfs attribute, or nothing
+attr() { [ -r "$1" ] && tr -d '\0' < "$1" 2>/dev/null | head -c 512; }
+
+sec "system"
+echo "banana: $(attr /etc/banana/version) board=$(attr /etc/banana/board)"
+uname -a
+echo "model: $(attr /proc/device-tree/model)"
+echo "compatible: $( (tr "\\0" " " < /proc/device-tree/compatible) 2>/dev/null)"
+echo "cmdline: $(cat /proc/cmdline 2>/dev/null)"
+grep -m1 -E '^(Hardware|model name)' /proc/cpuinfo 2>/dev/null
+echo "cpus: $(grep -c ^processor /proc/cpuinfo 2>/dev/null)"
+for p in /sys/devices/system/cpu/cpufreq/policy*; do
+    [ -d "$p" ] || continue
+    echo "$(basename "$p"): cpus=$(attr "$p/related_cpus") gov=$(attr "$p/scaling_governor") $(attr "$p/cpuinfo_min_freq")-$(attr "$p/cpuinfo_max_freq") kHz"
+done
+grep -E '^(MemTotal|MemAvailable|CmaTotal)' /proc/meminfo 2>/dev/null
+
+sec "display (/sys/class/drm)"
+for c in /sys/class/drm/card*-*; do
+    [ -d "$c" ] || continue
+    echo "$(basename "$c"): status=$(attr "$c/status") enabled=$(attr "$c/enabled") modes=$(attr "$c/modes" | tr '\n' ' ')"
+done
+for d in /sys/class/drm/card[0-9]; do
+    [ -d "$d" ] || continue
+    echo "$(basename "$d"): driver=$(basename "$(readlink -f "$d/device/driver" 2>/dev/null)")"
+done
+command -v modetest >/dev/null && { sec "modetest -c -p"; modetest -c -p 2>&1 | head -200; }
+for b in /sys/class/backlight/*; do
+    [ -d "$b" ] || continue
+    echo "backlight $(basename "$b"): $(attr "$b/brightness")/$(attr "$b/max_brightness") type=$(attr "$b/type")"
+done
+
+sec "input (/proc/bus/input/devices)"
+cat /proc/bus/input/devices 2>/dev/null
+for e in /sys/class/input/event*; do
+    [ -d "$e" ] || continue
+    echo "$(basename "$e"): $(attr "$e/device/name") phys=$(attr "$e/device/phys") sysfs=$(readlink -f "$e/device" 2>/dev/null)"
+    for a in "$e"/device/capabilities/abs; do echo "  abs=$(attr "$a") key=$(attr "$e/device/capabilities/key" | tr ' ' ':')"; done
+done
+
+sec "sound (/proc/asound)"
+cat /proc/asound/cards 2>/dev/null
+cat /proc/asound/pcm 2>/dev/null
+if command -v amixer >/dev/null; then
+    for n in $(sed -n 's/^ *\([0-9]\+\) \[.*/\1/p' /proc/asound/cards 2>/dev/null); do
+        echo "-- card $n controls"; amixer -c "$n" controls 2>&1 | head -150
+    done
+fi
+command -v aplay >/dev/null && aplay -l 2>&1
+
+sec "power (/sys/class/power_supply)"
+for s in /sys/class/power_supply/*; do
+    [ -d "$s" ] || continue
+    echo "$(basename "$s"): type=$(attr "$s/type") status=$(attr "$s/status") capacity=$(attr "$s/capacity") online=$(attr "$s/online") voltage_now=$(attr "$s/voltage_now")"
+done
+for l in /sys/class/leds/*; do
+    [ -d "$l" ] || continue
+    echo "led $(basename "$l"): $(attr "$l/brightness")/$(attr "$l/max_brightness") trigger=$(sed -n 's/.*\[\(.*\)\].*/\1/p' "$l/trigger" 2>/dev/null)"
+done
+for t in /sys/class/thermal/thermal_zone*; do
+    [ -d "$t" ] || continue
+    echo "$(basename "$t"): $(attr "$t/type") $(attr "$t/temp")"
+done
+for f in /sys/class/hwmon/hwmon*; do
+    [ -d "$f" ] || continue
+    echo "$(basename "$f"): $(attr "$f/name") $(ls "$f" | grep -E '^(fan|pwm)[0-9]' | tr '\n' ' ')"
+done
+echo "suspend: $(attr /sys/power/state) mem_sleep=$(attr /sys/power/mem_sleep)"
+
+sec "remote processors (/sys/class/remoteproc: Qualcomm's ADSP, CDSP, ...)"
+for r in /sys/class/remoteproc/*; do
+    [ -d "$r" ] || continue
+    echo "$(basename "$r"): $(attr "$r/name") state=$(attr "$r/state") firmware=$(attr "$r/firmware")"
+done
+ls /dev/qrtr* /dev/rpmsg* /dev/fastrpc* 2>/dev/null
+for d in qrtr-ns pd-mapper tqftpserv rmtfs; do pidof $d >/dev/null && echo "$d: running"; done
+
+sec "network"
+for n in /sys/class/net/*; do
+    [ -d "$n" ] || continue
+    echo "$(basename "$n"): driver=$(basename "$(readlink -f "$n/device/driver" 2>/dev/null)") state=$(attr "$n/operstate")"
+done
+for h in /sys/class/bluetooth/hci*; do [ -d "$h" ] && echo "$(basename "$h"): $(basename "$(readlink -f "$h/device/driver" 2>/dev/null)")"; done
+command -v rfkill >/dev/null && rfkill 2>&1
+
+sec "storage"
+cat /proc/partitions 2>/dev/null
+for b in /sys/block/*; do
+    case $(basename "$b") in loop*|ram*|zram*) continue ;; esac
+    echo "$(basename "$b"): $(attr "$b/device/model") $(attr "$b/device/name") removable=$(attr "$b/removable")"
+done
+grep -E ' /(data|boot|) ' /proc/mounts 2>/dev/null
+
+sec "firmware the kernel asked for (dmesg)"
+dmesg 2>/dev/null | grep -iE 'firmware|direct-loading|\.mbn|\.bin' | tail -60
+
+sec "errors and warnings (dmesg)"
+dmesg 2>/dev/null | grep -iE 'error|fail|timeout|deferred|not found|-EPROBE' | grep -v 'hw-probe' | tail -120
+
+sec "drivers still waiting (/sys/kernel/debug/devices_deferred)"
+cat /sys/kernel/debug/devices_deferred 2>/dev/null || echo "(debugfs not mounted)"
+exit 0

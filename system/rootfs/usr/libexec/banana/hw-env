@@ -1,0 +1,13 @@
+#!/bin/sh
+# The handheld's hardware profile (/etc/banana/hw.conf, the board's file from etc/banana/hw/) as the environment the
+# menu, bananad and the launchers read: sourced by rcS (". /usr/libexec/banana/hw-env") so everything it starts has it.
+# What a variable is already set to wins (the host tests, tools/qemu-boot.sh's kernel options through
+# banana-ui-session).
+HW_CONF=${BANANA_HW_CONF:-/etc/banana/hw.conf}
+[ -r "$HW_CONF" ] && . "$HW_CONF"
+[ -n "$HW_TOP" ] && export BANANA_TOP=${BANANA_TOP:-$HW_TOP}
+[ -n "$HW_TOUCH" ] && export BANANA_TOUCH=${BANANA_TOUCH:-$HW_TOUCH}
+[ -n "$HW_PANEL_ROTATE" ] && export BANANA_PANEL_ROTATE=${BANANA_PANEL_ROTATE:-$HW_PANEL_ROTATE}
+[ -n "$HW_BACKLIGHT_TOP" ] && export BANANA_BACKLIGHT_TOP=${BANANA_BACKLIGHT_TOP:-$HW_BACKLIGHT_TOP}
+[ -n "$HW_BACKLIGHT_BOTTOM" ] && export BANANA_BACKLIGHT_BOTTOM=${BANANA_BACKLIGHT_BOTTOM:-$HW_BACKLIGHT_BOTTOM}
+:
