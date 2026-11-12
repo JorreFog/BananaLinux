@@ -105,6 +105,16 @@ namespace banana
 		return plane;
 	}
 
+#ifndef BANANA_SDL
+	// (built without SDL: the panels through KMS only, and the SDL calls are never reached)
+	bool Display::wantSdl() { return false; }
+	bool Display::openSdl(const std::string&, std::string& err) { err = "built without SDL"; return false; }
+	void Display::closeSdl() {}
+	bool Display::presentSdl(const uint32_t* const*, const Damage*) { return false; }
+	void Display::handleSdl() {}
+	void Display::blankSdl() {}
+#endif
+
 	// a connector's "panel orientation" as the clockwise turn the picture needs (drm_connector.c: the device tree's
 	// rotation = <90> is "Right Side Up", the way Weston and KDE turn it by 90)
 	static int panelOrientation(int fd, uint32_t conn)
@@ -155,6 +165,7 @@ namespace banana
 
 	bool Display::open(const std::string& top, std::string& err)
 	{
+		if (wantSdl()) { close(); return handOver ? false : openSdl(top, err); }	// (kms_sdl.cpp; --panels-on: no panels to light)
 		close();
 		std::vector<std::string> cards;
 		if (DIR* d = opendir("/dev/dri"))
@@ -345,6 +356,7 @@ namespace banana
 
 	void Display::restore()
 	{
+		if (sdl) { blankSdl(); exposed = true; return; }
 		if (fd < 0) return;
 		drmSetMaster(fd);
 		if (leased < 0) planesUpright(fd);
@@ -357,6 +369,7 @@ namespace banana
 	// bookkeeping reset so the menu's next present() writes a full frame into the hidden buffer and flips to it
 	void Display::blank()
 	{
+		if (sdl) { blankSdl(); return; }
 		if (fd < 0) return;
 		for (int s = 0; s < 2; s++)
 		{
@@ -391,6 +404,7 @@ namespace banana
 	std::string Display::setColors(const ScreenColors& c)
 	{
 		if (fd < 0) return "no display";
+		if (sdl) return c.neutral() ? "" : "the compositor's outputs: no colour table";
 		int target = c.neutral() ? -1 : c.screen;
 		// the other screen's table off first: the kernel refuses a second one
 		for (int s = 0; s < 2; s++)
@@ -436,6 +450,7 @@ namespace banana
 
 	void Display::close()
 	{
+		if (sdl) { closeSdl(); return; }
 		if (fd < 0) return;
 		for (auto& pn : p) { freeBuf(pn.buf[0]); freeBuf(pn.buf[1]); }
 		::close(fd);	// (a lease ends with its lessor's master)
@@ -446,6 +461,7 @@ namespace banana
 
 	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
 	{
+		if (sdl) return presentSdl(screens, dmg);
 		if (fd < 0 || pending) return false;
 		bool any = false;
 		for (int s = 0; s < 2; s++)
@@ -488,6 +504,7 @@ namespace banana
 
 	void Display::handleEvents()
 	{
+		if (sdl) { handleSdl(); return; }
 		if (fd < 0) return;
 		drmEventContext ev = {};
 		ev.version = 2;
@@ -519,7 +536,7 @@ namespace banana
 
 	long Display::stormCheck()
 	{
-		if (fd < 0 || leased >= 0) return -1;
+		if (sdl || fd < 0 || leased >= 0) return -1;
 		long long a = vopIrqs();
 		if (a < 0) return -1;
 		usleep(200000);
@@ -538,7 +555,7 @@ namespace banana
 
 	int Display::lease(int s)
 	{
-		if (fd < 0 || s < 0 || s > 1) return -1;
+		if (sdl || fd < 0 || s < 0 || s > 1) return -1;	// (a compositor's windows: a game is its own client)
 		uint32_t plane = primaryPlane(fd, p[s].crtc);
 		if (!plane) return -1;
 		// (and an overlay plane when there is a free one: BananaFront's pop-ups over the game; RetroArch ignores it)

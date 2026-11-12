@@ -31,6 +31,12 @@ namespace banana
 		// a touch as a fraction of its touchscreen's range (panelfit.h's touchToCanvas)
 		bool touchToCanvas(int s, float nx, float ny, bool wide, float& x, float& y) const { return p[s].fit.touchToCanvas(nx, ny, wide, x, y); }
 		bool fitted() const { return !p[0].fit.identity() || !p[1].fit.identity(); }
+		// the screens are a compositor's windows (SDL2: Wayland under sway, on ROCKNIX; kms_sdl.cpp), not the panels
+		bool compositor() const { return sdl; }
+		// a window was uncovered or resized (SDL): the menu draws everything again; true once per event
+		bool takeExposed() { bool e = exposed; exposed = false; return e; }
+		// SDL rather than KMS for this run (BANANA_DISPLAY, WAYLAND_DISPLAY; false without SDL=1)
+		static bool wantSdl();
 		int panelWidth(int s) const { return p[s].fit.panelW() ? p[s].fit.panelW() : W; }
 		int panelHeight(int s) const { return p[s].fit.panelH() ? p[s].fit.panelH() : H; }
 		int pollFd() const { return fd; }
@@ -68,6 +74,14 @@ namespace banana
 		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
 		bool makeBuf(Buf& b, int w, int h);
+		bool sdl = false, exposed = false;
+		void* sdlWin[2] = { nullptr, nullptr };
+		int sdlTimer = -1;
+		bool openSdl(const std::string& top, std::string& err);
+		void closeSdl();
+		bool presentSdl(const uint32_t* const screens[2], const Damage dmg[2]);
+		void handleSdl();
+		void blankSdl();
 		bool lightBoth();
 		void freeBuf(Buf& b);
 	};

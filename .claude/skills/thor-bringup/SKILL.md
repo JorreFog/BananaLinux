@@ -5,6 +5,16 @@ description: Bring BananaOS up on a real AYN Thor (SM8550) and turn what the han
 
 # AYN Thor bring-up
 
+**The primary route is ROCKNIX** (`docs/THOR-ROCKNIX.md`): ROCKNIX's SM8550 image with banana-ui as the frontend, two
+windows under sway (`ui/src/kms_sdl.cpp`), packaged by `rocknix/` and installed into a ROCKNIX checkout by
+`tools/rocknix-banana.sh`.
+- On a running ROCKNIX Thor, check `journalctl -u bananasway` and `/storage/.config/banana/logs/banana-ui.log`, which
+  has the display lines saying which output got which screen.
+- Test without a Thor with `ui/tests/sway-test.sh` (headless sway, the Thor's two output sizes) and
+  `rocknix/tests/run.sh`.
+- Everything below is about the hardware. It applies under both routes, and in full to the Buildroot board
+  (`make thor`), the fallback.
+
 The plan and status are in `docs/THOR-PORT.md` (milestones M0 to M5). The board files are in `buildroot/board/thor`,
 the profile is `system/rootfs/etc/banana/hw/thor.conf`. Values marked `(check)` there are guesses from ROCKNIX's
 device tree; replace them with what the handheld reports, and delete the `(check)`.

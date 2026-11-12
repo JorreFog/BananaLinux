@@ -3505,7 +3505,9 @@ int main(int argc, char** argv)
 			else if (disp.isOpen() && p.fd == disp.pollFd())
 			{
 				disp.handleEvents();
-				if (!disp.flipPending()) fstat.flipped(nowMs());
+				// (a compositor's windows: this is the 50 ms pump, not a flip; an uncovered window is drawn whole again)
+				if (disp.compositor()) { if (disp.takeExposed()) { be.invalidate(); dirty = true; } }
+				else if (!disp.flipPending()) fstat.flipped(nowMs());
 			}
 			else
 				input.read(p.fd, handle);

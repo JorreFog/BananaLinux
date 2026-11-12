@@ -1,5 +1,9 @@
 # BananaOS on the AYN Thor
 
+> **The direction changed on 2026-11-12.** The Thor version is ROCKNIX's image with BananaOS's dual-screen menu as
+> its frontend: see [`docs/THOR-ROCKNIX.md`](THOR-ROCKNIX.md). This page is the BananaOS-on-Buildroot board that came
+> first (`make thor`). It stays as reference and as a fallback, and its hardware findings hold either way.
+
 The plan, and where it stands, for BananaOS on the AYN Thor (Snapdragon 8 Gen 2, SM8550: the Base, Pro and Max).
 The Thor Lite is a different handheld (Snapdragon 865, SM8250) and isn't covered here.
 

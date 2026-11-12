@@ -41,6 +41,8 @@ jobs:
         run: make test
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui
+      - name: banana-ui with SDL (the screens as a compositor's windows, ROCKNIX's frontend)
+        run: sudo apt-get install -y libsdl2-dev && make -C ui clean && make -C ui SDL=1
       - name: bananad (native and aarch64)
         run: |
           make -C system/bananad CFLAGS="-O2 -Werror"

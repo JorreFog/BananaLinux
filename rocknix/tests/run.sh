@@ -1,0 +1,20 @@
+#!/bin/sh
+# The ROCKNIX frontend layer's checks, no ROCKNIX needed: es-systems-to-banana.py on a sample es_systems.cfg in the
+# shape ROCKNIX writes it (each system's default emulator and core into runemu.sh, the extensions, the folder, a
+# system with its own command, the menu's own pages after), and the start script and installer parse.
+HERE=$(cd "$(dirname "$0")/.." && pwd)
+C=$HERE/packages/ui/banana-frontend/sources/es-systems-to-banana.py
+fail=0
+out=$(python3 -I "$C" "$HERE/tests/es_systems.cfg") || { echo "FAIL rocknix: the converter failed"; exit 1; }
+want() { printf '%s\n' "$out" | grep -qxF -- "$1" || { echo "FAIL rocknix: no line '$1'"; fail=1; }; }
+want '[nds]'
+want 'run = /usr/bin/runemu.sh %ROM% -Pnds --core=melonds-sa --emulator=melonds-sa --controllers=""'
+want 'ext = nds zip 7z'
+want 'folder = /storage/roms/nds'
+want 'run = /usr/bin/runemu.sh %ROM% -Pgba --core=mgba --emulator=retroarch --controllers=""'
+want 'run = %ROM%'
+want 'run = banana:files'
+bash -n "$HERE/packages/ui/banana-frontend/sources/start_banana.sh" || { echo "FAIL rocknix: start_banana.sh"; fail=1; }
+sh -n "$HERE/../tools/rocknix-banana.sh" || { echo "FAIL rocknix: rocknix-banana.sh"; fail=1; }
+[ $fail = 0 ] && echo "rocknix: all passed"
+exit $fail

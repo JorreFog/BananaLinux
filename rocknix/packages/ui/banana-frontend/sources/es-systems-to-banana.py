@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+# ROCKNIX's systems for BananaOS's menu: its EmulationStation es_systems.cfg (every system ROCKNIX's build put in,
+# with its folder, extensions and default emulator and core) as banana-ui's systems.conf. Each game starts the way
+# EmulationStation starts it, through ROCKNIX's /usr/bin/runemu.sh with the system's default emulator and core, so
+# ROCKNIX's emulator setup (its configs, its per-game settings, its Thor quirks) is used as it is. The ids are
+# ROCKNIX's system names, which banana-ui's theme already knows (ui/assets/rnds/systems.cfg). The menu's own pages
+# (Files) are added after the systems.
+#
+#   es-systems-to-banana.py <es_systems.cfg> [systems.conf to write; default: stdout]
+import sys
+import xml.etree.ElementTree as ET
+
+RUN = '/usr/bin/runemu.sh %ROM% -P{sys} --core={core} --emulator={emu} --controllers=""'
+# systems whose shelf stays even with no games (where a fresh card's games go)
+ALWAYS = {'nds', 'gba', 'gbc', 'gb', 'snes', 'nes', 'psx', 'n64', 'megadrive', 'genesis', 'ports'}
+OWN_PAGES = '''
+[files]
+name = Files
+maker = BananaOS
+folder = /usr/share/banana/apps/files
+ext = app
+run = banana:files
+always = yes
+flat = yes
+'''
+
+
+def text(el, tag):
+    t = el.find(tag)
+    return (t.text or '').strip() if t is not None else ''
+
+
+def default_emulator(system):
+    """(emulator, core): the one marked default, else the first one listed."""
+    first = None
+    for emu in system.findall('./emulators/emulator'):
+        for core in emu.findall('./cores/core'):
+            pair = (emu.get('name', ''), (core.text or '').strip())
+            if first is None:
+                first = pair
+            if core.get('default') == 'true':
+                return pair
+    return first or ('', '')
+
+
+def convert(root):
+    out = ['# made by es-systems-to-banana.py from ROCKNIX\'s es_systems.cfg (each game through runemu.sh)', '']
+    for s in root.findall('system'):
+        sid = text(s, 'name')
+        if not sid or not all(c.isalnum() or c in '-_' for c in sid):
+            continue
+        cmd = text(s, 'command')
+        emu, core = default_emulator(s)
+        if 'runemu.sh' in cmd:
+            run = RUN.format(sys=sid, core=core, emu=emu)
+        elif cmd:
+            # (a system with its own command: tools, ports' scripts) as EmulationStation runs it
+            run = cmd.replace('%SYSTEM%', sid).replace('%CORE%', core).replace('%EMULATOR%', emu) \
+                .replace('%CONTROLLERSCONFIG%', '')
+        else:
+            continue
+        exts = []
+        for e in text(s, 'extension').replace(',', ' ').split():
+            e = e.lstrip('.').lower()
+            if e and e not in exts:
+                exts.append(e)
+        out.append('[%s]' % sid)
+        out.append('name = %s' % (text(s, 'fullname') or sid))
+        if text(s, 'manufacturer'):
+            out.append('maker = %s' % text(s, 'manufacturer'))
+        if text(s, 'path'):
+            out.append('folder = %s' % text(s, 'path'))
+        if exts:
+            out.append('ext = %s' % ' '.join(exts))
+        out.append('run = %s' % run)
+        if sid in ALWAYS:
+            out.append('always = yes')
+        out.append('')
+    return '\n'.join(out) + OWN_PAGES
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit('usage: es-systems-to-banana.py <es_systems.cfg> [systems.conf]')
+    conf = convert(ET.parse(sys.argv[1]).getroot())
+    if len(sys.argv) > 2:
+        tmp = sys.argv[2] + '.new'
+        with open(tmp, 'w') as f:
+            f.write(conf)
+        import os
+        os.replace(tmp, sys.argv[2])
+    else:
+        sys.stdout.write(conf)
+
+
+if __name__ == '__main__':
+    main()

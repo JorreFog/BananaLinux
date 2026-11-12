@@ -21,6 +21,14 @@ ifeq ($(ALSA),1)
 PKGS += alsa
 UI_FLAGS += -DBANANA_ALSA
 endif
+# SDL=1: the screens may also be a compositor's windows (Wayland under sway, as on ROCKNIX: src/kms_sdl.cpp), chosen at
+# run time; without it, the panels through KMS only
+SDL ?= 0
+SRC += src/kms_sdl.cpp
+ifeq ($(SDL),1)
+PKGS += sdl2
+UI_FLAGS += -DBANANA_SDL
+endif
 # (banana-ui's own: asked for when it is built, so its helpers need none of its libraries)
 UI_FLAGS += $(shell $(PKG_CONFIG) --cflags $(PKGS))
 UI_LIBS = $(shell $(PKG_CONFIG) --libs $(PKGS))
