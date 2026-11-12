@@ -324,5 +324,8 @@ check "$(states)" "mst -" "no record of the game's end (a power-off's resume, a 
 nds --played; head -c 8192 /dev/zero | tr '\0' e > "$D/drastic/backup/Game.dsv"
 nds --prefer dsv
 check "$(states)" "- -" "the .dsv replaced: DraStic's state dropped, and BananaDS's with the save nds-saves gives it"
+# File sharing keeps the Home server's pairing off the network: romsync.json holds the server's token, and the copy
+# written beside it while it is replaced (romsync.json.new) holds it too
+check "$(grep -c '^[[:space:]]*veto files = .*/\*romsync\.json\*/' "$L/share")" "1" "the share vetoes romsync.json and the copy beside it"
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
