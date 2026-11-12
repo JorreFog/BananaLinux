@@ -259,7 +259,8 @@ at that address fails as untrusted whoever signed it. The name in it isn't compa
 certificate made for a LAN seldom carries. The check itself stays on; Forget removes the file. A certificate
 trusted for a server other than the one the card is paired with waits in `/run/banana/server-trusted.pem`, checking
 that server alone, and becomes the card's file when the pairing with it is written, so a pairing given up there
-leaves the paired server's certificate, and its syncs, as they were. Turning the check off
+leaves the paired server's certificate, and its syncs, as they were; a pairing written with any other server
+clears it. Turning the check off
 (`homesync_tls = off`) is the form's Check certificate row or the settings file, a choice made there and not on the
 error, since it then takes any certificate from any server; the Server row's help says when the paired server's
 certificate is unchecked or trusted by hand. Then `banana-sync pair --romm <url>` runs RomM's device flow: its status line `pair <code> <url> <seconds>` is the
@@ -401,7 +402,9 @@ What the sync holds to, whatever happens around it:
   `.tmp`, so a cut run's leftover is never taken for a save, and the next run of the same script for that save clears
   it.
 - The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges what
-  the saves agreed meanwhile instead of writing a stale copy over it.
+  the saves agreed meanwhile instead of writing a stale copy over it. A sync copying games when the pairing is
+  forgotten or made again stops at the first file it can't record: no game leaves the card, and the run goes on to
+  nothing else, its saves included.
 
 Around a game, `banana-sync sync --rom <path>` (after a game, and `--auto launch` before one) decides that game's save
 alone, and its states when they are on, except before a game; after a game Romhost and a RomM before 5.4 sync every
