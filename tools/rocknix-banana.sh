@@ -30,7 +30,7 @@ cp "$HERE/store/apps/activity/banana-activity.cpp" "$HERE/store/apps/activity/ac
 rm -rf "$P/sources/libexec" "$P/sources/sleep.d"
 mkdir -p "$P/sources/libexec" "$P/sources/sleep.d"
 for f in wifi wifi-nm bluetooth volume update ssh share sd2 sound-server hw-probe backlight run-rocknix rocknix-options handheld \
-         ra-reset ra-secrets nds-saves nds-reset nds-buttons nds-game-option nds-game-shader saves-flat systems-merge kv-env \
+         ra-reset ra-secrets ra-netcmd nds-saves nds-reset nds-buttons nds-game-option nds-game-shader saves-flat systems-merge kv-env \
          run-store run-store-app run-dodakvarter run-activity run-bank; do
     [ -f "$HERE/system/rootfs/usr/libexec/banana/$f" ] && cp "$HERE/system/rootfs/usr/libexec/banana/$f" "$P/sources/libexec/"
 done

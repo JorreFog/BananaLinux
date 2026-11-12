@@ -190,6 +190,30 @@ static std::string rocknixSystem(const banana::SystemDef& sys)
 	return getenv("BANANA_ROCKNIX") && sys.run.find("run-rocknix") != std::string::npos ? sys.id : "";
 }
 
+// the emulator a ROCKNIX game runs in (its run line's --emulator=/--core=, as the game page's choice turns them:
+// rocknix-options resolve), "" for the rest
+static std::string rocknixEmulator(const banana::SystemDef& sys, const std::string& rom)
+{
+	if (rocknixSystem(sys).empty()) return "";
+	auto arg = [&](const char* k) {
+		size_t a = sys.run.find(k);
+		if (a == std::string::npos) return std::string();
+		a += strlen(k);
+		return sys.run.substr(a, sys.run.find(' ', a) - a);
+	};
+	std::string emu = arg("--emulator="), core = arg("--core=");
+	const char* o = getenv("BANANA_ROCKNIX_OPTIONS");
+	const std::string tool = o && *o ? o : "/usr/libexec/banana/rocknix-options";
+	if (FILE* f = popen((shellQuote(tool) + " resolve " + shellQuote(sys.id) + " " + shellQuote(rom.substr(rom.rfind('/') + 1)) + " " +
+		shellQuote(emu) + " " + shellQuote(core) + " 2>/dev/null").c_str(), "r"))
+	{
+		char buf[256] = "";
+		if (fgets(buf, sizeof buf, f) && buf[0] && buf[0] != ' ') emu = std::string(buf, strcspn(buf, " \n"));
+		pclose(f);
+	}
+	return emu;
+}
+
 static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
 {
 	for (size_t at = 0; (at = s.find(from, at)) != std::string::npos; at += to.size()) s.replace(at, from.size(), to);
@@ -2795,8 +2819,11 @@ int main(int argc, char** argv)
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
 		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
+		// ROCKNIX's games (run-rocknix) in RetroArch or BananaFront too: the game's window on the top output, the menu's
+		// bottom one kept for the panel, the commands through run-rocknix (ra-netcmd: RetroArch's network commands)
+		const std::string rxEmu = rocknixEmulator(sd, rom);
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
-			sd.run.find("run-bananafront") != std::string::npos ||
+			sd.run.find("run-bananafront") != std::string::npos || rxEmu == "retroarch" || rxEmu == "bananafront" ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;

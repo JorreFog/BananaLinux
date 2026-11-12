@@ -31,6 +31,10 @@ DATA=/storage/.config/bananafront
 STATES=/storage/roms/savestates/${PLATFORM}
 mkdir -p "${DATA}" "${STATES}"
 export BANANAFRONT_DATA="${DATA}" SDL_VIDEODRIVER=wayland
+# the menu's game panel on the bottom screen (BANANA_RA_CMD: its commands, RetroArch's, on BananaFront's stdin;
+# BANANA_RA_OUT: the answers, for the companions)
+exec < "${BANANA_RA_CMD:-/dev/null}"
+[ -n "${BANANA_RA_OUT}" ] && exec > "${BANANA_RA_OUT}"
 ${EMUPERF} /usr/bin/bananafront --system "${PLATFORM}" --saves "$(dirname "${ROM}")" --states "${STATES}" \
   --bios /storage/roms/bios --shots /storage/roms/screenshots --resume-load --resume-save --lowlat \
   "${SO}" "${ROM}"

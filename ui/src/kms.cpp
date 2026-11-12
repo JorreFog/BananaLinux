@@ -122,6 +122,7 @@ namespace banana
 	bool Display::wantSdl() { return false; }
 	bool Display::openSdl(const std::string&, std::string& err) { err = "built without SDL"; return false; }
 	void Display::closeSdl() {}
+	int Display::leaseSdl(int) { return -1; }
 	bool Display::presentSdl(const uint32_t* const*, const Damage*) { return false; }
 	void Display::handleSdl() {}
 	void Display::blankSdl() {}
@@ -577,7 +578,8 @@ namespace banana
 
 	int Display::lease(int s)
 	{
-		if (sdl || fd < 0 || s < 0 || s > 1) return -1;	// (a compositor's windows: a game is its own client)
+		if (sdl) return leaseSdl(s);	// (a compositor's windows: the game's screen's window closed, the game its own client there)
+		if (fd < 0 || s < 0 || s > 1) return -1;
 		uint32_t plane = primaryPlane(fd, p[s].crtc);
 		if (!plane) return -1;
 		// (and an overlay plane when there is a free one: BananaFront's pop-ups over the game; RetroArch ignores it)

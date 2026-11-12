@@ -965,11 +965,12 @@ namespace banana
 			std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
 			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
 			text(lb, true, 19, x + tw / 2 - lw / 2, y + 60, fg);
-			std::string kk = GTILES[i].keys;
+			// (as ROCKNIX's frontend there is no F key: the tiles are taps, and its own hotkeys are its own)
+			std::string kk = getenv("BANANA_ROCKNIX") ? std::string(i == 5 ? "Tap" : "") : std::string(GTILES[i].keys);
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
-		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
+		std::string hint = getenv("BANANA_ROCKNIX") ? "Tap a tile" : gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
 		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
 		if (compOn()) compIcon();

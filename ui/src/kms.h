@@ -90,6 +90,7 @@ namespace banana
 		bool presentSdl(const uint32_t* const screens[2], const Damage dmg[2]);
 		void handleSdl();
 		void blankSdl();
+		int leaseSdl(int s);
 		bool lightBoth();
 		void freeBuf(Buf& b);
 	};

@@ -51,6 +51,8 @@ export BANANA_ROCKNIX=1
 # Banana's emulators' and apps' windows full screen, each on its screen (their bottom windows' titles end in "Bottom":
 # ROCKNIX's own rule moves those to the second output)
 swaymsg 'for_window [title="^(BananaDS|BananaFront|Activity|Store|Döda Kvarter)( Bottom)?$"] fullscreen enable' >/dev/null 2>&1
+# a RetroArch game on the top screen, while the menu keeps the bottom one for its game panel
+swaymsg "for_window [app_id=\"(?i)retroarch\"] move window to output ${WLR_CON:-DSI-2}" >/dev/null 2>&1
 
 # both screens as windows (src/kms_sdl.cpp): the top one on sway's main output (WLR_CON, the 095-sway profile's),
 # the other on the second

@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
 
@@ -84,8 +85,21 @@ namespace banana
 		return true;
 	}
 
+	// a game on screen s while the menu keeps the other for the game panel: that screen's window closed, so the
+	// compositor gives its output to the game's window; an fd that stands for the lease (the caller closes it, the game
+	// never uses it: /dev/null), -1 when it can't
+	int Display::leaseSdl(int s)
+	{
+		if (s < 0 || s > 1 || !sdlWin[s] || !sdlWin[1 - s]) return -1;
+		SDL_DestroyWindow(W_(sdlWin[s]));
+		sdlWin[s] = nullptr;
+		leased = s;
+		return ::open("/dev/null", O_RDONLY);
+	}
+
 	void Display::closeSdl()
 	{
+		leased = -1;
 		for (auto& w : sdlWin) { if (w) SDL_DestroyWindow(W_(w)); w = nullptr; }
 		if (sdlTimer >= 0) ::close(sdlTimer);
 		sdlTimer = -1;

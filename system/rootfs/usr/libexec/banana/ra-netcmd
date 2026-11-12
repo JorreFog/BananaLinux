@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# The game panel's commands to RetroArch over its network command port, for a RetroArch the menu didn't start itself
+# (ROCKNIX's runemu.sh: no stdin of ours; it turns network commands on, port 55355, on a two-screen handheld).
+# run-rocknix runs this beside the game: each line the panel writes on its command pipe (SAVE_STATE, LOAD_STATE,
+# MENU_TOGGLE, QUIT, the companions' READ_CORE_MEMORY...) goes to RetroArch as a datagram, and what RetroArch answers
+# goes to the panel's reply pipe as its stdout would have (one line each).
+#
+#   ra-netcmd <command pipe> [reply pipe] [port]
+import os
+import select
+import socket
+import sys
+
+
+def main(a):
+    if not a:
+        sys.exit('usage: ra-netcmd <command pipe> [reply pipe] [port]')
+    port = int(a[2]) if len(a) > 2 and a[2] else 55355
+    cmd = os.open(a[0], os.O_RDONLY | os.O_NONBLOCK)
+    out = -1
+    if len(a) > 1 and a[1]:
+        try:
+            out = os.open(a[1], os.O_WRONLY | os.O_NONBLOCK)
+        except OSError:
+            out = -1
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('127.0.0.1', 0))
+    to = ('127.0.0.1', port)
+    buf = b''
+    while True:
+        r, _, _ = select.select([cmd, s], [], [], 1.0)
+        if cmd in r:
+            try:
+                d = os.read(cmd, 65536)
+            except BlockingIOError:
+                d = b''
+            if d:
+                buf += d
+                while b'\n' in buf:
+                    line, buf = buf.split(b'\n', 1)
+                    if line.strip():
+                        try:
+                            s.sendto(line.strip(), to)
+                        except OSError:
+                            pass
+        if s in r:
+            try:
+                rep, _ = s.recvfrom(65536)
+            except OSError:
+                rep = b''
+            if rep and out >= 0:
+                if not rep.endswith(b'\n'):
+                    rep += b'\n'
+                try:
+                    os.write(out, rep)
+                except OSError:
+                    pass
+
+
+if __name__ == '__main__':
+    try:
+        main(sys.argv[1:])
+    except KeyboardInterrupt:
+        pass
