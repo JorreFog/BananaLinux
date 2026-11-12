@@ -688,7 +688,9 @@ namespace banana
 		bool pollSyncStatus(double t, bool force);	// sync.status read (also with Settings closed); true when its line changed
 		bool syncLineFresh = false;
 		double hsRowsAt = 0;	// the next look at whether the Home server rows are still the pairing's	// a new status line pollSync hasn't yet handled (the pairing screen's)
-		bool hsTurnAutoOn();	// a pairing's: Auto sync on when it was off (true: it was)
+		bool hsTurnAutoOn();	// a first pairing's: Auto sync on when it was off (true: it was)
+		bool hsWasPaired = false;	// a server was paired already when the pairing running began
+		double hsGoneAt = 0;		// when RomM's pairing was first seen with no process left and no last word (0: not)
 		bool hsTurnLaunchOn();
 		bool hsSlotsKept();			// the paired RomM keeps save slots (5.4 and newer, as the pairing found it)
 		std::string hsSlot();		// the slot saves sync with, as Settings names it: autosave unless a custom one

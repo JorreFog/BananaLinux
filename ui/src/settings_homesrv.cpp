@@ -114,6 +114,9 @@ namespace banana
 	void Settings::hsConnect()
 	{
 		if (hsBusy() || hsStep == 3) return;
+		// (Romhost still being looked for, from the Server row a moment ago: started over it, this would wait for that
+		// to end with the menu standing still)
+		if (hsJob.running()) { hsMsg = "Still finishing the last search. Try Connect again in a moment."; return; }
 		if (hsHost.empty()) { hsMsg = "Type RomM's address first."; hsSel = 1; return; }
 		if (!wifiOn()) { hsMsg = "Wi-Fi is off: switch it on in Network first."; return; }
 		hsStep = 4;
@@ -135,7 +138,7 @@ namespace banana
 	// signed it, its dates and its fingerprint, as banana-sync cert says them on one line
 	void Settings::hsReadCert()
 	{
-		if (hsBusy() || hsStep == 3) return;
+		if (hsBusy() || hsStep == 3 || hsJob.running()) return;
 		hsStep = 5;
 		hsMsg = "Reading the server's certificate...";
 		hsJob.start(syncCmd("cert " + gamesync::shellQuote(hsBase())) + " 2>/dev/null", sync);
@@ -300,6 +303,7 @@ namespace banana
 			fprintf(stderr, "home server: pairing not started: a sync is running\n");
 			return;
 		}
+		hsWasPaired = !homeServer().empty();
 		hsStep = 3;
 		hsMsg = code.empty() ? "Asking " + hsName + " for a code..." : "Pairing with the code...";
 		// (the last sync's line kept, for the Sync now row once a pairing that doesn't pair is over: a pairing stopped or
@@ -357,11 +361,12 @@ namespace banana
 			if (rest == "refused in RomM") hsMsg = "Refused in RomM. A asks for a new code.";
 			else if (rest == "the code ran out") hsMsg = "The code ran out before it was approved. A asks for a new one.";
 			else if (rest == "stopped") hsMsg = "Stopped.";
+			else if (rest == "gone") hsMsg = "The pairing stopped by itself. A tries again.";
 			else if (cause == "tls" || cause == "redirect")
 			{
 				// (a certificate or a redirect, as the pairing asked again: back on the form at the address paired with,
-				// which may have come from Romhost's question rather than the form, whose Y turns off Check certificate or
-				// takes the address the server sent to)
+				// which may have come from Romhost's question rather than the form, whose Y shows the certificate to trust
+				// or takes the address the server sent to)
 				hsSetAddress(hsUrl);
 				hsFailed(cause, detail);
 				hsView = HS_FORM;

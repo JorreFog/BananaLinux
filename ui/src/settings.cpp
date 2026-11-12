@@ -1469,7 +1469,7 @@ namespace banana
 				// (in the background: it waits for the state file's lock, which a sync writing its part back holds a moment.
 				// The rows are made again when it ends, reading the pairing gone)
 				if (forgetJob.running()) return NONE;
-				forgetJob.start(syncCmd("forget") + " 2>&1", sync);
+				forgetJob.start(syncCmd("forget") + " 2>&1 && echo forgotten", sync);
 				message = "Forgetting the server...";
 				return MOVED;
 			}
@@ -2760,8 +2760,11 @@ namespace banana
 			{
 				hsStep = 0;
 				hsRebuild();
-				message = "Unpaired. The games and saves stay on the card. A on Server pairs it again.";
-				fprintf(stderr, "home server: forgotten\n");
+				// (said as it went: the pairing still there, the card not written, isn't "Unpaired")
+				const bool gone = out.find("forgotten") != std::string::npos;
+				message = gone ? "Unpaired. The games and saves stay on the card. A on Server pairs it again."
+					: "Couldn't unpair: the card didn't take the change. Try again.";
+				fprintf(stderr, gone ? "home server: forgotten\n" : "home server: not forgotten\n");
 				scrapeChanged = true;
 			}
 		}
@@ -4902,6 +4905,9 @@ namespace banana
 		pickRefreshing = false;
 		if (!wifiOn()) { pickError = "Wi-Fi is off: switch it on in Network first."; return; }
 		pickLoading = true;
+		// (the page left and opened again while its list is still being asked for: that asking is the one waited on.
+		// Started again, the new one would first wait for the old to end, the menu standing still meanwhile)
+		if (pickJob.running()) return;
 		pickJob.start(syncCmd("games") + " 2>/dev/null", sync);
 	}
 
@@ -5437,7 +5443,7 @@ namespace banana
 			games.push_back({ rel, "", "", {} });
 			return games.back();
 		};
-		auto bytes = [](const std::string& s) { long long b = atoll(s.c_str()); char t[32]; if (b < 0) return std::string("gone"); if (b < 1024) snprintf(t, sizeof t, lang::tr("%lld bytes").c_str(), b); else if (b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%.1f MB", b / 1048576.0); return std::string(t); };
+		auto bytes = [](const std::string& s) { long long b = atoll(s.c_str()); char t[32]; if (b < 0) return std::string("gone"); if (b < 1024) { /* (a translation is the format only while it is one number's: anything else, and the English) */ std::string f = lang::tr("%lld bytes"); size_t at = f.find("%lld"); if (at == std::string::npos || f.find('%') != at || f.find('%', at + 1) != std::string::npos) f = "%lld bytes"; snprintf(t, sizeof t, f.c_str(), b); } else if (b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%.1f MB", b / 1048576.0); return std::string(t); };
 		std::istringstream in(out);
 		std::string ln;
 		while (std::getline(in, ln))
@@ -6714,6 +6720,8 @@ namespace banana
 			pw.clear();
 			page = entryBack;
 			if (v == hsPairedName) { message.clear(); return MOVED; }
+			// (a rename still on its way to the server: this one waits its turn rather than the menu waiting on that one)
+			if (nameJob.running()) { message = "The last name is still being set. Try again in a moment."; return MOVED; }
 			message.clear();
 			nameJob.start(syncCmd("rename " + gamesync::shellQuote(v)) + " 2>/dev/null", sync);
 			return MOVED;
@@ -6773,6 +6781,7 @@ namespace banana
 			}
 			if (code.empty()) { hsStep = 0; message.clear(); return MOVED; }
 			auto q = gamesync::shellQuote;
+			hsWasPaired = !homeServer().empty();
 			hsStep = 3;
 			message = "Pairing with " + hsName + "...";
 			std::ofstream(runDir + "/sync.status") << "pairing\n";
@@ -7663,6 +7672,9 @@ namespace banana
 	// pairing is for. The Paired screen says so, and Auto sync turns it off again
 	bool Settings::hsTurnAutoOn()
 	{
+		// (a first pairing's alone: a handheld paired already when this pairing began has these as its owner left them,
+		// off among them, and pairing it again, or with another server, leaves them so)
+		if (hsWasPaired) return false;
 		const std::string f = data + "/settings.conf";
 		if (getConfValue(f, "homesync_auto", "off") != "off") return false;
 		setConfValue(f, "homesync_auto", "quit");
@@ -7674,6 +7686,7 @@ namespace banana
 	// game to turn on
 	bool Settings::hsTurnLaunchOn()
 	{
+		if (hsWasPaired) return false;
 		JPtr j = readJsonFile(data + "/romsync.json");
 		const std::string ver = j && j->isObj() ? j->str("serverVersion") : "";
 		if (ver.empty() || !bsync::versionAtLeast(ver, 5, 4, 0)) return false;
@@ -7712,6 +7725,7 @@ namespace banana
 	void Settings::startPairing()
 	{
 		if (hsStep == 3) return;	// (waiting for RomM's approval or the server's answer)
+		if (hsJob.running()) return;	// (still looking, or asking an address: that answer first)
 		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return; }
 		// Romhost answers a broadcast; nothing (or RomM, which doesn't): its address is typed
 		hsStep = 1;
@@ -7769,7 +7783,10 @@ namespace banana
 		if (hsJob.take(out))
 		{
 			changed = true;
-			if (hsStep == 1)
+			// (Romhost looked for, or its address asked, and RomM's pages opened meanwhile: the answer is for a question
+			// no longer on screen, and would put Romhost's keyboard over RomM's form)
+			if ((hsStep == 1 || hsStep == 2) && page == HOMESRV) { hsStep = 0; out.clear(); message.clear(); }
+			else if (hsStep == 1)
 			{
 				// discover: "ROMHOST\t<url>\t<name>" lines; the first one, else the address typed
 				std::istringstream in(out);
@@ -7828,6 +7845,16 @@ namespace banana
 			hsRowsAt = t + 500;
 			if (hsBackend() != hsRowsFor) { hsRebuild(); changed = true; }
 		}
+		// (RomM's pairing with every process of it gone and its line still the menu's "pairing" or the code: it ended
+		// without a word, killed or never run, and would otherwise be waited on for good, a later Cancel signalling
+		// whatever has its group's number by then. Said once it has been so for a second and a half, the line read again
+		// meanwhile, so a pairing that ended saying "paired" a moment ago isn't taken for one)
+		if (hsStep == 3 && hsKind == "romm" && hsPairGroup > 0 && !syncLineFresh && (syncLine == "pairing" || syncLine.compare(0, 5, "pair ") == 0) && !groupAlive(hsPairGroup))
+		{
+			if (hsGoneAt == 0) hsGoneAt = t;
+			else if (t - hsGoneAt >= 1500) { hsGoneAt = 0; hsPairLine("error gone"); return true; }
+		}
+		else hsGoneAt = 0;
 		if (!syncLineFresh) return changed;
 		syncLineFresh = false;
 		const std::string ln = syncLine;
