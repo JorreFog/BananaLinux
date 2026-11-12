@@ -191,6 +191,28 @@ namespace banana
 						float sx = dv->maxX > dv->minX ? (float)pw / (dv->maxX - dv->minX + 1) : 1;
 						float sy = dv->maxY > dv->minY ? (float)ph / (dv->maxY - dv->minY + 1) : 1;
 						o.x = (dv->x - dv->minX) * sx; o.y = (dv->y - dv->minY) * sy;
+						if (touchToCanvas && dv->screen >= 0 && dv->screen < 2)
+						{
+							// the touchscreen spans the panel; the panel shows the canvas fitted (panelfit.h)
+							bool wide = dv->maxX - dv->minX > dv->maxY - dv->minY;
+							bool in = touchToCanvas(dv->screen, o.x / pw, o.y / ph, wide, o.x, o.y);
+							if (dv->down && !dv->wasDown) dv->outside = !in;
+							if (dv->outside)
+							{
+								// a touch that began in the bars round the picture: none of it is the menu's
+								if (!dv->down) dv->outside = false;
+								dv->wasDown = dv->down;
+								dv->moved = false;
+								continue;
+							}
+							if (in) { dv->lastX = o.x; dv->lastY = o.y; }
+							else
+							{
+								// dragged out into the bars: it stays at its last place inside, and is let go there
+								o.x = dv->lastX; o.y = dv->lastY;
+								if (dv->down) { dv->moved = false; continue; }
+							}
+						}
 						if (dv->down && !dv->wasDown) { o.type = InputEvent::TOUCH_DOWN; sink1(o, e); }
 						else if (dv->down && dv->moved) { o.type = InputEvent::TOUCH_MOVE; sink1(o, e); }
 						else if (!dv->down && dv->wasDown) { o.type = InputEvent::TOUCH_UP; sink1(o, e); }

@@ -39,6 +39,10 @@ namespace banana
 		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink
 		void read(int fd, const std::function<void(const InputEvent&)>& sink);
+		// panels of another size than the canvas or turned (the AYN Thor, panelfit.h): a touch on screen s, as a
+		// fraction of its touchscreen's range and whether that range is wider than tall, to the canvas; false in the
+		// bars around the picture. Unset: the touchscreen spans the canvas (the RG DS)
+		void mapTouch(std::function<bool(int, float, float, bool, float&, float&)> toCanvas) { touchToCanvas = std::move(toCanvas); }
 
 	private:
 		struct Dev
@@ -49,6 +53,8 @@ namespace banana
 			int minX = 0, maxX = 0, minY = 0, maxY = 0;
 			int x = 0, y = 0;
 			bool down = false, wasDown = false, moved = false;
+			bool outside = false;	// this touch began in the bars round a fitted picture: none of it is the menu's
+			float lastX = 0, lastY = 0;	// (a fitted picture: the touch's last place inside it, in canvas px)
 			int hatX = 0, hatY = 0;
 			// the left stick as a d-pad (ABS_X/ABS_Y of a pad: the RG DS's retrogame_joypad, -1800..1800 at rest 0):
 			// its centre and half range, and which way each axis is held now (-1, 0, 1)
@@ -57,6 +63,7 @@ namespace banana
 		};
 		std::vector<Dev> devs;
 		int pw = 640, ph = 480;
+		std::function<bool(int, float, float, bool, float&, float&)> touchToCanvas;
 		int watch = -1;
 		bool rescan = false;
 	};

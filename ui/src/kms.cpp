@@ -1,4 +1,5 @@
 #include "kms.h"
+#include "panelfit.h"
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
@@ -104,14 +105,36 @@ namespace banana
 		return plane;
 	}
 
-	bool Display::makeBuf(Buf& b)
+	// a connector's "panel orientation" as the clockwise turn the picture needs (drm_connector.c: the device tree's
+	// rotation = <90> is "Right Side Up", the way Weston and KDE turn it by 90)
+	static int panelOrientation(int fd, uint32_t conn)
+	{
+		int rot = 0;
+		drmModeObjectProperties* props = drmModeObjectGetProperties(fd, conn, DRM_MODE_OBJECT_CONNECTOR);
+		for (uint32_t i = 0; props && i < props->count_props; i++)
+		{
+			drmModePropertyRes* pr = drmModeGetProperty(fd, props->props[i]);
+			if (pr && !strcmp(pr->name, "panel orientation"))
+				for (int e = 0; e < pr->count_enums; e++)
+					if (pr->enums[e].value == props->prop_values[i])
+					{
+						const char* n = pr->enums[e].name;
+						rot = !strcmp(n, "Upside Down") ? 180 : !strcmp(n, "Right Side Up") ? 90 : !strcmp(n, "Left Side Up") ? 270 : 0;
+					}
+			drmModeFreeProperty(pr);
+		}
+		drmModeFreeObjectProperties(props);
+		return rot;
+	}
+
+	bool Display::makeBuf(Buf& b, int w, int h)
 	{
 		drm_mode_create_dumb c = {};
-		c.width = W; c.height = H; c.bpp = 32;
+		c.width = w; c.height = h; c.bpp = 32;
 		if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &c)) return false;
 		b.handle = c.handle; b.pitch = c.pitch; b.size = c.size;
 		uint32_t handles[4] = { b.handle }, pitches[4] = { b.pitch }, offsets[4] = { 0 };
-		if (drmModeAddFB2(fd, W, H, 0x34325258 /* XR24 */, handles, pitches, offsets, &b.fb, 0)) return false;
+		if (drmModeAddFB2(fd, w, h, 0x34325258 /* XR24 */, handles, pitches, offsets, &b.fb, 0)) return false;
 		drm_mode_map_dumb m = {};
 		m.handle = b.handle;
 		if (drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &m)) return false;
@@ -198,24 +221,30 @@ namespace banana
 			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
 				for (auto& m : found[1].modes)
 					if (m.hdisplay == found[0].mode.hdisplay && m.vdisplay == found[0].mode.vdisplay) { found[1].mode = m; break; }
-			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
-			{
-				err = "the two panels have different modes";
-				::close(f);
-				continue;
-			}
+			// and when it hasn't (the AYN Thor's 16:9 top and near-square bottom), or a panel is mounted turned: the menu
+			// draws one canvas size for both and each panel shows it fitted (panelfit.h). How each panel is mounted:
+			// BANANA_PANEL_ROTATE (the board's profile) when set, else the kernel's "panel orientation" (the device
+			// tree's rotation: the Thor's two natively portrait panels are both <90>)
+			int rot[2];
+			if (getenv("BANANA_PANEL_ROTATE")) panelRotations(rot[0], rot[1]);
+			else for (int s = 0; s < 2; s++) rot[s] = panelOrientation(f, found[s].conn);
+			canvasFor(found[0].mode.hdisplay, found[0].mode.vdisplay, rot[0], found[1].mode.hdisplay, found[1].mode.vdisplay, rot[1], W, H);
 			fd = f;
 			// the master: the boot's early light-up (--panels-on) may still hold it for a moment; it gives it up as soon
 			// as its modesets are queued (a second at most)
 			masterAtOpen = handOver;
 			for (int t = 0; !handOver && t < 100; t++) { if (drmSetMaster(fd) == 0) { masterAtOpen = true; break; } usleep(10000); }
-			W = found[0].mode.hdisplay; H = found[0].mode.vdisplay;
 			for (int s = 0; s < 2; s++)
 			{
 				p[s] = Panel();
 				p[s].conn = found[s].conn; p[s].crtc = found[s].crtc;
 				memcpy(p[s].mode, &found[s].mode, sizeof p[s].mode);
-				if (!makeBuf(p[s].buf[0]) || !makeBuf(p[s].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
+				p[s].fit.set(W, H, found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s]);
+				if (!p[s].fit.identity())
+					fprintf(stderr, "banana-ui: display: screen %d's panel is %dx%d (turned %d): the %dx%d canvas fitted at %dx%d+%d+%d\n",
+						s, found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s], W, H, p[s].fit.dw, p[s].fit.dh, p[s].fit.ox, p[s].fit.oy);
+				int bw = found[s].mode.hdisplay, bh = found[s].mode.vdisplay;
+				if (!makeBuf(p[s].buf[0], bw, bh) || !makeBuf(p[s].buf[1], bw, bh)) { err = "can't make scanout buffers"; close(); return false; }
 			}
 			// panels still dark (the boot): both lit at once; else (lit, or the driver won't) as always
 			if (!lightBoth() && !handOver) restore();
@@ -245,7 +274,8 @@ namespace banana
 			uint32_t active = propId(fd, p[s].crtc, DRM_MODE_OBJECT_CRTC, "ACTIVE");
 			uint32_t connCrtc = propId(fd, p[s].conn, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID");
 			const char* names[] = { "FB_ID", "CRTC_ID", "SRC_X", "SRC_Y", "SRC_W", "SRC_H", "CRTC_X", "CRTC_Y", "CRTC_W", "CRTC_H" };
-			const uint64_t values[] = { p[s].buf[p[s].front].fb, p[s].crtc, 0, 0, (uint64_t)W << 16, (uint64_t)H << 16, 0, 0, (uint64_t)W, (uint64_t)H };
+			const uint64_t pw = (uint64_t)p[s].fit.panelW(), ph = (uint64_t)p[s].fit.panelH();
+			const uint64_t values[] = { p[s].buf[p[s].front].fb, p[s].crtc, 0, 0, pw << 16, ph << 16, 0, 0, pw, ph };
 			ok = plane && modeId && active && connCrtc && !drmModeCreatePropertyBlob(fd, p[s].mode, sizeof p[s].mode, &blob[s]);
 			req[s] = drmModeAtomicAlloc();
 			ok = ok && req[s] && drmModeAtomicAddProperty(req[s], p[s].crtc, modeId, blob[s]) >= 0 &&
@@ -431,10 +461,9 @@ namespace banana
 			d.x1 = std::min(d.x1, W); d.y1 = std::min(d.y1, H);
 			if (d.empty()) continue;
 			Buf& bf = pn.buf[back];
-			// only the columns that changed: the scanout buffer is uncached, every byte written costs
-			size_t n = (size_t)(d.x1 - d.x0) * 4;
-			for (int y = d.y0; y < d.y1; y++)
-				memcpy(bf.map + (size_t)y * bf.pitch + (size_t)d.x0 * 4, screens[s] + (size_t)y * W + d.x0, n);
+			// only the columns that changed: the scanout buffer is uncached, every byte written costs (a panel of another
+			// size or way round: the canvas's rectangle scaled and turned onto it, panelfit.h)
+			pn.fit.blit(screens[s], bf.map, bf.pitch, d);
 			pn.missed[pn.front] = dmg[s];	// the buffer going hidden misses this frame
 			if (drmModePageFlip(fd, pn.crtc, bf.fb, DRM_MODE_PAGE_FLIP_EVENT, &pending) == 0)
 			{

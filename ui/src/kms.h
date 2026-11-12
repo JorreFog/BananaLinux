@@ -4,23 +4,11 @@
 #include <cstdint>
 #include <string>
 #include "colors.h"
+#include "damage.h"
+#include "panelfit.h"
 
 namespace banana
 {
-	// a rectangle of a screen that changed: [x0, x1) x [y0, y1)
-	struct Damage
-	{
-		int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-		bool empty() const { return x0 >= x1 || y0 >= y1; }
-		void add(const Damage& o)
-		{
-			if (o.empty()) return;
-			if (empty()) { *this = o; return; }
-			x0 = x0 < o.x0 ? x0 : o.x0; y0 = y0 < o.y0 ? y0 : o.y0;
-			x1 = x1 > o.x1 ? x1 : o.x1; y1 = y1 > o.y1 ? y1 : o.y1;
-		}
-	};
-
 	class Display
 	{
 	public:
@@ -34,8 +22,17 @@ namespace banana
 		bool handOver = false;
 		void close();
 		bool isOpen() const { return fd >= 0; }
+		// the canvas both screens are drawn on: the panels' size on the RG DS; on panels that differ (the AYN Thor) a 4:3
+		// canvas each panel shows fitted (panelfit.h)
 		int width() const { return W; }
 		int height() const { return H; }
+		// a touch at (px, py) of screen s's panel, in the canvas's px; false in the black bars around it
+		bool panelToCanvas(int s, float px, float py, float& x, float& y) const { return p[s].fit.toCanvas(px, py, x, y); }
+		// a touch as a fraction of its touchscreen's range (panelfit.h's touchToCanvas)
+		bool touchToCanvas(int s, float nx, float ny, bool wide, float& x, float& y) const { return p[s].fit.touchToCanvas(nx, ny, wide, x, y); }
+		bool fitted() const { return !p[0].fit.identity() || !p[1].fit.identity(); }
+		int panelWidth(int s) const { return p[s].fit.panelW() ? p[s].fit.panelW() : W; }
+		int panelHeight(int s) const { return p[s].fit.panelH() ? p[s].fit.panelH() : H; }
 		int pollFd() const { return fd; }
 		bool flipPending() const { return pending > 0; }
 		bool masterAtOpen = false;	// the master was had at open() (else another program still held it after the wait)
@@ -66,11 +63,11 @@ namespace banana
 
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
-		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
+		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; PanelFit fit; };
 		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
 		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
-		bool makeBuf(Buf& b);
+		bool makeBuf(Buf& b, int w, int h);
 		bool lightBoth();
 		void freeBuf(Buf& b);
 	};

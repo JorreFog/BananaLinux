@@ -47,6 +47,8 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the canvas on panels of another size or way round (the AYN Thor's two portrait panels)
+make -s -C "$HERE" tests/panelfit-test >/dev/null && "$HERE/tests/panelfit-test" 2> "$OUT/panelfit-test.log" || { echo "FAIL the panels' fit: $(grep FAIL "$OUT/panelfit-test.log" | head -3)"; fail=1; }
 # the translations: a line's %d takes a number only, not a game's or a file's name
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability

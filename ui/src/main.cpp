@@ -2030,6 +2030,15 @@ struct FrameStats
 	}
 };
 
+// the buttons and touchscreens; on panels the canvas is fitted to (the AYN Thor, panelfit.h) a touch goes through the
+// panel's fit to the canvas
+static void openInput(Input& input, const Display& disp, const std::string& touch)
+{
+	input.open(touch, disp.width(), disp.height());
+	if (disp.fitted())
+		input.mapTouch([&disp](int s, float nx, float ny, bool wide, float& x, float& y) { return disp.touchToCanvas(s, nx, ny, wide, x, y); });
+}
+
 int main(int argc, char** argv)
 {
 	Options o;
@@ -2227,7 +2236,7 @@ int main(int argc, char** argv)
 	const bool setupNow = firstSetup || !setupAt.empty();
 
 	Input input;
-	input.open(o.touch, disp.width(), disp.height());
+	openInput(input, disp, o.touch);
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
@@ -3063,7 +3072,7 @@ int main(int argc, char** argv)
 		if (settingsView.colorsOpen()) disp.setColors(ScreenColors());
 		else applyColors("after the game");
 		be.invalidate();
-		input.open(o.touch, disp.width(), disp.height());
+		openInput(input, disp, o.touch);
 		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		{
@@ -3179,7 +3188,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (rearrange(lib, *ui)) dirty = true;
 		}
-		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
+		if (input.rescanDue()) openInput(input, disp, o.touch);	// a pad came or went
 		{
 			// the display controller's interrupt storm, looked at every 10 s without waiting: over 20000 a second on
 			// average since the last look, the full check (it measures again and switches the panels off and on)
