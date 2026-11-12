@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <map>
+#include <set>
 #include <time.h>
 #include <mutex>
 #include <type_traits>
@@ -49,7 +51,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "screenX", "screenY", "screenW", "screenH", "day", "paused" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "screenX", "screenY", "screenW", "screenH", "day", "paused", "month", "monthDay" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -68,7 +70,7 @@ namespace banana
 	}
 #define HOOK(name) (std::integral_constant<int, hookConst(name)>::value)
 	// sysField's names by number
-	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index" };
+	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index", "resumeWhen", "recent1Art", "recent2Art" };
 	static int sysFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++) m.emplace(sysFieldNames[i], i); return m; }();
@@ -158,7 +160,11 @@ namespace banana
 	struct LayoutMenu::Impl
 	{
 		LayoutMenu* m;
-		float s;						// device px per layout px (a screen is 480 high)
+		float s;						// device px per layout px (a screen is 480 high); while a screen is drawn, its own (s0 * dk)
+		float s0 = 0;					// ...of the canvas
+		float dk = 1;					// the screen's own pixels per device px of the canvas (Backend::stageScale): pictures,
+										// boxes and text are made for the screen's pixels and drawn 1 / dk as large, so the
+										// backend's fit of the canvas puts them back pixel for pixel
 		float W = 640, H = 480;			// the screens in layout px
 		// "stage": "screen": each screen laid out on its own size (the AYN Thor's 16:9 top and near-square bottom), its
 		// top-left corner at 0,0; otherwise on the 640x480 canvas staged in its middle. W and H are the screen's being
@@ -238,9 +244,29 @@ namespace banana
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
 		std::deque<std::string> imageOrder;
-		struct Job { std::string key, src, fit, crop; int w, h; float radius; };
+		// what is done to a fitted picture before it is drawn (the image's blur, saturate, mask, rotate, tilt)
+		struct Fx
+		{
+			float blur = 0, sat = 1, rot = 0, pivX = 0.5f, pivY = 0.5f, tilt = 0, persp = 0, m0 = 0, m1 = 1, mAngle = 90;
+			int mask = 0;	// 1 radial, 2 linear
+			bool any() const { return blur > 0 || sat != 1 || rot != 0 || tilt != 0 || mask != 0; }
+			std::string key() const
+			{
+				if (!any()) return "";
+				char b[160];
+				snprintf(b, sizeof b, "b%g,s%g,r%g,%g,%g,t%g,%g,m%d,%g,%g,%g", blur, sat, rot, pivX, pivY, tilt, persp, mask, m0, m1, mAngle);
+				return b;
+			}
+		};
+		struct Job { std::string key, src, fit, crop; int w, h; float radius; Fx fx; };
+		std::map<std::string, std::map<std::string, std::string>> sysData;
+		std::set<std::string> sysDataKeys;
+		std::string month;
+		int monthDay = 0;
 		std::deque<Job> jobs;
-		std::set<std::string> pending, pendingSrc, failed;
+		std::set<std::string> pending, failed;
+		void dropPending(const std::string& k) { auto it = pendingSrc.find(k); if (it != pendingSrc.end()) pendingSrc.erase(it); }
+		std::multiset<std::string> pendingSrc;	// the pictures being made, once for each size of one (at most four at a time)
 		std::vector<std::pair<std::string, ImgTex>> done;
 
 		void err(const std::string& e)
@@ -423,6 +449,11 @@ namespace banana
 				std::sort(cues.begin(), cues.end(), [](const std::pair<std::string, double>& a, const std::pair<std::string, double>& b) { return a.second < b.second; });
 			}
 			else cues.emplace_back("insert", 560);
+			// the theme's own words for systems, by id: sys.<key> and item.<key>
+			if (const JVal* sd = doc->get("systems"))
+				for (auto& e : sd->obj)
+					if (e.second->isObj())
+						for (auto& kv : e.second->obj) { sysData[e.first][kv.first] = kv.second->isStr() ? kv.second->s : kv.second->isNum() ? std::to_string((long)kv.second->n) : std::string(); sysDataKeys.insert(kv.first); }
 			debug = doc->flag("debug");
 			screenStage = doc->str("stage", "canvas") == "screen";
 			const JVal* sc = doc->get("screens");
@@ -496,6 +527,17 @@ namespace banana
 			else if (fId == SYSF("resumeLabel")) out = EV(si.resumeLabel);
 			else if (fId == SYSF("resumeArt")) out = EV(!si.resumeBox.empty() ? si.resumeBox : !si.resumeLabel.empty() ? si.resumeLabel : si.resumeCart);
 			else if (fId == SYSF("index")) out = EV((double)index);
+			else if (fId == SYSF("resumeWhen")) out = EV(si.resumeWhen);
+			else if (fId == SYSF("recent1Art")) out = EV(si.recentArt[0]);
+			else if (fId == SYSF("recent2Art")) out = EV(si.recentArt[1]);
+			else if (sysDataKeys.count(f))
+			{
+				// the theme's own words for a system ("systems": { "nds": { "short": "DS" } }): "" for one it doesn't name
+				auto it = sysData.find(si.id);
+				std::string v;
+				if (it != sysData.end()) { auto e = it->second.find(f); if (e != it->second.end()) v = e->second; }
+				out = EV(v);
+			}
 			else return false;
 			return true;
 		}
@@ -545,6 +587,8 @@ namespace banana
 			if (nId == HOOK("screenW")) { out = EV((double)scrArea[2]); return true; }
 			if (nId == HOOK("screenH")) { out = EV((double)scrArea[3]); return true; }
 			if (nId == HOOK("day")) { out = EV(day); return true; }
+			if (nId == HOOK("month")) { out = EV(month); return true; }
+			if (nId == HOOK("monthDay")) { out = EV((double)monthDay); return true; }
 			if (nId == HOOK("clock")) { out = EV(clock); return true; }
 			if (nId == HOOK("date")) { out = EV(date); return true; }
 			if (nId == HOOK("battery"))
@@ -742,16 +786,17 @@ namespace banana
 		{
 			if (l.text.empty()) return;
 			// the cache's key (printf'd numbers) worked out once for the same values as they are (bytes)
-			struct Raw { const void* font; float size, spacing, width; bool upper; } raw;
+			struct Raw { const void* font; float size, spacing, width, scale; bool upper; } raw;
 			memset(&raw, 0, sizeof raw);
 			raw.font = st.font.get(); raw.size = st.size; raw.spacing = st.letterSpacing; raw.width = l.width; raw.upper = st.upper;
+			raw.scale = s;	// (a screen with its own pixel size has its own lines)
 			std::string rawKey((const char*)&raw, sizeof raw);
 			rawKey.append((const char*)l.text.data(), l.text.size() * sizeof(char32_t));
 			auto known = textKeys.find(rawKey);
 			if (known == textKeys.end())
 			{
 				std::string k = std::to_string((uintptr_t)st.font.get()) + "|" + std::to_string(st.size) + "|" + std::to_string(st.letterSpacing) +
-					(st.upper ? "U|" : "|") + std::to_string(l.width) + "|";
+					(st.upper ? "U|" : "|") + std::to_string(l.width) + "|" + (dk != 1 ? std::to_string(s) + "|" : "");
 				for (char32_t ch : l.text) { k += (char)(ch & 0xff); if (ch > 0xff) { k += (char)(ch >> 8); k += (char)(ch >> 16); } }
 				if (textKeys.size() >= 4096) textKeys.clear();
 				known = textKeys.emplace(std::move(rawKey), std::move(k)).first;
@@ -770,7 +815,7 @@ namespace banana
 			}
 			it->second.used = ++useTick;
 			const TextTex& tt = it->second;
-			if (tt.tex) m->be->draw(tt.tex, std::floor(x * s) - tt.padX, std::floor(y * s) - tt.padY, (float)tt.tex->w, (float)tt.tex->h, col);
+			if (tt.tex) m->be->draw(tt.tex, (std::floor(x * s) - tt.padX) / dk, (std::floor(y * s) - tt.padY) / dk, tt.tex->w / dk, tt.tex->h / dk, col);
 		}
 
 		// a rounded box's pixels: fill (a colour or a gradient), border, and a soft shadow, by its signed distance
@@ -989,7 +1034,7 @@ namespace banana
 			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;
 			float dx = x * s, dy = y * s, dw = w * s, dh = h * s;
 			bool plain = stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
-			if (plain) { m->be->fill(std::round(dx), std::round(dy), std::round(dx + dw) - std::round(dx), std::round(dy + dh) - std::round(dy), colorFrom(fill, f.opacity)); return; }
+			if (plain) { m->be->fill(std::round(dx) / dk, std::round(dy) / dk, (std::round(dx + dw) - std::round(dx)) / dk, (std::round(dy + dh) - std::round(dy)) / dk, colorFrom(fill, f.opacity)); return; }
 			int iw = pxOf(dw), ih = pxOf(dh);
 			if (iw <= 0 || ih <= 0) return;
 			rnds::Color tint(1, 1, 1, f.opacity);
@@ -1001,7 +1046,7 @@ namespace banana
 				// (made in white and drawn in its colour: one picture for every colour it takes, as Nebula's glow
 				// takes the selected system's)
 				rnds::TexPtr st = shape(iw, ih, zero, 0, {}, 0, 0, 0, blur, spread, 0xffffffffu, pad);
-				if (st) m->be->draw(st, std::round(dx + sx) - pad, std::round(dy + sy) - pad, (float)st->w, (float)st->h, colorFrom(shc, f.opacity));
+				if (st) m->be->draw(st, (std::round(dx + sx) - pad) / dk, (std::round(dy + sy) - pad) / dk, st->w / dk, st->h / dk, colorFrom(shc, f.opacity));
 				shc = 0;
 			}
 			int pad;
@@ -1009,11 +1054,11 @@ namespace banana
 			{
 				// a shadow alone (a glow): in white, drawn in its colour, as above
 				rnds::TexPtr t = shape(iw, ih, rad, 0, stops, angle, 0, 0, blur, spread, 0xffffffffu, pad);
-				if (t) m->be->draw(t, std::round(dx) - pad, std::round(dy) - pad, (float)t->w, (float)t->h, colorFrom(shc, f.opacity));
+				if (t) m->be->draw(t, (std::round(dx) - pad) / dk, (std::round(dy) - pad) / dk, t->w / dk, t->h / dk, colorFrom(shc, f.opacity));
 				return;
 			}
 			rnds::TexPtr t = shape(iw, ih, rad, hasFill ? fill : 0, stops, angle, border, bc, blur, spread, shc, pad);
-			if (t) m->be->draw(t, std::round(dx) - pad, std::round(dy) - pad, (float)t->w, (float)t->h, tint);
+			if (t) m->be->draw(t, (std::round(dx) - pad) / dk, (std::round(dy) - pad) / dk, t->w / dk, t->h / dk, tint);
 		}
 
 		void drawText(const Ctx& c, float x, float y, float w, float h, const Frame& f, const TextLayout& L)
@@ -1067,9 +1112,22 @@ namespace banana
 			int iw = pxOf(w * s), ih = pxOf(h * s);
 			if (iw <= 0 || ih <= 0 || (size_t)iw * ih > 4096u * 4096u) return;	// (a picture bigger than that: as shape() refuses a box)
 			float radius = (float)num(c, K("radius"), 0, std::min(w, h)) * f.k * s;
+			Fx fx;
+			if (has(c, K("blur"))) fx.blur = floatIn(num(c, K("blur"), 0) * f.k * s, 0, 1024);
+			if (has(c, K("saturate"))) fx.sat = floatIn(num(c, K("saturate"), 1), 0, 8);
+			if (has(c, K("rotate"))) fx.rot = floatIn(num(c, K("rotate"), 0), -360, 360);
+			if (has(c, K("tilt"))) { fx.tilt = floatIn(num(c, K("tilt"), 0), -80, 80); fx.persp = floatIn(num(c, K("perspective"), 1000) * f.k * s, 1, 1 << 20); }
+			if (fx.rot != 0 || fx.tilt != 0) { fx.pivX = floatIn(num(c, K("pivot.0"), 0.5), -8, 8); fx.pivY = floatIn(num(c, K("pivot.1"), 0.5), -8, 8); }
+			if (has(c, K("mask")) || has(c, K("mask.shape")))
+			{
+				std::string shape = str(c, has(c, K("mask.shape")) ? K("mask.shape") : K("mask"), "radial");
+				fx.mask = shape == "linear" ? 2 : 1;
+				fx.m0 = floatIn(num(c, K("mask.from"), 0), -8, 8); fx.m1 = floatIn(num(c, K("mask.to"), 1), -8, 8);
+				fx.mAngle = floatIn(num(c, K("mask.angle"), 90), -720, 720);
+			}
 			char kb[64];
-			snprintf(kb, sizeof kb, "|%d|%d|%g", iw, ih, radius);
-			std::string key = src + "|" + fit + "|" + crop + kb;
+			snprintf(kb, sizeof kb, "|%d|%d|%g|", iw, ih, radius);
+			std::string key = src + "|" + fit + "|" + crop + kb + fx.key();
 			uint32_t tc = 0xffffffff;
 			color(c, K("tint"), tc);
 			rnds::Color tint = colorFrom(tc, f.opacity);
@@ -1077,31 +1135,33 @@ namespace banana
 			if (it == images.end())
 			{
 				// another size of the same picture meanwhile, scaled (an element growing), else the placeholder
-				auto lt = latest.find(src);
+				// (a picture with something done to it, a blur, a turn, is another picture: never the stand-in for the plain one)
+				const std::string made = src + "|" + fx.key();
+				auto lt = latest.find(made);
 				if (lt != latest.end()) it = images.find(lt->second);
 				std::lock_guard<std::mutex> l(m->jm);
-				if (!pending.count(key) && !pendingSrc.count(src))
+				if (!pending.count(key) && pendingSrc.count(made) < 4)
 				{
 					pending.insert(key);
-					pendingSrc.insert(src);
-					jobs.push_back(Job{ key, src, fit, crop, iw, ih, radius });
-					while (jobs.size() > 32) { pending.erase(jobs.front().key); pendingSrc.erase(jobs.front().src); jobs.pop_front(); }
+					pendingSrc.insert(made);
+					jobs.push_back(Job{ key, src, fit, crop, iw, ih, radius, fx });
+					while (jobs.size() > 32) { pending.erase(jobs.front().key); dropPending(jobs.front().src + "|" + jobs.front().fx.key()); jobs.pop_front(); }
 					if (m->mQueued) m->mQueued();
 				}
 				if (it == images.end()) { drawPlaceholder(c, x, y, w, h, f); return; }
 				const ImgTex& im = it->second;
 				if (!im.tex) return;
 				float kx = iw / std::max(1.0f, im.w + 2 * im.ox), ky = ih / std::max(1.0f, im.h + 2 * im.oy);
-				m->be->draw(im.tex, std::round(x * s) + im.ox * kx, std::round(y * s) + im.oy * ky, im.w * kx, im.h * ky, tint);
+				m->be->draw(im.tex, (std::round(x * s) + im.ox * kx) / dk, (std::round(y * s) + im.oy * ky) / dk, im.w * kx / dk, im.h * ky / dk, tint);
 				return;
 			}
 			const ImgTex& im = it->second;
-			if (im.tex) m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
+			if (im.tex) m->be->draw(im.tex, (std::round(x * s) + im.ox) / dk, (std::round(y * s) + im.oy) / dk, im.w / dk, im.h / dk, tint);
 		}
 		void drawPlaceholder(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
 			uint32_t pc;
-			if (color(c, K("placeholder"), pc) && pc >> 24) m->be->fill(std::round(x * s), std::round(y * s), std::round(w * s), std::round(h * s), colorFrom(pc, f.opacity));
+			if (color(c, K("placeholder"), pc) && pc >> 24) m->be->fill(std::round(x * s) / dk, std::round(y * s) / dk, std::round(w * s) / dk, std::round(h * s) / dk, colorFrom(pc, f.opacity));
 		}
 
 		// an element's box in its parent (layout px, before the frame's scale): x, y, w, h
@@ -1210,7 +1270,7 @@ namespace banana
 			Box b = boxOf(c, pw, ph, nw, nh);
 			float ax0 = f.x + b.x * f.k, ay0 = f.y + b.y * f.k, aw = b.w * f.k, ah = b.h * f.k;	// absolute layout px
 			if (has(c, K("onTap")) || has(c, K("tap")))
-				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, K("onTap")) ? "onTap" : "tap") });
+				hits.push_back(Hit{ f.screen, ax0 * s0, ay0 * s0, (ax0 + aw) * s0, (ay0 + ah) * s0, "", -1, str(c, has(c, K("onTap")) ? "onTap" : "tap") });
 			// its scale to 1/100: boxes and texts are drawn anew for every size they are seen at, and a scale that
 			// moves all the time (Noir's pulsing cards) made new ones each frame; to the hundredth, a pulse goes
 			// through a few sizes that stay cached (a step is ~1 px on a 100 px box)
@@ -1230,7 +1290,7 @@ namespace banana
 				if (has(c, K("fill")) || has(c, K("gradient.stops.0")) || has(c, K("gradient.0")) || has(c, K("border")) || has(c, K("border.width")) || has(c, K("shadow.color"))) drawRect(c, ax0, ay0, aw, ah, cf);
 			}
 			bool clip = flag(c, K("clip"));
-			if (clip) m->be->pushClip(std::round(ax0 * s), std::round(ay0 * s), std::round(aw * s), std::round(ah * s));
+			if (clip) m->be->pushClip(std::round(ax0 * s) / dk, std::round(ay0 * s) / dk, std::round(aw * s) / dk, std::round(ah * s) / dk);
 			if (n->type == "list") renderList(c, csc, cf, b.w, b.h, key);
 			else if (!n->children.empty())
 			{
@@ -1413,7 +1473,7 @@ namespace banana
 					natural(tc, iw, ih, f.k, nw, nh);
 					Box tb = boxOf(tc, iw, ih, nw, nh);
 					float x0 = itf.x + tb.x * f.k, y0 = itf.y + tb.y * f.k;
-					hits.push_back(Hit{ f.screen, x0 * s, y0 * s, (x0 + tb.w * f.k) * s, (y0 + tb.h * f.k) * s, source, i,
+					hits.push_back(Hit{ f.screen, x0 * s0, y0 * s0, (x0 + tb.w * f.k) * s0, (y0 + tb.h * f.k) * s0, source, i,
 						source == "hints" ? "key:" + hl[i].first : "" });
 				}
 			}
@@ -1450,9 +1510,11 @@ namespace banana
 			{
 				const char* side = screen == 0 ? "top" : "bottom";
 				m->be->beginScreen(screen);
+				dk = std::max(0.05f, m->be->stageScale());
+				s = s0 * dk;
 				// the screen's whole area (the canvas itself on the RG DS), and the size the theme lays out on
 				float ax, ay, aw, ah;
-				rnds::screenArea(m->be, s, ax, ay, aw, ah);
+				rnds::screenArea(m->be, s0, ax, ay, aw, ah);
 				scrW = screenStage ? aw : W; scrH = screenStage ? ah : H;
 				scrArea[0] = screenStage ? 0 : ax; scrArea[1] = screenStage ? 0 : ay; scrArea[2] = aw; scrArea[3] = ah;
 				// (the vars for each screen: they may read its W and H)
@@ -1471,6 +1533,7 @@ namespace banana
 				if (debug && screen == 0 && !m->mErrors.empty()) drawErrors();
 				m->be->endScreen();
 			}
+			s = s0; dk = 1;
 			lastFrame = monoMs();
 		}
 
@@ -1481,7 +1544,9 @@ namespace banana
 			Scope root;
 			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
 			float ax, ay, aw, ah;
-			rnds::screenArea(m->be, s, ax, ay, aw, ah);
+			rnds::screenArea(m->be, s0, ax, ay, aw, ah);
+			dk = std::max(0.05f, m->be->stageScale());
+			s = s0 * dk;
 			const float w0 = scrW, h0 = scrH;
 			scrW = screenStage ? aw : W; scrH = screenStage ? ah : H;
 			float a0[4] = { scrArea[0], scrArea[1], scrArea[2], scrArea[3] };
@@ -1496,6 +1561,7 @@ namespace banana
 			const size_t hits0 = hits.size();
 			for (size_t i = 0; i < it->second.size(); i++) renderNode(it->second[i].get(), ss, f, scrW, scrH, name + std::to_string(screen) + "." + std::to_string(i));
 			hits.erase(hits.begin() + hits0, hits.end());	// (nothing of it is the menu's to tap)
+			s = s0; dk = 1;
 			scrW = w0; scrH = h0;
 			for (int i = 0; i < 4; i++) scrArea[i] = a0[i];
 			return true;
@@ -1517,6 +1583,137 @@ namespace banana
 			if (r <= 0 || b.empty() || b.alpha) return b;
 			rnds::Bitmap mask = rnds::paintMask(b.w, b.h, r);
 			for (size_t i = 0; i < (size_t)b.w * b.h; i++) b.px[i * 4 + 3] = (uint8_t)(b.px[i * 4 + 3] * mask.px[i] / 255);
+			return b;
+		}
+		// the picture repeated at its own pixel size over the box (a texture: dots, grain)
+		static rnds::Bitmap tiled(const rnds::Bitmap& src, int w, int h)
+		{
+			rnds::Bitmap b;
+			if (src.empty() || src.alpha || w <= 0 || h <= 0) return b;
+			b.w = w; b.h = h; b.px.resize((size_t)w * h * 4);
+			for (int y = 0; y < h; y++)
+				for (int x = 0; x < w; x++) memcpy(&b.px[((size_t)y * w + x) * 4], &src.px[((size_t)(y % src.h) * src.w + x % src.w) * 4], 4);
+			return b;
+		}
+		static void saturate(rnds::Bitmap& b, float k)
+		{
+			if (b.alpha) return;
+			for (size_t i = 0; i < (size_t)b.w * b.h; i++)
+			{
+				uint8_t* p = &b.px[i * 4];
+				float l = 0.2126f * p[0] + 0.7152f * p[1] + 0.0722f * p[2];
+				for (int ch = 0; ch < 3; ch++) p[ch] = (uint8_t)std::min(255.0f, std::max(0.0f, l + (p[ch] - l) * k + 0.5f));
+			}
+		}
+		// a Gaussian blur of deviation sigma (px), as CSS's blur(): made on a smaller copy (three box blurs), which is
+		// what comes back, to be drawn stretched (smooth) over the picture's box. The edges repeat
+		static rnds::Bitmap blurred(const rnds::Bitmap& src, float sigma)
+		{
+			if (src.empty() || src.alpha) return src;
+			int f = std::max(1, (int)std::floor(sigma / 6));
+			int sw = std::max(2, src.w / f), sh = std::max(2, src.h / f);
+			rnds::Bitmap b = f > 1 ? rnds::resize(src, sw, sh) : src;
+			float ss = sigma * sw / std::max(1, src.w);
+			int box = std::max(1, (int)std::lround(std::sqrt(4 * ss * ss + 1)));
+			if (box % 2 == 0) box++;
+			int r = box / 2;
+			std::vector<float> a((size_t)b.w * b.h * 4), t(a.size());
+			for (size_t i = 0; i < a.size(); i++) a[i] = b.px[i];
+			auto pass = [&](std::vector<float>& from, std::vector<float>& to, bool horiz)
+			{
+				int n = horiz ? b.w : b.h, lines = horiz ? b.h : b.w;
+				for (int l = 0; l < lines; l++)
+					for (int ch = 0; ch < 4; ch++)
+					{
+						auto at = [&](int i) -> float& { i = std::min(n - 1, std::max(0, i)); return from[((size_t)(horiz ? l : i) * b.w + (horiz ? i : l)) * 4 + ch]; };
+						float sum = 0;
+						for (int i = -r; i <= r; i++) sum += at(i);
+						for (int i = 0; i < n; i++)
+						{
+							to[((size_t)(horiz ? l : i) * b.w + (horiz ? i : l)) * 4 + ch] = sum / box;
+							sum += at(i + r + 1) - at(i - r);
+						}
+					}
+			};
+			for (int k = 0; k < 3; k++) { pass(a, t, true); pass(t, a, false); }
+			for (size_t i = 0; i < a.size(); i++) b.px[i] = (uint8_t)std::min(255.0f, std::max(0.0f, a[i] + 0.5f));
+			return b;
+		}
+		// the picture fading out: from its middle to its nearest side (radial) or along an angle (linear), whole up to
+		// "from" and gone at "to" (0..1 of the way)
+		static void masked(rnds::Bitmap& b, const Fx& fx)
+		{
+			if (b.empty() || b.alpha) return;
+			float ar = (fx.mAngle - 90) * 3.14159265f / 180, dx = std::cos(ar), dy = std::sin(ar);
+			float span = std::fabs(b.w * dx) + std::fabs(b.h * dy), rr = std::min(b.w, b.h) / 2.0f;
+			for (int y = 0; y < b.h; y++)
+				for (int x = 0; x < b.w; x++)
+				{
+					float px = x + 0.5f - b.w / 2.0f, py = y + 0.5f - b.h / 2.0f;
+					float t = fx.mask == 1 ? std::sqrt(px * px + py * py) / std::max(1.0f, rr) : (span > 0 ? (px * dx + py * dy) / span + 0.5f : 0);
+					float k = fx.m1 > fx.m0 ? 1 - std::min(1.0f, std::max(0.0f, (t - fx.m0) / (fx.m1 - fx.m0))) : (t <= fx.m0 ? 1.0f : 0.0f);
+					uint8_t& al = b.px[((size_t)y * b.w + x) * 4 + 3];
+					al = (uint8_t)(al * k + 0.5f);
+				}
+		}
+		// the picture turned about its pivot (rotate, degrees clockwise) or swung round the upright line through it as
+		// a door (tilt, seen from "perspective" px away): into the box that holds it, whose corner from the picture's is
+		// (offX, offY)
+		static rnds::Bitmap warped(const rnds::Bitmap& src, const Fx& fx, float& offX, float& offY)
+		{
+			if (src.empty() || src.alpha) return src;
+			const float cx = fx.pivX * src.w, cy = fx.pivY * src.h;
+			const float a = fx.rot * 3.14159265f / 180, ca = std::cos(a), sa = std::sin(a);
+			const float th = fx.tilt * 3.14159265f / 180, ct = std::cos(th), stn = std::sin(th), d = fx.persp;
+			const bool tilt = fx.tilt != 0;
+			auto fwd = [&](float x, float y, float& ox, float& oy)
+			{
+				x -= cx; y -= cy;
+				if (tilt) { float k = d / std::max(1.0f, d + x * stn); ox = x * ct * k; oy = y * k; }
+				else { ox = x * ca - y * sa; oy = x * sa + y * ca; }
+			};
+			auto inv = [&](float ox, float oy, float& x, float& y)
+			{
+				if (tilt) { float den = d * ct - ox * stn; x = std::fabs(den) > 1e-3f ? ox * d / den : 1e9f; y = oy * (d + x * stn) / d; }
+				else { x = ox * ca + oy * sa; y = -ox * sa + oy * ca; }
+				x += cx; y += cy;
+			};
+			float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+			for (int k = 0; k < 4; k++)
+			{
+				float ox, oy;
+				fwd(k & 1 ? (float)src.w : 0.0f, k & 2 ? (float)src.h : 0.0f, ox, oy);
+				x0 = std::min(x0, ox); y0 = std::min(y0, oy); x1 = std::max(x1, ox); y1 = std::max(y1, oy);
+			}
+			int bx = (int)std::floor(x0) - 1, by = (int)std::floor(y0) - 1;
+			rnds::Bitmap b;
+			b.w = (int)std::ceil(x1) + 1 - bx; b.h = (int)std::ceil(y1) + 1 - by;
+			if (b.w <= 0 || b.h <= 0 || (size_t)b.w * b.h > 4096u * 4096u) return src;
+			b.px.assign((size_t)b.w * b.h * 4, 0);
+			auto texel = [&](int x, int y, float w, float acc[4])
+			{
+				if (x < 0 || y < 0 || x >= src.w || y >= src.h) return;
+				const uint8_t* p = &src.px[((size_t)y * src.w + x) * 4];
+				float al = p[3] / 255.0f * w;
+				acc[0] += p[0] * al; acc[1] += p[1] * al; acc[2] += p[2] * al; acc[3] += al;
+			};
+			for (int y = 0; y < b.h; y++)
+				for (int x = 0; x < b.w; x++)
+				{
+					float sx, sy;
+					inv(x + bx + 0.5f, y + by + 0.5f, sx, sy);
+					sx -= 0.5f; sy -= 0.5f;
+					if (sx < -1 || sy < -1 || sx > src.w || sy > src.h) continue;
+					int ix = (int)std::floor(sx), iy = (int)std::floor(sy);
+					float fx2 = sx - ix, fy2 = sy - iy, acc[4] = { 0, 0, 0, 0 };
+					texel(ix, iy, (1 - fx2) * (1 - fy2), acc); texel(ix + 1, iy, fx2 * (1 - fy2), acc);
+					texel(ix, iy + 1, (1 - fx2) * fy2, acc); texel(ix + 1, iy + 1, fx2 * fy2, acc);
+					if (acc[3] <= 0) continue;
+					uint8_t* o = &b.px[((size_t)y * b.w + x) * 4];
+					for (int ch = 0; ch < 3; ch++) o[ch] = (uint8_t)std::min(255.0f, acc[ch] / acc[3] + 0.5f);
+					o[3] = (uint8_t)std::min(255.0f, acc[3] * 255 + 0.5f);
+				}
+			offX = (float)bx + cx; offY = (float)by + cy;
 			return b;
 		}
 		bool work()
@@ -1554,10 +1751,18 @@ namespace banana
 				else if (j.fit == "fill") out = rnds::resize(src, j.w, j.h);
 				else if (j.fit == "pixel") out = rnds::resizeNearest(src, j.w, j.h);
 				else if (j.fit == "coverTop") out = rnds::coverTop(src, j.w, j.h);
+				else if (j.fit == "tile") out = tiled(src, j.w, j.h);
 				else out = rnds::cover(src, j.w, j.h);
-				out = roundCorners(out, j.radius);
-				it.tex = m->be->upload(out, false);
-				it.ox = std::round(ox); it.oy = std::round(oy); it.w = (float)out.w; it.h = (float)out.h;
+				const int fullW = out.w, fullH = out.h;
+				const Fx& fx = j.fx;
+				if (fx.sat != 1) saturate(out, fx.sat);
+				if (fx.blur > 0) out = blurred(out, fx.blur);	// (smaller: drawn stretched to its size)
+				if (fx.mask) masked(out, fx);
+				out = roundCorners(out, j.radius * out.w / std::max(1, fullW));
+				float drawW = (float)fullW, drawH = (float)fullH;
+				if (fx.blur <= 0 && (fx.rot != 0 || fx.tilt != 0)) { float wx = 0, wy = 0; out = warped(out, fx, wx, wy); ox += wx; oy += wy; drawW = (float)out.w; drawH = (float)out.h; }
+				it.tex = m->be->upload(out, fx.blur > 0);
+				it.ox = std::round(ox); it.oy = std::round(oy); it.w = drawW; it.h = drawH;
 			}
 			{
 				std::lock_guard<std::mutex> l(m->jm);
@@ -1575,11 +1780,12 @@ namespace banana
 			{
 				pending.erase(dn.first);
 				std::string src = dn.first.substr(0, dn.first.find('|'));
-				// (the src itself may hold '|': the key's own last four fields are what follow it)
+				// (the src itself may hold '|': the key's own last six fields are what follow it)
 				size_t cut = dn.first.size();
-				for (int k = 0; k < 5 && cut != std::string::npos; k++) cut = dn.first.rfind('|', cut - 1);
+				for (int k = 0; k < 6 && cut != std::string::npos; k++) cut = dn.first.rfind('|', cut - 1);
 				if (cut != std::string::npos) src = dn.first.substr(0, cut);
-				pendingSrc.erase(src);
+				src += dn.first.substr(dn.first.rfind('|'));	// (and what was done to it: see drawImage)
+				dropPending(src);
 				if (!dn.second.tex) continue;
 				images[dn.first] = dn.second;
 				latest[src] = dn.first;
@@ -1600,7 +1806,7 @@ namespace banana
 		: d(new Impl), src(src_), be(be_)
 	{
 		d->m = this;
-		d->s = scale;
+		d->s = d->s0 = scale;
 		d->path = path;
 		d->dir = path.substr(0, path.rfind('/'));
 		d->load(pixelFonts, interFonts);
@@ -1819,7 +2025,11 @@ namespace banana
 			const char* fixed = getenv("BANANA_NOW");	// (the clock's own: the tests' fixed time)
 			time_t tt = fixed && *fixed ? (time_t)atoll(fixed) : time(nullptr);
 			struct tm lt;
-			d->day = localtime_r(&tt, &lt) ? DAYS[lt.tm_wday % 7] : "";
+			static const char* const MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+			const bool ok = localtime_r(&tt, &lt) != nullptr;
+			d->day = ok ? DAYS[lt.tm_wday % 7] : "";
+			d->month = ok ? MONTHS[lt.tm_mon % 12] : "";
+			d->monthDay = ok ? lt.tm_mday : 0;
 		}
 		float to = (float)d->cursor();
 		float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));

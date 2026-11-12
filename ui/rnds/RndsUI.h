@@ -34,6 +34,8 @@ namespace rnds
 		std::string resumeTitle;
 		std::string resumeBox;		// the chip's cartridge: box cover, the real cart scan, the label art (see GameInfo)
 		std::string resumeCart, resumeLabel;
+		std::string resumeWhen;		// when it was last played: "Today", "Yesterday", "12 Oct" ("" never)
+		std::string recentArt[2];	// the covers of the next two games played before it (else the shelf's first ones with art)
 	};
 
 	struct GameInfo
@@ -118,6 +120,10 @@ namespace rnds
 		// screen's background (its wallpaper, its "screen" box) is drawn over all of it, so the screen is filled; what
 		// sits on it keeps its place in the canvas. false: the screen is the canvas (the RG DS)
 		virtual bool stageArea(float& x, float& y, float& w, float& h) const { (void)x; (void)y; (void)w; (void)h; return false; }
+		// how many of the screen's own pixels one of those device px is, when a staged canvas is fitted to a screen
+		// narrower than it (the AYN Thor's bottom: 0.86): what is drawn w wide covers w times this many pixels. A menu
+		// that makes its pictures at this scale and draws them w / stageScale() wide has them pixel for pixel
+		virtual float stageScale() const { return 1; }
 	};
 
 	// the current screen's background area in the menu's 640x480 units (scale s: device px per unit): the stage's
