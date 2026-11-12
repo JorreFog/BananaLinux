@@ -393,7 +393,7 @@ static bool openPage(Settings& st, const std::string& page)
 	if (page == "bshare") { st.openBshare(); return true; }
 	// the quick menu (the Home button held while a game runs): the screens' brightness, the volume, the game's
 	// performance mode, the fan and the stick lights (settings_quick.cpp), on the bottom screen
-	if (page == "quick") { st.openQuick(); return true; }
+	if (page == "quick") { st.openSection("handheld"); return true; }
 	return false;
 }
 
@@ -1027,7 +1027,6 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
 		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
-		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
 		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
