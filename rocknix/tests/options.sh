@@ -39,8 +39,11 @@ mkdir -p "$T/bin" "$T/run" "$T/lib"
 printf '#!/bin/sh\necho "runemu $*" >> "%s/log"\n' "$T" > "$T/bin/runemu.sh"; chmod +x "$T/bin/runemu.sh"
 for s in rocknix-options; do ln -s "$L/$s" "$T/lib/$s"; done
 printf '#!/bin/sh\n:\n' > "$T/lib/backlight"; cp "$T/lib/backlight" "$T/lib/handheld"; chmod +x "$T/lib/backlight" "$T/lib/handheld"
+printf 'ra_user=player1\nra_password=secret\n' > "$T/accounts.conf"
 env BANANA_LIBEXEC="$T/lib" BANANA_RUNEMU="$T/bin/runemu.sh" BANANA_RUN="$T/run" BANANA_DATA="$T" \
     sh "$L/run-rocknix" gba "/roms/gba/Other.gba" --core=mgba --emulator=retroarch --controllers=""
 grep -qF 'runemu /roms/gba/Other.gba -Pgba --core=gpsp --emulator=retroarch --controllers=' "$T/log" || bad "run-rocknix: $(cat "$T/log")"
+grep -qx 'global.retroachievements.username=player1' "$T/system.cfg" && grep -qx 'global.retroachievements=1' "$T/system.cfg" ||
+    bad "the RetroAchievements account not given to ROCKNIX"
 [ $fail = 0 ] && echo "rocknix options: all passed"
 exit $fail

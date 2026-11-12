@@ -12,6 +12,8 @@
 #   handheld leds-effect none|breathe     the lights breathing (a slow pulse) or steady
 #   handheld leds-system <system>         (run-rocknix) the lights in the system's colour, when "system" is chosen
 #   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz)
+#   handheld poweroff-after <minutes>     asleep this long, the handheld turns off (ROCKNIX's sleep: its timed shutdown,
+#                                         in a game or not); 0 never
 # (host tests: BANANA_SYS for /sys, BANANA_TOOLS for ROCKNIX's tools, ROCKNIX_SETTINGS for its settings file)
 SYS=${BANANA_SYS:-/sys}
 TOOLS=${BANANA_TOOLS:-/usr/bin}
@@ -100,6 +102,16 @@ gpu)
     has_gpu || exit 0
     case $2 in on) "$TOOLS/gpu_overclock" enable ;; off) "$TOOLS/gpu_overclock" disable ;; *) exit 2 ;; esac >/dev/null 2>&1
     ;;
-*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off" >&2; exit 2 ;;
+poweroff-after)
+    case $2 in ''|*[!0-9]*) exit 2 ;; esac
+    if [ "$2" = 0 ]; then
+        setting system.suspend.enable_timed_shutdown 0
+    else
+        setting system.suspend.enable_timed_shutdown 1
+        setting system.shutdown_delay $(($2 * 60))
+        setting system.shutdown_delay_running_game $(($2 * 60))
+    fi
+    ;;
+*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off | poweroff-after <minutes>" >&2; exit 2 ;;
 esac
 exit 0

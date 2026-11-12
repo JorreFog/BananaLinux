@@ -44,6 +44,24 @@ if [ -r "$RUN/perf" ] && read -r gov gpu < "$RUN/perf" && [ -n "$gov" ]; then
     setting "$g.gpuperf" "$gpu"
 fi
 
+# the RetroAchievements account the menu's setup took (banana/accounts.conf) as ROCKNIX's, whose RetroArch and
+# emulators log in with it
+rocknix_setting() {
+    if [ -n "$ROCKNIX_SETTINGS" ]; then { grep -vF "$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
+    elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$1" "$2" ) >/dev/null 2>&1; fi
+}
+acct() { sed -n "/^$1=/{s///p;q}" "$DATA/accounts.conf" 2>/dev/null; }
+rocknix_get() {
+    if [ -n "$ROCKNIX_SETTINGS" ]; then sed -n "s/^$1=//p" "$ROCKNIX_SETTINGS" 2>/dev/null | tail -n 1
+    elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; get_setting "$1" ) 2>/dev/null; fi
+}
+ru=$(acct ra_user); rp=$(acct ra_password)
+if [ -n "$ru" ] && [ -n "$rp" ] && [ "$(rocknix_get global.retroachievements.username)" != "$ru" ]; then
+    rocknix_setting global.retroachievements.username "$ru"
+    rocknix_setting global.retroachievements.password "$rp"
+    rocknix_setting global.retroachievements 1
+fi
+
 # the stick lights in the system's colour (when Settings > Handheld > Stick lights is "By system")
 "$LIB/handheld" leds-system "$SYSTEM" >/dev/null 2>&1
 

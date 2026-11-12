@@ -39,6 +39,13 @@ set -- $(BANANA_TOP="${WLR_CON:-DSI-2}" /usr/libexec/banana/backlight names)
 conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "${DATA}/settings.conf" 2>/dev/null | tail -n 1; }
 /usr/libexec/banana/handheld leds "$(conf leds || true)" >/dev/null 2>&1
 [ "$(conf gpu_boost)" = on ] && /usr/libexec/banana/handheld gpu on >/dev/null 2>&1
+# Sleep & power's one row here: asleep this long, the handheld turns off (ROCKNIX's timed shutdown, 15 minutes as it
+# ships: the menu's row starts there)
+if [ -z "$(conf poweroff_after_sleep_minutes)" ]; then
+  echo "poweroff_after_sleep_minutes = 15" >> "${DATA}/settings.conf"
+else
+  /usr/libexec/banana/handheld poweroff-after "$(conf poweroff_after_sleep_minutes)" >/dev/null 2>&1
+fi
 # the buttons and touch: the bottom touchscreen by its name (the Thor's device tree labels); the face buttons as
 # Settings > System > Confirm button says (the right one, as on the RG DS, or the bottom one); while ROCKNIX's
 # InputPlumber merges the pad and the AYN key into its virtual pad, the menu reads that one only

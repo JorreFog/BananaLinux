@@ -31,6 +31,8 @@ sh "$H" leds red; sleep 0.5
 [ "$(cat "$T/sys/devices/platform/multi-ledl1/leds/rgb:l1/brightness")" != 0 ] || bad "the effect didn't touch the rings"
 sh "$H" leds-effect none; [ ! -f "$T/run/leds-effect.pid" ] || bad "the effect didn't stop"
 sh "$H" gpu on; ok log "gpu_overclock enable"
+sh "$H" poweroff-after 60; ok system.cfg "system.shutdown_delay=3600"; ok system.cfg "system.suspend.enable_timed_shutdown=1"
+sh "$H" poweroff-after 0; ok system.cfg "system.suspend.enable_timed_shutdown=0"
 # a handheld with none of it: nothing listed, nothing done
 [ -z "$(BANANA_SYS="$T/none" BANANA_TOOLS="$T/none" sh "$H" caps)" ] || bad "caps on a plain handheld"
 [ $fail = 0 ] && echo "handheld: all passed"

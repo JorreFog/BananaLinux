@@ -115,29 +115,22 @@ Still to make use of the extra room, view by view:
    - BananaOS's own volume and sleep scripts aren't on ROCKNIX, so the volume keys are ROCKNIX's (its input sense
      service).
 4. **Settings.** Settings pages that run BananaOS's scripts (`/usr/libexec/banana/*`: Wi-Fi, Bluetooth, update,
-   sharing, SSH) find nothing. Two ways forward:
-   - Map them to ROCKNIX's tools (`connmanctl`, `rocknix-settings`, `systemctl`) behind the same script names, in the
-     package.
-   - Hide them and point at ROCKNIX's own settings, which live in EmulationStation.
-
-   The second is quicker; the first gives the full menu.
+   sharing, SSH) run them in their services mode on ROCKNIX (7.1 below): the same script names over ROCKNIX's
+   NetworkManager, systemd units and settings, so the full menu works.
 
 ### R2. What only two screens give
 
-1. While a game runs, keep the bottom window for the game panel and the companions, BananaOS's Pokémon pages and
-   the like, instead of closing both.
-   - The game goes fullscreen on the top output by sway rule:
-     `for_window [app_id="..."] move to output $WLR_CON, fullscreen`.
-   - This replaces lowerdeck's save/load/resume buttons. Banana's game panel already sends RetroArch those commands
-     on the RG DS.
-2. The DS emulators: ROCKNIX's melonDS has a dual-screen fullscreen patch (`002-enable-dual-screen-fullscreen`).
-   Put its two screens on the two outputs.
+1. While a game runs, the bottom window stays for the game panel and the companions (8.1 below): the menu closes
+   its top window, the game's window takes that output (a sway rule keeps RetroArch there), and the panel's commands
+   reach RetroArch through its network command port.
+2. The DS emulators: ROCKNIX's melonDS places its two screens itself on a two-screen device; BananaDS opens a window
+   on each (2.1 below).
 
 ### R3. Ship it
 
-1. An upstream question for ROCKNIX: the frontend as a choice per device, not a fork.
-2. Until then, the Thor image is ROCKNIX's build with this package, and its updates are ROCKNIX's update mechanism
-   with this package's version.
+1. An upstream question for ROCKNIX: the frontend as a choice per device, not a fork (`docs/ROCKNIX-UPSTREAM.md`).
+2. Until then, the Thor image is ROCKNIX's build with this package (CI's `rocknix-thor` job), and its updates are
+   ROCKNIX's update mechanism with this package's version.
 
 ## What the earlier Thor work still gives
 
@@ -148,92 +141,95 @@ Still to make use of the extra room, view by view:
 
 ## To make it complete
 
-What the Thor version still needs, item by item. **Reuse** means ROCKNIX (or BananaOS) already has it and Banana's
-menu only has to drive it. **Build** means it doesn't exist yet. Sizes are rough: **S** a day or so, **M** a few days,
-**L** a week or more.
+What the Thor version needed, item by item, and where each stands. **Reuse** means ROCKNIX (or BananaOS) already had
+it and Banana's menu drives it. **Built** means it was written here. Everything below is in this repository and
+checked by `make test` (`rocknix/tests/run.sh`, `ui/tests/run.sh`) without a Thor. **On the Thor** marks what only
+the handheld can confirm; nothing here has run on one yet, and no image has been built.
 
 ### 1. Every emulator ROCKNIX can run
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 1.1 | Every ROCKNIX system on the shelves | Reuse: `es-systems-to-banana.py` already lists every system in ROCKNIX's `es_systems.cfg` (all of its about 170 emulator packages) and starts each through `runemu.sh` | done |
-| 1.2 | Choosing the emulator and core per system and per game | Reuse ROCKNIX's settings (`set_setting <system>.emulator / .core`, per game `<system>["<rom>"].core`, which `runemu.sh` reads). Build: Banana's game options page lists the `<emulators>` the converter already reads and writes those keys | M |
-| 1.3 | Per-game options ROCKNIX offers (shaders, aspect, rewind, run-ahead, overlays) | Reuse `setsettings.sh`'s keys. Build: a Banana options page over them, taking its list from ROCKNIX's `es_features.cfg` | M |
-| 1.4 | Standalone emulators on two screens (melonDS's dual-screen patch, Azahar for 3DS, the DS and 3DS ones' layouts) | Reuse their dual-screen modes. Build: sway rules that put each emulator's windows on the right output | M |
-| 1.5 | PortMaster, Tools, scripts | Reuse: they come through `es_systems.cfg` too (`run %ROM%`). Check each one's runner works when started from Banana | S |
-| 1.6 | Scraping, box art, game names | Reuse ROCKNIX's `rocknix-scraper` media folders, or Banana's own `banana-scrape` | S |
+| 1.1 | Every ROCKNIX system on the shelves | `es-systems-to-banana.py` lists every system in ROCKNIX's `es_systems.cfg` and starts each through `runemu.sh` (`run-rocknix`) | done |
+| 1.2 | The emulator and core per system and per game | The game page (X on a game): a **For** row (this game or its whole system) and an **Emulator** row with ROCKNIX's choices for the system. `rocknix-options` keeps them in ROCKNIX's `system.cfg` as EmulationStation does (`<system>.emulator/.core`, `<system>["<rom>"].emulator/.core`); `run-rocknix` starts the game with them | done |
+| 1.3 | Per-game options | The rows the chosen emulator and core have in ROCKNIX's `es_features.cfg`: its own `<feature>`s and the shared ones (aspect ratio, pixel perfect, smoothing, shader, bezel, run-ahead, rewind, auto save, RetroAchievements), as the keys `setsettings.sh` and the standalone start scripts read | done |
+| 1.4 | Standalone emulators on two screens | Reuse: ROCKNIX's start scripts already place melonDS's and Azahar's windows on two-screen devices (`DEVICE_HAS_DUAL_SCREEN`), and its sway rule moves any window titled `...Bottom...`/`Screen 2` to the second output. Banana's own emulators use the same rule (section 2) | done; on the Thor |
+| 1.5 | PortMaster, Tools, scripts | Reuse: Ports run through `runemu.sh` (PortMaster as the emulator), Tools through their own command (`foot` under sway), both passed through by the converter | done; on the Thor |
+| 1.6 | Scraping, box art, game names | ROCKNIX's scraper's art is read (the library reads `gamelist.xml`'s `image` and `thumbnail`); Banana's `banana-scrape` is in the package and knows ROCKNIX's systems' libretro names | done |
 
 ### 2. Banana's own emulators and apps
 
-These are BananaOS's, not ROCKNIX's. Each needs a ROCKNIX package, an entry in ROCKNIX's emulator list
-(`add_emu_core`, so it shows up in `es_systems.cfg` and the converter takes it), and a way to draw under sway. Today
-they draw on the panels themselves through KMS leases and Banana's SDL panels patch, and under sway they must become
-Wayland clients.
+Under sway the panels are the compositor's, so each of Banana's programs draws in windows there: a full-screen window
+for each screen, the bottom one's title ending in "Bottom" (ROCKNIX's own rule moves it to the second output). Each is
+a ROCKNIX package under `rocknix/packages/`, listed by `tools/rocknix-register.py` (the device's
+`ADDITIONAL_PACKAGES`, an `add_emu_core` line before each system's `add_es_system`, never the default, and its options
+in `es_features.cfg`).
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 2.1 | BananaDS (DS) | Package it, register it as the `nds` system's emulator, draw its two screens on the two outputs (Wayland), keep its companion link | L |
-| 2.2 | SuperDrastic with DraStic | The same. DraStic's licence allows it on ROCKNIX, which packages it already (`drastic-sa`); SuperDrastic's panels need the Wayland route | L |
-| 2.3 | BananaFront | Package it, register it, Wayland | M |
-| 2.4 | Banana's libretro cores (BananaGBA, BananaNES, BananaSNES) | Package them as ROCKNIX libretro cores (`add_emu_core <system> retroarch banana…`) | S |
-| 2.5 | Banana's RetroArch patches (audio re-init, the cheevos fix, RGUI Ukrainian…) | Add them to ROCKNIX's RetroArch package | M |
-| 2.6 | Game & Watch through MAME (`mame-gnw` with Banana's patches) | Package it, register it as `gameandwatch`, its two screens on two outputs | M |
-| 2.7 | The Pokémon companions (GBA and DS) on the bottom screen | Build (part of 2.1 and 5.1): needs BananaDS and Banana's GBA core, which share game memory with the menu | M |
-| 2.8 | The Store, Store apps, Bank & Trade, Dodakvarter, Activity, Bshare, Files | Package them. They are Banana's SDL or menu-own apps, and they need the Wayland route and ROCKNIX paths | M |
+| 2.1 | BananaDS | `bananads-sa`: its SDL frontend with a two-window mode, pads through SDL (InputPlumber's), the stylus a touch on the bottom window (patch 0001); melonDS from ROCKNIX's `melonds-sa` source, the same commit. The game page's 3D resolution. Its KMS frontend (in-game menu, the DS companion overlay) needs DRM master, which sway holds | done (SDL route); `rocknix/tests/bananads-sway.sh` runs it under sway |
+| 2.2 | SuperDrastic with DraStic | Reuse ROCKNIX's `drastic-sa`, already DraStic under sway. SuperDrastic is DraStic drawn onto the RG DS's panels through KMS; there is nothing for it to add under a compositor | ROCKNIX's DraStic |
+| 2.3 | BananaFront | `bananafront-sa`: an SDL display backend (`video_sdl.c`, `make sdl`; patch 0001), cores named `bananafront-<core>` so `runemu.sh` starts `start_bananafront.sh` | done; run under sway by hand |
+| 2.4 | BananaGBA, BananaNES, BananaSNES | `*-lr` RetroArch cores beside ROCKNIX's (no RG DS profile-guided optimisation: other CPU, other GCC) | done |
+| 2.5 | Banana's RetroArch patches | ROCKNIX's RetroArch is newer: 0005 (RGUI in Ukrainian) applies as it is, 0001's ALSA part is ported (ROCKNIX has the AUDIO_REINIT command already), 0006 is in its rcheevos already, 0002-0004 are BananaOS's own (the DRM context, the card's updater, the image's cores) | done |
+| 2.6 | Game & Watch through MAME | `mame-gnw` with BananaOS's patches; a two-screen game is two windows, the second moved by a rule `start_mamegnw.sh` sets | done; on the Thor |
+| 2.7 | The companions | The GBA ones work as on BananaOS: RetroArch's memory replies come back through `ra-netcmd`, BananaFront's shared-memory export through the environment. The DS companion draws through BananaDS's KMS overlay, which the SDL route doesn't have | GBA done; DS needs BananaDS's overlay in its SDL frontend |
+| 2.8 | The Store, Store apps, Bank & Trade, Döda Kvarter, Activity, Bshare, Files | `banana-apps` (the Store and Döda Kvarter, with a two-window mode for their SDL layer), Activity's SDL route (SDL opened at run time), Bshare, Sync and Fetch built into the frontend; the launchers take the SDL route when the menu's display is SDL; `/data` is a folder on `/storage`. Bank & Trade runs in one window (its own layout) | done; on the Thor |
 
 ### 3. Performance modes
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 3.1 | Mode per system and per game | Reuse: `runemu.sh` already sets ROCKNIX's `cpugovernor` and `gpuperf` per system and per game (`099-freqfunctions`). Build: Banana's modes (powersave, balanced, steady, performance) written as those settings | S |
-| 3.2 | Modes that fit the Thor | Build: the Thor has three CPU clusters (A510, A715/A710, X3) and an Adreno devfreq. Define each mode as per-cluster clock caps plus a GPU level, the way `banana-perf` does for the RK3568 | M |
-| 3.3 | A quick toggle in the game menu | Build: a page on the bottom screen while playing | S |
+| 3.1 | Mode per system and per game | `banana-perf`'s mode written as ROCKNIX's per-game `cpugovernor` and `gpuperf` (`run-rocknix`), which `runemu.sh` applies | done |
+| 3.2 | Modes that fit the Thor | `banana-perf`'s multi-cluster branch: caps per cluster (A510, A715, X3) as shares of each one's top clock, and a GPU level | done; on the Thor |
+| 3.3 | A quick toggle while playing | The game page's Performance row; on the bottom screen while playing, the game panel (8.1) | game page done |
 
 ### 4. Fan control
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 4.1 | Fan profiles (Auto, Quiet, Balanced, Max, Off when cool) | Build: the Thor's fan is `pwm-fan` on the PMIC with the device tree's thermal trips. ROCKNIX has no fan-control quirk for the Thor, only for other devices (`quirks/devices/*/bin/fancontrol`, as a model). A small service drives `hwmon` `pwm1` / `pwm1_enable` from the SoC temperature against a curve per profile | M |
-| 4.2 | Settings page, and a toggle in the game menu | Build | S |
+| 4.1 | Fan profiles | Reuse: ROCKNIX's SM8550 `fancontrol` with its `cooling.profile` (quiet, moderate, aggressive, custom). (An earlier version of this page said ROCKNIX had no Thor fan control: it has.) `handheld fan` sets the profile and restarts the service | done |
+| 4.2 | Settings page | Sleep & power > Fan, lights & speed, shown when the handheld has them (`handheld caps`) | done |
 
 ### 5. RGB lights round the sticks
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 5.1 | Colour, brightness, off, the battery as a colour | Reuse the Thor's `ledcontrol`, `analog_sticks_ledcontrol` and `battery_led_status` (the HTR3212 multicolour LEDs, `rgb:l1-4`, `rgb:r1-4`), and ROCKNIX's settings keys `led.color` and `analogsticks.led`. Build: a Banana settings page with a colour picker and the battery mode | S |
-| 5.2 | Effects (breathing, per-system colour, low-battery blink) | Build: a small service over the same sysfs | M |
+| 5.1 | Colour, brightness, off, the battery's colour | Reuse the Thor's `ledcontrol` and `analog_sticks_ledcontrol`, ROCKNIX's `led.color` kept the same | done |
+| 5.2 | Effects | Breathing (a small loop over the rings' sysfs), each system's colour at a game's start | done |
 
 ### 6. Brightness for each screen
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 6.1 | A level per screen | Build: ROCKNIX's `brightness` script sets every backlight to one value. Banana's bananad already keeps one level per screen (`BANANA_BACKLIGHT_TOP/BOTTOM`, `/data/banana/backlight`) and Settings already has the two sliders. On ROCKNIX: a small helper (or bananad's backlight part) over the Thor's two AMOLED backlights (names to read on the device, `hw-probe`) | S |
-| 6.2 | The brightness hotkeys | Build: ROCKNIX's hotkey service changes all backlights together. Point it at Banana's helper, or keep its keys off and let Banana's handle them (the screen being looked at, or both) | S |
-| 6.3 | The bottom screen off or dimmed in games that don't use it | Build | S |
+| 6.1 | A level per screen | `backlight`: the top screen's backlight found by the DSI hosts' order, a level each, ROCKNIX's `display.brightness`/`brightness2` kept the same | done; names on the Thor |
+| 6.2 | The brightness hotkeys | ROCKNIX's hotkeys step each screen from where it is (the same settings) | done |
+| 6.3 | The bottom screen off in games that don't use it | Settings > Display > Bottom screen in games (auto: dark for one-screen systems), never under the game panel | done |
 
 ### 7. The system
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 7.1 | Settings pages that call BananaOS's scripts | Reuse ROCKNIX's: `wifictl` (Wi-Fi), `rocknix-bluetooth`, `rocknix-update`, `rocknix-settings` (SSH, Samba, services), `volume`, `timeinfo`. Build: the same script names in the package, mapped onto them, so the menu's pages work unchanged | M |
-| 7.2 | Sleep and the lid | Reuse ROCKNIX's suspend (fake suspend on SM8550 for now, `suspendmode`). Build: the menu and the game paused, the screens off, Banana's quick resume | M |
-| 7.3 | Input | Check one thing: ROCKNIX runs InputPlumber on the Thor, so banana-ui may see the pad twice (evdev and InputPlumber's virtual pad). Build: read only one of them | S |
-| 7.4 | Touch on both screens | Check the top touchscreen's mapping under sway (ROCKNIX's touch calibration, `61-thor-ft5x06.hwdb`) | S |
-| 7.5 | First boot | Build: Banana's setup pages wired to ROCKNIX's settings (language, Wi-Fi, time zone) | S |
-| 7.6 | Image build and updates | Build: a CI job that builds ROCKNIX's SM8550 image with this package. Updates follow ROCKNIX's update channel with the package's version | M |
-| 7.7 | Upstream | Ask ROCKNIX for a frontend choice per device, so this needn't be a fork | S |
+| 7.1 | Settings pages that call BananaOS's scripts | Their services mode (`HW_SERVICES=systemd`): Wi-Fi through NetworkManager, Bluetooth, SSH, Samba, updates through `rocknix-update`, the volume through PipeWire | done |
+| 7.2 | Sleep and the lid | Reuse ROCKNIX's fake suspend on SM8550 (the power button and the lid: the game frozen, the screens and sound off, timed shutdown). Sleep & power keeps its one row that maps: Power off after sleeping, as ROCKNIX's timed shutdown (`handheld poweroff-after`) | done; on the Thor |
+| 7.3 | Input | InputPlumber's virtual pad read, its sources ignored (`BANANA_INPUT_IGNORE`); the confirm button choice | done; on the Thor |
+| 7.4 | Touch on both screens | Both touchscreens by name (the device tree's labels), mapped through each screen's fit | done; on the Thor |
+| 7.5 | First boot | Banana's setup pages work as they are: Wi-Fi through NetworkManager, the time zone given to ROCKNIX too (`timezone`: each of Banana's zones as an IANA zone, `rocknix-config tz`), the RetroAchievements account given to ROCKNIX's RetroArch at a game's start | done |
+| 7.6 | Image build and updates | CI's `rocknix-thor` job (manual: workflow_dispatch with `thor_image`): ROCKNIX at the pin, `tools/rocknix-banana.sh`, `make docker-SM8550`, the image as an artifact. Updates are ROCKNIX's, with this package in them | defined; not run |
+| 7.7 | Upstream | `docs/ROCKNIX-UPSTREAM.md`: the hooks to ask ROCKNIX for, so this needn't be a fork | drafted; not sent |
 
 ### 8. The bottom screen while playing (BananaOS's edge)
 
-| # | What | How | Size |
+| # | What | How | Status |
 |---|---|---|---|
-| 8.1 | The game on the top output, Banana's game panel on the bottom (save, load, the quick menu, the companions) instead of lowerdeck | Build: keep the bottom window open during a game, a sway rule for the game's window. Save and load reuse RetroArch's network commands, as lowerdeck does | M |
-| 8.2 | The menu's own screens filling the Thor's shapes view by view (the bottom screen's extra rows, the game list's top, Settings' top panel) | Build: see "The Thor's screen shapes" above | M |
+| 8.1 | Banana's game panel on the bottom while a game plays on the top | The menu closes its top window for the game and keeps the bottom one (`leaseSdl`); RetroArch is kept on the top output; the panel's commands go to RetroArch's network command port (`ra-netcmd`), BananaFront reads them itself. `rocknix/tests/gamepanel-sway.sh` | done; on the Thor |
+| 8.2 | The menu's views filling the Thor's shapes | Done so far: every screen filled, the status bar and the sheet spanning the top screen. Still to do, view by view: the bottom screen's extra rows (557 grid units high instead of 480: Settings' lists, the shelf), the game list's top screen, Settings' top panel. Each view lays its rows, footer and touch areas out on fixed coordinates, so this is a per-view reflow, done carefully to keep the RG DS pixel-identical | partly |
 
-### Suggested order
+### What only the Thor can tell
 
-1. **R0 and R1** (an image that starts the menu, which works) with 7.1, 7.3 and 6.1. Without these it isn't usable.
-2. **3.1, 5.1 and 4.1.** Performance, RGB and fan, mostly reuse.
-3. **1.2, 1.3, 8.1 and 2.4.** The emulators' choices, the bottom screen in games, Banana's cores.
-4. **2.1, 2.2, 2.6 and 2.7.** Banana's DS emulators, Game & Watch and the companions under sway. This is the largest block.
-5. **The rest**, then 7.6 for releases.
+Before an image is worth flashing, these are the open questions (`.claude/skills/thor-bringup`):
+
+- the backlights' names and order, and the output names (`WLR_CON`) against `BANANA_TOP`;
+- InputPlumber's device names for `BANANA_INPUT_IGNORE`, and both touchscreens' names;
+- that SDL's Wayland windows land on the outputs as they do under headless sway, and the sway rules for fullscreen;
+- the package builds against ROCKNIX's toolchain (dependency names, the cross `pkg-config`).

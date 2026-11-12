@@ -538,17 +538,30 @@ namespace banana
 			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
 		}
 		const char* P = "Sleep & power";
+		// (as ROCKNIX's frontend its own sleep is the handheld's: the power button and the lid put it to sleep, there is no
+		// idle sleep or dim, and it wakes its own way; asleep long enough it turns off, which the row below sets there)
+		const bool rxSleep = getenv("BANANA_ROCKNIX") != nullptr;
+		if (!rxSleep)
+		{
 		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
 		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
 		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
 		items.back().hints = { "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." };
+		}
+		if (rxSleep)
+			add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the handheld turns itself off, so the battery keeps for weeks. The power button and the lid put it to sleep.",
+				power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
+		else
 		add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.",
 			power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
+		if (!rxSleep)
+		{
 		add(P, "moon", "Waking up", "How the handheld wakes from sleep.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		items.back().hints = { "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." };
+		}
 		// the handheld's own extras where it has them (usr/libexec/banana/handheld caps: the AYN Thor's fan, stick lights and
 		// GPU under ROCKNIX), on a page of their own
 		{
@@ -1316,7 +1329,12 @@ namespace banana
 			setConfValue(it.file, it.key, v);
 		}
 		if (it.file == data + "/bananad.conf") poke("bananad");
-		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
+		if (it.key == "timezone")
+		{
+			setenv("TZ", v.c_str(), 1); tzset(); poke("bananad");	// bananad's logs too
+			// (as ROCKNIX's frontend: the system's zone too, for its emulators and services: usr/libexec/banana/timezone)
+			if (getenv("BANANA_ROCKNIX")) spawn("/usr/libexec/banana/timezone", v.c_str());
+		}
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
 		if (it.key == "bluetooth")
 		{
@@ -1334,6 +1352,7 @@ namespace banana
 			spawn("/usr/libexec/banana/handheld", "leds", leds.c_str());
 		}
 		if (it.key == "gpu_boost") spawn("/usr/libexec/banana/handheld", "gpu", v.c_str());
+		if (it.key == "poweroff_after_sleep_minutes" && getenv("BANANA_ROCKNIX")) spawn("/usr/libexec/banana/handheld", "poweroff-after", v.c_str());
 		if (it.key == "confirm_button") setenv("BANANA_CONFIRM", v == "bottom" ? "south" : "east", 1);	// (input.cpp reads it at every press)
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
