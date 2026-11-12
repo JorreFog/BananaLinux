@@ -102,6 +102,9 @@ ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid"
     echo "export QT_WAYLAND_DISABLE_WINDOWDECORATION=1 MOZ_ENABLE_WAYLAND=1 _JAVA_AWT_WM_NONREPARENTING=1"
     [ -n "$BOT" ] && echo "export SDL_VIDEO_DISPLAY_PRIORITY=$TOP,$BOT BANANA_WL_TOP=$TOP BANANA_WL_BOTTOM=$BOT"
     [ -z "$x11" ] && echo "unset DISPLAY"
+    # (the menu's lease shim is the compositor's, which opens the display device; a program in it has no use for it,
+    # and Box64 would try to load it into a Windows game as an x86 library)
+    echo 'case "$LD_PRELOAD" in */banana-leaseshim.so) unset LD_PRELOAD ;; esac'
     [ -n "$keyboard" ] && echo 'command -v wvkbd-mobintl >/dev/null && wvkbd-mobintl --hidden -L 300 &'
     printf 'setsid'
     for a in "$@"; do printf " '%s'" "$(printf '%s' "$a" | sed "s/'/'\\\\''/g")"; done

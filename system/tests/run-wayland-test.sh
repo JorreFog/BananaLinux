@@ -21,6 +21,13 @@ run --two-screens -- "$T/prog" "an argument with 'quotes'"; rc=$?
 [ $rc = 7 ] || bad "the program's exit status came back as $rc"
 case $(cat "$T/env" 2>/dev/null) in wayland-*"|wayland|wayland|HEADLESS-1|HEADLESS-2|an argument with 'quotes'") ;; *) bad "the program's environment: $(cat "$T/env" 2>/dev/null)" ;; esac
 grep -q '^workspace 1 output HEADLESS-1$' "$T/run/wl/sway.conf" || bad "the top output isn't the main one"
+# the menu's lease shim, preloaded into the compositor, doesn't reach the program in it; another preload does
+# (the files aren't there: the loader says so for each process and goes on)
+printf '#!/bin/sh\necho "[$LD_PRELOAD]" > "%s/preload"\n' "$T" > "$T/prog2"; chmod +x "$T/prog2"
+LD_PRELOAD=/nonexistent/banana-leaseshim.so run -- "$T/prog2" 2>/dev/null
+[ "$(cat "$T/preload" 2>/dev/null)" = "[]" ] || bad "the lease shim reached the program: $(cat "$T/preload" 2>/dev/null)"
+LD_PRELOAD=/nonexistent/other.so run -- "$T/prog2" 2>/dev/null
+[ "$(cat "$T/preload" 2>/dev/null)" = "[/nonexistent/other.so]" ] || bad "a launcher's own preload was dropped: $(cat "$T/preload" 2>/dev/null)"
 grep -q 'Bottom.*move window to output HEADLESS-2, fullscreen enable' "$T/run/wl/sway.conf" || bad "no second-screen rule"
 pgrep -f "sway -c $T/run/wl/sway.conf" >/dev/null && bad "the compositor is still running"
 # --keep-bottom: the bottom output off while the program runs
