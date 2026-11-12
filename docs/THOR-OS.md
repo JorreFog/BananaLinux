@@ -122,7 +122,8 @@ The first build takes hours (Qt, WebKit, Mesa, the emulators) and wants 100 GB o
 Checked on a PC:
 
 - the defconfig loads in Buildroot 2026.02.3 and keeps every option it sets; the new packages' dependencies resolve;
-- Box64's package cross-compiles for the Thor's CPU with this configuration (if the build log below says so);
+- Box64's package was cross-compiled for the Thor's CPU with this configuration (an ARM64 `box64` with Box32, built
+  by Buildroot from the recipe here);
 - `run-wayland` under a headless sway with two outputs: the environment, the exit status, the second-screen rule,
   `--keep-bottom`, SIGTERM (`system/tests/run-wayland-test.sh`);
 - `pc-games` against stand-ins: downloads refused on a wrong checksum, the unpacking, the prefix's setup calls, the
