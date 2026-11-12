@@ -4,10 +4,19 @@
 #
 ################################################################################
 
+ifeq ($(call qstrip,$(BR2_ROOTFS_POST_SCRIPT_ARGS)),thor)
+# The AYN Thor's: a later commit than ROCKNIX's package pinned when the Thor's device tree was taken (6cf94dba pins
+# 925dfb5e, which has no qcom/sm8550/AYN-Thor-tplg.bin: the sound card's topology, asked for by the card's name, and
+# without it the Thor has no sound). Fetched with git, so its hash is Buildroot's own archive's.
+ROCKNIX_EXTRA_FIRMWARE_VERSION = 55718b86abf82c81bac1aee2353a1316141478bf
+ROCKNIX_EXTRA_FIRMWARE_SITE = https://github.com/ROCKNIX/extra-firmware.git
+ROCKNIX_EXTRA_FIRMWARE_SITE_METHOD = git
+else
 # the commit (and archive hash) ROCKNIX's extra-firmware package pins
 ROCKNIX_EXTRA_FIRMWARE_VERSION = 925dfb5efbe5d6c3ca654f81e3e1f367f8492777
 ROCKNIX_EXTRA_FIRMWARE_SITE = https://github.com/ROCKNIX/extra-firmware/archive
 ROCKNIX_EXTRA_FIRMWARE_SOURCE = $(ROCKNIX_EXTRA_FIRMWARE_VERSION).tar.gz
+endif
 ROCKNIX_EXTRA_FIRMWARE_LICENSE = PROPRIETARY
 
 ifeq ($(call qstrip,$(BR2_ROOTFS_POST_SCRIPT_ARGS)),thor)

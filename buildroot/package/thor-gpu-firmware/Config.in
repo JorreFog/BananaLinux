@@ -1,0 +1,11 @@
+config BR2_PACKAGE_THOR_GPU_FIRMWARE
+	bool "thor-gpu-firmware"
+	help
+	  The Adreno 740's firmware for the AYN Thor: its microcode
+	  (qcom/a740_sqe.fw), its power controller's
+	  (qcom/gmu_gen70200.bin) and the zap shader
+	  (qcom/sm8550/a740_zap.mbn), from the linux-firmware release
+	  ROCKNIX builds with. Buildroot's linux-firmware is older and
+	  has none of the three: without them the GPU doesn't start.
+
+	  https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git

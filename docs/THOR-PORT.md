@@ -37,7 +37,7 @@ hardware layer the same way, from ROCKNIX's SM8550 work (`tools/sync-rocknix-sm8
 | Wi-Fi / BT | RTL8821CS (rtw88, hci_uart H5) | WCN7850 (ath12k on PCIe, hci_uart QCA) | `wifi`, `bluetooth` scripts mostly |
 | Lid | Hall sensor, `SW_LID` | Hall sensor on gpio17, `SW_LID` | bananad |
 | Fan, LEDs, rumble | none; power LED | pwm-fan; RGB rings round the sticks (HTR3212); PMIC haptics | new for Banana |
-| Firmware | rtw88, aw88166_acf | Adreno zap and GMU, ADSP and CDSP, topology, WCN7850 | `package/rocknix-extra-firmware` (same pinned commit) |
+| Firmware | rtw88, aw88166_acf | Adreno zap, GMU and microcode, ADSP and CDSP, topology, WCN7850 | `package/thor-gpu-firmware` (the Adreno 740's three, from linux-firmware 20260622: Buildroot's release has none of them) and `package/rocknix-extra-firmware` (the Thor's at a later commit than the RG DS's, for its sound topology) |
 
 Two more things come from the same layering:
 

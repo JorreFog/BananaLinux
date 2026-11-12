@@ -105,9 +105,10 @@ endif
 # rtl_bt/rtl8821cs_config.bin -> rtl8761b_config.bin; Buildroot makes the link once its target is installed).
 # Buildroot's Realtek BT options would bring every 87xx/88xx file instead of these two.
 # The AYN Thor's from linux-firmware beyond Buildroot's options (ROCKNIX's devices/SM8550/config/kernel-firmware.dat):
-# the Adreno 740's zap shader and GMU firmware (QCOM_ADRENO brings qcom/a* only), and the WCN7850's Bluetooth half
+# the WCN7850's Bluetooth half. (The Adreno 740's own three files aren't in this linux-firmware release at all:
+# package/thor-gpu-firmware takes them from the one ROCKNIX uses.)
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE)$(BANANA_BOARD),ythor)
-LINUX_FIRMWARE_FILES += qcom/sm8550/a740_zap.mbn qcom/gmu_gen70200.bin qca/hmtbtfw20.tlv qca/hmtnv20.*
+LINUX_FIRMWARE_FILES += qca/hmtbtfw20.tlv qca/hmtnv20.*
 LINUX_FIRMWARE_ALL_LICENSE_FILES += LICENSE.qcom qcom/NOTICE.txt
 endif
 

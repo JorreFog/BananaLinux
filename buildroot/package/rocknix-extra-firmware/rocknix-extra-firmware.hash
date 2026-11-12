@@ -1,2 +1,4 @@
 # from ROCKNIX's projects/ROCKNIX/packages/linux-firmware/extra-firmware/package.mk
 sha256  b994fa1c451708bc7addd256e68e0a872559e54e4ddec27f73e6197d64aefc0c  925dfb5efbe5d6c3ca654f81e3e1f367f8492777.tar.gz
+# the AYN Thor's commit, fetched with git: the archive Buildroot makes of it (the same on every machine)
+sha256  af53e303490a51deaa7fd01fad6c14da417db52cbf4a9c706be2af20e3041ec8  rocknix-extra-firmware-55718b86abf82c81bac1aee2353a1316141478bf-git4.tar.gz
