@@ -1563,6 +1563,13 @@ settings		Games go into their system's folder, everything else into banana/recei
 settings		A picks a folder on the cards for all of them.	A elige una carpeta en las tarjetas para todos ellos.
 settings		How phones and computers see this handheld in LocalSend. A changes it.	Cómo ven los teléfonos y ordenadores esta consola en LocalSend. A lo cambia.
 menu		Open Bshare to accept.	Abre Bshare para aceptar.
+menu		Flight recorder on	Caja negra activada
+menu		Hold Select for 2 seconds to mark a moment.	Mantén Select 2 segundos para marcar un momento.
+menu		Wi-Fi connected	Wi-Fi conectado
+menu		Bluetooth headphones connected	Auriculares Bluetooth conectados
+menu		The sound plays through them.	El sonido sale por ellos.
+menu		Bluetooth headphones disconnected	Auriculares Bluetooth desconectados
+menu		The sound is back on the speakers.	El sonido vuelve a los altavoces.
 menu		In banana/received.	En banana/received.
 menu		Games went into their system's folder.	Los juegos fueron a la carpeta de su sistema.
 menu		Nothing was sent.	No se envió nada.

@@ -2085,9 +2085,10 @@ namespace banana
 
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
-		SPal p = pal(light);
-		box("bubble", false, 40, 344, 560, 104);
-		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
+		// the battery's: the banner at the top as every notification's, its level in the square instead of a sign, red
+		// at 10% and under
+		Color red = light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f);
+		banner(title, body, 0, percent <= 10 ? 0xff5a4f : 0xffb340);
 		auto it = cache.find("battery");
 		if (it == cache.end())
 		{
@@ -2097,15 +2098,16 @@ namespace banana
 			it = put("battery", c, b);
 		}
 		keep(it);
-		int k = std::max(1, (int)std::lround(3 * s));
-		float bx = std::round(X(66)), by = std::round(X(375));
+		// the status bar's battery, twice its size on the same pixel grid, in the square's middle
+		int k = std::max(1, (int)std::lround(2 * s));
 		if (it->second.tex)
-			be->draw(it->second.tex, bx, by, (float)it->second.tex->w * k, (float)it->second.tex->h * k, p.ink);
-		int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
-		Color lc = percent <= 10 ? (light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f)) : p.accent;
-		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
-		text(title, true, 22, 172, 360, p.ink);
-		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+		{
+			float w = (float)it->second.tex->w * k, h = (float)it->second.tex->h * k;
+			float bx = std::round(X(16 + 24) - w / 2), by = std::round(X(12 + 24) - h / 2);
+			be->draw(it->second.tex, bx, by, w, h, Color::hex(0x12181f));
+			int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
+			if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, percent <= 10 ? red : Color::hex(0x12181f));
+		}
 	}
 
 	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)

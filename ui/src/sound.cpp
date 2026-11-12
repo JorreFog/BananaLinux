@@ -73,7 +73,7 @@ namespace banana
 
 	Sound::Sound(const std::string& dir)
 	{
-		for (const char* n : { "scroll", "select", "back", "fav", "ready", "insert" })
+		for (const char* n : { "scroll", "select", "back", "fav", "ready", "insert", "notify" })
 		{
 			// a user theme's own sound for it (rnds::themeFiles; "off": none), else the theme's (one that doesn't
 			// load: the theme's)
