@@ -160,11 +160,14 @@ blank "$OUT/blank.srm" 8192 60
 # the .dsv cut back to the raw save by nds-saves' own rule
 dsv "$p" "$RC/drastic/backup/Peel Quest (USA).dsv"
 [ "$(wc -c < "$RC/drastic/backup/Peel Quest (USA).dsv")" = $((8192 + 122)) ] || bad "dsv: not the save and a 122-byte footer"
-sed -n '/^raw_of_dsv() {/,/^}/p' "$HERE/../system/rootfs/usr/libexec/banana/nds-saves" > "$OUT/raw_of_dsv.sh"
+# (with the helper it reads sizes by, size(): without it the name is binutils' size, which fails on a save, and the
+# rule under test never ran)
+sed -n '/^size() {/p; /^raw_of_dsv() {/,/^}/p' "$HERE/../system/rootfs/usr/libexec/banana/nds-saves" > "$OUT/raw_of_dsv.sh"
+grep -q '^size() {' "$OUT/raw_of_dsv.sh" && grep -q '^raw_of_dsv() {' "$OUT/raw_of_dsv.sh" || bad "dsv: nds-saves' size() and raw_of_dsv() not found to test"
 . "$OUT/raw_of_dsv.sh"
-raw_of_dsv "$RC/drastic/backup/Peel Quest (USA).dsv" "$OUT/cut.sav"
+raw_of_dsv "$RC/drastic/backup/Peel Quest (USA).dsv" "$OUT/cut.sav" || bad "dsv: nds-saves' rule refused a good footer"
 cmp -s "$OUT/cut.sav" "$p" || bad "dsv: nds-saves doesn't cut it back to the raw save"
-dsv "$p" "$OUT/short.dsv" short; raw_of_dsv "$OUT/short.dsv" "$OUT/cut.sav"
+dsv "$p" "$OUT/short.dsv" short; raw_of_dsv "$OUT/short.dsv" "$OUT/cut.sav" || bad "dsv: nds-saves' rule refused an older DraStic's footer"
 cmp -s "$OUT/cut.sav" "$p" || bad "dsv: nds-saves doesn't cut an older DraStic's 40-byte footer"
 for f in version pad; do
     dsv "$p" "$OUT/$f.dsv" $f; rm -f "$OUT/cut.sav"
@@ -468,9 +471,17 @@ bs; grep -qF "never sent, kept in the vault: $QV" "$OUT/bs.log" && [ -e "$QV" ] 
     bad "a save that waited, the server's taken over it: its copy not kept: $(cat "$OUT/bs.log")"
 cp "$OUT/k6.srm" "$S/Killed (USA).srm"; bs
 sed -i '/^homesync_auto = quit/d' "$C/banana/settings.conf"
-# a server name that climbs out of saves/: nothing written anywhere
-curl -s -XPOST "$U3/test/save" -d "{\"rom_id\": $(rid Unsafe), \"slot\": \"autosave\", \"file_name\": \"../../x.srm\", \"data\": \"00ff00ff\"}" >/dev/null; bs
+# a server name that climbs out of saves/: the save is the game's all the same, a save of a size the GBA's come in, so
+# it is taken, and it goes where the game's save is on the card, by the game, never by the name the server gave it
+head -c 8192 /dev/urandom > "$OUT/unsafe.srm"; rm -f "$S/Unsafe (USA).srm"
+curl -s -XPOST "$U3/test/save" -d "{\"rom_id\": $(rid Unsafe), \"slot\": \"autosave\", \"file_name\": \"../../x.srm\", \"data\": \"$(hex "$OUT/unsafe.srm")\"}" >/dev/null; bs
+cmp -s "$S/Unsafe (USA).srm" "$OUT/unsafe.srm" || bad "a save under a server name that climbs out of saves/ didn't reach its game's own path: $(cat "$OUT/bs.log")"
 [ -z "$(find "$OUT" -name 'x.srm')" ] || bad "a server name wrote outside saves/: $(find "$OUT" -name 'x.srm')"
+# (a newer version there of no size a GBA save comes in: held, the save here left as it is, with nothing to choose;
+# the Saves page's cases further down want one held so)
+seed Unsafe 00ff00ff 30 >/dev/null; bs
+cmp -s "$S/Unsafe (USA).srm" "$OUT/unsafe.srm" && "$BIN" --root "$C" --run "$C/run" saves | grep -q "^held	[0-9]*/autosave	saves/gba/Unsafe (USA).srm	not a size" ||
+    bad "a server save of no GBA save's size not held: $("$BIN" --root "$C" --run "$C/run" saves | grep Unsafe) $(cat "$OUT/bs.log")"
 
 # ---------------------------------------------------------------- each game's save where its emulator reads it: the
 # DS's saves/nds, every GBA core's saves/gba, another system's its core's folder (the core asked its name); a game is

@@ -756,9 +756,10 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "http to the TLS port: $r"
     [ $((t1 - t0)) -le 3 ] || bad "http to the TLS port took $((t1 - t0)) s"
     # an address typed with http:// whose server sends everything to https on the same host (a proxy in front): the
-    # https address it names is tried, and kept; a redirect to another host isn't followed there
+    # https address it names is tried, and kept; a redirect to another host isn't followed there (the other host is
+    # RomM itself under another name, localhost, so a probe that followed it would find a server and say so)
     RP=$(port)
-    python3 - "$RP" "https://127.0.0.1:$TP" "https://elsewhere.example:$TP" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
+    python3 - "$RP" "https://127.0.0.1:$TP" "https://localhost:$TP" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
 import http.server, sys
 port, to, other = int(sys.argv[1]), sys.argv[2], sys.argv[3]
 class H(http.server.BaseHTTPRequestHandler):
@@ -773,6 +774,46 @@ EOF
     waitport "$RP" / || true
     r=$(bs ta probe "http://127.0.0.1:$RP"); [ "$r" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "http:// redirected to https on the same host: $r"
     r=$(bs ta probe "http://127.0.0.1:$RP/other"); [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "a redirect to another host was followed: $r"
+    # a pairing whose requests the server sends on elsewhere (its heartbeat answered, every POST redirected): none of
+    # them follows, so neither the pairing code nor anything else reaches the other server
+    RQ=$(port); RR=$(port)
+    python3 - "$RQ" "$RR" "$OUT/redirect-asked.txt" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys, threading
+front, back, seen = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
+class Front(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = b'{"SYSTEM": {"VERSION": "5.4.1"}}' if self.path == "/api/heartbeat" else b"{}"
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.send_response(307)
+        self.send_header("Location", "http://localhost:%d%s" % (back, self.path))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+    def log_message(self, *a): pass
+class Back(http.server.BaseHTTPRequestHandler):
+    def answer(self):
+        if self.path != "/":
+            open(seen, "a").write("%s %s\n" % (self.command, self.path))
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.send_response(200)
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"{}")
+    do_GET = do_POST = answer
+    def log_message(self, *a): pass
+threading.Thread(target=http.server.ThreadingHTTPServer(("127.0.0.1", back), Back).serve_forever, daemon=True).start()
+http.server.ThreadingHTTPServer(("127.0.0.1", front), Front).serve_forever()
+EOF
+    waitport "$RQ" /api/heartbeat || bad "the redirecting server for a pairing didn't start"; waitport "$RR" / || bad "its other server didn't start"
+    card tredir
+    bs tredir pair --romm "http://127.0.0.1:$RQ" "ABCD2345" > "$OUT/pair-redirect.log" 2>&1 && bad "a pairing whose requests were redirected elsewhere went through"
+    [ ! -s "$OUT/redirect-asked.txt" ] || bad "a pairing's requests followed a redirect to another server: $(cat "$OUT/redirect-asked.txt")"
+    [ ! -e "$OUT/tredir/banana/romsync.json" ] || bad "a pairing redirected elsewhere left a pairing behind"
     # a bare address: Romhost's 8092 first, https (443) when nothing answers on the http ports. 443 needs its own network
     # namespace (root in there, nobody's port 443 out here)
     if unshare -rn true 2>/dev/null; then
