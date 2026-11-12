@@ -259,6 +259,8 @@ namespace banana::ach
 		char hash[33] = {};
 		std::string lower = path;
 		for (auto& c : lower) c = (char)tolower((unsigned char)c);
+		// (a .7z: banana-ui doesn't unpack those; its bytes hashed as the game's would only find "no achievements")
+		if (lower.size() >= 3 && lower.compare(lower.size() - 3, 3, ".7z") == 0) return "";
 		if (lower.size() < 4 || lower.compare(lower.size() - 4, 4, ".zip") != 0)
 			return rc_hash_generate_from_file(hash, console, path.c_str()) ? std::string(hash) : "";
 		// a .zip: its game (the largest member), as RetroArch hashes what it unpacks
@@ -522,6 +524,7 @@ namespace banana::ach
 	Loader::Snapshot Loader::snapshot() const { std::lock_guard<std::mutex> l(sh->mu); return sh->snap; }
 	int Loader::gen() const { std::lock_guard<std::mutex> l(sh->mu); return sh->snap.gen; }
 	bool Loader::busy() const { std::lock_guard<std::mutex> l(sh->mu); return sh->busy; }
+	bool Loader::fetchingBadges() const { std::lock_guard<std::mutex> l(sh->mu); return sh->fetching; }
 	void Loader::stop() { sh->stopped = true; std::lock_guard<std::mutex> l(sh->mu); sh->want.clear(); }
 
 	bool Loader::badge(const std::string& name)

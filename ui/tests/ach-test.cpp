@@ -137,6 +137,8 @@ int main(int argc, char** argv)
 	storedZip(dir + "/game.zip", "Game (Europe).gb", rom);
 	CHECK(ach::hashRom(dir + "/game.zip", 4, dir) == want, "game.zip hashed '%s'", ach::hashRom(dir + "/game.zip", 4, dir).c_str());
 	CHECK(ach::hashRom(dir + "/nothing.gb", 4, dir).empty(), "a missing file hashed");
+	write(dir + "/game.7z", rom);	// (a .7z isn't unpacked here: no hash, rather than the archive's bytes as the game's)
+	CHECK(ach::hashRom(dir + "/game.7z", 4, dir).empty(), "a .7z hashed as it is");
 	CHECK(ach::hashRom(dir + "/game.gb", 0, dir).empty(), "hashed for no console");
 
 	// ---- the loader against made-up replies: no request starts a session

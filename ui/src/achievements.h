@@ -101,6 +101,7 @@ namespace banana::ach
 		Snapshot snapshot() const;
 		int gen() const;
 		bool busy() const;				// the list still being made (the tests wait for it)
+		bool fetchingBadges() const;	// badges still on their way
 		// a badge's picture wanted on the page: fetched on the badge thread (the page's rows first); true when its file is
 		// there already
 		bool badge(const std::string& name);
