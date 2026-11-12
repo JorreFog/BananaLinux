@@ -84,6 +84,9 @@ data || {
 mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
+# a Qualcomm AudioReach board's sound (the AYN Thor: hw.conf's HW_AUDIO), its modules in their order, before bananad
+# reads the cards (the RG DS's sound is built into the kernel)
+[ "$HW_AUDIO" = qcom-audioreach ] && /usr/libexec/banana/qcom-audio
 
 bananad &
 # the power and volume keys live before the menu's boot animation (#87): bananad creates bananad-ready once its loop
@@ -99,6 +102,8 @@ mark "rcS: bananad ready"
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
     modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null
+    # a board whose drivers are mostly modules (hw.conf's HW_COLDPLUG): each device's own, as udev would
+    [ "$HW_COLDPLUG" = 1 ] && /usr/libexec/banana/coldplug
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then

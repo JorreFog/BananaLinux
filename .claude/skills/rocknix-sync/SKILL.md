@@ -59,6 +59,12 @@ make ARCH=arm64 <vendor>/<name>.dtb
 for that SoC (Rockchip options on a Qualcomm config). Anything else: find the dependency (`make menuconfig`, search
 the symbol). Known one: disabling `CONFIG_VT` needs `CONFIG_EXPERT=y` (ROCKNIX's RK3566 config has it, SM8550's not).
 
+## Banana's own kernel patches
+
+`board/<dir>/linux-patches-banana/` is applied after the synced `linux-patches/` and is never touched by a sync. Put
+patches that aren't ROCKNIX's there, e.g. the Thor's from Banana Pocket, with a README saying where each came from.
+After a re-sync, run check 1 again with both directories in order: a ROCKNIX change can make one of them conflict.
+
 ## Pruning
 
 Drop what the board can't use or Banana doesn't build (the sync scripts list them): Intel display hacks, iMON,

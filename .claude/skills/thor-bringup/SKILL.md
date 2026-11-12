@@ -23,6 +23,19 @@ device tree; replace them with what the handheld reports, and delete the `(check
 - Boot: OpenABL v1.2 (flashed to `abl_a`/`abl_b`), EFI-stub kernel, reads BLS entries or extlinux from the card's
   first FAT partition; device tree from the entry or its device-model menu (`/dtbs`).
 - ROCKNIX: suspend is "fake suspend" only on SM8550.
+- Modules: no udev, so rcS loads them. `usr/libexec/banana/qcom-audio` loads the ADSP and audio stack in its order
+  before bananad (`HW_AUDIO=qcom-audioreach`), `coldplug` loads every other found device's module after the menu
+  (`HW_COLDPLUG=1`). The Wi-Fi's PCI driver is `ath12k_wifi7` in 7.2. Read `/run/banana/boot-times` (the steps) and
+  `/run/banana/coldplug.txt`.
+
+## The sibling port: Banana Pocket
+
+github.com/jesussaves-dev/Banana-Pocket is BananaOS on the Retroid Pocket Classic (SM4450), and it has the same stack:
+ROCKNIX kernel, OpenABL with extlinux, AudioReach, two AW88166, RSInput, edt-ft5x06, battmgr. Before solving a
+Qualcomm problem from scratch, look there: `docs/RPC-PORT.md` (sleep, sound, the compositor), `docs/BOOT-SOUND.md`
+(why the first sound was ~20 s), `buildroot/board/retroid-pocket-classic/` (kernel patches, rcS's audio order),
+`system/rootfs/usr/libexec/banana/sound-server` (PipeWire). What's been taken from it so far, and what was left out
+and why: `docs/THOR-PORT.md` "From Banana Pocket" and `buildroot/board/thor/linux-patches-banana/README.md`.
 
 ## The loop
 

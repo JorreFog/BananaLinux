@@ -96,12 +96,10 @@ Each milestone ends with something you can check on the handheld.
 
 1. `make thor`, then write the card. Flash OpenABL (`openabl/README.txt` on the card's boot partition). **Back up the
    ABL first.**
-2. Settle how OpenABL reads the card:
-   - Does it read `extlinux.conf`, or `loader/entries/banana.conf`?
-   - Does it honour the entry's device tree, or need its device-model menu (`dtbs/qcom/qcs8550-ayn-thor.dtb` is
-     there for that)?
-
-   Keep whichever works. The update already switches both.
+2. Settle how OpenABL reads the card. Banana Pocket (below) boots the same way on its SM4450 handheld: OpenABL reads
+   `extlinux/extlinux.conf` and its per-slot `LINUX` and `FDT` lines, a plain `Image`, no BLS entry. Expect the same
+   here. If so, the BLS entry and `dtbs/` are spares; drop them once the Thor confirms it. The update switches both
+   either way.
 3. Expected first problems:
    - The root on the card. The SD card should be `mmcblk0`, with the UFS as `sd*`. rcS and update look for
      `PARTNAME=banana-root-a`, so check that.
@@ -135,15 +133,27 @@ Each milestone ends with something you can check on the handheld.
 
 1. **Sound.**
    - bananad finds cards by name (`aw88166`, `rk817` in `/proc/asound/cards`).
-   - The Thor's card is "AYN-Thor" on the ADSP. Its routing is in ROCKNIX's UCM (`alsa-ucm-conf/patches/SM8550/0005_Add-AYN-Thor.patch`).
-   - Port that routing into bananad's mixer setup as a Thor path, for speaker, headphones and microphone. Banana runs
-     no UCM.
+   - The Thor's card is "AYN-Thor" on the ADSP. With no udev, nothing loaded its modules.
+     `usr/libexec/banana/qcom-audio` (from Banana Pocket) now loads them in the order the DSP needs, before bananad
+     (`HW_AUDIO=qcom-audioreach`).
+   - Its routing is ROCKNIX's UCM profile, now in the image: `package/alsa-ucm-conf` with
+     `patches/alsa-ucm-conf/0001-Add-AYN-Thor.patch`, plus `alsaucm`. Bring the card up with
+     `alsaucm -c AYN-Thor set _verb HiFi` and choose bananad's Thor path from there.
+   - Banana Pocket found that the DSP builds a frontend's graph when it is opened, latches the mixer values it finds
+     then, and only the first frontend plays. Its answer was PipeWire with WirePlumber reading the UCM
+     (`sound-server`, and a libudev-zero patch so PipeWire sees the card). If bananad's single-opener ALSA setup runs
+     into the same wall, take that.
 2. **Battery.** The charger and gauge are the ADSP's battery manager (`battmgr.jsn`), not the RK817. bananad finds
    power supplies by type. Check the "Discharging while charging" quirk, which is the RK817's only.
 3. **Sleep.**
    - ROCKNIX lists "fake suspend" only for SM8550.
    - Start with bananad's display-off idle: panels off, CPUs held low, the game paused. Treat real `mem` sleep as
      research: `/sys/power/mem_sleep`, the ipcc wakeup patch 0502.
+   - Banana Pocket's notes on the same mainline stack (its `docs/RPC-PORT.md`):
+     - `mem` sleep held from a shell, but woke after ~2 s from bananad's power-key path.
+     - No RTC wake alarm (the ADSP owns it), so bananad's timed battery check can't wake the handheld.
+     - A VT switch on suspend wedged it until `SEATD_VTBOUND=0`.
+     - Its SoundWire patch 0039 is a lead (`board/thor/linux-patches-banana/README.md`).
    - The lid is `SW_LID` as on the RG DS.
 4. **Wi-Fi.** ath12k with `wpa_supplicant`, interface `wlan0` (check). Does it need to be unloaded around sleep?
    (`HW_WIFI_MODULE`, empty for now)
@@ -157,8 +167,8 @@ Each milestone ends with something you can check on the handheld.
 
 1. **GPU.**
    - freedreno GLES: RetroArch, SuperDrastic's shaders, BananaFront.
-   - Turnip (Vulkan) isn't in Buildroot's `mesa3d` options yet. Add `-Dvulkan-drivers=freedreno` through a package
-     like `mesa3d-panfrost`, for PPSSPP, Dolphin and the like later.
+   - Turnip (Vulkan) is in the image now, from Banana Pocket's Buildroot patches (`buildroot/buildroot-patches`:
+     the option, and Mesa 26.2.6). The Makefile applies them to Buildroot. Use it for PPSSPP, Dolphin and the like.
 2. **CPU.**
    - Builds are for the Cortex-A710 (`BR2_cortex_a710`).
    - `bananads.mk`'s and `bananafront.mk`'s `-mcpu=cortex-a55` should follow the board.
@@ -180,6 +190,30 @@ Each milestone ends with something you can check on the handheld.
 2. Write a README section, and a known-issues list from the QA pass.
 3. Re-test the RG DS images: post-build's profile and external.mk's board switch touch their build too.
 4. Done when: a `banana-thor-<version>.update.tar` installs through Settings › System › Update on a Thor.
+
+## From Banana Pocket
+
+[Banana Pocket](https://github.com/jesussaves-dev/Banana-Pocket) is BananaOS for the Retroid Pocket Classic
+(SM4450, MIT, the Banana contributors). It went down the same road first: ROCKNIX's Qualcomm kernel, OpenABL, the
+same card and update. Taken from it at `2f4da8bf`:
+
+| What | Where here | Checked |
+|---|---|---|
+| Turnip option and Mesa 26.2.6 for Buildroot, and the Makefile step that applies Buildroot patches | `buildroot/buildroot-patches/`, `Makefile` (`buildroot-patched`), CI | apply to Buildroot 2026.02.3, idempotent; the Mesa hash; all four defconfigs keep every option |
+| `alsa-ucm-conf` package (ROCKNIX's Thor profile goes on top) | `buildroot/package/alsa-ucm-conf`, `buildroot/patches/alsa-ucm-conf` | the Thor profile applies to 1.2.16.1 and every file it includes is there |
+| 8 kernel patches: GENI UART RX restart (the pad), AW88166 start/format fixes (the ~20 s silent boot), battery manager, q6apm timing | `buildroot/board/thor/linux-patches-banana` (its README says which, and which were left out and why) | apply after ROCKNIX's 71; the drivers build for arm64 with the Thor's config |
+| The AudioReach module order | `usr/libexec/banana/qcom-audio`, `hw.conf`'s `HW_AUDIO*` | every module name exists in the Thor kernel |
+
+**Worth taking later:**
+- **The PipeWire sound server**, if the Thor's DSP needs it (M3).
+- **Its QEMU fragment for a Qualcomm kernel** (`linux-qemu.fragment`). It boots the board's own kernel on `virt` for
+  CI, which would let CI boot `make thor` the way it boots the RG DS image.
+- **USB gadget, ADB and mass-storage scripts.**
+- **Its docs.** `docs/BOOT-SOUND.md` and `docs/RPC-PORT.md` cover the sound and sleep it already worked out on this
+  stack.
+
+`coldplug` is new here, not from the Pocket. It loads each found device's module, as udev would. The Thor's drivers
+are mostly modules, and the Pocket names its modules one by one in rcS instead.
 
 ## RG DS code paths still to make board-aware
 
