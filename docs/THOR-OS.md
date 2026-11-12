@@ -137,6 +137,22 @@ Which button it is comes from the hardware profile (`HW_HOME_KEY` in `etc/banana
 It is set to the pad driver's "mode" key; the driver has one other spare key, and if that one turns out to be the
 button under the screen the line says what to change it to.
 
+## USB debugging
+
+On this build, a computer plugged into the Thor's USB-C port has complete access to it, with nothing to set up and no
+password (`usr/libexec/banana/usb-debug`, started at boot):
+
+- **A network card.** The Thor is `10.55.0.1` and gives the computer an address: `ssh root@10.55.0.1`, `scp`, and
+  everything else that runs over a network. Works as it is on Linux, macOS and Windows 11.
+- **A serial port** (`/dev/ttyACM0` on Linux, a COM port on Windows; `screen /dev/ttyACM0 115200`): a root shell that
+  needs no network, for when the network is what is broken.
+- **adb**: `adb shell`, `adb push`, `adb pull`, `adb forward`, as with an Android device.
+
+It is for bringing the Thor up and for working on BananaOS. Anyone with the cable is root, so an image meant for
+other people should have it off: take `HW_USB_DEBUG=yes` out of `etc/banana/hw/thor.conf` before building, or put
+`usb_debug = off` in `banana/settings.conf` on the card. While it is on, the port still charges; a pad or a drive
+plugged in instead works as before where the port switches roles by itself (not tried on a Thor).
+
 ## The web browser
 
 WPE WebKit with Cog: one full-screen page on the top screen, no desktop toolkit under it. An on-screen keyboard
@@ -185,6 +201,8 @@ Not checked, and the first things to look at on a Thor:
   list comes from Steam's web API with the downloader's token, which was written
   from how those are documented to work and never run against an account. If the list doesn't come,
   `pc/steam/library.tsv` (`<app id><tab><name>` lines) can be written by hand and the rest works from it;
+- USB debugging: the gadget's tree is checked against plain folders; whether the Thor's port comes up as a device,
+  and each of the three ways in, needs the handheld and a cable;
 - the Home button. It needs a display device with leases, which a PC without the panels doesn't give, so none of it
   has run: the lease of both panels to a compositor (sway opening the lease through the preloaded shim), the menu
   drawing over a stopped game, and the game's picture put back. If a standalone emulator doesn't start on the Thor,

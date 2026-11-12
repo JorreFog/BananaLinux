@@ -66,3 +66,14 @@ CONFIG_INPUT_UINPUT=y
 CONFIG_SQUASHFS_ZSTD=y
 CONFIG_ZRAM_BACKEND_ZSTD=y
 CONFIG_ZRAM_MULTI_COMP=y
+
+# USB debugging (usr/libexec/banana/usb-debug): the Thor's USB-C port as a device a computer sees, made in configfs
+# with a network card (NCM), a serial port (ACM) and FunctionFS for adb. The RG DS's fragment, read before this one,
+# turns the gadget side off; ROCKNIX's configuration has it on.
+CONFIG_USB_GADGET=y
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_NCM=y
+CONFIG_USB_CONFIGFS_ACM=y
+CONFIG_USB_CONFIGFS_F_FS=y
+# (the controller both ways: a host for pads and drives, a device for the computer)
+CONFIG_USB_DWC3_DUAL_ROLE=y

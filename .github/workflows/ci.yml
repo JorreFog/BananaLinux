@@ -59,7 +59,7 @@ jobs:
       - name: Kernel tunables (tune against a made-up /sys and /proc; the RG DS's profile touches nothing)
         run: sh system/tests/tune-test.sh
       - name: The AYN Thor's launchers (PC games' setup and runs and the Steam login, library and box art against stand-ins; the compositor wrapper, where sway is)
-        run: sh system/tests/pc-games-test.sh && sh system/tests/steam-test.sh && sh system/tests/data-link-test.sh && sh system/tests/ra-standalone-test.sh && sh system/tests/run-wayland-test.sh
+        run: sh system/tests/pc-games-test.sh && sh system/tests/steam-test.sh && sh system/tests/data-link-test.sh && sh system/tests/usb-debug-test.sh && sh system/tests/ra-standalone-test.sh && sh system/tests/run-wayland-test.sh
       - name: Shell scripts parse
         run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh buildroot/board/thor/*.sh tools/*.sh system/rootfs/usr/libexec/banana/hw-env; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option

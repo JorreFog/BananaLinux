@@ -106,7 +106,9 @@ Before pushing a fix: `make test`, and the scripts' own checks (`for t in system
 
 Nothing here has run on a Thor, so the first boot is a bring-up. The `thor-bringup` skill
 (`.claude/skills/thor-bringup`) turns what the handheld reports into fixes; `docs/THOR-PORT.md` has the milestones.
-Over SSH (or a USB keyboard and `console=tty0`):
+The quickest way in is the USB cable: this build has USB debugging on (`docs/THOR-OS.md`), so a computer plugged
+into the Thor gets a network card (`ssh root@10.55.0.1`, no password), a serial console and adb. Failing that, SSH
+over Wi-Fi, or a USB keyboard and `console=tty0`:
 
 - `/usr/libexec/banana/hw-probe` prints what the kernel found (panels, touchscreens, the pad, sound cards, the fan
   and the lights), to set against `etc/banana/hw/thor.conf`;

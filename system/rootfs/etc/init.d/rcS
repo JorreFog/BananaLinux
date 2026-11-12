@@ -134,6 +134,8 @@ mark "rcS: bananad ready"
     modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null
     # a handheld with a fan, lights round its sticks or a GPU boost (the AYN Thor): as Settings keeps them
     [ "$HW_HANDHELD" = yes ] && /usr/libexec/banana/handheld boot &
+    # USB debugging where the board's profile asks for it (hw.conf's HW_USB_DEBUG: the AYN Thor's bring-up build)
+    [ "$HW_USB_DEBUG" = yes ] && /usr/libexec/banana/usb-debug up >/dev/null 2>&1 &
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
