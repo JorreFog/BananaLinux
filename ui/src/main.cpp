@@ -391,6 +391,9 @@ static bool openPage(Settings& st, const std::string& page)
 {
 	if (page == "files") { st.openFiles(); return true; }
 	if (page == "bshare") { st.openBshare(); return true; }
+	// the quick menu (the Home button held while a game runs): the screens' brightness, the volume, the game's
+	// performance mode, the fan and the stick lights (settings_quick.cpp), on the bottom screen
+	if (page == "quick") { st.openQuick(); return true; }
 	return false;
 }
 
@@ -1023,6 +1026,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
+		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
+		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
 		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
@@ -2501,9 +2506,15 @@ int main(int argc, char** argv)
 	};
 
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
+	// (the Home button over a game: its state, used by the menu's own key handling too; the rest is further down)
+	const bool homeKey = getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY");
+	struct { bool on = false, quick = false, resume = false, end = false; pid_t pid = 0; std::string rom, next; } home;
+	std::function<void(const bool&)> mainLoop;	// (the menu's own loop, below: run here until the game is gone back to)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
+		// the Home button over a stopped game: back into it
+		if (home.on && ev.code == BTN_MODE) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
 		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
@@ -2628,8 +2639,112 @@ int main(int argc, char** argv)
 	// starts so the emulator sees it as a keyboard plugged in, gone when the game ends (vkbd.h)
 	VirtualKeyboard vkbd;
 	bool keysOn = false;
-	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
+	// The Home button (hw.conf HW_HOME=yes: the AYN Thor's, under the bottom screen). A press while a game runs
+	// stops the game where it is (SIGSTOP: nothing is saved, nothing ends) and shows the menu on both screens; a
+	// press again, or the same game picked, goes back into it. Held for three seconds it opens the quick menu on
+	// the bottom screen instead (brightness, speed, the fan, the lights), the game's picture kept on the top one.
+	// Both are a page flip: the menu never gave the display device away (the game draws through a DRM lease), so no
+	// mode is set and no program starts. Another game picked from the menu ends the stopped one first.
+	auto homeMenu = [&](pid_t pid, int game, bool quick)
 	{
+		const double t0 = nowMs();
+		kill(-pid, SIGSTOP);
+		// (bananad: a sleep's end leaves this game stopped)
+		{ std::ofstream f("/run/banana/game.held"); f << pid << "\n"; }
+		const int wasBorrowed = disp.borrowed();
+		disp.borrow(quick ? 2 : 3);
+		home.on = true; home.quick = quick; home.resume = home.end = false; home.pid = pid; home.rom = gameRomPath; home.next.clear();
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (quick)
+			{
+				settingsView.setVariant(settings["theme"]);
+				openPage(settingsView, "quick");
+			}
+			else
+			{
+				ui->dataChanged();
+				ui->setLibrary(lib.currentShelf(), game);
+			}
+		}
+		rep.key = Key::NONE;
+		be.invalidate();
+		dirty = true; drawn = false;
+		if (system("banana-perf ui &") != 0) {}	// (not waited for: the menu is up first)
+		logf("home: the game stopped, the %s up in %.0f ms", quick ? "quick menu" : "menu", nowMs() - t0);
+		recordEvent("game", quick ? "quick menu" : "home");
+		if (mainLoop) mainLoop(home.resume);
+		const double t1 = nowMs();
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (settingsView.isOpen()) settingsView.close();
+		}
+		home.on = false;
+		if (!wasBorrowed) disp.giveBack();
+		unlink("/run/banana/game.held");
+		rep.key = Key::NONE;
+		if (home.end || quit)
+		{
+			// another game picked, or the menu is going (a shutdown): this one ends, writing its saves
+			kill(-pid, SIGTERM);
+			kill(-pid, SIGCONT);
+			logf("home: the stopped game ended (%s)", quit ? "the menu is closing" : "another game was picked");
+			return;
+		}
+		{
+			// (the mode the game ran in: its own, else its system's)
+			const SystemDef& sd = lib.systemOf(game);
+			const std::string gp = settingsView.gamePerf(gameRomPath.substr(gameRomPath.rfind('/') + 1));
+			if (system(("banana-perf " + shellQuote(!gp.empty() ? gp : sd.perf.empty() ? "balanced" : sd.perf) + " &").c_str()) != 0) {}
+		}
+		kill(-pid, SIGCONT);
+		be.invalidate();
+		logf("home: back in the game in %.0f ms", nowMs() - t1);
+	};
+	// the Home button while a game runs: its press and release timed (a tap: the menu; three seconds: the quick menu)
+	struct HomeTap
+	{
+		double down = 0;
+		int ask = 0;	// 1 the menu, 2 the quick menu
+		void event(const InputEvent& ev)
+		{
+			if (ev.code != BTN_MODE) return;
+			if (ev.type == InputEvent::PRESS) down = nowMs();
+			else if (ev.type == InputEvent::RELEASE && down > 0) { down = 0; ask = 1; }
+		}
+		void tick(double now) { if (down > 0 && now - down >= 3000) { down = 0; ask = 2; } }
+		int take() { int a = ask; ask = 0; return a; }
+	};
+	// a game that has both panels (through leaseBoth) and no game panel: only the Home button is the menu's
+	auto homeWait = [&](pid_t pid, int& status, int game)
+	{
+		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
+		HomeTap tap;
+		for (;;)
+		{
+			pid_t w = waitpid(pid, &status, WNOHANG);
+			if (w == pid || (w < 0 && errno != EINTR)) break;
+			tap.tick(nowMs());
+			if (int a = tap.take())
+			{
+				homeMenu(pid, game, a == 2);
+				// (the presses made in the menu aren't the game's Home presses)
+				tap = HomeTap();
+				continue;
+			}
+			pollfd fds[40];
+			int in[32], ni = input.fds(in, 32), nf = 0;
+			for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+			if (pidFd >= 0) fds[nf++] = { pidFd, POLLIN, 0 };
+			if (poll(fds, nf, tap.down > 0 ? 50 : 1000) <= 0) continue;
+			for (int i = 0; i < ni; i++)
+				if (fds[i].revents & POLLIN) input.read(fds[i].fd, [&](const InputEvent& ev) { tap.event(ev); });
+		}
+		if (pidFd >= 0) ::close(pidFd);
+	};
+	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName, int game)
+	{
+		HomeTap homeTap;
 		const int panelScreen = 1 - gameScreen;
 		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
@@ -2661,6 +2776,16 @@ int main(int argc, char** argv)
 			pid_t w = waitpid(pid, &status, WNOHANG);
 			if (w == pid || (w < 0 && errno != EINTR)) break;
 			double t = nowMs();
+			homeTap.tick(t);
+			if (int a = homeKey ? homeTap.take() : 0)
+			{
+				// (the quick menu wants the bottom screen: the menu's own already when the panel is there)
+				homeMenu(pid, game, a == 2);
+				homeTap = HomeTap();
+				bottomIdle.activity(nowMs());
+				want = true;
+				continue;
+			}
 			bottomIdle.tick(t);	// the bottom game panel dims on its own idle timer too (the game is on the other)
 			if (outFd >= 0)
 			{
@@ -2733,7 +2858,7 @@ int main(int argc, char** argv)
 			for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
 			if (outFd >= 0) { outAt = nf; fds[nf++] = { outFd, POLLIN, 0 }; }
 			if (pidFd >= 0) { pidAt = nf; fds[nf++] = { pidFd, POLLIN, 0 }; }
-			if (poll(fds, nf, compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
+			if (poll(fds, nf, compLink.waiting() ? 10 : homeTap.down > 0 ? 50 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
 			if (pidAt >= 0 && (fds[pidAt].revents & POLLIN)) continue;	// it ended: waitpid above
 			if (fds[0].revents & POLLIN) disp.handleEvents();
 			if (outAt >= 0 && (fds[outAt].revents & POLLIN))
@@ -2757,6 +2882,7 @@ int main(int argc, char** argv)
 					{
 						// the buttons are the game's; F and a Companion button (the back button's job by default) also
 						// switch the panel between its menu and the companion
+						if (homeKey && ev.code == BTN_MODE) { homeTap.event(ev); return; }	// (the Home button: the menu's)
 						if (ev.type == InputEvent::PRESS)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2809,6 +2935,14 @@ int main(int argc, char** argv)
 	{
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
+		if (home.on)
+		{
+			// picked from the menu over a stopped game: that game itself is gone back to; another ends it and starts
+			// once it has ended (through the launch file, as a launch asked for from outside)
+			if (rom != home.rom) { home.end = true; home.next = rom; }
+			home.resume = true;
+			return;
+		}
 		gameRomPath = rom;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
@@ -2990,7 +3124,17 @@ int main(int argc, char** argv)
 				if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			}
 		}
-		if (!panel)
+		// a game that takes both panels, on a handheld with a Home button: it gets them through a lease too (both), so the
+		// menu still has the display device and the buttons when Home is pressed (Settings: home_switch = off for the
+		// way it was, the game opening the display device itself)
+		bool homeLease = false;
+		if (!panel && !ndsPage && homeKey && disp.isOpen() && settings["home_switch"] != "off")
+		{
+			leaseFd = disp.leaseBoth();
+			homeLease = leaseFd >= 0;
+			if (!homeLease) logf("home: no lease of both panels (%s): the game takes the display itself, the Home button is off", strerror(errno));
+		}
+		if (!panel && !homeLease)
 		{
 			input.close();
 			disp.close();
@@ -3027,6 +3171,13 @@ int main(int argc, char** argv)
 			setenv("BANANA_ROM", rom.c_str(), 1);
 			setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
 			setenv("BANANA_RA_PROGRESS", PROGRESS, 1);
+			if (homeLease)
+			{
+				// (the shim hands the lease to whatever opens the display device: RetroArch, a compositor, an emulator)
+				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
+				setenv("BANANA_HOME_LEASE", "1", 1);
+				if (access("/usr/lib/banana/banana-leaseshim.so", R_OK) == 0) setenv("LD_PRELOAD", "/usr/lib/banana/banana-leaseshim.so", 1);
+			}
 			if (panel)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
@@ -3051,8 +3202,9 @@ int main(int argc, char** argv)
 			f << "\n";
 			if (panel)
 			{
-				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
+				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name, game);
 			}
+			else if (homeLease) homeWait(pid, status, game);
 			else if (ndsPage)
 			{
 				// the ROM's data and the guide once read (ndsLoad), then the game's memory: the Session polls it over
@@ -3130,6 +3282,20 @@ int main(int argc, char** argv)
 			gameComp.close();
 			input.close();
 			disp.close();
+		}
+		if (homeLease)
+		{
+			input.close();
+			disp.close();
+		}
+		if (!home.next.empty())
+		{
+			// the game picked over the stopped one: started at the loop's next turn
+			std::ofstream f("/run/banana/launch.new");
+			f << home.next << "\n";
+			f.close();
+			rename("/run/banana/launch.new", "/run/banana/launch");
+			home.next.clear();
 		}
 		long secs = (long)((nowMs() - start) / 1000);
 		logf("game ended after %ld s (status %d)", secs, status);
@@ -3228,8 +3394,12 @@ int main(int argc, char** argv)
 	std::string launchLater;	// a launch file's game not in the library yet (the rescan after a copy), tried again until launchLaterUntil
 	double launchLaterUntil = 0;
 	bool wasTyping = false;
-	while (!quit)
+	mainLoop = [&](const bool& stop)
 	{
+	while (!quit && !stop)
+	{
+		// the quick menu over a stopped game is its page and nothing else: closed (B), the game goes on
+		if (home.on && home.quick && !settingsView.isOpen()) { home.resume = true; continue; }
 		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
 		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
 		if (settingsView.typing() != wasTyping)
@@ -3590,6 +3760,11 @@ int main(int argc, char** argv)
 			else
 				input.read(p.fd, handle);
 		}
+	}
+	};
+	{
+		const bool never = false;
+		mainLoop(never);
 	}
 	{
 		std::ofstream f(o.data + "/last-system");

@@ -65,8 +65,11 @@ What keeps it there:
 |---|---|---|
 | Both screens in the menu | `banana-ui` on KMS, each panel its own shape | touch on both |
 | Theme | Thor OLED, from the owner's mockup | the other BananaOS themes stay selectable |
-| Emulators | RetroArch with its cores, the standalone ones under `run-wayland` | `docs/THOR-EMULATORS.md` has the list, system by system |
-| PC games | Box64 + Wine + DXVK + VKD3D-Proton | below |
+| Emulators | RetroArch with 50 cores, and Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K, xemu, Flycast and ScummVM under `run-wayland` | 56 systems; `docs/THOR-EMULATORS.md` has the list and what is left out (Wii U, PS3, Switch, Xbox 360) |
+| PC games | Box64 + Wine + DXVK + VKD3D-Proton, and your Steam library | below |
+| Home button | the menu over a frozen game and back; held, the quick menu | below |
+| First-time setup | language, Wi-Fi, time zone, name, RetroAchievements, home server, Steam, the fan and lights, box art | Settings > System > First-time setup runs it again |
+| Tuning | `docs/THOR-TUNING.md` | what ROCKNIX does for this chip and what this image does |
 | Sound | PipeWire + WirePlumber over AudioReach (UCM) | speakers, jack, Bluetooth (SBC, Opus; LDAC and aptX where built) |
 | Wi-Fi | `wpa_supplicant` (WPA2/WPA3), the WCN7850 on `ath12k` | Settings > Network |
 | Bluetooth | BlueZ: pads (classic and LE), headphones through PipeWire | Settings > Network > Bluetooth |
@@ -93,11 +96,36 @@ What GameNative and Winlator do on Android, without Android underneath:
 - **Your games**: copy a game's folder into `roms/pc` on the card. The shelf shows it; its main program is guessed
   (the largest `.exe` that isn't an installer or a helper) and written to a small `<Game>.pc` file you can edit
   (`exe`, `args`, `env`, `d3d = wined3d` for a game DXVK draws wrong).
-- **Steam**: the shelf's Steam entry installs and runs Steam's own Windows client in the prefix. Whether it runs
+- **Your Steam library**: log in to Steam in the first-time setup or in Settings (account name, password, then the
+  Steam Guard code or a tap in the Steam app on your phone). Your games appear on the PC games shelf with Steam's own
+  box art; picking one that isn't on the card downloads its Windows build to `roms/pc/<Game>` and starts it. The
+  login and the downloads are DepotDownloader's (a native ARM64 program, fetched once with its SHA-256 checked, no
+  Wine under it). A login token is kept on the card, never the password. `usr/libexec/banana/steam` is the tool.
+- A game that needs Steam itself running (Steam's DRM, its multiplayer, cloud saves) won't start this way. For those
+  the shelf's **Steam** entry installs and runs Steam's own Windows client in the prefix. Whether that runs
   acceptably on Box64 on this chip is untested, and it is the part most likely to need work.
+- **Box art** for PC games: Steam's library covers by app id; a game copied by hand is looked up by its folder's name
+  in Steam's store search; with a SteamGridDB API key (Settings > Accounts) that site is asked for what Steam doesn't
+  have.
 
 Expect what the Android apps deliver on the same chip: older and lighter Windows games play well, recent heavy ones
 don't. Anti-cheat games won't start.
+
+## The Home button
+
+The button under the bottom screen is the menu's while a game runs:
+
+- **A press** stops the game where it is and shows BananaOS's menu on both screens. Nothing is saved and nothing
+  ends: the game's process is frozen. **A press again**, or picking the same game, goes back into it at the same
+  frame. Picking another game ends the frozen one first (it gets the signal to write its saves).
+- **Held for three seconds**, it opens the quick menu on the bottom screen (brightness, performance mode, the fan,
+  the stick lights) with the game's picture kept on the top one. The Home button or B closes it.
+
+It is quick because nothing is started or torn down. The menu never gives the display device away: a game draws
+through a DRM lease of the panels (RetroArch on one panel beside the game panel, as on the RG DS; everything else on
+both), and the menu, which owns the lease, puts its own picture on the panels and later the game's back. That is one
+page flip each way. `home_switch = off` in `banana/settings.conf` gives a game the display device directly, as
+before, with the Home button off.
 
 ## The web browser
 
@@ -129,13 +157,26 @@ Checked on a PC:
 - `pc-games` against stand-ins: downloads refused on a wrong checksum, the unpacking, the prefix's setup calls, the
   game scan and a run's arguments (`system/tests/pc-games-test.sh`); the three real archives were downloaded once to
   record their checksums and layouts;
+- `steam` against stand-ins: the login's states (a wrong password, Steam Guard's code wrong then right), the token
+  read back, the library's entries, the covers, a download and its program, the logout
+  (`system/tests/steam-test.sh`). Steam's store search, its cover addresses and DepotDownloader's release were
+  fetched for real; no account was logged in;
+- the emulator packages: the configuration resolves with all of them on, every pinned commit exists upstream and
+  ROCKNIX's patches apply to their sources. None was compiled;
 - the theme at the Thor's screen shapes, in the menu's headless renderer.
 
 Not checked, and the first things to look at on a Thor:
 
 - the whole image has never been built end to end, and never booted;
 - the panels' rotation and the touchscreens' mapping under sway (`HW_WL_ROTATE`, `HW_WL_TOUCH_*` in `hw.conf`);
-- Wine under Box64 on this kernel and Mesa; Steam;
+- Wine under Box64 on this kernel and Mesa; Steam's client in Wine;
+- a real Steam login: the library's list comes from Steam's web API with the downloader's token, which was written
+  from how those are documented to work and never run against an account. If the list doesn't come,
+  `pc/steam/library.tsv` (`<app id><tab><name>` lines) can be written by hand and the rest works from it;
+- the Home button. It needs a display device with leases, which a PC without the panels doesn't give, so none of it
+  has run: the lease of both panels to a compositor (sway opening the lease through the preloaded shim), the menu
+  drawing over a stopped game, and the game's picture put back. If a standalone emulator doesn't start on the Thor,
+  `home_switch = off` is the first thing to try;
 - Cog's flags and the on-screen keyboard's placement;
 - every standalone emulator's first start (`docs/THOR-EMULATORS.md` marks each one's state);
 - the fan's sensor and PWM paths and the rings' sysfs names (`handheld` is tested against a made-up `/sys`).

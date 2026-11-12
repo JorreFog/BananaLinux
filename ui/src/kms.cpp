@@ -384,7 +384,7 @@ namespace banana
 		drmSetMaster(fd);
 		if (leased < 0) planesUpright(fd);
 		for (int s = 0; s < 2; s++)
-			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			if (!theirs(s)) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
 	}
 
@@ -396,7 +396,7 @@ namespace banana
 		if (fd < 0) return;
 		for (int s = 0; s < 2; s++)
 		{
-			if (s == leased) continue;
+			if (theirs(s)) continue;
 			Panel& pn = p[s];
 			for (int b = 0; b < 2; b++)
 				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
@@ -480,6 +480,7 @@ namespace banana
 		fd = -1;
 		pending = 0;
 		leased = -1;
+		borrowMask = 0;
 	}
 
 	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
@@ -489,7 +490,7 @@ namespace banana
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
-			if (s == leased) continue;	// a game draws there
+			if (theirs(s)) continue;	// a game draws there
 			Panel& pn = p[s];
 			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
@@ -589,5 +590,58 @@ namespace banana
 		if (l < 0 && over) l = drmModeCreateLease(fd, objs, 3, 0, &lessee);
 		if (l >= 0) leased = s;
 		return l;
+	}
+
+	int Display::leaseBoth()
+	{
+		if (sdl || fd < 0 || leased >= 0) return -1;
+		uint32_t objs[8], lessee = 0;
+		int n = 0;
+		for (int s = 0; s < 2; s++)
+		{
+			uint32_t plane = primaryPlane(fd, p[s].crtc);
+			if (!plane) return -1;
+			objs[n++] = p[s].conn; objs[n++] = p[s].crtc; objs[n++] = plane;
+		}
+		int l = drmModeCreateLease(fd, objs, n, 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
+		if (l >= 0) leased = 2;
+		return l;
+	}
+
+	bool Display::borrow(int mask)
+	{
+		if (sdl || fd < 0 || leased < 0) return false;
+		bool any = false;
+		for (int s = 0; s < 2; s++)
+		{
+			if (!(mask & (1 << s)) || !theirs(s)) continue;
+			drmModeCrtc* c = drmModeGetCrtc(fd, p[s].crtc);
+			theirFb[s] = c ? c->buffer_id : 0;
+			if (c) drmModeFreeCrtc(c);
+			borrowMask |= 1 << s;
+			Panel& pn = p[s];
+			// (black first: the menu's buffers there are from before the game)
+			for (int b = 0; b < 2; b++)
+				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
+			pn.missed[0] = pn.missed[1] = Damage();	// (the caller draws everything afresh: its backend invalidated)
+			if (drmModeSetCrtc(fd, pn.crtc, pn.buf[pn.front].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode) == 0) any = true;
+			else { borrowMask &= ~(1 << s); theirFb[s] = 0; }
+		}
+		return any;
+	}
+
+	void Display::giveBack()
+	{
+		if (sdl || fd < 0) return;
+		// (a flip of ours still on its way lands first: the program's picture must be the last thing set)
+		for (int i = 0; i < 20 && pending; i++) { pollfd pf = { fd, POLLIN, 0 }; if (poll(&pf, 1, 10) > 0) handleEvents(); }
+		pending = 0;
+		for (int s = 0; s < 2; s++)
+		{
+			if (!(borrowMask & (1 << s))) continue;
+			if (theirFb[s]) drmModeSetCrtc(fd, p[s].crtc, theirFb[s], 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			theirFb[s] = 0;
+		}
+		borrowMask = 0;
 	}
 }

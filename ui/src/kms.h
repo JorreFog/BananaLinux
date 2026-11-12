@@ -62,6 +62,15 @@ namespace banana
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
 		int lease(int s);
 		int leasedScreen() const { return leased; }
+		// both panels leased to one program (a game that takes both, on a handheld with a Home button: the menu keeps
+		// the display device, so it can come back over the game without the game ending). The lease's fd, or -1.
+		int leaseBoth();
+		// the menu over a leased program that is stopped (SIGSTOP): the screens in mask (bit 0 the top, bit 1 the
+		// bottom) drawn by present() again, what the program had on them remembered; giveBack() puts that back, for
+		// the program to go on from. Nothing but a page flip either way: no mode is set, no process starts.
+		bool borrow(int mask);
+		void giveBack();
+		int borrowed() const { return borrowMask; }
 		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
 		// second, seen after RetroArch's leased panel was given back): measured over 200 ms, and when it storms both
 		// CRTCs are switched off and on again, the one thing that ends it. The rate after, or -1 when it was calm.
@@ -75,7 +84,10 @@ namespace banana
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
 		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; PanelFit fit; };
-		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
+		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;	// (leased: 0 or 1 that screen, 2 both)
+		int borrowMask = 0;			// the leased screens the menu draws on for now (borrow)
+		uint32_t theirFb[2] = { 0, 0 };	// what the lease's program showed there
+		bool theirs(int s) const { return (leased == 2 || leased == s) && !(borrowMask & (1 << s)); }
 		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
 		bool makeBuf(Buf& b, int w, int h);

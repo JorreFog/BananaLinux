@@ -1023,9 +1023,10 @@ static void suspend_now(const char *why)
 	 * power-button sleep (the lid-open event that would light them is drained below) */
 	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
 	if (dark || !lid_closed) backlights_power(!lid_closed);
-	if (pg > 0) kill(-pg, SIGCONT);
+	/* (a game the menu itself holds stopped, the Home button's menu over it: left so, the menu lets it go on) */
+	if (pg > 0 && access("/run/banana/game.held", F_OK) != 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
-	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
+	if (ui && (!game || access("/run/banana/game.held", F_OK) == 0)) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
 	undim();
 	hooks("post", 1);
