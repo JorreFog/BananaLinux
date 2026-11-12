@@ -1866,3 +1866,37 @@ settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certif
 settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again. Its certificate is one you trusted on this handheld.	已与 {n}（{hsPairedUrl}）配对。按 A 打开其地址与「检查证书」。在那里选择「连接」可重新配对。其证书是你在此掌机上信任的那一张。
 settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate isn't checked (Check certificate is off).	已与 {n}（Romhost，{hsPairedUrl}）配对。按 A 重新配对。其证书未经检查（「检查证书」已关闭）。
 settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate is one you trusted on this handheld.	已与 {n}（Romhost，{hsPairedUrl}）配对。按 A 重新配对。其证书是你在此掌机上信任的那一张。
+# (Home server's page: the help and hints of its rows as they are worded now, the waits of a pairing:
+# a machine-translated draft, for the translator to check in the next round)
+settings		Syncs saves both ways and downloads the games waiting in Get games.	双向同步存档，并下载「获取游戏」中等待的游戏。
+settings		Where Get games puts a game.	「获取游戏」把游戏放在哪里。
+settings		This card's roms folder.	本卡的 roms 文件夹。
+settings		The second card's roms folder. With the card out, a game waits for the next sync.	第二张卡的 roms 文件夹。卡未插入时，游戏会等到下次同步。
+settings		When syncing happens by itself.	何时自动进行同步。
+settings		Only when you choose Sync now.	仅在你选择「立即同步」时。
+settings		After you leave a game, and before one with Sync before playing on (B skips the wait).	离开游戏后；开启「游玩前同步」时，在游戏开始前也会同步（按 B 跳过等待）。
+settings		Also every save and the waiting games when Wi-Fi connects. Never while a game runs.	Wi-Fi 连接时还会同步所有存档和等待中的游戏。游戏运行时绝不同步。
+settings		Whether a game's save is brought up to date before it starts.	游戏开始前是否先把它的存档更新到最新。
+settings		The game starts at once.	游戏立即开始。
+settings		With Auto sync on. B plays at once.	需开启「自动同步」。按 B 立即开始游戏。
+settings		Whether save states sync too.	是否也同步即时存档。
+settings		Only the games' own saves.	仅游戏自身的存档。
+settings		Save states too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	也同步即时存档。来自 RomM 的会保存在「管理存档」中，绝不会自行载入。快速恢复的状态从不同步。
+settings		Copies the server's games to the card and syncs saves both ways. Your own files stay.	把服务器上的游戏复制到卡上，并双向同步存档。你自己的文件会保留。
+settings		What comes from the server.	从服务器获取什么。
+settings		Games and their saves.	游戏及其存档。
+settings		Only the saves.	仅存档。
+settings		Where downloaded games go.	下载的游戏放在哪里。
+settings		The second card's roms folder, while it's in.	第二张卡的 roms 文件夹（卡插入时）。
+settings		Which of the server's games come to the card. Saves sync for every game on the card.	服务器上的哪些游戏会下载到卡上。卡上每个游戏的存档都会同步。
+settings		Every game of the systems above: on a large server, maybe more than the card holds.	上述系统的所有游戏：在大型服务器上，可能超出卡的容量。
+settings		Only the games ticked in Choose games. One unticked later stays until you delete it.	仅「选择游戏」中勾选的游戏。之后取消勾选的游戏会保留，直到你删除它。
+settings		The server's games, a system at a time. A ticks one, X ticks them all.	服务器上的游戏，每次一个系统。按 A 勾选一个，按 X 全部勾选。
+settings		After you leave a game.	离开游戏后。
+settings		After a game, and when Wi-Fi connects. Never while a game runs.	游戏结束后，以及 Wi-Fi 连接时。游戏运行时绝不同步。
+settings		On: an https server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust.	开：像浏览器一样检查 https 服务器的证书。关：用于自签名证书。在不信任的网络上请保持开启。
+settings		Unpairs the handheld. Games and saves stay on the card. Press A twice.	取消此掌机的配对。游戏和存档保留在卡上。按 A 两次。
+settings		Forgetting the server...	正在遗忘服务器...
+settings		The server's certificate isn't trusted. For a certificate of your own making, turn off Check certificate below (or put your CA's certificate on the card as homesync_ca), then pair again.	服务器的证书不受信任。若是你自己制作的证书，请关闭下方的「检查证书」（或把你的 CA 证书作为 homesync_ca 放到卡上），然后重新配对。
+settings		Stopping the last pairing...	正在停止上一次配对...
+settings		A sync is running. Wait for it to end, or stop it on Sync now, then pair.	正在同步。请等它结束，或在「立即同步」处停止它，然后再配对。
