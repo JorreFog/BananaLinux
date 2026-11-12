@@ -7,7 +7,10 @@ rules, a plan the test writes, each file's bytes and the upload's answer. Not Ho
 plan.json, read again at each request so a test can change it between syncs: {"mode": "saves"|"states"|"off",
 "actions": [{"path", "action", "version"?, "sha1"?, ...}], "data"?: hex (every file's bytes, 8 KiB of 0x42 when
 left out), "put"?: the status an upload is answered with (200), "delay"?: seconds a file's download waits before
-it is sent (a slow link, for a save written meanwhile)}. A download's sha1, when the plan gives none, is the data's.
+it is sent (a slow link, for a save written meanwhile), "manifest"?: the games' list as Romhost's /api/v1/manifest
+gives it ({"generation", "systems": [{"id", "folder", "games": [{"title", "files": [{"path"}]}]}]}; each file is the
+data, its size and sha1 filled in here, and its download waits "delay" too)}. A download's sha1, when the plan gives
+none, is the data's.
 """
 import hashlib
 import http.server
@@ -24,6 +27,11 @@ def plan():
         if a.get("action") == "download":
             a.setdefault("sha1", hashlib.sha1(data).hexdigest())
             a.setdefault("version", 2)
+    for s in p.get("manifest", {}).get("systems", []):
+        for g in s.get("games", []):
+            for f in g.get("files", []):
+                f.setdefault("size", len(data))
+                f.setdefault("sha1", hashlib.sha1(data).hexdigest())
     return p, data
 
 
@@ -40,11 +48,13 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         p, data = plan()
-        if self.path.startswith("/api/v1/saves/file/"):
+        if self.path.startswith("/api/v1/saves/file/") or self.path.startswith("/api/v1/files/"):
             time.sleep(p.get("delay", 0))
             self.reply(data, kind="application/octet-stream")
         elif self.path.startswith("/api/v1/saves/rules"):
             self.reply(json.dumps({"mode": p.get("mode", "saves")}).encode())
+        elif self.path.startswith("/api/v1/manifest") and "manifest" in p:
+            self.reply(json.dumps(p["manifest"]).encode())
         else:
             self.reply(b"{}")
 

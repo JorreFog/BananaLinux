@@ -441,6 +441,22 @@ sleep 1; head -c 8192 /dev/urandom > "$S/Offline (USA).srm"; cp "$S/Offline (USA
 cmp -s "$S/Offline (USA).srm" "$OUT/rh-played.srm" && grep -q 'Offline (USA).srm: changed while syncing' "$OUT/bs.log" ||
     bad "Romhost's download went over a save written during it: $(cat "$OUT/bs.log")"
 grep -q '"saves/gba/Offline (USA).srm": {"version": 2' "$C/banana/romsync.json" && bad "Romhost's download over a save written during it recorded as agreed"
+# Forget this server pressed while Romhost's games are copying (the menu says the games stay on the card): the run stops
+# at the first file it can't record, and the game the server no longer lists, which the run had set out to remove,
+# stays, on a card of its own following the stand-in's list
+F=$OUT/rhcard; mkdir -p "$F/banana" "$F/run" "$F/roms"
+rhf() { "$BIN" --root "$F" --run "$F/run" --status "$F/run/sync.status" "$@"; }
+printf '{"backend": "romhost", "server": "http://127.0.0.1:%s", "token": "t", "name": "rhcard"}\n' "$RHPORT" > "$F/banana/romsync.json"
+echo '{"mode": "off", "manifest": {"generation": 1, "systems": [{"id": "gba", "folder": "gba", "games": [{"title": "Stays", "files": [{"path": "gba/Stays (USA).gba"}]}]}]}}' > "$OUT/rh-plan.json"
+rhf sync > "$OUT/rhf1.log" 2>&1; [ -s "$F/roms/gba/Stays (USA).gba" ] || bad "the Romhost stand-in's game didn't come: $(cat "$OUT/rhf1.log")"
+echo '{"mode": "off", "delay": 2, "manifest": {"generation": 2, "systems": [{"id": "gba", "folder": "gba", "games": [{"title": "Comes", "files": [{"path": "gba/Comes (USA).gba"}]}]}]}}' > "$OUT/rh-plan.json"
+rhf sync > "$OUT/rhf2.log" 2>&1 & RHP=$!
+sleep 1; rhf forget; wait $RHP
+grep -q "stopped: what was copied couldn't be recorded" "$OUT/rhf2.log" || bad "a Forget while games copied: the run not stopped: $(cat "$OUT/rhf2.log")"
+[ -s "$F/roms/gba/Stays (USA).gba" ] || bad "a Forget while games copied: a game the server stopped listing was still removed: $(cat "$OUT/rhf2.log")"
+[ ! -e "$F/banana/romsync.json" ] || bad "a Forget while games copied: the pairing written back"
+grep -q 'saves: left alone, the run stopped' "$OUT/rhf2.log" || bad "a Forget while games copied: the run went on to the saves of a server forgotten: $(cat "$OUT/rhf2.log")"
+echo '{"actions": []}' > "$OUT/rh-plan.json"
 cp "$OUT/rm.json" "$C/banana/romsync.json"
 sed -i "s#\"server\": \"http://127.0.0.1:1\"#\"server\": \"$U3\"#" "$C/banana/romsync.json"
 head -c 8192 /dev/urandom > "$S/Not Queued (USA).srm"

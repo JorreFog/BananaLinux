@@ -316,7 +316,9 @@ namespace
 	}
 
 	// ---- the ROMs: the card made to match the server's list (PROTOCOL.md "What a device sync must do") ----------------
-	struct RomResult { int downloaded = 0, removed = 0; std::vector<std::string> conflicts, errors; bool changed = false; };
+	// (stopped: what was copied could no longer be recorded, the pairing forgotten or made again under the run, or the
+	// card full: nothing more is to be done for this pairing by the run, its saves included)
+	struct RomResult { int downloaded = 0, removed = 0; std::vector<std::string> conflicts, errors; bool changed = false, stopped = false; };
 	// Choosing games (owner, 0.5.0): settings homesync_games = all | chosen; the chosen ones in banana/homesync-games.txt,
 	// a line each: the game's key, its first ROM file's roms-relative path ("gba/Name.gba"), as `banana-sync games` lists
 	std::string gameKey(const MGame& g)
@@ -640,9 +642,21 @@ namespace
 			got.insert(f->path);
 			say("  [file %d/%zu] %s", fi, todo.size(), f->path.c_str());
 			// (progress kept: a sync cut short goes on from here. Not kept, the pairing forgotten or made again while
-			// this ran, or the card full: nothing further is copied for a state that can't say it was)
-			if (!saveConf(c)) { res.errors.push_back("stopped: what was copied couldn't be recorded (the pairing changed, or the card is full)"); break; }
+			// this ran, or the card full: nothing further is copied for a state that can't say it was, and no game the
+			// server stopped listing leaves the card, for a pairing that may be gone, whose Forget said the games stay)
+			if (!saveConf(c))
+			{
+				progress = nullptr;
+				res.errors.push_back("stopped: what was copied couldn't be recorded (the pairing changed, or the card is full)");
+				res.stopped = true;
+				break;
+			}
 		}
+		// (stopped: no gamelist rewritten either, which takes out the entries of the games no longer listed, the games
+		// themselves staying. Get games' entries are only ever added, for the games this run brought, which are on the
+		// card whatever became of the pairing: written, or a game recorded before the stop would have a file and never
+		// a title, the next run finding it in place and bringing nothing)
+		if (res.stopped && !fetch) return res;
 		for (auto& rel : gone)
 		{
 			bool sd = c.where.count(rel) > 0;
@@ -708,6 +722,7 @@ namespace
 				res.changed = true;
 			}
 		}
+		if (res.stopped) return res;
 		std::set<std::string> listed;
 		for (auto& s : m.systems) listed.insert(s.folder);
 		for (auto it = c.gamelist.begin(); !fetch && it != c.gamelist.end();)
@@ -1357,6 +1372,7 @@ namespace
 		std::vector<std::string> errors, conflicts;
 		int downloaded = 0, removed = 0, up = 0, down = 0, sconf = 0;
 		std::string note;
+		bool stopped = false;	// (the games' part could no longer record what it did: the run does nothing more)
 		auto romsPass = [&]() -> bool
 		{
 			const size_t before = errors.size();
@@ -1393,6 +1409,7 @@ namespace
 				RomResult r = syncRoms(*b, c, m, skip, romm || pick ? &chosen : nullptr, toSd2, romm);
 				downloaded += r.downloaded; removed += r.removed; conflicts.insert(conflicts.end(), r.conflicts.begin(), r.conflicts.end());
 				for (auto& e : r.errors) errors.push_back(e);
+				stopped = stopped || r.stopped;
 			}
 			noteFailed();
 			return true;
@@ -1402,7 +1419,7 @@ namespace
 		std::set<std::string> tried = chosen;
 		auto more = [&]()
 		{
-			if (!romm || savesOnly || dryRun) return false;
+			if (!romm || savesOnly || dryRun || stopped) return false;
 			std::set<std::string> next;
 			for (auto& k : readListLines(getFile())) if (tried.insert(k).second) next.insert(k);
 			if (next.empty()) return false;
@@ -1431,6 +1448,9 @@ namespace
 		};
 		// (Get games' own run, --games-only: the games asked for and nothing else, the saves left to the syncs that are for them)
 		if (gamesOnly) say("saves: left to the syncs for them (--games-only)");
+		// (the games' part stopped, nothing of it recorded any more: the saves aren't looked at for a pairing that may be
+		// gone, with a token only this run still holds, none of what it did there to be kept)
+		else if (stopped) say("saves: left alone, the run stopped");
 		else if (gameRunning()) errors.push_back(running);
 		else if (!lock()) errors.push_back("saves: another sync is saving, next time");
 		// (the lock let go with the saves left alone: kept, it would be held through the games asked for meanwhile, below,
@@ -1464,7 +1484,7 @@ namespace
 		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
 		// (RomM: the server's games, listed for the saves or for Get games' downloads, kept for Get games' page; not
 		// from one game's sync, which lists that game's system alone)
-		if (romm && onlyRom.empty() && !dryRun && b->haveList())
+		if (romm && onlyRom.empty() && !dryRun && !stopped && b->haveList())
 		{
 			Manifest m;
 			std::string err;

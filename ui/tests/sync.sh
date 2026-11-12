@@ -1238,6 +1238,20 @@ if [ -x "$HERE/banana-ui" ]; then
     grep -v '^#' "$OUT/rce/banana/homesync-get.txt" 2>/dev/null | grep -q . && bad "Get games, three picks: games left on the list: $(cat "$OUT/rce/banana/homesync-get.txt")"
     case $(st rce) in done\ *) ;; *) bad "Get games, three picks: the last line isn't done: $(st rce)" ;; esac
     grep -q 'ended before it started' "$OUT/ui-e2e.log" && bad "Get games, three picks: a sync ended before it started"
+    # (the pairing made again while a game asked for comes down: the run stops at the file it can't record, the game it
+    # brought has its gamelist entry all the same, being on the card, and the saves aren't looked at with a token the
+    # card no longer holds)
+    card rcs
+    CODE=$(curl -s -XPOST "$UE/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rcs pair "$UE" "$CODE" > "$OUT/rcs-pair.log" 2>&1 || bad "rcs: pairing failed: $(st rcs) $(cat "$OUT/rcs-pair.log")"
+    printf 'gba/Banana Run (USA).gba\n' > "$OUT/rcs/banana/homesync-get.txt"
+    curl -s -XPOST "$UE/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "slow", "arg": 20000, "count": 1}' >/dev/null
+    GETALL=0 bs rcs sync > "$OUT/rcs.log" 2>&1 & RCSP=$!
+    sleep 1; sed -i 's/"token": "[^"]*"/"token": "another"/' "$OUT/rcs/banana/romsync.json"; wait $RCSP
+    grep -q "stopped: what was copied couldn't be recorded" "$OUT/rcs.log" || bad "Get games, the pairing made again under it: the run not stopped: $(cat "$OUT/rcs.log")"
+    [ -s "$OUT/rcs/roms/gba/Banana Run (USA).gba" ] && grep -q 'Banana Run' "$OUT/rcs/roms/gba/gamelist.xml" 2>/dev/null || bad "Get games, stopped: the game it brought has no gamelist entry: $(cat "$OUT/rcs.log")"
+    grep -q 'saves: left alone, the run stopped' "$OUT/rcs.log" || bad "Get games, stopped: the saves were still looked at: $(cat "$OUT/rcs.log")"
+    grep -q '"token": "another"' "$OUT/rcs/banana/romsync.json" || bad "Get games, stopped: the pairing made meanwhile was written over"
     # (the progress line while games come down counts games, not files: two games of one system with their covers are
     # four files, by path both ROMs before either cover; the line says game 1 of 2 through the first game's ROM and
     # cover, by its title, then game 2 of 2. The first cover slowed to a few seconds so its line is seen)
