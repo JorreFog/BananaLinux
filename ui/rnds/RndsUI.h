@@ -146,6 +146,7 @@ namespace rnds
 	// and the boot animation (setAccent before the UI is made; Banana's settings: yellow, blue, red, green, purple,
 	// pink)
 	extern std::string brandNote;	// beside the logo at the top (Banana: "Alpha 0.3.0"); empty: nothing
+	extern std::string pausedGame;	// the game stopped behind the menu (the Home button): its title; empty: none
 	struct Accent { uint32_t base, light, dark, band, low; };
 	extern Accent accent;
 	bool setAccent(const std::string& name);		// false: unknown, the yellow kept

@@ -10,6 +10,7 @@
 namespace rnds
 {
 	std::string brandNote;
+	std::string pausedGame;
 	Accent accent = { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 };
 	static const struct { const char* name; Accent a; } ACCENTS[] = {
 		{ "yellow", { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 } },

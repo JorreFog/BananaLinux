@@ -207,7 +207,17 @@
                 { "type": "text", "text": "BANANA OS", "size": 13.3, "spacing": 1.07, "color": "=a", "y": 0.5 },
                 { "type": "rect", "w": 4.6, "h": 1 }
               ] },
-            { "type": "text", "text": "{brand}", "size": 12.4, "color": "=muted" }
+            { "type": "text", "text": "{brand}", "size": 12.4, "color": "=muted" },
+            // a game stopped behind the menu (the Home button): its name, and how to go back
+            { "type": "group", "layout": "row", "align": "center", "gap": 6.2, "padding": 3.6, "h": 24.4, "radius": 12.2,
+              "border": 0.9, "borderColor": "=alpha(a, 0.6)", "visible": "=paused != ''",
+              "children": [
+                { "type": "rect", "w": 1.7, "h": 1 },
+                { "type": "rect", "w": 2.7, "h": 9.8, "fill": "=a" }, { "type": "rect", "w": 2.7, "h": 9.8, "fill": "=a" },
+                { "type": "text", "text": "{paused}", "size": 13.3, "color": "=ink", "y": 0.5 },
+                { "type": "text", "text": "HOME TO RETURN", "size": 11.1, "spacing": 0.9, "color": "=muted", "y": 0.5 },
+                { "type": "rect", "w": 4.6, "h": 1 }
+              ] }
           ] },
         { "type": "group", "layout": "row", "align": "center", "gap": 11.6, "right": 25.3, "y": 0, "h": 41,
           "children": [

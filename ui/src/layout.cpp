@@ -49,7 +49,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "screenX", "screenY", "screenW", "screenH", "day" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "screenX", "screenY", "screenW", "screenH", "day", "paused" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -558,6 +558,7 @@ namespace banana
 			if (nId == HOOK("online")) { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
 			if (nId == HOOK("motion")) { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
 			if (nId == HOOK("brand")) { out = EV(rnds::brandNote); return true; }
+			if (nId == HOOK("paused")) { out = EV(rnds::pausedGame); return true; }
 			if (nId == HOOK("accent") || nId == HOOK("accent.base")) { out = EV(hex(rnds::accent.base)); return true; }
 			if (nId == HOOK("accent.light")) { out = EV(hex(rnds::accent.light)); return true; }
 			if (nId == HOOK("accent.dark")) { out = EV(hex(rnds::accent.dark)); return true; }

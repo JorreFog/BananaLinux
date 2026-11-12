@@ -1093,6 +1093,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
 		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
 		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
+		else if (op == "paused") { std::getline(cs >> std::ws, rnds::pausedGame); be.invalidate(); }	// paused [title]: a game behind the menu
 		else if (op == "section") { std::string sec; std::getline(cs >> std::ws, sec); if (!settings.isOpen()) settings.open(); settings.openSection(sec); logf("section %s open", sec.c_str()); }	// section <name>: a settings page
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
@@ -2893,6 +2894,8 @@ int main(int argc, char** argv)
 		const int wasBorrowed = disp.borrowed();
 		disp.borrow(quick ? 2 : 3);
 		home.on = true; home.quick = quick; home.resume = home.end = false; home.pid = pid; home.rom = gameRomPath; home.next.clear();
+		// (a layout theme's "paused": the Thor's status bar says which game waits behind the menu)
+		rnds::pausedGame = quick ? "" : lib.gameAt(game).title;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (quick)
@@ -2919,6 +2922,7 @@ int main(int argc, char** argv)
 			if (settingsView.isOpen()) settingsView.close();
 		}
 		home.on = false;
+		rnds::pausedGame.clear();
 		if (!wasBorrowed) disp.giveBack();
 		unlink("/run/banana/game.held");
 		rep.key = Key::NONE;
