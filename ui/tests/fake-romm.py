@@ -39,7 +39,7 @@ first byte flipped), "500" (refused before anything is done), "500-after" (done,
 bytes a second, 1024), "delay" (answered arg seconds late, 1, as it stood when asked: the state may move meanwhile),
 "skew" (the Date header arg seconds off), "replace" (the body swapped for arg: a string as it is, anything else as
 JSON), "raise" (the handler fails, as a bug in the stand-in would), "409" (an upload refused by the upload guard,
-whatever the slot holds), "409-rewrite" (refused, the slot's head written over in place meanwhile with the bytes arg in
+whatever the slot holds), "403" (refused with a page of arg bytes, as something standing in front of RomM does), "409-rewrite" (refused, the slot's head written over in place meanwhile with the bytes arg in
 hex, its id kept), "409-rewrite-nohash" (the same, the head then giving no MD5); {"clear": true} drops them.
 Strict: POST /test/strict {"tokens"} notes, for those tokens, what BananaOS must never send (overwrite=true,
 autocleanup, an upload outside a slot, PUT /api/saves/{id}, /api/saves/delete); GET /test/violations lists them.
@@ -564,6 +564,8 @@ class H(http.server.BaseHTTPRequestHandler):
             body = (a if isinstance(a, str) else json.dumps(a)).encode()
         if kind == "badhash" and body and ctype == "application/octet-stream":
             body = bytes([body[0] ^ 0xFF]) + body[1:]
+        if kind == "403":
+            code, ctype, body = 403, "text/html", b"<html>" + b"x" * int(fault.get("arg") or 1024)
         length = len(body)
         if kind == "delay":
             time.sleep(float(fault.get("arg") or 1))

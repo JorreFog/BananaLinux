@@ -136,6 +136,7 @@ namespace bsync
 		long long certFrom = 0, certTo = 0;	// Req's certDates: the server's certificate's own dates (unix time; 0 not read)
 		std::string certPem, certSubject, certIssuer;	// and the certificate itself (PEM), whom it names and who signed it
 		std::string body, err;
+		bool tooBig = false;	// stopped: the body went past Req's maxBytes (code 0, err says so)
 		std::map<std::string, std::string> hdr;	// lower-case names
 		JPtr json() const { return banana::parseJson(body); }
 		std::string error() const	// the server's {"error": ...} (Romhost) or {"detail": ...} (RomM/FastAPI), or why
@@ -162,9 +163,16 @@ namespace bsync
 		std::string partName;					// the multipart file's name as sent
 		long timeout = callTimeout;				// whole request (0 = none: the speed floor below instead)
 		bool follow = true;						// redirects followed; off, a 3xx is the answer (its location in hdr)
+		// the most the body may be, the request stopped past it: an answer kept in memory is the server's JSON, a file
+		// a game, a save or a cover of a size known or bounded, and a server (or whoever stands in for one over plain
+		// http) that sends without end would otherwise fill the memory, or /run, which is memory too. -1: BODY_MAX for
+		// an answer in memory, no cap for a file
+		long long maxBytes = -1;
 		bool certDates = false;					// the server's certificate taken unchecked, for its dates (Resp's certFrom, certTo)
 	};
 	Resp http(const Req& q);
+	constexpr long long BODY_MAX = 64ll << 20;	// an answer kept in memory: a RomM library's whole list is a few MB
+	constexpr long long FILE_MAX = 64ll << 20;	// a download of no size said beforehand: a save, a state or a cover
 
 	// ---- the card's sync state: /data/banana/romsync.json --------------------------------------------------------
 	// The same file romsync.py (Romhost's reference client) keeps: server, token, device, name, state{files,gamelist,
@@ -374,5 +382,5 @@ namespace bsync
 	void dropDownload(const std::string& dl);
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
 		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr,
-		const std::function<std::string(const std::string&)>& check = nullptr);
+		const std::function<std::string(const std::string&)>& check = nullptr, long long cap = FILE_MAX);	// cap: the most taken when size is -1 (-1: any amount)
 }

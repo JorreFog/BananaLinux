@@ -298,8 +298,10 @@ namespace
 					say("  down %s", rel.c_str());
 					// (the journal's entry ended once the record is written: a run killed between the two is agreed by
 					// the next start)
-					saveConf(c);
-					op.close();
+					// (the record not written, the card full or the pairing gone meanwhile: the entry is left open, so the
+					// next run's recovery agrees the save it finds installed rather than taking it for the card's change)
+					if (saveConf(c)) op.close();
+					else { op.id.clear(); errors.push_back(rel + ": put in place, its record not written (the card full?), agreed next time"); }
 				}
 				saveConf(c);
 			}
@@ -619,7 +621,7 @@ namespace
 						}
 						return std::string();
 					};
-				ok = fetchTo(f->url, b.authFor(f->url), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members);
+				ok = fetchTo(f->url, b.authFor(f->url), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members, f->media ? 16ll << 20 : -1);
 			}
 			progress = nullptr;
 			doneBytes += std::max(0LL, f->size);
@@ -636,8 +638,10 @@ namespace
 			res.downloaded++;
 			res.changed = true;
 			got.insert(f->path);
-			saveConf(c);	// progress kept: a sync cut short goes on from here
 			say("  [file %d/%zu] %s", fi, todo.size(), f->path.c_str());
+			// (progress kept: a sync cut short goes on from here. Not kept, the pairing forgotten or made again while
+			// this ran, or the card full: nothing further is copied for a state that can't say it was)
+			if (!saveConf(c)) { res.errors.push_back("stopped: what was copied couldn't be recorded (the pairing changed, or the card is full)"); break; }
 		}
 		for (auto& rel : gone)
 		{
@@ -1020,10 +1024,17 @@ namespace
 			JPtr j = (r.code == 200 || r.code == 201) ? r.json() : nullptr;
 			if (!j || j->str("device_code").empty()) { status("error " + (r.code == 404 ? std::string("this RomM has no device pairing (update it, or type a client token's code)") : r.error())); return 1; }
 			std::string dc = j->str("device_code"), uc = j->str("user_code");
-			int interval = std::max(2, (int)j->num("interval", 5)), left = (int)j->num("expires_in", 600);
+			int interval = std::min(60, std::max(2, (int)j->num("interval", 5))), left = std::min(3600, (int)j->num("expires_in", 600));
 			// the page's address with the code in it (verification_path_complete): RomM's /pair/device has no field to
 			// type a code into, it takes it from ?user_code= only (#141)
-			std::string verify = url + j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
+			// (the page is the paired server's own, a path under its address: one that doesn't start as a path, "@other.host/…"
+			// say, would make the QR code a link to another server; and the code is letters and digits, as RomM makes it)
+			std::string vpath = j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
+			bool plain = !uc.empty() && uc.size() <= 32 && vpath.size() > 1 && vpath[0] == '/' && vpath[1] != '/';
+			for (unsigned char ch : uc) if (!isalnum(ch) && ch != '-') plain = false;
+			for (unsigned char ch : vpath) if (ch <= ' ' || ch == 0x7f) plain = false;
+			if (!plain) { status("error the server's pairing answer isn't RomM's (its code, or the page that approves it)"); return 1; }
+			std::string verify = url + vpath;
 			status("pair " + uc + " " + verify + " " + std::to_string(left));
 			say("On RomM, open %s and enter %s", verify.c_str(), uc.c_str());
 			std::string body = "{\"device_code\": " + jsonStr(dc) + "}";
@@ -1195,7 +1206,9 @@ namespace
 		why = place(n.rel, n.vault, std::to_string(n.saveId), n.localMd5, n.rom);
 		if (!why.empty()) return answer(why);
 		from->erase(key);
-		saveConf(c);
+		// (the save is in place either way; the note that couldn't be taken off is by the next sync, which finds the
+		// two the same)
+		if (!saveConf(c)) return answer("put in place, but that couldn't be recorded: Sync now settles it");
 		return answer("");
 	}
 	// restore <file>: a kept copy as the card's save, the save it replaces kept; the next sync sends it as any change

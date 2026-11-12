@@ -72,11 +72,14 @@ namespace bsync
 	}
 	void status(const std::string& s)
 	{
-		if (STATUS.empty() || s == statusLine) return;
-		statusLine = s;
-		if (verbose) fprintf(stderr, "status: %s\n", s.c_str());
+		// (one line, whatever a server's words carried into it: the menu reads the file's first line as the whole)
+		std::string line = s;
+		for (char& ch : line) if (ch == '\n' || ch == '\r') ch = ' ';
+		if (STATUS.empty() || line == statusLine) return;
+		statusLine = line;
+		if (verbose) fprintf(stderr, "status: %s\n", statusLine.c_str());
 		std::string tmp = STATUS + ".new";
-		if (FILE* f = fopen(tmp.c_str(), "w")) { fprintf(f, "%s\n", s.c_str()); fclose(f); rename(tmp.c_str(), STATUS.c_str()); }
+		if (FILE* f = fopen(tmp.c_str(), "w")) { fprintf(f, "%s\n", statusLine.c_str()); fclose(f); rename(tmp.c_str(), STATUS.c_str()); }
 	}
 	// killed (a quit, the menu's Stop, a shutdown): the status says so at once ("error stopped", what the menu shows for
 	// a run that is gone) instead of "running" until the menu's 120 s check notices. Async-signal-safe: open, write,
@@ -335,7 +338,7 @@ namespace bsync
 		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
 		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
 		O_HTTPGET = 80, O_CAINFO = 10065, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002,
-		O_CERTINFO = 172, I_CERTINFO = 0x400022, O_CAPATH = 10097
+		O_CERTINFO = 172, I_CERTINFO = 0x400022, O_CAPATH = 10097, O_REDIR_PROTOCOLS = 182
 	};
 	struct CertInfo { int n; struct Slist { char* data; Slist* next; }** certs; };	// (libcurl's curl_certinfo)
 	// a date as libcurl's certificate information gives it: OpenSSL's "Jan  1 00:00:00 2099 GMT", or its own
@@ -405,15 +408,48 @@ namespace bsync
 
 	namespace
 	{
-	size_t onBody(char* p, size_t sz, size_t n, void* u) { ((std::string*)u)->append(p, sz * n); return sz * n; }
-	size_t onFile(char* p, size_t sz, size_t n, void* u) { return fwrite(p, sz, n, (FILE*)u) * sz; }
+	// an answer's headers as they come: each hop's own, and its status
+	struct Head { std::map<std::string, std::string>* hdr; long status; };
+	// where a body goes, a file or a string, and how much more of it there may be (left < 0: any amount); past that the
+	// write is refused, which ends the transfer. A refusal's body (400 and up) meant for a file is neither written nor
+	// counted against the file's size: it is some server's page about the refusal, often longer than a small file,
+	// and stopping at the file's size ended the transfer before its status was read, so a 403 or a 502 from whatever
+	// stands in front of the server was said as the server sending more than it said. Let through (to BODY_MAX, a page
+	// without end being no better than a file without one), the transfer ends as any answer and says its status
+	struct Sink { FILE* f; std::string* s; long long left; bool over; const Head* head; long long refused; };
+	size_t onSink(char* p, size_t sz, size_t n, void* u)
+	{
+		Sink& k = *(Sink*)u;
+		size_t len = sz * n;
+		if (k.f && k.head && k.head->status >= 400)
+		{
+			k.refused += (long long)len;
+			if (k.refused > BODY_MAX) { k.over = true; return 0; }
+			return len;
+		}
+		if (k.left >= 0)
+		{
+			if ((long long)len > k.left) { k.over = true; return 0; }
+			k.left -= (long long)len;
+		}
+		if (k.f) return fwrite(p, sz, n, k.f) * sz;
+		k.s->append(p, len);
+		return len;
+	}
 	size_t onHeader(char* p, size_t sz, size_t n, void* u)
 	{
 		std::string l(p, sz * n);
+		Head& hd = *(Head*)u;
 		// (each hop's headers alone: a redirect's location gone with it once the next answer starts)
-		if (l.compare(0, 5, "HTTP/") == 0) { ((std::map<std::string, std::string>*)u)->clear(); return sz * n; }
+		if (l.compare(0, 5, "HTTP/") == 0)
+		{
+			hd.hdr->clear();
+			size_t sp = l.find(' ');
+			hd.status = sp == std::string::npos ? 0 : atol(l.c_str() + sp + 1);
+			return sz * n;
+		}
 		size_t c = l.find(':');
-		if (c != std::string::npos) (*(std::map<std::string, std::string>*)u)[lower(trim(l.substr(0, c)))] = trim(l.substr(c + 1));
+		if (c != std::string::npos) (*hd.hdr)[lower(trim(l.substr(0, c)))] = trim(l.substr(c + 1));
 		return sz * n;
 	}
 	}
@@ -451,9 +487,14 @@ namespace bsync
 		if (!tlsVerify || q.certDates) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }	// (a self-signed one, the owner's choice)
 		if (q.certDates) cu.setopt(h, O_CERTINFO, 1L);
 		cu.setopt(h, O_HEADERFUNCTION, onHeader);
-		cu.setopt(h, O_HEADERDATA, &r.hdr);
-		if (q.out) { cu.setopt(h, O_WRITEFUNCTION, onFile); cu.setopt(h, O_WRITEDATA, q.out); }
-		else { cu.setopt(h, O_WRITEFUNCTION, onBody); cu.setopt(h, O_WRITEDATA, &r.body); }
+		Head head = { &r.hdr, 0 };
+		cu.setopt(h, O_HEADERDATA, &head);
+		Sink sink = { q.out, &r.body, q.maxBytes >= 0 ? q.maxBytes : q.out ? -1 : BODY_MAX, false, &head, 0 };
+		cu.setopt(h, O_WRITEFUNCTION, onSink);
+		cu.setopt(h, O_WRITEDATA, &sink);
+		// (a redirect followed only to http or https, and from https only to https: never to a file or another scheme
+		// the server names, nor down to a connection anyone can read)
+		cu.setopt(h, O_REDIR_PROTOCOLS, q.url.compare(0, 8, "https://") == 0 ? 2L : 3L);
 		if (progress) { cu.setopt(h, O_NOPROGRESS, 0L); cu.setopt(h, O_XFERINFOFUNCTION, onProgress); cu.setopt(h, O_XFERINFODATA, nullptr); }
 		void* hl = nullptr;
 		for (auto& x : q.headers) hl = cu.slistAppend(hl, x.c_str());
@@ -497,7 +538,8 @@ namespace bsync
 		{
 			r.curl = rc;
 			r.err = cu.strerror(rc);
-			if (r.err == "Error")
+			if (sink.over) { r.tooBig = true; r.err = "the server sent more than it said, or than this can be"; r.body.clear(); }
+			else if (r.err == "Error")
 			{
 				// (a libcurl without its messages, as the image's: the usual ones in words, the rest by number. Sync now
 				// pressed as the lid opened, before Wi-Fi was back, read "Error (curl 6)")
@@ -965,13 +1007,16 @@ namespace bsync
 	// downloaded to <dst>.part, checked, renamed. The part file is left for a retry when the connection broke
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
 		const std::string& algo, const std::string& want, std::string& err, std::string* got,
-		const std::function<std::string(const std::string&)>& check)
+		const std::function<std::string(const std::string&)>& check, long long cap)
 	{
 		mkdirs(dirOf(dst));
 		std::string part = dst + ".part";
 		long long have = fileSize(part);
 		if (have < 0 || (size >= 0 && have > size) || size < 0) { unlink(part.c_str()); have = 0; }
 		Req q; q.url = url; q.headers = headers; q.timeout = 0;
+		// (no more taken than the file is, or than a file of no size said can be: the whole size even when only the rest
+		// is asked for, as a server that doesn't do ranges sends it all again, which is dealt with below)
+		q.maxBytes = size >= 0 ? size : cap;
 		if (have > 0) q.headers.push_back("Range: bytes=" + std::to_string(have) + "-");
 		FILE* f = nullptr;
 		Resp r;
@@ -986,11 +1031,11 @@ namespace bsync
 			if (r.code == 200 && have > 0)	// (the server sent it all again: the part file has it after the old bytes)
 			{
 				unlink(part.c_str());
-				return fetchTo(url, headers, dst, size, algo, want, err, got, check);
+				return fetchTo(url, headers, dst, size, algo, want, err, got, check, cap);
 			}
 			if (r.code != 200 && r.code != 206)
 			{
-				if (r.code != 0) unlink(part.c_str());
+				if (r.code != 0 || r.tooBig) unlink(part.c_str());	// (cut short by the connection: kept, to go on from)
 				err = r.code ? "HTTP " + std::to_string(r.code) : r.err;
 				return false;
 			}

@@ -1057,7 +1057,7 @@ namespace bsync
 				errors.push_back(rel + ": " + r.error());
 				QueueSt& w = c.queue[key];
 				std::string kept, e;
-				if (w.md5 != L) w = { L, vaultKeep(rel, snap, kept, e) ? kept : "", (double)time(nullptr) };
+				if (w.md5 != L) w = { L, vaultKeep(rel, snap, kept, e) ? kept : "", (double)time(nullptr), "" };
 				unlink(snap.c_str());
 				saveConf(c);
 				return Up::Failed;

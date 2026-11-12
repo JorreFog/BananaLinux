@@ -100,7 +100,8 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path != "/":
             open(sys.argv[2], "a").write((self.headers.get("Authorization") or "none") + "\n")
-        body = b"\x89PNG\r\n\x1a\nelsewhere"
+        import os
+        body = b"\x89PNG\r\n\x1a\nelsewhere" + (b"\0" * (17 << 20) if os.path.exists(sys.argv[2] + ".big") else b"")
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
         self.send_header("Content-Length", str(len(body)))
@@ -118,6 +119,32 @@ bs celse pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "celse: pair
 bs celse sync > "$OUT/cover-elsewhere.log" 2>&1 || bad "a cover on another server: $(tail -3 "$OUT/cover-elsewhere.log")"
 has "celse/roms/gba/media/box/Banana Run (USA).png"
 [ "$(sort -u "$OUT/cover-asked.txt" 2>/dev/null)" = none ] || bad "a cover on another server was asked for with the token: $(sort -u "$OUT/cover-asked.txt" 2>&1)"
+# (the same cover sent 17 MB long, by a server that could as well never stop: taken up to the most a cover can be and
+# no further, nothing of it kept, the game itself still copied)
+: > "$OUT/cover-asked.txt.big"; card cbig
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs cbig pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "cbig: pairing failed: $(st cbig)"
+bs cbig sync > "$OUT/cover-big.log" 2>&1
+rm -f "$OUT/cover-asked.txt.big"
+grep -q 'Banana Run (USA).png: the server sent more than it said, or than this can be' "$OUT/cover-big.log" || bad "a cover without end not stopped, or not said: $(tail -4 "$OUT/cover-big.log")"
+[ -z "$(find "$OUT/cbig/roms/gba/media" -type f 2>/dev/null)" ] || bad "a cover without end left something on the card: $(find "$OUT/cbig/roms/gba/media" -type f)"
+has "cbig/roms/gba/Banana Run (USA).gba"
+# (a game's download refused by something in front of the server, its page longer than the game: said by its status,
+# not as a file longer than it should be, and nothing of the page kept)
+card c403
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs c403 pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "c403: pairing failed: $(st c403)"
+getall "$OUT/c403"
+curl -s -XPOST "http://127.0.0.1:$RA/test/fault" -d '{"path": "GET /api/roms/.*/content/", "kind": "403", "arg": 400000, "count": 1}' >/dev/null
+GETALL=0 bs c403 sync > "$OUT/rom-403.log" 2>&1
+grep -q ': HTTP 403' "$OUT/rom-403.log" && ! grep -q 'the server sent more than it said' "$OUT/rom-403.log" || bad "a download refused with a long page not said by its status: $(tail -4 "$OUT/rom-403.log")"
+[ -z "$(find "$OUT/c403/roms" -name '*.part' 2>/dev/null)" ] || bad "a download refused with a long page left it on the card: $(find "$OUT/c403/roms" -name '*.part')"
+# a pairing whose server names, as the page that approves it, something that isn't a path of its own ("@host/…" would
+# make the QR code a link to another server): refused at once, no code shown
+curl -s -XPOST "http://127.0.0.1:$RA/test/fault" -d '{"path": "POST /api/auth/device/init", "kind": "replace", "arg": {"device_code": "d", "user_code": "ABCD2345", "verification_path_complete": "@elsewhere.example/pair/device?user_code=ABCD2345", "expires_in": 600, "interval": 5}}' >/dev/null
+card cpath
+bs cpath pair --romm "http://127.0.0.1:$RA" > "$OUT/pair-path.log" 2>&1 && bad "a pairing whose approval page is on another server went on"
+[ "$(st cpath)" = "error the server's pairing answer isn't RomM's (its code, or the page that approves it)" ] || bad "an approval page on another server not refused: $(st cpath) $(cat "$OUT/pair-path.log")"
 # a client token's pairing code (RomM: Profile > Client tokens > Pair) on a second card
 card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
