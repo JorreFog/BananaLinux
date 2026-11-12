@@ -4,7 +4,7 @@
 # EmulationStation starts it, through ROCKNIX's /usr/bin/runemu.sh with the system's default emulator and core, so
 # ROCKNIX's emulator setup (its configs, its per-game settings, its Thor quirks) is used as it is. The ids are
 # ROCKNIX's system names, which banana-ui's theme already knows (ui/assets/rnds/systems.cfg). The menu's own pages
-# (Files) are added after the systems.
+# (the Store, Döda Kvarter, Bshare, Activity, the Store's apps, Files) are added after the systems.
 #
 #   es-systems-to-banana.py <es_systems.cfg> [systems.conf to write; default: stdout]
 import sys
@@ -20,6 +20,47 @@ PERF = {'performance': {'psp', 'pspminis', 'ps2', 'gamecube', 'wii', 'wiiware', 
 # systems whose shelf stays even with no games (where a fresh card's games go)
 ALWAYS = {'nds', 'gba', 'gbc', 'gb', 'snes', 'nes', 'psx', 'n64', 'megadrive', 'genesis', 'ports'}
 OWN_PAGES = '''
+[rocknixdsstore]
+name = Store
+maker = ROCKNIXDS
+folder = /usr/share/banana/apps/store
+ext = app
+run = /usr/libexec/banana/run-store %ROM%
+perf = balanced
+
+[dodakvarter]
+name = Döda Kvarter
+maker = ROCKNIXDS
+folder = /usr/share/banana/apps/dodakvarter
+ext = app
+run = /usr/libexec/banana/run-dodakvarter %ROM%
+perf = balanced
+
+[bshare]
+name = Bshare
+maker = Banana
+folder = /usr/share/banana/apps/bshare
+ext = app
+run = banana:bshare
+always = yes
+
+[activity]
+name = Activity
+maker = Banana
+folder = /usr/share/banana/apps/activity
+ext = app
+run = /usr/libexec/banana/run-activity %ROM%
+perf = balanced
+
+[storeapps]
+name = Apps
+maker = Store
+folder = /data/store/tiles
+ext = sh
+run = /usr/libexec/banana/run-store-app %ROM%
+perf = balanced
+flat = yes
+
 [files]
 name = Files
 maker = BananaOS

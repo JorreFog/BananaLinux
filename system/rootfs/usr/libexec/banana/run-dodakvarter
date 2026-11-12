@@ -5,4 +5,9 @@
 export DK_DATA=/data/apps/dodakvarter
 mkdir -p $DK_DATA
 cd $DK_DATA
+# under a compositor (ROCKNIX's sway: the menu's own display is SDL there) a full-screen window on each screen
+if [ "$BANANA_DISPLAY" = sdl ]; then
+    export DK_SDL_LAYOUT=windows SDL_VIDEODRIVER=wayland
+    exec /usr/bin/dodakvarter --backend sdl
+fi
 exec /usr/bin/dodakvarter --backend kms

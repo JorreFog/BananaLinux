@@ -1,0 +1,151 @@
+The apps' SDL layer (Döda Kvarter, the Store) on a two-screen handheld under a Wayland compositor (the AYN Thor under
+ROCKNIX's sway): DK_SDL_LAYOUT=windows, a full-screen window for each screen, the bottom one's title ending in
+"Bottom" (ROCKNIX's sway puts windows named so on its second output), each screen fitted in its own; a touch on
+the bottom window taps the bottom screen. DK_TITLE names the windows.
+
+diff --git a/dodakvarter/src/plat_sdl.c b/dodakvarter/src/plat_sdl.c
+index 8bacecf..87271ed 100644
+--- a/dodakvarter/src/plat_sdl.c
++++ b/dodakvarter/src/plat_sdl.c
+@@ -4,6 +4,9 @@
+ // Keys: arrows/WASD move, J or Z fire (A), K or X use (B), I or C swap (X), U or V reload (Y), Q sprint (L),
+ // E knife (R), 1 item (L2), 3 grenade (R2), Tab next item (SELECT), Enter pause (START), Esc menu.
+ // The mouse aims on the top screen (left button fires) and taps the bottom one.
++// DK_SDL_LAYOUT=windows (a two-screen handheld under a Wayland compositor: the AYN Thor under ROCKNIX's sway): a
++// full-screen window for each screen, the bottom one's title ending in "Bottom" (ROCKNIX's sway puts windows named so
++// on its second output), each screen fitted in its own; a touch on the bottom window taps the bottom screen.
+ #define _GNU_SOURCE
+ #include "plat.h"
+ #include <SDL2/SDL.h>
+@@ -17,9 +20,11 @@ FN(SDL_RenderClear); FN(SDL_RenderCopy); FN(SDL_RenderPresent); FN(SDL_PollEvent
+ FN(SDL_GameControllerOpen); FN(SDL_IsGameController); FN(SDL_NumJoysticks); FN(SDL_GameControllerGetAxis);
+ FN(SDL_GameControllerGetButton); FN(SDL_OpenAudioDevice); FN(SDL_PauseAudioDevice); FN(SDL_GetDesktopDisplayMode);
+ FN(SDL_SetRenderDrawColor); FN(SDL_GetWindowSize); FN(SDL_DestroyRenderer); FN(SDL_DestroyWindow); FN(SDL_GetRendererOutputSize);
+-FN(SDL_SetWindowTitle); FN(SDL_GameControllerClose);
++FN(SDL_SetWindowTitle); FN(SDL_GameControllerClose); FN(SDL_GetWindowID);
+ 
+ static SDL_Window *win; static SDL_Renderer *ren; static SDL_Texture *tex;
++static SDL_Window *win2; static SDL_Renderer *ren2; static SDL_Texture *tex2;   /* DK_SDL_LAYOUT=windows: the bottom's */
++static int two; static Uint32 win2_id, mouse_win;
+ static int lw, lh, side, gap, scale;            /* the composite's logical size and layout */
+ static uint32_t *comp;
+ static uint32_t keys;
+@@ -39,7 +44,7 @@ static int load(void) {
+     L(SDL_GameControllerOpen); L(SDL_IsGameController); L(SDL_NumJoysticks); L(SDL_GameControllerGetAxis);
+     L(SDL_GameControllerGetButton); L(SDL_OpenAudioDevice); L(SDL_PauseAudioDevice); L(SDL_GetDesktopDisplayMode);
+     L(SDL_SetRenderDrawColor); L(SDL_GetWindowSize); L(SDL_DestroyRenderer); L(SDL_DestroyWindow); L(SDL_GetRendererOutputSize);
+-    L(SDL_SetWindowTitle); L(SDL_GameControllerClose);
++    L(SDL_SetWindowTitle); L(SDL_GameControllerClose); L(SDL_GetWindowID);
+ #undef L
+     return 0;
+ }
+@@ -49,6 +54,7 @@ static int s_init(PlatInfo *info) {
+     if (p_SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER)) { plat_log("sdl: %s", p_SDL_GetError()); return -1; }
+     const char *lay = getenv("DK_SDL_LAYOUT");
+     side = lay && !strcmp(lay, "side");
++    two = lay && !strcmp(lay, "windows");
+     int pw = 640, ph = 480;
+     const char *sz = getenv("DK_WINDOW_SIZE");
+     if (sz) sscanf(sz, "%dx%d", &pw, &ph);
+@@ -63,12 +69,25 @@ static int s_init(PlatInfo *info) {
+     if (side) scale = s;                              /* on the device: each panel at its own resolution */
+     p_SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+     p_SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+-    win = p_SDL_CreateWindow("Döda Kvarter", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, lw * scale, lh * scale, SDL_WINDOW_RESIZABLE);
++    const char *title = getenv("DK_TITLE") ? getenv("DK_TITLE") : "Döda Kvarter";
++    if (two) {
++        char t2[160]; snprintf(t2, sizeof t2, "%s Bottom", title);
++        win = p_SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, info->top_w, info->top_h, SDL_WINDOW_FULLSCREEN_DESKTOP);
++        win2 = p_SDL_CreateWindow(t2, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, info->bot_w, info->bot_h, SDL_WINDOW_FULLSCREEN_DESKTOP);
++        if (!win || !win2) { plat_log("sdl: window: %s", p_SDL_GetError()); return -1; }
++        win2_id = p_SDL_GetWindowID(win2);
++        ren2 = p_SDL_CreateRenderer(win2, -1, SDL_RENDERER_ACCELERATED);
++        if (!ren2) ren2 = p_SDL_CreateRenderer(win2, -1, 0);
++        if (!ren2) { plat_log("sdl: renderer: %s", p_SDL_GetError()); return -1; }
++        tex2 = p_SDL_CreateTexture(ren2, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, info->bot_w, info->bot_h);
++        p_SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
++    } else
++    win = p_SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, lw * scale, lh * scale, SDL_WINDOW_RESIZABLE);
+     if (!win) { plat_log("sdl: window: %s", p_SDL_GetError()); return -1; }
+     ren = p_SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+     if (!ren) ren = p_SDL_CreateRenderer(win, -1, 0);
+     if (!ren) { plat_log("sdl: renderer: %s", p_SDL_GetError()); return -1; }
+-    tex = p_SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, lw, lh);
++    tex = p_SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, two ? info->top_w : lw, two ? info->top_h : lh);
+     comp = calloc((size_t)lw * lh, 4);
+     for (int i = 0; i < p_SDL_NumJoysticks(); i++) if (p_SDL_IsGameController(i)) { pad = p_SDL_GameControllerOpen(i); if (pad) break; }
+     info->scale = scale; info->panel_w = pw; info->panel_h = ph; info->hz = 60; info->backend = "sdl";
+@@ -97,8 +116,24 @@ static int key_bit(SDL_Keycode k) {
+     return -1;
+ }
+ 
++/* where a screen of w x h goes in a window of ow x oh (fitted, centred) */
++static SDL_Rect fit(int w, int h, int ow, int oh) {
++    float f = MIN((float)ow / w, (float)oh / h);
++    SDL_Rect r = { 0, 0, (int)(w * f), (int)(h * f) };
++    r.x = (ow - r.w) / 2; r.y = (oh - r.h) / 2;
++    return r;
++}
++
+ /* window pixels to (screen, logical x, y) */
+ static int map_mouse(int wx, int wy, int *x, int *y) {
++    if (two) {
++        const int b = mouse_win == win2_id;
++        int ww, wh; p_SDL_GetWindowSize(b ? win2 : win, &ww, &wh);
++        const int sw = b ? pinfo->bot_w : pinfo->top_w, sh = b ? pinfo->bot_h : pinfo->top_h;
++        SDL_Rect r = fit(sw, sh, ww, wh);
++        *x = r.w ? (wx - r.x) * sw / r.w : 0; *y = r.h ? (wy - r.y) * sh / r.h : 0;
++        return b;
++    }
+     int ww, wh; p_SDL_GetWindowSize(win, &ww, &wh);
+     float k = MIN((float)ww / lw, (float)wh / lh);
+     int ox = (int)((ww - lw * k) / 2), oy = (int)((wh - lh * k) / 2);
+@@ -120,11 +155,11 @@ static void s_poll(Input *in) {
+             mouse_seen = 0;
+             break;
+         }
+-        case SDL_MOUSEMOTION: mouse_x = e.motion.x; mouse_y = e.motion.y; mouse_seen = 1; break;
++        case SDL_MOUSEMOTION: mouse_x = e.motion.x; mouse_y = e.motion.y; mouse_win = e.motion.windowID; mouse_seen = 1; break;
+         case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP:
+             if (e.button.button == SDL_BUTTON_LEFT) mouse_l = e.type == SDL_MOUSEBUTTONDOWN;
+             if (e.button.button == SDL_BUTTON_RIGHT) mouse_r = e.type == SDL_MOUSEBUTTONDOWN;
+-            mouse_x = e.button.x; mouse_y = e.button.y; mouse_seen = 1;
++            mouse_x = e.button.x; mouse_y = e.button.y; mouse_win = e.button.windowID; mouse_seen = 1;
+             break;
+         case SDL_CONTROLLERDEVICEADDED: if (!pad) pad = p_SDL_GameControllerOpen(e.cdevice.which); break;
+         }
+@@ -160,6 +195,25 @@ static void s_poll(Input *in) {
+ }
+ 
+ static void s_present(Surf *top, Surf *bot) {
++    if (two) {
++        /* each screen into its own window: the pixels with their alpha set, as the composite's */
++        Surf *sc[2] = { top, bot };
++        SDL_Renderer *rr[2] = { ren, ren2 };
++        SDL_Texture *tt[2] = { tex, tex2 };
++        for (int k = 0; k < 2; k++) {
++            Surf *f = sc[k];
++            for (int y = 0; y < f->h; y++) for (int x = 0; x < f->w; x++) comp[(size_t)y * f->w + x] = 0xff000000 | f->px[(size_t)y * f->pitch + x];
++            p_SDL_UpdateTexture(tt[k], 0, comp, f->w * 4);
++            int ow, oh; p_SDL_GetRendererOutputSize(rr[k], &ow, &oh);
++            SDL_Rect dst = fit(f->w, f->h, ow, oh);
++            p_SDL_SetRenderDrawColor(rr[k], 0, 0, 0, 255);
++            p_SDL_RenderClear(rr[k]);
++            p_SDL_RenderCopy(rr[k], tt[k], 0, &dst);
++        }
++        p_SDL_RenderPresent(ren2);
++        p_SDL_RenderPresent(ren);
++        return;
++    }
+     for (size_t i = 0; i < (size_t)lw * lh; i++) comp[i] = 0xff0c0c10;
+     for (int y = 0; y < top->h; y++) for (int x = 0; x < top->w; x++) comp[(size_t)y * lw + x] = 0xff000000 | top->px[(size_t)y * top->pitch + x];
+     int bx = side ? top->w : 0, by = side ? 0 : top->h + gap;
+@@ -178,6 +232,8 @@ static void s_present(Surf *top, Surf *bot) {
+ 
+ static void s_shutdown(void) {
+     if (pad) p_SDL_GameControllerClose(pad);
++    if (ren2) p_SDL_DestroyRenderer(ren2);
++    if (win2) p_SDL_DestroyWindow(win2);
+     if (ren) p_SDL_DestroyRenderer(ren);
+     if (win) p_SDL_DestroyWindow(win);
+     p_SDL_Quit();

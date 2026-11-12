@@ -24,5 +24,10 @@ LAYOUT=side
 [ "$(head -n 1 /sys/class/drm/card0-DSI-1/modes 2>/dev/null)" = 1024x768 ] && LAYOUT=plus
 export ROCKNIXDS_BANK_CONFIG=$CFG HOME=$D DOTNET_GCConserveMemory=5 DOTNET_CLI_TELEMETRY_OPTOUT=1
 export SDL_VIDEODRIVER=evdev SDL_BANANA_PANELS=side SDL_BANANA_TOP=${BANANA_TOP:-DSI-2}
+# under a compositor (ROCKNIX's sway: the menu's own display is SDL there): its window, both screens side by side in
+# it, on the top screen (Banana's SDL panels patch is the RG DS's)
+if [ "$BANANA_DISPLAY" = sdl ]; then
+    export SDL_VIDEODRIVER=wayland; unset SDL_BANANA_PANELS SDL_BANANA_TOP
+fi
 cd $D
 exec $APP/rocknixds-bank --layout $LAYOUT

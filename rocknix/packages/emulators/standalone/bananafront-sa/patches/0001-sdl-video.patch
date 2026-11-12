@@ -1,0 +1,264 @@
+BananaFront on a handheld whose panels a Wayland compositor holds (the AYN Thor under ROCKNIX's sway): video_sdl.c,
+the game in a full-screen SDL2 window (fitted, whole-number or stretched as its menu says; the in-game menu's
+640x480 canvas fitted while it is up), a timerfd at the display's rate for the flip events; make sdl builds it
+with ALSA sound and the evdev pad as on the handhelds.
+
+diff --git a/Makefile b/Makefile
+index 0a16153..fbfa3cd 100644
+--- a/Makefile
++++ b/Makefile
+@@ -38,6 +38,21 @@ $(OUT)/bananafront: $(SRC_DEVICE) src/*.h Makefile $(OUT)/librc.a
+ 	@mv -f $@.new $@  # (whole: a test copying it meanwhile never gets half a program)
+ 	@ls -la $@
+ 
++# a handheld whose panels a Wayland compositor holds (ROCKNIX's sway on the AYN Thor): the game in an SDL2 window
++# (video_sdl.c), sound through ALSA, the pad from evdev as on the handhelds: build/sdl/bananafront
++SRC_SDL := $(SRC_COMMON) src/video_sdl.c src/audio.c
++PKG_CONFIG ?= pkg-config
++sdl: build/sdl/bananafront
++build/sdl/rc/%.o: $(RC)/src/%.c
++	@mkdir -p $(dir $@)
++	$(CC) $(CFLAGS) $(RC_FLAGS) -c -o $@ $<
++build/sdl/librc.a: $(patsubst $(RC)/src/%.c,build/sdl/rc/%.o,$(RC_SRC))
++	$(AR) rcs $@ $^
++build/sdl/bananafront: $(SRC_SDL) src/*.h Makefile build/sdl/librc.a
++	@mkdir -p build/sdl
++	$(CC) $(CFLAGS) -O2 $(shell $(PKG_CONFIG) --cflags sdl2) -Isrc -I$(RC)/include -std=gnu11 $(WARN) $(MENU_WARN) $(DEFS) -o $@ $(SRC_SDL) \
++		build/sdl/librc.a $(LDFLAGS) $(shell $(PKG_CONFIG) --libs sdl2) -lasound -lz -lm -ldl -lpthread
++
+ HOSTCC ?= cc
+ host: build/host/bananafront
+ build/host/rc/%.o: $(RC)/src/%.c
+diff --git a/src/video_sdl.c b/src/video_sdl.c
+new file mode 100644
+index 0000000..f836f72
+--- /dev/null
++++ b/src/video_sdl.c
+@@ -0,0 +1,227 @@
++// video_sdl.c: the game in an SDL2 window, for a handheld whose panels a Wayland compositor holds (the AYN Thor under
++// ROCKNIX's sway): one full-screen window on the screen the compositor gives it (the top one), the picture fitted,
++// whole-number scaled or stretched as the menu says, the in-game menu's 640x480 canvas fitted in its place while it is
++// up. A 60 Hz timerfd stands in for the panel's flip event (the compositor shows the newest picture at its own
++// refresh). No overlay plane and no GPU shader pass here.
++#define _GNU_SOURCE
++#include <SDL.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/timerfd.h>
++#include <unistd.h>
++
++#include "bf.h"
++#include "video.h"
++
++static SDL_Window* win;
++static SDL_Renderer* ren;
++static SDL_Texture *tex, *cvtex;
++static int tex_w, tex_h, tex_fmt = -1;
++static int tfd = -1;
++static bool pending;
++static double last_flip, t_start, period_ms, commit_at;
++static uint8_t* buf;
++static size_t cap;
++static unsigned W, H;
++static int fmt_, pitch_;
++static float aspect_;
++static enum bf_scale scale_ = BF_SCALE_FIT;
++static int fixed[4];
++static uint32_t* cv[2];
++static bool canvas_up;
++
++static void pump(void)
++{
++    SDL_Event e;
++    while (SDL_PollEvent(&e)) {}
++}
++
++bool bf_video_open(const bf_video_opts* o)
++{
++    if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) { bf_log("video: SDL: %s", SDL_GetError()); return false; }
++    const int disp = o && o->screen > 0 && o->screen < SDL_GetNumVideoDisplays() ? o->screen : 0;
++    win = SDL_CreateWindow("BananaFront", SDL_WINDOWPOS_CENTERED_DISPLAY(disp), SDL_WINDOWPOS_CENTERED_DISPLAY(disp),
++                           640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);
++    if (!win) { bf_log("video: SDL window: %s", SDL_GetError()); return false; }
++    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
++    if (!ren) ren = SDL_CreateRenderer(win, -1, 0);
++    if (!ren) { bf_log("video: SDL renderer: %s", SDL_GetError()); return false; }
++    SDL_ShowCursor(SDL_DISABLE);
++    if (o) scale_ = o->scale;
++    SDL_DisplayMode m;
++    double hz = SDL_GetCurrentDisplayMode(disp, &m) == 0 && m.refresh_rate > 0 ? m.refresh_rate : 60.0;
++    tfd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
++    struct itimerspec t = { 0 };
++    t.it_interval.tv_nsec = t.it_value.tv_nsec = (long)(1e9 / hz);
++    timerfd_settime(tfd, 0, &t, NULL);
++    t_start = bf_now_ms();
++    period_ms = 1000.0 / hz;
++    int w, h;
++    SDL_GetRendererOutputSize(ren, &w, &h);
++    bf_log("video: SDL (%s), %dx%d at %.0f Hz", SDL_GetCurrentVideoDriver(), w, h, hz);
++    pump();
++    return true;
++}
++
++void* bf_video_begin(unsigned w, unsigned h, int fmt, float aspect, int* pitch)
++{
++    const int bpp = fmt == RETRO_PIXEL_FORMAT_XRGB8888 ? 4 : 2;
++    W = w; H = h; fmt_ = fmt; aspect_ = aspect;
++    pitch_ = (int)(w * bpp);
++    if ((size_t)pitch_ * h > cap) { cap = (size_t)pitch_ * h; buf = realloc(buf, cap); }
++    *pitch = pitch_;
++    return buf;
++}
++
++// where a picture of w x h (shown at aspect a, w/h when 0) goes in the window, by the menu's scale (or the screen
++// border's hole)
++static SDL_Rect place(int w, int h, float a)
++{
++    int ow, oh;
++    SDL_GetRendererOutputSize(ren, &ow, &oh);
++    SDL_Rect r = { 0, 0, ow, oh };
++    if (fixed[2] > 0 && fixed[3] > 0) {
++        // (the hole is in the 640x480 canvas's coordinates: fitted as the canvas is)
++        const double s = ow * 480.0 < oh * 640.0 ? ow / 640.0 : oh / 480.0;
++        const int cx = (int)((ow - 640 * s) / 2), cy = (int)((oh - 480 * s) / 2);
++        r.x = cx + (int)(fixed[0] * s); r.y = cy + (int)(fixed[1] * s);
++        r.w = (int)(fixed[2] * s); r.h = (int)(fixed[3] * s);
++        return r;
++    }
++    if (scale_ == BF_SCALE_STRETCH) return r;
++    if (a <= 0) a = (float)w / (float)h;
++    if (scale_ == BF_SCALE_INTEGER) {
++        const int dh = h, dw = (int)(dh * a + 0.5);
++        int k = 1;
++        while (dw * (k + 1) <= ow && dh * (k + 1) <= oh) k++;
++        r.w = dw * k; r.h = dh * k;
++    } else if (ow > oh * a) {
++        r.h = oh; r.w = (int)(oh * a + 0.5);
++    } else {
++        r.w = ow; r.h = (int)(ow / a + 0.5);
++    }
++    r.x = (ow - r.w) / 2; r.y = (oh - r.h) / 2;
++    return r;
++}
++
++static void draw(void)
++{
++    SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
++    SDL_RenderClear(ren);
++    if (canvas_up && cvtex) {
++        const int keep = fixed[2];
++        const enum bf_scale ks = scale_;
++        fixed[2] = 0; scale_ = BF_SCALE_FIT;  // (the canvas itself: fitted, never in the hole)
++        const SDL_Rect r = place(640, 480, 4.0f / 3.0f);
++        scale_ = ks;
++        fixed[2] = keep;
++        SDL_RenderCopy(ren, cvtex, NULL, &r);
++    } else if (tex) {
++        SDL_Rect r = place(tex_w, tex_h, aspect_);
++        SDL_RenderCopy(ren, tex, NULL, &r);
++    }
++    SDL_RenderPresent(ren);
++}
++
++bool bf_video_commit(bool dupe)
++{
++    if (pending) return false;
++    if (!dupe && buf && W && H) {
++        const Uint32 sf = fmt_ == RETRO_PIXEL_FORMAT_XRGB8888 ? SDL_PIXELFORMAT_XRGB8888
++                        : fmt_ == RETRO_PIXEL_FORMAT_RGB565 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_XRGB1555;
++        if (!tex || tex_w != (int)W || tex_h != (int)H || tex_fmt != (int)sf) {
++            if (tex) SDL_DestroyTexture(tex);
++            tex = SDL_CreateTexture(ren, sf, SDL_TEXTUREACCESS_STREAMING, (int)W, (int)H);
++            tex_w = (int)W; tex_h = (int)H; tex_fmt = (int)sf;
++        }
++        if (tex) SDL_UpdateTexture(tex, NULL, buf, pitch_);
++    }
++    draw();
++    pending = true;
++    commit_at = bf_now_ms();
++    return true;
++}
++
++bool bf_video_flip_pending(void) { return pending; }
++int bf_video_fd(void) { return tfd; }
++void bf_video_events(void)
++{
++    uint64_t n;
++    pump();
++    if (read(tfd, &n, sizeof n) <= 0 || !pending) return;
++    const double tick = t_start + (double)(long long)((bf_now_ms() - t_start) / period_ms) * period_ms;
++    if (tick < commit_at) return;
++    pending = false;
++    last_flip = tick;
++}
++double bf_video_refresh(void) { return 1000.0 / period_ms; }
++int bf_video_size(int* w, int* h) { return ren ? SDL_GetRendererOutputSize(ren, w, h) : -1; }
++double bf_video_last_flip_ms(void) { return last_flip; }
++
++uint32_t* bf_video_grab(int* w, int* h)
++{
++    if (!buf || !W || !H) return NULL;
++    uint32_t* out = malloc((size_t)W * H * 4);
++    if (!out) return NULL;
++    for (unsigned y = 0; y < H; y++) {
++        const uint8_t* row = buf + (size_t)y * pitch_;
++        for (unsigned x = 0; x < W; x++) {
++            uint32_t p;
++            if (fmt_ == RETRO_PIXEL_FORMAT_XRGB8888) p = ((const uint32_t*)row)[x] & 0xffffff;
++            else {
++                const uint16_t v = ((const uint16_t*)row)[x];
++                if (fmt_ == RETRO_PIXEL_FORMAT_RGB565)
++                    p = ((v >> 11 & 31) * 255 / 31) << 16 | ((v >> 5 & 63) * 255 / 63) << 8 | (v & 31) * 255 / 31;
++                else
++                    p = ((v >> 10 & 31) * 255 / 31) << 16 | ((v >> 5 & 31) * 255 / 31) << 8 | (v & 31) * 255 / 31;
++            }
++            out[(size_t)y * W + x] = p;
++        }
++    }
++    *w = (int)W; *h = (int)H;
++    return out;
++}
++
++void bf_video_close(void)
++{
++    if (tex) SDL_DestroyTexture(tex);
++    if (cvtex) SDL_DestroyTexture(cvtex);
++    if (ren) SDL_DestroyRenderer(ren);
++    if (win) SDL_DestroyWindow(win);
++    SDL_QuitSubSystem(SDL_INIT_VIDEO);
++    if (tfd >= 0) close(tfd);
++    free(buf); free(cv[0]); free(cv[1]);
++    tex = cvtex = NULL; ren = NULL; win = NULL; buf = NULL; cv[0] = cv[1] = NULL; tfd = -1;
++}
++
++// the in-game menu: a 640x480 canvas (the RG DS's panel size, which the menu is drawn for), fitted in the window
++int bf_video_canvas(uint32_t** px, int* pitch, int* w, int* h)
++{
++    static int k;
++    k ^= 1;
++    if (!cv[k]) cv[k] = calloc(640 * 480, 4);
++    if (!cv[k]) return -1;
++    *px = cv[k]; *pitch = 640 * 4; *w = 640; *h = 480;
++    return k;
++}
++void bf_video_canvas_show(int k)
++{
++    if (k < 0 || k > 1 || !cv[k]) return;
++    if (!cvtex) cvtex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 640, 480);
++    if (cvtex) SDL_UpdateTexture(cvtex, NULL, cv[k], 640 * 4);
++    canvas_up = true;
++    draw();
++}
++void bf_video_canvas_done(void) { canvas_up = false; draw(); }
++bool bf_video_shader(const char* name) { (void)name; return false; }
++bool bf_video_wants_xrgb(void) { return false; }
++void bf_video_shader_off(void) {}
++const char* bf_video_shader_name(void) { return ""; }
++void bf_video_set_scale(enum bf_scale s) { scale_ = s; }
++enum bf_scale bf_video_get_scale(void) { return scale_; }
++uint32_t* bf_video_overlay(int rows, int* pitch, int* w) { (void)rows; (void)pitch; (void)w; return NULL; }
++void bf_video_overlay_show(bool on) { (void)on; }
++bool bf_video_has_overlay(void) { return false; }
++void bf_video_fixed_rect(int x, int y, int w, int h) { fixed[0] = x; fixed[1] = y; fixed[2] = w; fixed[3] = h; }

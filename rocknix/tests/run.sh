@@ -22,6 +22,9 @@ sh "$HERE/tests/backlight.sh" || fail=1
 sh "$HERE/tests/perf.sh" || fail=1
 sh "$HERE/tests/handheld.sh" || fail=1
 sh "$HERE/tests/options.sh" || fail=1
+sh "$HERE/tests/register.sh" || fail=1
+for f in "$HERE"/packages/emulators/standalone/*/scripts/*.sh; do bash -n "$f" || { echo "FAIL rocknix: $f"; fail=1; }; done
+sh "$HERE/tests/bananads-sway.sh" || fail=1
 bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

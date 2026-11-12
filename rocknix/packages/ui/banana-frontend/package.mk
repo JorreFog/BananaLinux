@@ -9,13 +9,13 @@ PKG_VERSION="local"
 PKG_LICENSE="MIT"
 PKG_SITE="https://github.com/JorreFog/BananaLinux"
 PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain SDL2 freetype libdrm zlib alsa-lib Python3 curl"
+PKG_DEPENDS_TARGET="toolchain SDL2 freetype libdrm zlib alsa-lib Python3 curl openssl libssh2"
 PKG_LONGDESC="BananaOS's dual-screen menu (banana-ui) as the frontend, under sway"
 PKG_TOOLCHAIN="manual"
 
 unpack() {
   mkdir -p ${PKG_BUILD}
-  cp -a ${PKG_DIR}/sources/ui ${PKG_BUILD}/
+  cp -a ${PKG_DIR}/sources/ui ${PKG_DIR}/sources/activity ${PKG_BUILD}/
 }
 
 make_target() {
@@ -23,22 +23,31 @@ make_target() {
   # default device on ROCKNIX)
   make -C ${PKG_BUILD}/ui banana-ui CXX="${CXX}" PKG_CONFIG="${PKG_CONFIG:-pkg-config}" \
     CXXFLAGS="${CXXFLAGS} -O2" LDFLAGS="${LDFLAGS}" SDL=1 ALSA=1
-  # box art and game names from libretro's collections (Settings > System > Box art; libcurl opened at run time)
-  make -C ${PKG_BUILD}/ui banana-scrape CXX="${CXX}" CXXFLAGS="${CXXFLAGS} -O2" LDFLAGS="${LDFLAGS}"
+  # its helpers: box art and game names (banana-scrape: libretro's collections, libcurl opened at run time), home
+  # server sync (banana-sync), Bshare (banana-bshare: LocalSend), Files' servers without SMB (banana-fetch SMB=0)
+  make -C ${PKG_BUILD}/ui banana-scrape banana-sync banana-bshare CXX="${CXX}" PKG_CONFIG="${PKG_CONFIG:-pkg-config}" \
+    CXXFLAGS="${CXXFLAGS} -O2" LDFLAGS="${LDFLAGS}"
+  make -C ${PKG_BUILD}/ui banana-fetch SMB=0 CXX="${CXX}" PKG_CONFIG="${PKG_CONFIG:-pkg-config}" \
+    CXXFLAGS="${CXXFLAGS} -O2" LDFLAGS="${LDFLAGS}"
+  # Activity (store/apps/activity): its SDL windows under sway (SDL opened at run time)
+  ${CXX} ${CXXFLAGS} -O2 -std=c++17 ${LDFLAGS} -o ${PKG_BUILD}/banana-activity ${PKG_BUILD}/activity/banana-activity.cpp -ldl
 }
 
 makeinstall_target() {
   mkdir -p ${INSTALL}/usr/bin ${INSTALL}/usr/share/banana
-    cp ${PKG_BUILD}/ui/banana-ui ${PKG_BUILD}/ui/banana-scrape ${INSTALL}/usr/bin/
+    cp ${PKG_BUILD}/ui/banana-ui ${INSTALL}/usr/bin/
+    for b in banana-scrape banana-sync banana-bshare banana-fetch; do cp ${PKG_BUILD}/ui/${b} ${INSTALL}/usr/bin/; done
+    cp ${PKG_BUILD}/banana-activity ${INSTALL}/usr/bin/
     cp ${PKG_DIR}/sources/start_banana.sh ${INSTALL}/usr/bin/
-    chmod 0755 ${INSTALL}/usr/bin/banana-ui ${INSTALL}/usr/bin/banana-scrape ${INSTALL}/usr/bin/start_banana.sh
+    chmod 0755 ${INSTALL}/usr/bin/banana-* ${INSTALL}/usr/bin/start_banana.sh
   for d in rnds splash banana lang speaker-eq; do
     mkdir -p ${INSTALL}/usr/share/banana/${d}
     cp -a ${PKG_BUILD}/ui/assets/${d}/. ${INSTALL}/usr/share/banana/${d}/
   done
-  # the shelf's Files tile (one of the menu's own pages)
-  mkdir -p ${INSTALL}/usr/share/banana/apps/files
-    touch ${INSTALL}/usr/share/banana/apps/files/Files.app
+  # the home row's own tiles: Files and Bshare (the menu's own pages), Activity
+  mkdir -p ${INSTALL}/usr/share/banana/apps/files ${INSTALL}/usr/share/banana/apps/bshare ${INSTALL}/usr/share/banana/apps/activity
+    touch ${INSTALL}/usr/share/banana/apps/files/Files.app ${INSTALL}/usr/share/banana/apps/bshare/Bshare.app \
+      ${INSTALL}/usr/share/banana/apps/activity/Activity.app
   mkdir -p ${INSTALL}/usr/share/banana/rocknix
     cp ${PKG_DIR}/sources/es-systems-to-banana.py ${INSTALL}/usr/share/banana/rocknix/
   # BananaOS's system scripts the menu runs (Wi-Fi, Bluetooth, volume, updates, SSH, sharing, the DS's saves...), in
@@ -53,11 +62,9 @@ makeinstall_target() {
     cp ${PKG_DIR}/sources/099-banana-frontend ${INSTALL}/usr/lib/autostart/common/
     chmod 0755 ${INSTALL}/usr/lib/autostart/common/099-banana-frontend
     echo 'UI_SERVICE="sway.service bananasway.service"' > ${INSTALL}/usr/config/profile.d/099-banana-ui_service
-  # the paths BananaOS's scripts and the menu know, on ROCKNIX's writable /storage
-  mkdir -p ${INSTALL}/data
-    ln -sf /storage/.config/banana ${INSTALL}/data/banana
-    ln -sf /storage/roms ${INSTALL}/data/roms
-    ln -sf /storage/roms/bios ${INSTALL}/data/bios
+  # the paths BananaOS's scripts, the menu and its apps know (/data/banana, /data/roms, /data/store...), on ROCKNIX's
+  # writable /storage: /data is a folder there, its roms and bios ROCKNIX's own (start_banana.sh makes them)
+  ln -sf /storage/.config/banana-data ${INSTALL}/data
 }
 
 # (started by ROCKNIX's autostart as UI_SERVICE, as EmulationStation's essway is: the common start script chooses it,

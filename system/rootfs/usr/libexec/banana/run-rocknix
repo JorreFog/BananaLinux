@@ -20,6 +20,8 @@ emu=; core=
 for a in "$@"; do case $a in --emulator=*) emu=${a#--emulator=} ;; --core=*) core=${a#--core=} ;; esac; done
 if [ -n "$emu" ] && pick=$("$LIB/rocknix-options" resolve "$SYSTEM" "${ROM##*/}" "$emu" "$core" 2>/dev/null) && [ -n "$pick" ]; then
     e=${pick%% *}; c=${pick#* }
+    # (BananaFront's start script loads the libretro core this names: bananafront-<core>)
+    export BANANA_CORE="$c"
     for a in "$@"; do
         shift
         case $a in --emulator=*) a="--emulator=$e" ;; --core=*) a="--core=$c" ;; esac

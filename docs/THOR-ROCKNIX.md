@@ -29,7 +29,7 @@ makes for SM8550 reaches it with no porting.
 | Systems | `es_systems.cfg`, generated at build (`distributions/ROCKNIX/config/functions`: `add_es_system`) | read at every start by `es-systems-to-banana.py`: the same systems, folders, extensions and default emulator/core |
 | Starting a game | `runemu.sh %ROM% -P%SYSTEM% --core=… --emulator=… --controllers=…` | the same command, with the system's default emulator and core |
 | Input | evdev via libinput (sway), SDL's for the games | banana-ui reads evdev itself, as on the RG DS (sway doesn't grab the devices) |
-| Data | `/storage` | the menu's in `/storage/.config/banana`, games in `/storage/roms` |
+| Data | `/storage` | the menu's in `/storage/.config/banana-data/banana` (`/data/banana`), games in `/storage/roms` |
 
 In code:
 
@@ -98,7 +98,7 @@ Still to make use of the extra room, view by view:
 2. Fix what the package build says: dependency names, the cross `pkg-config`, missing headers.
 3. Flash and boot it the ROCKNIX way.
 4. Check `bananasway.service` starts and essway stays down: `journalctl -u bananasway`,
-   `/storage/.config/banana/logs/banana-ui.log`.
+   `/storage/.config/banana-data/banana/logs/banana-ui.log`.
 5. Check the display lines in that log: screen 0 on the top output, screen 1 on the bottom.
 6. If the output names don't match `WLR_CON`, set `BANANA_SDL_TOP` in `start_banana.sh`.
 

@@ -1,0 +1,18 @@
+BananaOS's RetroArch patch 0001 (buildroot/patches/retroarch), what ROCKNIX's RetroArch lacks of it (it has the
+AUDIO_REINIT command already): alsa-lib's configuration read again when the ALSA driver opens, so a driver opened
+again plays where "default" goes now (headphones, a Bluetooth speaker through PipeWire's ALSA plugin).
+
+diff --git a/audio/drivers/alsa.c b/audio/drivers/alsa.c
+index c3208be..bbf2142 100644
+--- a/audio/drivers/alsa.c
++++ b/audio/drivers/alsa.c
+@@ -500,6 +500,9 @@ static void *alsa_init(const char *device, unsigned rate, unsigned latency,
+    RARCH_LOG("[ALSA] Using ALSA version %s.\n", snd_asoundlib_version());
+ 
+    alsa->requested_layout = audio_driver_requested_layout();
++   /* alsa-lib reads its configuration once per process; a device opened again (AUDIO_REINIT) goes where
++    * "default" is now, so the configuration read so far is forgotten first */
++   snd_config_update_free_global();
+    if (alsa_init_pcm(&alsa->pcm, device, SND_PCM_STREAM_PLAYBACK, rate,
+             latency, audio_layout_channels(alsa->requested_layout),
+             &alsa->stream_info, new_rate, SND_PCM_NONBLOCK) < 0)
