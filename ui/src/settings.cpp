@@ -284,6 +284,14 @@ namespace banana
 			std::string path = asked ? st : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/steam";
 			steamTool = (asked || !rgdsBoard_()) && access(path.c_str(), X_OK) == 0 ? path : "";
 		}
+		// the PC games hub's tool, by the same rule (BANANA_PCGAMES: the tests' stand-in)
+		{
+			const char* pt = getenv("BANANA_PCGAMES");
+			const char* lx = getenv("BANANA_LIBEXEC");
+			const bool asked = pt && *pt;
+			std::string path = asked ? pt : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/pc-games";
+			pcTool = (asked || !rgdsBoard_()) && access(path.c_str(), X_OK) == 0 ? path : "";
+		}
 		build();
 	}
 
@@ -1801,6 +1809,7 @@ namespace banana
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (page == QUICK) return pressQuick(k);
+		if (page == PCGAMES) return pressPc(k);
 		if (page == THEMES) return pressThemes(k);
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
@@ -3001,6 +3010,7 @@ namespace banana
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == QUICK) { renderQuick(); return; }
+		if (page == PCGAMES) { renderPc(); return; }
 		if (page == THEMES) { renderThemes(); return; }
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
@@ -3236,6 +3246,7 @@ namespace banana
 		scrapeChanged |= pollSteam();
 		scrapeChanged |= pollPickGames();
 		scrapeChanged |= quickPoll(t);
+		scrapeChanged |= pollPc(t);
 		bool changed0 = false;
 		if (raCheck)
 		{
@@ -3397,7 +3408,8 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
-		if (page == QUICK && qBoard) return std::max(0, (int)(qStatAt + 1000 - t) + 1);	// (the meters, once a second)
+if (page == PCGAMES) return std::max(0, (int)(pcPollAt - t) + 1);	// (a download's progress)
+				if (page == QUICK && qBoard) return std::max(0, (int)(qStatAt + 1000 - t) + 1);	// (the meters, once a second)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));

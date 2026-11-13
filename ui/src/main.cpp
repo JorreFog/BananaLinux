@@ -385,7 +385,8 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 // a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [files]), not a program: A or X
 // on it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts and
 // layout themes' own start of an app) does the same. The page's name, or "" for a program
-static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0 ? sd.run.substr(7) : ""; }
+// (the PC games shelf opens its hub where the image has one: openPage says no where it hasn't, and the shelf opens)
+static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0 ? sd.run.substr(7) : sd.id == "pc" ? "pcgames" : ""; }
 
 // opens that page on the settings screen; false for a name no page has
 static bool openPage(Settings& st, const std::string& page)
@@ -395,6 +396,7 @@ static bool openPage(Settings& st, const std::string& page)
 	// the quick menu (the Home button held while a game runs): the screens' brightness, the volume, the game's
 	// performance mode, the fan and the stick lights (settings_quick.cpp), on the bottom screen
 	if (page == "quick") { st.openQuick(); return true; }
+	if (page == "pcgames") { if (!st.pcHub()) return false; st.openPcGames(); return true; }
 	return false;
 }
 
@@ -1267,6 +1269,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
 		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
+		else if (op == "pcgames") { const bool ok = openPage(settings, "pcgames"); logf("pcgames %s", ok ? "open" : "no hub"); }	// the PC games hub
+		else if (op == "pcstate") logf("pcstate: %s", settings.pcState().c_str());
 		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
 		else if (op == "paused") { std::getline(cs >> std::ws, rnds::pausedGame); be.invalidate(); }	// paused [title]: a game behind the menu
 		else if (op == "section") { std::string sec; std::getline(cs >> std::ws, sec); if (!settings.isOpen()) settings.open(); settings.openSection(sec); logf("section %s open", sec.c_str()); }	// section <name>: a settings page
@@ -4009,6 +4013,16 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
+		}
+		// Play on the PC games hub: the game started as from its shelf
+		{
+			std::string pcFile;
+			bool got;
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				got = settingsView.takePcLaunch(pcFile);
+			}
+			if (got && !launchPath(lib, pcFile)) logf("pc games: %s is not on the shelf", pcFile.c_str());
 		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
 		if (access("/run/banana/launch", F_OK) == 0)

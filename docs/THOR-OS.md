@@ -87,7 +87,15 @@ What keeps it there:
 
 ## PC games
 
-What GameNative and Winlator do on Android, without Android underneath:
+The PC games tile opens a hub instead of a plain shelf (`ui/src/settings_pc.cpp`): the games on the card and the ones
+of the Steam library in one list, with their covers on the top screen. A opens a game's sheet: **Play**, or
+**Download** for a game that is only in the library (its progress shows in the list, and it goes on while something
+else is played), and what would otherwise be edited by hand in its `.pc` file: Compatibility (how careful Box64 is),
+Overlay (DXVK's frame rate display), Direct3D (DXVK or Wine's own), which program starts, and Remove from the card
+(asked twice). Y filters the list, X reads the Steam library again. The page only asks the `pc-games` and `steam`
+tools; an image without them shows the shelf as before.
+
+Under it, what GameNative and Winlator do on Android, without Android underneath:
 
 - **Box64** (in the image, built for the Snapdragon 8 Gen 2) recompiles x86_64 code for the Thor's cores and passes
   calls into Vulkan, Wayland and ALSA straight to the system's own libraries. Its Box32 side runs 32-bit games: the

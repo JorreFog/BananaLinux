@@ -156,3 +156,31 @@ if command -v convert >/dev/null; then
     [ "$(convert "$OUT/thor-st-lang-top.png" -format '%[pixel:p{4,1075}]' info: 2>/dev/null)" = "srgb(0,0,0)" ] || { echo "FAIL thor setup: the top isn't true black"; fail=1; }
     [ "$(convert "$OUT/thor-st-lang-top.png" -crop 1920x90+0+0 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor setup: no status bar on the setup's top screen"; fail=1; }
 fi
+
+# the PC games hub (the PC games tile's page where the image has the pc-games tool): the real tool's list of a made-up
+# shelf (two games on the card, one only in the Steam library), a game's sheet and a setting changed in its .pc, the
+# folder taken off the card only on the second A, and a download through a stand-in for the steam tool
+PCF=$TS/pcroms; rm -rf "$PCF"; mkdir -p "$PCF/Alpha/bin" "$PCF/Beta"
+head -c 300000 /dev/zero > "$PCF/Alpha/bin/alpha.exe"; head -c 2000 /dev/zero > "$PCF/Alpha/tool.exe"; head -c 4000 /dev/zero > "$PCF/Beta/beta.exe"
+printf 'exe = Alpha/bin/alpha.exe\n' > "$PCF/Alpha.pc"; printf 'exe = Beta/beta.exe\n' > "$PCF/Beta.pc"; printf 'steam = 4242\n' > "$PCF/Cloudy.pc"
+printf '#!/bin/sh\nRUN=${BANANA_RUN:-/run/banana}\ncase $1 in\nstatus) echo ready=yes; echo user=tester ;;\ninstall) echo "4242 40 downloading" > "$RUN/steam.progress"; sleep 0.3; echo "4242 100 done" > "$RUN/steam.progress" ;;\nstop) echo "$2 0 stopped" > "$RUN/steam.progress" ;;\nesac\n' > "$TS/pcsteam"; chmod +x "$TS/pcsteam"
+rm -f "$TS/run/steam.progress"
+ts_run pc "home 0; pcgames; pcstate; shot pc; press a; pcstate; press down; press right; pcstate; shot pc-sheet; press up; press up; press a; pcstate; press a; pcstate; press y; press y; pcstate; press a; press a; sleep 100; wait 1100; pcstate; sleep 600; wait 1100; pcstate; press b; press b; pcstate" \
+    BANANA_PCGAMES="$HERE/../system/rootfs/usr/libexec/banana/pc-games" BANANA_PC_ROMS="$PCF" BANANA_STEAM="$TS/pcsteam"
+ts_check pc "pcgames open"
+ts_check pc "pcstate: level=0 filter=0 shown=3 game=Alpha state=installed"
+ts_check pc "pcstate: level=1 .* rows=play|preset:Balanced|hud:Off|d3d:DXVK (Vulkan)|exe:alpha.exe|remove|"
+ts_check pc "pcstate: level=1 .* row=1 rows=play|preset:Careful|"
+ts_check pc "pcstate: level=1 .* game=Alpha state=installed row=5 "
+ts_check pc "pcstate: level=0 filter=0 shown=3 game=Alpha state=cloud\|pcstate: level=0 filter=0 shown=2 "
+ts_check pc "pcstate: level=0 filter=2 shown=[12] game=Cloudy state=cloud"
+ts_check pc "dl=4242:40:downloading"
+ts_check pc "dl=4242:100:done"
+ts_check pc "pcstate: closed"
+grep -q '^preset = compatible$' "$PCF/Alpha.pc" 2>/dev/null || [ ! -f "$PCF/Alpha.pc" ] || { echo "FAIL thor pc games: the sheet's Compatibility wasn't written to the game's .pc"; fail=1; }
+[ ! -d "$PCF/Alpha" ] || { echo "FAIL thor pc games: Remove from the card left the game's folder"; fail=1; }
+[ -d "$PCF/Beta" ] || { echo "FAIL thor pc games: another game's folder is gone"; fail=1; }
+# (without the tool the tile is its plain shelf)
+ts_run pc-none "home 0; pcgames; pcstate"
+ts_check pc-none "pcgames no hub"
+

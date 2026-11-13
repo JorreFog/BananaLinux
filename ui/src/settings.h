@@ -90,6 +90,12 @@ namespace banana
 		// the setup's first slide comes in (after the first boot's arrival, in a theme with fades): from time t on
 		void setupComeIn(double t) { now = t; wAnimT0 = t; wAnimDir = 1; }
 		bool takeSetupFinished() { bool r = setupEnded; setupEnded = false; return r; }
+		// the PC games hub: there is one (the pc-games tool is in the image), its page, and the game picked to play on
+		// it (its .pc file; the menu starts it as from its shelf)
+		bool pcHub() const;
+		std::string pcState() const;	// (for the tests: where the page is and what it shows)
+		void openPcGames();
+		bool takePcLaunch(std::string& file) { if (pcLaunch.empty()) return false; file.swap(pcLaunch); pcLaunch.clear(); return true; }
 		std::string ownerName() { return dsName(); }
 		std::string setupState();	// (the tests) the slide, its choices and the checks' results, as a line	// the DS's name ("" none): the Welcome says it
 		// banana/setup-step: the slide a setup was on ("" none) and whether it was the boot's
@@ -368,7 +374,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, QUICK } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, QUICK, PCGAMES } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -910,6 +916,23 @@ namespace banana
 		std::string gRomFile;			// the game's file name (gameRom): its per-game settings' key
 		// the quick menu's rows: a settings row (its index in items) or the game's performance mode (-1)
 		std::vector<int> qRows;
+		// the PC games hub (settings_pc.cpp): the pc-games tool's list, a game's sheet, a download's progress
+		struct PcGame { std::string file, name, state, appid, cover; long mb = 0; };
+		struct PcRow { std::string id, label, value; bool arrows; };
+		std::vector<PcGame> pcGames;
+		std::vector<PcRow> pcRows;
+		std::vector<std::string> pcExes;
+		std::string pcTool, pcExe, pcDlId, pcDlState, pcLaunch;
+		int pcSel = 0, pcTop = 0, pcFilter = 0, pcLevel = 0, pcRow = 0, pcDlPct = 0;
+		bool pcArm = false, pcRefreshing = false;
+		double pcPollAt = 0;
+		void pcLoad();
+		void pcSheet();
+		std::vector<int> pcShown() const;
+		bool pollPc(double t);
+		Result pcStep(int dir);
+		Result pressPc(Key k);
+		void renderPc();
 		// (the board of the material look: its sliders, the handheld's state from the sysstat tool, its drawing)
 		int quickSliders() const;
 		bool quickPoll(double t);
