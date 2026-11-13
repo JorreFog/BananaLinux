@@ -1745,6 +1745,13 @@ grep -q " 0 saves up, 0 down, 2 conflicts, 0 errors" "$OUT/ss-u.log" || bad "fro
 [ "$(s6u resolve "$(rid6 Other)/autosave" server; tail -1 "$OUT/ss-u.log")" = ok ] && cmp -s "$S6/Other (USA).srm" "$OUT/old-Other.srm" || bad "from 0.5.3: the server's chosen, not placed: $(cat "$OUT/ss-u.log")"
 s6u sync --saves-only
 grep -q " 0 conflicts, 0 errors" "$OUT/ss-u.log" || bad "from 0.5.3: held again after its owner chose: $(cat "$OUT/ss-u.log")"
+# another slot named in Settings since: the saves outside the slots were decided with the first, and aren't looked at
+# again. The card's, played on since (one taken from outside then, one chosen over it), go to the new slot, none held
+printf 'homesync_slot = custom\nhomesync_slot_name = trip\n' >> "$C6/banana/settings.conf"
+for g in Behind Apart; do head -c 8192 /dev/urandom > "$OUT/played-$g.srm"; cp "$OUT/played-$g.srm" "$S6/$g (USA).srm"; done
+s6u sync --saves-only
+grep -q " 0 conflicts, 0 errors" "$OUT/ss-u.log" && [ "$(rows6 Behind trip)" = "$(m "$OUT/played-Behind.srm")" ] && [ "$(rows6 Apart trip)" = "$(m "$OUT/played-Apart.srm")" ] &&
+    cmp -s "$S6/Behind (USA).srm" "$OUT/played-Behind.srm" || bad "from 0.5.3: another slot named: a save outside the slots looked at again: $(cat "$OUT/ss-u.log")"
 [ "$(for g in Same Ahead Moved Behind Fresh Apart Other; do rows6 $g ""; done)" = "$before6" ] || bad "from 0.5.3: a save outside the slots was written to or removed"
 [ "$(curl -s "$U6/test/violations")" = "[]" ] || bad "from 0.5.3: the card sent what it never may: $(curl -s "$U6/test/violations")"
 

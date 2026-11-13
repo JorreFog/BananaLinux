@@ -865,6 +865,13 @@ namespace bsync
 			if (best && best->hash.empty()) best->hash = serverHash("/api/saves", *best);
 			return best && !best->hash.empty() ? best : nullptr;
 		}
+		// this card has agreed a version of that game's save with a slot, whatever the slot's name
+		bool slotted(long long id) const
+		{
+			const std::string pre = std::to_string(id) + "/";
+			auto it = c.slots.lower_bound(pre);
+			return it != c.slots.end() && it->first.compare(0, pre.size(), pre) == 0;
+		}
 		// the version this card last agreed for that save outside the slots, from the record that release's sync kept by the
 		// save's path. The flat saves/ folder came after it, so a save's record may be under its old core folder: found
 		// by the file's name then, when no two records of that name disagree
@@ -909,7 +916,7 @@ namespace bsync
 			// (a game with nothing in the slot yet, never agreed with it: its save from before the slots, if it has one)
 			std::map<long long, std::vector<Head>> outside;
 			std::vector<long long> ask;
-			for (long long id : cand) if (!heads.count(id) && !c.slots.count(std::to_string(id) + "/" + SLOT)) ask.push_back(id);
+			for (long long id : cand) if (!heads.count(id) && !slotted(id)) ask.push_back(id);
 			ok = ok && listUnslotted(ask, outside, err);
 			if (!ok) { errors.push_back("saves: " + err); keepUnsent(errors); complete(0, 1); return false; }
 			std::set<long long> onServer;
@@ -921,9 +928,10 @@ namespace bsync
 			for (auto& kv : canonical) keepOthers(kv.first, errors);
 			if (!dryRun && c.stateVersion < 2)
 			{
-				// (the file as banana-sync 1.0 left it, kept once beside it. Its saves{} gives no agreed version: a slot whose
-				// head is the card's very save is agreed by the first rule below, and the card's against other bytes is a
-				// conflict, whatever 1.0 last sent or took)
+				// (the file as banana-sync 1.0 left it, kept once beside it. Its saves{} gives no agreed version with a
+				// slot: one whose head is the card's very save is agreed by the first rule below, and the card's against
+				// other bytes is a conflict, whatever 1.0 last sent or took. It is the version agreed only for a save still
+				// outside the slots, agreedUnslotted's)
 				std::string v1 = dirOf(CONF) + "/romsync.v1.json";
 				bool had;
 				std::string old = readFile(CONF, &had);
@@ -984,8 +992,9 @@ namespace bsync
 				// server's moved on, another handheld's play): O is taken, through the vault as any download, then sent to
 				// the slot as this card's. Anything else is two saves that can't be told apart: held as a conflict, both
 				// kept, and the one chosen on Manage saves goes to the slot. O itself is never written to nor removed, and
-				// once the slot holds a version it is never looked at again
-				Head* o = h || si != c.slots.end() ? nullptr : unslotted(outside, g, rel);
+				// once a slot holds a version of this card's it is never looked at again: not for another slot either, named
+				// in Settings since, where the card's save has moved on from O and would be held against it
+				Head* o = h || slotted(g.rom.id) ? nullptr : unslotted(outside, g, rel);
 				if (o && !(real && L == o->hash))
 				{
 					const std::string B = agreedUnslotted(rel);
