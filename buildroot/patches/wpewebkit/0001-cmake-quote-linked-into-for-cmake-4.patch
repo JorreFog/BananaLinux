@@ -1,0 +1,19 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] cmake: quote _linked_into in _WEBKIT_TARGET_LINK_FRAMEWORK
+
+When a framework is linked into nothing, ${_linked_into} is empty and the
+condition expands to "WTF STREQUAL" and "NOT IN_LIST <list>". CMake 4.4
+rejects that ("if given arguments ... Unknown arguments specified") and
+configuring JavaScriptCore stops. Quoting keeps each operand present.
+
+--- a/Source/cmake/WebKitMacros.cmake	2026-11-13 13:14:30.072852556 +0100
++++ b/Source/cmake/WebKitMacros.cmake	2026-11-13 13:14:30.080134473 +0100
+@@ -308,7 +308,7 @@
+         get_property(_linked_into GLOBAL PROPERTY ${framework}_LINKED_INTO)
+ 
+         # See if the target is linking a framework that the specified framework is already linked into
+-        if ((NOT _linked_into) OR (${framework} STREQUAL ${_linked_into}) OR (NOT ${_linked_into} IN_LIST ${_target}_FRAMEWORKS))
++        if ((NOT _linked_into) OR ("${framework}" STREQUAL "${_linked_into}") OR (NOT "${_linked_into}" IN_LIST ${_target}_FRAMEWORKS))
+             list(APPEND ${_target}_PRIVATE_LIBRARIES WebKit::${framework})
+ 
+             # The WebKit:: alias targets do not propagate OBJECT libraries so the
