@@ -20,6 +20,9 @@ PPSSPP_LICENSE = GPL-2.0+
 PPSSPP_LICENSE_FILES = LICENSE.TXT
 PPSSPP_SUPPORTS_IN_SOURCE_BUILD = NO
 PPSSPP_DEPENDENCIES = host-pkgconf sdl2 libzip zlib libegl libgles vulkan-headers wayland
+# PPSSPP's CMake uses SDL2_ttf (and fontconfig) for its UI text when it finds them: built first, so the result doesn't
+# depend on which package happened to finish before PPSSPP
+PPSSPP_DEPENDENCIES += $(if $(BR2_PACKAGE_SDL2_TTF),sdl2_ttf) $(if $(BR2_PACKAGE_FONTCONFIG),fontconfig)
 PPSSPP_CONF_OPTS = \
 	-DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_CROSSCOMPILING=ON \
 	-DUSE_SYSTEM_FFMPEG=OFF -DUSE_SYSTEM_LIBPNG=OFF -DBUILD_SHARED_LIBS=OFF \
