@@ -283,6 +283,11 @@ namespace banana
 				}
 				else { radius(32); m.stops = { { 0, c } }; m.ring = 2 * q; m.ringC = mcol("hair2"); }
 			}
+			else if (style == "preview") { radius(40); m.stops = { { 0, pal(light).screenBg } }; m.ring = 2 * q; m.ringC = mcol("hair2"); }
+			else if (style == "ptile") { radius(28); mat(); texture(); m.ring = 2 * q; m.ringC = mcol("tileEdge"); }
+			else if (style == "pplate") { radius(40); plate("plateTop", "plateMid", "plateLow", pAt); }
+			else if (style == "pwin") { radius(12); m.stops = { { 0, Color(0, 0, 0) } }; }
+			else if (style == "pthumb") { radius(4); m.stops = { { 0, mcol("plateTop") }, { pAt, mcol("plateMid") }, { 1, mcol("plateLow") } }; }
 			else if (style == "capring") { radius(1000); m.stops = { { 0, mcol("ink") } }; }
 			else if (style == "caphole") { radius(1000); m.stops = { { 0, pal(light).screenBg } }; }
 			else if (style == "qr") { radius(32); m.stops = { { 0, mcol("qrGround") } }; }
@@ -534,8 +539,9 @@ namespace banana
 				shown += "...";
 				vw = textWith(shown, IR, "|ir", z, 0, 0, vc, false, 0, true);
 			}
+			// (a row that steps through choices keeps the chevrons' room, picked or not: its value never moves sideways)
 			const bool chev = arrows && on;
-			if (chev) vright -= px(32) + px(16);
+			if (arrows) vright -= px(32) + px(16);
 			vleft = vright - vw;
 			textWith(shown, IR, "|ir", z, vleft, tyText, vc);
 			if (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME)
@@ -566,7 +572,9 @@ namespace banana
 	{
 		SPal p = pal(light);
 		auto hex = [](const Color& c) { char b[16]; snprintf(b, sizeof b, "%02x%02x%02x", (int)std::lround(c.r * 255), (int)std::lround(c.g * 255), (int)std::lround(c.b * 255)); return std::string(b); };
-		const float y = px(720) - shift.bodyDy / s, z = px(28);
+		// (under the help's last line, as the design's: 64 px to the swatches, 56 to the caps)
+		const float y = wrapEnd + px(it.key == "theme" ? 64 : 56), z = px(28);
+		const float pvX = HELP_X + px(900), pvY = px(224);
 		if (it.key == "theme")
 		{
 			const struct { const char* name; Color c; } S[] = { { "Background", p.screenBg }, { "Surface", mcol("surface") }, { "Raised", mcol("raised") },
@@ -593,6 +601,7 @@ namespace banana
 					textWith(L[i].what, IM, "|im", z, kx + px(60), ky + (px(48) - z * 1.22f) / 2, mcol("ink2"));
 				}
 			}
+			miniPreview(pvX, pvY);
 			return;
 		}
 		float x = HELP_X;
@@ -609,5 +618,61 @@ namespace banana
 			textWith(it.names[i], IR, "|ir", z, x + cell / 2 - nw / 2, y + px(120), cur ? p.ink : mcol("dim"));
 			x += cell + px(32);
 		}
+		miniPreview(pvX, pvY);
+	}
+
+	// the split page's picture of the menu in this theme and accent, 700 x 440 px at (x, y): two tiles of the material, the
+	// plate between them with its black window and "Start", a scrub line under them; its shadow falls on what is under it
+	void Settings::miniPreview(float x, float y)
+	{
+		SPal p = pal(light);
+		const float rk = shift.rk(), q = shift.px();
+		struct Still { StageShift& s; float was; ~Still() { s.bodyDy = was; } } still{ shift, shift.bodyDy };	// (its place is the screen's)
+		shift.bodyDy = 0;
+		{
+			// the shadow (0 48px 96px, 80 % black): made small, drawn large
+			auto it = cache.find("m:pvshadow");
+			if (it == cache.end())
+			{
+				rnds::Bitmap b;
+				const int W = 124, H = 104;	// (8 px a texel: the box 700 x 440 with 144 px round it)
+				b.w = W; b.h = H; b.alpha = false;
+				b.px.assign((size_t)W * H * 4, 0);
+				const float sg = 48 * 1.41421f;
+				for (int j = 0; j < H; j++)
+					for (int i = 0; i < W; i++)
+					{
+						const float px0 = i * 8 + 4 - 144.0f, py0 = j * 8 + 4 - 144.0f - 48;
+						const float fx = 0.5f * (std::erf(px0 / sg) - std::erf((px0 - 700) / sg)), fy = 0.5f * (std::erf(py0 / sg) - std::erf((py0 - 440) / sg));
+						b.px[((size_t)j * W + i) * 4 + 3] = (uint8_t)std::lround(255 * 0.8f * fx * fy);
+					}
+				Cached c;
+				c.tex = be->upload(b, true);
+				it = put("m:pvshadow", c, b);
+			}
+			be->draw(keep(it).tex, X(x - px(144)), X(y - px(144)), X(px(124 * 8)), X(px(104 * 8)), Color(1, 1, 1, 1));
+		}
+		mpaint("preview", x, y, px(700), px(440));
+		mpaint("ptile", x + px(64), y + px(140), px(160), px(160));
+		mpaint("ptile", x + px(476), y + px(140), px(160), px(160));
+		mpaint("pplate", x + px(240), y + px(84), px(220), px(272));
+		mpaint("pwin", x + px(268), y + px(112), px(164), px(164));
+		// the systems' pixel icons: 96 px on the tiles, 128 in the window (whole screen pixels an icon's pixel)
+		auto sysIcon = [&](const char* name, float cx, float cy, int k)
+		{
+			icon(name, -10000, -10000, 1);
+			auto it = cache.find(std::string("icon:") + name);
+			if (it == cache.end() || !it->second.tex) return;
+			const float kk = std::max(1.0f, std::round(k * q)) / rk, w = it->second.tex->w * kk, h = it->second.tex->h * kk;
+			be->draw(it->second.tex, X(cx) - w / 2, X(cy) - h / 2, w, h, Color(1, 1, 1, 1));
+		};
+		sysIcon("gba", x + px(144), y + px(220), 3);
+		sysIcon("snes", x + px(556), y + px(220), 3);
+		sysIcon("nds", x + px(350), y + px(194), 4);
+		const float z = px(30);
+		const float tw = textWith("Start", M, "|m", z, 0, 0, p.ink, false, 0, true);
+		textWith("Start", M, "|m", z, x + px(350) - tw / 2, y + px(356 - 26) - z * 1.2f, mcol("plateInk"));
+		mpaint("scrub", x + px(64), y + px(384), px(572), px(8));
+		mpaint("pthumb", x + px(64) + px(572) * 0.35f, y + px(384), px(572) * 0.3f, px(8));
 	}
 }

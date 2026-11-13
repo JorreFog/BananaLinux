@@ -9,7 +9,9 @@
   "extends": "thor-oled",
 
   "accents": { "own": { "name": "Alabaster", "color": "#ece0c3", "ink": "#1a1610" } },
-  "settings": { "plate": { "light": 0.3, "at": 0.3, "dark": 0.1, "lip": 8 } },
+  "settings": { "help": { "theme": "Thor OLED on the Rainbow Thor: true black on both AMOLED panels, the shell's alabaster plastic for the selection, and the four button colours only on the button hints.",
+                          "accent": "The selection, the Start plate and the progress bars follow the accent. Alabaster is the shell's own plastic; Banana is the stock one." },
+                "plate": { "light": 0.3, "at": 0.3, "dark": 0.1, "lip": 8 } },
   "colors": {
     "ink": "#ece8df", "muted": "#aca69b", "line": "#2c2a25", "edge": "#262420",
     "panelBand": "#201f1c", "panelBody": "#151412", "panelLow": "#100f0e",

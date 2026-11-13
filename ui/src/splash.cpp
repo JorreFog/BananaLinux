@@ -391,6 +391,8 @@ namespace banana
 		if (!loadRgba(banana, bunch.px, bunch.w, bunch.h)) return false;
 		ink = 0xffefe9deu;
 		muted = 0xff6a655du;
+		// (the word in the theme's own ink: a variant's is another white)
+		if (rnds::Color c; rnds::themeColor("ink", c)) ink = 0xff000000u | (uint32_t)std::lround(c.r * 255) << 16 | (uint32_t)std::lround(c.g * 255) << 8 | (uint32_t)std::lround(c.b * 255);
 		// BananaOS in Pixelify Sans, 72 px of a 1080-line screen; the device's name in Inter (beside the banana's
 		// picture: <banana>/fonts), 34 px of the bottom screen's 1240 across (the canvas is drawn on it narrower)
 		word = Mask(); device = Mask();

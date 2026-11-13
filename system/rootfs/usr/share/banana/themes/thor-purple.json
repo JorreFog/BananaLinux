@@ -8,7 +8,9 @@
   "extends": "thor-oled",
 
   "accents": { "own": { "name": "Board", "color": "#6fe3b4", "ink": "#06180f" } },
-  "settings": { "texture": "thor-purple/grain.png" },
+  "settings": { "help": { "theme": "Thor OLED, Clear Purple, keeps Dark's layout on true black, so the pixels around the cards stay off on both AMOLED panels. Cards are frosted purple glass, like the shell.",
+                          "accent": "The selection, the Start plate and the progress bars follow the accent. Board, the mint of the circuit board inside, is the default here." },
+                "texture": "thor-purple/grain.png" },
   "colors": {
     "ink": "#efeaf8", "muted": "#b2a8c6", "line": "#33284a", "edge": "#281f38",
     "panelBand": "#241b33", "panelBody": "#1a1426", "panelLow": "#130e1b",

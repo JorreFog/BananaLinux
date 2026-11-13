@@ -1020,6 +1020,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
 		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
+		else if (op == "online") { cs >> lib.testOnline; be.invalidate(); }	// online <0|1>: Wi-Fi connected or not, from now on
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -1241,6 +1242,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
+			settings.gameHome = getenv("BANANA_HOME_KEY") != nullptr;
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
 			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
@@ -1425,6 +1427,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			const int code = b == "f" ? BTN_MODE : b == "back" ? BTN_Z : b == "l2" ? BTN_TL2 : b == "r2" ? BTN_TR2 : b == "l3" ? BTN_THUMBL : b == "r3" ? BTN_THUMBR : 0;
 			const bool changed = settings.gameButton(code, now);
 			logf("gbutton %s: %s view %s", b.c_str(), changed ? "switched" : "nothing", settings.gamePanelView().c_str());
+		}
+		else if (op == "settle") settings.settle();	// settle: the rows' and tiles' glide at rest (a still picture of the picked row)
+		else if (op == "gdown")
+		{
+			// gdown <x> <y>: a finger put down on the game panel and held (px of a 640x480 panel): the pressed tile's look
+			float x = 0, y = 0;
+			cs >> x >> y;
+			settings.gameTouch(x * o.h / 480.0f, y * o.h / 480.0f, true);
 		}
 		else if (op == "gtouch")
 		{
@@ -2394,7 +2404,8 @@ int main(int argc, char** argv)
 	// another stage)
 	{
 		std::string v, stage = "Alpha";
-		std::ifstream("/etc/banana/version") >> v;
+		if (const char* tv = getenv("BANANA_VERSION")) v = tv;	// (the tests: as Settings' own)
+		else std::ifstream("/etc/banana/version") >> v;
 		std::ifstream sf("/etc/banana/stage"); std::string st; if (std::getline(sf, st) && !st.empty()) stage = st;
 		if (!v.empty()) rnds::brandNote = stage + " " + v.substr(0, v.find('-'));
 	}
@@ -3014,6 +3025,7 @@ int main(int argc, char** argv)
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
+			settingsView.gameHome = homeKey;
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
 		}

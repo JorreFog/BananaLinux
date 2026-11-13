@@ -23,7 +23,10 @@
   // from edge to edge with 64 px margins, its title at the top and the hints at the foot. "glyphs": the line icons of
   // rows and tiles. screens.settings below draws the status bar over them
   "settings": { "top": "open", "left": 71.1, "icons": "none", "pick": "outline", "hints": "pill", "bodyFont": "inter",
-                "layout": "screen", "glyphs": "thor-oled/ui" },
+                "layout": "screen", "glyphs": "thor-oled/ui",
+                // the theme's own words on its Theme and Accent colour rows' page
+                "help": { "theme": "Thor OLED keeps Dark's layout and banana accent on true black, so the pixels around the cards stay off on both AMOLED panels. Depth comes from surface steps and thin hairlines.",
+                          "accent": "The selection, the Start plate and the progress bars follow the accent. Banana is the stock one." } },
   // Settings > Display & sound > Accent colour in this theme: the design's names, colours and inks for Banana's six
   // (pink stays as it is). The variants (thor-white.json, thor-purple.json, thor-rainbow.json) add their own first
   "accents": {
@@ -222,9 +225,9 @@
     "shelf": { "type": "group", "children": [
       { "type": "image", "src": "=shelfImg", "fit": "fill", "x": "=16 * u", "y": "=660 * u", "w": "=(PW - 32) * u", "h": "=56 * u" },
       { "type": "image", "src": "thor-oled/chevL-48.png", "fit": "fill", "x": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
-        "visible": "=cursor > 0", "onTap": "left" },
+        "visible": "=view == 'home' ? count > 1 : cursor > 0", "onTap": "left" },
       { "type": "image", "src": "thor-oled/chevR-48.png", "fit": "fill", "right": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
-        "visible": "=cursor < count - 1", "onTap": "right" }
+        "visible": "=view == 'home' ? count > 1 : cursor < count - 1", "onTap": "right" }
     ] },
     // a tile on the shelf: where it stands by its eased distance from the selection (pos), and how selected it is (d,
     // 0..1 in tenths: the boxes for its sizes are made once). 200 px square, standing 12 px into the shelf; the selected
@@ -295,7 +298,7 @@
                 { "type": "image", "src": "thor-oled/banana.png", "fit": "pixel", "w": "=40 * v", "h": "=40 * v" },
                 { "type": "text", "text": "BananaOS", "size": "=34 * v", "color": "=ink" }
               ] },
-            { "type": "text", "text": "{brand}", "font": "inter", "size": "=28 * v", "color": "=muted", "visible": "=paused == ''" },
+            { "type": "text", "text": "=brand != '' ? brand + ' for Thor' : ''", "font": "inter", "size": "=28 * v", "color": "=muted", "visible": "=paused == ''" },
             // a game stopped behind the menu (the Home button): its name, and how to go back
             { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=paused != ''",
               "children": [
@@ -314,7 +317,7 @@
             { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=battery >= 0",
               "children": [
                 { "type": "text", "text": "{battery}%", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
-                { "type": "group", "w": "=57 * v", "h": "=28 * v", "children": [
+                { "type": "group", "w": "=52 * v", "h": "=28 * v", "children": [
                   { "type": "rect", "w": "=52 * v", "h": "=28 * v", "radius": "=8 * v", "border": "=3 * v", "borderColor": "=battery < 20 && !charging ? '#f0767c' : ink2" },
                   { "type": "rect", "x": "=6 * v", "y": "=6 * v", "w": "=max(2, 40 * battery / 100) * v", "h": "=16 * v", "radius": "=3 * v",
                     "fill": "=battery < 20 && !charging ? '#f0767c' : charging ? ok : ink" },
@@ -447,7 +450,8 @@
               { "type": "text", "x": 0, "w": "100%", "y": "=68 * v", "text": "{game.title}", "color": "=ink", "wrap": true, "maxLines": 2,
                 "size": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * v",
                 "lineHeight": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * 1.1 * v" },
-              { "type": "text", "x": 0, "w": "100%", "y": "=278 * v", "h": "=44 * v", "valign": "middle", "text": "{game.sub}", "font": "inter", "size": "=36 * v", "color": "=ink2" },
+              { "type": "text", "x": 0, "w": "100%", "y": "=278 * v", "h": "=44 * v", "valign": "middle", "text": "{game.sub}", "font": "inter", "size": "=36 * v", "color": "=ink2",
+                "visible": "=game.sub != game.systemName" },
               { "type": "group", "layout": "row", "gap": "=64 * v", "y": "=378 * v",
                 "children": [
                   { "use": "stat", "with": { "n": "=round(num(either(game.plays, '0')) * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=game.plays == '1' ? 'Play' : 'Plays'", "big": 56 } },

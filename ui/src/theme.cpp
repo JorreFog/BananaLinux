@@ -412,6 +412,8 @@ namespace banana
 			nums("state", f.stateMix);
 			f.setTexture = themeImage(dir, kv["settings.texture"]);
 		}
+		f.setHelp.clear();
+		for (auto& e : kv) if (e.first.compare(0, 14, "settings.help.") == 0 && !e.second.empty()) f.setHelp[e.first.substr(14)] = e.second;
 		f.setGlyphs.clear();
 		if (!kv["settings.glyphs"].empty() && kv["settings.glyphs"].find("..") == std::string::npos)
 			for (auto& d : dir)

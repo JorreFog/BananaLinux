@@ -10,7 +10,9 @@
 
   "accents": { "own": { "name": "Celadon", "color": "#8fceb6", "ink": "#0a1a14" } },
   // Settings and the game panel: the plate's middle 40 % down, the state a glaze of the accent
-  "settings": { "plate": { "at": 0.4, "lip": 6 }, "state": { "light": 0.22, "at": 0.4, "dark": 0.16 } },
+  "settings": { "help": { "theme": "Thor White keeps Dark's layout on true black, so the pixels around the cards stay off on both AMOLED panels. The selection is a white key cap, the same plastic as the shell.",
+                          "accent": "Switches, progress and the focus ring follow the accent. Celadon, a porcelain glaze, is the one made for the white shell." },
+                "plate": { "at": 0.4, "lip": 6 }, "state": { "light": 0.22, "at": 0.4, "dark": 0.16 } },
   "colors": {
     "ink": "#edf0ec", "muted": "#a8aeaa", "line": "#282c2a", "edge": "#202423",
     "panelBand": "#1c1f1e", "panelBody": "#131514", "panelLow": "#0f1110",

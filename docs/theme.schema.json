@@ -42,7 +42,8 @@
         "glyphs": { "type": "string", "description": "A folder beside the theme with line icons (<name>-32.png for rows, <name>-88.png for tiles; white, tinted)." },
         "plate": {"type": "object", "additionalProperties": false, "properties": {"light": {"type": "number", "minimum": 0, "maximum": 1}, "at": {"type": "number", "minimum": 0, "maximum": 1}, "dark": {"type": "number", "minimum": 0, "maximum": 1}, "lip": {"type": "number", "minimum": 0, "maximum": 24}}, "description": "The material look's plate from the accent: white mixed in at the top (light), where the accent itself sits (at, 0..1 down), black at the bottom (dark), the lower lip's height in px (lip). Default 0.18, 0.38, 0.14, 6."},
         "state": {"type": "object", "additionalProperties": false, "properties": {"light": {"type": "number", "minimum": 0, "maximum": 1}, "at": {"type": "number", "minimum": 0, "maximum": 1}, "dark": {"type": "number", "minimum": 0, "maximum": 1}, "lip": {"type": "number", "minimum": 0, "maximum": 24}}, "description": "The same for what says \"on\" (a switch, a bar's fill, the main hint's key) when it isn't the plate. Missing: the plate."},
-        "texture": {"type": "string", "description": "An RGBA .png beside the theme, tiled over the material look's cards, rows and tiles in place of the cards' dots."}
+        "texture": {"type": "string", "description": "An RGBA .png beside the theme, tiled over the material look's cards, rows and tiles in place of the cards' dots."},
+        "help": {"type": "object", "additionalProperties": {"type": "string"}, "description": "The theme's own words for a row's help on the top screen, by the row's key: \"theme\" (what this theme is), \"accent\" (what its accent colours). In English; other rows keep the system's help."}
       }
     },
     "transitions": {

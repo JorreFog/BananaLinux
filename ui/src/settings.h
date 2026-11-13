@@ -105,6 +105,7 @@ namespace banana
 		static void bshareServe(bool want);
 		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
+		void settle() { aPick = (float)sel; aTop = (float)top; aCol = (float)(gsel % 3); aRow = (float)(gsel / 3); }	// (a still picture: the glides at rest)
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
@@ -123,6 +124,9 @@ namespace banana
 		// the panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the virtual keyboard the emulator
 		// reads as a USB one (vkbd.h), made before the game starts. null: no Keys tile on the panel
 		void gameKeyboard(VirtualKeyboard* k) { vkbd = k; }
+		// the handheld has a Home button that stops the game for the menu (a press) or the quick menu (held): the panel's
+		// hints say so in a theme's screen layout (set before gameOpen)
+		bool gameHome = false;
 		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
 		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
 		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
@@ -721,6 +725,8 @@ namespace banana
 		void themeAccent(const std::string& theme);
 		void listExtras(const Item& it);	// the top screen's swatches (Theme) and caps (Accent colour)
 		int iconPx = 0;		// (iconCentred: screen px an icon pixel, when a page says)
+		float helpWide = 0, wrapEnd = 0;	// (the help's column when not HELP_W; where wrapped()'s last line ended)
+		void miniPreview(float x, float y);	// the split page's picture: three tiles, the middle one on the plate
 		float crumbEnd = 0;		// (the top screen's header: where the crumb ended, for the value after it)
 		float px(float v) const { return v * shift.px() / (s * shift.rk()); }	// design px (of 1080 lines) in the page's units
 		void iconTile(float x, float y, float w, float h);	// a theme's lit tile behind a top screen icon (settings.icons "tile")

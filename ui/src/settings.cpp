@@ -2312,6 +2312,9 @@ namespace banana
 		{
 			// (the top screen's header, drawn at x 170 beside the icon: a crumb, the title large, the value after the crumb)
 			if (lay() && shift.screen == 0 && x == 170 && !measureOnly) return headText(t, size, c);
+			// (the bottom screen's header line: the title flush with the rows' left edge, what is at the right with their
+			// right one, both where the design has them: 7 px lower)
+			if (lay() && shift.screen == 1 && !shift.chips && !measureOnly && top > 0 && top < 60) { x += x < 300 ? -20 : 20; top += 7 * shift.u1; }
 			const float was = size;
 			role(medium, size, font, upper, ls);
 			if (font == IM) tag = "|im"; else if (font == IR) tag = "|ir";
@@ -2385,7 +2388,7 @@ namespace banana
 		}
 		const Color vc = (c.r == p.accent.r && c.g == p.accent.g && c.b == p.accent.b) ? p.ink : c;
 		float x = crumbEnd;
-		{ AsNamed raw(*this); x += textWith("  \xc2\xb7  ", IR, "|ir", crumbSize, x, crumbY, mcol("ink2")); }
+		{ AsNamed raw(*this); x += textWith(" \xc2\xb7 ", IR, "|ir", crumbSize, x, crumbY, mcol("ink2")); }
 		float w = textWith(t, IR, "|ir", crumbSize, x, crumbY, vc);
 		crumbEnd = x + w;
 		return w;
@@ -2416,12 +2419,13 @@ namespace banana
 			// (Inter at the look's size, lines one and a half high)
 			bool up = false; float ls = 0;
 			role(false, st.size, st.font, up, ls);
-			lh = std::round(st.size * 1.5f);
+			lh = lay() ? st.size * 1.5f : std::round(st.size * 1.5f);
 		}
 		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
 		bodyNow = true;	// (in the theme's body font, when it has one)
 		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
 		bodyNow = false;
+		wrapEnd = top + lines.size() * lh;
 	}
 
 	// an icon centred on cx (its own width: the icons aren't all the same size)
@@ -2838,6 +2842,8 @@ namespace banana
 	{
 		const Item& cur = items[i];
 		std::string help = cur.help;
+		// (a theme's own words for the row: its Theme row says what the theme is)
+		if (auto th = rnds::themeFiles.setHelp.find(cur.key); th != rnds::themeFiles.setHelp.end() && !cur.key.empty()) help = th->second;
 		if (cur.kind == Item::INFO && cur.key != "hk") help = about;	// (Hotkeys' rows have their own)
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
@@ -2907,7 +2913,7 @@ namespace banana
 		{
 			st.size = z;
 			size = z;
-			lines = st.font ? (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)HELP_W, 0).size() : 0;
+			lines = st.font ? (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)(helpWide > 0 ? helpWide : HELP_W), 0).size() : 0;
 			if ((lines - 1) * std::round(z * 1.4f) + z * 1.3f <= bottom - top) return true;
 		}
 		return false;
@@ -2917,7 +2923,7 @@ namespace banana
 		float z; int n;
 		bool ok = helpFit(t, top, bottom, z, n);
 		int maxLines = ok ? n : std::max(1, (int)((bottom - top - z * 1.3f) / std::round(z * 1.4f)) + 1);
-		wrapped(t, z, HELP_X, top, HELP_W, maxLines, c);
+		wrapped(t, z, HELP_X, top, helpWide > 0 ? helpWide : HELP_W, maxLines, c);
 	}
 
 	int Settings::helpCheck(const std::function<void(const std::string&)>& log)
@@ -3032,8 +3038,16 @@ namespace banana
 			if (steamQrRows.empty()) wrapped("Asking Steam for a code...", 20, HELP_X, HELP_TOP, HELP_W, 2, p.muted);
 			else drawSteamQr(HELP_X, HELP_TOP);
 		}
-		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
-		if (crumbs && (cur.key == "theme" || cur.key == "accent")) listExtras(cur);
+		else
+		{
+			// (the Theme and Accent colour rows' page is split: the help in a narrower column, a small picture of the
+			// menu in the theme beside it)
+			const bool split = crumbs && (cur.key == "theme" || cur.key == "accent");
+			if (split) helpWide = px(772);	// (the design's 760 px, and the room its narrower letters leave)
+			helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
+			helpWide = 0;
+			if (split) listExtras(cur);
+		}
 		be->endScreen();
 
 		// ---- bottom: the list ----
@@ -3042,7 +3056,19 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		// the count only when the group has more rows than the five in view (it is the only sign of the others)
 		float titleW = 564;
-		if (ge - gb > listRows())
+		const bool headM = material() && lay();	// (the design's header: "Settings", the page's name at the right)
+		if (headM)
+		{
+			std::vector<std::string> path = sectionPath(cur.section);
+			std::string where;
+			for (auto& s : path) where += (where.empty() ? "" : " > ") + (lang::active() ? lang::tr(s) : s);
+			if (ge - gb > listRows()) where += " \xc2\xb7 " + std::to_string(sel - gb + 1) + " / " + std::to_string(ge - gb);
+			const float tw = text("Settings", true, 22, 38, 28, p.ink);
+			rawText = true;
+			textFit(where, false, px(30) / 0.85f, 38 + tw + 24, 30, 602 - (38 + tw + 24), mcol("ink2"), false, true);
+			rawText = false;
+		}
+		else if (ge - gb > listRows())
 		{
 			char count[32];
 			snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
@@ -3052,6 +3078,7 @@ namespace banana
 		}
 		// the title: a subpage's place, the sections above it muted (Nintendo DS > SuperDrastic > ...), each translated on
 		// its own; the outer ones left out ("...") when the whole doesn't fit beside the count
+		if (!headM)
 		{
 			std::vector<std::string> path = sectionPath(cur.section);
 			for (auto& s : path) s = lang::active() ? lang::tr(s) : s;

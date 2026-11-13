@@ -630,6 +630,8 @@ namespace banana
 		return true;
 	}
 
+	static int gameTileIds(bool grid, int ntiles, int ids[6]);
+
 	Settings::GameAction Settings::gameTouch(float x, float y, bool down)
 	{
 		shift.untouch(x, y);
@@ -683,9 +685,11 @@ namespace banana
 			return G_NONE;
 		}
 		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
+		const bool grid = material() && lay();	// (the design's grid: the slots are a tile's, and close on a tap beside them)
+		if (grid && gamePage && gStates && (down || ly < 80 || ly >= 286 || lx < 18 || lx >= 622)) { if (!down) gStates = false; return G_NONE; }
 		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
 		{
-			if (!gStates && ly >= 80 && ly < 286) { gStates = true; gSlotSel = -1; gameStatesScan(); return G_NONE; }
+			if (!grid && !gStates && ly >= 80 && ly < 286) { gStates = true; gSlotSel = -1; gameStatesScan(); return G_NONE; }
 			if (gStates && ly < 80) { gStates = false; return G_NONE; }
 			if (gStates && ly >= 120 && ly < 284)
 			{
@@ -699,11 +703,13 @@ namespace banana
 			}
 		}
 		const int ntiles = vkbd && gTouch ? 6 : 5;
-		for (int i = 0; i < ntiles; i++)
+		int tileIds[6];
+		const int nplaces = gameTileIds(grid, ntiles, tileIds);
+		for (int i = 0; i < nplaces; i++)
 		{
 			float tx, ty, tw, th;
 			gameTile(i, ntiles, tx, ty, tw, th);
-			if (lx >= tx && lx < tx + tw && ly >= ty && ly < ty + th) hit = i;
+			if (lx >= tx && lx < tx + tw && ly >= ty && ly < ty + th) hit = tileIds[i];
 		}
 		// the game companion's pages: the tab bar, a page's screens (the pager), a list's row opened or closed (the menu
 		// has the tiles alone, below)
@@ -738,6 +744,11 @@ namespace banana
 		gFlashUntil = now + 220;
 		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
 		static const GameAction acts[6] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_NONE };
+		if (hit == 6)	// the save states' slots
+		{
+			if (!gStateBase.empty()) { gStates = true; gSlotSel = -1; gameStatesScan(); }
+			return G_NONE;
+		}
 		if (hit == 5)	// the panel's keyboard
 		{
 			gKeysOpen = true; gKeyPage = 0; gKeyTyped.clear();
@@ -794,16 +805,26 @@ namespace banana
 		text("The game keeps running on the other screen. Done brings the tiles back.", false, 15, 12, 384, p.muted);
 	}
 
-	// the panel's tiles (canvas units): five or six in a row under the achievements; in a screen layout two rows of
-	// the design's grid buttons down to the screen's foot (three, then the rest)
+	// which tile is in each place: Save, Load, Menu, Fast, Quit (and Keys) in a row; in a screen layout the design's grid
+	// of six, three by two: Save, Load, Save states (6: the slots, which the achievements box opens elsewhere), Menu, Fast
+	// (Keys where the game has a keyboard), Quit
+	static int gameTileIds(bool grid, int ntiles, int ids[6])
+	{
+		if (!grid) { for (int i = 0; i < ntiles; i++) ids[i] = i; return ntiles; }
+		const int G[6] = { 0, 1, 6, 2, ntiles == 6 ? 5 : 3, 4 };
+		for (int i = 0; i < 6; i++) ids[i] = G[i];
+		return 6;
+	}
+
+	// the panel's tiles by their place (canvas units): five or six in a row under the achievements; in a screen layout
+	// the design's grid buttons, six of 320 px in two rows from the title down
 	void Settings::gameTile(int i, int n, float& x, float& y, float& w, float& h) const
 	{
 		if (rnds::themeFiles.panels == "material" && shift.lay && shift.u1 > 0)
 		{
 			const float u = shift.u1, gap = 24 * u;
-			const int row = i < 3 ? 0 : 1, cols = row == 0 ? 3 : n - 3, col = row == 0 ? i : i - 3;
-			w = (604 - (cols - 1) * gap) / cols; h = 220 * u;
-			x = 18 + col * (w + gap); y = (537 + 14) * u + row * (h + gap);
+			w = (604 - 2 * gap) / 3; h = 320 * u;
+			x = 18 + (i % 3) * (w + gap); y = (128 + 14) * u + (i / 3) * (h + gap);
 			return;
 		}
 		const float tstep = n == 6 ? 102 : 122;
@@ -871,7 +892,18 @@ namespace banana
 		std::string sys = fit(gSystem, true, 17, 200);
 		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
 		const float sysEnd = compOn() ? 574 : 602;	// (the companion's icon at the header's right end)
-		if (rpText.empty())
+		const bool grid = material() && lay();
+		if (grid)
+		{
+			// the design's title line: the game's name, and at the right its rich presence or the system
+			const std::string& side = rpText.empty() ? gSystem : rpText;
+			const float z = px(30) / 0.85f, room = 260;
+			const std::string sd = fit(side, false, z, room);
+			const float w = text(sd, false, z, 0, 0, p.ink, false, 0, true);
+			text(sd, false, z, sysEnd - w, 30, mcol("ink2"));
+			text(fit(gTitle, true, 22, sysEnd - 62 - w), true, 22, 38, 28, p.ink);
+		}
+		else if (rpText.empty())
 		{
 			text(sys, true, 17, sysEnd - sw, 31, p.muted);
 			text(fit(gTitle, true, 22, sysEnd - 62 - sw), true, 22, 38, 28, p.ink);
@@ -885,6 +917,30 @@ namespace banana
 		}
 		// ---- the achievements (or, after a tap on them, the save states)
 		if (gStates) gameStatesFrame(p);
+		else if (grid)
+		{
+			// under the grid: the latest achievement and the count in one row of the material (the design has them on
+			// the top screen, which is the game's here); while RetroArch is still asked, that in a line
+			const float u = shift.u1, ry = (816 + 14) * u, rh = 96 * u;
+			if ((state == 2 && total) || !nearList.empty())
+			{
+				box("row", false, 18, ry, 604, rh);
+				glyph("trophy", 32, 18 + px(32), ry + (rh - px(32)) / 2, mcol("ink2"));
+				std::string count = state == 2 && total ? std::to_string(got) + " of " + std::to_string(total) + " achievements" : "";
+				if (rows.empty() && !nearList.empty()) count = nearList[0].measured;
+				const float zc = px(28) / 0.85f, cw = text(count, false, zc, 0, 0, p.ink, false, 0, true);
+				text(count, false, zc, 622 - px(24) - cw, ry + (rh - px(28) * 1.2f) / 2 - (zc - px(28)) * 0.5f, mcol("ink2"));
+				const std::string what = !rows.empty() ? rows[0].title : !nearList.empty() ? "Next: " + nearList[0].title : std::string("None unlocked yet. Good luck!");
+				const float zt = px(34) / 0.92f * 0.63f;	// (below the pixel face's size: Inter medium)
+				textFit(what, true, std::min(zt, 21.0f), 18 + px(88), ry + (rh - px(34) * 1.2f) / 2, 604 - px(88 + 48) - cw, p.ink, false);
+			}
+			else if (state == 0 || state == 1 || state == 5)
+			{
+				const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." : "No connection to RetroAchievements: check Wi-Fi.";
+				const float zc = px(28) / 0.85f, mw = text(msg, false, zc, 0, 0, p.ink, false, 0, true);
+				text(msg, false, zc, 320 - mw / 2, ry + (rh - px(28) * 1.2f) / 2, mcol("dim"));
+			}
+		}
 		else {
 		box("slot", false, 18, 80, 604, 206);
 		if (!gStateBase.empty() && gTouch)
@@ -969,21 +1025,38 @@ namespace banana
 		// ---- the tiles: RetroArch's commands by touch, and their buttons
 		const int ntiles = vkbd && gTouch ? 6 : 5;
 		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
-		for (int i = 0; i < ntiles && material(); i++)
+		int tileIds[6];
+		const int nplaces = gStates && grid ? 0 : gameTileIds(grid, ntiles, tileIds);
+		if (grid && !gStates && !gStateBase.empty() && now - gStatesScan > 2000) gameStatesScan();	// (the Save states tile's count)
+		for (int at = 0; at < nplaces && material(); at++)
 		{
 			// the material look's grid buttons: a line icon, the name in the pixel face, the buttons under it; a tile
 			// pressed is the plate (Quit's the danger's), Quit's icon and name in the danger's text colour
-			static const char* const GLYPHS[6] = { "save", "load", "menu", "fast", "quit", "keys" };
+			static const char* const GLYPHS[7] = { "save", "load", "menu", "fast", "quit", "keys", "states" };
+			const int i = tileIds[at];
 			float x, y, w, h;
-			gameTile(i, ntiles, x, y, w, h);
+			gameTile(at, ntiles, x, y, w, h);
 			const bool on = gFlash == i, quit = i == 4;
 			box(on ? (quit ? "danger" : "plate") : "tileM", on, x, y, w, h);
-			const Color fg = on ? (quit ? mcol("dangerInk") : mcol("plateInk")) : quit ? mcol("dangerText") : p.ink;
+			const bool none = i == 6 && gStateBase.empty();	// (no save states for this game: the tile is there, dimmed)
+			const Color fg = on ? (quit ? mcol("dangerInk") : mcol("plateInk")) : quit ? mcol("dangerText") : none ? mcol("dim") : p.ink;
 			const Color ic = on ? (quit ? fg : mcol("plateSub")) : quit ? mcol("dangerText") : mcol("ink2");
-			const std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
-			const std::string kk = getenv("BANANA_ROCKNIX") ? std::string(i == 5 ? "Tap" : "") : std::string(GTILES[i].keys);
+			const std::string lb = i == 6 ? std::string("Save states") : lang::tr("Second screen (RetroArch games)", GTILES[i].label);
+			std::string kk = i == 6 ? "" : getenv("BANANA_ROCKNIX") ? std::string(i == 5 ? "Tap" : "") : std::string(GTILES[i].keys);
+			if (grid && (gTouch || i == 6))
+			{
+				// (a finger's panel: what the tile does in words, as the design's)
+				static const char* const WHAT[7] = { "Quick save", "The last quick save", "The emulator's menu", "Fast forward", "Back to the library", "On-screen keyboard", "" };
+				kk = WHAT[i];
+				if (i == 6)
+				{
+					int n = 0;
+					for (auto& f : gStateFiles) if (f.mtime) n++;
+					kk = gStateBase.empty() ? "Not for this game" : n ? std::to_string(n) + " of 10 slots" : "None saved yet";
+				}
+			}
 			const bool tall = h >= px(200);
-			const float icon = px(tall ? 80 : 40), nameZ = std::max(21.6f, px(tall ? 40 : 30)), keyZ = px(tall ? 28 : 22);
+			const float icon = px(h >= px(300) ? 88 : tall ? 80 : 40), nameZ = std::max(21.6f, px(tall ? 40 : 30)), keyZ = px(tall ? 28 : 22);
 			const float all = icon + px(12) + nameZ * 1.2f + (kk.empty() ? 0 : px(6) + keyZ * 1.2f), y0 = y + (h - all) / 2;
 			glyphAt(GLYPHS[i], 88, x + (w - icon) / 2, y0, icon, ic);
 			float lw = text(lb, true, nameZ, 0, 0, fg, false, 0, true);
@@ -991,6 +1064,26 @@ namespace banana
 			else textFit(lb, true, nameZ, x + px(12), y0 + icon + px(12), w - px(24), fg, false);
 			float kw = text(kk, false, keyZ, 0, 0, fg, false, 0, true);
 			text(kk, false, keyZ, x + w / 2 - kw / 2, y0 + icon + px(12) + nameZ * 1.2f + px(6), on ? (quit ? fg : mcol("plateSub")) : mcol("dim"));
+		}
+		if (grid)
+		{
+			// the hints at the screen's foot, as pills: what the Home button does here (the buttons are the game's)
+			if (gameHome)
+			{
+				const std::string a = "Menu", b = "Hold: quick settings";
+				face("HOME", a, 18, faceWidth("HOME", a));
+				const float bw = faceWidth("HOME", b, 400);
+				face("HOME", b, 622 - bw, bw);
+			}
+			else
+			{
+				const std::string hint = getenv("BANANA_ROCKNIX") || gTouch ? "Tap a tile" : "Hold F with the button under each tile";
+				const float z = px(30) / 0.85f, hw = text(hint, false, z, 0, 0, p.muted, false, 0, true);
+				text(hint, false, z, 320 - hw / 2, (990 + 14) * shift.u1, mcol("dim"));
+			}
+			if (compOn()) compIcon();
+			be->endScreen();
+			return;
 		}
 		for (int i = 0; i < ntiles && !material(); i++)
 		{

@@ -197,6 +197,9 @@ namespace rnds
 		float plateMix[4] = { 0.18f, 0.38f, 0.14f, 6 }, stateMix[4] = { -1, 0.38f, 0.14f, 6 };
 		bool accentLogo = true;		// the boot animation's banana in the accent's hue ("accentLogo": false: it stays yellow)
 		std::string setTexture;		// a picture tiled over the look's cards, rows and tiles in place of the dots (.png); "" none
+		// the theme's own words for a row's help on the top screen, by the row's key ("settings": { "help": { "theme":
+		// "...", "accent": "..." } }): what this theme is, what its accent colours
+		std::map<std::string, std::string> setHelp;
 		std::string setGlyphs;		// a folder of line icons (<name>-32.png, <name>-88.png: white, tinted) for rows and tiles; "" none
 		// the moments between screens ("transitions": "fade"): smooth fades instead of the iris and the stepped fades
 		std::string transitions;

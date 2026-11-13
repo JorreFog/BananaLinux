@@ -1081,6 +1081,7 @@ namespace banana
 
 	bool Library::online()
 	{
+		if (testOnline >= 0) return testOnline == 1;
 		double now = monoSec();
 		if (onlineAt > 0 && now - onlineAt < 2) return onlineSeen;
 		onlineAt = now;
