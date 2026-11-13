@@ -24,11 +24,9 @@ EXTRA = [0x00B7, 0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2026, 0x2192,
 
 
 def charset(px):
-    # big sizes only ever draw numbers, times and short Latin titles: keep them lean
-    if px > 32:
-        cps = list(range(0x20, 0x7F)) + EXTRA
-    else:
-        cps = list(range(0x20, 0x7F)) + list(range(0xA0, 0x100)) + EXTRA
+    # every size gets Latin-1: on the 1024x768 panels the Library bubble's 26 px title is
+    # drawn at ~42 px, and game titles there carry accents ("Pokémon", #251)
+    cps = list(range(0x20, 0x7F)) + list(range(0xA0, 0x100)) + EXTRA
     return sorted(set(cps))
 
 
