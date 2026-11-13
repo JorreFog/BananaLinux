@@ -738,6 +738,99 @@ namespace banana::gcomp
 		return out;
 	}
 
+	bool parseStrings(const JVal& j, std::map<std::string, std::string>& out, std::string* why)
+	{
+		out.clear();
+		if (!j.isObj()) { if (why) *why = "not a JSON object"; return false; }
+		const JVal* st = j.get("strings");
+		if (!st || !st->isObj()) { if (why) *why = "no \"strings\" object"; return false; }
+		for (auto& kv : st->obj)
+		{
+			if (!kv.second || !kv.second->isStr()) { if (why) *why = "strings.\"" + kv.first + "\": not a string"; out.clear(); return false; }
+			if (!kv.first.empty() && !kv.second->s.empty()) out[kv.first] = kv.second->s;
+		}
+		return true;
+	}
+
+	bool loadStrings(const std::string& path, std::map<std::string, std::string>& out, std::string* why)
+	{
+		out.clear();
+		JPtr j = readJsonFile(path, why);
+		return j && parseStrings(*j, out, why);
+	}
+
+	namespace
+	{
+		int countBraces(const std::string& s)
+		{
+			int n = 0;
+			for (size_t at = s.find("{}"); at != std::string::npos; at = s.find("{}", at + 2)) n++;
+			return n;
+		}
+		void collectCharmaps(const Mem& m, std::vector<std::string>& out) { if (!m.charmap.empty()) out.push_back(m.charmap); }
+	}
+
+	int translateDef(Def& d, const std::map<std::string, std::string>& tr)
+	{
+		if (tr.empty()) return 0;
+		int n = 0;
+		auto t = [&](std::string& s)
+		{
+			if (s.empty()) return;
+			auto it = tr.find(s);
+			if (it != tr.end()) { s = it->second; n++; }
+		};
+		// a format is a keyword (thousands, time60...) or words with {} for the value: only the second, and only when
+		// the translation keeps as many {}
+		auto tf = [&](std::string& s)
+		{
+			int k = countBraces(s);
+			if (!k) return;
+			auto it = tr.find(s);
+			if (it != tr.end() && countBraces(it->second) == k) { s = it->second; n++; }
+		};
+		t(d.title);
+		for (auto& p : d.pages)
+		{
+			t(p.title);
+			t(p.tab);
+			for (auto& w : p.widgets)
+			{
+				t(w.label);
+				t(w.text);
+				tf(w.format);
+				for (auto& i : w.items) t(i);
+				for (auto& r : w.rows) { t(r.first); t(r.second); }
+				for (auto& f : w.fields) { t(f.label); tf(f.format); }
+			}
+		}
+		// an enum a text is decoded with (charmap:) maps bytes to letters: not words to translate
+		std::vector<std::string> cm;
+		for (auto& v : d.vars) collectCharmaps(v.m, cm);
+		for (auto& p : d.pages) for (auto& w : p.widgets) for (auto& f : w.fields) collectCharmaps(f.m, cm);
+		for (auto& e : d.enums)
+		{
+			if (std::find(cm.begin(), cm.end(), e.first) != cm.end()) continue;
+			for (auto& l : e.second) t(l.second);
+		}
+		return n;
+	}
+
+	std::string translateFrom(Def& d, const std::vector<std::string>& paths)
+	{
+		for (const std::string& p : paths)
+		{
+			if (access(p.c_str(), R_OK) != 0) continue;
+			std::string w;
+			std::map<std::string, std::string> tr;
+			if (!loadStrings(p, tr, &w)) { fprintf(stderr, "game companion: %s: %s (the English words are used)\n", p.c_str(), w.c_str()); return ""; }
+			translateDef(d, tr);
+			d.translation = p;
+			return p;
+		}
+		return "";
+	}
+
 	std::string findDef(const std::string& dir0, const std::string& rom, std::string* why, const std::string& system)
 	{
 		if (system != "gba") return findDefOther(dir0 + "/" + system, rom, why, system);
@@ -786,20 +879,12 @@ namespace banana::gcomp
 		std::string why;
 		std::string f = findDef(dir, rom, &why, system);
 		if (f.empty()) { fprintf(stderr, "game companion: %s\n", why.c_str()); return false; }
-		// matching used the English file (and index.tsv). The menu's language, when it has a translation that parses,
-		// shows that instead; a missing or broken translation keeps the English definition.
-		std::shared_ptr<Def> d;
-		for (const std::string& p : translationPaths(dir, f))
-		{
-			if (access(p.c_str(), R_OK) != 0) continue;
-			std::string w;
-			d = loadDef(p, &w);
-			if (d) break;
-			fprintf(stderr, "game companion: %s: %s (the English definition is used)\n", p.c_str(), w.c_str());
-			break;
-		}
-		if (!d) d = loadDef(f, &why);
+		auto d = loadDef(f, &why);
 		if (!d) { fprintf(stderr, "game companion: %s: %s\n", f.c_str(), why.c_str()); return false; }
+		// matching used the English file (and index.tsv), and its logic is what is read. The menu's language, when it has
+		// a translation, puts its words over the English ones; the first file that is there is the one, and one that is
+		// not a translation leaves the English words.
+		translateFrom(*d, translationPaths(dir, f));
 		return openDef(d, rom);
 	}
 

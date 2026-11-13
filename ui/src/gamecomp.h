@@ -10,7 +10,8 @@
 // game (its ROM header's code and title, or the ROM's CRC-32 for hacks and translations), the values to read (address,
 // type, post-processing, pointers, expressions over other values) and the pages' widgets. index.tsv in that folder
 // lists every file's match keys, so a game's start reads one small file, not every definition. A translation of a
-// definition (the menu's language) is lang/<code>/<the same path> beside it; matching stays on the English file.
+// definition (the menu's language) is lang/<code>/<the same path> beside it: the English words it shows and theirs
+// ({"strings": {...}}), put over the English definition, which is still the one matched and read.
 //
 // Reading: the values a page needs (the page shown, and every page's "when") are gathered into as few reads as
 // possible (addresses within 512 bytes share one, up to 4 KB each), a set every 250 ms, the next only once the last
@@ -107,6 +108,7 @@ namespace banana::gcomp
 	struct Def
 	{
 		std::string file, title, quality;
+		std::string translation;		// the lang/<code>/ file its words came from ("" English)
 		std::string system = "gba";		// schema 1: always the GBA
 		std::shared_ptr<const SysMap> map;
 		uint32_t accent = 0xd0a030;
@@ -126,6 +128,15 @@ namespace banana::gcomp
 	// they are tried: the card's folder, the image's, then companionsDir when that is neither. Empty for English or no
 	// language (docs/COMPANIONS.md). The path under lang/<code>/ mirrors the English file's path under its folder.
 	std::vector<std::string> translationPaths(const std::string& companionsDir, const std::string& englishPath);
+	// a translation file's words: {"strings": {"<the English text>": "<the translation>", ...}} (false and why in *why
+	// when it isn't one: not an object, no "strings" object, a value that is not a string). An empty translation is left out.
+	bool loadStrings(const std::string& path, std::map<std::string, std::string>& out, std::string* why = nullptr);
+	bool parseStrings(const JVal& j, std::map<std::string, std::string>& out, std::string* why = nullptr);
+	// d's words that have an entry in tr replaced (the title, pages' title and tab, widgets' label, text, items and rows,
+	// list fields' labels, enums' labels but not a charmap's, a format with {}); nothing else changes. How many.
+	int translateDef(Def& d, const std::map<std::string, std::string>& tr);
+	// the first of paths that is there translates d (a file that is not a translation: none, English). The file used ("" none).
+	std::string translateFrom(Def& d, const std::vector<std::string>& paths);
 
 	// the running ROM: its header's code and title, its CRC-32 (from the zip's directory, or worked out for a .gba
 	// when asked), its file name without folder and extension

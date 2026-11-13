@@ -2814,7 +2814,7 @@ int main(int argc, char** argv)
 		// Settings > Other systems > Second screen > Game companion: the same for another GBA game with a definition in
 		// /data/banana/companions (the card's own, written or tried out there) or /usr/share/banana/companions
 		// (gamecomp.h; the Pokémon games are the Pokémon companion's). A translation is lang/<code>/ under either
-		// folder; matching stays on the English definition.
+		// folder, words put over the English definition (which is still the one matched and read).
 		bool pkOn = panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom);
 		// (any system with a definition: the GBA's in the folder itself, another system's in <folder>/<system>/, schema 2)
 		bool gcOn = !pkOn && panel && settings["game_companion"] == "on" &&
@@ -2826,7 +2826,8 @@ int main(int argc, char** argv)
 			if (mkfifo(OUT, 0600) == 0) outFd = ::open(OUT, O_RDWR | O_NONBLOCK | O_CLOEXEC);
 			if (outFd < 0) { logf("companion: no pipe for RetroArch's replies"); companion.close(); gameComp.close(); }
 			else if (pkOn) logf("pokemon companion: %s", companion.game()->name);
-			else logf("game companion: %s (%s)", gameComp.game()->title.c_str(), gameComp.game()->file.c_str());
+			else logf("game companion: %s (%s%s%s)", gameComp.game()->title.c_str(), gameComp.game()->file.c_str(),
+				gameComp.game()->translation.empty() ? "" : ", words from ", gameComp.game()->translation.c_str());
 		}
 		// the DS Pokémon companion (alpha; settings.conf nds_companion): no panel of its own beside a DS game, so its
 		// pages go to BananaDS through the companion overlay (nds/overlay.h), which BananaDS shows on the bottom screen
