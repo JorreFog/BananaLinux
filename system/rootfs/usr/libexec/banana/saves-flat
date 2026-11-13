@@ -24,9 +24,15 @@ case $0 in */*) . "${0%/*}/save-put.sh" ;; *) . /usr/libexec/banana/save-put.sh 
 [ -d "$DATA/saves" ] || exit 0
 IDS=$(sed -n 's/^\[\(.*\)\]$/\1/p' "$SYSTEMS" 2>/dev/null)
 FAIL=0
-# blank <file>: no save in it, only 0xff or only 0x00 bytes (a core that made the file and never wrote it; counted, not
-# compared: the shell drops a NUL from $(...)), or nothing at all; as run-retroarch tells a GBA core's blank one
+# blank <file> <folder>: no save in it, as the save sync tells one (banana-sync blank, as gba-seed asks it: only 0xff or
+# only 0x00 bytes, or nothing at all, and what that core writes fresh, Snes9x's 0x60 fill, PCSX-ReARMed's formatted
+# card, Mupen64Plus-Next's new save; folder: the core's, or none for a flat save, which may be any core's). The sync
+# counts such a file as no save, so one weighed here as a save would go over the real one by its time alone. Without
+# banana-sync to ask (it answers 0 or 1), the bytes alone: only 0xff or only 0x00 (counted, not compared: the shell
+# drops a NUL from $(...))
 blank() {
+    banana-sync blank "$1" "$2" 2>/dev/null; _b=$?
+    case $_b in 0|1) return $_b ;; esac
     [ "$(tr -d '\377' < "$1" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$1" | head -c 1 | wc -c)" = 0 ]
 }
 # where each system's games are (its "folder", or its id: "<id> <folder>" lines), on this card and on the second one
@@ -128,9 +134,11 @@ for dir in "$DATA"/saves/*/; do
         # the core's save goes flat when there is none there, when it is newer, and always over a blank one; never a
         # blank one over a save with data in it (gpSP's real save, then mGBA's empty file of it a day later)
         take=
+        # (the flat folder's save may be any core's; saves/gba's is a GBA core's)
+        df=; [ "$dest" = "$DATA/saves" ] || df=${dest##*/}
         if [ ! -e "$dest/$n" ]; then take=1
-        elif blank "$f"; then blank "$dest/$n" && [ "$f" -nt "$dest/$n" ] && take=1
-        elif blank "$dest/$n" || [ "$f" -nt "$dest/$n" ]; then take=1
+        elif blank "$f" "$d"; then blank "$dest/$n" "$df" && [ "$f" -nt "$dest/$n" ] && take=1
+        elif blank "$dest/$n" "$df" || [ "$f" -nt "$dest/$n" ]; then take=1
         fi
         if [ -n "$take" ]; then
             # (the flat save it replaces is kept too: saves-legacy/replaced/, never overwritten)
