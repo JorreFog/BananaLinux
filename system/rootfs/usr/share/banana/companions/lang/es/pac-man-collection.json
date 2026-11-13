@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Pac-Man score": "Puntuación de Pac-Man",
+  "Pac-Man stage": "Escenario de Pac-Man",
+  "Pac-Attack score": "Puntuación de Pac-Attack",
+  "Pac-Attack level": "Nivel de Pac-Attack",
+  "Games": "Juegos",
+  "Notes": "Notas",
+  "Pac-Attack is a falling-block puzzle.": "Pac-Attack es un rompecabezas de bloques que caen.",
+  "Tips": "Consejos",
+  "Power pellets turn ghosts blue.": "Las bolas de poder vuelven azules a los fantasmas.",
+  "Menu": "Menú",
+  "Pick a game.": "Elige un juego.",
+  "Items": "Objetos",
+  "Fruit.": "Frutas.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Score": "Puntuación",
+  "Controls": "Controles",
+  "A jump, B punch, R kick/special. Jackie uses objects in the scene as weapons.": "A saltar, B puñetazo, R patada/especial. Jackie usa objetos del escenario como armas.",
+  "Talismans": "Talismanes",
+  "Each talisman gives a power (e.g. speed, strength, invisibility).": "Cada talismán otorga un poder (p. ej. velocidad, fuerza, invisibilidad).",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Block then counter. Use talisman powers on bosses.": "Bloquea y contraataca. Usa los poderes de los talismanes contra los jefes.",
+  "Stages": "Escenarios",
+  "Level id": "ID de nivel",
+  "Structure": "Estructura",
+  "Stages around the world chasing the Dark Hand.": "Escenarios por el mundo persiguiendo la Mano Oscura.",
+  "Items": "Objetos",
+  "Health pickups and scrolls.": "Recogibles de salud y pergaminos.",
+  "Collect": "Coleccionar",
+  "Find the talismans before the Dark Hand.": "Encuentra los talismanes antes que la Mano Oscura.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat the Dark Hand.": "Derrota a la Mano Oscura."
+ }
+}

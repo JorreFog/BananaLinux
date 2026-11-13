@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Play time": "Tiempo jugado",
+  "Controls": "Controles",
+  "A jump, B butt-bounce/rev roll.": "A salta, B rebota con el culo/giro inverso.",
+  "Moves": "Movimientos",
+  "Butt-bounce, rev roll.": "Rebote con el culo, giro inverso.",
+  "Bosses": "Jefes",
+  "Toc-Man health": "Salud de Toc-Man",
+  "Tips": "Consejos",
+  "Power pellets.": "Bolas de poder.",
+  "Worlds": "Mundos",
+  "Level id": "ID de nivel",
+  "Structure": "Estructura",
+  "Worlds.": "Mundos.",
+  "Items": "Objetos",
+  "Fruit, pellets.": "Frutas, bolas.",
+  "Family": "Familia",
+  "Collect": "Coleccionar",
+  "Rescue the family.": "Rescata a la familia.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Toc-Man.": "Derrota a Toc-Man."
+ }
+}

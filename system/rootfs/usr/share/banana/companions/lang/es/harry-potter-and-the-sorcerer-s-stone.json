@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Harry Potter and the Sorcerer's Stone": "Harry Potter y la Piedra filosofal",
+  "Health": "Salud",
+  "Controls": "Controles",
+  "A cast/interact, B jump, R spell select, L map/items (varies by screen)\nTop-down Hogwarts exploration": "A lanzar/interactuar, B saltar, R elegir hechizo, L mapa/objetos (varía según la pantalla)\nExploración cenital de Hogwarts",
+  "Spells": "Hechizos",
+  "Flipendo (push/knock), Lumos (light), Wingardium Leviosa (lift), Incendio (fire); learned in class as the year goes on.": "Flipendo (empujar/derribar), Lumos (luz), Wingardium Leviosa (levantar), Incendio (fuego); se aprenden en clase a lo largo del año.",
+  "Challenges": "Retos",
+  "Tips": "Consejos",
+  "Flipendo stuns most creatures.\nThe final chambers test each spell learned: think about which one opens the path.": "Flipendo aturde a casi todas las criaturas.\nLas cámaras finales ponen a prueba cada hechizo aprendido: piensa cuál abre el camino.",
+  "Places": "Lugares",
+  "Gryffindor tower, classrooms, the grounds, the Forbidden Forest, and the chambers below the trapdoor.": "La torre de Gryffindor, los salones de clase, los grounds, el Bosque Prohibido y las cámaras bajo la trampilla.",
+  "Items": "Objetos",
+  "Chocolate frogs restore health.\nBertie Bott's beans buy items from Fred & George.\nFamous Wizard cards are hidden around.": "Las ranas de chocolate restauran la salud.\nLas judías de Bertie Bott compran objetos a Fred & George.\nLas Cartas de Magos Famosos están escondidas.",
+  "Cards": "Cartas",
+  "Collect": "Coleccionar",
+  "Famous Wizard Cards hidden in secret areas and rewarded by challenges.": "Cartas de Magos Famosos escondidas en zonas secretas y premiadas con retos.",
+  "Year": "Año",
+  "Goal": "Objetivo",
+  "Finish the classes, win at Quidditch and get to the Philosopher's Stone before Quirrell.": "Termina las clases, gana en Quidditch y llega a la Piedra filosofal antes que Quirrell."
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "You play as the PET operator; pick a Navi partner for each battle\nHP, Battle Chips; Navi has its own personality and AI": "Juegas como el operador de la PET; elige un Navi compañero para cada batalla\nHP, chips de batalla; el Navi tiene su propia personalidad e IA",
+  "Many Navis from the series can be partnered\nEach Navi has its own Navi Chips and stats": "Muchos Navis de la serie pueden ser compañeros\nCada Navi tiene sus propios Navi Chips y estadísticas",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Choose chips; the Navi acts on its own between your inputs": "Elige chips; el Navi actúa por su cuenta entre tus acciones",
+  "the battle runs in real time": "la batalla ocurre en tiempo real",
+  "World": "Mundo",
+  "ACDC Town and the Net areas\nReal-time clock events (date and time) change what happens in the game": "ACDC Town y las áreas de la Red\nLos eventos del reloj en tiempo real (fecha y hora) cambian lo que pasa en el juego",
+  "Unique chips found": "Chips únicos encontrados",
+  "Battle Chips, Navi Chips; Zenny (money)": "Battle Chips, Navi Chips; Zenny (dinero)",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Chip library; Navi count": "Biblioteca de chips; cantidad de Navis",
+  "Progress": "Progreso",
+  "Story events and tournaments\nUnique chips found are counted (see Collection)\nEnglish translation in the Translations folder; version 1.1 (from the file name)": "Eventos de historia y torneos\nSe cuentan los chips únicos encontrados (ver Colección)\nTraducción al inglés en la carpeta Translations; versión 1.1 (según el nombre del archivo)"
+ }
+}

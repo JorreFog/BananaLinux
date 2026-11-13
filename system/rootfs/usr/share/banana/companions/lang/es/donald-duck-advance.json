@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Stars": "Estrellas",
+  "Power spheres": "Esferas de poder",
+  "Moves": "Movimientos",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Jump": "Saltar",
+  "Attack / kick": "Atacar / patear",
+  "Down + B": "Abajo + B",
+  "Slide": "Deslizar",
+  "Angry Donald": "Donald furioso",
+  "Get hit-free long enough and Donald gets furious: plough through enemies": "Aguanta un rato sin recibir golpes y Donald se enfurece: arrolla a los enemigos",
+  "Boss": "Jefe",
+  "Boss health": "Salud del jefe",
+  "Bosses repeat a short pattern: wait for the opening after their charge, then jump-attack.": "Los jefes repiten un patrón corto: espera el hueco tras su embestida y luego salta para atacar.",
+  "Stage": "Escenario",
+  "Gyro's lab is the hub; the worlds include Duckie Mountain, Duckburg, Magica's manor and Merlock's temple, each with a boss at the end.": "El laboratorio de Gyro es el centro; los mundos incluyen Duckie Mountain, Duckburg, la mansión de Magica y el templo de Merlock, cada uno con un jefe al final.",
+  "Items": "Objetos",
+  "Stars add to your total; milkshakes heal; extra-life icons add lives.": "Las estrellas suman a tu total; los batidos curan; los iconos de vida extra dan vidas.",
+  "Stars from the level": "Estrellas del nivel",
+  "Stars from enemies": "Estrellas de los enemigos",
+  "Gallery bits": "Bits de la galería",
+  "Progress": "Progreso"
+ }
+}

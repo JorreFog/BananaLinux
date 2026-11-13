@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Toy Land": "Tierra de Juguetes",
+  "Forest World": "Mundo Forestal",
+  "Organic World": "Mundo Orgánico",
+  "Sweets World": "Mundo de Dulces",
+  "Dark World": "Mundo Oscuro",
+  "Health": "Salud",
+  "Health; lives": "Salud; vidas",
+  "Costumes": "Trajes",
+  "Detail": "Detalle",
+  "Costumes give powers (e.g. disco, karate)\nCostumes give Rayman new powers for a while; each world introduces new ones": "Los disfraces dan poderes (p. ej. discoteca, karate)\nLos disfraces le dan a Rayman poderes nuevos por un tiempo; cada mundo introduce otros",
+  "Bosses": "Jefes",
+  "Rabbid bosses at world ends\nRabbid bosses close each world; health is 20 points (full)": "Jefes Rabbid al final de cada mundo\nLos jefes Rabbid cierran cada mundo; la salud es de 20 puntos (completa)",
+  "Worlds": "Mundos",
+  "World": "Mundo",
+  "On the hub map": "En el mapa central",
+  "Several worlds of side-scrolling levels": "Varios mundos de niveles de desplazamiento lateral",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Health, costumes\nHealth refills and costumes are the pickups; cages hold captives": "Salud, disfraces\nLos recogibles son las recargas de salud y los disfraces; las jaulas encierran cautivos",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Cages": "Jaulas",
+  "World 1 lums": "Lums del mundo 1",
+  "Hidden items per level": "Objetos ocultos por nivel",
+  "Progress": "Progreso",
+  "Worlds cleared": "Mundos superados",
+  "Toy Land, Forest World, Organic World, Sweets World and Dark World": "Tierra de Juguetes, Mundo Forestal, Mundo Orgánico, Mundo de Dulces y Mundo Oscuro"
+ }
+}

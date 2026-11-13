@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "Score": "Puntuación",
+  "R-90 ship; lives; Wave Cannon charge meter (hold the fire button)": "Nave R-90; vidas; medidor de carga del Wave Cannon (mantén pulsado el botón de disparo)",
+  "Force": "Fuerza",
+  "Choose one of 3 Forces: Round, Shadow, Cyclone\nForce attaches to front or back; detach to send it ahead": "Elige uno de los 3 Force: Round, Shadow, Cyclone\nEl Force se acopla delante o detrás; sepáralo para lanzarlo por delante",
+  "Bosses": "Jefes",
+  "Each stage ends in a boss; aim the charged Hyper Wave Cannon at its core": "Cada escenario termina con un jefe; apunta el Hyper Wave Cannon cargado a su núcleo",
+  "Stages": "Escenarios",
+  "6 stages\n6 stages; the game loops to a harder round after the last boss": "6 escenarios\n6 escenarios; tras el último jefe el juego vuelve a una ronda más difícil",
+  "Weapons": "Armas",
+  "Bag": "Bolsa",
+  "Laser crystals": "Cristales láser",
+  "red, blue, yellow change the Force's weapon": "rojo, azul, amarillo cambian el arma del Force",
+  "Speed-up, missiles, Bits (orbiting options)": "Aceleración, misiles, Bits (opciones orbitales)",
+  "Loadout": "Equipamiento",
+  "Collect": "Coleccionar",
+  "Force type and beam color combinations\nThree Forces x three laser colors give nine weapon combinations": "Combinaciones de tipo de Force y color del haz\nTres Force x tres colores de láser dan nueve combinaciones de arma",
+  "Progress": "Progreso",
+  "Stages cleared; loop for higher difficulty\nCharge the Hyper Wave Cannon for big hits: a fully charged shot pierces enemies": "Escenarios superados; repite para más dificultad\nCarga el Hyper Wave Cannon para golpes grandes: un disparo totalmente cargado atraviesa enemigos"
+ }
+}

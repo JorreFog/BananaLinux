@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Rio": "Río",
+  "Car damage": "Daño del auto",
+  "Felony": "Delito grave",
+  "Mission clock": "Reloj de misión",
+  "Controls": "Controles",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Accelerate": "Acelerar",
+  "Brake / reverse": "Frenar / marcha atrás",
+  "Handbrake": "Freno de mano",
+  "Get out of the car": "Sal del auto",
+  "Select": "Seleccionar",
+  "Look back": "Mirar atrás",
+  "Chase": "Persecución",
+  "Checkpoints": "Puntos de control",
+  "In tail missions keep your distance; in getaways break line of sight.": "En las misiones de persecución mantén la distancia; en las fugas rompe la línea de visión.",
+  "City": "Ciudad",
+  "Mission": "Misión",
+  "Mode": "Modo",
+  "Car": "Auto",
+  "Damage": "Daño",
+  "Trailblazer points": "Puntos de Trailblazer",
+  "Progress": "Progreso",
+  "Missions completed": "Misiones completadas"
+ }
+}

@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Ratings (%)": "Calificaciones (%)",
+  "Hearts": "Corazones",
+  "Ratings meter": "Medidor de calificaciones",
+  "hit the commands in time": "pulsa los comandos a tiempo",
+  "Commands": "Comandos",
+  "Detail": "Detalle",
+  "Up, Down, Left, Right, Chu (shoot)": "Arriba, Abajo, Izquierda, Derecha, Chu (disparar)",
+  "Up, Down, Left, Right and Chu (shoot); repeat each pattern on the beat": "Arriba, Abajo, Izquierda, Derecha y Chu (disparar); repite cada patrón al ritmo",
+  "Tips": "Consejos",
+  "Repeat the Morolians' moves exactly on the beat\nBosses dance against you; every missed command costs ratings": "Repite exactamente los movimientos de los Morolians al ritmo\nLos jefes bailan contra ti; cada comando fallado cuesta calificaciones",
+  "Reports": "Reportes",
+  "Map": "Mapa",
+  "Stage": "Escenario",
+  "Extra stage": "Escenario extra",
+  "Reports (stages) on the space ship and stations": "Reportes (escenarios) en la nave espacial y las estaciones",
+  "Hostages": "Rehenes",
+  "Bag": "Bolsa",
+  "Rescue hostages for ratings\nRescued hostages raise your ratings; each report rates your rescues": "Rescata rehenes para subir las calificaciones\nLos rehenes rescatados suben tus calificaciones; cada reporte califica tus rescates",
+  "Rescue": "Rescate",
+  "Report 1 rescue rating": "Calificación de rescate del reporte 1",
+  "Report 2 rescue rating": "Calificación de rescate del reporte 2",
+  "Report 3 rescue rating": "Calificación de rescate del reporte 3",
+  "Report 4 rescue rating": "Calificación de rescate del reporte 4",
+  "Hostages rescued": "Rehenes rescatados",
+  "Progress": "Progreso",
+  "Reports cleared; ratings\nReports 1-4 plus an extra stage; character profiles unlock as you go": "Reportes completados; calificaciones\nReportes 1-4 más un escenario extra; los perfiles de personaje se desbloquean al avanzar"
+ }
+}

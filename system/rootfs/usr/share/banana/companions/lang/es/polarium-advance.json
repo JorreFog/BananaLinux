@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "How it plays": "Cómo se juega",
+  "Draw one line through tiles to flip them; full rows of one colour clear.": "Dibuja una línea por las fichas para voltearlas; las filas completas de un color desaparecen.",
+  "Tiles": "Fichas",
+  "Black/white.": "Negro/blanco.",
+  "Puzzles": "Puzles",
+  "Tips": "Consejos",
+  "Trace the whole line before starting; a tile you pass over flips colour.": "Traza toda la línea antes de empezar; cada ficha que atraviesas cambia de color.",
+  "Structure": "Estructura",
+  "Puzzle and Challenge modes.": "Modos Puzle y Desafío.",
+  "Items": "Objetos",
+  "No items: grey tiles never flip.": "Sin objetos: las fichas grises nunca voltean.",
+  "Collect": "Coleccionar",
+  "Puzzles solved.": "Puzles resueltos.",
+  "Goal": "Objetivo",
+  "Solve all.": "Resuélvelos todos."
+ }
+}

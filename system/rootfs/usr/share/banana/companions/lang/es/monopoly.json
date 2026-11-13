@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "How it plays": "Cómo se juega",
+  "Classic Monopoly against CPU players.": "Monopoly clásico contra la CPU.",
+  "Properties": "Propiedades",
+  "Buy, trade, build houses.": "Compra, intercambia, construye casas.",
+  "Rent": "Renta",
+  "Tips": "Consejos",
+  "Orange and red sets are landed on most.": "Los conjuntos naranja y rojo son los más pisados.",
+  "Board": "Tablero",
+  "40 squares.": "40 casillas.",
+  "Money": "Dinero",
+  "Items": "Objetos",
+  "Cash and properties.": "Efectivo y propiedades.",
+  "Sets": "Conjuntos",
+  "Collect": "Coleccionar",
+  "Colour sets.": "Conjuntos de color.",
+  "Bankrupt": "Quiebra",
+  "Goal": "Objetivo",
+  "Bankrupt opponents.": "Hunde a tus rivales."
+ }
+}

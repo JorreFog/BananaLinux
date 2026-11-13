@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Duo": "Dúo",
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Witch and wizard pair; health": "Pareja de bruja y mago; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Switch between the two\nTwo young witches/wizards; switch between them to use each one's ability": "Cambia entre los dos\nDos jóvenes brujos/magos; cambia entre ellos para usar la habilidad de cada uno",
+  "Bosses": "Jefes",
+  "Bosses at world ends\nEach world ends with a boss\nBosses guard the end of each world; use both characters' abilities": "Jefes al final de los mundos\nCada mundo termina con un jefe\nLos jefes guardan el final de cada mundo; usa las habilidades de ambos personajes",
+  "Worlds": "Mundos",
+  "Several worlds\nWorlds full of candy and souls to collect\nTotal percent collected is shown at the end of each level": "Varios mundos\nMundos llenos de caramelos y almas por recoger\nEl porcentaje total recogido se muestra al final de cada nivel",
+  "Items": "Objetos",
+  "Magic items\nCandy and souls are counted per level; the fairy helps along the way": "Objetos mágicos\nLos caramelos y las almas se cuentan por nivel; el hada te ayuda en el camino",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Souls (this level)": "Almas (este nivel)",
+  "Candy (this level)": "Caramelos (este nivel)",
+  "Total collected (%)": "Total recogido (%)",
+  "Hidden items": "Objetos ocultos",
+  "Progress": "Progreso",
+  "Worlds cleared": "Mundos superados"
+ }
+}

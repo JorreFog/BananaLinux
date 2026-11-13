@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Status": "Estado",
+  "Game points": "Puntos de juego",
+  "Day": "Día",
+  "Cards in deck": "Cartas en el mazo",
+  "Your LP": "Tus LP",
+  "Life Points 8000; 40-card deck minimum": "Puntos de vida 8000; mazo mínimo de 40 cartas",
+  "Rules": "Reglas",
+  "Tribute Summon": "Invocación por Tributo",
+  "1 for Level 5-6, 2 for Level 7+": "1 para Nivel 5-6, 2 para Nivel 7+",
+  "Fusion Summon with Polymerization; Ritual monsters need their Ritual spell": "Invocación por Fusión con Polimerización; los monstruos de Ritual necesitan su hechizo de Ritual",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Opponent LP": "LP del rival",
+  "Your deck left": "Cartas que quedan en tu mazo",
+  "Opponent deck left": "Cartas que quedan en el mazo del rival",
+  "Map duelists appear at different times; duel often for DP": "Los duelistas del mapa aparecen a distintos momentos; duala a menudo para ganar DP",
+  "Map": "Mapa",
+  "Walk around the map to find duelists each day\nDuelists appear at different spots and days; check the map each day": "Camina por el mapa para encontrar duelistas cada día\nLos duelistas aparecen en lugares y días distintos; revisa el mapa cada día",
+  "Cards": "Cartas",
+  "Card packs for DP; deck editor": "Paquetes de cartas por DP; editor de mazos",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "Over a thousand cards to collect\nA large card list; game points are earned from duels": "Más de mil cartas para coleccionar\nUna gran lista de cartas; los puntos de juego se ganan en los duelos",
+  "Progress": "Progreso",
+  "Stairway to the final duel; duelists beaten\nDuel records per duelist (Mokuba to Marik and Ishizu); the stairway ends with the strongest duelists": "Escalera al duelo final; duelistas derrotados\nHistorial de duelos por duelista (de Mokuba a Marik e Ishizu); la escalera termina con los duelistas más fuertes"
+ }
+}

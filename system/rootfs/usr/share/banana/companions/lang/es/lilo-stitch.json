@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Special ammo": "Munición especial",
+  "Pineapple bombs": "Bombas de piña",
+  "Stage time": "Tiempo de escenario",
+  "Controls": "Controles",
+  "A jump, B shoot, R special. Stitch uses blasters and climbs walls.": "A saltar, B disparar, R especial. Stitch usa blásteres y trepa paredes.",
+  "Abilities": "Habilidades",
+  "Blasters, climbing and rolling.": "Blásteres, escalada y rodada.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Captain Gantu: keep distance and shoot.": "Capitán Gantu: mantén la distancia y dispara.",
+  "Levels": "Niveles",
+  "Stage": "Escenario",
+  "Section": "Sección",
+  "Structure": "Estructura",
+  "Levels on Earth and space.": "Niveles en la Tierra y el espacio.",
+  "Items": "Objetos",
+  "Health and ammo pickups.": "Recogibles de salud y munición.",
+  "Collect": "Coleccionar",
+  "Collect items for bonuses.": "Recoge objetos para obtener bonuses.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Save Lilo from Gantu.": "Rescata a Lilo de Gantu."
+ }
+}

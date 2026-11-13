@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Position": "Posición",
+  "Co-driver score": "Puntuación del copiloto",
+  "Controls": "Controles",
+  "A accelerate, B brake\nR handbrake for tight hairpins\nL/R shift in manual": "A acelera, B frena\nR freno de mano para curvas cerradas\nL/R cambios en manual",
+  "Cars": "Autos",
+  "Rally cars": "Autos de rally",
+  "Licensed rally machines with four-wheel drive and front/rear drive types.\n4WD grips best on gravel; RWD slides more on snow.": "Máquinas de rally con licencia, de tracción total y de tracción delantera/trasera.\nEl 4WD agarra mejor en grava; el RWD patina más en nieve.",
+  "Setup": "Ajuste",
+  "Tune gearing, suspension and tyres for each surface.": "Ajusta la caja, la suspensión y los neumáticos para cada superficie.",
+  "Stage": "Escenario",
+  "Stage tips": "Consejos de escenario",
+  "Rally stages are timed: every second lost in a ditch counts.\nUse the handbrake into hairpins, then straighten before the throttle.\nSnow and gravel need earlier braking than tarmac.": "Los escenarios de rally se cronometran: cada segundo perdido en un bache cuenta.\nUsa el freno de mano en las curvas cerradas y endereza antes de acelerar.\nLa nieve y la grava piden frenar antes que el asfalto.",
+  "Stages": "Escenarios",
+  "Stage/leg id": "ID de escenario/tramo",
+  "Surfaces": "Superficies",
+  "Tarmac, gravel, dirt and snow stages.\nEach rally is a set of stages; total time decides the winner.": "Escenarios de asfalto, grava, tierra y nieve.\nCada rally es un conjunto de escenarios; el tiempo total decide al ganador.",
+  "Garage": "Garaje",
+  "Upgrades": "Mejoras",
+  "Winning unlocks new cars and parts.\nMatch tyres to the surface for the biggest gain.": "Ganar desbloquea autos y piezas nuevas.\nAdapta los neumáticos a la superficie para ganar más.",
+  "Unlocks": "Desbloqueos",
+  "New cars appear as championships are won.\nHidden cars reward perfect seasons.": "Aparecen autos nuevos al ganar campeonatos.\nLos autos ocultos premian las temporadas perfectas.",
+  "Seasons": "Temporadas",
+  "Goal": "Objetivo",
+  "Clear each rally class in Championship mode.\nBeat stage times in Time Attack.": "Completa cada clase de rally en el modo Campeonato.\nSupera los tiempos de escenario en Time Attack."
+ }
+}

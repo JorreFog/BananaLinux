@@ -5,6 +5,7 @@
 // $1 for tests/run.sh's game panel run. The companion idea is PokeDaisy's (Lidor Itzhari).
 #include "gamecomp.h"
 #include "json.h"
+#include "lang.h"
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -397,6 +398,195 @@ int main(int argc, char** argv)
 		CHECK(f == nd + "/nes/test-nes.json", "the NES definition is found: %s (%s)", f.c_str(), why.c_str());
 		Engine ne;
 		CHECK(ne.open(out + "/gc-test.nes", nd, "nes") && ne.game()->title == "NES Test", "the engine opens it");
+	}
+	// ---- a translation of a definition (lang/<code>/ under the companions folder; the English file still matches)
+	{
+		std::string dir = out + "/gc-lang", tsv = out + "/gc-lang-tsv";
+		CHECK(system(("rm -rf '" + dir + "' '" + tsv + "' && mkdir -p '" + dir + "/lang/es/nes' '" + dir + "/nes' '" + tsv + "'").c_str()) == 0, "the translation test folder");
+		auto mini = [](const std::string& title, const std::string& code, const std::string& title12)
+		{
+			std::string pages;
+			const char* ids[] = { "status", "detail", "battle", "map", "bag", "collection", "progress" };
+			for (int i = 0; i < 7; i++)
+			{
+				if (i) pages += ",";
+				pages += std::string("{\"id\":\"") + ids[i] + "\",\"title\":\"" + ids[i] + "\",\"widgets\":[{\"type\":\"static\",\"text\":\"Hello\"}]}";
+			}
+			return std::string("{\"schema\":1,\"title\":\"") + title + "\",\"match\":{\"code\":\"" + code + "\",\"title12\":\"" + title12 +
+				"\"},\"accent\":\"#112233\",\"quality\":\"reference-only\",\"sources\":[],\"vars\":{},\"pages\":[" + pages + "]}";
+		};
+		writeText(dir + "/gcomp-lang-probe.json", mini("Probe English", "Z9PE", "LANGPROBE"));
+		auto strs = [](const std::string& body) { return "{\"strings\": {" + body + "}}"; };
+		writeText(dir + "/lang/es/gcomp-lang-probe.json", strs(R"("Probe English": "Sonda", "Hello": "Hola")"));
+		writeText(tsv + "/es.tsv", "#: language = Español\n#: language-en = Spanish\n#: translated-by = test\nsettings\t\tHello\tHola\n");
+		writeText(tsv + "/de.tsv", "#: language = Deutsch\n#: language-en = German\n#: translated-by = test\nsettings\t\tHello\tHallo\n");
+		std::string rom = out + "/gc-lang.gba";
+		writeFile(rom, makeRom("LANGPROBE", "Z9PE"));
+		writeText(dir + "/index.tsv", makeIndex(dir));
+		CHECK(makeIndex(dir).find("lang/") == std::string::npos, "index.tsv lists the English files only");
+		CHECK(translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "English (the default): no translation lookup");
+		CHECK(lang::load(tsv, "es", { "settings" }) && lang::current().code == "es", "Spanish loads");
+		auto ps = translationPaths(dir, dir + "/gcomp-lang-probe.json");
+		CHECK(ps.size() == 3, "card, image, then this folder: %zu", ps.size());
+		if (ps.size() == 3)
+		{
+			CHECK(ps[0] == "/data/banana/companions/lang/es/gcomp-lang-probe.json", "the card first: %s", ps[0].c_str());
+			CHECK(ps[1] == "/usr/share/banana/companions/lang/es/gcomp-lang-probe.json", "then the image: %s", ps[1].c_str());
+			CHECK(ps[2] == dir + "/lang/es/gcomp-lang-probe.json", "then the folder the game was found in: %s", ps[2].c_str());
+		}
+		auto card = translationPaths("/data/banana/companions", "/data/banana/companions/nes/gcomp-lang-probe.json");
+		CHECK(card.size() == 2 && card[0] == "/data/banana/companions/lang/es/nes/gcomp-lang-probe.json" &&
+			card[1] == "/usr/share/banana/companions/lang/es/nes/gcomp-lang-probe.json",
+			"a system subfolder is mirrored, and the card is not listed twice");
+		CHECK(findDef(dir, rom) == dir + "/gcomp-lang-probe.json", "matching stays on the English file");
+		Engine e;
+		CHECK(e.open(rom, dir) && e.game()->title == "Sonda" && e.game()->file == dir + "/gcomp-lang-probe.json" &&
+			e.game()->translation == dir + "/lang/es/gcomp-lang-probe.json" && e.game()->pages[P_MAP].widgets[0].text == "Hola",
+			"the translation's words over the English definition: %s", e.game() ? e.game()->title.c_str() : "");
+		for (const char* broken : { "{", "[]", "{\"strings\": []}", "{\"title\": \"Sonda\"}", "{\"strings\": {\"Hello\": 3}}" })
+		{
+			writeText(dir + "/lang/es/gcomp-lang-probe.json", broken);
+			Engine bad;
+			CHECK(bad.open(rom, dir) && bad.game()->title == "Probe English" && bad.game()->translation.empty() &&
+				bad.game()->pages[P_MAP].widgets[0].text == "Hello", "not a translation (%s): the English words", broken);
+		}
+		writeText(dir + "/lang/es/gcomp-lang-probe.json", strs(R"("Probe English": "Sonda", "Hello": "Hola")"));
+		CHECK(lang::load(tsv, "de", { "settings" }) && lang::current().code == "de", "German loads");
+		Engine miss;
+		CHECK(miss.open(rom, dir) && miss.game()->title == "Probe English", "no translation for this language: English");
+		CHECK(lang::load(tsv, "en", {}) && lang::current().code == "en", "back to English");
+		CHECK(translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "en: no lookup, even when a translation is there");
+		Engine en;
+		CHECK(en.open(rom, dir) && en.game()->title == "Probe English", "en shows the English definition");
+		CHECK(lang::load(tsv, "", {}) && translationPaths(dir, dir + "/gcomp-lang-probe.json").empty(), "no language set: no lookup");
+		// another system's file: companions/<system>/<file>.json -> companions/lang/<code>/<system>/<file>.json
+		std::string sys = argc > 3 ? std::string(argv[3]) + "/systems" : "../system/rootfs/usr/share/banana/companions/systems";
+		setSystemsDir(sys);
+		std::vector<uint8_t> nrom(0x4010, 0x11);
+		memcpy(nrom.data(), "NES\x1a", 4);
+		std::string npath = out + "/gc-lang.nes";
+		writeFile(npath, nrom);
+		uLong ncrc = crc32(crc32(0L, Z_NULL, 0), nrom.data(), (uInt)nrom.size());
+		char ncs[16];
+		snprintf(ncs, sizeof ncs, "%08lx", ncrc);
+		std::string nesEn = std::string("{\"schema\":2,\"system\":\"nes\",\"title\":\"NES English\",\"match\":{\"crc32\":[\"") + ncs +
+			"\"]},\"accent\":\"#c04040\",\"quality\":\"reference-only\",\"sources\":[],\"vars\":{},\"pages\":[{\"id\":\"status\",\"title\":\"S\",\"widgets\":[{\"type\":\"static\",\"text\":\"Hi\"}]}]}";
+		std::string nesEs = strs(R"("NES English": "NES Español", "Hi": "Hola")");
+		writeText(dir + "/nes/gcomp-lang-nes.json", nesEn);
+		writeText(dir + "/lang/es/nes/gcomp-lang-nes.json", nesEs);
+		CHECK(lang::load(tsv, "es", { "settings" }), "Spanish again");
+		auto ns = translationPaths(dir, dir + "/nes/gcomp-lang-nes.json");
+		CHECK(!ns.empty() && ns.back() == dir + "/lang/es/nes/gcomp-lang-nes.json", "the NES path is mirrored under lang/es/: %s",
+			ns.empty() ? "" : ns.back().c_str());
+		CHECK(findDef(dir, npath, &why, "nes") == dir + "/nes/gcomp-lang-nes.json", "the NES match is the English file: %s", why.c_str());
+		Engine ne2;
+		CHECK(ne2.open(npath, dir, "nes") && ne2.game()->title == "NES Español" && ne2.game()->file == dir + "/nes/gcomp-lang-nes.json" &&
+			ne2.game()->translation == dir + "/lang/es/nes/gcomp-lang-nes.json" && ne2.game()->pages[P_STATUS].widgets[0].text == "Hola",
+			"the NES translation is shown: %s", ne2.game() ? ne2.game()->translation.c_str() : why.c_str());
+		writeText(dir + "/lang/es/nes/gcomp-lang-nes.json", "{\"strings\": {\"NES English\": null}}");
+		Engine ne3;
+		CHECK(ne3.open(npath, dir, "nes") && ne3.game()->title == "NES English", "a NES translation that is not one: English");
+		unlink((dir + "/lang/es/nes/gcomp-lang-nes.json").c_str());
+		Engine ne4;
+		CHECK(ne4.open(npath, dir, "nes") && ne4.game()->title == "NES English", "a NES translation that is missing: English");
+		// every kind of word, a partial map, and the logic left alone
+		{
+			std::string full = R"({"schema": 2, "system": "gba", "title": "Word Test", "match": {"code": "Z9WE", "title12": "WORDTEST"}, "accent": "#112233",
+				"quality": "reference-only", "sources": [],
+				"enums": {"items": {"0": "Potion", "1": "Ether", "2": "Lives"}, "letters": {"0x41": "A", "0x42": "B"}},
+				"vars": {"lives": {"addr": "0x02000010", "type": "u8"}, "twice": {"expr": "lives * 2"},
+					"name": {"addr": "0x02000020", "type": "text", "len": 2, "enc": "charmap:letters"}},
+				"pages": [{"id": "status", "title": "Status", "tab": "Stat", "widgets": [
+					{"type": "number", "label": "Lives", "value": "lives", "format": "Lv {}"},
+					{"type": "number", "label": "Score", "value": "twice", "format": "thousands"},
+					{"type": "text", "label": "Name", "value": "name"},
+					{"type": "static", "title": "Tips", "text": "Jump high\nRun fast"},
+					{"type": "flags", "label": "Badges", "value": "lives", "items": ["Gold", "Silver", "Bronze"]},
+					{"type": "kv", "label": "Controls", "rows": [["A", "Jump"], ["B", "Run"]]},
+					{"type": "list", "title": "Bag", "base": "0x02000100", "stride": 2, "n": 2,
+						"fields": [{"name": "item", "label": "Item", "type": "u8", "off": 0, "enum": "items"},
+							{"name": "count", "label": "Count", "type": "u8", "off": 1, "format": "x{}"}]}]}]})";
+			std::string tr = strs(R"("Word Test": "Prueba", "Status": "Estado", "Stat": "Est", "Lives": "Vidas", "Lv {}": "Nv {}",
+				"thousands": "miles", "x{}": "sin marcador", "Name": "Nombre", "Tips": "Consejos", "Jump high\nRun fast": "Salta alto\nCorre",
+				"Gold": "Oro", "Bronze": "", "Controls": "Controles", "Jump": "Saltar", "Bag": "Bolsa", "Item": "Objeto",
+				"Potion": "Poción", "A": "Z", "lives": "vidas", "lives * 2": "0", "0x02000010": "0x0", "Unused": "Sin usar")");
+			writeText(dir + "/gcomp-lang-words.json", full);
+			writeText(dir + "/lang/es/gcomp-lang-words.json", tr);
+			std::string wrom = out + "/gc-lang-words.gba";
+			writeFile(wrom, makeRom("WORDTEST", "Z9WE"));
+			writeText(dir + "/index.tsv", makeIndex(dir));
+			Engine w;
+			CHECK(w.open(wrom, dir), "the word test opens");
+			const Def* d = w.game();
+			if (d)
+			{
+				const Page& p = d->pages[P_STATUS];
+				CHECK(d->title == "Prueba" && p.title == "Estado" && p.tab == "Est", "title, page title and tab: %s %s %s", d->title.c_str(), p.title.c_str(), p.tab.c_str());
+				CHECK(p.widgets.size() == 7, "seven widgets: %zu", p.widgets.size());
+				if (p.widgets.size() == 7)
+				{
+					CHECK(p.widgets[0].label == "Vidas" && p.widgets[0].format == "Nv {}", "a label, and a format with {}: %s", p.widgets[0].format.c_str());
+					CHECK(p.widgets[1].label == "Score" && p.widgets[1].format == "thousands", "not in the map: English; a keyword format is kept");
+					CHECK(p.widgets[2].label == "Nombre", "a text widget's label");
+					CHECK(p.widgets[3].label == "Consejos" && p.widgets[3].text == "Salta alto\nCorre", "a static title and its text with a line break");
+					CHECK(p.widgets[4].items.size() == 3 && p.widgets[4].items[0] == "Oro" && p.widgets[4].items[1] == "Silver" &&
+						p.widgets[4].items[2] == "Bronze", "items one by one (an empty translation stays English)");
+					CHECK(p.widgets[5].label == "Controles" && p.widgets[5].rows.size() == 2 && p.widgets[5].rows[0].first == "Z" &&
+						p.widgets[5].rows[0].second == "Saltar" && p.widgets[5].rows[1].second == "Run", "rows, both sides");
+					const Widget& l = p.widgets[6];
+					CHECK(l.label == "Bolsa" && l.fields.size() == 2 && l.fields[0].label == "Objeto" && l.fields[0].name == "item" &&
+						l.fields[0].enumName == "items" && l.fields[1].label == "Count" && l.fields[1].format == "x{}",
+						"a list's title and field labels (a format losing its {} stays English)");
+					CHECK(l.base == 0x02000100 && l.stride == 2, "the list's layout is the English one");
+				}
+				CHECK(d->enumLabel("items", 0) == "Poción" && d->enumLabel("items", 1) == "Ether" && d->enumLabel("items", 2) == "Vidas",
+					"enum labels: %s %s %s", d->enumLabel("items", 0).c_str(), d->enumLabel("items", 1).c_str(), d->enumLabel("items", 2).c_str());
+				CHECK(d->enumLabel("letters", 0x41) == "A", "a charmap's letters are not words: %s", d->enumLabel("letters", 0x41).c_str());
+				const Var* lv = d->var("lives");
+				CHECK(lv && lv->kind == Var::MEM && lv->m.addr == 0x02000010 && d->var("twice") && d->var("twice")->deps.size() == 1 &&
+					d->var("twice")->deps[0] == "lives" && !d->var("vidas"), "vars, addresses and expressions are the English ones");
+				// the values still read and evaluate through the translated definition
+				FakeGba g;
+				g.put(0x02000010, 7, 1);
+				g.put(0x02000020, 0x4241, 2);
+				double now = 0;
+				oneSet(w, g, now);
+				CHECK(num(w, "lives") == 7 && num(w, "twice") == 14 && str(w, "name") == "AB", "read through it: %g %g %s",
+					num(w, "lives"), num(w, "twice"), str(w, "name").c_str());
+			}
+			// the card's file before the image's, and the whole of it: the image's words are not merged in
+			{
+				std::string cardDir = out + "/gc-lang-card", imgDir = out + "/gc-lang-img";
+				CHECK(system(("rm -rf '" + cardDir + "' '" + imgDir + "' && mkdir -p '" + cardDir + "' '" + imgDir + "'").c_str()) == 0, "card and image folders");
+				writeText(cardDir + "/w.json", strs(R"("Word Test": "Tarjeta")"));
+				writeText(imgDir + "/w.json", strs(R"("Word Test": "Imagen", "Lives": "Vidas")"));
+				auto c = loadDef(dir + "/gcomp-lang-words.json");
+				CHECK(c && translateFrom(*c, { cardDir + "/w.json", imgDir + "/w.json" }) == cardDir + "/w.json" && c->title == "Tarjeta" &&
+					c->pages[P_STATUS].widgets[0].label == "Lives", "the card's file wins, alone: %s", c ? c->title.c_str() : "");
+				auto i = loadDef(dir + "/gcomp-lang-words.json");
+				CHECK(i && translateFrom(*i, { cardDir + "/none.json", imgDir + "/w.json" }) == imgDir + "/w.json" && i->title == "Imagen",
+					"no card file: the image's");
+				writeText(cardDir + "/w.json", "{\"strings\": 1}");
+				auto b2 = loadDef(dir + "/gcomp-lang-words.json");
+				CHECK(b2 && translateFrom(*b2, { cardDir + "/w.json", imgDir + "/w.json" }).empty() && b2->title == "Word Test",
+					"a broken card file: English (the image's is not tried instead)");
+			}
+			unlink((dir + "/lang/es/gcomp-lang-words.json").c_str());
+			Engine we;
+			CHECK(we.open(wrom, dir) && we.game()->title == "Word Test" && we.game()->pages[P_STATUS].widgets[0].label == "Lives" &&
+				we.game()->translation.empty(), "no file: every word English");
+		}
+		// the file's own reading
+		{
+			std::map<std::string, std::string> m;
+			std::string why2;
+			std::string sf = out + "/gc-lang-strings.json";
+			writeText(sf, R"({"strings": {"Lives": "Vidas", "Empty": ""}, "note": "other keys are ignored"})");
+			CHECK(loadStrings(sf, m, &why2) && m.size() == 1 && m["Lives"] == "Vidas", "a translation file's words (%s)", why2.c_str());
+			writeText(sf, R"({"strings": {"Lives": ["Vidas"]}})");
+			CHECK(!loadStrings(sf, m, &why2) && m.empty(), "a value that is not a string: not a translation (%s)", why2.c_str());
+		}
+		lang::load(tsv, "en", {});
 	}
 	if (fails) { fprintf(stderr, "%d checks failed\n", fails); return 1; }
 	fprintf(stderr, "gamecomp-test: all passed\n");

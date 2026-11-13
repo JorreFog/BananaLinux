@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Health": "Salud",
+  "Attack level": "Nivel de ataque",
+  "Force level": "Nivel de fuerza",
+  "How it plays": "Cómo se juega",
+  "Top-down action with Frankenstein, Wolfman, Dracula's kin heroes.": "Acción cenital con héroes: Frankenstein, el Hombre Lobo y los parientes de Drácula.",
+  "Heroes": "Héroes",
+  "Each has own powers.": "Cada uno tiene sus propios poderes.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Charge shots (hold the fire button) hit hardest; bosses open up after their attack runs. Relics found in levels raise max health.": "Los disparos cargados (mantén pulsado el botón de disparo) pegan más fuerte; los jefes quedan abiertos tras su ataque. Las reliquias en los niveles suben la salud máxima.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Levels.": "Niveles.",
+  "Items": "Objetos",
+  "Health pickups, relics (permanent upgrades to health and attack), switches that open the way.": "Recogibles de salud, reliquias (mejoras permanentes de salud y ataque) e interruptores que abren el paso.",
+  "Relics": "Reliquias",
+  "Collect": "Coleccionar",
+  "Relics hidden in each level; the score screen ranks time and play.": "Reliquias escondidas en cada nivel; la pantalla de puntuación ordena tiempo y partida.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Stop the villain.": "Detén al villano."
+ }
+}

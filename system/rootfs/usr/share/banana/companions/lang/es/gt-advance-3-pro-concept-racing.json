@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Lap": "Vuelta",
+  "Controls": "Controles",
+  "A accelerate, B brake\nR/L shift in manual\nUse the brake early: these cars are heavy": "A acelera, B frena\nR/L cambios en manual\nFrena temprano: estos autos son pesados",
+  "Cars": "Autos",
+  "Car list": "Lista de autos",
+  "Real Japanese cars plus \"pro concept\" tuned versions.\nCars level up their tuning by racing.": "Autos japoneses reales más versiones ajustadas \"pro concept\".\nLos autos suben de nivel su ajuste al competir.",
+  "Tuning": "Ajuste",
+  "Engine, transmission, suspension, tyres and body upgrades.": "Mejoras de motor, transmisión, suspensión, neumáticos y carrocería.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Grip racing: smooth lines beat drifting.\nSlipstream the leader on long straights, pass on braking.": "Carreras de agarre: las trazadas limpias baten al derrape.\nAprovecha el efecto aerodinámico del líder en las rectas largas y adelanta al frenar.",
+  "Tracks": "Pistas",
+  "Track id": "ID de pista",
+  "Modes": "Modos",
+  "Championship series, Quick race, Time trial, Versus (link).": "Series de campeonato, carrera rápida, contrarreloj, Versus (enlace).",
+  "Garage": "Garaje",
+  "Parts": "Partes",
+  "Earn credits from wins and spend them on upgrades.\nSell old cars you no longer race.": "Gana créditos con las victorias y gástalos en mejoras.\nVende los autos viejos que ya no uses.",
+  "Collecting": "Colección",
+  "Dozens of cars unlock over the championships.\nWinning a series often gives a prize car.": "Docenas de autos se desbloquean a lo largo de los campeonatos.\nGanar una serie suele dar un auto de premio.",
+  "Goal": "Objetivo",
+  "Finish every championship series in first place.": "Termina cada serie de campeonato en primer lugar."
+ }
+}

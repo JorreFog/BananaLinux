@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Units": "Unidades",
+  "Money": "Dinero",
+  "Hero": "Héroe",
+  "Mechs + pilots; HP, EN, Spirit commands": "Mechs + pilotos; HP, EN, órdenes de Espíritu",
+  "Pilots": "Pilotos",
+  "Katia level": "Nivel de Katia",
+  "Festenia level": "Nivel de Festenia",
+  "Melua level": "Nivel de Melua",
+  "Katia sorties": "Salidas de Katia",
+  "Festenia sorties": "Salidas de Festenia",
+  "Melua sorties": "Salidas de Melua",
+  "Pilot stats and Spirit commands (Focus, Strike, Valor...)": "Estadísticas de piloto y órdenes de Espíritu (Focus, Strike, Valor...)",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Counter on enemy phase; save Valor for bosses\nCombine unit attacks when adjacent; use Spirit commands before key attacks": "Contra en la fase enemiga; guarda Valor para los jefes\nCombina los ataques de las unidades adyacentes; usa las órdenes de Espíritu antes de los ataques clave",
+  "Scenarios": "Escenarios",
+  "Map": "Mapa",
+  "Episode id": "ID de episodio",
+  "Route": "Ruta",
+  "Scenario chain; route choices": "Cadena de escenarios; decisiones de ruta",
+  "Upgrades": "Mejoras",
+  "Bag": "Bolsa",
+  "Money upgrades units; optional parts": "El dinero mejora las unidades; partes opcionales",
+  "Secrets": "Secretos",
+  "Collect": "Coleccionar",
+  "Secret units unlocked by conditions\nPuzzle-Robo stages unlock after episodes; route choices change recruits": "Unidades secretas desbloqueadas por condiciones\nLos escenarios Puzzle-Robo se desbloquean tras los episodios; las decisiones de ruta cambian los reclutamientos",
+  "Progress": "Progreso",
+  "Puzzle-Robo stages": "Escenarios Puzzle-Robo",
+  "Scenario count\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Número de escenarios\nTraducción al inglés en la carpeta Translations; versión 1.0 (según el nombre del archivo)"
+ }
+}

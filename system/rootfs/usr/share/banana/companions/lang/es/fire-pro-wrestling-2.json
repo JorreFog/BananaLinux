@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Wrestler": "Luchador",
+  "There's no on-screen health: wrestlers tire as they take hits. Big moves only work on worn-down opponents; spam early and you'll get reversed.": "No hay salud en pantalla: los luchadores se cansan al recibir golpes. Los movimientos grandes solo funcionan contra rivales desgastados; si los spameas pronto te los van a revertir.",
+  "Controls": "Controles",
+  "Strong move / strike": "Movimiento fuerte / golpe",
+  "Weak move / strike": "Movimiento débil / golpe",
+  "Run": "Correr",
+  "Grapple": "Agarrón",
+  "Walk into the opponent; press A/B at the moment of the tie-up (timing, not mashing)": "Acércate al rival; pulsa A/B en el momento del agarrón (es cuestión de timing, no de machacar el botón)",
+  "Taunt / change target": "Provocar / cambiar de objetivo",
+  "Tips": "Consejos",
+  "Timing is everything: press the button just as the grapple starts. Weak moves first, medium in the middle, finishers last. Pin with Up+A on a down opponent.": "El timing lo es todo: pulsa el botón justo cuando empieza el agarrón. Primero los movimientos débiles, luego los medios en el centro y los finales al final. Inmoviliza con Arriba+A a un rival en el suelo.",
+  "Modes": "Modos",
+  "Exhibition, tournament, league, Edit (create a wrestler) and Death Match variants (cage, barbed wire in 2).": "Exhibición, torneo, liga, Editar (crear un luchador) y variantes de Death Match (jaula, alambre de púas en el 2).",
+  "Edit mode": "Modo Editar",
+  "Created wrestlers pick moves for every grapple strength, a fighting style and AI logic.": "Los luchadores creados eligen movimientos para cada fuerza de agarrón, un estilo de pelea y una lógica de IA.",
+  "Roster": "Plantilla",
+  "Roster wrestlers are parodies of real Japanese and American stars; more unlock through tournament wins.": "Los luchadores de la plantilla son parodias de estrellas reales japonesas y americanas; se desbloquean más con victorias en torneos.",
+  "Progress": "Progreso",
+  "Win tournaments to unlock hidden wrestlers.": "Gana torneos para desbloquear luchadores ocultos."
+ }
+}

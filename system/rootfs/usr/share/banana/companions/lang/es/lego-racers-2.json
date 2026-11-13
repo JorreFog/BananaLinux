@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Controls": "Controles",
+  "A accelerate, B brake, R use power-up.": "A acelerar, B frenar, R usar potenciador.",
+  "Car": "Auto",
+  "Build": "Construir",
+  "Build your own car from bricks; parts change stats.": "Construye tu propio auto con piezas; las partes cambian las estadísticas.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Power-up bricks: collect and stack them for stronger weapons.": "Piezas de potenciador: recógelas y apílalas para obtener armas más fuertes.",
+  "Worlds": "Mundos",
+  "Several themed worlds (Sandy Bay, Dino Island, Mars, Arctic, Knightmare...) with champions.": "Varios mundos con temas (Sandy Bay, Dino Island, Marte, Ártico, Knightmare...) con campeones.",
+  "Bricks": "Piezas",
+  "Items": "Objetos",
+  "Power-up bricks on track.": "Piezas de potenciador en la pista.",
+  "Parts": "Partes",
+  "Gold bricks": "Piezas doradas",
+  "Collect": "Coleccionar",
+  "New pieces from beating champions.": "Piezas nuevas al derrotar a los campeones.",
+  "Champions": "Campeones",
+  "Goal": "Objetivo",
+  "Beat every world's champion and Rocket Racer.": "Derrota al campeón de cada mundo y a Rocket Racer."
+ }
+}

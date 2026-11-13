@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Easy": "Fácil",
+  "Hard": "Difícil",
+  "Very Hard": "Muy difícil",
+  "Ultra Hard": "Ultra Difícil",
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "You": "Tú",
+  "Your health": "Tu salud",
+  "Rounds won": "Rondas ganadas",
+  "Health, round timer": "Salud, temporizador de ronda",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Tekken 3 cast": "Reparto de Tekken 3",
+  "Jin, Paul, Law, Hwoarang, Xiaoyu, Nina, King, Yoshimitsu and more": "Jin, Paul, Law, Hwoarang, Xiaoyu, Nina, King, Yoshimitsu y más",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Opponent": "Rival",
+  "Opponent health": "Salud del rival",
+  "Two punches and two kicks; side-step with L/R": "Dos puñetazos y dos patadas; desplazamiento lateral con L/R",
+  "Modes": "Modos",
+  "Stage": "Escenario",
+  "Difficulty": "Dificultad",
+  "Arcade, Tag, Survival, Time Attack": "Arcade, Tag, Supervivencia, Ataque contrarreloj",
+  "Moves": "Movimientos",
+  "Command lists per character\nCommand lists per character in the pause menu; four attack buttons map to limbs": "Listas de comandos por personaje\nListas de comandos por personaje en el menú de pausa; cuatro botones de ataque corresponden a las extremidades",
+  "Roster": "Plantilla",
+  "Unlockable fighters": "Combatientes desbloqueables",
+  "Progress": "Progreso",
+  "Arcade clears\nArcade and Time Attack; difficulty from Easy to Ultra Hard": "Récords de arcade\nArcade y Ataque contrarreloj; la dificultad va de Fácil a Ultra Difícil"
+ }
+}

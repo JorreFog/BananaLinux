@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Game time": "Tiempo de juego",
+  "Edward and Alphonse Elric; HP, level": "Edward y Alphonse Elric; HP, nivel",
+  "Alchemy": "Alquimia",
+  "Detail": "Detalle",
+  "Ed's alchemy book (bits set)": "Libro de alquimia de Ed (bits activos)",
+  "Winry's gun book (bits set)": "Libro de armas de Winry (bits activos)",
+  "Alchemy transmutes the environment into weapons and gimmicks": "La alquimia transmuta el entorno en armas y trucos",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Combine Ed's and Al's abilities in fights\nEd transmutes weapons from the floor and walls; Winry's gun book adds tools": "Combina las habilidades de Ed y Al en combate\nEd transmute armas del suelo y las paredes; el libro de armas de Winry añade herramientas",
+  "Places": "Lugares",
+  "Location": "Ubicación",
+  "Map id": "ID de mapa",
+  "Room id": "ID de sala",
+  "Amestris towns and dungeons": "Pueblos y mazmorras de Amestris",
+  "Items": "Objetos",
+  "Free capsules": "Cápsulas libres",
+  "Healing items, alchemy materials": "Objetos de curación, materiales de alquimia",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Cats found (bits set)": "Gatos encontrados (bits activos)",
+  "Alchemy recipes": "Recetas de alquimia",
+  "Progress": "Progreso",
+  "Story chapters\nStory chapters; cats to find and capsules to use\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Capítulos de la historia\nCapítulos de la historia; gatos que encontrar y cápsulas que usar\nTraducción al inglés en la carpeta Translations; versión 1.0 (sacada del nombre del archivo)"
+ }
+}

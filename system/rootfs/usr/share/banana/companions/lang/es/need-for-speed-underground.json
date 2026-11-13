@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Credits": "Créditos",
+  "Drift score": "Puntuación de derrape",
+  "Total drift score": "Puntuación total de derrape",
+  "Controls": "Controles",
+  "A accelerate, B brake, R nitro.": "A acelera, B frena, R nitro.",
+  "Car": "Auto",
+  "Upgrades": "Mejoras",
+  "Engine, tyres, body.": "Motor, neumáticos, carrocería.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Nitro on straights.": "Nitro en las rectas.",
+  "Modes": "Modos",
+  "Track id": "ID de pista",
+  "Best lap (raw)": "Mejor vuelta (bruto)",
+  "Circuit, sprint, drag, drift.": "Circuito, sprint, accelerate, derrape.",
+  "Parts": "Partes",
+  "Items": "Objetos",
+  "Parts.": "Piezas.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Unlock cars.": "Desbloquea autos.",
+  "Career": "Carrera",
+  "Goal": "Objetivo",
+  "Win career.": "Gana la campaña."
+ }
+}

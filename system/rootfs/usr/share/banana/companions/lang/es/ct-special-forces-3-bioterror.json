@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Soldier": "Soldado",
+  "Health is the bar on screen; lives are lost when it empties. Pick-ups refill health and ammo.": "La salud es la barra en pantalla; pierdes vidas cuando se vacía. Los recogibles recargan salud y munición.",
+  "Controls": "Controles",
+  "Jump": "Saltar",
+  "Fire": "Fuego",
+  "Throw grenade": "Lanzar granada",
+  "Switch weapon": "Cambiar de arma",
+  "Down": "Abajo",
+  "Crouch / climb down": "Agacharse / bajar",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Bosses are mostly armoured vehicles and gunships: keep moving, crouch under the fire and use rockets or grenades when they stop.": "Los jefes son sobre todo vehículos blindados y helicópteros: sigue moviéndote, agáchate bajo el fuego y usa cohetes o granadas cuando se detengan.",
+  "Missions": "Misiones",
+  "A bio-weapon plot; adds more vehicle and sniper sections and a gas-mask style survival theme. Each mission ends with a password.": "Un trama de armas biológicas; añade más secciones de vehículo y francotirador y un tema de supervivencia con máscara de gas. Cada misión termina con una contraseña.",
+  "Weapons": "Armas",
+  "Machine gun": "Ametralladora",
+  "Unlimited basic fire": "Fuego básico ilimitado",
+  "Grenades": "Granadas",
+  "Arc over cover": "Tiro por encima de la cobertura",
+  "Rockets": "Cohetes",
+  "Heavy damage on vehicles": "Mucho daño a vehículos",
+  "Grappling hook": "Gancho",
+  "Climb to ledges": "Trepar a repisas",
+  "Hostages": "Rehenes",
+  "Free hostages and pick up intel for score.": "Libera rehenes y recoge información para puntuar.",
+  "Progress": "Progreso",
+  "Missions unlock in order; passwords save your place.": "Las misiones se desbloquean en orden; las contraseñas guardan tu avance."
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Rider": "Pasajero",
+  "Controls": "Controles",
+  "A accelerate, B brake.": "A acelera, B frena.",
+  "Bikes": "Motos",
+  "Superbike and motocross.": "Superbike y motocross.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Brake upright before a turn, lean in, then power out. Motocross: time jumps so you land on the down-slope.": "Frena enderezado antes de girar, inclínate y luego acelera. Motocross: cronometra los saltos para caer en la bajada.",
+  "Tracks": "Pistas",
+  "Road and dirt tracks.": "Pistas de asfalto y tierra.",
+  "Items": "Objetos",
+  "No items: upgrades come from winning (better bikes and classes).": "Sin objetos: las mejoras vienen de ganar (mejores motos y categorías).",
+  "Collect": "Coleccionar",
+  "Unlock bikes.": "Desbloquea motos.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

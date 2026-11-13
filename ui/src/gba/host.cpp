@@ -3,6 +3,7 @@
 #include "gba/expansion.h"
 #include "gba/gen3live.h"
 #include "gba/gen3rom.h"
+#include "lang.h"
 #include "nds/guide.h"
 #include <chrono>
 #include <cstdio>
@@ -91,8 +92,17 @@ namespace banana::gba
 		}
 		// no save to show yet: why, when the emulator says (no memory map in this core, a release with no profile)
 		const pkmn::Snapshot& cs = comp.snapshot();
-		const std::string why = cs.seen ? "" : cs.unknownRelease ? "This release of the game isn't one the companion knows." :
-			!cs.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + cs.error : "";
+		std::string why;
+		if (cs.seen) why = "";
+		else if (cs.unknownRelease) why = "This release of the game isn't one the companion knows.";
+		else if (!cs.error.empty())
+		{
+			// the same line as the game companion's panel (one sentence with %s: a language file has that line)
+			why = lang::tr("RetroArch can't read the game's memory with this emulator: %s");
+			size_t at = why.find("%s");
+			if (at != std::string::npos) why.replace(at, 2, cs.error);
+			else why += cs.error;
+		}
 		if (why != base.waitWhy) { base.waitWhy = why; out.waitWhy = why; fresh = true; }
 		nds::SessionThread::Snapshot sn;
 		if (session->take(sn))

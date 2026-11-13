@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Energy ring": "Anillo de energía",
+  "Level time": "Tiempo de nivel",
+  "Controls": "Controles",
+  "A jump, B sword attack, R magic/special.": "A saltar, B ataque de espada, R magia/especial.",
+  "Powers": "Poderes",
+  "Sia gains magic powers and sword combos as she frees her people.": "Sia gana poderes mágicos y combos de espada mientras libera a su gente.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Learn patterns, strike after their attacks.": "Aprende los patrones y golpea tras sus ataques.",
+  "Worlds": "Mundos",
+  "World select": "Selección de mundo",
+  "Structure": "Estructura",
+  "Four worlds of levels, each with a boss.": "Cuatro mundos de niveles, cada uno con un jefe.",
+  "Items": "Objetos",
+  "Health potions, keys and power pickups.": "Pociones de salud, llaves y recogibles de poder.",
+  "Prisoners": "Prisioneros",
+  "Collect": "Coleccionar",
+  "Free the captured people in each level.": "Libera a los cautivos en cada nivel.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Onimen and his T'soas.": "Derrota a Onimen y sus T'soas."
+ }
+}

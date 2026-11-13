@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Playing as": "Jugando como",
+  "Energy": "Energía",
+  "Team": "Equipo",
+  "Each fighter gains points on level-up to spend on Strength, Power, Endurance and Speed. Equipment (gi, gloves, boots, accessory) is found in chests and shops.": "Cada luchador gana puntos al subir de nivel para gastarlos en Fuerza, Potencia, Resistencia y Velocidad. El equipo (gi, guantes, botas, accesorio) aparece en cofres y tiendas.",
+  "Bosses": "Jefes",
+  "Boss tips": "Consejos del jefe",
+  "Other World tournament: block, then counter.": "Torneo del Otro Mundo: bloquea y luego contraataca.",
+  "Petrifying spit: dodge sideways, melee combos.": "Escupitajo petrificante: esquiva de lado, combos cuerpo a cuerpo.",
+  "Strong melee; energy attacks from range.": "Cuerpo a cuerpo fuerte; ataques de energía a distancia.",
+  "Regenerates: keep the damage constant, use your best beam.": "Se regenera: mantén el daño constante, usa tu mejor rayo.",
+  "Fuse (Gotenks, Vegito) when the story allows; stock senzu beans.": "Fusiona (Gotenks, Vegito) cuando la historia lo permita; ten Beans Senzu.",
+  "Beaten": "Derrotado",
+  "Pharaoh mummy": "Momia de faraón",
+  "Location": "Ubicación",
+  "Stage": "Escenario",
+  "Map id": "ID de mapa",
+  "Chapters follow the Buu saga: Other World, the World Tournament, Babidi's ship, the Buu fights, and Earth's end. Zenni buys gear in towns.": "Los capítulos siguen la saga de Buu: Otro Mundo, el World Tournament, el barco de Babidi, las peleas contra Buu y el final de la Tierra. Zenni compra equipo en los pueblos.",
+  "Items": "Objetos",
+  "Senzu beans": "Frijoles senzu",
+  "Capsules": "Cápsulas",
+  "Lazarus crystals": "Cristales de Lázaro",
+  "Food heals a little, drinks restore energy, elixirs heal more; senzu beans heal everything.": "La comida cura poco, las bebidas restauran energía, los elixires curan más; los Beans Senzu curan todo.",
+  "Collection": "Colección",
+  "Dragon Balls": "Esferas del Dragón",
+  "Hercule exhibits": "Exposiciones de Hercule",
+  "Story": "Historia"
+ }
+}

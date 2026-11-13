@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Hoop Drop level": "Nivel Hoop Drop",
+  "Grid Grab level": "Nivel Grid Grab",
+  "Match Attack level": "Nivel Match Attack",
+  "How it plays": "Cómo se juega",
+  "Picture riddles: find the listed objects hidden in busy photo scenes before time runs out.": "Adivinanzas con dibujos: encuentra los objetos indicados escondidos en escenas fotográficas antes de que se acabe el tiempo.",
+  "Riddles": "Adivinanzas",
+  "Each scene lists objects in a rhyme; tap/move the cursor and press A on each one.": "Cada escena enumera los objetos en rima; mueve el cursor y pulsa A sobre cada uno.",
+  "Timer": "Temporizador",
+  "Tips": "Consejos",
+  "Scan the scene in strips, edges first. Small objects hide in patterns of the same colour.": "Recorre la escena por franjas, empezando por los bordes. Los objetos pequeños se esconden en patrones del mismo color.",
+  "Scenes": "Escenas",
+  "Structure": "Estructura",
+  "Themed picture scenes grouped into challenges; clearing them opens more.": "Escenas ilustradas con temática agrupadas en retos; superarlas abre más.",
+  "Hints": "Pistas",
+  "Hints are limited: save them for the last object in a scene.": "Las pistas son limitadas: guárdalas para el último objeto de la escena.",
+  "Collect": "Coleccionar",
+  "Every completed scene is kept; replay for faster times.": "Cada escena completada se conserva; repítela para sacar tiempos más rápidos.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear all challenge scenes.": "Completa todas las escenas de reto."
+ }
+}

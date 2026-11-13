@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "EX mode": "Modo EX",
+  "Special mode": "Modo especial",
+  "Units": "Unidades",
+  "Money": "Dinero",
+  "Kyosuke total SP": "SP total de Kyosuke",
+  "Kyosuke EXP": "EXP de Kyosuke",
+  "Mechs + pilots": "Mechs + pilotos",
+  "HP, EN, armor, mobility; pilots SP and Spirit commands": "HP, EN, armadura, movilidad; los pilotos tienen SP y órdenes de Espíritu",
+  "Twin/team attacks between linked units": "Ataques gemelos/de equipo entre unidades enlazadas",
+  "Pilots": "Pilotos",
+  "Pilot points (PP) buy stat boosts and skills\nSpirit commands cost SP; aces get extra bonus": "Los puntos de piloto (PP) compran mejoras de estadísticas y habilidades\nLas órdenes de Espíritu cuestan SP; los ases reciben bonus extra",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Combination attacks need units adjacent\nMind enemy bosses' barriers; use support attack/defense": "Los ataques combinados necesitan unidades adyacentes\nCuidado con las barreras de los jefes enemigos; usa los ataques y defensas de apoyo",
+  "Scenarios": "Escenarios",
+  "Map": "Mapa",
+  "Episode id": "ID de episodio",
+  "Mode": "Modo",
+  "Scenario chain with branches; intermission between maps": "Cadena de escenarios con ramas; interludio entre mapas",
+  "Parts": "Partes",
+  "Optional parts and weapons; money for upgrades": "Partes opcionales y armas; dinero para mejoras",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Secret units/pilots (conditions in scenarios)\nSecret units and pilots join when hidden conditions are met in scenarios": "Unidades/pilotos secretos (condiciones en los escenarios)\nLas unidades y pilotos secretos se unen cuando se cumplen las condiciones ocultas en los escenarios",
+  "Progress": "Progreso",
+  "Scenario count and battle mastery": "Número de escenarios y dominio de la batalla"
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Secondary weapon ammo": "Munición del arma secundaria",
+  "Health, Force": "Salud, Fuerza",
+  "Moves": "Movimientos",
+  "Blaster then lightsaber; Force powers\nLuke starts with a blaster and gets the lightsaber later; secondary weapon ammo is shown on status": "Bláster y luego sable de luz; poderes de la Fuerza\nLuke empieza con un bláster y consigue después el sable de luz; la munición del arma secundaria se muestra en el estado",
+  "Bosses": "Jefes",
+  "Boss health": "Salud del jefe",
+  "Vader and story bosses": "Vader y los jefes de la historia",
+  "Levels": "Niveles",
+  "Mission": "Misión",
+  "Episodes IV-VI locations": "Lugares de los Episodios IV-VI",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Items (bits)": "Objetos (bits)",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nItems found in missions (bit flags in RAM); R2-D2 has his own health in one mission": "Objetos ocultos\nObjetos encontrados en las misiones (flags de bits en RAM); R2-D2 tiene su propia salud en una misión",
+  "Progress": "Progreso",
+  "Levels cleared\nMissions follow A New Hope to Return of the Jedi": "Niveles superados\nLas misiones siguen Una Nueva Esperanza hasta El Retorno del Jedi"
+ }
+}

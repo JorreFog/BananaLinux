@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Play time": "Tiempo jugado",
+  "Health, Furyoku": "Salud, Furyoku",
+  "Spirits": "Espíritus",
+  "Detail": "Detalle",
+  "Spirits give abilities; multiple spirits equipped\nEquip several spirits at once; each changes Yoh's moves and abilities": "Los espíritus dan habilidades; varios equipados\nEquipa varios espíritus a la vez; cada uno cambia los movimientos y habilidades de Yoh",
+  "Bosses": "Jefes",
+  "Switch spirits to exploit patterns\nBosses resist some spirits: switch to the element that hurts them": "Cambia de espíritu para explotar los patrones\nLos jefes resisten algunos espíritus: cambia al elemento que les duele",
+  "Areas": "Áreas",
+  "Explore interconnected areas\nExplore areas connected by doors; new spirit powers open new paths": "Explora áreas interconectadas\nExplora áreas conectadas por puertas; los nuevos poderes de los espíritus abren rutas nuevas",
+  "Items": "Objetos",
+  "Ex-items": "Ex-objetos",
+  "Health items; spirit upgrades": "Objetos de salud; mejoras de espíritus",
+  "Collect": "Coleccionar",
+  "Souls deck value": "Valor del mazo de almas",
+  "Spirits collected": "Espíritus coleccionados",
+  "Progress": "Progreso",
+  "Bosses and areas\nBosses beaten and areas explored; items and ex-items are counted": "Jefes y áreas\nJefes derrotados y áreas exploradas; se cuentan los objetos y ex-objetos"
+ }
+}

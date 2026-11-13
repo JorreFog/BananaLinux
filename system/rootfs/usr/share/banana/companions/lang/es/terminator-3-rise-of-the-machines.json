@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Health, weapons, ammo": "Salud, armas, munición",
+  "Top-down shooter": "Shooter cenital",
+  "the T-850 fights through missions from the film": "el T-850 combate en las misiones de la película",
+  "Health bar; weapons and ammo picked up from fallen enemies": "Barra de salud; armas y munición recogidas de los enemigos caídos",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Guns picked up during missions\nHeavy weapons have limited ammo: keep a pistol-class weapon for weak enemies\nSome missions put you in vehicles or protection roles (keep John Connor alive)": "Armas recogidas durante las misiones\nLas armas pesadas tienen munición limitada: guarda un arma tipo pistola para los enemigos débiles\nAlgunas misiones te ponen al volante o en tareas de protección (mantén con vida a John Connor)",
+  "Bosses": "Jefes",
+  "T-X encounters\nThe T-X is the recurring boss: hit her, then keep moving: she closes distance fast\nUse cover; enemy robots fire in bursts": "Encuentros con la T-X\nLa T-X es el jefe recurrente: golpéala y sigue moviéndote: acorta la distancia muy rápido\nUsa cobertura; los robots enemigos disparan a ráfagas",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Missions following the film\nMissions follow the film from the city streets to the final bunker": "Misiones siguiendo la película\nLas misiones siguen la película, desde las calles de la ciudad hasta el búnker final",
+  "Bag": "Bolsa",
+  "Ammo per weapon\nAmmo per weapon; health packs in crates\nHealth packs and ammo crates are in side rooms": "Munición por arma\nMunición por arma; botiquines en cajas\nLos botiquines y las cajas de munición están en las salas laterales",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden ammo caches in side rooms\nAmmo caches are worth the detour on harder missions": "Objetos ocultos\nAlijos de munición escondidos en salas laterales\nEl alijo de munición vale la desvío en las misiones más difíciles",
+  "Progress": "Progreso",
+  "Missions completed\nMissions in order; the final mission is the bunker": "Misiones completadas\nMisiones en orden; la última es el búnker"
+ }
+}

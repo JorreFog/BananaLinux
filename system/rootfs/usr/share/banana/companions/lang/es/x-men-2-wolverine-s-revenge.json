@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health; healing factor regenerates health\nWolverine has a few days to live after a virus: his healing factor regenerates health over time\nContinues are limited; the game saves progress per slot": "Salud; el factor de curación regenera la salud\nWolverine tiene unos días de vida tras un virus: su factor de curación regenera la salud con el tiempo\nLas continuaciones son limitadas; el juego guarda el progreso por ranura",
+  "Moves": "Movimientos",
+  "Claw combos\nClaw combos, lunges and stealth takedowns; healing factor refills health while you avoid damage\nSuper-hero mode unlocks after the first clear (from the game's menu)": "Combos de garras\nCombos de garras, embestidas y derribos silenciosos; el factor de curación rellena la salud mientras evitas el daño\nEl modo superhéroe se desbloquea tras el primer completado (según el menú del juego)",
+  "Bosses": "Jefes",
+  "Sabretooth and others\nBosses include Sabretooth and other mutants and soldiers from the story\nBack off and let the healing factor work between boss attack waves": "Sabretooth y otros\nLos jefes incluyen a Sabretooth y otros mutantes y soldados de la historia\nRetrocede y deja que el factor de curación trabaje entre las oleadas de ataque del jefe",
+  "Levels": "Niveles",
+  "Story levels": "Niveles de historia",
+  "Items": "Objetos",
+  "Health\nOne-ups and power-ups found in levels\nOne-ups give extra lives; power-ups boost attacks": "Salud\nVidas extra y potenciadores encontrados en los niveles\nLas vidas extra dan más vidas; los potenciadores aumentan los ataques",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nScene gallery and secret gallery unlock with progress; Danger Room and time trial modes": "Objetos ocultos\nLa galería de escenas y la galería secreta se desbloquean con el progreso; modos Sala de Peligro y contrarreloj",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels cleared; level select and skip become available later": "Niveles superados\nNiveles superados; la selección y el salto de nivel se desbloquean más tarde"
+ }
+}

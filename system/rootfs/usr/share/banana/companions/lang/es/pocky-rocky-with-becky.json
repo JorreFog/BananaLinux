@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Lives": "Vidas",
+  "Bombs": "Bombas",
+  "Health (0 is 1 HP, 1 is 2 HP)": "Salud (0 es 1 HP, 1 es 2 HP)",
+  "How it plays": "Cómo se juega",
+  "Top-down shooter: throw cards/leaves at yokai.": "Shooter cenital: lanza cartas u hojas a los yokai.",
+  "Heroes": "Héroes",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Spin/deflect blocks many shots; keep moving.": "Girar o desviar bloquea muchos disparos; no dejes de moverte.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Stages.": "Escenarios.",
+  "Items": "Objetos",
+  "Weapon power-ups and bombs.": "Potenciadores de arma y bombas.",
+  "Score": "Puntuación",
+  "Collect": "Coleccionar",
+  "Score and stages cleared.": "Puntuación y escenarios superados.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Clear.": "Limpia."
+ }
+}

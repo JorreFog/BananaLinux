@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Cash earned": "Dinero ganado",
+  "Mission timer": "Temporizador de misión",
+  "Controls": "Controles",
+  "A shoot / enter car, B run / accelerate, R lock weapon, L next weapon\nWanted stars rise with crimes": "A dispara / entra al auto, B corre / acelera, R fija arma, L cambia de arma\nLas estrellas de búsqueda suben con los crímenes",
+  "Weapons": "Armas",
+  "Fists, pistol, Uzi, shotgun, flamethrower, rocket launcher, grenades, molotovs and more.": "Puños, pistola, Uzi, escopeta, lanzallamas, lanzacohetes, granadas, molotovs y más.",
+  "Police": "Policía",
+  "Wanted level": "Nivel de búsqueda",
+  "Up to 6 stars: police, then SWAT, FBI and army.\nPay 'n' Spray garages wipe the wanted level.": "Hasta 6 estrellas: policía, luego SWAT, FBI y ejército.\nLos garajes Pay 'n' Spray borran el nivel de búsqueda.",
+  "Islands": "Islas",
+  "Portland -> Staunton Island -> Shoreside Vale, opening as the story advances.": "Portland -> Staunton Island -> Shoreside Vale, que se abren según avanza la historia.",
+  "Money": "Dinero",
+  "Missions and side jobs pay cash.\nAmmu-Nation sells weapons; hidden packages also add weapons at hideouts.": "Las misiones y los trabajos extra dan dinero.\nAmmu-Nation vende armas; los paquetes ocultos también dan armas en los escondites.",
+  "Hidden": "Oculto",
+  "Collectables": "Coleccionables",
+  "Hidden packages, rampages and unique stunt jumps around the city.": "Paquetes ocultos, alocadas y saltos acrobáticos únicos por la ciudad.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Work through each boss's missions to find out who killed Vinnie.": "Haz las misiones de cada jefe para descubrir quién mató a Vinnie."
+ }
+}

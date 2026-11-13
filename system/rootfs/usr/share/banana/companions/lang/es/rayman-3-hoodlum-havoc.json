@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Health; lives; score\nRayman's health and lives; boss fights track hits on the boss": "Salud; vidas; puntuación\nLa salud y las vidas de Rayman; en los combates con jefes se cuentan los golpes al jefe",
+  "Moves": "Movimientos",
+  "Charge punch; helicopter hair; wall climbing\nMurfy gives tips": "Golpe cargado; pelo helicóptero; trepar paredes\nMurfy da consejos",
+  "Bosses": "Jefes",
+  "Rocky (Den of Rocky) hits": "Golpes a Rocky (Guarida de Rocky)",
+  "Scaleman (Keep) hits": "Golpes a Scaleman (Torre)",
+  "Heart of the Ancients 1 hits": "Golpes al Corazón de los Ancestros 1",
+  "Garish Gears hits": "Golpes a Garish Gears",
+  "Heart of the Ancients 2 hits": "Golpes al Corazón de los Ancestros 2",
+  "Bosses at the end of world sections; time charged punches": "Jefes al final de las secciones de cada mundo; cronometra los golpes cargados",
+  "Levels": "Niveles",
+  "World": "Mundo",
+  "Level": "Nivel",
+  "Levels across the Hoodlum-infested world; Murfy's hints": "Niveles por el mundo infestado de Hoodlums; las pistas de Murfy",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Lums (yellow), health; Cages\nLums are collected in levels; cages free captives for bonuses": "Lums (amarillos), salud; jaulas\nLos Lums se recogen en los niveles; las jaulas liberan cautivos y dan bonos",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Lums left in this level": "Lums que quedan en este nivel",
+  "Cages and Lums per level": "Jaulas y Lums por nivel",
+  "Progress": "Progreso",
+  "Levels cleared, bosses beaten": "Niveles superados, jefes derrotados",
+  "Rocky, Scaleman, Heart of the Ancients and others; Magma Mayhem races with laps": "Rocky, Scaleman, Corazón de los Ancestros y otros; carreras de Magma Mayhem por vueltas"
+ }
+}

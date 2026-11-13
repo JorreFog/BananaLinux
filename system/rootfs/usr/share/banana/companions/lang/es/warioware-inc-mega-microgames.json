@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Session": "Sesión",
+  "Status": "Estado",
+  "Lives": "Vidas",
+  "Microgames cleared": "Microjuegos superados",
+  "Wario stage high score": "Récord de la etapa de Wario",
+  "Microgames last a few seconds each; 4 lives\nSpeed rises; a boss stage every few games\nScore = microgames cleared": "Cada microjuego dura unos segundos; 4 vidas\nLa velocidad sube; una etapa de jefe cada pocos juegos\nPuntuación = microjuegos superados",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Each stage belongs to one character with its own microgame theme": "Cada etapa pertenece a un personaje con su propio tema de microjuegos",
+  "Cast": "Elenco",
+  "Wario's remix of everything": "El remix de Wario con todo",
+  "Boss stage": "Etapa de jefe",
+  "Battle": "Batalla",
+  "Boss microgames are longer and must be cleared to finish a stage\nThe prompt word tells the goal: \"Dodge!\", \"Catch!\", \"Shoot!\"": "Los microjuegos de jefe son más largos y deben superarse para terminar una etapa\nLa palabra clave indica el objetivo: \"¡Esquiva!\", \"¡Atrapa!\", \"¡Dispara!\"",
+  "Stages": "Etapas",
+  "Each character's stage = 1 genre of microgames\nRemix stages mix all genres\nGrid of unlocked stages on the menu": "La etapa de cada personaje = 1 género de microjuegos\nLas etapas remix mezclan todos los géneros\nCuadrícula de etapas desbloqueadas en el menú",
+  "Unlocks": "Desbloqueos",
+  "Bag": "Bolsa",
+  "Toys and minigames unlocked by high scores: Paper Plane, Pyoro, Dr. Wario, etc.": "Juguetes y minijuegos desbloqueados con récords: Paper Plane, Pyoro, Dr. Wario, etc.",
+  "Microgames": "Microjuegos",
+  "Collect": "Coleccionar",
+  "200+ microgames; each played once gets added to the Grid\nPlay any microgame alone from the Grid to beat its record": "Más de 200 microjuegos; cada uno que juegas una vez se añade a la Cuadrícula\nJuega cualquier microjuego solo desde la Cuadrícula para superar su récord",
+  "Progress": "Progreso",
+  "Stages unlocked": "Etapas desbloqueadas",
+  "Stages cleared": "Etapas superadas",
+  "Clear all characters, then the final remix\nHit the high-score target per stage for each unlock": "Supera a todos los personajes, luego el remix final\nAlcanza el objetivo de récord de cada etapa para cada desbloqueo"
+ }
+}

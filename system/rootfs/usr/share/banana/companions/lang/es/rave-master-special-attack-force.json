@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "Health, special meter\n2D fighter based on the Rave Master manga and anime\nEach fighter has a health bar and a special gauge that fills while you fight": "Salud, medidor de especial\nLuchador 2D basado en el manga y el anime Rave Master\nCada luchador tiene una barra de salud y un medidor de especial que se llena al combatir",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Haru, Elie, Musica and others from Rave Master\nCharacters include Haru Glory and his friends and rivals from the series\nEach character has normal attacks, special moves and a gauge-powered super\nLearn one character's specials first: they share simple command inputs": "Haru, Elie, Musica y otros de Rave Master\nLos personajes incluyen a Haru Glory y sus amigos y rivales de la serie\nCada personaje tiene ataques normales, movimientos especiales y un súper que consume el medidor\nAprende primero los especiales de un personaje: comparten comandos sencillos",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Specials use the meter; block and counter\nBlock high and low; counter after the opponent's whiffed special\nKeep the gauge for a super that finishes the round\nAir attacks beat slow ground specials": "Los especiales consumen el medidor; bloquea y contraataca\nBloquea arriba y abajo; contraataca tras fallar el especial del rival\nGuarda el medidor para un súper que cierre el combate\nLos ataques aéreos superan a los especiales terrestres lentos",
+  "Modes": "Modos",
+  "Story, VS\nStory mode follows the cast through a series of fights with scenes between them": "Historia, VS\nEl modo Historia sigue a los personajes a lo largo de una serie de combates con escenas entre ellos",
+  "VS mode": "Modo VS",
+  "pick any unlocked fighter and stage": "elige cualquier luchador y escenario desbloqueado",
+  "Moves": "Movimientos",
+  "Special moves per fighter\nSupers cost gauge; the gauge carries between rounds in many fighters, so plan ahead\nEach fighter's command list is in the pause menu": "Movimientos especiales por luchador\nLos súpers consumen medidor; en muchos luchadores el medidor se conserva entre rondas, así que planifica\nLa lista de comandos de cada luchador está en el menú de pausa",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Fighters unlocked\nClearing story mode with characters unlocks more fighters\nTry every character in story mode to see all endings": "Luchadores desbloqueados\nCompletar el modo Historia con los personajes desbloquea más luchadores\nPrueba cada personaje en el modo Historia para ver todos los finales",
+  "Progress": "Progreso",
+  "Story wins\nStory mode progress is per character\nUnlock the full roster by clearing story routes": "Victorias de Historia\nEl progreso del modo Historia es por personaje\nDesbloquea la plantilla completa completando las rutas de Historia"
+ }
+}

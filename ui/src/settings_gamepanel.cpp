@@ -1391,7 +1391,15 @@ namespace banana
 		if (live && !sn.seen)
 		{
 			box("bubble", false, 18, 76, 604, 336);
-			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
+			// one sentence with its placeholder, looked up as that (a line joined with the error has no line of its own)
+			std::string why = "Waiting for the game...";
+			if (!sn.error.empty())
+			{
+				why = lang::tr("RetroArch can't read the game's memory with this emulator: %s");
+				size_t at = why.find("%s");
+				if (at != std::string::npos) why.replace(at, 2, sn.error);
+				else why += sn.error;
+			}
 			wrapped(why, 18, 40, 96, 560, 4, p.muted);
 			return;
 		}

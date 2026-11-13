@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Court": "Tribunal",
+  "Court health": "Salud del tribunal",
+  "Cross-examination id": "ID del interrogatorio",
+  "Phoenix Wright (and Mia in flashbacks)": "Phoenix Wright (y Mia en los flashbacks)",
+  "Penalty meter": "Medidor de penalización",
+  "wrong presses/presents cost health; 0 = guilty": "equivocarte al presionar o presentar cuesta salud; 0 = culpable",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Phoenix Wright, Maya Fey, Pearl Fey, Mia Fey\nProsecutor Godot; Detective Gumshoe; Judge": "Phoenix Wright, Maya Fey, Pearl Fey, Mia Fey\nFiscal Godot; Detective Gumshoe; Juez",
+  "Trial tips": "Consejos de juicio",
+  "Battle": "Batalla",
+  "Press every statement for hidden facts\nPresent the evidence that contradicts a statement": "Presiona cada declaración para hallar datos ocultos\nPresenta la evidencia que contradiga una declaración",
+  "present evidence to break each lock (Magatama)": "presenta evidencia para romper cada cierre (Magatama)",
+  "Episodes": "Episodios",
+  "Map": "Mapa",
+  "Episode (new game pick)": "Episodio (elección al empezar)",
+  "Part / phase": "Parte / fase",
+  "Court Record": "Expediente del tribunal",
+  "Bag": "Bolsa",
+  "Evidence": "Evidencia",
+  "Profiles": "Perfiles",
+  "Evidence and Profiles; inspect for clues": "Evidencia y perfiles; inspécionalos para buscar pistas",
+  "Collect": "Coleccionar",
+  "Each episode adds evidence and profiles": "Cada episodio añade evidencia y perfiles",
+  "Progress": "Progreso",
+  "5 episodes; finish each to unlock the next\nEach episode has investigation and trial parts; court health resets per trial\nEnglish translation in the Translations folder; version 015.8 (from the file name)": "5 episodios; completa cada uno para desbloquear el siguiente\nCada episodio tiene partes de investigación y juicio; la salud del tribunal se reinicia en cada juicio\nTraducción al inglés en la carpeta Translations; versión 015.8 (sacada del nombre del archivo)"
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Fire missiles (lock-on)": "Disparar misiles (fijación)",
+  "Machine gun": "Ametralladora",
+  "Rudder / speed": "Timón / velocidad",
+  "Pitch and roll": "Cabeceo y alabeo",
+  "Start": "Iniciar",
+  "Pause / mission map": "Pausa / mapa de misión",
+  "Planes": "Aviones",
+  "Mission rewards buy new aircraft in the hangar; later fighters carry more missiles and turn faster, attackers are better against ground targets.": "Las recompensas de misión compran aviones nuevos en el hangar; los cazas posteriores llevan más misiles y giran más rápido, los atacantes son mejores contra objetivos terrestres.",
+  "Tips": "Consejos",
+  "Fire missiles only after the lock tone; enemy fighters break off, so switch to the gun at close range. Ground targets: dive at a shallow angle and pull up early.": "Dispara los misiles solo tras la señal de fijación; los cazas enemigos se retiran, así que cambia a la ametralladora en rango corto. Objetivos terrestres: pica en ángulo poco marcado y tira de la palanca antes de tiempo.",
+  "Missions": "Misiones",
+  "Missions are a campaign of air superiority, strike and escort sorties. The radar marks primary targets; destroying them all ends the mission.": "Las misiones son una campaña de superioridad aérea, ataque y escolta. El radar marca los objetivos principales; destruirlos todos termina la misión.",
+  "Weapons": "Armas",
+  "Gun": "Cañón",
+  "Unlimited, short range": "Ilimitada, alcance corto",
+  "Missiles": "Misiles",
+  "Limited, lock-on; refill between missions": "Limitada, con fijación; se recarga entre misiones",
+  "Collect aircraft by clearing missions and earning money; the hangar shows every plane you own.": "Consigue aviones completando misiones y ganando dinero; el hangar muestra todos los aviones que tienes.",
+  "Progress": "Progreso",
+  "Clear missions in order; a mission's rank depends on time and targets destroyed.": "Completa las misiones en orden; el rango de una misión depende del tiempo y de los objetivos destruidos."
+ }
+}

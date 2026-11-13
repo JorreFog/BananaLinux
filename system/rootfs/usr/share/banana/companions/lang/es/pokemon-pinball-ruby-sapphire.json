@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Pokemon Pinball - Ruby & Sapphire": "Pokemon Pinball - Rubí y Zafiro",
+  "Ball": "Bola",
+  "Score": "Puntuación",
+  "Balls left": "Bolas restantes",
+  "Coins": "Monedas",
+  "Controls": "Controles",
+  "L/R flippers; tilt.": "Flipper L/R; inclina.",
+  "Tables": "Mesas",
+  "Ruby and Sapphire.": "Rubí y Zafiro.",
+  "Catch": "Atrapa",
+  "Boss health (inverted)": "Salud del jefe (invertida)",
+  "Boss max health": "Salud máx. del jefe",
+  "Tips": "Consejos",
+  "Light CATCH lanes to start Catch mode.": "Enciende las vías CATCH para iniciar el modo Atrapa.",
+  "Area id": "ID de área",
+  "Structure": "Estructura",
+  "Areas change with Travel mode.": "Las áreas cambian con el modo Viaje.",
+  "Items": "Objetos",
+  "Coins (shop).": "Monedas (tienda).",
+  "Collect": "Coleccionar",
+  "Goal": "Objetivo",
+  "Complete the Pokédex.": "Completa el Pokédex."
+ }
+}

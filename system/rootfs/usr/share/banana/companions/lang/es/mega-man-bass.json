@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Life": "Vida",
+  "Characters": "Personajes",
+  "Mega Man (charge shot, slide) or Bass (rapid 8-way shot, double jump, dash).": "Mega Man (disparo cargado, deslizamiento) o Bass (disparo rápido de 8 direcciones, doble salto, dash).",
+  "Weapons": "Armas",
+  "Each Robot Master gives its weapon.": "Cada Robot Master te da su arma.",
+  "Boss": "Jefe",
+  "Boss (alt slot)": "Jefe (ranura alt)",
+  "Cold Man, Astro Man, Ground Man, Magic Man, Pirate Man, Burner Man, Tengu Man, Dynamo Man. Weakness chain: Lightning Bolt beats Cold Man, Ice Wall beats Burner Man...": "Cold Man, Astro Man, Ground Man, Magic Man, Pirate Man, Burner Man, Tengu Man, Dynamo Man. Cadena de debilidades: Lightning Bolt vence a Cold Man, Ice Wall vence a Burner Man...",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Intro, 8 stages, King's fortress.": "Intro, 8 escenarios, fortaleza del Rey.",
+  "Shop": "Tienda",
+  "Items": "Objetos",
+  "Bolts buy parts at Auto's shop.": "Los pernos compran partes en la tienda de Auto.",
+  "Collect": "Coleccionar",
+  "100 data CDs hidden in stages.": "100 CDs de datos escondidos en los escenarios.",
+  "Goal": "Objetivo",
+  "Defeat King.": "Derrota al Rey."
+ }
+}

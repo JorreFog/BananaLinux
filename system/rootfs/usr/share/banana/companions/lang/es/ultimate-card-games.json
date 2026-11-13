@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Games": "Juegos",
+  "Collection of card games\nCollection of card games, single player against the CPU": "Colección de juegos de cartas\nColección de juegos de cartas, un jugador contra la CPU",
+  "Solitaire and other card games\nGames in the ROM include Hearts, Spades, Euchre, Gin Rummy, Poker, Go Fish, plus solitaires such as Aces Up, Betsy Ross and Eagle Wing\nEach game has a rules and history page (Gin Rummy, for example, dates from 1909 New York)": "Solitario y otros juegos de cartas\nLos juegos de la ROM incluyen Corazones, Picas, Euchre, Gin Rummy, Póquer, Go Fish, además de solitarios como Aces Up, Betsy Ross y Eagle Wing\nCada juego tiene una página de reglas e historia (Gin Rummy, por ejemplo, data de Nueva York en 1909)",
+  "Tips": "Consejos",
+  "Practice modes": "Modos de práctica",
+  "Hearts": "Corazones",
+  "avoid taking tricks with hearts (and the queen of spades in most rule sets)": "evita llevarte bazas con corazones (y la reina de picas en la mayoría de las reglas)",
+  "Spades": "Picas",
+  "bid the number of tricks you expect; spades are always trump": "canta el número de bazas que esperas; las picas siempre son trump",
+  "build sets and runs; knock when your unmatched cards are low": "forma conjuntos y series; golpea cuando te queden pocas cartas sin emparejar",
+  "Menu": "Menú",
+  "Choose a game from the menu\nChoose a game from the menu; skill levels change how the CPU plays": "Elige un juego del menú\nEscoge un juego del menú; los niveles de habilidad cambian cómo juega la CPU",
+  "Settings": "Ajustes",
+  "Bag": "Bolsa",
+  "Rules options\nYour hand is shown at the bottom; sort it by suit or rank": "Opciones de reglas\nTu mano se muestra abajo; ordénala por palo o por valor",
+  "Games available\nScore records per game\nScores per game are kept in the records": "Juegos disponibles\nRécords de puntuación por juego\nLas puntuaciones por juego se guardan en los récords",
+  "Progress": "Progreso",
+  "Wins\nWin games at higher skill levels\nRaise the skill level for tougher CPU players": "Victorias\nGana juegos en niveles de habilidad más altos\nSube el nivel de habilidad para rivales de CPU más duros"
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Boat": "Barco",
+  "Health; weapons\nPuzzle-action spin-off of Worms: worms in boats shoot at colored blocks and at each other": "Salud; armas\nSpin-off de acción y puzle de Worms: los gusanos en barcas disparan a bloques de color y entre sí",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Weapons from crates\nCrates give weapons; shots follow arcs affected by wind and gravity": "Armas de las cajas\nLas cajas dan armas; los disparos siguen arcos afectados por el viento y la gravedad",
+  "Tips": "Consejos",
+  "Aim with physics\nHit blocks of the matching color to clear them; avoid the rising water": "Apunta con física\nGolpea los bloques del color que coincida para limpiarlos; evita el agua que sube",
+  "Modes": "Modos",
+  "Current level": "Nivel actual",
+  "Puzzle and VS": "Puzle y VS",
+  "Bag": "Bolsa",
+  "Weapons\nWeapons from crates have limited shots; powerups change the next shots": "Armas\nLas armas de las cajas tienen disparos limitados; los potenciadores cambian los siguientes disparos",
+  "Puzzles": "Puzles",
+  "Collect": "Coleccionar",
+  "Puzzles\nPuzzle routes on the world map (7 routes, including a tutorial route)": "Puzles\nRutas de puzle en el mapa del mundo (7 rutas, incluida una ruta tutorial)",
+  "Progress": "Progreso",
+  "Puzzle routes completed": "Rutas de puzle completadas",
+  "Puzzles solved": "Puzles resueltos"
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Level": "Nivel",
+  "Recker health": "Salud de Recker",
+  "Ship health": "Salud de la nave",
+  "Bombs": "Bombas",
+  "Recker Krilsa; HP, level; ship": "Recker Krilsa; HP, nivel; nave",
+  "Ship": "Nave",
+  "Cannon module id": "ID del módulo de cañón",
+  "Bullet module id": "ID del módulo de bala",
+  "Impact module id": "ID del módulo de impacto",
+  "Random battles become shooter stages": "Los encuentros aleatorios se vuelven escenarios de shooter",
+  "Tips": "Consejos",
+  "Equip gun modules to change the ship's shot\nRandom encounters switch to side-scrolling shooter fights; killing the target count ends them": "Equipa módulos de arma para cambiar el disparo de la nave\nLos encuentros aleatorios cambian a combates de shooter de scroll horizontal; matar la cantidad objetivo los termina",
+  "World": "Mundo",
+  "Map id": "ID de mapa",
+  "Planet areas explored on foot, battles in space": "Áreas de los planetas exploradas a pie, combates en el espacio",
+  "Modules": "Módulos",
+  "Bag": "Bolsa",
+  "Gun modules from enemies and shops\nCannon, bullet and impact modules combine into different ship shots": "Módulos de arma de enemigos y tiendas\nLos módulos de cañón, bala e impacto se combinan en distintos disparos de la nave",
+  "Collect": "Coleccionar",
+  "Module combinations\nTry module combinations: each mix changes the shot pattern and power": "Combinaciones de módulos\nPrueba combinaciones de módulos: cada mezcla cambia el patrón de disparo y la potencia",
+  "Progress": "Progreso",
+  "Game clears": "Partidas completadas",
+  "In-game timer": "Temporizador del juego",
+  "Story chapters": "Capítulos de historia"
+ }
+}

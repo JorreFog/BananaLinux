@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Ball": "Bola",
+  "Controls": "Controles",
+  "L/R flippers.": "L/R flipper.",
+  "Tables": "Mesas",
+  "Tables.": "Mesas.",
+  "Tips": "Consejos",
+  "Ramps and lit targets raise multipliers; nudge (tilt) carefully.": "Las rampas y los objetivos iluminados suben los multiplicadores; inclina (tilt) con cuidado.",
+  "Structure": "Estructura",
+  "Table": "Mesa",
+  "Items": "Objetos",
+  "No items: score bonuses from ramps, bumpers, targets.": "Sin objetos: bonos de puntuación por rampas, toppers y objetivos.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo"
+ }
+}

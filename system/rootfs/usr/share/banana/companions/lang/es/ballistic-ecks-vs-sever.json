@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Agent": "Agente",
+  "Playing as": "Jugando como",
+  "Enemies left": "Enemigos restantes",
+  "Hostages saved": "Rehenes salvados",
+  "Level timer": "Temporizador de nivel",
+  "Agents": "Agentes",
+  "FBI agent: more health, standard arsenal": "Agente del FBI: más salud, arsenal estándar",
+  "Ex-DIA operative: faster, better gadgets": "Ex-operativo de la DIA: más rápido, mejores artilugios",
+  "Fight": "Pelea",
+  "Alarm": "Alarma",
+  "Alarm raised": "Alarma activada",
+  "Strafe around corners and shoot first; alarms bring reinforcements, so take out guards quietly. Hostages: never shoot through them.": "Dispara primero y muévete en paralelo al cruzar las esquinas; las alarmas traen refuerzos, así que elimina a los guardias en silencio. Rehenes: nunca dispares a través de ellos.",
+  "Mission": "Misión",
+  "Level id": "ID de nivel",
+  "Two campaigns (Ecks and Sever) with their own levels; passwords save progress.": "Dos campañas (Ecks y Sever) con sus propios niveles; las contraseñas guardan el progreso.",
+  "Gear": "Equipo",
+  "Weapons and ammo are picked up from fallen enemies; IR goggles show tripwires and hidden enemies in dark areas.": "Las armas y la munición se recogen de los enemigos caídos; las gafas de infrarrojo muestran cables trampa y enemigos ocultos en zonas oscuras.",
+  "Cheats": "Trucos",
+  "Cheat flags": "Banderas de truco",
+  "Ten hidden cheat pickups are spread over the levels.": "Diez objetos de truco ocultos repartidos por los niveles.",
+  "Progress": "Progreso",
+  "Level": "Nivel"
+ }
+}

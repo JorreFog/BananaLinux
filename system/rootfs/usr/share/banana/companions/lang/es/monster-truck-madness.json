@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Truck": "Camión",
+  "Position": "Posición",
+  "Controls": "Controles",
+  "A accelerate, B brake.": "A acelera, B frena.",
+  "Trucks": "Camiones",
+  "Monster trucks with stats.": "Camiones monstruo con estadísticas.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Monster trucks bounce: land square on all four wheels and look for shortcut ramps between checkpoints.": "Los camiones monstruo rebotan: aterriza plano sobre las cuatro ruedas y busca rampas de atajo entre los puntos de control.",
+  "Tracks": "Pistas",
+  "Track": "Pista",
+  "Off-road tracks.": "Pistas todoterreno.",
+  "Pickups": "Recogibles",
+  "Items": "Objetos",
+  "Boost pickups on track; missing checkpoints costs the race.": "Recogibles de impulso en la pista; saltarte un punto de control te hace perder la carrera.",
+  "Collect": "Coleccionar",
+  "Unlock trucks.": "Desbloquea camiones.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

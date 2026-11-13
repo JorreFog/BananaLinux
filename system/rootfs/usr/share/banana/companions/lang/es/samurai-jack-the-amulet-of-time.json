@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Health; sword": "Salud; espada",
+  "Moves": "Movimientos",
+  "Sword combos, jump, special attacks\nJack's sword combos, jump and weapon specials; blocking timing matters against Aku's robots": "Combos de espada, salto, ataques especiales\nLos combos de espada de Jack, el salto y los especiales de arma; el momento de bloquear importa contra los robots de Aku",
+  "Bosses": "Jefes",
+  "Enemy HP": "HP enemigo",
+  "Aku's minions": "Los secuaces de Aku",
+  "Levels": "Niveles",
+  "Levels across Aku's world\nLevels across Aku's world, each a different setting from the series": "Niveles por el mundo de Aku\nNiveles por el mundo de Aku, cada uno con un escenario distinto de la serie",
+  "Items": "Objetos",
+  "Health\nHealth pickups and special weapons found in levels\nSpecial weapons have limited uses; save them for bosses": "Salud\nRecogibles de salud y armas especiales en los niveles\nLas armas especiales tienen usos limitados; guárdalas para los jefes",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Amulet pieces\nPieces of the Amulet of Time are found along the journey": "Piezas del amuleto\nLas piezas del Amulet of Time se encuentran por el camino",
+  "Progress": "Progreso",
+  "Levels cleared\nCollect the amulet pieces to open the way home": "Niveles completados\nRecoge las piezas del amuleto para abrir el camino de vuelta"
+ }
+}

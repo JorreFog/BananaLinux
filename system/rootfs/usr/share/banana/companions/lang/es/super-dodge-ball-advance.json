@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Heroes": "Héroes",
+  "Dragons": "Dragones",
+  "Stars": "Estrellas",
+  "Rockets": "Cohetes",
+  "Team": "Equipo",
+  "Your team": "Tu equipo",
+  "Player 1 HP": "HP del jugador 1",
+  "Player 2 HP": "HP del jugador 2",
+  "Player 3 HP": "HP del jugador 3",
+  "Player 4 HP": "HP del jugador 4",
+  "Player 5 HP": "HP del jugador 5",
+  "Players with HP; outfield and infield": "Jugadores con HP; posiciones de defensa y ataque",
+  "Teams": "Equipos",
+  "Teams with special throws per player": "Equipos con lanzamientos especiales por jugador",
+  "Heroes, Knights, Dragons, Angels, Stars, Braves, Shooters, Rockets, Ninjas, Bombers, Bears, Foxes, Ironmen, Warriors and a hidden team": "Heroes, Knights, Dragons, Angels, Stars, Braves, Shooters, Rockets, Ninjas, Bombers, Bears, Foxes, Ironmen, Warriors y un equipo oculto",
+  "Tips": "Consejos",
+  "Opponent team": "Equipo rival",
+  "Catch with good timing, then special throw": "Atrapa con buen timing y luego lanza el especial",
+  "Tournament": "Torneo",
+  "Map": "Mapa",
+  "World tournament\nWorld tournament against the teams above\nTeams from many nations meet in the tournament": "Torneo mundial\nTorneo mundial contra los equipos de arriba\nEquipos de muchas naciones se enfrentan en el torneo",
+  "Specials": "Especiales",
+  "Bag": "Bolsa",
+  "Special shots": "Lanzamientos especiales",
+  "Special throws per player": "Lanzamientos especiales por jugador",
+  "Teams unlocked\nPlayers have special shots; teams unlock as you win": "Equipos desbloqueados\nLos jugadores tienen lanzamientos especiales; los equipos se desbloquean al ganar",
+  "Progress": "Progreso",
+  "Tournament wins\nTournament rounds won; each player's HP is shown on the status page": "Victorias de torneo\nRondas de torneo ganadas; el HP de cada jugador se muestra en la página de estado"
+ }
+}

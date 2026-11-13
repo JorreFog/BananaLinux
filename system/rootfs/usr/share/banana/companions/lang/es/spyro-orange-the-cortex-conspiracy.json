@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Gems": "Gemas",
+  "Spyro and Crash; health; lives": "Spyro y Crash; salud; vidas",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "breath, glide; Crash: spin, jump": "aliento, planeo; Crash: giro, salto",
+  "Card collecting minigames\nSpyro and Crash alternate; each has his own levels and minigames": "Minijuegos de coleccionar cartas\nSpyro y Crash se alternan; cada uno tiene sus niveles y minijuegos",
+  "Bosses": "Jefes",
+  "Cortex's forces; bosses per world\nBosses include Cortex's minions and the Riptoc forces": "Las fuerzas de Cortex; jefes por mundo\nLos jefes incluyen los secuaces de Cortex y las fuerzas de los Riptoc",
+  "Worlds": "Mundos",
+  "World id": "ID de mundo",
+  "Level id": "ID de nivel",
+  "Levels for Spyro and Crash": "Niveles de Spyro y Crash",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Gems/Wumpa fruit": "Gemas/Frutas Wumpa",
+  "Cards": "Cartas",
+  "Trading cards (link with Crash Purple)\nTrading cards collected in levels; some trade with Crash Purple": "Cartas coleccionables (enlace con Crash Púrpura)\nCartas coleccionables reunidas en los niveles; algunas se cambian con Crash Púrpura",
+  "Progress": "Progreso",
+  "Worlds and cards": "Mundos y cartas",
+  "Dragon Castles, Arctic Cliffs and more, each with its own level states": "Dragon Castles, Arctic Cliffs y más, cada uno con sus propios estados de nivel"
+ }
+}

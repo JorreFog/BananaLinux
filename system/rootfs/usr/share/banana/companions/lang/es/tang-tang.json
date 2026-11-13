@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Level timer": "Temporizador de nivel",
+  "Place and break blocks to make paths; reach the exit door\nLives; health": "Coloca y rompe bloques para hacer caminos; llega a la puerta de salida\nVidas; salud",
+  "Moves": "Movimientos",
+  "Platform jumping; puzzles\nPlace and break blocks to build paths; cannonballs and pickups help in some levels": "Saltos entre plataformas; puzles\nColoca y rompe bloques para construir caminos; las bolas de cañón y los recogibles ayudan en algunos niveles",
+  "Bosses": "Jefes",
+  "Some levels switch into a boss mode; cannonballs and blocks are the tools\nBosses at world ends": "Algunos niveles cambian a modo de jefe; las bolas de cañón y los bloques son las herramientas\nJefes al final de los mundos",
+  "Worlds": "Mundos",
+  "World selected": "Mundo seleccionado",
+  "Several worlds": "Varios mundos",
+  "Items": "Objetos",
+  "Pickups\nRings and bolts are collected in levels (counted on screen)": "Recogibles\nEn los niveles se recogen anillos y pernos (se cuentan en pantalla)",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden pickups need blocks placed to reach them": "Objetos ocultos\nPara alcanzar los recogibles ocultos hay que colocar bloques",
+  "Progress": "Progreso",
+  "Worlds cleared\nWorlds in order; high scores are kept\nHigh scores are saved with a name entry": "Mundos superados\nMundos en orden; se guardan las mejores puntuaciones\nLas mejores puntuaciones se guardan con un nombre"
+ }
+}

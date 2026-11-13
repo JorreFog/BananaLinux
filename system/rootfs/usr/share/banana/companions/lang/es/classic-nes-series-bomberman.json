@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Drop a bomb": "Suelta una bomba",
+  "Detonate (with the remote power-up)": "Detona (con el potenciador a distancia)",
+  "Walk": "Camina",
+  "Power-ups": "Potenciadores",
+  "Bomb": "Bomba",
+  "+1 bomb at a time": "+1 bomba a la vez",
+  "Longer blasts": "Explosiones más largas",
+  "Skate": "Patines",
+  "Faster": "Más rápido",
+  "Remote": "A distancia",
+  "Detonate with B": "Detona con B",
+  "Wall pass": "Pase de muros",
+  "Walk through soft walls": "Camina a través de muros blandos",
+  "Bomb pass": "Pase de bombas",
+  "Walk through bombs": "Camina a través de bombas",
+  "Flame pass": "Pase de llamas",
+  "Immune to blasts": "Inmune a las explosiones",
+  "Mystery (?)": "Misterio (?)",
+  "Short invincibility": "Invulnerabilidad breve",
+  "Enemies": "Enemigos",
+  "Ballom (slow), Onil, Dahl, Minvo, Doria (passes walls), Ovape, Pass (fast, smart), Pontan (very fast). Bombing the exit spawns more enemies.": "Ballom (lento), Onil, Dahl, Minvo, Doria (pasa muros), Ovape, Pass (rápido, listo), Pontan (muy rápido). Bombear la salida genera más enemigos.",
+  "Stages": "Escenarios",
+  "50 stages; each hides an exit door and one power-up under soft blocks. Defeat all enemies, then step on the exit. Bonus stages every few levels.": "50 escenarios; cada uno esconde una puerta de salida y un potenciador bajo los bloques blandos. Derrota a todos los enemigos y luego pisa la salida. Hay etapas de bonus cada pocos niveles.",
+  "Power-ups stay until you lose a life (except the stage's special ones).": "Los potenciadores duran hasta que pierdes una vida (salvo los especiales de la etapa).",
+  "Passwords": "Contraseñas",
+  "A 20-letter password after each stage restores the stage and your power-ups. Write it down: the Classic NES cart has no other save.": "Una contraseña de 20 letras tras cada escenario restaura el escenario y tus potenciadores. Anótala: el cartucho de NES clásico no tiene otra partida guardada.",
+  "Progress": "Progreso",
+  "Clear all 50 stages; the timer (200 s) brings fast enemies when it hits 0.": "Supera los 50 escenarios; el temporizador (200 s) trae enemigos rápidos cuando llega a 0."
+ }
+}

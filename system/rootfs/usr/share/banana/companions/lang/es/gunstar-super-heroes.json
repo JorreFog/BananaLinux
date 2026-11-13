@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Score": "Puntuación",
+  "Weapon energy": "Energía del arma",
+  "Heroes": "Héroes",
+  "Red and Blue play the same stages with different weapon sets and scenes.": "Red y Blue juegan los mismos escenarios con distintas armas y escenas.",
+  "Controls": "Controles",
+  "A jump, B shoot, R switch weapon, L slide; B near enemies = melee/throw": "A salta, B dispara, R cambia de arma, L se desliza; B cerca de enemigos = cuerpo a cuerpo/empujón",
+  "Weapons": "Armas",
+  "Three weapons": "Tres armas",
+  "Force (rapid shots), Lightning (piercing beam), Fire (short flame).\nEach has a special attack using the special gauge.": "Force (disparos rápidos), Lightning (rayo perforante), Fire (llama corta).\nCada una tiene un ataque especial que usa el medidor especial.",
+  "Bosses": "Jefes",
+  "Boss health": "Salud del jefe",
+  "Tips": "Consejos",
+  "Melee throws do big damage up close.\nSwitch to Lightning against armoured bosses.\nThe Seven Force returns: learn each form.": "Los golpes cuerpo a cuerpo hacen mucho daño de cerca.\nCambia a Lightning contra los jefes blindados.\nThe Seven Force regresa: aprende cada forma.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Episodes based on the original Gunstar Heroes, including the dice-board Black's stage and a ship shooter stage.": "Episodios basados en el Gunstar Heroes original, con la etapa de tableros de dados de Black y una etapa de disparos en nave.",
+  "Special gauge": "Medidor especial",
+  "Hitting enemies fills the gauge for the special attack.": "Golpear a los enemigos llena el medidor del ataque especial.",
+  "Gems": "Gemas",
+  "Secrets": "Secretos",
+  "Each hero sees different scenes: clear the game with both.": "Cada héroe ve escenas distintas: completa el juego con ambos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Finish the episodes with both heroes for the full story.": "Termina los episodios con ambos héroes para ver la historia completa."
+ }
+}

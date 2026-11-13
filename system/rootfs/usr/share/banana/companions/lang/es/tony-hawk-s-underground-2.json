@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Run": "Correr",
+  "Score, combo, special meter\nVicarious Visions' isometric THUG2: score, combo, special meter, goals per level\nGet off the board (walking) to reach ledges, then hop back on to keep the combo going": "Puntuación, combo, medidor de especial\nTHUG2 isométrico de Vicarious Visions: puntuación, combo, medidor de especial, objetivos por nivel\nBájate de la tabla (caminando) para llegar a los repisas y vuelve a subirte para mantener el combo",
+  "Tricks": "Trucos",
+  "Flip, grab, grind, manual, Freak Out\nUnlockable trick sets from the ROM: lip transitions, grind transitions and flatland tricks\nStats include rail balance, lip balance and manual balance": "Flip, grab, grind, manual, Freak Out\nConjuntos de trucos desbloqueables de la ROM: transiciones de bordillo, transiciones de grind y trucos de flatland\nLas estadísticas incluyen equilibrio en rieles, equilibrio en bordillo y equilibrio en manual",
+  "Goals": "Objetivos",
+  "World Destruction Tour goals per city\nLevel goals include score, combo, item and S-K-A-T-E style tasks; finishing them all is tracked (\"All goals completed\")": "Objetivos por ciudad del World Destruction Tour\nLos objetivos de nivel incluyen puntuación, combo, objetos y tareas tipo S-K-A-T-E; se registra cuando los completas todos (\"Todos los objetivos completados\")",
+  "Levels": "Niveles",
+  "Cities of the World Destruction Tour\nWorld Destruction Tour cities, played one after another": "Ciudades del World Destruction Tour\nCiudades del World Destruction Tour, jugadas una tras otra",
+  "Stats": "Estadísticas",
+  "Stat points from goals\nCheats unlocked by play: always special, perfect balance (rail/manual/lip), moon physics, jet pack, matrix, turbo and mini modes": "Puntos de estadística de los objetivos\nTrucos desbloqueados jugando: siempre especial, equilibrio perfecto (riel/manual/bordillo), física lunar, jet pack, matrix, turbo y mini",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items per level\nSecret skaters and cheats unlock as you complete goals": "Objetos ocultos por nivel\nLos skaters y los trucos secretos se desbloquean al completar objetivos",
+  "Progress": "Progreso",
+  "Goals and levels\nGoals per level; all goals completed per city": "Objetivos y niveles\nObjetivos por nivel; todos los objetivos completados por ciudad"
+ }
+}

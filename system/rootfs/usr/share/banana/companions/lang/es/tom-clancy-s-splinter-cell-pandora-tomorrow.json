@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health, alarms; ammo\nSecond GBA Splinter Cell: Sam Fisher side-scrolling stealth against Suhadi Sadono's group\nHealth bar; detection and alarms make missions harder": "Salud, alarmas; munición\nSegundo Splinter Cell de GBA: sigilo lateral de Sam Fisher contra el grupo de Suhadi Sadono\nBarra de salud; la detección y las alarmas dificultan las misiones",
+  "Moves": "Movimientos",
+  "Sneak, hang, split jump, shimmy": "Agacharse, colgarse, salto dividido, desplazamiento lateral",
+  "sneak, hang, shimmy, split jump, back-to-wall, drop attacks": "agacharse, colgarse, desplazamiento lateral, salto dividido, pegarse a la pared, ataques en caída",
+  "Non-lethal takedowns from behind are quieter than gunfire": "Los derribos no letales por la espalda son más silenciosos que los disparos",
+  "Tips": "Consejos",
+  "Shoot lights; move in the shadows\nLight and noise give you away: move slowly near guards and keep to shadows\nObjectives update during missions; check the pause menu": "Apaga las luces; muévete entre sombras\nLa luz y el ruido te delatan: muévete despacio cerca de los guardias y quédate en las sombras\nLos objetivos se actualizan durante las misiones; revisa el menú de pausa",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Story missions\nStory missions around the world following the console game's plot": "Misiones de historia\nMisiones de historia por el mundo siguiendo la trama del juego de consola",
+  "Gear": "Equipo",
+  "Weapons and gadgets\nWeapons and gadgets are given per mission; ammo is limited": "Armas y gadgets\nLas armas y los gadgets se dan por misión; la munición es limitada",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nMission ratings on the completion screen\nMissions are graded on completion; stealthy runs score higher": "Objetos ocultos\nCalificaciones de misión en la pantalla de fin\nLas misiones se califican al completarlas; las carreras sigilosas puntúan más alto",
+  "Progress": "Progreso",
+  "Missions\nMissions in order to the finale\nMissions in story order to the finale": "Misiones\nMisiones en orden hasta el final\nMisiones en orden de historia hasta el final"
+ }
+}

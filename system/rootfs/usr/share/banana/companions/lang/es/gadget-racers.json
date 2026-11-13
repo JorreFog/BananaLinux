@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Money": "Dinero",
+  "Ammo": "Munición",
+  "Race time (raw)": "Tiempo de carrera (bruto)",
+  "Controls": "Controles",
+  "A accelerate, B brake\nR use item / boost\nCars are small toy racers (Choro-Q style)": "A acelerar, B frenar\nR usar objeto / turbo\nLos autos son pequeños coches de juguete (estilo Choro-Q)",
+  "Car": "Auto",
+  "Parts": "Partes",
+  "Body, engine, tyres, brakes and wings are swapped individually.\nEach part changes speed, acceleration or grip.": "Carrocería, motor, neumáticos, frenos y alas se cambian por separado.\nCada pieza cambia la velocidad, la aceleración o el agarre.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Toy cars are light: avoid side hits in corners.\nUpgrade tyres early, the first tracks are twisty.": "Los coches de juguete son ligeros: evita los golpes laterales en las curvas.\nMejora los neumáticos pronto: los primeros circuitos son muy sinuosos.",
+  "Tracks": "Pistas",
+  "Course": "Circuito",
+  "Event": "Evento",
+  "Structure": "Estructura",
+  "Grand Prix cups made of several tracks; finishing high earns money and parts.": "Las copas del Gran Premio se componen de varios circuitos; terminar bien da dinero y piezas.",
+  "Shop": "Tienda",
+  "Prize money buys parts in the shop.\nBetter engines unlock the faster cups.": "El dinero de los premios compra piezas en la tienda.\nLos motores mejores desbloquean las copas más rápidas.",
+  "Collection": "Colección",
+  "Collect bodies and parts from wins and the shop.": "Consigue carrocerías y piezas con las victorias y en la tienda.",
+  "Cups": "Copas",
+  "Goal": "Objetivo",
+  "Win each cup class to open the next.": "Gana cada clase de copa para abrir la siguiente."
+ }
+}

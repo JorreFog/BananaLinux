@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Score": "Puntuación",
+  "Meters": "Medidores",
+  "Life bar, Tension gauge (fills by attacking) and the round timer.": "Barra de vida, medidor de tensión (se llena al atacar) y temporizador del round.",
+  "Controls": "Controles",
+  "Four attacks: Punch, Kick, Slash, Heavy Slash (button map in Options)\nDust: a launcher; Roman Cancel costs 50% Tension": "Cuatro ataques: Punch, Kick, Slash, Heavy Slash (mapa de botones en Opciones)\nDust: un lanzador; Roman Cancel cuesta 50% de tensión",
+  "Moves": "Movimientos",
+  "Systems": "Sistemas",
+  "Faultless Defence (hold block + two buttons) costs Tension.\nInstant Kill: dangerous one-hit move, available when its mode is on.": "Faultless Defence (mantén bloqueo + dos botones) cuesta tensión.\nInstant Kill: movimiento peligroso de un golpe, disponible cuando su modo está activo.",
+  "Matchup": "Enfrentamiento",
+  "P1 health": "Salud P1",
+  "P2 health": "Salud P2",
+  "Tips": "Consejos",
+  "Don't stand still: the game punishes passivity with the Negative Penalty.\nBurst out of combos when the Burst gauge is full.": "No te quedes quieto: el juego castiga la pasividad con la Penalización Negativa.\nSaca combos cuando el medidor de Burst esté lleno.",
+  "Modes": "Modos",
+  "Tension": "Tensión",
+  "Using Tension": "Usar la tensión",
+  "Overdrives (supers) cost 50% Tension.\nRoman Cancel 50%. Faultless Defence drains while held.": "Los Overdrives (supers) cuestan 50% de tensión.\nRoman Cancel, 50%. Faultless Defence se consume mientras lo mantienes.",
+  "Roster": "Plantilla",
+  "Characters": "Personajes",
+  "Goal": "Objetivo",
+  "Clear Arcade with each character to see their ending.": "Completa Arcade con cada personaje para ver su final."
+ }
+}

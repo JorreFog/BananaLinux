@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Wrestler": "Luchador",
+  "Status": "Estado",
+  "Health; momentum\nNatsume's 2001 WWF game: health and momentum meters": "Salud; impulso\nEl juego de WWF de Natsume de 2001: medidores de salud e impulso",
+  "Moves": "Movimientos",
+  "Grapples, strikes, finisher\nGrapples, strikes and finishers; each superstar has signature moves": "Agarres, golpes, remate\nAgarres, golpes y remates; cada superstar tiene movimientos especiales",
+  "Match tips": "Consejos de partido",
+  "Battle": "Batalla",
+  "Build momentum, then finish\nBuild momentum with varied attacks; the finisher becomes available when it's full": "Carga el impulso y remata\nCarga el impulso con ataques variados; el remate se hace disponible cuando el medidor está lleno",
+  "Modes": "Modos",
+  "Season mode toward WrestleMania\nSeason mode on the road to WrestleMania; exhibition matches": "Modo temporada hacia WrestleMania\nModo temporada en el camino a WrestleMania; partidos de exhibición",
+  "Move set per wrestler\nMove sets per wrestler\nEach superstar has his own grapples, strikes and finisher": "Juego de movimientos por luchador\nJuegos de movimientos por luchador\nCada superstar tiene sus propios agarres, golpes y remate",
+  "Roster": "Plantilla",
+  "Wrestlers unlocked\nUnlockable superstars\nSuperstars unlocked by playing through the season": "Luchadores desbloqueados\nSuperstars desbloqueables\nSuperstars desbloqueados al completar la temporada",
+  "Progress": "Progreso",
+  "Season matches\nSeason matches won\nSeason matches won up to WrestleMania": "Partidos de temporada\nPartidos de temporada ganados\nPartidos de temporada ganados hasta WrestleMania"
+ }
+}

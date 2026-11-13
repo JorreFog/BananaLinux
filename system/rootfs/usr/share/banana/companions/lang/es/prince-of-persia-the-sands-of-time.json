@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Prince": "Príncipe",
+  "How it plays": "Cómo se juega",
+  "Acrobatic platforming with the Dagger of Time.": "Plataformas acrobáticas con la Daga del Tiempo.",
+  "Dagger": "Daga",
+  "Sand": "Arena",
+  "Rewind time with sand tanks.": "Rebobina el tiempo con los depósitos de arena.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Rewind a bad fall with the Dagger of Time; time attacks between enemy swings.": "Rebobina una mala caída con la Daga del Tiempo; ataca en el tiempo entre los golpes enemigos.",
+  "Palace": "Palacio",
+  "Structure": "Estructura",
+  "Palace levels.": "Niveles del palacio.",
+  "Items": "Objetos",
+  "Sand tanks.": "Depósitos de arena.",
+  "Collect": "Coleccionar",
+  "Sand from enemies refills the tanks.": "La arena de los enemigos rellena los depósitos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Reseal the sands.": "Vuelve a sellar las arenas."
+ }
+}

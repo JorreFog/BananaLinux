@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A jump, B attack/throw\nGarfield climbs, swims and pushes objects": "A salta, B ataca/empuja\nGarfield trepa, nada y empuja objetos",
+  "The title says it: Garfield has nine lives through the adventure.": "El título lo dice: Garfield tiene nueve vidas a lo largo de la aventura.",
+  "Abilities": "Habilidades",
+  "Each world gives Garfield a different costume and a new move set.": "Cada mundo le da a Garfield un traje distinto y un nuevo conjunto de movimientos.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Bosses have short attack cycles: wait for the opening after their attack, then strike.": "Los jefes tienen ciclos de ataque cortos: espera la apertura tras su ataque y luego golpea.",
+  "Worlds": "Mundos",
+  "Structure": "Estructura",
+  "Nine themed levels based on Garfield's \"lives\": each a different setting and era.": "Nueve niveles con temática basada en las \"vidas\" de Garfield: cada uno con un escenario y una época distintos.",
+  "Items": "Objetos",
+  "Pickups": "Recogibles",
+  "Lasagna and food restore health.\nCollectables are scattered in each level.": "La lasagna y la comida restauran la salud.\nLos coleccionables están esparcidos por cada nivel.",
+  "Collectables": "Coleccionables",
+  "Hidden items": "Objetos ocultos",
+  "Each level hides collectables; find them all for 100%.": "Cada nivel esconde coleccionables; encuentra todos para llegar al 100%.",
+  "Goal": "Objetivo",
+  "Clear all nine lives (levels).": "Completa las nueve vidas (niveles)."
+ }
+}

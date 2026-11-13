@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "The Incredible Hulk": "El Increíble Hulk",
+  "Controls": "Controles",
+  "A jump, B punch, R grab/throw. Rage builds Hulk's power.": "A salta, B golpe, R agarre/lanzamiento. La furia aumenta el poder de Hulk.",
+  "Moves": "Movimientos",
+  "Thunderclap, ground slam and throwing objects and enemies.": "Golpe de trueno, golpe al suelo y lanzamiento de objetos y enemigos.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Grab and throw enemies into each other; use objects on armoured foes.": "Agarra y lanza enemigos contra otros; usa objetos contra los enemigos blindados.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Side-scrolling levels through cities, deserts and military bases.": "Niveles de desplazamiento lateral por ciudades, desiertos y bases militares.",
+  "Pickups": "Recogibles",
+  "Items": "Objetos",
+  "Health pickups and rage power-ups from crates.": "Recogibles de salud y potenciadores de furia en las cajas.",
+  "Secrets": "Secretos",
+  "Collect": "Coleccionar",
+  "Hidden bonus items in levels.": "Objetos de bonificación ocultos en los niveles.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat the Leader and his creations.": "Derrota al Leader y a sus creaciones."
+ }
+}

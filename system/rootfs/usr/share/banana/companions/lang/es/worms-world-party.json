@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Round seconds left": "Segundos restantes de la ronda",
+  "Worm health per team": "Salud de los gusanos por equipo",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Bazooka, grenade, shotgun, sheep, banana bomb, airstrike, ninja rope": "Bazuca, granada, escopeta, oveja, bomba de plátano, ataque aéreo, cuerda ninja",
+  "Tips": "Consejos",
+  "Wind changes bazooka shots; grenades bounce\nNinja rope and jet pack move worms across the map; the sheep and banana bomb hit hardest": "El viento cambia los disparos de la bazuca; las granadas rebotan\nLa cuerda ninja y la mochila propulsora mueven a los gusanos por el mapa; la oveja y la bomba de plátano pegan más fuerte",
+  "Modes": "Modos",
+  "Quick match, missions, deathmatch\nTeams have names (Liquid Silk, Bruce Boys, The Gods, Elite, Olympians and more); CPU level per team": "Partida rápida, misiones, deathmatch\nLos equipos tienen nombres (Liquid Silk, Bruce Boys, The Gods, Elite, Olympians y más); nivel de CPU por equipo",
+  "Bag": "Bolsa",
+  "Weapons and utilities": "Armas y utilidades",
+  "Utilities": "Utilidades",
+  "girders, teleport, parachute and more alongside the weapons": "vigas, teletransporte, paracaídas y más además de las armas",
+  "Missions": "Misiones",
+  "Collect": "Coleccionar",
+  "Missions\nSingle-player missions with set goals\nMissions have fixed weapons and goals; finish them to unlock more": "Misiones\nMisiones de un jugador con objetivos fijados\nLas misiones tienen armas y objetivos fijos; complétalas para desbloquear más",
+  "Progress": "Progreso",
+  "Missions won\nMissions won; deathmatch ranking\nDeathmatch rankings and mission wins are kept": "Misiones ganadas\nMisiones ganadas; ranking de deathmatch\nSe guardan los rankings de deathmatch y las misiones ganadas"
+ }
+}

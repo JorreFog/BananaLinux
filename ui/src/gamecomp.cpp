@@ -1,6 +1,7 @@
 // banana-ui: the game companion's definitions, matching and reading (gamecomp.h). The companion idea is PokeDaisy's
 // (Lidor Itzhari).
 #include "gamecomp.h"
+#include "lang.h"
 #include "zip.h"
 #include <algorithm>
 #include <cctype>
@@ -688,6 +689,148 @@ namespace banana::gcomp
 		}
 	}
 
+	namespace
+	{
+		// a language code that can be one path component (es, zh-cn): nothing else is looked up
+		bool translationCode(std::string& code)
+		{
+			code = lang::current().code;
+			if (code.empty() || code == "en") return false;
+			for (size_t i = 0; i < code.size(); i++)
+			{
+				unsigned char c = (unsigned char)code[i];
+				if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-')) return false;
+			}
+			return true;
+		}
+		std::string relUnder(const std::string& dir, const std::string& path)
+		{
+			std::string d = dir;
+			while (!d.empty() && d.back() == '/') d.pop_back();
+			std::string pfx = d + "/";
+			if (path.compare(0, pfx.size(), pfx) == 0) return path.substr(pfx.size());
+			size_t s = path.find_last_of('/');
+			return s == std::string::npos ? path : path.substr(s + 1);
+		}
+	}
+
+	std::vector<std::string> translationPaths(const std::string& companionsDir, const std::string& englishPath)
+	{
+		std::vector<std::string> out;
+		std::string code;
+		if (!translationCode(code)) return out;
+		std::string rel = relUnder(companionsDir, englishPath);
+		if (rel.empty() || rel.find("..") != std::string::npos) return out;
+		auto add = [&](const std::string& root)
+		{
+			std::string r = root;
+			while (!r.empty() && r.back() == '/') r.pop_back();
+			if (r.empty()) return;
+			std::string p = r + "/lang/" + code + "/" + rel;
+			for (auto& x : out) if (x == p) return;
+			out.push_back(p);
+		};
+		// the card's own first, then the image's (main.cpp opens a game the same way), then the folder this match
+		// came from when that is neither (a test's, a folder passed to open)
+		add("/data/banana/companions");
+		add("/usr/share/banana/companions");
+		add(companionsDir);
+		return out;
+	}
+
+	bool parseStrings(const JVal& j, std::map<std::string, std::string>& out, std::string* why)
+	{
+		out.clear();
+		if (!j.isObj()) { if (why) *why = "not a JSON object"; return false; }
+		const JVal* st = j.get("strings");
+		if (!st || !st->isObj()) { if (why) *why = "no \"strings\" object"; return false; }
+		for (auto& kv : st->obj)
+		{
+			if (!kv.second || !kv.second->isStr()) { if (why) *why = "strings.\"" + kv.first + "\": not a string"; out.clear(); return false; }
+			if (!kv.first.empty() && !kv.second->s.empty()) out[kv.first] = kv.second->s;
+		}
+		return true;
+	}
+
+	bool loadStrings(const std::string& path, std::map<std::string, std::string>& out, std::string* why)
+	{
+		out.clear();
+		JPtr j = readJsonFile(path, why);
+		return j && parseStrings(*j, out, why);
+	}
+
+	namespace
+	{
+		int countBraces(const std::string& s)
+		{
+			int n = 0;
+			for (size_t at = s.find("{}"); at != std::string::npos; at = s.find("{}", at + 2)) n++;
+			return n;
+		}
+		void collectCharmaps(const Mem& m, std::vector<std::string>& out) { if (!m.charmap.empty()) out.push_back(m.charmap); }
+	}
+
+	int translateDef(Def& d, const std::map<std::string, std::string>& tr)
+	{
+		if (tr.empty()) return 0;
+		int n = 0;
+		auto t = [&](std::string& s)
+		{
+			if (s.empty()) return;
+			auto it = tr.find(s);
+			if (it != tr.end()) { s = it->second; n++; }
+		};
+		// a format is a keyword (thousands, time60...) or words with {} for the value: only the second, and only when
+		// the translation keeps as many {}
+		auto tf = [&](std::string& s)
+		{
+			int k = countBraces(s);
+			if (!k) return;
+			auto it = tr.find(s);
+			if (it != tr.end() && countBraces(it->second) == k) { s = it->second; n++; }
+		};
+		t(d.title);
+		for (auto& p : d.pages)
+		{
+			t(p.title);
+			t(p.tab);
+			for (auto& w : p.widgets)
+			{
+				t(w.label);
+				t(w.text);
+				tf(w.format);
+				for (auto& i : w.items) t(i);
+				for (auto& r : w.rows) { t(r.first); t(r.second); }
+				for (auto& f : w.fields) { t(f.label); tf(f.format); }
+			}
+		}
+		// an enum a text is decoded with (charmap:) maps bytes to letters: not words to translate
+		std::vector<std::string> cm;
+		for (auto& v : d.vars) collectCharmaps(v.m, cm);
+		for (auto& p : d.pages) for (auto& w : p.widgets) for (auto& f : w.fields) collectCharmaps(f.m, cm);
+		for (auto& e : d.enums)
+		{
+			if (std::find(cm.begin(), cm.end(), e.first) != cm.end()) continue;
+			for (auto& l : e.second) t(l.second);
+		}
+		return n;
+	}
+
+	std::string translateFrom(Def& d, const std::vector<std::string>& paths)
+	{
+		for (const std::string& p : paths)
+		{
+			if (access(p.c_str(), R_OK) != 0) continue;
+			std::string w;
+			std::map<std::string, std::string> tr;
+			if (!loadStrings(p, tr, &w)) { fprintf(stderr, "game companion: %s: %s (the English words are used)\n", p.c_str(), w.c_str()); return ""; }
+			translateDef(d, tr);
+			d.translation = p;
+			return p;
+		}
+		return "";
+	}
+
 	std::string findDef(const std::string& dir0, const std::string& rom, std::string* why, const std::string& system)
 	{
 		if (system != "gba") return findDefOther(dir0 + "/" + system, rom, why, system);
@@ -738,6 +881,10 @@ namespace banana::gcomp
 		if (f.empty()) { fprintf(stderr, "game companion: %s\n", why.c_str()); return false; }
 		auto d = loadDef(f, &why);
 		if (!d) { fprintf(stderr, "game companion: %s: %s\n", f.c_str(), why.c_str()); return false; }
+		// matching used the English file (and index.tsv), and its logic is what is read. The menu's language, when it has
+		// a translation, puts its words over the English ones; the first file that is there is the one, and one that is
+		// not a translation leaves the English words.
+		translateFrom(*d, translationPaths(dir, f));
 		return openDef(d, rom);
 	}
 

@@ -31,6 +31,69 @@ The companion idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lido
    before the system's folder; no index.tsv needed there, every file is read), turn Game companion on, start the game
    from the menu with Second screen on. banana-ui's log (`/data/banana/logs/banana-ui.log`) says which file matched.
 
+## Translations
+
+The files above are the English definitions, and a game is matched against those only. `index.tsv` stays in the
+companions folder (it is not translated, and it is not read from `lang/`). The header code, the title and the CRC-32
+come from the English files.
+
+The menu's language (`language` in `/data/banana/settings.conf`, `lang::current().code`) chooses which words are
+shown once a game has matched. A translation of `<companions dir>/<path>` is `<companions dir>/lang/<code>/<path>`:
+the same relative path, with one `lang/<code>/` directory in front of it. `<path>` is `<file>.json` for a GBA game
+and `<system>/<file>.json` for any other system.
+
+```
+/usr/share/banana/companions/castlevania-aria-of-sorrow.json
+/usr/share/banana/companions/lang/es/castlevania-aria-of-sorrow.json
+
+/usr/share/banana/companions/nes/super-mario-bros.json
+/usr/share/banana/companions/lang/es/nes/super-mario-bros.json
+```
+
+The card uses the same layout under `/data/banana/companions/`. Both folders are checked, the card's first, the same
+way a game is opened (a translation on the card is used for a definition that ships in the image). The first of
+those files that is there is the translation. `en`, or no language set, does not look in `lang/`.
+
+A translation is only words: the English text the definition shows, and that text in the language.
+
+```json
+{
+  "strings": {
+    "Castlevania: Aria of Sorrow": "Castlevania: Aria of Sorrow",
+    "Status": "Estado",
+    "Lives": "Vidas",
+    "Lv {}": "Nv {}",
+    "Jump high\nRun fast": "Salta alto\nCorre rápido"
+  }
+}
+```
+
+The English definition is always the one loaded: its `match`, `vars`, addresses, expressions, list layouts and every
+other field stay as they are, so a fix to the English file is a fix in every language. Its words are then looked up,
+each one whole and exactly as written (case, spaces, punctuation and `\n` included); one that has an entry with a
+non-empty translation is replaced, and one that has none stays English. The words looked up are:
+
+- the definition's `title`;
+- each page's `title` and `tab`;
+- each widget's `label` (a static widget's or a list's `title` too), `text`, every one of its `items`, and both
+  sides of every `rows` pair;
+- a list's `fields[].label`;
+- the labels in `enums` (the values, not the numbers); an enum used as a text's `charmap:` is letters, not words,
+  and is left alone;
+- a `format` that has `{}` in it (`"Lv {}"`), when the translation has as many `{}`. A named format (`thousands`,
+  `time60`, `secs`, `hex`, `pad2`...) is not a word.
+
+The same English text gets the same translation wherever it appears in that file. Other members of the file are
+ignored. The first file found (the card's before the image's) is the translation, the whole of it; the two are not
+merged. A file that is not JSON, not an object, has no `"strings"` object, or has a value that is not a string is
+not used at all, and every word stays English (banana-ui's log says why). BananaOS does not ship translation files;
+a language's files are added on their own.
+
+The words that are the game's come from that JSON. The panel's own lines (the waiting line, a page that is not the
+game's yet) are the menu's language files, `ui/assets/lang/<code>.tsv`, looked up as the English sentence. A line the
+code builds by joining pieces has no entry to match, so a value sits in a placeholder the file already uses
+(`RetroArch can't read the game's memory with this emulator: %s`).
+
 ## The definition format (schema 1)
 Schema 1 (the first one the companion data was written in). Check every def with `python3 tools/companions/validate.py`
 (no args: all of `defs/`; or give files). A def that fails validation is not installed.

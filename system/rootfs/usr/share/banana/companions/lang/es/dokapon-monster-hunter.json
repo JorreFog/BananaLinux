@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Level": "Nivel",
+  "Cash": "Dinero",
+  "Stats": "Estadísticas",
+  "Attack": "Ataque",
+  "Defense": "Defensa",
+  "Speed": "Velocidad",
+  "Sword id": "ID de espada",
+  "Shield id": "ID de escudo",
+  "Monster": "Monstruo",
+  "Enemy HP": "HP enemigo",
+  "Tip": "Consejo",
+  "Heal before the enemy's HP math says it can finish you; level up on easier floors before a new area, and upgrade sword and shield in town whenever cash allows.": "Cúrate antes de que la HP del enemigo dé para matarte; sube de nivel en las plantas fáciles antes de un área nueva y mejora espada y escudo en el pueblo cuando el dinero alcance.",
+  "Where": "Dónde",
+  "Area": "Área",
+  "Floor": "Piso",
+  "Story progress": "Progreso de la historia",
+  "Gear": "Equipo",
+  "Weapons owned": "Armas obtenidas",
+  "Shields owned": "Escudos obtenidos",
+  "Monster book": "Libro de monstruos",
+  "Monsters seen": "Monstruos vistos",
+  "Monsters slain": "Monstruos derrotados",
+  "Progress": "Progreso"
+ }
+}

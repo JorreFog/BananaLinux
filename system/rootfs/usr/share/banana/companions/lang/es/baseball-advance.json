@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A (batting)": "A (batear)",
+  "Swing; hold a direction to aim": "Baltea; mantén una dirección para apuntar",
+  "B (batting)": "B (batear)",
+  "A (pitching)": "A (lanzar)",
+  "Pitch; D-pad picks the pitch and location": "Lanza; la cruceta elige el tipo de lanzamiento y la ubicación",
+  "D-pad + A/B to throw to a base": "Cruceta + A/B para lanzar a una base",
+  "Steal / lead off": "Robar / arrancar base",
+  "Teams": "Equipos",
+  "Licensed MLB players (2002 rosters). Each player has contact, power, speed and arm ratings; pitchers have stamina and a pitch set.": "Jugadores MLB con licencia (plantillas de 2002). Cada jugador tiene contacto, potencia, velocidad y brazo; los lanzadores tienen resistencia y un repertorio de lanzamientos.",
+  "Tips": "Consejos",
+  "Lay off pitches outside the zone early in the count. Mix fastballs up with breaking balls low; tired pitchers lose speed, so check stamina and go to the bullpen.": "Deja pasar los lanzamientos fuera de la zona al principio del conteo. Alterna rectas con lanzamientos rompientes por abajo; los lanzadores cansados pierden velocidad, así que revisa su resistencia y ve al bullpen.",
+  "Modes": "Modos",
+  "Exhibition": "Exhibición",
+  "Single game": "Partida única",
+  "Season": "Temporada",
+  "A full schedule": "Calendario completo",
+  "Home Run Derby": "Derby de Jonrones",
+  "Swing for distance": "Batea para distancia",
+  "Lineup": "Formación",
+  "Set the batting order and defensive positions before each game; platoon left/right batters against the opposing pitcher.": "Define el orden al bate y las posiciones defensivas antes de cada partido; alterna bateadores diestros y zurdos contra el lanzador rival.",
+  "Records": "Récords",
+  "Season mode keeps standings and player stats.": "El modo temporada mantiene la tabla de posiciones y las estadísticas de los jugadores.",
+  "Win your division and the playoffs to take the World Series.": "Gana tu división y los playoffs para llevarte la Serie Mundial."
+ }
+}

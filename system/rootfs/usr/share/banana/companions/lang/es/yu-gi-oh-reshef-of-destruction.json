@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Status": "Estado",
+  "Deck Capacity used": "Capacidad de mazo usada",
+  "Cards in deck": "Cartas en el mazo",
+  "Domino (money)": "Domino (dinero)",
+  "Your LP": "Tus LP",
+  "Life Points 8000; Deck Capacity (DC) limits the deck\nWin duels to raise DC": "Puntos de Vida 8000; la Capacidad de Mazo (DC) limita el mazo\nGana duelos para subir la DC",
+  "Rules": "Reglas",
+  "Guardian Stars give +500 when your star beats theirs\nFusion by playing two monsters together (fusion combinations)": "Las Estrellas Guardián dan +500 cuando tu estrella vence a la suya\nFusión al jugar dos monstruos juntos (combinaciones de fusión)",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Opponent id": "ID del rival",
+  "Choose the guardian star that beats the defender's": "Elige la estrella guardián que venza a la del defensor",
+  "Story": "Historia",
+  "Travel around the world to stop Reshef; areas unlock through the story": "Viaja por el mundo para detener a Reshef; las áreas se desbloquean con la historia",
+  "Cards": "Cartas",
+  "Deck Capacity": "Capacidad de mazo",
+  "Cards won from duels; deck editor within DC": "Cartas ganadas en duelos; editor de mazos dentro de la DC",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "Hundreds of cards to collect\nTrunk quantities are tracked per card (e.g. Winged Dragon of Ra)": "Cientos de cartas para coleccionar\nLas cantidades del baúl se registran por carta (p. ej. Winged Dragon of Ra)",
+  "Progress": "Progreso",
+  "Story chapters; final duel with Reshef\nDomino and deck capacity grow from duels": "Capítulos de historia; duelo final con Reshef\nEl domino y la capacidad de mazo crecen con los duelos"
+ }
+}

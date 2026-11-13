@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "Shields, armor; missiles\nSpace combat against the alien Nephilim (with the Kilrathi now allies); shields absorb hits, then armor\nMissions are briefed before launch; your wingmen fly with you": "Escudos, armadura; misiles\nCombate espacial contra los Nefilim alienígenas (con los Kilrathi ahora aliados); los escudos absorben los golpes, luego la armadura\nLas misiones son asignadas antes del despegue; tus alas vuelan contigo",
+  "Ship": "Nave",
+  "Fighter guns and missiles\nFighters from the mission list include the Wasp (booster on/off), Vampire, Devastator bomber and Panther\nAfterburner for chasing and escaping; missiles lock on after a short hold": "Cañones y misiles de caza\nLos cazas de la lista de misiones incluyen el Wasp (propulsor on/off), Vampire, el bombardero Devastator y Panther\nPropulsor para perseguir y escapar; los misiles se fijan tras una pulsación corta",
+  "Tips": "Consejos",
+  "Lock missiles; break off to avoid fire\nMission types in the ROM: Sweep and Rendezvous, Patrol, Wasp Intercept, Tactical Retreat, Convoy Rescue, Shrike Escort, Cruiser Assault, Hydra Fleet Assault, Mine the Jump Point, Relay Station Insertion/Defense, Treasure Hunt, MIA Recovery, Strike Bomber Assault and more": "Fija los misiles; aléjate para esquivar el fuego\nTipos de misión en el ROM: Sweep and Rendezvous, Patrol, Wasp Intercept, Tactical Retreat, Convoy Rescue, Shrike Escort, Cruiser Assault, Hydra Fleet Assault, Mine the Jump Point, Relay Station Insertion/Defense, Treasure Hunt, MIA Recovery, Strike Bomber Assault y más",
+  "Capital ships": "Naves capitales",
+  "hit turrets first, then the hull": "golpea primero las torretas, luego el casco",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Campaign missions": "Misiones de campaña",
+  "Areas": "Áreas",
+  "the Stingray Cluster and other systems; wormhole gates appear in late missions": "el racimo de Stingray y otros sistemas; las puertas de aguijero de gusano aparecen en las misiones tardías",
+  "Weapons": "Armas",
+  "Bag": "Bolsa",
+  "Missiles\nMissiles by type (dumb-fire, heat seekers, torpedoes on bombers); guns use energy": "Misiles\nMisiles por tipo (ciego, seekers de calor, torpedos en bombarderos); los cañones usan energía",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Medals\nMedals and kills on your record\nWingman kills count for the squadron": "Medallas\nMedallas y bajas en tu historial\nLas bajas de tu ala cuentan para el escuadrón",
+  "Progress": "Progreso",
+  "Missions\nCampaign missions in order, with retreat and rescue branches": "Misiones\nMisiones de campaña en orden, con ramas de retirada y rescate"
+ }
+}

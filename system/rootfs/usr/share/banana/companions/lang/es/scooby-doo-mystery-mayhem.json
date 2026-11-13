@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Gang": "Pandilla",
+  "Shaggy and Scooby; courage meter\nShaggy (with Scooby) explores, collects clues and traps ghosts with the Tome of Doom\nCourage drops when scared; Scooby Snacks restore it": "Shaggy y Scooby; medidor de valor\nShaggy (con Scooby) explora, recoge pistas y atrapa fantasmas con el Tome of Doom\nEl valor baja cuando te asusta; los Scooby Snacks lo restauran",
+  "Book": "Libro",
+  "capture ghosts back into the book": "captura fantasmas de vuelta en el libro",
+  "The Tome of Doom sucks monsters back into its pages: aim it and hold until the ghost is captured\nClues found in each area solve the episode's mystery": "El Tome of Doom succiona a los monstruos de vuelta a sus páginas: apúntalo y mantén hasta capturar al fantasma\nLas pistas halladas en cada área resuelven el misterio del episodio",
+  "Ghosts": "Fantasmas",
+  "Use the book to trap ghosts\nEvery episode ends in a boss fight against the episode's monster\nEpisodes also have a \"ride\" chase section before the boss\nWeaken ghosts first, then capture them with the book": "Usa el libro para atrapar fantasmas\nCada episodio termina con un combate contra el monstruo del episodio\nLos episodios también tienen una sección de persecución \"ride\" antes del jefe\nDebilita a los fantasmas y luego captúralos con el libro",
+  "Episodes": "Episodios",
+  "Map": "Mapa",
+  "Episodes with mysteries\n5 episodes (from the ROM's level list):": "Episodios con misterios\n5 episodios (según la lista de niveles del ROM):",
+  "campus, basement, library (3 parts), archives (3 parts)": "campus, sótano, biblioteca (3 partes), archivos (3 partes)",
+  "castle, catacombs, joust, graveyard and crypt, statue room": "castillo, catacumbas, torneo, cementerio y cripta, sala de estatuas",
+  "town street, hotel, saloon, \"conveyor madness\"": "calle del pueblo, hotel, saloon, \"locura de la cinta transportadora\"",
+  "bayou, underground, wildlands, camp": "pantanano, subterráneo, tierras salvajes, campamento",
+  "research center, elevator, lower level, secret lab": "centro de investigación, ascensor, nivel inferior, laboratorio secreto",
+  "Items": "Objetos",
+  "Scooby Snacks, clues\nScooby Snacks heal courage; clues are kept per episode": "Scooby Snacks, pistas\nLos Scooby Snacks curan el valor; las pistas se guardan por episodio",
+  "Clues": "Pistas",
+  "Clues per episode\nClues per episode; finish an episode with all clues for the full solution": "Pistas por episodio\nPistas por episodio; termina un episodio con todas las pistas para la solución completa",
+  "Progress": "Progreso",
+  "Episodes solved\n5 episodes in order; each unlocks the next\nEach episode has a ride section and a boss fight": "Episodios resueltos\n5 episodios en orden; cada uno desbloquea el siguiente\nCada episodio tiene una sección de persecución y un combate con jefe"
+ }
+}

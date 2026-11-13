@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Status": "Estado",
+  "Deck Capacity": "Capacidad de mazo",
+  "Money": "Dinero",
+  "Your LP": "Tus LP",
+  "Life Points 8000; deck capacity is limited by DC (Deck Capacity)\nWin duels to raise DC": "Puntos de Vida 8000; la capacidad de mazo está limitada por la DC (Capacidad de Mazo)\nGana duelos para subir la DC",
+  "Rules": "Reglas",
+  "No tribute in this game: any monster can be summoned if DC allows": "En este juego no hay tributo: cualquier monstruo puede invocarse si la DC lo permite",
+  "Guardian Stars": "Estrellas Guardián",
+  "each monster has 2; the attacker's star beats a weaker one (+500)": "cada monstruo tiene 2; la estrella del atacante vence a una más débil (+500)",
+  "Guardian star cycle": "Ciclo de estrellas guardián",
+  "Sun > Moon > Venus > Mercury > Sun; Mars > Jupiter > Saturn > Uranus > Pluto > Neptune > Mars": "Sol > Luna > Venus > Mercurio > Sol; Marte > Júpiter > Saturno > Urano > Plutón > Neptuno > Marte",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Opponent LP": "LP del rival",
+  "Opponent deck": "Mazo del rival",
+  "Pick the guardian star that beats the opponent's monster\nRare cards come from beating strong duelists by large margins": "Elige la estrella guardián que venza al monstruo del rival\nLas cartas raras se consiguen al derrotar con amplia ventaja a duelistas fuertes",
+  "Story": "Historia",
+  "walk around town to find duelists": "camina por la ciudad para encontrar duelistas",
+  "Follows the Battle City arc to the finals": "Sigue el arco de Battle City hasta las finales",
+  "Cards": "Cartas",
+  "Cards won from duels; deck editor within DC": "Cartas ganadas en duelos; editor de mazos dentro de la DC",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "900 cards; card list counts owned\nLocator cards lead to duelists; duelist level rises with wins": "900 cartas; la lista cuenta las que posees\nLas cartas localizadoras llevan a los duelistas; el nivel de duelista sube con las victorias",
+  "Progress": "Progreso",
+  "Battle City rounds; final duel against Marik\nDeck capacity and money grow from duels": "Rondas de Battle City; duelo final contra Marik\nLa capacidad de mazo y el dinero crecen con los duelos"
+ }
+}

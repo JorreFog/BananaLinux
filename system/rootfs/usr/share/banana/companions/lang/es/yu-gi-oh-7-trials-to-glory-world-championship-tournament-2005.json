@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Status": "Estado",
+  "Duel Points": "Puntos de duelo",
+  "Wins": "Victorias",
+  "Your LP": "Tus LP",
+  "Deck slot": "Ranura de mazo",
+  "Life Points 8000; 40-card deck minimum": "Puntos de vida 8000; mazo mínimo de 40 cartas",
+  "Story mode": "Modo historia",
+  "seven trials (tournaments) to become champion": "siete pruebas (torneos) para ser campeón",
+  "Rules": "Reglas",
+  "Tribute Summon": "Invocación por Tributo",
+  "1 for Level 5-6, 2 for Level 7+": "1 para Nivel 5-6, 2 para Nivel 7+",
+  "Chains resolve last-in first-out": "Las cadenas se resuelven en orden inverso (último en entrar, primero en salir)",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Read each trial's special rules before entering": "Lee las reglas especiales de cada prueba antes de entrar",
+  "Keep a mix": "Mantén una mezcla",
+  "monsters, spell removal, traps": "monstruos, eliminación de hechizos, trampas",
+  "Trials": "Pruebas",
+  "7 trials in story mode; Free Duel and Survival on the side\nEach trial has its own rules and opponents": "7 pruebas en modo historia; Duelo Libre y Supervivencia aparte\nCada prueba tiene sus propias reglas y rivales",
+  "Cards": "Cartas",
+  "Card packs bought with DP from duels; trunk and deck editor": "Paquetes de cartas comprados con DP de los duelos; baúl y editor de mazos",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "1100+ cards; card list counts owned\nCard packs bought with DP; the card list counts the cards you own": "Más de 1100 cartas; la lista de cartas cuenta las que tienes\nLos paquetes de cartas se compran con DP; la lista cuenta las cartas que posees",
+  "Progress": "Progreso",
+  "Trials cleared (7); duelists defeated": "Pruebas superadas (7); duelistas derrotados"
+ }
+}

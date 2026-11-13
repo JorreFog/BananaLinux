@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Health %": "Salud %",
+  "Lives": "Vidas",
+  "Plasma ammo": "Munición de plasma",
+  "Current weapon ammo": "Munición del arma actual",
+  "Moves": "Movimientos",
+  "Fire": "Fuego",
+  "Jump": "Saltar",
+  "Snott swing / sticky jump (hold A to parachute with Snott)": "Barrido de Snott / salto pegajoso (mantén A para planear con Snott)",
+  "Cycle weapons": "Cambiar de arma",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Most 'bosses' are mini-games: bounce Peter's puppies to safety (Puppy Love), guide the balloon in Inflated Head, answer the quiz in Jim's mind.": "La mayoría de los \"jefes\" son minijuegos: rebota a los cachorros de Peter hasta la seguridad (Puppy Love), guía el globo en Inflated Head y responde al cuestionario en la mente de Jim.",
+  "Levels": "Niveles",
+  "Weapons": "Armas",
+  "Plasma blaster": "Bláster de plasma",
+  "Default, unlimited": "Por defecto, ilimitada",
+  "Three-finger gun": "Arma de tres dedos",
+  "Spread shot": "Dispersión",
+  "Homing missiles": "Misiles teledirigidos",
+  "Track enemies": "Rastrear enemigos",
+  "Bubble gun": "Arma de burbujas",
+  "Weak but fun": "Débil pero divertida",
+  "Barn blaster": "Bláster del granero",
+  "Smart bomb that clears the screen": "Bomba inteligente que limpia la pantalla",
+  "Pickups": "Recogibles",
+  "Atoms and ammo crates are the main pickups; extra lives hide off the main path.": "Los átomos y las cajas de munición son los recogibles principales; las vidas extra se esconden fuera del camino principal.",
+  "Progress": "Progreso",
+  "Password-free: progress is per sitting; the level order is fixed.": "Sin contraseñas: el progreso es por sesión; el orden de los niveles es fijo."
+ }
+}

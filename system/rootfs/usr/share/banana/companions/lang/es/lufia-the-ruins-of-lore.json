@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Leader HP": "HP del líder",
+  "Gold": "Oro",
+  "Characters": "Personajes",
+  "Eldin and companions.": "Eldin y sus compañeros.",
+  "Monsters": "Monstruos",
+  "Capsule-like monster allies join the party and evolve.": "Aliados monstruos con forma de cápsula se unen al grupo y evolucionan.",
+  "Classes": "Clases",
+  "Jobs": "Clases",
+  "Characters change jobs; skills learned stay.": "Los personajes cambian de oficio; las habilidades aprendidas se conservan.",
+  "Battle": "Batalla",
+  "Enemy HP": "HP enemigo",
+  "Tips": "Consejos",
+  "Use IP gauge specials; target weak elements.": "Usa los especiales del medidor IP; apunta a los elementos débiles.",
+  "Ruins": "Ruinas",
+  "Area id": "ID de área",
+  "Ancient Cave floor": "Piso de la Cueva Antigua",
+  "Structure": "Estructura",
+  "Towns and ruins dungeons with puzzles.": "Mazmorras de pueblos y ruinas con acertijos.",
+  "Items": "Objetos",
+  "Equipment, potions.": "Equipamiento, pociones.",
+  "Collect": "Coleccionar",
+  "Recruit monsters.": "Recluta monstruos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Explore the ruins.": "Explora las ruinas."
+ }
+}

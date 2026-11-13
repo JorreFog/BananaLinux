@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Play time": "Tiempo jugado",
+  "Max HP": "HP máx.",
+  "Cards": "Cartas",
+  "Every attack, magic and item is a card in the deck; the deck has a Card Point (CP) limit set by level.": "Cada ataque, magia y objeto es una carta del mazo; el mazo tiene un límite de Puntos de Carta (CP) según el nivel.",
+  "Controls": "Controles",
+  "A use card, R/L scroll deck, R+L stock 3 cards for a sleight.": "A usar carta, R/L desplazar el mazo, R+L apartar 3 cartas para un truco.",
+  "Deck": "Mazo",
+  "Card values": "Valores de las cartas",
+  "Cards have numbers 0-9: a higher card breaks a lower one. 0 cards break anything played before them but break easily.": "Las cartas tienen números del 0 al 9: una carta mayor rompe a una menor. Las cartas 0 rompen lo que se jugó antes que ellas, pero se rompen con facilidad.",
+  "Sleights": "Trucos",
+  "3 stocked cards in certain combos make sleights (e.g. Sonic Blade, Strike Raid, Lethal Frame).": "3 cartas apartadas en ciertas combinaciones forman trucos (p. ej. Sonic Blade, Strike Raid, Lethal Frame).",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Hold back 0 cards to break boss sleights. Reload (hold R) when the deck runs out: each reload costs more time. Enemy cards drop and give buffs.": "Aparta cartas 0 para romper los trucos de los jefes. Recarga (mantén R) cuando se acabe el mazo: cada recarga cuesta más tiempo. Las cartas de enemigo sueltan y dan bonificaciones.",
+  "Castle Oblivion": "Castillo del Olvido",
+  "World": "Mundo",
+  "Floors": "Pisos",
+  "Each floor is a Disney world made from a World Card: Traverse Town, Agrabah, Olympus Coliseum, Wonderland, Monstro, Halloween Town, Atlantica, Neverland, Hollow Bastion, 100 Acre Wood, Twilight Town, Destiny Islands.": "Cada piso es un mundo Disney formado por una Carta de Mundo: Traverse Town, Agrabah, Olympus Coliseum, Wonderland, Monstro, Halloween Town, Atlantica, Neverland, Hollow Bastion, 100 Acre Wood, Twilight Town, Destiny Islands.",
+  "Map cards": "Cartas de mapa",
+  "Room cards build each floor: red (enemies), green (Sora buffs), blue (special rooms like save points, Moogle shop).": "Las cartas de sala construyen cada piso: rojas (enemigos), verdes (bonos para Sora), azules (salas especiales como puntos de guardado y la tienda de Moogle).",
+  "Collect": "Coleccionar",
+  "Card collection includes attack, magic, item, summon, enemy cards; Moogle shop sells card packs for Moogle points.": "La colección de cartas incluye cartas de ataque, magia, objeto, invocación y enemigo; la tienda de Moogle vende sobres de cartas por puntos Moogle.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Climb Castle Oblivion floor by floor, beat Organization XIII members (Larxene, Vexen, Marluxia...). Reverse/Rebirth: Riku's story after clearing Sora's.": "Sube el Castillo del Olvido piso a piso y derrota a los miembros de la Organización XIII (Larxene, Vexen, Marluxia...). Reverso/renacimiento: la historia de Riku tras completar la de Sora."
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Army": "Ejército",
+  "Side-view war action": "Acción de guerra en vista lateral",
+  "you fly/drive a vehicle (a helicopter at the start) over the battlefield and support your troops": "vuelas/conduces un vehículo (un helicóptero al principio) sobre el campo de batalla y apoyas a tus tropas",
+  "The top bar shows the front line with both sides' flags and bunkers; your lives, money ($) and stars are on the HUD\nExtra lives (\"Extra credit\") are awarded during play": "La barra superior muestra el frente con las banderas y los bunkers de ambos lados; tus vidas, dinero ($) y estrellas están en el HUD\nLas vidas extra (\"Extra credit\") se ganan durante la partida",
+  "Vehicles": "Vehículos",
+  "Detail": "Detalle",
+  "Change vehicle is an option in the game; each vehicle has its own weapons\nWeapons need reloading; reload bonuses appear on the battlefield\nWatch your fuel/health and return to base when needed": "Cambiar de vehículo es una opción del juego; cada vehículo tiene sus propias armas\nLas armas necesitan recarga; los bonos de recarga aparecen en el campo de batalla\nVigila tu combustible/salud y vuelve a la base cuando haga falta",
+  "Combat": "Combate",
+  "Bunkers can be captured, cleared or lost: capture them to push the front line toward the enemy\nHitting civilians gives a penalty: aim carefully near villages\nTanks, aircraft and soldiers attack from the enemy side": "Los bunkers se pueden capturar, limpiar o perder: captúralos para avanzar el frente hacia el enemigo\nGolpear a los civiles da penalización: apunta con cuidado cerca de las aldeas\nTanques, aeronaves y soldados atacan desde el lado enemigo",
+  "Front line": "Frente",
+  "Map": "Mapa",
+  "The bar at the top of the screen is the map: flags and bunker icons show who holds which part of the front\nPush the front all the way to the enemy side to win the mission": "La barra de la parte superior de la pantalla es el mapa: las banderas y los iconos de búnker muestran quién controla cada parte del frente\nAvanza el frente hasta el lado enemigo para ganar la misión",
+  "Money": "Dinero",
+  "Money ($) is earned in missions; stars rate how well you are doing\nSpecial weapons \"Big Wave\" and \"Broken Arrow\" are won during play and activated from the menu": "El dinero ($) se gana en las misiones; las estrellas valoran tu desempeño\nLas armas especiales \"Big Wave\" y \"Broken Arrow\" se ganan jugando y se activan desde el menú",
+  "Specials": "Especiales",
+  "Collect": "Coleccionar",
+  "Special weapons won": "Armas especiales ganadas",
+  "Bonus messages tell you when you earn credits, extra lives or reloads": "Los mensajes de bonus te avisan cuando ganas créditos, vidas extra o recargas",
+  "Progress": "Progreso",
+  "Missions in order; capturing bunkers and keeping your own decides the outcome\nLosing bunkers moves the front back toward your base": "Misiones en orden; capturar bunkers y conservar los tuyos decide el resultado\nPerder bunkers hace retroceder el frente hacia tu base"
+ }
+}

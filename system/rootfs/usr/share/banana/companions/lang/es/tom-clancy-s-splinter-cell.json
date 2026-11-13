@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health, alarm count; ammo\nSide-scrolling stealth: Sam Fisher works from the shadows; alarms make a mission harder or fail it\nHealth bar; a mission fails if Sam dies or a \"do not be seen\" objective is broken": "Salud, contador de alarmas; munición\nSigilo lateral: Sam Fisher trabaja desde las sombras; las alarmas dificultan la misión o la hacen fracasar\nBarra de salud; la misión falla si Sam muere o se incumple un objetivo de \"no ser visto\"",
+  "Moves": "Movimientos",
+  "Stealth moves": "Movimientos de sigilo",
+  "sneak, hang, split jump, shimmy": "agacharse, colgarse, salto dividido, desplazamiento lateral",
+  "sneak, crouch, hang from pipes, shimmy along ledges, split jump between walls, drop on enemies": "agacharse, agachado, colgarse de tuberías, desplazamiento lateral por repisas, salto dividido entre paredes, caer sobre enemigos",
+  "Knock guards out from behind instead of shooting when you can: bodies must be hidden": "Derriba a los guardias por la espalda en vez de disparar cuando puedas: hay que esconder los cuerpos",
+  "Tips": "Consejos",
+  "Avoid alarms; knock out guards from behind\nShoot out lights to create shadows; guards investigate noise and missing lights\nMission objectives can be checked in the pause menu: some appear mid-mission": "Evita las alarmas; derriba a los guardias por la espalda\nApaga las luces para crear sombras; los guardias investigan el ruido y las luces apagadas\nLos objetivos de misión se revisan en el menú de pausa: algunos aparecen a mitad de misión",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Missions from the console story\nMissions from the ROM's text: Police Station, Defense Ministry, Caspian Oil Refinery (oil rig), Georgian capital, an abattoir, a Georgian microwave relay, and more": "Misiones de la historia de consola\nMisiones del texto de la ROM: Comisaría, Ministerio de Defensa, Refinería de petróleo del Caspio (plataforma), capital georgiana, un matadero, un relé de microondas en Georgia y más",
+  "Gear": "Equipo",
+  "SC-20K, pistol, gadgets\nSC-20K rifle and pistol with limited ammo; gadgets such as sticky cameras and lock picks come with the mission": "SC-20K, pistola, gadgets\nFusil SC-20K y pistola con munición limitada; gadgets como cámaras adhesivas y ganzúas vienen con la misión",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nMission complete screens grade your performance": "Objetos ocultos\nLas pantallas de misión completada califican tu desempeño",
+  "Progress": "Progreso",
+  "Missions\nMissions open in order (some require finishing two earlier ones first, e.g. \"complete mission 2 and 3\")": "Misiones\nLas misiones se abren en orden (algunas requieren terminar dos anteriores, p. ej. \"completa las misiones 2 y 3\")"
+ }
+}
