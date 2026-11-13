@@ -76,7 +76,7 @@ TO=$OUT/thor-oled-data; rm -rf "$TO"; cp -r "$FX/data" "$TO"; echo "setup 2" > "
 BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
 "$HERE/banana-ui" --headless "$OUT/thor-oled-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
     --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel" \
+    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel; gdown 340 280; gshot panel-quit; section Display & sound; press down; press down; press down; press down; settle; shot theme" \
     2> "$OUT/thor-oled.log" || { echo "FAIL thor-oled: banana-ui exited $?"; fail=1; }
 grep -qx 'theme = user:thor-oled' "$TO/settings.conf" || { echo "FAIL thor-oled: the Thor's settings.conf has $(grep '^theme' "$TO/settings.conf")"; fail=1; }
 grep -q 'theme' "$OUT/thor-oled.log" && { echo "FAIL thor-oled: $(grep -m2 theme "$OUT/thor-oled.log")"; fail=1; }
@@ -100,6 +100,15 @@ if command -v identify >/dev/null; then
     [ "$(convert "$OUT/thor-oled-boot-top.png" -crop 400x60+760+580 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor-oled: no BananaOS in the boot"; fail=1; }
     convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
         awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
+    # the game panel is the design's grid (six tiles of 320 px in two rows, black between them), Quit under a finger the
+    # danger's red; the Theme row's page has the small preview (its plate in the accent) right of the help
+    rgb() { convert "$OUT/thor-oled-$1.png" -format "%[fx:int(255*p{$2,$3}.r)] %[fx:int(255*p{$2,$3}.g)] %[fx:int(255*p{$2,$3}.b)]" info: 2>/dev/null; }
+    for at in "240 300" "620 300" "1000 300" "240 640" "620 640" "1000 640"; do
+        rgb panel-bot $at | awk '{ exit !($1 + $2 + $3 > 30) }' || { echo "FAIL thor-oled: no game panel tile at $at"; fail=1; }
+    done
+    rgb panel-bot 620 460 | awk '{ exit !($1 + $2 + $3 == 0) }' || { echo "FAIL thor-oled: the game panel's rows of tiles aren't apart"; fail=1; }
+    rgb panel-quit-bot 1000 560 | awk '{ exit !($1 > 150 && $2 < 110 && $3 < 110) }' || { echo "FAIL thor-oled: Quit pressed isn't the danger's red ($(rgb panel-quit-bot 1000 560))"; fail=1; }
+    rgb theme-top 1410 322 | awk '{ exit !($1 > 150 && $2 > 100 && $3 < 130) }' || { echo "FAIL thor-oled: no preview with its plate on the Theme row's page ($(rgb theme-top 1410 322))"; fail=1; }
 fi
 # Thor OLED's three variants (thor-white, thor-purple, thor-rainbow: "extends": "thor-oled"): each loads without a
 # theme error under its own name, in its own accent ("accent = theme"), with its plate under the selected system (the

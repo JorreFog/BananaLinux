@@ -40,7 +40,7 @@
     "hair": "#ecf1ee14", "hair2": "#ecf1ee26",
     "mat0": "#1c1f1e", "mat1": "#131514", "mat2": "#0f1110", "matLit": "#2d302f",
     // cards: a rim of the shell's light along the top, 3 px
-    "cardLit": "#454948", "cardLitPx": 3,
+    "cardLit": "#4b4d4c", "cardLitPx": 3,
     // the plate is the shell, its text the buttons' grey print
     "pTop": "#ffffff", "pMid": "#f2f3ef", "pBot": "#e4e5e0", "pAt": 40, "pLit": "#ffffff", "pLow": "#d0d2cd", "pInk": "#575c59",
     // the state is the glaze
