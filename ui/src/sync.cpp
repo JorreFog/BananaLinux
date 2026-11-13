@@ -920,7 +920,9 @@ namespace
 			// often handed the address asked for as its query, which is cut off before the path is looked at)
 			detail = r.hdr.count("location") ? r.hdr["location"] : "";
 			const std::string to = detail.substr(0, detail.find_first_of("?#")), hb = "/api/heartbeat";
-			return to.size() >= hb.size() && to.compare(to.size() - hb.size(), hb.size(), hb) == 0 ? "redirect" : "access";
+			if (to.size() < hb.size() || to.compare(to.size() - hb.size(), hb.size(), hb) != 0) return "access";
+			detail = to;	// (the address the form offers to take: without a query, as it is judged)
+			return "redirect";
 		}
 		if (r.code == 401 || r.code == 403) { detail = std::to_string(r.code); return "denied"; }
 		JPtr j = r.code == 200 ? r.json() : nullptr;

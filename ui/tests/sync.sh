@@ -843,6 +843,7 @@ class H(http.server.BaseHTTPRequestHandler):
         # host, and as Cloudflare Access sends it)
         login = {"/login-away": "https://auth.example.com/?rd=http://127.0.0.1/api/heartbeat", "/login-here": "/oauth2/sign_in?rd=/api/heartbeat",
                  "/login-cf": "https://team.cloudflareaccess.com/cdn-cgi/access/login/romm.example.com"}.get(self.path.replace("/api/heartbeat", ""))
+        if self.path.startswith("/query"): login = to + "/api/heartbeat?next=%2F"
         self.send_header("Location", login or (other if self.path.startswith("/other") else to) + self.path.replace("/other", "", 1))
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -855,6 +856,8 @@ EOF
     # RomM's own form asks the one address and follows nothing: a redirect that still ends at the heartbeat is the same
     # API elsewhere (the form offers it), one to any other page is something in RomM's place, a login whoever's it is
     r=$(bs ta probe --romm "http://127.0.0.1:$RP"); [ "$r" = "fail redirect https://127.0.0.1:$TP/api/heartbeat" ] || bad "a redirect to the same API not said as one: $r"
+    # (a query after the heartbeat's path: the address named is the one the form can take, without it)
+    r=$(bs ta probe --romm "http://127.0.0.1:$RP/query"); [ "$r" = "fail redirect https://127.0.0.1:$TP/api/heartbeat" ] || bad "a redirect to the same API with a query not said as its address: $r"
     for w in away here cf; do
         r=$(bs ta probe --romm "http://127.0.0.1:$RP/login-$w"); [ "$(echo "$r" | cut -d' ' -f1,2)" = "fail access" ] || bad "a login page in RomM's place ($w) not said as one: $r"
     done
