@@ -105,6 +105,53 @@
    }
   },
   {
+   "id": "bananaplayer",
+   "name": "Banana Player",
+   "tile": "Banana Player",
+   "kind": "app",
+   "developer": "tonywei92",
+   "genre": "Media",
+   "players": "1",
+   "releasedate": "20261107T000000",
+   "accent": "#8a6a10",
+   "summary": "Movies, music, photos and manga on both screens: the picture on top, touch controls below.",
+   "description": "A media player made for the two screens: the picture plays on the top screen, and the bottom one has the controls, by button or touch. Movies (MP4, MKV and more) with subtitles, audio tracks and chapters, each one picking up where you stopped. A folder of music plays as an album with its cover, one of twenty visualizers and a 10-band equalizer. Photos zoom and pan with a finger, and manga reads across both screens (an optional extension). It also plays straight from a computer or NAS over Wi-Fi, and its web dashboard uploads files, makes playlists and controls playback from a phone or computer. Put videos, music and photos anywhere on the card; its settings and places stay in the card's home/.config/banana-player, also when the app is removed. Most 1080p videos play smoothly; very high bitrates and HEVC (x265) may stutter. Made by tonywei92 (free software, MIT); the Store follows its releases.",
+   "icon": "apps/bananaplayer/icon.png",
+   "screenshots": [
+    "apps/bananaplayer/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "release": {
+    "github": "tonywei92/banana-player",
+    "tag_prefix": "v",
+    "asset": "BananaPlayer-{version}-aarch64.zip"
+   },
+   "package": {
+    "root": "BananaPlayer",
+    "dest": "/storage/.config/rocknixds/bananaplayer",
+    "check": "bin/banana-player",
+    "executable": [
+     "launch.sh",
+     "bin/banana-player"
+    ],
+    "version_file": "VERSION",
+    "version_match": "([0-9][0-9.]*)"
+   },
+   "menu": {
+    "system": "bananaplayer",
+    "folder": "/storage/.config/rocknixds/apps/bananaplayer",
+    "entry": "BananaPlayer.sh",
+    "launch": "launch.sh",
+    "ports": false,
+    "media": {
+     "image": "share/banana-player/icon.png"
+    }
+   }
+  },
+  {
    "id": "dodakvarter",
    "name": "Döda Kvarter",
    "tile": "Döda Kvarter",

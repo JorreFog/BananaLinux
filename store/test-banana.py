@@ -165,7 +165,50 @@ def main(cli):
         check(os.path.isfile(gb + "/states/Game.auto.state") and os.path.isfile(gb + "/gba-ds.cfg"),
               "its states and settings stay")
         check(row("gbads")[7:8] == ["install"], "list: GBA DS to install again")
+        # Banana Player (tonywei92/banana-player): its release zip as it is (Banana Player.sh, BananaPlayer/, media/box/
+        # at the top, for the Ports shelf), the app's folder alone installed, its version from VERSION, the tile's
+        # entry starting its launch.sh, its picture from share/banana-player; on both handhelds
+        def bananaplayer_zip(v):
+            z = os.path.join(t, "dl", "v" + v, "BananaPlayer-%s-aarch64.zip" % v)
+            os.makedirs(os.path.dirname(z))
+            with zipfile.ZipFile(z, "w") as zf:
+                zf.writestr("Banana Player.sh", "#!/bin/bash\nexec \"$(dirname \"$0\")/BananaPlayer/launch.sh\" \"$@\"\n")
+                zf.writestr("media/box/Banana Player.png", "png\n")
+                zf.writestr("BananaPlayer/launch.sh", "#!/bin/bash\necho play\n")
+                zf.writestr("BananaPlayer/bin/banana-player", "elf %s\n" % v)
+                zf.writestr("BananaPlayer/lib/libmpv.so.2", "lib\n")
+                zf.writestr("BananaPlayer/VERSION", v + "\n")
+                zf.write(os.path.join(HERE, "apps/bananaplayer/icon.png"), "BananaPlayer/share/banana-player/icon.png")
+            return {"name": os.path.basename(z), "size": os.path.getsize(z),
+                    "digest": "sha256:" + hashlib.sha256(open(z, "rb").read()).hexdigest()}
+
+        api = os.path.join(t, "api", "tonywei92", "banana-player.json")
+        os.makedirs(os.path.dirname(api))
+        with open(api, "w") as f:
+            json.dump([{"tag_name": "v0.7.15", "body": "Banana Player 0.7.15", "assets": [bananaplayer_zip("0.7.15")]}], f)
+        o = run("refresh")
+        check(o.strip().endswith("OK"), "refresh with Banana Player's release: " + o.strip())
+        check(row("bananaplayer")[5:8] == ["", "0.7.15", "install"], "list (RG DS): Banana Player 0.7.15 to install: %s"
+              % row("bananaplayer")[5:8])
+        o = run("install", "bananaplayer")
+        check(o.strip().splitlines()[-1] == "DONE 0.7.15", "install Banana Player: " + o.strip().splitlines()[-1])
+        bp = root + "/data/store/apps/bananaplayer"
+        check(os.access(bp + "/bin/banana-player", os.X_OK) and os.access(bp + "/launch.sh", os.X_OK),
+              "Banana Player's folder in /data/store/apps/bananaplayer, its program and launch.sh runnable")
+        check(not os.path.exists(bp + "/BananaPlayer") and not os.path.exists(bp + "/Banana Player.sh"),
+              "only the app's own folder (BananaPlayer/), not the Ports entry beside it")
+        entry = root + "/data/store/tiles/BananaPlayer.sh"
+        text = open(entry).read() if os.path.exists(entry) else ""
+        check("exec '%s/launch.sh'" % bp in text, "the Apps shelf's entry starts its launch.sh")
+        gl = open(root + "/data/store/tiles/gamelist.xml").read()
+        check("<path>./BananaPlayer.sh</path>" in gl and "<image>./images/icon.png</image>" in gl,
+              "its line and picture in the shelf's list")
+        check(row("bananaplayer")[5:8] == ["0.7.15", "0.7.15", "installed"], "list: 0.7.15 installed (its VERSION)")
         env["RNDS_STORE_DEVICE"] = "rgds-plus"
+        check(row("bananaplayer")[7:8] == ["installed"], "the RG DS Plus: Banana Player installed too")
+        o = run("remove", "bananaplayer")
+        check(o.strip().endswith("DONE") and not os.path.exists(entry) and not os.path.exists(bp + "/bin/banana-player"),
+              "remove Banana Player: its tile and program gone")
         # the apps that come with the system
         hidden = root + "/data/store/hidden-systems"
 
