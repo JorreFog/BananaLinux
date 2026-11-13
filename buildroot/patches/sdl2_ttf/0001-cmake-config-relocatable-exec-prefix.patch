@@ -1,0 +1,21 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] cmake config: exec_prefix relative to the found prefix
+
+sdl2_ttf-config.cmake works out prefix from its own location, so it can
+be used from a sysroot, but took exec_prefix from configure. Configured
+with --exec-prefix=/usr (as Buildroot does), libdir became the build
+machine's /usr/lib, and a cross build that found SDL2_ttf through this
+file linked /usr/lib/libSDL2_ttf.so of the build machine ("file in wrong
+format"). The CMake build of SDL2_ttf already writes ${prefix} here.
+
+--- a/sdl2_ttf-config.cmake.in
++++ b/sdl2_ttf-config.cmake.in
+@@ -17,7 +17,7 @@
+ 
+ get_filename_component(CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR} REALPATH)
+ get_filename_component(prefix "${CMAKE_CURRENT_LIST_DIR}/@cmake_prefix_relpath@" ABSOLUTE)
+-set(exec_prefix "@exec_prefix@")
++set(exec_prefix "${prefix}")
+ set(bindir "@bindir@")
+ set(includedir "@includedir@")
+ set(libdir "@libdir@")
