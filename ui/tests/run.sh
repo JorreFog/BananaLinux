@@ -76,7 +76,7 @@ TO=$OUT/thor-oled-data; rm -rf "$TO"; cp -r "$FX/data" "$TO"; echo "setup 2" > "
 BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
 "$HERE/banana-ui" --headless "$OUT/thor-oled-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
     --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel; gdown 340 280; gshot panel-quit; section Display & sound; press down; press down; press down; press down; settle; shot theme" \
+    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel; gdown 340 280; gshot panel-quit; section Display & sound; press down; press down; press down; press down; settle; shot split" \
     2> "$OUT/thor-oled.log" || { echo "FAIL thor-oled: banana-ui exited $?"; fail=1; }
 grep -qx 'theme = user:thor-oled' "$TO/settings.conf" || { echo "FAIL thor-oled: the Thor's settings.conf has $(grep '^theme' "$TO/settings.conf")"; fail=1; }
 grep -q 'theme' "$OUT/thor-oled.log" && { echo "FAIL thor-oled: $(grep -m2 theme "$OUT/thor-oled.log")"; fail=1; }
@@ -108,7 +108,7 @@ if command -v identify >/dev/null; then
     done
     rgb panel-bot 620 460 | awk '{ exit !($1 + $2 + $3 == 0) }' || { echo "FAIL thor-oled: the game panel's rows of tiles aren't apart"; fail=1; }
     rgb panel-quit-bot 1000 560 | awk '{ exit !($1 > 150 && $2 < 110 && $3 < 110) }' || { echo "FAIL thor-oled: Quit pressed isn't the danger's red ($(rgb panel-quit-bot 1000 560))"; fail=1; }
-    rgb theme-top 1410 322 | awk '{ exit !($1 > 150 && $2 > 100 && $3 < 130) }' || { echo "FAIL thor-oled: no preview with its plate on the Theme row's page ($(rgb theme-top 1410 322))"; fail=1; }
+    rgb split-top 1410 322 | awk '{ exit !($1 > 150 && $2 > 100 && $3 < 130) }' || { echo "FAIL thor-oled: no preview with its plate on the Theme row's page ($(rgb split-top 1410 322))"; fail=1; }
 fi
 # Thor OLED's three variants (thor-white, thor-purple, thor-rainbow: "extends": "thor-oled"): each loads without a
 # theme error under its own name, in its own accent ("accent = theme"), with its plate under the selected system (the
