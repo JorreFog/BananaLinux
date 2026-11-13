@@ -1,0 +1,62 @@
+#!/bin/sh
+# What the handheld is doing right now, for the quick menu's tiles (the Home button held in a game): a line a value,
+# "name=value", a value the kernel doesn't give left out. Cheap enough to ask once a second: files read with the
+# shell's own read, one awk for the sums.
+#   cpu=<percent busy since the last call>   cpu_mhz=<the fastest core's clock>   cpu_c=<the hottest CPU zone>
+#   gpu=<percent busy, where the driver says>   gpu_mhz=<its clock>   gpu_c=<the hottest GPU zone>
+#   mem_used_mb=  mem_total_mb=  mem_pct=
+#   power_mw=<into the battery, negative out of it>   power_state=<Charging | Discharging | Full ...>   battery=<percent>
+#   fan_pct=<the fan's drive, 0-100>
+# (host tests: BANANA_SYS for /sys, BANANA_PROC for /proc, BANANA_RUN)
+SYS=${BANANA_SYS:-/sys}
+PROC=${BANANA_PROC:-/proc}
+RUN=${BANANA_RUN:-/run/banana}
+rd() { [ -r "$1" ] && IFS= read -r v < "$1" 2>/dev/null && printf '%s' "$v"; }
+
+# the CPU: busy time since the last call (the first call has nothing to compare with and says nothing)
+if [ -r "$PROC/stat" ] && IFS=' ' read -r _ u n s i w q sq st _ < "$PROC/stat"; then
+    tot=$((u + n + s + i + w + q + sq + st)); idle=$((i + w))
+    if [ -r "$RUN/sysstat.prev" ] && IFS=' ' read -r pt pi < "$RUN/sysstat.prev" && [ "$tot" -gt "${pt:-0}" ] 2>/dev/null; then
+        echo "cpu=$(( (100 * ((tot - pt) - (idle - pi)) + (tot - pt) / 2) / (tot - pt) ))"
+    fi
+    mkdir -p "$RUN" 2>/dev/null; echo "$tot $idle" > "$RUN/sysstat.prev" 2>/dev/null
+fi
+m=0; for f in "$SYS"/devices/system/cpu/cpufreq/policy*/scaling_cur_freq; do v=$(rd "$f"); [ "${v:-0}" -gt "$m" ] 2>/dev/null && m=$v; done
+[ "$m" -gt 0 ] && echo "cpu_mhz=$((m / 1000))"
+# the hottest zone of each kind (the zones' names: cpu..., gpu... on Qualcomm's chips)
+ct=0; gt=0
+for z in "$SYS"/class/thermal/thermal_zone*; do
+    t=$(rd "$z/temp"); [ -n "$t" ] || continue
+    case $(rd "$z/type") in
+    cpu*|*-cpu*|CPU*) [ "$t" -gt "$ct" ] 2>/dev/null && ct=$t ;;
+    gpu*|*-gpu*|GPU*) [ "$t" -gt "$gt" ] 2>/dev/null && gt=$t ;;
+    esac
+done
+[ "$ct" -gt 0 ] && echo "cpu_c=$((ct / 1000))"
+[ "$gt" -gt 0 ] && echo "gpu_c=$((gt / 1000))"
+# the GPU: its devfreq node's clock; how busy it is only where a driver gives a file for that
+for d in "$SYS"/class/devfreq/*gpu* "$SYS"/class/devfreq/*.gpu "$SYS"/class/drm/card*/device/devfreq/*; do
+    v=$(rd "$d/cur_freq"); [ -n "$v" ] || continue
+    echo "gpu_mhz=$((v / 1000000))"; break
+done
+for f in "$SYS"/class/drm/card*/device/gpu_busy_percent "$SYS"/class/kgsl/kgsl-3d0/gpu_busy_percentage; do
+    v=$(rd "$f"); [ -n "$v" ] && { echo "gpu=${v%% *}"; break; }
+done
+# memory in use: all of it less what could be had at once
+awk '/^MemTotal:/ { t = $2 } /^MemAvailable:/ { a = $2 } END { if (t > 0) printf "mem_used_mb=%d\nmem_total_mb=%d\nmem_pct=%d\n", (t - a) / 1024, t / 1024, (t - a) * 100 / t }' "$PROC/meminfo" 2>/dev/null
+# the battery: what goes into it (the kernel's current is positive while charging on these drivers; a driver that
+# gives its power itself is taken at its word)
+for b in "$SYS"/class/power_supply/*; do
+    [ "$(rd "$b/type")" = Battery ] || continue
+    st=$(rd "$b/status"); [ -n "$st" ] && echo "power_state=$st"
+    c=$(rd "$b/capacity"); [ -n "$c" ] && echo "battery=$c"
+    p=$(rd "$b/power_now"); cu=$(rd "$b/current_now"); vo=$(rd "$b/voltage_now")
+    if [ -n "$p" ]; then mw=$((p / 1000))
+    elif [ -n "$cu" ] && [ -n "$vo" ]; then mw=$(( (cu / 1000) * (vo / 1000) / 1000 ))
+    else break; fi
+    # (out of the battery is negative, whichever sign the driver uses)
+    case $st in Discharging) [ "$mw" -gt 0 ] && mw=$((0 - mw)) ;; Charging|Full) [ "$mw" -lt 0 ] && mw=$((0 - mw)) ;; esac
+    echo "power_mw=$mw"; break
+done
+for f in "$SYS"/class/hwmon/hwmon*/pwm1; do v=$(rd "$f"); [ -n "$v" ] && { echo "fan_pct=$((v * 100 / 255))"; break; }; done
+exit 0
