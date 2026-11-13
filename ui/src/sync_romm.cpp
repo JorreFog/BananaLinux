@@ -556,9 +556,12 @@ namespace bsync
 			}
 			else ndsSavesFirst();
 			auto local = localSaves(statesToo);
+			const size_t errs0 = errors.size();
 			bool ok = sendOk ? slots(local, up, down, conflicts, errors, note) : sync("save", local, c.saves, up, down, conflicts, errors, note);
-			// (before 5.4 every save was just decided, sent or held: none waits for its own turn any longer)
-			if (!sendOk && ok && !dryRun && !c.queue.empty()) { c.queue.clear(); saveConf(c); }
+			// (before 5.4 every save was just decided, sent or held: none waits for its own turn any longer. A run broken
+			// off for a game starting, or with a save it couldn't send or read, decided not all of them: they wait still,
+			// so the Wi-Fi's return runs again and Manage saves goes on naming them)
+			if (!sendOk && ok && !dryRun && !c.queue.empty() && errors.size() == errs0) { c.queue.clear(); saveConf(c); }
 			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors, note);
 			return ok;
 		}

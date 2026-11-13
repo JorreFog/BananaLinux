@@ -628,8 +628,8 @@ bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
 bs rp forget; [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "forget left a certificate trusted for a server never paired with"
 [ ! -e "$OUT/rp/banana/homesync-server.pem" ] || bad "forget left the trusted certificate"
 [ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a server trusted before a Forget still trusted after it"
-# a RomM before 5.4 (whose slots and device records the other clients sync by): saves only come down, and the note
-# says to update it; a development build counts as new (its saves by slot)
+# a RomM before 5.4 (no slots, nor the device records the other clients sync by): every save by content, sent only
+# over the version last agreed, and the note says to update it; a development build counts as new (its saves by slot)
 LV=$OUT/romm-old-lib; mkdir -p "$LV/gba"; printf 'gba rom down' > "$LV/gba/Down (USA).gba"; printf 'gba rom up' > "$LV/gba/Up (USA).gba"
 for v in 5.3.1 development; do
     p=$(port); cv=rv-$v
@@ -744,6 +744,11 @@ for v in 5.3.1 development; do
         bs "$cv" sync --rom "gba/Up (USA).gba" > "$OUT/romm-$v-q.log" 2>&1
         sed -i "s|\"server\": \"http://127.0.0.1:1\"|\"server\": \"http://127.0.0.1:$p\"|" "$OUT/$cv/banana/romsync.json"
         python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("queue") else 1)' "$OUT/$cv/banana/romsync.json" || bad "RomM 5.3.1: a save not left waiting with the server out of reach: $(cat "$OUT/romm-$v-q.log")"
+        # (the save's upload failing: it waits still, for the next return of Wi-Fi to send)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null
+        bs "$cv" sync --auto wifi > "$OUT/romm-$v-q.log" 2>&1
+        python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("queue") else 1)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a waiting save whose upload failed no longer waits: $(cat "$OUT/romm-$v-q.log")"
         bs "$cv" sync --auto wifi > "$OUT/romm-$v-q.log" 2>&1
         srvmd5 102 | grep -q "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" &&
             python3 -c 'import json, sys; sys.exit(1 if json.load(open(sys.argv[1])).get("queue") else 0)' "$OUT/$cv/banana/romsync.json" ||
