@@ -1658,9 +1658,71 @@ grep -q "save slot: \"bad:name\" isn't a slot name" "$OUT/ss-e.log" && [ "$(head
     bad "custom slot: a bad name not said, or not autosave: $(cat "$OUT/ss-e.log")"
 [ "$(curl -s "$U5/test/violations")" = "[]" ] || bad "custom slot: a card sent what it never may: $(curl -s "$U5/test/violations")"
 
+# ---------------------------------------------------------------- a card updated from BananaOS 0.5.3.4, whose sync sent
+# its saves outside every slot (one row per file name and emulator) and kept the version agreed by the save's path:
+# a game whose slot is empty is decided once with that row as the server's and that record as the version agreed, so
+# nothing is left behind and nothing guessed. The same on both: to the slot. Only the card moved on: the card's to the
+# slot. Only the row moved on (another handheld's play): taken, then to the slot. No save here: taken. No record, other
+# bytes: a conflict, both kept, the one chosen going to the slot. The rows themselves are never written nor removed.
+# A stand-in of its own, the card's token strict
+L6=$OUT/lib6
+mkdir -p "$L6/gba"; for g in Same Ahead Moved Behind Fresh Apart Other; do printf 'gba rom %s' "$g" > "$L6/gba/$g (USA).gba"; done
+P6=$(port)
+python3 "$HERE/tests/fake-romm.py" "$P6" "$L6" 2> "$OUT/fake-romm6.log" & PIDS="$PIDS $!"
+waitport "$P6" /api/heartbeat || bad "the earlier release's fake RomM didn't start"
+U6=http://127.0.0.1:$P6
+T6=$(curl -s -XPOST "$U6/test/token" -d '{}' | jget '["token"]')
+curl -s -XPOST "$U6/test/strict" -d "{\"tokens\": [\"$T6\"]}" >/dev/null
+s6() { curl -s -H "Authorization: Bearer $T6" "$U6$1"; }
+rid6() { s6 "/api/roms?platform_ids=$(s6 /api/platforms | jget '[0]["id"]')&limit=500" | python3 -c "import json,sys; print(next(r['id'] for r in json.load(sys.stdin)['items'] if r['fs_name'] == sys.argv[1]))" "$1 (USA).gba"; }
+# rows6 <game> <slot or "">: the MD5s of that game's rows there (outside every slot for ""), sorted
+rows6() { s6 "/api/saves?rom_id=$(rid6 "$1")" | python3 -c '
+import json, sys
+print(" ".join(sorted(s["content_hash"] for s in json.load(sys.stdin) if (s["slot"] or "") == sys.argv[1])) or "none")' "$2"; }
+# old6 <game> <file>: that file as the row that release sent for the game; prints "<id> <updated_at>"
+old6() { curl -s -XPOST "$U6/test/save" -d "{\"rom_id\": $(rid6 "$1"), \"file_name\": \"$1 (USA).srm\", \"emulator\": \"retroarch\", \"data\": \"$(od -An -v -tx1 "$2" | tr -d ' \n')\"}" | python3 -c 'import json,sys; s = json.load(sys.stdin); print(s["id"], s["updated_at"])'; }
+C6=$OUT/s-u; realcard "$C6"; cp "$L6/gba/"* "$C6/roms/gba/"; S6=$C6/saves/gba
+for g in Same Ahead Moved Behind Fresh Apart Other; do head -c 8192 /dev/urandom > "$OUT/old-$g.srm"; head -c 8192 /dev/urandom > "$OUT/new-$g.srm"; done
+REC6=""
+# rec6 <game> <agreed file> <path of the record>: that release's record of the version agreed, as romsync.json kept it
+rec6() { REC6="$REC6${REC6:+, }\"$3\": {\"version\": ${4%% *}, \"md5\": \"$(m "$2")\", \"server\": \"${4#* }\"}"; }
+r=$(old6 Same "$OUT/old-Same.srm"); cp "$OUT/old-Same.srm" "$S6/Same (USA).srm"; rec6 Same "$OUT/old-Same.srm" "saves/gba/Same (USA).srm" "$r"
+r=$(old6 Ahead "$OUT/old-Ahead.srm"); cp "$OUT/new-Ahead.srm" "$S6/Ahead (USA).srm"; rec6 Ahead "$OUT/old-Ahead.srm" "saves/gba/Ahead (USA).srm" "$r"
+# (its record under the core's folder, where the save was before the flat saves/: found by the file's name)
+r=$(old6 Moved "$OUT/old-Moved.srm"); cp "$OUT/new-Moved.srm" "$S6/Moved (USA).srm"; rec6 Moved "$OUT/old-Moved.srm" "saves/mGBA/Moved (USA).srm" "$r"
+r=$(old6 Behind "$OUT/new-Behind.srm"); cp "$OUT/old-Behind.srm" "$S6/Behind (USA).srm"; rec6 Behind "$OUT/old-Behind.srm" "saves/gba/Behind (USA).srm" "$r"
+old6 Fresh "$OUT/old-Fresh.srm" >/dev/null
+old6 Apart "$OUT/old-Apart.srm" >/dev/null; cp "$OUT/new-Apart.srm" "$S6/Apart (USA).srm"
+old6 Other "$OUT/old-Other.srm" >/dev/null; cp "$OUT/new-Other.srm" "$S6/Other (USA).srm"
+printf '{"backend": "romm", "server": "%s", "token": "%s", "saves": {%s}}\n' "$U6" "$T6" "$REC6" > "$C6/banana/romsync.json"
+before6=$(for g in Same Ahead Moved Behind Fresh Apart Other; do rows6 $g ""; done)
+s6u() { "$BIN" --root "$C6" --run "$C6/run" --status "$C6/run/sync.status" "$@" > "$OUT/ss-u.log" 2>&1; }
+s6u sync --saves-only
+[ "$(rows6 Same autosave)" = "$(m "$OUT/old-Same.srm")" ] || bad "from 0.5.3: the same save on both not sent to the slot: $(cat "$OUT/ss-u.log")"
+[ "$(rows6 Ahead autosave)" = "$(m "$OUT/new-Ahead.srm")" ] && cmp -s "$S6/Ahead (USA).srm" "$OUT/new-Ahead.srm" || bad "from 0.5.3: the card's, played on since, not sent to the slot: $(cat "$OUT/ss-u.log")"
+[ "$(rows6 Moved autosave)" = "$(m "$OUT/new-Moved.srm")" ] && cmp -s "$S6/Moved (USA).srm" "$OUT/new-Moved.srm" || bad "from 0.5.3: a record under the old core folder not found: $(cat "$OUT/ss-u.log")"
+cmp -s "$S6/Behind (USA).srm" "$OUT/new-Behind.srm" && [ "$(rows6 Behind autosave)" = "$(m "$OUT/new-Behind.srm")" ] && [ -n "$(find "$C6/banana/save-vault/saves/gba/Behind (USA)" -type f 2>/dev/null)" ] ||
+    bad "from 0.5.3: the server's, moved on since, not taken (the card's kept) and sent to the slot: $(cat "$OUT/ss-u.log")"
+cmp -s "$S6/Fresh (USA).srm" "$OUT/old-Fresh.srm" && [ "$(rows6 Fresh autosave)" = "$(m "$OUT/old-Fresh.srm")" ] || bad "from 0.5.3: a save the card doesn't hold not taken and sent to the slot: $(cat "$OUT/ss-u.log")"
+for g in Apart Other; do
+    cmp -s "$S6/$g (USA).srm" "$OUT/new-$g.srm" && [ "$(rows6 $g autosave)" = none ] && grep -q "conflict, both kept: saves/gba/$g (USA).srm" "$OUT/ss-u.log" &&
+        "$BIN" --root "$C6" --run "$C6/run" saves | grep -q "^conflict	$(rid6 $g)/autosave	" || bad "from 0.5.3: two saves never agreed ($g) not held, both kept: $(cat "$OUT/ss-u.log")"
+done
+grep -q " 2 conflicts, 0 errors" "$OUT/ss-u.log" || bad "from 0.5.3: the first sync: $(tail -2 "$OUT/ss-u.log")"
+# (again: what was decided stays decided, and the two are still held)
+s6u sync --saves-only
+grep -q " 0 saves up, 0 down, 2 conflicts, 0 errors" "$OUT/ss-u.log" || bad "from 0.5.3: a second sync moved something: $(cat "$OUT/ss-u.log")"
+# the card's chosen: to the slot; the server's chosen: placed here, the card's kept
+[ "$(s6u resolve "$(rid6 Apart)/autosave" card; tail -1 "$OUT/ss-u.log")" = ok ] && [ "$(rows6 Apart autosave)" = "$(m "$OUT/new-Apart.srm")" ] || bad "from 0.5.3: the card's chosen, not sent to the slot: $(cat "$OUT/ss-u.log")"
+[ "$(s6u resolve "$(rid6 Other)/autosave" server; tail -1 "$OUT/ss-u.log")" = ok ] && cmp -s "$S6/Other (USA).srm" "$OUT/old-Other.srm" || bad "from 0.5.3: the server's chosen, not placed: $(cat "$OUT/ss-u.log")"
+s6u sync --saves-only
+grep -q " 0 conflicts, 0 errors" "$OUT/ss-u.log" || bad "from 0.5.3: held again after its owner chose: $(cat "$OUT/ss-u.log")"
+[ "$(for g in Same Ahead Moved Behind Fresh Apart Other; do rows6 $g ""; done)" = "$before6" ] || bad "from 0.5.3: a save outside the slots was written to or removed"
+[ "$(curl -s "$U6/test/violations")" = "[]" ] || bad "from 0.5.3: the card sent what it never may: $(curl -s "$U6/test/violations")"
+
 # no traceback but those of the faults that asked the handler to fail: each traceback's last line, the exception, is
 # what tells them apart
-for f in "$OUT/fake-romm.log" "$OUT/fake-romm2.log" "$OUT/fake-romm3.log" "$OUT/fake-romm4.log" "$OUT/fake-romm5.log"; do
+for f in "$OUT/fake-romm.log" "$OUT/fake-romm2.log" "$OUT/fake-romm3.log" "$OUT/fake-romm4.log" "$OUT/fake-romm5.log" "$OUT/fake-romm6.log"; do
     u=$(awk '/^Traceback/ { t = 1; next } t && !/^ / { t = 0; if ($0 !~ /^RuntimeError: a fault asked for on/) print }' "$f")
     [ -z "$u" ] || bad "the stand-in failed a request ($f): $u"
 done

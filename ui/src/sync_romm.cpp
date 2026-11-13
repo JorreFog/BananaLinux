@@ -785,6 +785,68 @@ namespace bsync
 			}
 			return true;
 		}
+		// The saves these ROMs have outside every slot, where BananaOS up to 0.5.3.4 sent its own (one row per file name
+		// and emulator, written over in place). Asked only for a game whose slot is still empty and that this card has
+		// never agreed with it, so that an update from that release doesn't leave them behind: slots() below takes one
+		// into account once, as the version the card last synced with, and never writes to it or removes it
+		bool listUnslotted(const std::vector<long long>& ids, std::map<long long, std::vector<Head>>& rows, std::string& err)
+		{
+			for (size_t a = 0; a < ids.size(); a += 100)
+			{
+				std::set<long long> scope(ids.begin() + a, ids.begin() + std::min(ids.size(), a + 100));
+				std::string q = "/api/saves?";
+				for (long long id : scope) q += (q.back() == '?' ? "rom_ids=" : "&rom_ids=") + std::to_string(id);
+				Resp r = call("GET", q);
+				if (r.code != 200) { err = "saves: " + r.error(); return false; }
+				JPtr j = r.json();
+				if (!j || !j->isArr()) { err = "the server's saves can't be read"; return false; }
+				for (auto& s : j->arr)
+				{
+					long long rid = (long long)s->num("rom_id");
+					if (!scope.count(rid) || !s->str("slot").empty() || s->flag("missing_from_fs")) continue;
+					Head h;
+					h.id = (long long)s->num("id"); h.updated = s->str("updated_at"); h.t = isoTime(h.updated);
+					if (s->get("file_size_bytes")) h.size = (long long)s->num("file_size_bytes");
+					h.name = s->str("file_name"); h.hash = lower(s->str("content_hash"));
+					if (h.id && safeRel(h.name) && h.name.find('/') == std::string::npos) rows[rid].push_back(h);
+				}
+			}
+			return true;
+		}
+		// of those, the one that is this game's save: named as the ROM or as the card's save, in the form its emulator
+		// reads, no larger than a save of its system, with a checksum to take it by; the newest when there are several
+		// (one per emulator's name). None: nullptr, and the game is decided as it would be with nothing there
+		Head* unslotted(std::map<long long, std::vector<Head>>& rows, const Canon& g, const std::string& rel)
+		{
+			auto ri = rows.find(g.rom.id);
+			if (ri == rows.end()) return nullptr;
+			Head* best = nullptr;
+			long long max = maxSave(g.rom.folder);
+			for (auto& h : ri->second)
+			{
+				if (stemOf(h.name) != g.rom.stem && stemOf(h.name) != stemOf(baseOf(rel))) continue;
+				if (extOf(h.name) != extOf(rel) || (max >= 0 && h.size > max)) continue;
+				if (!best || h.t > best->t || (h.t == best->t && h.id > best->id)) best = &h;
+			}
+			if (best && best->hash.empty()) best->hash = serverHash("/api/saves", *best);
+			return best && !best->hash.empty() ? best : nullptr;
+		}
+		// the version this card last agreed for that save outside the slots, from the record that release's sync kept by the
+		// save's path. The flat saves/ folder came after it, so a save's record may be under its old core folder: found
+		// by the file's name then, when no two records of that name disagree
+		std::string agreedUnslotted(const std::string& rel) const
+		{
+			auto st = c.saves.find(rel);
+			if (st != c.saves.end()) return st->second.hash;
+			std::string found;
+			for (auto& kv : c.saves)
+			{
+				if (baseOf(kv.first) != baseOf(rel)) continue;
+				if (!found.empty() && found != kv.second.hash) return "";
+				found = kv.second.hash;
+			}
+			return found;
+		}
 		// the slot's head seen by this device, so RomM's guard lets its next upload in (only for a version this card
 		// holds, or agreed, or a blank one)
 		bool confirm(const Head& h)
@@ -810,9 +872,15 @@ namespace bsync
 			// (no device: no negotiation, which needs one; a dry run: none either, it opens a session)
 			bool ok = c.device.empty() || dryRun || (with.clear(), negotiate(cand, with, err));
 			ok = ok && listHeads(std::vector<long long>(with.begin(), with.end()), heads, err);
+			// (a game with nothing in the slot yet, never agreed with it: its save from before the slots, if it has one)
+			std::map<long long, std::vector<Head>> outside;
+			std::vector<long long> ask;
+			for (long long id : cand) if (!heads.count(id) && !c.slots.count(std::to_string(id) + "/" + SLOT)) ask.push_back(id);
+			ok = ok && listUnslotted(ask, outside, err);
 			if (!ok) { errors.push_back("saves: " + err); keepUnsent(errors); complete(0, 1); return false; }
 			std::set<long long> onServer;
 			for (auto& h : heads) onServer.insert(h.first);
+			for (auto& o : outside) onServer.insert(o.first);
 			std::set<std::string> stemsHere;
 			for (auto& kv : localAll) if (kv.second == "save") stemsHere.insert(stemOf(baseOf(kv.first)));
 			resolve(onServer, stemsHere, errors, note);
@@ -875,6 +943,37 @@ namespace bsync
 					Up u = upload(g, rel, key, L, h, errors);
 					if (u == Up::Sent) { up++; done++; } else if (u == Up::Held) conflicts++; else if (u == Up::Failed) undecided(key);
 				};
+				// ---- An empty slot, never agreed with, and a save of this game's outside the slots (O), sent there by
+				// BananaOS up to 0.5.3.4: decided once more by content, with the version that sync last agreed (B, when its
+				// record is still here) in place of A. The card's is O, or O is B (only the card moved on): nothing to take,
+				// and the card's goes to the slot below as any first save does. No save here, or the card's is B (only the
+				// server's moved on, another handheld's play): O is taken, through the vault as any download, then sent to
+				// the slot as this card's. Anything else is two saves that can't be told apart: held as a conflict, both
+				// kept, and the one chosen on Manage saves goes to the slot. O itself is never written to nor removed, and
+				// once the slot holds a version it is never looked at again
+				Head* o = h || si != c.slots.end() ? nullptr : unslotted(outside, g, rel);
+				if (o && !(real && L == o->hash))
+				{
+					const std::string B = agreedUnslotted(rel);
+					if (!real || (!B.empty() && L == B && o->hash != B))
+					{
+						if (!download(g, rel, key, L, *o, errors, true)) { if (!dryRun) undecided(key); continue; }
+						down++; done++;
+						say("  taken from outside the slots, where an earlier BananaOS sent it: %s", rel.c_str());
+						L = hashFile(p, "md5");
+						if (c.device.empty()) waiting = true; else send();
+						continue;
+					}
+					if (B.empty() || o->hash != B)
+					{
+						// (its owner chose the card's over that one: to the slot, where nothing is written over)
+						if (key == settleKey && prior.count(key) && prior[key].serverMd5 == o->hash) { if (c.device.empty()) waiting = true; else send(); continue; }
+						Both r = conflict(g, rel, key, L, *o, errors);
+						if (r == Both::Held) { conflicts++; continue; }
+						if (r == Both::Failed) { undecided(key); continue; }
+						if (r == Both::NotTaken) continue;
+					}
+				}
 				std::string S = h ? h->hash : "";
 				// (the head as the card took it in its own form, a .dsv as its raw save: the agreed version still)
 				std::string W = si != c.slots.end() && si->second.rel == rel && !lost ? si->second.wire : "";
@@ -1098,7 +1197,9 @@ namespace bsync
 		}
 		// the slot's head as the card's save: fetched to /run and checked, the card's kept in the vault, installed, then
 		// told to RomM as this device's (L: the card's save as it was decided on, "" for none)
-		bool download(const Canon& g, const std::string& rel, const std::string& key, const std::string& L, const Head& h, std::vector<std::string>& errors)
+		// (outside: a save from outside the slots, which is no version of the slot's: placed the same way, neither agreed
+		// nor told to RomM as seen; the caller sends it to the slot)
+		bool download(const Canon& g, const std::string& rel, const std::string& key, const std::string& L, const Head& h, std::vector<std::string>& errors, bool outside = false)
 		{
 			std::string p = ROOT + "/" + rel;
 			if (dryRun) { say("  download %s", p.c_str()); return false; }
@@ -1139,12 +1240,12 @@ namespace bsync
 			// Not agreed, so the next sync decides again from what it then finds: the same bytes agree, others are a
 			// conflict, held. Agreed, the game's would go up over the version just taken, as the newer)
 			if (gameRunning()) { errors.push_back(baseOf(p) + ": a game started while it was placed, decided next time"); return false; }
-			agree(key, md5, rel, h.id, md5 != h.hash ? h.hash : "");
+			if (!outside) agree(key, md5, rel, h.id, md5 != h.hash ? h.hash : "");
 			say("  down %s", p.c_str());
 			saveConf(c);
 			op.close();
 			placing.end();
-			if (!c.device.empty()) confirm(h);
+			if (!c.device.empty() && !outside) confirm(h);
 			saveConf(c);
 			return true;
 		}

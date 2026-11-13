@@ -448,6 +448,15 @@ def unslotted_rows():
     b1 = ok(*call("POST", "/api/saves", token=TA, query=q(f"u2{RUN}"), files={"saveFile": ("Plain.srm", b"three")}), "b1")
     check(a1["id"] == a2["id"] and a1["slot"] is None, f"same emulator: rows {a1['id']}, {a2['id']}")
     check(b1["id"] != a1["id"], f"another emulator replaced the row {a1['id']}")
+    # (a listing by rom_ids with no slot named gives those rows beside a slot's, their slot null and their MD5 given;
+    # one that names the slot gives none of them)
+    sl = ok(*call("POST", "/api/saves", token=TA, query={"rom_id": rom, "device_id": A, "slot": SLOT, "emulator": f"u3{RUN}"},
+                  files={"saveFile": ("Plain.srm", b"in the slot")}), "slotted")
+    rows = ok(*call("GET", "/api/saves", token=TA, query={"rom_ids": rom}), "listing with no slot")
+    mine = {x["id"]: x for x in rows}
+    check(a1["id"] in mine and b1["id"] in mine and sl["id"] in mine, f"no slot named: rows {sorted(mine)}")
+    check(mine[a1["id"]]["slot"] is None and mine[a1["id"]]["content_hash"] == md5(b"two"), f"the row outside: {mine.get(a1['id'])}")
+    check(not [x for x in listing(TA, rom) if x["id"] in (a1["id"], b1["id"])], "the slot's listing holds rows from outside it")
 
 
 @case

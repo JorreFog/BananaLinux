@@ -328,6 +328,16 @@ go (said, its copy kept in the vault, and the Saves page stops listing it as soo
 versions agreed stay per slot, so going back finds them agreed; in the new slot every game is a save never agreed with
 it.
 
+BananaOS up to 0.5.3.4 sent its saves outside every slot, and a card updated from it still has that sync's record of
+the version each save last agreed (`saves{}` in `romsync.json`, by the save's path; found by the file's name when the
+path is the old core folder's). So that the update leaves nothing behind, a game whose slot is empty and was never
+agreed with is decided once with that row as the server's save and that record as the version agreed: the same bytes
+on both, or only the card's moved on, and the card's goes to the slot as any first save does; only the row moved on
+(another handheld's play), or no save on the card, and the row's save is taken, through the vault, and then sent to
+the slot; anything else, a card with no record among them, is a conflict, both kept, and the one chosen on Manage
+saves is what the slot gets. The row itself is never written to nor removed, and once the slot holds a version it is
+not looked at again (the listing with no slot named is asked only for games whose slot is empty).
+
 A RomM before 5.4 has no slots: a save there is one row per file name and emulator, written over in place. Its saves
 sync all at once (after a game, by Sync now, and when Wi-Fi comes back with one waiting), never before a game, and by
 content as the slots do: a save changed here alone goes up, over the version this card last agreed and no other (the
