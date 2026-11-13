@@ -169,6 +169,26 @@ namespace bsync
 			std::map<std::string, MFile> gwArt;
 			for (auto& it : romJson)
 			{
+				if (platforms[(long long)it->num("platform_id")] != "gameandwatch" || it->str("fs_name") != "artwork") continue;
+				Resp d = call("GET", "/api/roms/" + std::to_string((long long)it->num("id")));
+				JPtr dj = d.code == 200 ? d.json() : nullptr;
+				const JVal* files = dj ? dj->get("files") : nullptr;
+				if (!files || !files->isArr()) continue;
+				for (auto& fj : files->arr)
+				{
+					std::string fn = fj->str("file_name");
+					if (fn.empty() || !safeRel(fn) || lower(extOf(fn)) != "zip") continue;
+					MFile f;
+					f.path = "gameandwatch/artwork/" + fn;
+					// checked by size only: RomM's hashes of the files in a folder like this one aren't the files' own (it
+					// hashes what's inside a zip; checked with RomM 5.4.1: every artwork zip "mismatched", sent intact)
+					f.size = (long long)fj->num("file_size_bytes", -1);
+					f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
+					gwArt[stemOf(fn)] = f;
+				}
+			}
+			for (auto& it : romJson)
+			{
 				std::string folder = platforms[(long long)it->num("platform_id")], fsName = it->str("fs_name");
 				long long id = (long long)it->num("id");
 				if (folder == "gameandwatch" && fsName == "artwork") continue;	// (its zips go with their games: above)
