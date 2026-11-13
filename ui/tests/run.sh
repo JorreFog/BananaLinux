@@ -219,6 +219,19 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press a; wait 3000; wait 1" 2>> "$tlog" || { echo "FAIL $size: banana-ui (titles 2) exited $?"; fail=1; }
     grep -q "launch 0: .*Yellow Planet" "$tlog" || { echo "FAIL $size: the sort title didn't put it first: $(grep launch "$tlog")"; fail=1; }
     rm -f "$T"
+    # #228: an app started from its tile on the home row (Activity: systems.conf's [activity], "[app]" in systems.cfg)
+    # comes back to the home row on its tile when it quits, not to its one-entry list; a game still comes back to its
+    # system's list on the game (Activity's folder is the image's /usr/share/banana/apps/activity: one in $OUT here)
+    alog=$OUT/$size-app-end.log; AC=$OUT/app-end
+    mkdir -p "$AC/activity"; : > "$AC/activity/Activity.app"
+    sed "s|^folder = /usr/share/banana/apps/activity\$|folder = $AC/activity|" "$HERE/../system/rootfs/etc/banana/systems.conf" > "$AC/systems.conf"
+    grep -q "^folder = $AC/activity\$" "$AC/systems.conf" || { echo "FAIL $size: app end: no [activity] folder line in systems.conf"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$AC/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "homeid activity; press a; wait 3000; wait 1; gameend; shot app-end; home 0; press a; press right; press a; wait 3000; wait 1; gameend" \
+        2> "$alog" || { echo "FAIL $size: banana-ui (app end) exited $?"; fail=1; }
+    grep -q "launch 0: $AC/activity/Activity.app (system activity)" "$alog" || { echo "FAIL $size: app end: Activity didn't start from its tile: $(grep 'launch\|homeid' "$alog")"; fail=1; }
+    grep -q "gameend: view 0 sys [0-9]* game [-0-9]* (activity)" "$alog" || { echo "FAIL $size: app end: Activity's end isn't the home row on its tile: $(grep gameend "$alog" | head -n 1)"; fail=1; }
+    grep -q "gameend: view 1 sys 0 game 1 (nds)" "$alog" || { echo "FAIL $size: app end: a DS game's end isn't its list on the game: $(grep gameend "$alog" | tail -n 1)"; fail=1; }
     # Power off after sleeping: bananad's banana/resume-boot names the game it saved; at the next start it is launched
     # once (on its own shelf, not Favorites) and the marker is gone; one naming a game no longer there launches nothing
     rlog=$OUT/$size-resume.log

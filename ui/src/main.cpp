@@ -362,6 +362,17 @@ static bool openPage(Settings& st, const std::string& page)
 	return false;
 }
 
+// where the menu comes back to when a game or an app ends (runGame, and the headless "gameend"): a game to its
+// system's list with the cursor on it; an app ("[app]" in the theme's systems.cfg: Activity, the Store, Döda Kvarter)
+// to the home row on its tile, where A started it. Its one-entry list, the game card the app's entry is drawn as,
+// isn't a place anyone went to (#228: quitting Activity landed there)
+template <class H, class U> static void backFromGame(H& lib, U& ui, int game)
+{
+	const int sys = lib.currentShelf();
+	if (sys >= 0 && sys < lib.systemCount() && lib.system(sys).app) ui.setHome(sys);
+	else ui.setLibrary(sys, game);
+}
+
 // a favourite starred or unstarred: once the shelf shows, the Favorites collection and the favourite systems are put
 // right, and the cursor stays on the system it was on
 template <class U> static bool rearrange(Host& lib, U& ui)
@@ -887,6 +898,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
 	};
+	int lastLaunch = -1;	// (the headless "gameend": the game the last launch started)
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -905,6 +917,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
+		else if (op == "gameend")
+		{
+			if (lastLaunch < 0) { logf("gameend: nothing was launched"); return 2; }
+			backFromGame(lib, ui, lastLaunch);
+			ui.update(now);
+			logf("gameend: view %d sys %d game %d (%s)", (int)ui.view(), ui.systemIndex(), ui.gameIndex(),
+				ui.systemIndex() >= 0 && ui.systemIndex() < lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id.c_str() : "-");
+			lastLaunch = -1;
+		}
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
@@ -1456,7 +1478,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
-			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			else { logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str()); lastLaunch = g; }
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -3080,7 +3102,7 @@ int main(int argc, char** argv)
 			lib.recordPlay(game, secs, achA, achB);	// (a start that failed straight away isn't a play)
 		}
 		ui->dataChanged();
-		ui->setLibrary(lib.currentShelf(), game);
+		backFromGame(lib, *ui, game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
 		if (!forceStorm && stormIrqs >= 0 && disp.isOpen())
 		{
