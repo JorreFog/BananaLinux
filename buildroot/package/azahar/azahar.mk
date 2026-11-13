@@ -29,6 +29,10 @@ AZAHAR_CONF_OPTS = \
 	-DUSE_DISCORD_PRESENCE=OFF -DENABLE_DISCORD_RPC=OFF -DENABLE_LIBRETRO=OFF \
 	-DCITRA_WARNINGS_AS_ERRORS=OFF -DCITRA_USE_PRECOMPILED_HEADERS=OFF \
 	-DCMAKE_C_FLAGS="$(TARGET_CFLAGS) -Wno-error=incompatible-pointer-types"
+# The bundled openal-soft regenerates its version from git when it finds a .git in its folder: the download keeps the
+# submodule's .git file (gitdir: ../../.git/modules/openal-soft) but not the git folder it points to, and make stops
+# on the missing .git/modules/openal-soft/index. There is no git history to read in a download anyway.
+AZAHAR_CONF_OPTS += -DALSOFT_UPDATE_BUILD_VERSION=OFF
 
 # the emulator and ROCKNIX's settings (config/qt-config.ini). Its pad bindings aren't ROCKNIX's, which name the one
 # pad InputPlumber makes there (a virtual DualSense, by its GUID and raw button numbers): they are SDL game-controller
