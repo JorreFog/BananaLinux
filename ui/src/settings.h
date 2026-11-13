@@ -213,6 +213,7 @@ namespace banana
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
+			std::string def;						// the value shown while the file has none, when it isn't the first choice
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
