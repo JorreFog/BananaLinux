@@ -181,8 +181,9 @@ esac
 # quick resume state that isn't loaded at this start is dropped, as run-drastic does: it is the last session's spot,
 # and loaded after a later session it would put that session's save back (nds-saves and the home server's sync drop
 # it too when they replace the save, and nds-saves when the save isn't the one the game was quit with, which the menu
-# or bananad told it at the game's end: one copied onto the card by hand since; the files' times, which decided this
-# before, lie when the clock was lost); both changed since they last agreed, BananaDS's own is played and DraStic's
+# or bananad told it at the game's end: one copied onto the card by hand since; and when the last session's end was
+# never told to it, the battery or a crash having ended it: the state is from before what the game saved then; the
+# files' times, which decided this before, lie when the clock was lost); both changed since they last agreed, BananaDS's own is played and DraStic's
 # kept in the vault
 /usr/libexec/banana/nds-saves "$1" --prefer sav
 G=${1##*/}; G=${G%.*}

@@ -112,7 +112,9 @@ else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
 # would be put back by it; whatever replaces the save from outside (nds-saves, the home server's sync) drops it too,
 # and nds-saves above drops it when the save isn't the one the game was quit with (the menu, or bananad when it quits
 # the game itself, tells it what the saves held at the game's end, --played): a save copied onto the card by hand
-# since is played as it is, not under the old spot's memory. (The files' times decided this before, and the handheld's clock, lost with its battery, made them lie.)
+# since is played as it is, not under the old spot's memory; and when the game's last session was never told to it as
+# over (the battery, a crash): the state is the one that session started from, older than what the game saved in it.
+# (The files' times decided this before, and the handheld's clock, lost with its battery, made them lie.)
 # Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game. The
 # file is set either way: off, DSFLIP_RESUME_ON_QUIT=0 keeps it for bananad's SIGUSR1 alone (Power off after
 # sleeping saves the game before it shuts the handheld down), and the state is loaded only at the boot after that.

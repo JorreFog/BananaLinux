@@ -344,16 +344,41 @@ saves 8192 - x; mkdir -p "$D/states/nds" "$D/drastic/savestates"; : > "$MST"; : 
 nds --played
 check "$(sed 's/ [0-9a-f]\{32\}$/ md5/' "$D/banana/nds-saves/Game.played" | tr '\n' ' ')" "dsv md5 sav md5 " "--played: the raw save each file holds, recorded"
 nds --prefer sav
-check "$(states) $(ls "$D/banana/nds-saves" | grep -c played)" "mst dss 0" "the save as the game left it: BananaDS's state stays, the record taken up"
+check "$(states) $(sed 's/ [0-9a-f]\{32\}$/ md5/' "$D/banana/nds-saves/Game.played" | tr '\n' ' ')" "mst dss dsv md5 started sav " "the save as the game left it: BananaDS's state stays, its line of the record taken up, DraStic's left"
 nds --played; head -c 8192 /dev/zero | tr '\0' n > "$D/saves/nds/Game.sav"
 nds --prefer sav
 check "$(states) $(grep -c 'resume state dropped' "$T/log")" "- - 1" "the .sav replaced by hand since: BananaDS's state dropped, said (DraStic's goes with the save nds-saves gives it)"
-: > "$MST"; : > "$DSS"; head -c 8192 /dev/zero | tr '\0' m > "$D/saves/nds/Game.sav"
+: > "$MST"; : > "$DSS"; head -c 8192 /dev/zero | tr '\0' m > "$D/saves/nds/Game.sav"; rm -f "$D/banana/nds-saves/Game.played"
 nds --prefer sav
 check "$(states)" "mst -" "no record of the game's end (a power-off's resume, a card from before): BananaDS's state kept"
 nds --played; head -c 8192 /dev/zero | tr '\0' e > "$D/drastic/backup/Game.dsv"
 nds --prefer dsv
 check "$(states)" "- -" "the .dsv replaced: DraStic's state dropped, and BananaDS's with the save nds-saves gives it"
+# a session that never came to its end (the battery, a crash: no --played): the state it started from would put back
+# what the game saved during it, so that emulator's goes at its next start; the other's, and a clean quit's, stay
+: > "$MST"; : > "$DSS"; nds --played; nds --prefer sav
+check "$(states)" "mst dss" "a start after a clean quit: both states stay"
+nds --prefer sav
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "- dss 1" "a start after a session with no end told: BananaDS's state from before it dropped, said, DraStic's left"
+nds --prefer dsv
+check "$(states)" "- dss" "...and DraStic's next start, its own line of the record still there: its state stays"
+nds --prefer dsv
+check "$(states)" "- -" "...its session with no end told either: dropped at the start after"
+: > "$DSS"; nds --played; nds --prefer dsv
+check "$(states) $(tr '\n' ' ' < "$D/banana/nds-saves/Game.played" | sed 's/ [0-9a-f]\{32\} / md5 /')" "- dss sav md5 started dsv " "a clean quit writes the record afresh: the state stays"
+
+echo "nds-saves: BananaDS's save cut short (a power cut as it was written) is never written for DraStic"
+card sav; nds; cp "$D/drastic/backup/Game.dsv" "$T/good.dsv"
+head -c 5000 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"
+nds; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$T/good.dsv" && echo kept) $(grep -c 'cut short' "$T/log")" "6 kept 1" "5000 bytes, a size no DS save has: DraStic's left as it is, said, exit 6"
+nds --prefer sav; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$T/good.dsv" && echo kept)" "6 kept" "...BananaDS starting too"
+rm "$D/drastic/backup/Game.dsv"; nds; rc=$?
+check "$rc $([ -e "$D/drastic/backup/Game.dsv" ] || echo none)" "6 none" "...and with no save of DraStic's: none made from it"
+cp "$T/good.dsv" "$D/drastic/backup/Game.dsv"; head -c 8192 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"
+nds; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$D/saves/nds/Game.sav" && echo taken)" "0 taken" "written whole again by BananaDS: DraStic takes it"
 # File sharing keeps the Home server's pairing off the network: romsync.json holds the server's token, and the copy
 # written beside it while it is replaced (romsync.json.new) holds it too
 check "$(grep -c '^[[:space:]]*veto files = .*/\*romsync\.json\*/' "$L/share")" "1" "the share vetoes romsync.json and the copy beside it"

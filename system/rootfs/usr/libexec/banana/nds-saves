@@ -18,8 +18,11 @@
 # or an emulator starting settles them. A save under 512 bytes (the smallest real
 # one is a 4 Kbit EEPROM's) is no save: it never goes over one that has something in it, which goes over it instead,
 # whichever changed, with no record or an unreadable one as well: nothing is held for it, and no file's time asked (#96). DraStic's save unreadable (its footer doesn't add up, or a size no DS save has, 512 bytes
-# or more): neither touched, said, exit 5, the game held the same way. The raw size is kept as it is: melonDS sizes
-# the save memory from its game list, not from the file, and
+# or more): neither touched, said, exit 5, the game held the same way. BananaDS's save of a size no DS save has (512
+# bytes or more and not a power of two up to 8 MiB: a file cut short, by a power cut as it was written) is never written
+# for DraStic, which would read it from then on as a save that can't be read: neither touched, said, exit 6; BananaDS
+# starting writes it whole again, and DraStic's own changed goes over it as over any other. The raw size is kept as it
+# is: melonDS sizes the save memory from its game list, not from the file, and
 # fits a file of another size to it (cut short, or padded with 0xFF) without a word. Every file is written beside its
 # name and renamed over, the card synced before each rename, so the power going at any point leaves the copy in the
 # vault whole before the save it was kept for changes, and the record behind the files it describes; the names written
@@ -39,8 +42,11 @@
 #                                    which belongs with the save it held then: its save another since (one copied onto
 #                                    the card by hand, or gone), the state is dropped, said, rather than loaded, which
 #                                    would put the old save's memory back over the new one. No record (a card from
-#                                    before) leaves the state as it is, and a start takes the record up, so it speaks
-#                                    for one start
+#                                    before) leaves the state as it is. A start takes that emulator's line up and
+#                                    leaves "started dsv" or "started sav" in its place: found still there at that
+#                                    emulator's next start, the game never came to --played (the battery ran out, the
+#                                    emulator crashed), so the state is the session before's, and what was saved in the
+#                                    game since would be put back by it: dropped as well, said
 #   BANANA_ROOT=<dir> nds-saves ...  the data partition somewhere else than /data (the tests' cards; banana-sync's
 #                                    --root, not BANANA_DATA: that is banana/ to banana-ui and update)
 DATA=${BANANA_ROOT:-/data}
@@ -92,6 +98,17 @@ raw_of_dsv() {
     [ "$_p" -ge 512 ] && [ "$_p" -le 8388608 ] && [ $((_p & (_p - 1))) = 0 ] || return 1
     # (the write checked, and its size: on a full card a copy cut short counted as done and went over the save)
     head -c "$_p" "$1" > "$2" && [ "$(size "$2")" = "$_p" ]
+}
+# whole_sav: BananaDS's save is of a size a DS save has, as raw_of_dsv asks of DraStic's (under 512 bytes is no save,
+# and the rules for that decide it)
+whole_sav() {
+    _w=$(size "$SAV")
+    [ "$_w" -lt 512 ] || { [ "$_w" -le 8388608 ] && [ $((_w & (_w - 1))) = 0 ]; }
+}
+# cut_short: said, and the run over, where BananaDS's save was about to be written for DraStic and isn't whole
+cut_short() {
+    echo "nds-saves: $G: BananaDS's save is cut short ($(size "$SAV") bytes, a size no DS save has): neither touched"
+    done_ "$FAILED"
 }
 # md5 <file>: its MD5, nothing when it can't be read
 md5() { md5sum "$1" | cut -c1-32; }
@@ -150,17 +167,24 @@ if [ -f "$SAV" ]; then
 fi
 # the emulator starting has a quick-resume state, the spot the game was quit at: it belongs with the save the game
 # held then (--played's record, written by the menu or bananad at the game's end). That emulator's save another since, or gone:
-# loaded, the state would put the old save's memory back over it, so it goes instead. The record is taken up by the
-# start it was written for, whether or not there was a state to judge
+# loaded, the state would put the old save's memory back over it, so it goes instead. That emulator's line of the record
+# is taken up by the start it was written for, whether or not there was a state to judge, and "started" left in its
+# place (the other emulator's line stays for its own next start). Found again at the next start, no game's end was told
+# in between: the session ended with the battery or a crash, any state is the one that session started from, and what
+# the game saved during it would be put back by it, so it goes too
 if [ -n "$PREFER" ] && [ -f "$END" ]; then
     case $PREFER in
-    dsv) _st="$DATA/drastic/savestates/$G.resume.dss"; _now=$d; _was=$(sed -n 's/^dsv //p' "$END") ;;
-    sav) _st="$DATA/states/nds/$G.resume.mst"; _now=$s; _was=$(sed -n 's/^sav //p' "$END") ;;
+    dsv) _st="$DATA/drastic/savestates/$G.resume.dss"; _now=$d ;;
+    sav) _st="$DATA/states/nds/$G.resume.mst"; _now=$s ;;
     esac
-    if [ -f "$_st" ] && [ -n "$_was" ] && [ "$_now" != "$_was" ]; then
+    _was=$(sed -n "s/^$PREFER //p" "$END")
+    if grep -qx "started $PREFER" "$END"; then
+        [ -f "$_st" ] && rm -f "$_st" && echo "nds-saves: $G: the game's last session never came to its end: the resume state from before it dropped ($PREFER)"
+    elif [ -f "$_st" ] && [ -n "$_was" ] && [ "$_now" != "$_was" ]; then
         rm -f "$_st" && echo "nds-saves: $G: the save isn't the one the game was quit with: its resume state dropped ($PREFER)"
     fi
-    rm -f "$END"
+    # (a record that can't be written is taken off, as it was before this: one start's judgement, never a second's)
+    { grep -v -e "^$PREFER " -e "^started $PREFER\$" "$END"; echo "started $PREFER"; } > "$END$T" && put "$END$T" "$END" || rm -f "$END" "$END$T"
 fi
 A=$(cat "$REC" 2>/dev/null)
 # (a record there but not an MD5, as a power cut while it was written leaves it: two that differ are held as both
@@ -186,6 +210,7 @@ if [ -z "$s" ]; then
     done_
 fi
 if [ -z "$d" ]; then
+    whole_sav || cut_short
     sav_to_dsv && rec "$s" && echo "nds-saves: $G: BananaDS's save: DraStic takes it ($(wc -c < "$DSV") bytes)" || done_ "$FAILED"
     done_
 fi
@@ -193,7 +218,7 @@ if [ "$d" = "$s" ]; then
     [ "$A" = "$s" ] || rec "$s" || done_ "$FAILED"
     done_
 fi
-zd=$(wc -c < "$RAW"); zs=$(wc -c < "$SAV")
+zs=$(wc -c < "$SAV")
 if [ -z "$A" ] && [ "$zs" -ge 512 ]; then
     # (no record yet: the newer by the files' times, this once. Not asked of a BananaDS save under 512 bytes, which the
     # rule below decides whatever the times, and whose record may be there and unreadable)
@@ -203,12 +228,12 @@ fi
 # a save under 512 bytes is no save (the smallest real one is a 4 Kbit EEPROM's; under it, a file a game made and never
 # filled, as SM64DS leaves in SuperDrastic, #96): it never goes over one that has something in it, which goes over it
 # instead, whether it is the one that changed, both did, or the emulator starting prefers it
-if [ "$A" != "$s" ] && [ "$zs" -lt 512 ] && [ "$zd" -gt 0 ]; then
+# (DraStic's under 512 never came this far: it set no d above, and BananaDS's went over it there)
+if [ "$A" != "$s" ] && [ "$zs" -lt 512 ]; then
     echo "nds-saves: $G: BananaDS's save is empty ($zs bytes): DraStic's kept, BananaDS takes it"; A=$s
-elif [ "$A" != "$d" ] && [ "$zd" -lt 512 ] && [ "$zs" -gt 0 ]; then
-    echo "nds-saves: $G: DraStic's save is empty ($zd bytes): BananaDS's kept, DraStic takes it"; A=$d
 fi
 if [ "$d" = "$A" ]; then
+    whole_sav || cut_short
     # BananaDS's changed: DraStic's, the one it was, kept, then given the new one
     keep "$RAW" "$d" || { echo "nds-saves: $G: DraStic's save can't be kept in the vault (card full?): neither touched"; done_ "$FAILED"; }
     sav_to_dsv && rec "$s" && echo "nds-saves: $G: BananaDS's save changed: DraStic takes it ($(wc -c < "$DSV") bytes)" || done_ "$FAILED"
