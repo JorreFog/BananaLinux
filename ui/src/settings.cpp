@@ -535,8 +535,9 @@ namespace banana
 			const std::string bds = "/data/bananads/bananads.conf";
 			add(BD, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
 			add(BD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.",
-				bds, "render.scale", { "2x", "1x", "3x (experimental)", "4x (experimental)" }, { "2", "1", "3", "4" });
-			items.back().hints = { "Twice the DS's size: sharper 3D.", "The DS's own size: the lightest.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
+				bds, "render.scale", { "1x", "2x", "3x (experimental)", "4x (experimental)" }, { "1", "2", "3", "4" });
+			items.back().def = "2";	// (#250: smallest to largest, left to right; 2x stays the default, as run-bananads writes it)
+			items.back().hints = { "The DS's own size: the lightest.", "Twice the DS's size: sharper 3D.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
 			add(BD, "nds", "Edge marking", "The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Outlines drawn, as on a DS.", "Outlines left out." };
@@ -583,8 +584,9 @@ namespace banana
 		{
 			const char* SD = "SuperDrastic";
 			add(SD, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
-			add(SD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-			items.back().hints = { "Twice the DS's size: sharper 3D, at full speed.", "The DS's own size: the lightest." };
+			add(SD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "1x", "2x" }, { "0", "1" });
+			items.back().def = "1";	// (#250: as BananaDS's row, 1x on the left; 2x stays the default, as DraStic's own drastic.cfg)
+			items.back().hints = { "The DS's own size: the lightest.", "Twice the DS's size: sharper 3D, at full speed." };
 			add(SD, "nds", "Threaded 3D", "How the DS's 3D is drawn alongside the game.",
 				dcfg, "threaded_3d", { "On", "Off" }, { "1", "0" });
 			items.back().hints = { "Drawn beside the game: the faster way.", "Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games)." };
@@ -1010,7 +1012,7 @@ namespace banana
 		if (it.kind != Item::CHOICE) return;
 		// the schema's default (settings_defaults.cpp), else the row's first choice
 		std::string def = settingDefault(it.key);
-		if (def.empty()) def = it.values[0];
+		if (def.empty()) def = it.def.empty() ? it.values[0] : it.def;
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
