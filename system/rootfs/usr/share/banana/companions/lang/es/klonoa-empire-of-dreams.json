@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Hearts/gems/stars counter": "Contador de corazones/gemas/estrellas",
+  "Minutes": "Minutos",
+  "Controls": "Controles",
+  "B shoot the Wind Bullet to grab enemies, A jump; with an enemy held, jump again for a double jump or throw it.": "B dispara la Bala de viento para agarrar enemigos, A saltar; con un enemigo sujeto, salta otra vez para un salto doble o lánzalo.",
+  "Moves": "Movimientos",
+  "Use": "Usar",
+  "Grabbed enemies are used to break blocks, hit switches and reach high ledges.": "Los enemigos agarrados sirven para romper bloques, activar interruptores y alcanzar repisas altas.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Grab the bombs/enemies the boss sends and throw them back.": "Agarra las bombas/enemigos que lanza el jefe y devuélvelos.",
+  "Kingdom": "Reino",
+  "World": "Mundo",
+  "Worlds": "Mundos",
+  "Several kingdoms, each with stages including hoverboard stages.": "Varios reinos, cada uno con escenarios incluidos los de monopatín.",
+  "Items": "Objetos",
+  "Dream stones and hearts for health; keys (stars) open the exit.": "Piedras de sueño y corazones para la salud; las llaves (estrellas) abren la salida.",
+  "Stones": "Piedras",
+  "Collect": "Coleccionar",
+  "3 stars (keys) open each stage's exit; 150 dream stones in a stage unlock bonus.": "3 estrellas (llaves) abren la salida de cada escenario; 150 piedras de sueño en un escenario desbloquean un bonus.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear the worlds to defeat the nightmare that troubles Jillius.": "Completa los mundos para derrotar la pesadilla que aqueja a Jillius."
+ }
+}

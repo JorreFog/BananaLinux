@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Score": "Puntuación",
+  "Lives": "Vidas",
+  "Snoods fired (level)": "Snoods disparados (nivel)",
+  "Danger meter; score": "Medidor de peligro; puntuación",
+  "Match 3+ of a color; disconnected Snoods fall\nAim with the launcher; snoods stick where they hit and drop when cut off": "Empareja 3+ del mismo color; los Snoods sueltos caen\nApunta con el lanzador; los snoods se quedan donde golpean y caen al quedar aislados",
+  "Tips": "Consejos",
+  "Bank shots off walls\nBank shots off walls reach snoods behind others; fewer shots keep the danger meter low": "Tiros con rebote en las paredes\nLos tiros con rebote en las paredes alcanzan a los snoods que están detrás de otros; menos disparos mantienen bajo el medidor de peligro",
+  "Modes": "Modos",
+  "World Tour country id": "ID de país del World Tour",
+  "World Tour level": "Nivel del World Tour",
+  "Puzzle/Journey level": "Nivel de Puzzle/Journey",
+  "Vacation spots as level sets": "Lugares de vacaciones como conjuntos de niveles",
+  "Specials": "Especiales",
+  "Bag": "Bolsa",
+  "Special Snoods\nSpecial snoods have effects (wildcards, bombs and more)": "Snoods especiales\nLos snoods especiales tienen efectos (comodines, bombas y más)",
+  "Levels": "Niveles",
+  "Levels cleared": "Niveles completados",
+  "World tour": "Gira mundial",
+  "each country is a set of levels; bonus modes such as Snood Ball and Snood Sideways unlock by beating countries": "cada país es un conjunto de niveles; los modos extra como Snood Ball y Snood Sideways se desbloquean al completar países",
+  "Progress": "Progreso",
+  "Vacation spots\nCountries cleared on the world tour\nBonus modes unlock by beating countries": "Lugares de vacaciones\nPaíses completados en la gira mundial\nLos modos extra se desbloquean al completar países"
+ }
+}

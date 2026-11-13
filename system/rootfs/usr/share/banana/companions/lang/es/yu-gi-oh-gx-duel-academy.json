@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Student": "Estudiante",
+  "Status": "Estado",
+  "Deck size": "Tamaño del mazo",
+  "Your LP": "Tus LP",
+  "Duel Academy student; dorm rank: Slifer Red -> Ra Yellow -> Obelisk Blue\nLife Points 8000 (4000 in some duels)": "Estudiante de Duel Academy; rango del dormitorio: Slifer Red -> Ra Yellow -> Obelisk Blue\nPuntos de Vida 8000 (4000 en algunos duelos)",
+  "Rules": "Reglas",
+  "Tribute Summon": "Invocación por Tributo",
+  "1 for Level 5-6, 2 for Level 7+": "1 para Nivel 5-6, 2 para Nivel 7+",
+  "Elemental HERO fusions via Polymerization": "Fusiones de Elemental HERO con Polimerización",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Opponent LP": "LP del rival",
+  "Turns": "Turnos",
+  "Cards in the opponent's hand": "Cartas en la mano del rival",
+  "Win duels to earn DP and raise your rank\nClasses and tests decide promotions": "Gana duelos para ganar DP y subir de rango\nLas clases y los exámenes deciden los ascensos",
+  "Duel Academy island": "Isla de Duel Academy",
+  "dorms, classrooms, card shop, forest": "dormitorios, aulas, tienda de cartas, bosque",
+  "Days pass on a calendar; classes and tests decide dorm promotion": "Los días pasan en un calendario; las clases y los exámenes deciden el ascenso de dormitorio",
+  "Cards": "Cartas",
+  "Card packs at the shop (DP); deck editor": "Paquetes de cartas en la tienda (DP); editor de mazos",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "Over a thousand cards to collect\nA large card list; tutorials teach deck construction\nCard packs at the academy shop open new card series over time": "Más de mil cartas para coleccionar\nUna gran lista de cartas; los tutoriales enseñan a construir mazos\nLos paquetes de cartas de la tienda de la academia abren nuevas series con el tiempo",
+  "Progress": "Progreso",
+  "Dorm rank; days of the school calendar; story chapters\nTurns and LP shown during duels on the Battle page": "Rango del dormitorio; días del calendario escolar; capítulos de historia\nTurnos y LP se muestran durante los duelos en la página de Batalla"
+ }
+}

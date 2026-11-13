@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Current league race": "Carrera de liga actual",
+  "Current time-attack race": "Carrera contrarreloj actual",
+  "Last finish time (raw)": "Último tiempo de final (crudo)",
+  "Position, time, speed": "Posición, tiempo, velocidad",
+  "Car setup": "Ajuste del auto",
+  "gears, tires": "engranajes, neumáticos",
+  "Cars": "Autos",
+  "Race tips": "Consejos de carrera",
+  "Battle": "Batalla",
+  "Brake before corners on gravel\nGravel and snow need earlier braking than tarmac; watch the co-driver arrows": "Frena antes de las curvas en tierra\nLa grava y la nieve exigen frenar antes que el asfalto; mira las flechas del copiloto",
+  "Tracks": "Pistas",
+  "Rally stages\nLeague races and time-attack races; practice mode with race type and length options": "Tramos de rally\nCarreras de liga y contrarreloj; modo práctica con opciones de tipo y longitud de carrera",
+  "Setup": "Ajuste",
+  "Car tuning\nNew cars unlock as league progress is made": "Ajuste de autos\nSe desbloquean autos nuevos según avanzas en la liga",
+  "Tuning per car": "Ajuste por auto",
+  "gears and tires": "engranajes y neumáticos",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Cars unlocked": "Autos desbloqueados",
+  "Cars and tracks": "Autos y pistas",
+  "Progress": "Progreso",
+  "Championships": "Campeonatos"
+ }
+}

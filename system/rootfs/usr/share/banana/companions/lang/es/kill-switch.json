@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Agent": "Agente",
+  "Controls": "Controles",
+  "Cover-based shooter: duck behind cover, pop out to shoot, blind fire over cover.": "Shooter de coberturas: agáchate tras la cobertura, sal para disparar y dispara a ciegas por encima.",
+  "Weapons": "Armas",
+  "Pistol, assault rifle, shotgun, sniper rifle, grenades.": "Pistola, fusil de asalto, escopeta, fusil de tirador y granadas.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Stay in cover; move between cover points while enemies reload.": "Mantente en cobertura; muévete entre puntos de cobertura mientras los enemigos recargan.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Linear missions.": "Misiones lineales.",
+  "Ammo": "Munición",
+  "Items": "Objetos",
+  "Ammo and health from fallen enemies.": "Munición y salud de los enemigos caídos.",
+  "Intel": "Inteligencia",
+  "Collect": "Coleccionar",
+  "Mission objectives.": "Objetivos de misión.",
+  "Goal": "Objetivo",
+  "Complete the missions.": "Completa las misiones."
+ }
+}

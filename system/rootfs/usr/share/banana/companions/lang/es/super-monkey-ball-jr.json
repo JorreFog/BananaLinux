@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Monkey": "Mono",
+  "Floor": "Piso",
+  "Time left (s)": "Tiempo restante (s)",
+  "Lives, time, bananas": "Vidas, tiempo, plátanos",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "AiAi, MeeMee, Baby, GonGon\nAiAi, MeeMee, Baby and GonGon have slightly different speed and weight": "AiAi, MeeMee, Baby, GonGon\nAiAi, MeeMee, Baby y GonGon tienen una velocidad y un peso ligeramente distintos",
+  "Tips": "Consejos",
+  "Tilt the stage gently; momentum carries you\nTime runs out at zero; bananas add score": "Inclina el escenario con suavidad; el impulso te lleva\nEl tiempo se acaba al llegar a cero; los plátanos suman puntos",
+  "Worlds": "Mundos",
+  "Beginner, Advanced, Expert\nDifficulty sets with a number of floors each, played in order": "Principiante, Avanzado, Experto\nConjuntos de dificultad con un número de pisos cada uno, que se juegan en orden",
+  "Bananas": "Plátanos",
+  "Bag": "Bolsa",
+  "Bananas collected (this floor)": "Plátanos recogidos (este piso)",
+  "100 bananas = extra life": "100 plátanos = vida extra",
+  "Minigames": "Minijuegos",
+  "Collect": "Coleccionar",
+  "Monkey Golf score": "Puntuación de Monkey Golf",
+  "Monkey Fight score": "Puntuación de Monkey Fight",
+  "Party minigames unlock alongside the main game": "Los minijuegos de fiesta se desbloquean junto con el juego principal",
+  "Progress": "Progreso",
+  "Floors cleared\nFloors cleared in time; bananas counted per floor": "Pisos superados\nPisos superados a tiempo; plátanos contados por piso"
+ }
+}

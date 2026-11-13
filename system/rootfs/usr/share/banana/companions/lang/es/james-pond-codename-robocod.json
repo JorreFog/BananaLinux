@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, R/up stretch: RoboCod extends his body upward to grab ceilings.": "A saltar, R/arriba estirar: RoboCod estira el cuerpo hacia arriba para aferrarse al techo.",
+  "Abilities": "Habilidades",
+  "Stretch up to climb; jump on enemies to defeat them.": "Estírate para trepar; salta sobre los enemigos para derrotarlos.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Stretch to reach high platforms and avoid boss attacks.": "Estírate para alcanzar plataformas altas y esquivar los ataques de los jefes.",
+  "Toy factory": "Fábrica de juguetes",
+  "Structure": "Estructura",
+  "Santa's toy factory: doors lead to themed worlds of levels.": "La fábrica de juguetes de Papá Noel: las puertas llevan a mundos de niveles con temas.",
+  "Pickups": "Recogibles",
+  "Items": "Objetos",
+  "Cakes, toys and bonus items; vehicles (car, plane, bathtub) in some levels.": "Pasteles, juguetes y objetos extra; vehículos (coche, avión, bañera) en algunos niveles.",
+  "Penguins": "Pingüinos",
+  "Collect": "Coleccionar",
+  "Rescue the penguins in each level to open the exit.": "Rescata a los pingüinos de cada nivel para abrir la salida.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear all worlds and defeat Dr. Maybe.": "Completa todos los mundos y derrota al Dr. Maybe."
+ }
+}

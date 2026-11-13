@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Enemies defeated (level)": "Enemigos derrotados (nivel)",
+  "Health, web meter": "Salud, medidor de telaraña",
+  "Moves": "Movimientos",
+  "Web swing, punches, web attacks\nWeb swing between buildings in the 3D hub; spiders hidden around the city": "Balanceo con telaraña, puñetazos, ataques de telaraña\nBalancéate entre edificios en el hub 3D; arañas escondidas por la ciudad",
+  "Bosses": "Jefes",
+  "Doctor Octopus and other villains\nDoctor Octopus is the main villain; the chase level has its own timer": "Doctor Octopus y otros villanos\nDoctor Octopus es el villano principal; el nivel de persecución tiene su propio temporizador",
+  "Levels": "Niveles",
+  "Level id": "ID de nivel",
+  "Manhattan levels": "Niveles de Manhattan",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Red key": "Llave roja",
+  "Silver key": "Llave plateada",
+  "Yellow key": "Llave amarilla",
+  "Health, power-ups": "Salud, potenciadores",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Spiders collected (3D hub)": "Arañas coleccionadas (hub 3D)",
+  "Pictures taken (level)": "Fotos tomadas (nivel)",
+  "Hidden tokens": "Fichas ocultas",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels by id; secret photos unlock as you take pictures": "Niveles superados\nNiveles por ID; las fotos secretas se desbloquean al tomar fotos"
+ }
+}

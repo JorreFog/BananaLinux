@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Boxer": "Boxeador",
+  "Round": "Asalto",
+  "Round timer": "Temporizador de asalto",
+  "Your downs": "Tus caídas",
+  "Opponent downs": "Caídas del rival",
+  "Score": "Puntuación",
+  "Stamina, guard; KO by draining stamina": "Resistencia, guardia; KO al vaciar la resistencia",
+  "Punches": "Golpes",
+  "Detail": "Detalle",
+  "Jab, Straight, Hook, Uppercut; special: Dempsey Roll\nDown counter and long count are tracked; KO when a boxer stays down": "Jab, Straight, Hook, Uppercut; especial: Dempsey Roll\nSe lleva la cuenta de las caídas y la cuenta de diez; KO cuando un boxeador sigue en el suelo",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Guard when the opponent winds up; counter after a miss": "Guarda cuando el rival se prepara; contraataca tras su fallo.",
+  "Story": "Historia",
+  "Tournament stage": "Etapa del torneo",
+  "Tournament round": "Asalto del torneo",
+  "CPU level": "Nivel de CPU",
+  "Ippo's career from his debut to title fights": "La carrera de Ippo desde su debut hasta las peleas por el título",
+  "Training": "Entrenamiento",
+  "Bag": "Bolsa",
+  "Training mode raises stats\nTraining between fights raises your boxer's stats for story mode": "El modo entrenamiento sube los atributos\nEntrenar entre peleas sube los atributos de tu boxeador para el modo historia",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Boxers unlocked for VS mode\nBoxers include Ippo, Sendo, Mashiba, Volg, Hayami, Shigeta, Date and Saeki\nTournament and sparring modes have their own settings": "Boxeadores desbloqueados para el modo VS\nLos boxeadores incluyen a Ippo, Sendo, Mashiba, Volg, Hayami, Shigeta, Date y Saeki\nLos modos torneo y sparring tienen sus propios ajustes",
+  "Progress": "Progreso",
+  "Story progress (per boxer)": "Progreso de la historia (por boxeador)",
+  "Fights won\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Peleas ganadas\nTraducción al inglés en la carpeta Translations; versión 1.0 (sacada del nombre del archivo)"
+ }
+}

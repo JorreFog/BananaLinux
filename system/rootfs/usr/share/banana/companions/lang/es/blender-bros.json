@@ -1,0 +1,17 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Bones": "Huesos",
+  "Minibros are blended creatures that follow you and attack, open paths or shield you; mix them in the blender to create new ones.": "Los minibros son criaturas mezcladas que te siguen y atacan, abren caminos o te protegen; mézclalos en la batidora para crear nuevos.",
+  "Fights": "Combates",
+  "Enemies defeated": "Enemigos derrotados",
+  "Send attack minibros first, then finish with your own hit.": "Manda primero a los minibros atacantes y remata con tu propio golpe.",
+  "World": "Mundo",
+  "Explore Blender Land's areas to find new minibro types and the parts to rescue the world.": "Explora las zonas de Blender Land para encontrar nuevos tipos de minibro y las piezas para rescatar al mundo.",
+  "Items": "Objetos",
+  "Minibros owned": "Minibros que tienes",
+  "Progress": "Progreso"
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B attack/shoot, R special.": "A saltar, B atacar/disparar, R especial.",
+  "Abilities": "Habilidades",
+  "Blasters, climbing, Lilo sections.": "Blásteres, escalada y secciones de Lilo.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Dodge, then shoot.": "Esquiva y luego dispara.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Levels on Hawaii and space.": "Niveles en Hawái y el espacio.",
+  "Items": "Objetos",
+  "Health and ammo.": "Salud y munición.",
+  "Collectables": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items.": "Objetos ocultos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Stop Dr. Hämsterviel.": "Detén al Dr. Hämsterviel."
+ }
+}

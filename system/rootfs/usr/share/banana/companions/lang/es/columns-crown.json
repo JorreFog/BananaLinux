@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "How to play": "Cómo se juega",
+  "Drop columns of three jewels; line up 3 or more of a colour horizontally, vertically or diagonally to clear them. Chains score more.": "Suelta columnas de tres joyas; alinea 3 o más del mismo color en horizontal, vertical o diagonal para eliminarlas. Las cadenas puntúan más.",
+  "Controls": "Controles",
+  "Left/Right": "Izquierda/Derecha",
+  "Move": "Mover",
+  "Rotate the jewel order": "Gira el orden de las joyas",
+  "Down": "Abajo",
+  "Drop faster": "Suelta más rápido",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Tips": "Consejos",
+  "In Flash and versus modes, chains send garbage to the rival; magic jewels (the gem pieces) cast attacks or shields.": "En los modos Flash y versus, las cadenas envían basura al rival; las joyas mágicas (las piezas de gema) lanzan ataques o escudos.",
+  "Modes": "Modos",
+  "Endless classic": "Clásico sin fin",
+  "Flash": "Destello",
+  "Clear the flashing jewel": "Elimina la joya que parpadea",
+  "Versus / Story": "Versus / Historia",
+  "Fight rivals with magic gems": "Combate a los rivales con gemas mágicas",
+  "Magic gems": "Gemas mágicas",
+  "Collected magic gems are equipped before a match; each gives one spell (raise rival's field, clear rows, slow drops...).": "Las gemas mágicas recogidas se equipan antes del combate; cada una da un hechizo (elevar el campo del rival, borrar filas, ralentizar las caídas...).",
+  "Gems": "Gemas",
+  "Magic gems are won through story and versus wins; collect the full set to fill the gem list.": "Las gemas mágicas se ganan en la historia y en el versus; recoge el set completo para llenar la lista de gemas.",
+  "Progress": "Progreso",
+  "Story mode: beat each rival in turn to reach the Crown.": "Modo historia: derrota a cada rival por turno para llegar a la Corona."
+ }
+}

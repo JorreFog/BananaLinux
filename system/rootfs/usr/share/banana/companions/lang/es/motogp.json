@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Rider": "Pasajero",
+  "Position": "Posición",
+  "Lap": "Vuelta",
+  "Controls": "Controles",
+  "A accelerate, B brake.": "A acelera, B frena.",
+  "Bikes": "Motos",
+  "MotoGP bikes.": "Motos de MotoGP.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Brake while upright; braking leaned over throws you off. Follow the racing line and exit wide.": "Frena enderezado; frenar inclinado te tira de la moto. Sigue la trazada y sale de la curva bien abierto.",
+  "Tracks": "Pistas",
+  "Track": "Pista",
+  "GP circuits.": "Circuitos de GP.",
+  "Setup": "Ajuste",
+  "Items": "Objetos",
+  "No items: the bike is chosen per race; skill decides the result.": "Sin objetos: eliges la moto en cada carrera; el talento decide el resultado.",
+  "Riders": "Pilotos",
+  "Collect": "Coleccionar",
+  "Unlocks.": "Desbloqueos.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

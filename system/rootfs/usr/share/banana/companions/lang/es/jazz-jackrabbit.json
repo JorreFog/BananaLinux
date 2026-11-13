@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A jump, B shoot, R change weapon. Fast run-and-gun.": "A saltar, B disparar, R cambiar arma. Run-and-gun rápido.",
+  "Weapons": "Armas",
+  "Blaster plus special ammo types found in levels.": "Bláster y tipos de munición especial que se encuentran en los niveles.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Keep moving and shoot from range.": "Sigue moviéndote y dispara a distancia.",
+  "Worlds": "Mundos",
+  "Level": "Nivel",
+  "Structure": "Estructura",
+  "Several worlds with multiple levels each.": "Varios mundos con varios niveles cada uno.",
+  "Ammo": "Munición",
+  "Carrot grenades": "Granadas de zanahoria",
+  "Machine gun": "Ametralladora",
+  "Ricochet": "Rebote",
+  "Items": "Objetos",
+  "Ammo, carrots (health), gems.": "Munición, zanahorias (salud), gemas.",
+  "Gems": "Gemas",
+  "Collect": "Coleccionar",
+  "Gems and hidden areas.": "Gemas y zonas ocultas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Devan Shell.": "Derrota a Devan Shell."
+ }
+}

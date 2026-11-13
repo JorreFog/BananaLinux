@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "How it plays": "Cómo se juega",
+  "First-person dungeon crawler with a party of up to 3.": "Crawler de mazmorras en primera persona con un grupo de hasta 3.",
+  "Stats": "Estadísticas",
+  "Classes, stats, skills.": "Clases, estadísticas, habilidades.",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Real-time combat; manage spells.": "Combate en tiempo real; administra los hechizos.",
+  "Dungeons": "Mazmorras",
+  "Structure": "Estructura",
+  "Dungeons and towns; auto-map.": "Mazmorras y pueblos; mapa automático.",
+  "Items": "Objetos",
+  "Equipment, potions, food.": "Equipamiento, pociones, comida.",
+  "Quests": "Misiones",
+  "Collect": "Coleccionar",
+  "Side quests.": "Misiones secundarias.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Finish the main quest.": "Completa la misión principal."
+ }
+}

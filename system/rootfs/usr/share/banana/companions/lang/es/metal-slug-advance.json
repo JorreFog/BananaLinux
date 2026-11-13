@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Mission": "Misión",
+  "Controls": "Controles",
+  "A jump, B shoot, R grenade.": "A salta, B dispara, R granada.",
+  "Weapons": "Armas",
+  "Heavy machine gun, Rocket, Shotgun, Flame shot, Laser.": "Ametralladora, Cohete, Escopeta, Disparo de fuego, Láser.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Use grenades on bosses.": "Usa granadas contra los jefes.",
+  "Mission id": "ID de misión",
+  "Structure": "Estructura",
+  "5 missions.": "5 misiones.",
+  "Ammo": "Munición",
+  "Items": "Objetos",
+  "Weapon crates.": "Cajas de armas.",
+  "Cards": "Cartas",
+  "Collect": "Coleccionar",
+  "Cards and prisoners.": "Tarjetas y prisioneros.",
+  "Missions": "Misiones",
+  "Goal": "Objetivo",
+  "Escape the island.": "Escapa de la isla."
+ }
+}

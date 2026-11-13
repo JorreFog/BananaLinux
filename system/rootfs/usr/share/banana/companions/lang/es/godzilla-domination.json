@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Monster": "Monstruo",
+  "Score": "Puntuación",
+  "How it plays": "Cómo se juega",
+  "Up to four giant monsters fight in a city: smash buildings for power and knock rivals down.": "Hasta cuatro monstruos gigantes combaten en una ciudad: destroza edificios para obtener poder y derriba a los rivales.",
+  "Controls": "Controles",
+  "A punch, B kick, R grab/throw, L jump; special uses the energy meter": "A golpe, B patada, R agarre/lanzamiento, L salto; el especial usa el medidor de energía",
+  "Monsters": "Monstruos",
+  "Roster": "Plantilla",
+  "Godzilla and Toho rivals such as Mecha-King Ghidorah, Rodan, Megalon, Anguirus and Gigan.": "Godzilla y rivales de Toho como Mecha-King Ghidorah, Rodan, Megalon, Anguirus y Gigan.",
+  "Fight": "Pelea",
+  "Rival HP (slot 1)": "HP del rival (ranura 1)",
+  "Tips": "Consejos",
+  "Throw buildings at rivals; collect power-ups from rubble.\nCharge the special beam when the rival is down.": "Lanza edificios contra los rivales; recoge potenciadores entre los escombros.\nCarga el rayo especial cuando el rival esté en el suelo.",
+  "Cities": "Ciudades",
+  "Stage": "Escenario",
+  "Stages": "Escenarios",
+  "Destructible city stages; military forces attack everyone.": "Escenarios de ciudades destructibles; las fuerzas militares atacan a todos.",
+  "Power-ups": "Potenciadores",
+  "Pickups": "Recogibles",
+  "Health and energy pickups appear when buildings collapse.": "Aparecen recogibles de salud y energía cuando se derrumban los edificios.",
+  "Unlocks": "Desbloqueos",
+  "Win Adventure with monsters to unlock more of the roster.": "Gana en Aventura con monstruos para desbloquear más de la plantilla.",
+  "Adventure": "Aventura",
+  "Goal": "Objetivo",
+  "Beat the series of fights in Adventure mode.": "Gana la serie de combates del modo Aventura."
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Mall": "Centro comercial",
+  "Warehouse": "Almacén",
+  "Run": "Correr",
+  "Level": "Nivel",
+  "Cash": "Dinero",
+  "Score, combo, special meter; off-board walking": "Puntuación, combo, medidor de especial; caminar sin tabla",
+  "Tricks": "Trucos",
+  "Flip, grab, grind, manual; get off the board to climb\nStory mode follows one created skater; Arcade uses the pros": "Flip, grab, grind, manual; bájate de la tabla para trepar\nEl modo historia sigue a un skater creado por ti; el arcade usa a los pros",
+  "Goals": "Objetivos",
+  "Story goals per level; 10 goals complete a level (0x3FF in RA's terms)": "Objetivos de historia por nivel; 10 objetivos completan un nivel (0x3FF en términos de RA)",
+  "Levels": "Niveles",
+  "GBA levels": "Niveles GBA",
+  "New Jersey, Mall, Warehouse, Battery Park, Bronx, Hangar, Santa Monica, Hollywood, San Diego, Slam City Jam": "New Jersey, Centro comercial, Almacén, Battery Park, Bronx, Hangar, Santa Monica, Hollywood, San Diego, Slam City Jam",
+  "Levels unlocked": "Niveles desbloqueados",
+  "Collect": "Coleccionar",
+  "Goals (Tony)": "Objetivos (Tony)",
+  "Progress": "Progreso",
+  "Arcade goals per level for Tony Hawk (RA tracks each pro)": "Objetivos de arcade por nivel para Tony Hawk (RA registra a cada pro)"
+ }
+}

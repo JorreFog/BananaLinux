@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Damage power-up": "Potenciador de daño",
+  "Level time": "Tiempo de nivel",
+  "Health; red/black suit": "Salud; traje rojo/negro",
+  "Moves": "Movimientos",
+  "Web attacks; black suit powers\nWeb attacks, swings and combos; the black suit adds stronger attacks": "Ataques de telaraña; poderes del traje negro\nAtaques de telaraña, balanceos y combos; el traje negro añade ataques más fuertes",
+  "Bosses": "Jefes",
+  "Sandman, Venom, New Goblin\nSandman, Venom and the New Goblin are the film's villains": "Sandman, Venom, New Goblin\nSandman, Venom y New Goblin son los villanos de la película",
+  "Levels": "Niveles",
+  "Chapter": "Capítulo",
+  "Level id": "ID de nivel",
+  "Levels unlocked": "Niveles desbloqueados",
+  "City levels": "Niveles de la ciudad",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Health\nHealth pickups and damage power-ups\nDamage power-ups boost attacks for a while": "Salud\nRecogibles de salud y potenciadores de daño\nLos potenciadores de daño potencian los ataques por un tiempo",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nUp attacks and other moves unlock as you progress": "Objetos ocultos\nLos ataques hacia arriba y otros movimientos se desbloquean al avanzar",
+  "Progress": "Progreso",
+  "Levels completed": "Niveles completados",
+  "Levels cleared": "Niveles completados"
+ }
+}

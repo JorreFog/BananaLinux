@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Weapon durability": "Durabilidad del arma",
+  "Day (0 = prologue)": "Día (0 = prólogo)",
+  "Hero (Edgar or Aera) with a Guardian Beast partner\nHP, level; weapons wear out": "Héroe (Edgar o Aera) con una Bestia Guardiana de compañero\nHP, nivel; las armas se desgastan",
+  "Guardian Beast": "Bestia Guardiana",
+  "Detail": "Detalle",
+  "Guardian type": "Tipo de guardián",
+  "Choose one of four guardians; it fights and grants abilities": "Elige uno de cuatro guardianes; combate y otorga habilidades",
+  "Combat": "Combate",
+  "Enemy 1 HP": "HP enemigo 1",
+  "Enemy weapon durability": "Durabilidad del arma enemiga",
+  "Enemy 2 HP": "HP enemigo 2",
+  "Real-time action; dungeon floors end in bosses\nKeep several forged weapons: they break": "Acción en tiempo real; los pisos de la mazmorra terminan con jefes\nTen varias armas forjadas: se rompen",
+  "World": "Mundo",
+  "Room id": "ID de sala",
+  "Town and dungeon chapters; dragon-related story": "Capítulos de ciudad y mazmorra; historia con dragones",
+  "Forge weapons from recipes and materials\nRepair, upgrade, sell at the workshop": "Forja armas con recetas y materiales\nRepara, mejora y vende en el taller",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Fishing top score": "Mejor puntuación de pesca",
+  "Missing-cat quests done": "Misiones de gatos perdidos completadas",
+  "Rampage Rabbit defeats": "Victorias contra Rampage Rabbit",
+  "Missing-thing quests done": "Misiones de cosas perdidas completadas",
+  "Recipes, materials, weapon types": "Recetas, materiales, tipos de arma",
+  "Progress": "Progreso",
+  "Chapters of the story\nDays in the story; side quests (missing cats, rare medals) are tracked": "Capítulos de la historia\nDías de la historia; se registran las misiones secundarias (gatos perdidos, medallas raras)"
+ }
+}

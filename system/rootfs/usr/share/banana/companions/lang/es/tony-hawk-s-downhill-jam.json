@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Race": "Carrera",
+  "Downhill race position, boost\nDownhill racing with tricks: tricks fill the boost meter, boost wins races\nEvents include races and target-shooting challenges (stand on a point and destroy all targets)": "Posición en carrera cuesta abajo, turbo\nCarreras cuesta abajo con trucos: los trucos llenan el medidor de turbo y el turbo gana carreras\nLos eventos incluyen carreras y retos de tiro a blancos (quédate en un punto y destruye todos los blancos)",
+  "Tricks": "Trucos",
+  "Tricks fill the boost meter\nPerfect landings and balance keep your speed; crashing loses the combo and time": "Los trucos llenan el medidor de turbo\nLas aterrizaciones perfectas y el equilibrio mantienen tu velocidad; caerte pierde el combo y el tiempo",
+  "Race rivals downhill; tricks give speed\nRivals block and push: use boost on straights and shortcuts": "Compite cuesta abajo contra rivales; los trucos dan velocidad\nLos rivales bloquean y empujan: usa el turbo en las rectas y los atajos",
+  "Target events": "Eventos de blancos",
+  "stop at the marker and aim with the d-pad at each target": "detente en la marca y apunta con el d-pad a cada blanco",
+  "Courses": "Recorridos",
+  "Map": "Mapa",
+  "Downhill courses\nDownhill courses through towns, mountains and city streets": "Circuitos cuesta abajo\nCircuitos cuesta abajo por pueblos, montañas y calles de la ciudad",
+  "Gear": "Equipo",
+  "Boards and stats\nSkaters and boards with different stats\nSkaters and boards have stats for speed, tricks and balance": "Tablas y estadísticas\nSkaters y tablas con distintas estadísticas\nLos skaters y las tablas tienen estadísticas de velocidad, trucos y equilibrio",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Skaters and courses unlocked\nUnlockable skaters and courses from event wins": "Skaters y circuitos desbloqueados\nSkaters y circuitos desbloqueables al ganar eventos",
+  "Progress": "Progreso",
+  "Events won\nEvents won per tier\nEvents won per tier open the next set of courses": "Eventos ganados\nEventos ganados por nivel\nGanar los eventos de cada nivel abre el siguiente grupo de circuitos"
+ }
+}

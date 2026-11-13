@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "How it plays": "Cómo se juega",
+  "Side-scrolling shooter.": "Shooter de desplazamiento lateral.",
+  "Weapons": "Armas",
+  "Weapon types.": "Tipos de arma.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Keep the strongest weapon you have; bosses repeat attack cycles.": "Conserva el arma más potente que tengas; los jefes repiten ciclos de ataque.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Stages.": "Escenarios.",
+  "Items": "Objetos",
+  "Weapon power-ups change your shot type.": "Los potenciadores de arma cambian tu tipo de disparo.",
+  "Score": "Puntuación",
+  "Collect": "Coleccionar",
+  "High score.": "Récord.",
+  "Goal": "Objetivo",
+  "Clear.": "Limpia."
+ }
+}

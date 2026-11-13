@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Position, lap, damage; weapons\nCombat racing from Orbital Media: race well and use weapons to earn prize money\nCars take damage; a wrecked car loses time, so armor upgrades matter as much as speed": "Posición, vuelta, daño; armas\nCarreras de combate de Orbital Media: compite bien y usa armas para ganar dinero de premio\nLos autos reciben daño; un auto destrozado pierde tiempo, así que las mejoras de armadura importan tanto como la velocidad",
+  "Car upgrades": "Mejoras del auto",
+  "engine, tires, armor, weapons": "motor, neumáticos, armadura, armas",
+  "Front weapons fire ahead (missiles, guns); rear weapons are dropped behind (mines, oil)\nSpend money between races; upgrades carry over to later championships\nBetter cars unlock as you win; a fully tuned early car can still win early cups": "Las armas delanteras disparan hacia delante (misiles, cañones); las armas traseras se dejan atrás (minas, aceite)\nGasta dinero entre carreras; las mejoras se mantienen en los campeonatos siguientes\nSe desbloquean mejores autos al ganar; un auto inicial bien ajustado aún puede ganar las copas iniciales",
+  "Race tips": "Consejos de carrera",
+  "Battle": "Batalla",
+  "Front and rear weapons; use them in packs\nHold front weapons for the straights where rivals line up ahead of you\nDrop rear weapons on narrow sections and just before corners\nLap traffic carefully: a hit from behind costs more than a lost place": "Armas delanteras y traseras; úsalas en grupos\nGuarda las armas delanteras para las rectas donde los rivales se alinean delante\nDeja las armas traseras en las zonas estrechas y justo antes de las curvas\nCuidado al rebasar el tráfico: un golpe por detrás cuesta más que perder un puesto",
+  "Tracks": "Pistas",
+  "Championship tracks across several locales\nChampionships are grouped by difficulty; each one is a series of tracks with points per finish\nLearn the shortcuts in practice before racing the cup": "Circuitos de campeonato en varios lugares\nLos campeonatos se agrupan por dificultad; cada uno es una serie de circuitos con puntos por posición final\nAprende los atajos en los ensayos antes de competir por la copa",
+  "Shop": "Tienda",
+  "Money from races buys upgrades and new cars\nPrize money depends on your finishing position in each race\nWeapons are bought as upgrades, not picked up on track": "El dinero de las carreras compra mejoras y autos nuevos\nEl premio depende de tu posición final en cada carrera\nLas armas se compran como mejoras, no se recogen en pista",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Cars and tracks\nNew cars, weapons and tracks are unlocked by winning championships\nTime trial records are kept per track": "Autos y circuitos\nSe desbloquean autos, armas y circuitos al ganar campeonatos\nLos récords de contrarreloj se guardan por circuito",
+  "Progress": "Progreso",
+  "Championships won\nWin every championship at every difficulty for the full set of unlocks\nPoints decide the championship: consistent podiums beat one lucky win": "Campeonatos ganados\nGana todos los campeonatos en todas las dificultades para desbloquearlo todo\nLos puntos deciden el campeonato: los podios constantes valen más que una victoria suelta"
+ }
+}

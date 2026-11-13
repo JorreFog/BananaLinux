@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Health; lives": "Salud; vidas",
+  "Tarzan side-scroller": "Tarzan de plataformas lateral",
+  "health bar and lives": "barra de salud y vidas",
+  "Tarzan can run, jump, climb walls and ceilings, crawl through tunnels and swing on vines": "Tarzan puede correr, saltar, trepar paredes y techos, arrastrarse por túneles y balancearse en lianas",
+  "Moves": "Movimientos",
+  "Vine swing, spear throw, climbing\nWeapons from the game's move set: spear and boomerang, plus thrown fruit\nCeiling climbing and wall climbing open routes above the main path": "Balanceo en lianas, lanzamiento de lanza, trepa\nArmas del moveset del juego: lanza y bumerán, además de fruta lanzado\nTrepar por techos y paredes abre rutas sobre el camino principal",
+  "Surf-jumps and carts": "Saltos de surf y carritos",
+  "fast sliding sections that need well-timed jumps": "tramos de deslizamiento rápido que exigen saltos bien calculados",
+  "Bosses": "Jefes",
+  "Jungle bosses\nJungle animals and hunters guard each area; bosses close the chapters\nCrawl under fast attacks, then strike from close range": "Jefes de la jungla\nAnimales de la jungla y cazadores protegen cada área; los jefes cierran los capítulos\nArrástrate bajo los ataques rápidos y golpea de cerca",
+  "Levels": "Niveles",
+  "Jungle levels\nJungle levels with vines, rivers, caves and treetops": "Niveles de jungla\nNiveles de jungla con lianas, ríos, cavernas y copas de árboles",
+  "Items": "Objetos",
+  "Fruit (ammo), health\nFruit as ammo, health pickups, and the boomerang / spear when found": "Fruta (munición), salud\nFruta como munición, recogibles de salud, y el bumerán / lanza cuando aparecen",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden items above and below the main route\nLook for hidden items above trees and below in caves": "Objetos ocultos\nObjetos ocultos sobre y bajo la ruta principal\nBusca objetos ocultos sobre los árboles y dentro de las cavernas",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels in order to the final chapter\nLevels follow the jungle story; bosses end each chapter": "Niveles superados\nNiveles en orden hasta el capítulo final\nLos niveles siguen la historia de la jungla; los jefes terminan cada capítulo"
+ }
+}

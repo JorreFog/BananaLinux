@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Energy": "Energía",
+  "Score": "Puntuación",
+  "Characters": "Personajes",
+  "The six Toa: Tahu (fire), Gali (water), Lewa (air), Pohatu (stone), Onua (earth), Kopaka (ice).": "Los seis Toa: Tahu (fuego), Gali (agua), Lewa (aire), Pohatu (piedra), Onua (tierra), Kopaka (hielo).",
+  "Masks": "Máscaras",
+  "Kanohi masks": "Máscaras Kanohi",
+  "Collect masks for powers.": "Recoge máscaras para obtener poderes.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Each Rahi beast has an element weakness.": "Cada bestia Rahi tiene una debilidad elemental.",
+  "Map id": "ID de mapa",
+  "Areas": "Áreas",
+  "The island's regions, each the home of a Toa.": "Las regiones de la isla, cada una hogar de un Toa.",
+  "Items": "Objetos",
+  "Masks and energy.": "Máscaras y energía.",
+  "Collect": "Coleccionar",
+  "Kanohi masks.": "Máscaras Kanohi.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Makuta.": "Derrota a Makuta."
+ }
+}

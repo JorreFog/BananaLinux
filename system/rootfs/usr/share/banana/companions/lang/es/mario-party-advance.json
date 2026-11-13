@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Coins": "Monedas",
+  "Saved coins": "Monedas guardadas",
+  "How it plays": "Cómo se juega",
+  "Shroom City: complete quests for residents by playing mini-games.": "Shroom City: completa las misiones de los residentes jugando minijuegos.",
+  "Gaddgets": "Gadgets",
+  "Collect gadgets.": "Recoge gadgets.",
+  "Mini-games": "Minijuegos",
+  "Tips": "Consejos",
+  "Many mini-games reward timing.": "Muchos minijuegos premian la temporización.",
+  "Map": "Mapa",
+  "Board-like city areas.": "Zonas de ciudad con forma de tablero.",
+  "Items": "Objetos",
+  "Mushrooms.": "Hongos.",
+  "Collect": "Coleccionar",
+  "Gaddgets and mini-games.": "Gadgets y minijuegos.",
+  "Quests": "Misiones",
+  "Goal": "Objetivo",
+  "Finish all quests.": "Completa todas las misiones."
+ }
+}

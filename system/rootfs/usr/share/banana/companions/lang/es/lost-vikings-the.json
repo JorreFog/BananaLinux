@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Erik health": "Salud de Erik",
+  "Baleog health": "Salud de Baleog",
+  "Olaf health": "Salud de Olaf",
+  "Three vikings": "Tres vikings",
+  "Erik the Swift (runs, jumps, headbutts walls), Baleog the Fierce (sword, bow), Olaf the Stout (shield: blocks, glides).": "Erik el Veloz (corre, salta, embiste paredes), Baleog el Fiero (espada, arco) y Olaf el Fuerte (escudo: bloquea, se desliza).",
+  "Controls": "Controles",
+  "L/R switch viking, A/B their abilities.": "L/R cambia de viking, A/B sus habilidades.",
+  "Health": "Salud",
+  "Each viking has 3 health points; food heals.": "Cada viking tiene 3 puntos de salud; la comida cura.",
+  "Hazards": "Peligros",
+  "Tips": "Consejos",
+  "Every viking must reach the exit. Olaf's shield blocks shots; Baleog's arrows hit switches.": "Cada viking debe llegar a la salida. El escudo de Olaf bloquea los disparos; las flechas de Baleog activan interruptores.",
+  "Worlds": "Mundos",
+  "Level": "Nivel",
+  "Spaceship, Prehistoric, Egypt, Factory, Wacky World.": "Nave espacial, Prehistoria, Egipto, Fábrica, Mundo Loco.",
+  "Inventory": "Inventario",
+  "Items": "Objetos",
+  "Each viking carries up to 4 items: keys, bombs, food, shields.": "Cada viking carga hasta 4 objetos: llaves, bombas, comida, escudos.",
+  "Passwords": "Contraseñas",
+  "Collect": "Coleccionar",
+  "Level passwords.": "Contraseñas de nivel.",
+  "Levels": "Niveles",
+  "Goal": "Objetivo",
+  "Get the three vikings home from Tomator's ship.": "Lleva a los tres vikings a casa desde el barco de Tomator."
+ }
+}

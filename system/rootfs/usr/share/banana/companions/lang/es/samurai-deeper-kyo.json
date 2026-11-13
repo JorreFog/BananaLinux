@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Kills this stage": "Bajas este escenario",
+  "Health; sword attacks": "Salud; ataques con espada",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Kyo and allies from the manga\nKyo fights with a katana; weapons are chosen on the weapon select screen": "Kyo y sus aliados del manga\nKyo pelea con una katana; las armas se eligen en la pantalla de selección de arma",
+  "Bosses": "Jefes",
+  "Enemy 1": "Enemigo 1",
+  "Enemy 2": "Enemigo 2",
+  "Boss fights at chapter ends": "Combates con jefes al final de los capítulos",
+  "Chapters": "Capítulos",
+  "Map": "Mapa",
+  "Map id": "ID de mapa",
+  "Story chapters": "Capítulos de historia",
+  "Items": "Objetos",
+  "Health items\nHealth refills drop from breakable objects in each area": "Objetos de salud\nLas recargas de salud salen de objetos rompibles en cada área",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nBreakables can hide items; kill counts are tracked per stage": "Objetos ocultos\nLos objetos rompibles pueden esconder cosas; las bajas se cuentan por escenario",
+  "Progress": "Progreso",
+  "Chapters\nStory and arcade modes; each stage is timed\nStory and arcade modes keep their own timers": "Capítulos\nModos historia y arcade; cada escenario está cronometrado\nLos modos historia y arcade guardan sus propios tiempos"
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Level time": "Tiempo de nivel",
+  "Health; pistols": "Salud; pistolas",
+  "Moves": "Movimientos",
+  "Jump, climb, grapple\nGrapple to swing over gaps and pull objects; time trials per level": "Saltar, trepar, gancho\nUsa el gancho para balancearte sobre huecos y jalar objetos; trials de tiempo por nivel",
+  "Bosses": "Jefes",
+  "Story bosses\nBoss health shows during fights; dodge and shoot": "Jefes de la historia\nLa salud del jefe aparece durante los combates; esquiva y dispara",
+  "Levels": "Niveles",
+  "Level": "Nivel",
+  "Area": "Área",
+  "Checkpoint": "Punto de control",
+  "Locations from the story": "Lugares de la historia",
+  "Items": "Objetos",
+  "Shotgun ammo": "Munición de escopeta",
+  "SMG ammo": "Munición de subfusil",
+  "Health packs, ammo": "Botiquines, munición",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Gold rewards": "Recompensas en oro",
+  "Hidden artifacts": "Artefactos ocultos",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels and areas with checkpoints; gold rewards for finishing goals": "Niveles superados\nNiveles y áreas con puntos de control; recompensas en oro por cumplir objetivos"
+ }
+}

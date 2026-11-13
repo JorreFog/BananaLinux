@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Health": "Salud",
+  "Character": "Personaje",
+  "Goblin energy": "Energía del Goblin",
+  "Spider-Man or Green Goblin; health": "Spider-Man o Green Goblin; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Spider-Man health upgrades": "Mejoras de salud de Spider-Man",
+  "Spider-Man melee upgrades": "Mejoras de cuerpo a cuerpo de Spider-Man",
+  "Spider-Man web fluid upgrades": "Mejoras de fluido de telaraña de Spider-Man",
+  "Spider-Man web capture upgrades": "Mejoras de captura de telaraña de Spider-Man",
+  "Goblin health upgrades": "Mejoras de salud del Goblin",
+  "Alternate between Spider-Man and the Goblin in chapters": "Alterna entre Spider-Man y el Goblin en los capítulos",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Ultimate-universe villains": "Villanos del universo alternativo",
+  "Levels": "Niveles",
+  "Level (save 1)": "Nivel (partida 1)",
+  "New York levels": "Niveles de New York",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Upgrade points": "Puntos de mejora",
+  "health, melee damage, web fluid and web capture time for Spider-Man; health for the Goblin": "salud, daño cuerpo a cuerpo, fluido de telaraña y tiempo de captura de telaraña de Spider-Man; salud del Goblin",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden items in each chapter; upgrades are spent between chapters": "Objetos ocultos\nObjetos ocultos en cada capítulo; las mejoras se gastan entre capítulos",
+  "Progress": "Progreso",
+  "Levels cleared\nChapters alternate between Spider-Man and the Green Goblin": "Niveles superados\nLos capítulos alternan entre Spider-Man y Green Goblin"
+ }
+}

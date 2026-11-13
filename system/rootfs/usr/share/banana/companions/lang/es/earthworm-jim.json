@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Level 5": "Nivel 5",
+  "Tube Race": "Carrera de tubos",
+  "Psy-Crow race 1": "Carrera de Psy-Crow 1",
+  "Psy-Crow race 2": "Carrera de Psy-Crow 2",
+  "Health %": "Salud %",
+  "Lives": "Vidas",
+  "Continues": "Continuaciones",
+  "Plasma ammo": "Munición de plasma",
+  "Moves": "Movimientos",
+  "Fire the plasma blaster (8 directions)": "Dispara el bláster de plasma (8 direcciones)",
+  "Jump": "Saltar",
+  "Head whip (swing from hooks with whip + Up)": "Latigazo de cabeza (gira desde los ganchos con latigazo + Arriba)",
+  "Hold A in the air": "Mantén A en el aire",
+  "Helicopter head (slow fall)": "Cabeza de helicóptero (caída lenta)",
+  "Checkpoint": "Punto de control",
+  "Bosses": "Jefes",
+  "Level": "Nivel",
+  "Tips": "Consejos",
+  "Chuck: whip him while dodging the fish he spits.\nBob the Goldfish: walk up and whip the bowl.\nMajor Mucus: bounce on the bungee so he hits the wall first.\nQueen Slug: knock the eggs back at her.\nEvil the Cat: shoot him after each fireball run; he has nine lives.": "Chuck: golpéalo con el látigazo mientras esquivas los peces que escupe.\nBob el Pez Dorado: acércate y golpéa el cuenco.\nMajor Mucus: rebota en la goma para que golpee primero la pared.\nQueen Slug: devuélvele los huevos.\nEvil the Cat: dispárale después de cada tanda de bolas de fuego; tiene nueve vidas.",
+  "Route: New Junk City, What The Heck?, Down the Tubes, Snot a Problem, Level 5, For Pete's Sake, Buttville, Tube Race; Andy Asteroids races between levels.": "Ruta: New Junk City, What The Heck?, Down the Tubes, Snot a Problem, Level 5, For Pete's Sake, Buttville, Tube Race; carreras de Andy Asteroids entre niveles.",
+  "Ammo": "Munición",
+  "Mega plasma": "Megaplasma",
+  "Sub oxygen": "Oxígeno del submarino",
+  "Fuel pods (race)": "Botes de combustible (carrera)",
+  "Asteroid shields": "Escudos de asteroide",
+  "Pickups": "Recogibles",
+  "Atoms refill plasma, the Jim heads are extra lives, the green glob refills health, and question-mark items warp to secret areas.": "Los átomos recargan el plasma, las cabezas de Jim son vidas extra, el globo verde recupera salud y los objetos con signo de interrogación te teletransportan a zonas secretas.",
+  "Progress": "Progreso",
+  "Difficulty": "Dificultad"
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Cannon": "Cañón",
+  "Lives": "Vidas",
+  "Bombs": "Bombas",
+  "Score": "Puntuación",
+  "Coins": "Monedas",
+  "How it plays": "Cómo se juega",
+  "Space Invaders style: move the cannon, shoot the descending invader waves.": "Estilo Space Invaders: mueve el cañón y dispara a las oleadas de invasores que descienden.",
+  "Invaders": "Invasores",
+  "Left weapon level": "Nivel del arma izquierda",
+  "Right weapon level": "Nivel del arma derecha",
+  "Points": "Puntos",
+  "Lower rows score least, top rows most; the mystery UFO gives bonus points.": "Las filas de abajo valen menos y las de arriba más; el OVNI misterioso da puntos extra.",
+  "Wave": "Oleada",
+  "Tips": "Consejos",
+  "Clear one column at the edge to slow their reach. The last invader moves fastest.": "Limpia una columna del borde para frenar su avance. El último invasor es el más rápido.",
+  "Waves": "Oleadas",
+  "Structure": "Estructura",
+  "Waves start lower each time you clear one.": "Cada vez que limpias una, las oleadas empiezan más abajo.",
+  "Shields": "Escudos",
+  "Bunkers block shots both ways and wear down.": "Los bunkers bloquean los disparos en ambos sentidos y se desgastan.",
+  "Collect": "Coleccionar",
+  "High score table.": "Tabla de récords.",
+  "Goal": "Objetivo",
+  "Survive as many waves as possible.": "Sobrevive tantas oleadas como puedas."
+ }
+}

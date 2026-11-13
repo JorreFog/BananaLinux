@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Chess game; clock\nChess against a ladder of CPU opponents, ending with Garry Kasparov himself (Titus Interactive)": "Juego de ajedrez; reloj\nAjedrez contra una escalera de rivales de CPU, que termina con el propio Garry Kasparov (Titus Interactive)",
+  "Save slots": "Ranuras de guardado",
+  "new game, load, copy and erase": "partida nueva, cargar, copiar y borrar",
+  "Pieces": "Piezas",
+  "Standard chess pieces and moves\nOpponents in the ROM come from around the world (e.g. Masakazu Hojo, Dmitri Vasilov, Vicktor Kirov, Igor Grouketzky), each with a stronger style": "Piezas y movimientos estándar de ajedrez\nLos rivales del ROM vienen de todo el mundo (p. ej. Masakazu Hojo, Dmitri Vasilov, Vicktor Kirov, Igor Grouketzky), cada uno con un estilo más fuerte",
+  "Standard chess rules": "Reglas estándar de ajedrez",
+  "castling, en passant, promotion": "enroque, captura al paso, promoción",
+  "Tips": "Consejos",
+  "Control the center; develop pieces early": "Controla el centro; desarrolla las piezas pronto",
+  "Opening tips": "Consejos de apertura",
+  "control the center with pawns and knights, castle early, don't move the queen out too soon": "controla el centro con peones y caballos, enroca pronto y no saques la reina demasiado pronto",
+  "Trade pieces when ahead; keep rooks on open files": "Cambia piezas cuando vayas ganando; mantén las torres en columnas abiertas",
+  "Modes": "Modos",
+  "Game, tutorial, puzzles\nThe career ladder of named opponents leads to the match with Kasparov": "Partida, tutorial, puzles\nLa escalera de rivales con nombre lleva al duelo con Kasparov",
+  "Settings": "Ajustes",
+  "Bag": "Bolsa",
+  "Difficulty levels\nDifficulty levels and clock settings in the options": "Niveles de dificultad\nNiveles de dificultad y ajustes del reloj en las opciones",
+  "Puzzles": "Puzles",
+  "Collect": "Coleccionar",
+  "Chess puzzles\nChess lessons and puzzles from the menu teach tactics": "Puzles de ajedrez\nLas lecciones y puzles de ajedrez del menú enseñan tácticas",
+  "Progress": "Progreso",
+  "Wins\nBeat each opponent on the ladder to unlock the next\nSave the game between opponents (load/copy/erase)": "Victorias\nGana a cada rival de la escalera para desbloquear al siguiente\nGuarda la partida entre rivales (cargar/copiar/borrar)"
+ }
+}

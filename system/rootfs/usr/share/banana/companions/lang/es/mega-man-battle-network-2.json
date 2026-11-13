@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "How it plays": "Cómo se juega",
+  "Lan jacks MegaMan.EXE into the Net; battles on a 3x6 grid with chips.": "Lan conecta a MegaMan.EXE a la Red; los combates son en una cuadrícula de 3x6 con chips.",
+  "Controls": "Controles",
+  "A use chip, B buster (hold to charge), L/R select/custom screen.": "A usa chip, B buster (mantén pulsado para cargar), L/R seleccionan / pantalla personalizada.",
+  "MegaMan": "Mega Man",
+  "Stats": "Estadísticas",
+  "HP up through HP Memory. Folder: 30 chips.": "La HP sube con HP Memory. Carpeta: 30 chips.",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Chip codes: pick chips with the same code or same name to send more each turn. Program Advances: combine specific chips. Break stage panels for advantage.": "Códigos de chip: elige chips con el mismo código o el mismo nombre para enviar más cada turno. Program Advances: combina chips concretos. Rompe los paneles del escenario para marcar ventaja.",
+  "Net": "Red",
+  "Areas": "Áreas",
+  "Items": "Objetos",
+  "Chips, Zenny, Styles.": "Chips, Zenny, Estilos.",
+  "Library": "Biblioteca",
+  "Collect": "Coleccionar",
+  "Chip Library; Style changes.": "Biblioteca de chips; cambios de estilo.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Gospel.": "Derrota a Gospel."
+ }
+}

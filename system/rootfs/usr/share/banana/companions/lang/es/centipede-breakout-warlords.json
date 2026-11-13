@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Games": "Juegos",
+  "Shoot the centipede segments in the mushroom field": "Dispara a los segmentos del ciempiés en el campo de hongos",
+  "Bounce the ball through the brick wall": "Rebota la pelota entre el muro de ladrillos",
+  "Defend your castle corner from the bouncing fireball": "Defiende la esquina de tu castillo de la bola de fuego que rebota",
+  "Controls": "Controles",
+  "D-pad move, A/B fire": "Cruceta mueve, A/B dispara",
+  "D-pad move paddle, A serve": "Cruceta mueve paleta, A saca",
+  "D-pad move shield, A catch/release": "Cruceta mueve escudo, A atrapa/suelta",
+  "Tips": "Consejos",
+  "Centipede: stay low, kill the flea that seeds mushrooms; the spider gives most points close up.\nBreakout: break through the side for the ball to bounce behind the wall.\nWarlords: catch and aim the fireball at a weak castle wall.": "Centipede: agáchate, mata a la pulga que siembra hongos; la araña da la mayoría de los puntos de cerca.\nBreakout: rompe por el lateral para que la pelota rebote detrás del muro.\nWarlords: atrapa la bola de fuego y apúntala a una muralla débil del castillo.",
+  "Modes": "Modos",
+  "Classic and enhanced versions of each game; Warlords has 4-player link.": "Versiones clásicas y mejoradas de cada juego; Warlords tiene enlace para 4 jugadores.",
+  "Scoring": "Puntuación",
+  "Centipede: head 100, body 10, spider 300-900, flea 200, scorpion 1000.": "Centipede: cabeza 100, cuerpo 10, araña 300-900, pulga 200, escorpión 1000.",
+  "Three Atari arcade classics on one cart.": "Tres clásicos arcade de Atari en un solo cartucho.",
+  "Progress": "Progreso",
+  "Score attack: high scores are saved per game.": "Ataque de puntos: los récords se guardan por juego."
+ }
+}

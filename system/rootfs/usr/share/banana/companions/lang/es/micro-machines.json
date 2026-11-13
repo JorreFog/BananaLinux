@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Position": "Posición",
+  "Lap": "Vuelta",
+  "Laps in race": "Vueltas en carrera",
+  "Minutes": "Minutos",
+  "Controls": "Controles",
+  "A accelerate, B brake. Top-down races of tiny cars around household tracks.": "A acelera, B frena. Carreras cenitales de autos diminutos por pistas en la casa.",
+  "Vehicles": "Vehículos",
+  "Sports cars, 4x4s, boats, helicopters, tanks...": "Deportivos, 4x4, barcos, helicópteros, tanques...",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Falling off the screen's edge behind the leader loses the point in head-to-head.": "Caer por el borde de la pantalla detrás del líder te hace perder el punto en las carreras cara a cara.",
+  "Tracks": "Pistas",
+  "Championship track": "Pista del campeonato",
+  "Furthest track": "Pista más lejana",
+  "Breakfast table, desk, bath, garden, pool table.": "Mesa del desayuno, escritorio, baño, jardín, mesa de billar.",
+  "Items": "Objetos",
+  "Power-ups on some tracks.": "Potenciadores en algunas pistas.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Unlock vehicles.": "Desbloquea vehículos.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win the championship.": "Gana el campeonato."
+ }
+}

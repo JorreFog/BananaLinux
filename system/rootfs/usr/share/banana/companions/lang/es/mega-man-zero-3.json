@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Lives": "Vidas",
+  "Stage time": "Tiempo de escenario",
+  "Controls": "Controles",
+  "A jump, B main weapon, R sub weapon, L dash (config).": "A salta, B arma principal, R subarma, L dash (config).",
+  "Weapons": "Armas",
+  "Z-Saber combos, Buster charge shots.": "Combos de Z-Saber, disparos cargados de Buster.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Element chips (fire, ice, thunder) on charged attacks exploit boss weaknesses.": "Los chips elementales (fuego, hielo, trueno) en los ataques cargados explotan las debilidades de los jefes.",
+  "Mission": "Misión",
+  "Stage id": "ID de escenario",
+  "Structure": "Estructura",
+  "Missions; Secret Disks.": "Misiones; Discos secretos.",
+  "Items": "Objetos",
+  "Sub tank 1": "Tanque sub 1",
+  "Sub tank 2": "Tanque sub 2",
+  "Sub tank 3": "Tanque sub 3",
+  "Chips, Secret Disks.": "Chips, Discos secretos.",
+  "Disks": "Discos",
+  "Collect": "Coleccionar",
+  "Secret Disks.": "Discos secretos.",
+  "Missions": "Misiones",
+  "Goal": "Objetivo",
+  "Defeat Omega.": "Derrota a Omega."
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Controls": "Controles",
+  "Punch, kick, block, run (check Options).": "Puñetazo, patada, bloqueo, carrera (revisa Opciones).",
+  "Fatalities": "Fatalidades",
+  "Finish him: special input at close/far range.": "Finish him: combo especial a corta o larga distancia.",
+  "Moves": "Movimientos",
+  "Each fighter has special moves.": "Cada combatiente tiene movimientos especiales.",
+  "Fight": "Pelea",
+  "Round timer": "Temporizador de asalto",
+  "Your health": "Tu salud",
+  "Opponent health": "Salud del rival",
+  "Tips": "Consejos",
+  "Block, then punish.": "Bloquea y castiga.",
+  "Modes": "Modos",
+  "Gold Koins": "Koins dorados",
+  "Items": "Objetos",
+  "Collect": "Coleccionar",
+  "Unlocks.": "Desbloqueos.",
+  "Goal": "Objetivo",
+  "Win the tournament.": "Gana el torneo."
+ }
+}

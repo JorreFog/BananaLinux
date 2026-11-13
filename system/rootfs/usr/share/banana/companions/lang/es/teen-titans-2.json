@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Titans": "Titanes",
+  "Health": "Salud",
+  "Play time": "Tiempo jugado",
+  "The five Titans; health": "Los cinco Titanes; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Switch Titans; each has special attacks\nCharacters and upgrades unlock with play; upgrades are stored as bit flags per Titan": "Cambia de Titán; cada uno tiene ataques especiales\nLos personajes y las mejoras se desbloquean jugando; las mejoras se guardan como banderas de bits por Titán",
+  "Bosses": "Jefes",
+  "Brotherhood of Evil\nMissions against the Brotherhood of Evil; boss health bars appear during fights": "Hermandad del Mal\nMisiones contra la Hermandad del Mal; aparecen barras de salud de jefe durante los combates",
+  "Levels": "Niveles",
+  "Level": "Nivel",
+  "Locations from the series": "Lugares de la serie",
+  "Items": "Objetos",
+  "Health\nHealth refills from pickups; play time is tracked per save": "Salud\nLa salud se rellena con recogibles; el tiempo jugado se registra por partida",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Characters unlocked (bits)": "Personajes desbloqueados (bits)",
+  "Upgrades unlocked (bits)": "Mejoras desbloqueadas (bits)",
+  "Hidden items": "Objetos ocultos",
+  "Progress": "Progreso",
+  "Levels unlocked": "Niveles desbloqueados"
+ }
+}

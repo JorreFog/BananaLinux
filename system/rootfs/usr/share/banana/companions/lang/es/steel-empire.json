@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "Score": "Puntuación",
+  "Ships": "Naves",
+  "Bombs": "Bombas",
+  "Weapon level": "Nivel del arma",
+  "Life, bombs; Striker (plane) or Zeppelin": "Vida, bombas; Striker (avión) o Zeppelin",
+  "fast biplane; Zeppelin: slow airship that takes more hits": "biplano rápido; Zeppelin: nave aérea lenta que aguanta más golpes",
+  "Aircraft": "Aeronaves",
+  "Detail": "Detalle",
+  "fast, weaker; Zeppelin: slower, tougher": "rápida, más débil; Zeppelin: más lenta, más resistente",
+  "Fire forward and backward": "Dispara hacia delante y hacia atrás",
+  "Bosses": "Jefes",
+  "Steampunk airships and fortresses\nBosses are huge steam-powered war machines; their parts can be destroyed one by one": "Naves aéreas y fortalezas steampunk\nLos jefes son enormes máquinas de guerra a vapor; sus partes se pueden destruir una a una",
+  "Stages": "Escenarios",
+  "Stages of the Motorhead empire war\n7 stages (the stage result screen counts life, level and all-stage-clear bonuses)": "Escenarios de la guerra del imperio Motorhead\n7 escenarios (la pantalla de resultados cuenta los bonos de vida, nivel y de superar todo)",
+  "Weapons": "Armas",
+  "Bag": "Bolsa",
+  "Power-ups and bombs\nPower-up icons raise the main gun level; lightning bombs hit everything on screen": "Potenciadores y bombas\nLos iconos de potenciador suben el nivel del cañón principal; las bombas de rayos alcanzan todo lo que hay en pantalla",
+  "Bonuses": "Bonos",
+  "Collect": "Coleccionar",
+  "Power-up levels": "Niveles de potenciador",
+  "Bonus points": "Puntos extra",
+  "life bonus, level bonus, all-stage-clear bonus and a no-continue clear bonus": "bono de vida, bono de nivel, bono de superar todo y bono de terminar sin continuar",
+  "Progress": "Progreso",
+  "Stages cleared\nClear all stages without continuing for the biggest bonus (developed by Starfish)": "Escenarios superados\nSupera todos los escenarios sin continuar para llevarte el mayor bonus (desarrollado por Starfish)"
+ }
+}

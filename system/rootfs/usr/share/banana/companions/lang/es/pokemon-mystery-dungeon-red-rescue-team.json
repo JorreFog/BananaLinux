@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Pokemon Mystery Dungeon - Red Rescue Team": "Pokemon Mystery Dungeon - Equipo de Rescate Rojo",
+  "Team": "Equipo",
+  "Leader HP": "HP del líder",
+  "Leader level": "Nivel del líder",
+  "Partner HP": "HP del compañero",
+  "Partner level": "Nivel del compañero",
+  "Floor": "Piso",
+  "How it plays": "Cómo se juega",
+  "You are a Pokémon with a partner; rescue team missions in dungeons.": "Eres un Pokémon con un compañero; misiones del equipo de rescate en mazmorras.",
+  "Belly": "Barriga",
+  "Belly drops with every step: eat Apples.": "La barriga baja con cada paso: come Manzanas.",
+  "Moves": "Movimientos",
+  "Each Pokémon has 4 moves with PP; link moves chain.": "Cada Pokémon tiene 4 movimientos con PP; los movimientos enlazados se encadenan.",
+  "Dungeon": "Mazmorra",
+  "Tips": "Consejos",
+  "Type matchups as in the main games. Use Orbs in monster houses.": "Ventajas de tipo como en los juegos principales. Usa Orbes en las casas de monstruos.",
+  "Areas": "Áreas",
+  "Tiny Woods, Thunderwave Cave, Mt. Steel, Sinister Woods, Silent Chasm, Mt. Thunder, Great Canyon, Lapis Cave, Mt. Blaze, Frosty Forest, Magma Cavern, Sky Tower.": "Bosque Diminuto, Cueva Onda Trueno, Monte Acero, Bosque Siniestro, Barranco Silencioso, Monte Trueno, Gran Cañón, Cueva Lapis, Monte Llama, Bosque Helado, Caverna de Magma, Torre del Cielo.",
+  "Bag": "Bolsa",
+  "Poké (money)": "Poké (dinero)",
+  "Items": "Objetos",
+  "Apples, Berries, Seeds, Orbs, Gummis (raise IQ).": "Manzanas, Bayas, Semillas, Orbes, Gummis (suben el CI).",
+  "Friends": "Amigos",
+  "Collect": "Coleccionar",
+  "Friend areas for recruited Pokémon.": "Zonas de amigos para los Pokémon reclutados.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Reach Sky Tower and calm Rayquaza.": "Llega a la Torre del Cielo y calma a Rayquaza."
+ }
+}

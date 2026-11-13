@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Cody and his team of Robopon (robot monsters), up to 4 in battle\nHP, level, energy; each Robopon has a type": "Cody y su equipo de Robopon (monstruos robot), hasta 4 en combate\nHP, nivel, energía; cada Robopon tiene un tipo",
+  "Detail": "Detalle",
+  "Robopon gain levels and can be powered up with parts\nMoves come from software (installed programs)": "Los Robopon suben de nivel y se potencian con piezas\nLos movimientos vienen del software (programas instalados)",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Use software that matches the opponent's weakness\nBatteries in the field restore energy": "Usa el software que coincida con la debilidad del rival\nLas baterías en el campo restauran energía",
+  "World": "Mundo",
+  "Main map": "Mapa principal",
+  "Sub-map": "Submapa",
+  "Island towns and routes; Robopon battle sites": "Pueblos y rutas de las islas; zonas de batalla Robopon",
+  "Items": "Objetos",
+  "Software (moves), batteries, parts, money\nSoftware and parts lists hold up to 20 entries each": "Software (movimientos), baterías, piezas, dinero\nLas listas de software y piezas admiten hasta 20 entradas cada una",
+  "Collect": "Coleccionar",
+  "Robopon stored in Hoffman's Tower": "Robopon guardados en la Torre de Hoffman",
+  "Many Robopon to collect; Cross and Ring versions differ": "Muchos Robopon para coleccionar; las versiones Cross y Ring difieren",
+  "Progress": "Progreso",
+  "Current rank (counts down)": "Rango actual (cuenta regresiva)",
+  "Beat the story's rival tamers and bosses island by island": "Derrota a los adiestadores rivales y a los jefes de la historia isla por isla"
+ }
+}

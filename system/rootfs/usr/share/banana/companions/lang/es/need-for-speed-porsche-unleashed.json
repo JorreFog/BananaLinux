@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Controls": "Controles",
+  "A accelerate, B brake, R nitro.": "A acelera, B frena, R nitro.",
+  "Car": "Auto",
+  "Upgrades": "Mejoras",
+  "Engine, tyres, body.": "Motor, neumáticos, carrocería.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Nitro on straights.": "Nitro en las rectas.",
+  "Modes": "Modos",
+  "Track id": "ID de pista",
+  "Porsche career.": "Modo carrera de Porsche.",
+  "Parts": "Partes",
+  "Items": "Objetos",
+  "Parts.": "Piezas.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Career": "Carrera",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

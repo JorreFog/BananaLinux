@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Race": "Carrera",
+  "Place": "Posición",
+  "Lap": "Vuelta",
+  "Race time": "Tiempo de carrera",
+  "Jiggies (this race)": "Jiggies (esta carrera)",
+  "Pilot": "Piloto",
+  "Character id": "ID de personaje",
+  "Cup points": "Puntos de copa",
+  "Pilots: Banjo, Kazooie, Mumbo, Humba Wumba, Bottles, Jolly, Klungo, Grunty (and unlockables).": "Pilotos: Banjo, Kazooie, Mumbo, Humba Wumba, Bottles, Jolly, Klungo, Grunty (y desbloqueables).",
+  "Items": "Objetos",
+  "Eggs": "Huevos",
+  "Fire forward": "Fuego hacia adelante",
+  "Homing eggs": "Huevos teledirigidos",
+  "Lock-on shot": "Disparo con fijación",
+  "Feather": "Pluma",
+  "Shield": "Escudo",
+  "Honeycomb": "Panal",
+  "Repairs damage": "Repara el daño",
+  "Golden feather": "Pluma dorada",
+  "Invincibility": "Invulnerabilidad",
+  "Each pilot also has a special weapon gained by collecting the pilot's items.": "Cada piloto tiene además un arma especial que se obtiene al recoger sus objetos.",
+  "Cup": "Copa",
+  "Grand Prix cups of four courses; Jiggy Challenge collects six jiggies per course; Time Trial races Cheato's times.": "Las copas del Gran Premio son de cuatro circuitos; Jiggy Challenge recoge seis jiggies por circuito; Time Trial compite con los tiempos de Cheato.",
+  "Pickups": "Recogibles",
+  "Honeycombs repair, notes add points, and Cheato pages unlock extras.": "Los panales reparan, las notas suman puntos y las páginas de Cheato desbloquean extras.",
+  "Cheato pages": "Páginas de Cheato",
+  "Pages found": "Páginas encontradas",
+  "Jiggies this race": "Jiggies en esta carrera",
+  "Progress": "Progreso"
+ }
+}

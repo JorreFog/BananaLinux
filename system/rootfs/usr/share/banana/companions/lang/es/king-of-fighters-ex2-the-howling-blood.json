@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Format": "Formato",
+  "Teams of three fight in sequence; a striker can be called in for assists.": "Equipos de tres combaten en secuencia; se puede llamar a un striker para asistir.",
+  "Controls": "Controles",
+  "A light punch, B light kick, R/L heavy attacks (check Options).": "A puñetazo ligero, B patada ligera, R/L ataques fuertes (revisa Opciones).",
+  "Moves": "Movimientos",
+  "Power gauge": "Medidor de poder",
+  "Fills by attacking and blocking; spend stocks on super moves.": "Se llena atacando y bloqueando; gasta las reservas en superataques.",
+  "Fight": "Pelea",
+  "Player 1 HP": "HP del jugador 1",
+  "Player 2 HP": "HP del jugador 2",
+  "Match timer": "Temporizador de combate",
+  "Tips": "Consejos",
+  "Guard cancel with a stock to escape pressure. Finish rounds with supers for style points.": "Cancela la guardia con una reserva para salir de la presión. Termina los rounds con superataques para ganar puntos de estilo.",
+  "Modes": "Modos",
+  "Arcade (team), Single, Versus, Survival, Practice.": "Arcade (equipo), Individual, Versus, Supervivencia, Práctica.",
+  "Gauge": "Medidor",
+  "Stocks": "Reservas",
+  "Power stocks for supers and guard cancels.": "Reservas de poder para superataques y cancelaciones de guardia.",
+  "Roster": "Plantilla",
+  "Fighters": "Combatientes",
+  "KOF regulars and new characters for this story.": "Clásicos de KOF y nuevos personajes para esta historia.",
+  "Goal": "Objetivo",
+  "Clear Arcade with each team.": "Completa Arcade con cada equipo."
+ }
+}

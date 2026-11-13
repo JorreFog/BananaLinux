@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Tower": "Torre",
+  "Funds, population, star rating\nSimTower on the GBA: build a skyscraper floor by floor, keep tenants happy, earn rent\nPower and money limit how much you can place; low power blocks new items": "Fondos, población, estrellas\nSimTower en GBA: construye un rascacielos piso a piso, mantén felices a los inquilinos y cobra la renta\nLa energía y el dinero limitan lo que puedes colocar; con poca energía no puedes añadir objetos nuevos",
+  "Facilities": "Instalaciones",
+  "Detail": "Detalle",
+  "Offices, condos, hotels, restaurants, shops\nRules from the game's own messages: the Lobby goes on the 1st floor; offices placed side by side; an elevator can span at most 20 floors\nThe Cathedral can only go on the top floor (and only high enough: 31F/41F limits appear in the rules)\nParking ramps and elevators can be extended or contracted floor by floor": "Oficinas, condominios, hoteles, restaurantes, tiendas\nReglas de los mensajes del juego: el Vestíbulo va en el primer piso; las oficinas se colocan una al lado de otra; un ascensor abarca como máximo 20 pisos\nLa Catedral solo puede ir en el piso más alto (y solo si el edificio es suficientemente alto: aparecen límites de 31 pisos/41 pisos en las reglas)\nLas rampas de estacionamiento y los ascensores se pueden ampliar o reducir piso a piso",
+  "Tips": "Consejos",
+  "Elevators": "Ascensores",
+  "keep wait times short": "mantén cortos los tiempos de espera",
+  "Elevators break down": "Los ascensores se averían",
+  "use \"Repair Car\" in the Information screen when one malfunctions": "usa \"Repair Car\" en la pantalla de información cuando uno falla",
+  "Long elevator waits make tenants leave: add cars and express elevators as the tower grows": "Las esperas largas en los ascensores hacen que los inquilinos se vayan: añade cabinas y ascensores exprés según crece la torre",
+  "Your tower, floor by floor": "Tu torre, piso a piso",
+  "The tower view": "La vista de la torre",
+  "scroll up and down the floors; the information screen shows each facility's status": "sube y baja entre los pisos; la pantalla de información muestra el estado de cada instalación",
+  "Lessons (tutorial) teach placing each facility type": "Las lecciones (tutorial) enseñan a colocar cada tipo de instalación",
+  "Funds": "Fondos",
+  "Rent and income": "Renta e ingresos",
+  "lobby, offices, condos, hotel rooms, restaurants, shops, parking, elevators, stairs, and the Cathedral at the very top": "vestíbulo, oficinas, condominios, habitaciones de hotel, restaurantes, tiendas, estacionamiento, ascensores, escaleras y la Catedral en la parte más alta",
+  "Collect": "Coleccionar",
+  "Unlocked facilities per star\nNew facility types unlock as the tower's star rating rises": "Instalaciones desbloqueadas por estrella\nLos nuevos tipos de instalación se desbloquean al subir la valoración de estrellas de la torre",
+  "Progress": "Progreso",
+  "Star rating toward the Tower rank\nStar rating 1 to 5, then the Tower rank once the Cathedral is built and a wedding is held": "Valoración de estrellas hacia el rango de la torre\nValoración de 1 a 5 estrellas, y luego el rango de la torre cuando se construye la Catedral y se celebra una boda"
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Time: minutes": "Tiempo: minutos",
+  "Time: seconds": "Tiempo: segundos",
+  "Position": "Posición",
+  "Body damage": "Daño del cuerpo",
+  "Lap (V-Rally Cross)": "Vuelta (V-Rally Cross)",
+  "Stage time, damage, speed": "Tiempo de escenario, daño, velocidad",
+  "Setup": "Ajuste",
+  "gear ratio, suspension, tires": "relación de cambio, suspensión, neumáticos",
+  "Car setup": "Ajuste del auto",
+  "gear ratio, suspension, tires and steering": "relación de cambio, suspensión, neumáticos y dirección",
+  "Stage": "Escenario",
+  "Follow co-driver calls; avoid damage\nBody damage slows the car; avoid big hits early in a rally": "Sigue las indicaciones del copiloto; evita el daño\nEl daño del cuerpo frena el auto; evita golpes fuertes al principio de un rally",
+  "Rallies": "Rallyes",
+  "Map": "Mapa",
+  "Stages across rally countries\nCars include the Citroen Saxo, Fiat Punto, Opel Corsa, Renault Clio, VW Polo, Ford Focus, Mitsubishi Lancer, Subaru Impreza, Citroen Xsara and Peugeot 206": "Escenarios en distintos países de rally\nLos autos incluyen el Citroen Saxo, Fiat Punto, Opel Corsa, Renault Clio, VW Polo, Ford Focus, Mitsubishi Lancer, Subaru Impreza, Citroen Xsara y Peugeot 206",
+  "Car setup and repairs\nV-Rally mode counts stages completed; V-Rally Cross has laps": "Ajustes y reparaciones del auto\nEl modo V-Rally cuenta los escenarios completados; V-Rally Cross tiene vueltas",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Cars unlocked": "Autos desbloqueados",
+  "Cars": "Autos",
+  "Progress": "Progreso",
+  "V-Rally mode stages completed": "Escenarios completados en modo V-Rally",
+  "Championship rounds": "Rondas de campeonato"
+ }
+}

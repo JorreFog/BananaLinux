@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Fire a marble": "Lanza una canica",
+  "Hold A": "Mantén A",
+  "Charge a power shot": "Carga un tiro de potencia",
+  "Aim/move": "Apuntar/mover",
+  "Switch target": "Cambiar objetivo",
+  "Customize your B-Daman's parts for power, speed or control. Each character's B-Daman has a special shot.": "Personaliza las piezas de tu B-Daman para obtener potencia, velocidad o control. Cada personaje tiene un B-Daman con un tiro especial.",
+  "Duels": "Duelos",
+  "Hit targets or the rival's B-Daman before time runs out; power shots break through blocking marbles.": "Impacta los objetivos o el B-Daman rival antes de que se acabe el tiempo; los tiros de potencia atraviesan las canicas que bloquean.",
+  "Story": "Historia",
+  "Follow Yamato and friends through tournaments in the B-Da world, with free roaming between matches.": "Sigue a Yamato y sus amigos en los torneos del mundo B-Da, con exploración libre entre combates.",
+  "Parts": "Partes",
+  "Win matches to earn parts; equip them in the custom menu.": "Gana combates para ganar piezas; equípalas en el menú de personalización.",
+  "Parts list": "Lista de piezas",
+  "Collect every part to build the strongest B-Daman.": "Reúne todas las piezas para construir el B-Daman más fuerte.",
+  "Tournaments": "Torneos",
+  "Win each tournament to advance the story.": "Gana cada torneo para avanzar en la historia."
+ }
+}

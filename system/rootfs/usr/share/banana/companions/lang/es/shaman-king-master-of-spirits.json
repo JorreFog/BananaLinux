@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Time in this stage": "Tiempo en este escenario",
+  "Health, Furyoku (spirit power)\nAmidamaru is Yoh's main spirit": "Salud, Furyoku (poder espiritual)\nAmidamaru es el espíritu principal de Yoh",
+  "Spirits": "Espíritus",
+  "Detail": "Detalle",
+  "Spirits give Yoh new moves and access to areas\nAmidamaru is Yoh's main spirit; more spirits are won from bosses and give new moves": "Los espíritus le dan a Yoh nuevos movimientos y acceso a áreas\nAmidamaru es el espíritu principal de Yoh; más espíritus se ganan a los jefes y dan movimientos nuevos",
+  "Bosses": "Jefes",
+  "Bosses have patterns; switch spirits for the right attack\nBosses often need a specific spirit's attack: try each spirit when damage stops": "Los jefes tienen patrones; cambia de espíritu para el ataque correcto\nLos jefes suelen necesitar el ataque de un espíritu concreto: prueba con cada espíritu cuando el daño se detenga",
+  "Areas": "Áreas",
+  "Interconnected areas (Metroidvania-style)": "Áreas interconectadas (estilo Metroidvania)",
+  "Areas link together": "Las áreas se conectan entre sí",
+  "new spirit abilities open blocked paths in old areas": "las nuevas habilidades de los espíritus abren caminos bloqueados en áreas viejas",
+  "Items": "Objetos",
+  "Health items; spirit upgrades\nHealth items and spirit upgrades found in hidden rooms": "Objetos de salud; mejoras de espíritus\nObjetos de salud y mejoras de espíritus hallados en salas ocultas",
+  "Collect": "Coleccionar",
+  "Spirits collected\nSpirits collected and their power levels\nStage unlock flags per area (EC, NF, WC groups) are on Progress": "Espíritus coleccionados\nEspíritus coleccionados y sus niveles de poder\nLas marcas de escenarios desbloqueados por área (grupos EC, NF, WC) están en Progreso",
+  "Progress": "Progreso",
+  "EC stages open": "Escenarios EC abiertos",
+  "NF stages open": "Escenarios NF abiertos",
+  "WC stages open": "Escenarios WC abiertos",
+  "Bosses beaten; areas explored": "Jefes derrotados; áreas exploradas"
+ }
+}

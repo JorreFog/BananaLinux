@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A jump, B main weapon, R sub weapon, L dash (config).": "A salta, B arma principal, R subarma, L dash (config).",
+  "Weapons": "Armas",
+  "Z-Saber combos, Buster charge shots.": "Combos de Z-Saber, disparos cargados de Buster.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Element chips (fire, ice, thunder) on charged attacks exploit boss weaknesses.": "Los chips elementales (fuego, hielo, trueno) en los ataques cargados explotan las debilidades de los jefes.",
+  "Missions": "Misiones",
+  "Stage id": "ID de escenario",
+  "Structure": "Estructura",
+  "Missions; EX skills from A/S ranks.": "Misiones; habilidades EX de los rangos A/S.",
+  "Sub tank energy": "Energía del sub-tanque",
+  "Items": "Objetos",
+  "Cyber-elves, EX skills.": "Cyber-elves, habilidades EX.",
+  "Skills": "Habilidades",
+  "Collect": "Coleccionar",
+  "EX Skills.": "Habilidades EX.",
+  "Goal": "Objetivo",
+  "Defeat Elpizo.": "Derrota a Elpizo."
+ }
+}

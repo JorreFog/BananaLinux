@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A action, B attack, R use item\nBilbo fights with a walking stick, later the sword Sting and throwing stones": "A acción, B atacar, R usar objeto\nBilbo pelea con un bastón, luego con la espada Sting y lanzando piedras",
+  "Abilities": "Habilidades",
+  "Bilbo levels up through courage points found in the levels.\nThe Ring makes him invisible for a time.": "Bilbo sube de nivel con puntos de valor encontrados en los niveles.\nEl Anillo lo hace invisible por un tiempo.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Trolls, goblins, wargs and spiders: dodge and strike.\nStones hit flying and distant enemies.": "Trolls, duendes, wargs y arañas: esquiva y golpea.\nLas piedras alcanzan a enemigos voladores y lejanos.",
+  "Journey": "Viaje",
+  "Map id": "ID de mapa",
+  "Route": "Ruta",
+  "Bag End -> Trollshaws -> Rivendell -> Misty Mountains -> Mirkwood -> Lake-town -> the Lonely Mountain.": "Bolsa del Fin -> Trollshaws -> Rivendel -> Montañas del Niebla -> Bosque de Mirkwood -> Ciudad del Lago -> la Montaña Solitaria.",
+  "Items": "Objetos",
+  "Keys, potions, stones and quest items; silver pennies are money for vendors.": "Llaves, pociones, piedras y objetos de misión; los peniques de plata son dinero para los vendedores.",
+  "Courage": "Valor",
+  "Collect": "Coleccionar",
+  "Courage points and chests hidden in each chapter.": "Puntos de valor y cofres ocultos en cada capítulo.",
+  "Chapters": "Capítulos",
+  "Goal": "Objetivo",
+  "Follow the journey to the Battle of Five Armies.": "Sigue el viaje hasta la Batalla de los Cinco Ejércitos."
+ }
+}

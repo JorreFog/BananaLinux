@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Yusuke health": "Salud de Yusuke",
+  "Yusuke spirit energy": "Energía espiritual de Yusuke",
+  "Kuwabara health": "Salud de Kuwabara",
+  "Hiei health": "Salud de Hiei",
+  "Kurama health": "Salud de Kurama",
+  "Character id": "ID de personaje",
+  "Health and Spirit energy": "Salud y energía espiritual",
+  "Moves": "Movimientos",
+  "Punches and Spirit Gun (charged attack)\nYusuke's Spirit Gun is charged with spirit energy; Kuwabara, Hiei and Kurama are playable in parts": "Puñetazos y Spirit Gun (ataque cargado)\nEl Spirit Gun de Yusuke se carga con energía espiritual; Kuwabara, Hiei y Kurama son jugables en algunas partes",
+  "Bosses": "Jefes",
+  "Story bosses from the Spirit Detective arc\nBosses from the Spirit Detective cases close each chapter": "Jefes de historia del arco Spirit Detective\nLos jefes de los casos de Spirit Detective cierran cada capítulo",
+  "Areas": "Áreas",
+  "Level id": "ID de nivel",
+  "Story chapters through the Spirit Detective cases": "Capítulos de historia a través de los casos de Spirit Detective",
+  "Items": "Objetos",
+  "Health items and spirit items\nHealth and spirit energy refills from items": "Objetos de salud y objetos espirituales\nRecargas de salud y energía espiritual de los objetos",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items per area\nHidden items in each area\nItems are hidden in side rooms; return later with new abilities": "Objetos ocultos por área\nObjetos ocultos en cada área\nLos objetos se esconden en salas laterales; vuelve más tarde con nuevas habilidades",
+  "Progress": "Progreso",
+  "Chapters cleared\nChapters follow the anime's first arc\nChapters end with boss fights": "Capítulos superados\nLos capítulos siguen el primer arco del anime\nLos capítulos terminan con combates de jefe"
+ }
+}

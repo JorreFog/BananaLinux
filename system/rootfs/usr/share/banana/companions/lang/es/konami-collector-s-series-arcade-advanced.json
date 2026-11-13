@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Games": "Juegos",
+  "Notes": "Notas",
+  "Frogger: cross road and river. Scramble: bomb fuel tanks to keep flying. Time Pilot: shoot planes through the eras.": "Frogger: cruza la carretera y el río. Scramble: bomba los tanques de combustible para seguir volando. Time Pilot: dispara aviones a través de las eras.",
+  "Tips": "Consejos",
+  "Gyruss: circle the edge, shoot inward. Yie Ar Kung-Fu: learn each fighter.": "Gyruss: rodea el borde y dispara hacia dentro. Yie Ar Kung-Fu: aprende a cada luchador.",
+  "Menu": "Menú",
+  "Pick a game from the menu; each keeps its own high score.": "Elige un juego del menú; cada uno guarda su propio récord.",
+  "Codes": "Códigos",
+  "Konami code unlocks extras.": "El código Konami desbloquea extras.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores per game.": "Récords por juego.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

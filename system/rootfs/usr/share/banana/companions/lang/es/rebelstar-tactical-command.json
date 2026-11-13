@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Squad": "Escuadra",
+  "Jorel and the rebel squad vs. the Arelians\nAction points per turn: moving, shooting, reloading cost AP": "Jorel y la escuadra rebelde contra los Arelians\nPuntos de acción por turno: moverse, disparar y recargar gastan PA",
+  "Soldiers": "Soldados",
+  "Detail": "Detalle",
+  "Stats": "Estadísticas",
+  "Health, Accuracy, Stamina, Psionics etc.; level up with experience": "Salud, Precisión, Resistencia, Psiónica, etc.; sube de nivel con la experiencia",
+  "Skills chosen when leveling (weapons, psionics)": "Habilidades elegidas al subir de nivel (armas, psiónica)",
+  "Combat tips": "Consejos de combate",
+  "Battle": "Batalla",
+  "Fire modes": "Modos de disparo",
+  "snap (cheap), aimed (accurate)": "rápido (barato), apuntado (preciso)",
+  "Keep AP for reaction fire on the enemy turn\nUse cover; aliens appear from fog of war": "Guarda PA para el fuego de reacción en el turno enemigo\nUsa cobertura; los aliens aparecen desde la niebla de guerra",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Missions in sequence, each a tactical map\nMissions on the Arelian-occupied Earth, played in order on isometric maps": "Misiones en secuencia, cada una un mapa táctico\nMisiones en la Tierra ocupada por los arelianos, jugadas en orden en mapas isométricos",
+  "Equipment": "Equipo",
+  "Bag": "Bolsa",
+  "Weapons, ammo, medkits, grenades; weight limits per soldier\nEach soldier carries weapons and items within a weight limit": "Armas, munición, botiquines, granadas; límites de peso por soldado\nCada soldado lleva armas y objetos dentro de un límite de peso",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Weapons found and squad members recruited": "Armas halladas y miembros de la escuadra reclutados",
+  "Jorel, Zak, Ruby and more join as the story goes on": "Jorel, Zak, Ruby y más se unen según avanza la historia",
+  "Progress": "Progreso",
+  "Mission count to the final assault\nMissions to the final assault; soldiers' skills grow with experience": "Misiones hasta el asalto final\nMisiones hasta el asalto final; las habilidades de los soldados crecen con la experiencia"
+ }
+}

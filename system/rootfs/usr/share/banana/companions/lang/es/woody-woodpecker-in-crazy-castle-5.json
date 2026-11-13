@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Health; lives\nPuzzle-platformer in the Crazy Castle series: collect every key on a floor to open its exit door\nLives; enemies chase Woody around the floor": "Salud; vidas\nPuzle-plataformas de la serie Crazy Castle: recoge todas las llaves de un piso para abrir su puerta de salida\nVidas; los enemigos persiguen a Woody por el piso",
+  "Moves": "Movimientos",
+  "Platform puzzle moves\nWoody can use items found on each floor to stun enemies (push, throw or drop them)\nPipes and stairs connect the platforms: plan a route that collects keys without getting cornered": "Movimientos de puzle de plataformas\nWoody puede usar los objetos de cada piso para aturdir enemigos (empujarlos, lanzarlos o soltarlos)\nLas tuberías y escaleras conectan las plataformas: planifica una ruta que recoja llaves sin dejarte acorralar",
+  "Bosses": "Jefes",
+  "Castle bosses\nEnemies follow patterns: wait for them to pass, then grab the key behind them\nSome floors end with a boss room": "Jefes del castillo\nLos enemigos siguen patrones: espera a que pasen y luego toma la llave que tienen detrás\nAlgunos pisos terminan con la sala de un jefe",
+  "Floors": "Pisos",
+  "Castle floors\nFloors of the castle, played in order; passwords or saves keep your floor\nSolo and multi-player modes (link cable) appear in the menu": "Pisos del castillo\nPisos del castillo, jugados en orden; las contraseñas o los guardados mantienen tu piso\nLos modos de un jugador y multijugador (cable de enlace) aparecen en el menú",
+  "Items": "Objetos",
+  "Keys\nKeys per floor; items to push or throw\nCollect every key on a floor to open its exit door": "Llaves\nLlaves por piso; objetos para empujar o lanzar\nRecoge todas las llaves de un piso para abrir su puerta de salida",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nBonus items on floors for extra points\nBonus items give points; some floors have hidden extra lives": "Objetos ocultos\nObjetos extra en los pisos para puntos adicionales\nLos objetos extra dan puntos; algunos pisos tienen vidas extra ocultas",
+  "Progress": "Progreso",
+  "Floors cleared\nFloors cleared to the top of the castle (developed by Tantalus of Australia)": "Pisos superados\nPisos superados hasta la cima del castillo (desarrollado por Tantalus of Australia)"
+ }
+}

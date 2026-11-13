@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Laps left": "Vueltas restantes",
+  "Guns": "Armas",
+  "Drops (mines / oil)": "Objetos (minas / aceite)",
+  "Armor, position, lap; weapons and nitro": "Armadura, posición, vuelta; armas y nitro",
+  "Upgrades": "Mejoras",
+  "engine, tires, shocks, armor; front weapon, drop, boost": "motor, neumáticos, amortiguadores, armadura; arma frontal, objeto, turbo",
+  "Upgrades per planet; armor keeps you racing when hit": "Mejoras por planeta; la armadura te mantiene compitiendo cuando te golpean",
+  "Race tips": "Consejos de carrera",
+  "Battle": "Batalla",
+  "Shoot rivals ahead; drop mines behind\nMines and oil are dropped behind; nitro boosts are limited per lap": "Dispara a los rivales que van delante; suelta minas detrás\nLas minas y el aceite se sueltan detrás; los turbos de nitro son limitados por vuelta",
+  "Planets": "Planetas",
+  "Map": "Mapa",
+  "Planet": "Planeta",
+  "Races run": "Carreras jugadas",
+  "Planets in order": "Planetas en orden",
+  "Racing circuits on several planets": "Circuitos de carreras en varios planetas",
+  "Shop": "Tienda",
+  "Money from races buys upgrades and cars\nPrize money depends on your finishing place; upgrades carry over to new planets": "El dinero de las carreras compra mejoras y autos\nEl premio depende de tu puesto de llegada; las mejoras se mantienen en los nuevos planetas",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Cars and drivers\nCars from the shop get faster as planets progress; drivers have different bonuses": "Autos y pilotos\nLos autos de la tienda se aceleran al avanzar los planetas; los pilotos tienen bonificaciones distintas",
+  "Progress": "Progreso",
+  "Division points": "Puntos de división",
+  "Divisions won per planet": "Divisiones ganadas por planeta"
+ }
+}

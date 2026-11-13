@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B action\nGumby can stretch and shape-shift at certain spots": "A salta, B acción\nGumby puede estirarse y cambiar de forma en ciertos puntos",
+  "Friends": "Amigos",
+  "Characters": "Personajes",
+  "Gumby rescues Pokey, Prickle, Goo and other friends from the Blockheads and Astrobots.": "Gumby rescata a Pokey, Prickle, Goo y otros amigos de los Blockheads y los Astrobots.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Learn the boss pattern from a safe spot first.": "Aprende primero el patrón del jefe desde un lugar seguro.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Side-scrolling levels through Gumby's clay worlds.": "Niveles de desplazamiento lateral por los mundos de arcilla de Gumby.",
+  "Items": "Objetos",
+  "Pickups": "Recogibles",
+  "Collect items to restore health and unlock bonuses.": "Recoge objetos para recuperar salud y desbloquear bonificaciones.",
+  "Collectables": "Coleccionables",
+  "Hidden": "Oculto",
+  "Find the hidden collectables in each level.": "Encuentra los coleccionables ocultos en cada nivel.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Rescue all the friends and stop the Astrobots.": "Rescata a todos los amigos y detén a los Astrobots."
+ }
+}

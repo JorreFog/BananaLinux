@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Games": "Juegos",
+  "Collection of puzzle and board games\nCollection of classic board and strategy games against the CPU or a friend (link cable)\nWins can be reset per game; CPU level and turn timer are selectable": "Colección de puzles y juegos de tablero\nColección de juegos de mesa y estrategia clásicos contra la CPU o un amigo (cable de enlace)\nLas victorias se pueden reiniciar por juego; el nivel de la CPU y el temporizador de turno son seleccionables",
+  "Board and puzzle games\nGames include Four in a Row and Sink Ships (battleships), plus chess-style board games with pawns and board setups": "Juegos de tablero y puzles\nLos juegos incluyen Cuatro en Raya y Hundir Flotas, además de juegos de tablero estilo ajedrez con peones y posiciones",
+  "Options": "Opciones",
+  "perspective or top-down board view, white/black or white/red pieces, tile sets and layouts": "vista del tablero en perspectiva o cenital, piezas blancas/negas o blancas/rojas, sets de fichas y distribuciones",
+  "Tips": "Consejos",
+  "Practice modes per game\nUndo (\"back one move\") and redo let you study a position\nStart on Very Easy to learn the rules of each game, then raise the CPU level": "Modos de práctica por juego\nDeshacer (\"retroceder un movimiento\") y rehacer te permiten estudiar una posición\nEmpieza en Muy Fácil para aprender las reglas de cada juego y luego sube el nivel de la CPU",
+  "Menu": "Menú",
+  "Choose a game from the menu\nPick a game from the menu; each has its own \"How to play\" page": "Elige un juego del menú\nEscoge un juego del menú; cada uno tiene su página de \"Cómo se juega\"",
+  "Settings": "Ajustes",
+  "Bag": "Bolsa",
+  "Difficulty\nSave and load a game in progress from the pause menu": "Dificultad\nGuarda y carga una partida en curso desde el menú de pausa",
+  "Games available\nWin counts per game and side\nWin counts are kept per game and side": "Juegos disponibles\nVictorias por juego y bando\nLas victorias se guardan por juego y bando",
+  "Progress": "Progreso",
+  "Wins\nBeat the higher CPU levels in each game\nTry each game at a higher CPU level": "Victorias\nVence a los niveles más altos de la CPU en cada juego\nPrueba cada juego con un nivel de CPU más alto"
+ }
+}

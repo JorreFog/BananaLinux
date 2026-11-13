@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Easy": "Fácil",
+  "Hard": "Difícil",
+  "Playing as": "Jugando como",
+  "Lives": "Vidas",
+  "Points": "Puntos",
+  "Moves": "Movimientos",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Attack (combo by repeating)": "Ataque (combo repitiendo)",
+  "Jump": "Saltar",
+  "Power Pole extend": "Extender el Bastón de poder",
+  "Kamehameha (charge)": "Kamehameha (cargar)",
+  "Flying Nimbus": "Nube voladora",
+  "Some stages are shoot'em-up rides": "Algunas etapas son recorridos de shoot'em-up",
+  "Power Pole upgrades": "Mejoras del Bastón de poder",
+  "Boss": "Jefe",
+  "Bosses telegraph big attacks: jump over sweeps, punish with a full combo; charged Kamehameha for flying foes.": "Los jefes avisan de sus ataques grandes: salta los barridos y castígalos con un combo completo; Kamehameha cargado contra los que vuelan.",
+  "Stage": "Escenario",
+  "Difficulty": "Dificultad",
+  "The story follows the original Dragon Ball: Bulma and the Dragon Balls, Pilaf, the World Martial Arts Tournament, the Red Ribbon Army, Fortuneteller Baba, King Piccolo.": "La historia sigue el Dragon Ball original: Bulma y las esferas del dragón, Pilaf, el Tournament of Martial Arts, el Ejército del listón rojo, Baba la adivina y el Rey Piccolo.",
+  "Items": "Objetos",
+  "Items found": "Objetos encontrados",
+  "Items in stages raise max HP/ki or unlock extras; the gallery shows them by number.": "Los objetos en las etapas suben la HP/ki máxima o desbloquean extras; la galería los muestra numerados.",
+  "Progress": "Progreso"
+ }
+}

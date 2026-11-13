@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Tier": "Rango",
+  "Tier battles won": "Batallas de rango ganadas",
+  "Rules": "Reglas",
+  "How a turn works": "Cómo funciona un turno",
+  "Goal": "Objetivo",
+  "Reach the highest power level or beat the opponent's anger/survival conditions": "Llega al nivel de poder más alto o cumple las condiciones de ira/supervivencia del rival",
+  "Combat": "Combate",
+  "Attacker plays physical or energy attacks, defender blocks with matching cards": "El atacante juega ataques físicos o de energía, el defensor bloquea con cartas del mismo tipo",
+  "Power stages": "Niveles de poder",
+  "Your life bar: attacks lower them, at zero you lose life cards": "Tu barra de vida: los ataques la bajan, a cero pierdes cartas de vida",
+  "Anger": "Ira",
+  "Fills with certain cards; at max your personality levels up": "Se llena con ciertas cartas; al máximo tu personalidad sube de nivel",
+  "Duel": "Duelo",
+  "Tip": "Consejo",
+  "Keep blocks for both physical and energy attacks in hand; energy attacks cost power stages, so don't empty yourself before blocking.": "Guarda en la mano cartas de bloqueo físicas y de energía; los ataques de energía cuestan niveles de poder, así que no te vacíes antes de bloquear.",
+  "Tournament": "Torneo",
+  "Three battles per tier; winning a tier unlocks the next and new personalities.": "Tres batallas por rango; ganar un rango desbloquea el siguiente y nuevas personalidades.",
+  "Cards": "Cartas",
+  "Win battles to earn booster packs; edit decks in the deck menu. Keep decks lean: duplicates of strong blocks beat many weak attacks.": "Gana batallas para ganar sobres de refuerzo; edita tus mazos en el menú de mazos. Mantén los mazos ligeros: duplicar cartas de bloqueo fuertes vence a muchos ataques débiles.",
+  "Personalities": "Personalidades",
+  "Unlocked": "Desbloqueado",
+  "Progress": "Progreso"
+ }
+}

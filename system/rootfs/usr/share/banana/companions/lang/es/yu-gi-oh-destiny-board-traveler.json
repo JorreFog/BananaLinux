@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Red player LP": "LP del jugador rojo",
+  "Blue player LP": "LP del jugador azul",
+  "Green player LP": "LP del jugador verde",
+  "Yellow player LP": "LP del jugador amarillo",
+  "Board game": "Juego de mesa",
+  "roll, move, land on spaces; Life Points and stars": "tira, avanza, cae en casillas; Puntos de Vida y estrellas",
+  "Board game with the Yu-Gi-Oh! cast: roll the die, move, and claim spaces with monster cards\nEach player has Life Points; duels on spaces are decided by monster ATK/DEF": "Juego de mesa con el elenco de Yu-Gi-Oh!: tira el dado, avanza y reclama casillas con cartas de monstruo\nCada jugador tiene Puntos de Vida; los duelos en casillas se deciden por el ATK/DEF de los monstruos",
+  "Rules": "Reglas",
+  "Land on monster spaces to duel; spells change the board\nCards include monsters, spells and traps from the real card game (e.g. Sakuretsu Armor, Archfiend's Roar, Dice Re-Roll, Contract with the Abyss)\nSpells like Dice Re-Roll change your movement; traps punish opponents landing on your spaces": "Cae en casillas de monstruo para duelar; los hechizos cambian el tablero\nLas cartas incluyen monstruos, hechizos y trampas del juego de cartas real (p. ej. Sakuretsu Armor, Archfiend's Roar, Dice Re-Roll, Contract with the Abyss)\nHechizos como Dice Re-Roll cambian tu movimiento; las trampas castigan a quien cae en tus casillas",
+  "Duel": "Duelo",
+  "Monsters fight automatically by ATK/DEF\nDuels on a space compare monster stats; place strong monsters on spaces many players pass\nKeep a trap for the space in front of the leader": "Los monstruos combaten automáticamente por ATK/DEF\nLos duelos en una casilla comparan las estadísticas de los monstruos; coloca monstruos fuertes en casillas por las que pasan muchos jugadores\nGuarda una trampa para la casilla delante del líder",
+  "Boards": "Tableros",
+  "Several board maps\nSeveral boards; characters unlock as you win (Yugi, Joey, Kaiba, Mai, Mokuba, Yami Yugi, Yami Bakura and others)": "Varios mapas de tablero\nVarios tableros; los personajes se desbloquean al ganar (Yugi, Joey, Kaiba, Mai, Mokuba, Yami Yugi, Yami Bakura y otros)",
+  "Cards": "Cartas",
+  "Cards collected from spaces\nYour hand of cards; draw more by passing certain spaces": "Cartas recogidas de las casillas\nTu mano de cartas; roba más pasando por ciertas casillas",
+  "Card list\nCard list grows as you play boards\nCard list grows as you play; unlock more characters": "Lista de cartas\nLa lista de cartas crece según juegas tableros\nLa lista crece según juegas; desbloquea más personajes",
+  "Progress": "Progreso",
+  "Boards cleared, wins\nWins per board; unlock all characters\nWin boards to unlock characters and cards": "Tableros superados, victorias\nVictorias por tablero; desbloquea todos los personajes\nGana tableros para desbloquear personajes y cartas"
+ }
+}

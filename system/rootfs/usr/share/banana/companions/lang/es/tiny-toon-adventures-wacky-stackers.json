@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Level": "Nivel",
+  "Score; stack pieces\nFalling-block puzzle with Tiny Toons characters: stack and match pieces to clear them": "Puntuación; piezas apiladas\nPuzle de bloques que caen con los personajes de Tiny Toons: apila y combina piezas para eliminarlas",
+  "Pieces": "Piezas",
+  "Stack characters to match\nGame types from the menu: play against 1-3 other people, against the computer, solve the Tiny Toons puzzles, or play against the clock": "Apila personajes para combinarlos\nTipos de juego del menú: juega contra 1-3 personas, contra la computadora, resuelve los puzles de Tiny Toons o juega contra el reloj",
+  "Tips": "Consejos",
+  "Clear rows quickly": "Elimina filas rápido",
+  "clearing big groups sends trouble to the opponent's stack": "eliminar grupos grandes le pasa los problemas a la pila del rival",
+  "Modes": "Modos",
+  "Puzzle and VS\nPuzzle mode is a sequence of set puzzles; bonus challenges appear between them": "Puzle y VS\nEl modo puzle es una secuencia de puzles fijados; entre ellos aparecen retos extra",
+  "Next pieces\nThe next piece is shown beside the well; plan where it lands before it drops": "Siguientes piezas\nLa siguiente pieza se muestra junto al pozo; planea dónde caerá antes de que baje",
+  "Characters": "Personajes",
+  "Collect": "Coleccionar",
+  "Characters unlocked\nCharacters and movies unlock as you clear puzzles and challenges": "Personajes desbloqueados\nLos personajes y las películas se desbloquean al superar puzles y retos",
+  "Progress": "Progreso",
+  "Stages cleared\nPuzzles and challenges cleared; the final hurdle closes the puzzle mode": "Escenarios superados\nPuzles y retos superados; la última prueba cierra el modo puzle"
+ }
+}

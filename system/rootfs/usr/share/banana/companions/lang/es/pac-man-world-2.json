@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Controls": "Controles",
+  "A jump, B butt-bounce/rev roll.": "A salta, B rebota con el culo/giro inverso.",
+  "Moves": "Movimientos",
+  "Butt-bounce, rev roll.": "Rebote con el culo, giro inverso.",
+  "Ghosts": "Fantasmas",
+  "Tips": "Consejos",
+  "Power pellets turn ghosts blue for a short time; butt-bounce stomps enemies.": "Las bolas de poder vuelven azules a los fantasmas por un momento; el rebote con el culo aplasta enemigos.",
+  "Stage id": "ID de escenario",
+  "Structure": "Estructura",
+  "Areas.": "Áreas.",
+  "Items": "Objetos",
+  "Fruit, power pellets, chrome balls.": "Frutas, bolas de poder, bolas cromadas.",
+  "Tokens": "Fichas",
+  "Collect": "Coleccionar",
+  "Tokens.": "Fichas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Spooky.": "Derrota a Spooky."
+ }
+}

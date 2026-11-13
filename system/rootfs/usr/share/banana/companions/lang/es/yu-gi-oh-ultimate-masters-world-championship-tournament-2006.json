@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Status": "Estado",
+  "Life Points 8000; 40-card deck minimum\nAdvanced/Traditional formats of the 2006 card game; the forbidden list follows that year": "Puntos de Vida 8000; mazo mínimo de 40 cartas\nFormatos Advanced/Traditional del juego de cartas de 2006; la lista de prohibiciones sigue a ese año",
+  "Rules": "Reglas",
+  "Tribute Summon": "Invocación por Tributo",
+  "1 for Level 5-6, 2 for Level 7+": "1 para Nivel 5-6, 2 para Nivel 7+",
+  "Fusion via Polymerization; Ritual cards need their Ritual spell": "Fusión con Polimerización; las cartas de Ritual necesitan su hechizo de Ritual",
+  "Duel tips": "Consejos de duelo",
+  "Battle": "Batalla",
+  "Survival and puzzle duels sharpen combos": "Los duelos de supervivencia y puzle afinan los combos",
+  "Survival mode": "Modo supervivencia",
+  "keep winning with the same LP; Puzzle duels teach set combos": "sigue ganando con los mismos LP; los duelos de puzle enseñan combos de set",
+  "Opponents": "Rivales",
+  "Map": "Mapa",
+  "World Championship tour; GX and earlier characters\nDuelists range from Duelist Kingdom to the GX era": "Tour del Campeonato Mundial; personajes de GX y anteriores\nLos duelistas van desde el Reino de los Duelistas hasta la era GX",
+  "Cards": "Cartas",
+  "Card packs for DP; trunk; deck editor\n50+ booster series, from Legend of Blue Eyes to the 2006 sets, bought with DP": "Paquetes de cartas por DP; baúl; editor de mazos\nMás de 50 series de boosters, de Legend of Blue Eyes a los sets de 2006, comprados con DP",
+  "Card list": "Lista de cartas",
+  "Collect": "Coleccionar",
+  "Cards collected from boosters": "Cartas recogidas de los boosters",
+  "Booster series with cards found": "Series de booster con cartas encontradas",
+  "1500+ cards": "Más de 1500 cartas",
+  "Progress": "Progreso",
+  "Tournaments won; duelists unlocked\nTournaments won; number of cards collected per booster is tracked": "Torneos ganados; duelistas desbloqueados\nTorneos ganados; se registra cuántas cartas se recogieron de cada booster"
+ }
+}

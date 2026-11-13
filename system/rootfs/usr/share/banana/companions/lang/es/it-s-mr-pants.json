@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Marathon score": "Puntuación de maratón",
+  "Mode timer (raw)": "Temporizador de modo (bruto)",
+  "How it plays": "Cómo se juega",
+  "Falling-block puzzle (Rare): place shapes to fill rectangular areas; filled rectangles clear.": "Puzle de bloques que caen (Rare): coloca las piezas para llenar áreas rectangulares; los rectángulos completos desaparecen.",
+  "Pieces": "Piezas",
+  "Odd shaped pieces; rotate and fit them so they form complete rectangles.": "Piezas de formas irregulares; gíralas y encájalas para formar rectángulos completos.",
+  "Puzzles": "Puzles",
+  "Tips": "Consejos",
+  "Big rectangles score more. Leave room in corners for awkward shapes.": "Los rectángulos grandes valen más. Deja espacio en las esquinas para las piezas difíciles.",
+  "Modes": "Modos",
+  "Replayed level": "Escenario repetido",
+  "Marathon, Puzzle and multiplayer modes.": "Modos Maratón, Puzle y multijugador.",
+  "Next": "Siguiente",
+  "Watch the next piece preview.": "Observa la vista previa de la siguiente pieza.",
+  "Collect": "Coleccionar",
+  "Solve the puzzle mode boards.": "Resuelve los tableros del modo puzle.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear the puzzle sets and top scores.": "Completa los conjuntos de puzles y las mejores puntuaciones."
+ }
+}

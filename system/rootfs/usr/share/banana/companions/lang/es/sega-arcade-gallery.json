@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Compilation": "Compilación",
+  "Status": "Estado",
+  "After Burner score": "Puntuación de After Burner",
+  "After Burner stage": "Escenario de After Burner",
+  "Four arcade games": "Cuatro juegos de arcade",
+  "Pick a game from the gallery menu; each game has its own high score": "Elige un juego del menú de la galería; cada juego tiene su propio récord",
+  "Games": "Juegos",
+  "motorbike racing; OutRun: Ferrari road trip with branches": "carreras de motos; OutRun: viaje por carretera en Ferrari con desvíos",
+  "jet combat; Space Harrier: rail shooter": "combate con cazas; Space Harrier: shooter de vía",
+  "Tips": "Consejos",
+  "pick left/right forks for different endings": "elige los desvíos a izquierda/derecha para distintos finales",
+  "missiles lock on automatically; Space Harrier: keep moving": "los misiles se fijan solos; Space Harrier: sigue moviéndote",
+  "Pick a game from the menu\nEach game keeps its own options (difficulty, controls) on its own title screen": "Elige un juego del menú\nCada juego guarda sus propias opciones (dificultad, controles) en su pantalla de título",
+  "Settings": "Ajustes",
+  "Bag": "Bolsa",
+  "Difficulty and lives per game": "Dificultad y vidas por juego",
+  "course choice (Africa, Asia, America, Europe) sets the length and difficulty": "la elección de recorrido (África, Asia, América, Europa) define la duración y la dificultad",
+  "4 games\nFour arcade classics from Sega's AM2 era on one cartridge": "4 juegos\nCuatro clásicos de arcade de la era AM2 de Sega en un cartucho",
+  "Progress": "Progreso",
+  "High scores per game": "Récords por juego",
+  "reach any of the five goals; After Burner and Space Harrier: score and stage reached": "llega a cualquiera de las cinco metas; After Burner y Space Harrier: puntuación y escenario alcanzado"
+ }
+}

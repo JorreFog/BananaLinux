@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Cage level": "Nivel de Cage",
+  "Testament HP": "HP de Testament",
+  "Testament EXP": "EXP de Testament",
+  "Frame max HP": "HP máx. del Frame",
+  "Frame max EN": "EN máx. del Frame",
+  "HP, energy; pilot Cage": "HP, energía; piloto Cage",
+  "Cage battle": "Combate de Cage",
+  "Cage shoot": "Disparo de Cage",
+  "Cage avoid": "Evasión de Cage",
+  "Cage hit": "Impacto de Cage",
+  "Cage reflex": "Reflejo de Cage",
+  "Shell": "Cáscara",
+  "Move": "Mover",
+  "Frame stats and weapons": "Estadísticas y armas del Frame",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Enemy 1 HP": "HP enemigo 1",
+  "Turn-based; attack minigame for accuracy": "Por turnos; minijuego de ataque para la precisión",
+  "Story": "Historia",
+  "Mars colony story\nStory on Mars; missions with tactical maps and dialogue scenes": "Historia de la colonia marciana\nHistoria en Marte; misiones con mapas tácticos y escenas de diálogo",
+  "Weapons": "Armas",
+  "Bag": "Bolsa",
+  "Weapons and items\nWeapons equipped per frame; sub-weapons have limited uses": "Armas y objetos\nArmas equipadas por Frame; las subarmas tienen usos limitados",
+  "Frames obtained": "Frames obtenidos",
+  "Testament and others, each with battle, shoot, avoid, hit and reflex stats": "Testament y otros, cada uno con estadísticas de combate, disparo, evasión, impacto y reflejo",
+  "Progress": "Progreso",
+  "Story missions\nStory missions; Cage's level and Testament's EXP grow through battles": "Misiones de historia\nMisiones de historia; el nivel de Cage y la EXP de Testament crecen en los combates"
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Score": "Puntuación",
+  "Controls": "Controles",
+  "A jump, B attack, R grapple hook, L throw shuriken.": "A salta, B ataca, R gancho, L lanza shuriken.",
+  "Abilities": "Habilidades",
+  "Grappling hook swing.": "Balanceo con el gancho.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Swing out of reach with the hook; shuriken from range, sword when the boss is open.": "Alcánzalo fuera de su alcance con el gancho; shuriken a distancia, espada cuando el jefe queda abierto.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Missions.": "Misiones.",
+  "Items": "Objetos",
+  "Shuriken ammo, health pickups, keys for locked doors.": "Munición de shuriken, recogibles de salud y llaves para puertas cerradas.",
+  "Hostages": "Rehenes",
+  "Collect": "Coleccionar",
+  "Hostages.": "Rehenes.",
+  "Goal": "Objetivo",
+  "Rescue hostages.": "Rescata a los rehenes."
+ }
+}

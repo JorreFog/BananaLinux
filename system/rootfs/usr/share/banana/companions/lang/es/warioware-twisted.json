@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Session": "Sesión",
+  "Status": "Estado",
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Games played this stage": "Juegos jugados en esta etapa",
+  "Gyro sensor game": "Juego con sensor giroscópico",
+  "tilt the console to control (emulators map it)": "inclina la consola para controlar (los emuladores lo asignan)",
+  "4 lives; a boss every few microgames": "4 vidas; un jefe cada pocos microjuegos",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Cast includes Wario, Mona, Jimmy T., 9-Volt, Dr. Crygor, Kat & Ana and more\nEach character's stage uses one kind of twisting control": "El reparto incluye a Wario, Mona, Jimmy T., 9-Volt, Dr. Crygor, Kat & Ana y más\nLa etapa de cada personaje usa un tipo de control de giro",
+  "Boss stage": "Etapa de jefe",
+  "Battle": "Batalla",
+  "Longer microgames to close a stage; tilting quickly is key": "Microjuegos más largos para cerrar una etapa; inclinar rápido es clave",
+  "Spin and tilt": "Giro e inclinación",
+  "rotating the GBA (or the mapped buttons) steers most microgames": "girar la GBA (o los botones asignados) dirige la mayoría de microjuegos",
+  "Stages": "Escenarios",
+  "Stage id": "ID de escenario",
+  "Each character = a microgame set built around spinning/tilting": "Cada personaje = un set de microjuegos basado en girar/inclinar",
+  "Spinner (Toys)": "Girador (juguetes)",
+  "souvenirs from the capsule machine": "recuerdos de la máquina de cápsulas",
+  "Souvenirs": "Recuerdos",
+  "Bag": "Bolsa",
+  "Coins from microgames buy capsule-machine souvenirs (toys, music, games)": "Las monedas de los microjuegos compran recuerdos de la máquina de cápsulas (juguetes, música, juegos)",
+  "Collect": "Coleccionar",
+  "100+ souvenirs; 200+ microgames\nSouvenirs include toys, music and minigames from the capsule machine": "Más de 100 recuerdos; más de 200 microjuegos\nLos recuerdos incluyen juguetes, música y minijuegos de la máquina de cápsulas",
+  "Progress": "Progreso",
+  "Clear each character, then the final stage\nSouvenir total shown on the menu": "Supera a cada personaje, luego la etapa final\nEl total de recuerdos se muestra en el menú"
+ }
+}

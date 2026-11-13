@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B attack, R breath, L switch element; Dragon Time slows time.": "A saltar, B atacar, R aliento, L cambiar elemento; el Tiempo del Dragón ralentiza el tiempo.",
+  "Breaths": "Alientos",
+  "Elements": "Elementos",
+  "Fire, Ice, Electricity, Earth; upgraded with blue gems.": "Fuego, Hielo, Electricidad, Tierra; se mejoran con gemas azules.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Dragon Time and element weaknesses.": "Tiempo del Dragón y debilidades elementales.",
+  "Realms": "Reinos",
+  "Structure": "Estructura",
+  "Story levels toward the Well of Souls.": "Escenarios de historia hacia el Pozo de las Almas.",
+  "Gems": "Gemas",
+  "Items": "Objetos",
+  "Gems for health, mana, upgrades.": "Gemas de salud, maná y mejoras.",
+  "Collect": "Coleccionar",
+  "Gems and hidden items.": "Gemas y objetos ocultos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Gaul before the Eternal Night.": "Derrota a Gaul antes de la Noche Eterna."
+ }
+}

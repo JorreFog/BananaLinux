@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "HP (battle)": "HP (combate)",
+  "Cash": "Dinero",
+  "Map id": "ID de mapa",
+  "A B-Daman is built from parts: arms (left/right), core, trigger, magazine and foot. Heavier parts add power, lighter ones speed; the part shop opens during the story.": "Un B-Daman se arma con piezas: brazos (izquierdo/derecho), núcleo, gatillo, cargador y pie. Las piezas pesadas dan potencia, las ligeras velocidad; la tienda de piezas abre durante la historia.",
+  "Duel": "Duelo",
+  "Your HP": "Tu HP",
+  "Enemy HP": "HP enemigo",
+  "Shots left": "Disparos restantes",
+  "Seconds left": "Segundos restantes",
+  "Aim for the opponent's weak target when it opens; charge shots for power but watch the clock.": "Apunta al punto débil del rival cuando se abra; carga los disparos para hacer potencia, pero vigila el reloj.",
+  "World": "Mundo",
+  "The story moves from the starting town through the Valley of the Gale to tournaments against Bull, Gray, Sigma and finally Death.": "La historia va del pueblo inicial por el Valle de la Ráfaga hasta los torneos contra Bull, Gray, Sigma y finalmente Death.",
+  "Parts": "Partes",
+  "Parts are bought in the shop or won from rivals; swap them in the B-Daman menu.": "Las piezas se compran en la tienda o se ganan a los rivales; cámbialas en el menú del B-Daman.",
+  "Rivals": "Rivales",
+  "Rivals: Cain, Lady, Terry, Shinobi Cat, Crow, Goblin, Bull, Gray, Sigma, Wen, Death.": "Rivales: Cain, Lady, Terry, Shinobi Cat, Crow, Goblin, Bull, Gray, Sigma, Wen, Death.",
+  "Progress": "Progreso",
+  "Death defeated": "Death derrotado"
+ }
+}

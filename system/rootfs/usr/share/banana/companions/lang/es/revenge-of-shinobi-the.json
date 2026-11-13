@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Revenge of Shinobi, The": "La Venganza de Shinobi",
+  "Health; ninja magic; shuriken\nNinja action starring a Shinobi warrior (a 2002 GBA game, not a port of the 1989 Mega Drive one)\nYour life bar refills from health pickups; shuriken and ninja magic are limited": "Salud; magia ninja; shuriken\nAcción ninja con un guerrero Shinobi (un juego de GBA de 2002, no un port del de Mega Drive de 1989)\nTu barra de vida se rellena con los objetos de salud; los shuriken y la magia ninja son limitados",
+  "Moves": "Movimientos",
+  "Sword slashes, shuriken, ninja magic\nSword for close range; shuriken for enemies across gaps\nNinja magic clears the screen or protects you: save it for bosses\nThe ending you get depends on how you play (the ROM has separate good and bad endings)": "Cortes de espada, shuriken, magia ninja\nEspada para cuerpo a cuerpo; shuriken para enemigos al otro lado de un hueco\nLa magia ninja despeja la pantalla o te protege: guárdala para los jefes\nEl final que consigas depende de cómo juegues (la ROM tiene finales buenos y malos separados)",
+  "Bosses": "Jefes",
+  "Stage-end bosses\nBosses telegraph their attacks: back off during the wind-up, strike after\nThe final enemy is Ashira; reaching him with full magic makes the fight easier\nUse shuriken to hit bosses from safe distance when they hover or jump": "Jefes al final de cada escenario\nLos jefes anuncian sus ataques: retrocede durante la preparación y golpea después\nEl último enemigo es Ashira; llegar con la magia llena facilita el combate\nUsa shuriken para golpear a los jefes desde lejos cuando flotan o saltan",
+  "Stages": "Escenarios",
+  "Stages across Japan\nStages are reached in order; passwords save your progress between sessions\nEach stage ends with a boss gate": "Escenarios por Japón\nLos escenarios se abordan en orden; las contraseñas guardan tu progreso entre sesiones\nCada escenario termina con una puerta de jefe",
+  "Items": "Objetos",
+  "Shuriken ammo, magic, health\nShuriken refills and magic pickups appear in breakable objects and from enemies\nHealth pickups heal part of the life bar": "Munición de shuriken, magia, salud\nLas recargas de shuriken y los objetos de magia aparecen en cosas rompibles y en los enemigos\nLos objetos de salud curan parte de la barra de vida",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nThe password screen lets you continue from a later stage\nHidden pickups are often above the main path: jump on ledges": "Objetos ocultos\nLa pantalla de contraseña te deja continuar desde un escenario posterior\nLos objetos ocultos suelen estar sobre el camino principal: salta a las repisas",
+  "Progress": "Progreso",
+  "Stages cleared\nPasswords record your stage; write them down at each stage start\nBeat Ashira to finish the story": "Escenarios superados\nLas contraseñas registran tu escenario; anótalas al inicio de cada uno\nDerrota a Ashira para terminar la historia"
+ }
+}

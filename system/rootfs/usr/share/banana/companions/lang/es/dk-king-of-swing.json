@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Adventure": "Aventura",
+  "Time trial": "Prueba de tiempo",
+  "Playing as": "Jugando como",
+  "Health": "Salud",
+  "Bananas": "Plátanos",
+  "Mode": "Modo",
+  "Bananas power the charge attack (hold L+R on the ground). Taking hits lowers health; oil barrels and heart pickups restore it.": "Los plátanos dan energía al ataque de carga (mantén L+R en el suelo). Los golpes bajan la salud; los toneles de aceite y los corazones la recuperan.",
+  "How to swing": "Cómo colgarse",
+  "Controls": "Controles",
+  "Grab with the left hand (hold), release to let go": "Agarra con la mano izquierda (mantén), suelta para soltarte",
+  "Grab with the right hand": "Agarra con la mano derecha",
+  "Jump / charge attack when held on the ground": "Salto / ataque de carga con L+R en el suelo",
+  "Both hands on a peg": "Ambas manos en una clavija",
+  "DK spins; let go at the right moment to fly that way": "DK gira; suelta en el momento justo para volar en esa dirección",
+  "Charge (L+R held)": "Carga (L+R pulsados)",
+  "Smash enemies and breakable walls, costs bananas": "Aplasta enemigos y paredes rompibles, cuesta plátanos",
+  "Bosses": "Jefes",
+  "Boss tips": "Consejos del jefe",
+  "Each world ends in a boss arena built of pegs. Keep moving between pegs, wait for the boss to finish an attack, then fly into it with a charged jump (L+R) or a spin release. King K. Rool waits at the end: same idea, more projectiles to dodge.": "Cada mundo termina en una arena de clavijas. Muévete entre las clavijas, espera a que el jefe termine un ataque y vuéleale con un salto cargado (L+R) o soltando el giro. King K. Rool espera al final: la misma idea, con más proyectiles que esquivar.",
+  "Boss value": "Valor del jefe",
+  "World": "Mundo",
+  "Level id": "ID de nivel",
+  "Five worlds of peg-board levels plus a boss each; the world map shows medals per level.": "Cinco mundos de niveles de clavijas más un jefe cada uno; el mapa del mundo muestra las medallas por nivel.",
+  "Oil barrels refill health. Gold/silver/bronze medals come from time trials and boss fights.": "Los toneles de aceite recargan salud. Las medallas de oro/plata/bronce salen de las pruebas de tiempo y las peleas contra jefes.",
+  "Crystal coconuts": "Cocos de cristal",
+  "Boss gold medals (bits)": "Medallas de oro de jefes (bits)",
+  "Each level hides one crystal coconut; they unlock characters for Jungle Jam.": "Cada nivel esconde un coco de cristal; desbloquean personajes para Jungle Jam.",
+  "Progress": "Progreso",
+  "Completion %": "% de completitud"
+ }
+}

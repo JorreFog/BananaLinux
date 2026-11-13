@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Games": "Juegos",
+  "Notes": "Notas",
+  "Lunar Lander: land softly on pads with low fuel. Breakout: clear the bricks.": "Lunar Lander: aterriza suave en las plataformas con poco combustible. Breakout: rompe los ladrillos.",
+  "Tips": "Consejos",
+  "Millipede: clear mushrooms near the bottom.": "Millipede: elimina los hongos de abajo.",
+  "Menu": "Menú",
+  "Pick a game.": "Elige un juego.",
+  "Items": "Objetos",
+  "DDT bombs in Millipede.": "Bombas DDT en Millipede.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

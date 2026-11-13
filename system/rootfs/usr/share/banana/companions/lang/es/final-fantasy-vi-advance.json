@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Characters": "Personajes",
+  "Who": "Quién",
+  "Level": "Nivel",
+  "Max HP": "HP máx.",
+  "Max MP": "MP máx.",
+  "Stats": "Estadísticas",
+  "Strength": "Fuerza",
+  "Speed": "Velocidad",
+  "Stamina": "Resistencia",
+  "Magic": "Magia",
+  "Esper id": "ID de esper",
+  "Espers teach spells while equipped (AP after each battle) and give a stat bonus at level-up: equip Bismark/Carbuncle-style HP/stat espers when levelling late.": "Los espers enseñan hechizos mientras están equipados (AP tras cada batalla) y dan una bonificación de estadística al subir de nivel: equipa espers de HP o estadística tipo Bismark/Carbuncle cuando subes tarde.",
+  "Bosses": "Jefes",
+  "Monster formation": "Formación de monstruos",
+  "Tips": "Consejos",
+  "Whelk: never hit the shell. Ultros (1st): Sabin's Aura Bolt. Vargas: Sabin's Raging Fist. Kefka at Narshe: guard the lines, keep healers in the middle. Atma Weapon: Shell + Haste. Kefka (final): Reflect does not stop his ultimate moves - heal after each.": "Whelk: nunca golpees el caparazón. Ultros (1.º): Aura Bolt de Sabin. Vargas: Raging Fist de Sabin. Kefka en Narshe: guarda las líneas, deja a los curanderos en el centro. Atma Weapon: Shell + Haste. Kefka (final): Reflect no detiene sus movimientos definitivos: cúrate después de cada uno.",
+  "Where": "Dónde",
+  "Map id": "ID de mapa",
+  "Steps": "Pasos",
+  "World of Balance until the Floating Continent, then the World of Ruin. The GBA version adds the Dragons' Den and the Soul Shrine.": "Mundo del Equilibrio hasta el Continente Flotante, luego el Mundo de la Ruina. La versión de GBA añade la Guarida de los Dragones y el Santuario del Alma.",
+  "Gil from last battle": "Gil de la última batalla",
+  "GBA adds Leviathan, Gilgamesh, Cactuar and Diabolos. Ragnarok and Crusader are the late big ones; Odin becomes Raiden in Cyan's dream / ancient castle.": "GBA añade Leviathan, Gilgamesh, Cactuar y Diabolos. Ragnarok y Crusader son los grandes del final; Odin se convierte en Raiden en el sueño de Cyan / el castillo ancestral.",
+  "Progress": "Progreso",
+  "Play time": "Tiempo jugado",
+  "Characters can be missed in the World of Ruin: Shadow (wait on the Floating Continent), Mog (Narshe caves), Umaro (Narshe with Mog), Gogo (Zone Eater) and Strago/Relm.": "Puedes perderte personajes en el Mundo de la Ruina: Shadow (espera en el Continente Flotante), Mog (cuevas de Narshe), Umaro (Narshe con Mog), Gogo (Zone Eater) y Strago/Relm."
+ }
+}

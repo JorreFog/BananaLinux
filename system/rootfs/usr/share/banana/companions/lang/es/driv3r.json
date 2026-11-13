@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Clips": "Cargadores",
+  "Bullets": "Balas",
+  "Controls": "Controles",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Accelerate / shoot on foot": "Acelera / dispara a pie",
+  "Brake": "Freno",
+  "Handbrake": "Freno de mano",
+  "Enter/exit car": "Entrar/salir del auto",
+  "Select": "Seleccionar",
+  "Map": "Mapa",
+  "Pursuit": "Persecución",
+  "Tips": "Consejos",
+  "Lose a tail by turning down narrow streets and alleys; cops lose interest when you are out of sight for a while.": "Pierde a los perseguidores al meterte por calles y callejones estrechos; los policías se aburren si te pierden de vista un rato.",
+  "Cities": "Ciudades",
+  "Undercover cop Tanner works through Miami, Nice and Istanbul.": "El poli infiltrado Tanner actúa en Miami, Niza y Estambul.",
+  "Ammo": "Munición",
+  "Bullets in clip": "Balas en el cargador",
+  "Finishing missions unlocks driving games and cheats on the main menu.": "Completar misiones desbloquea juegos de conducción y trucos en el menú principal.",
+  "Progress": "Progreso",
+  "Story missions alternate driving and on-foot shooting.": "Las misiones de historia alternan conducción y disparos a pie."
+ }
+}

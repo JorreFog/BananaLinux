@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Deck": "Mazo",
+  "Card File entries": "Entradas del archivo de cartas",
+  "Card battles; your deck of characters, magic and equipment": "Batallas de cartas; tu mazo de personajes, magia y equipo",
+  "Cards": "Cartas",
+  "Character cards": "Cartas de personajes",
+  "attack, defense; magic cards; equipment": "ataque, defensa; cartas de magia; equipo",
+  "up to 256 entries are tracked; rune magic cards add effects": "se registran hasta 256 entradas; las cartas de magia rúnica añaden efectos",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Combo characters together; use rune magic cards\nCharacter cards fight with attack and defense; equipment cards boost them": "Combina personajes entre sí; usa cartas de magia rúnica\nLas cartas de personaje combaten con ataque y defensa; las de equipo los potencian",
+  "Story": "Historia",
+  "Dungeon id": "ID de mazmorra",
+  "Dungeon room": "Sala de mazmorra",
+  "Follows Suikoden II's story": "Sigue la historia de Suikoden II",
+  "Deck building; card shop": "Construcción de mazos; tienda de cartas",
+  "Card album": "Álbum de cartas",
+  "Progress": "Progreso",
+  "Story chapters\nStory follows Suikoden II's events; dungeon floors have chests with cards and potch\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Capítulos de la historia\nLa historia sigue los eventos de Suikoden II; los pisos de mazmorra tienen cofres con cartas y potch\nTraducción al inglés en la carpeta Translations; versión 1.0 (sacada del nombre del archivo)"
+ }
+}

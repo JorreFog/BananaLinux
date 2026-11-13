@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Board position, gems\nLooney Tunes board game: roll, move around the board and land on spaces": "Posición en el tablero, gemas\nJuego de tablero de Looney Tunes: tira los dados, muévete por el tablero y cae en casillas",
+  "Goal": "Objetivo",
+  "collect the magic gems before the other players": "reúne las gemas mágicas antes que los demás jugadores",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Looney Tunes characters": "Personajes de Looney Tunes",
+  "Tweety and other Looney Tunes (Sylvester, Granny and friends)": "Tweety y otros Looney Tunes (Sylvester, Granny y amigos)",
+  "Each space type does something: gems, minigames, events": "Cada tipo de casilla hace algo: gemas, minijuegos, eventos",
+  "Minigames": "Minijuegos",
+  "Battle": "Batalla",
+  "Minigames on spaces\nMinigames decide who wins items or gems; practice them from the minigame menu": "Minijuegos en casillas\nLos minijuegos deciden quién se lleva objetos o gemas; practica desde el menú de minijuegos",
+  "Boards": "Tableros",
+  "Boards\nSeveral boards, each with its own layout and events\nBoards differ in size and events; minigames trigger on certain spaces\nThe board is a world map with cities (e.g. Hong Kong), shops and exits; character points are spent in shops": "Tableros\nVarios tableros, cada uno con su propia distribución y eventos\nLos tableros difieren en tamaño y eventos; los minijuegos se activan en ciertas casillas\nEl tablero es un mapa del mundo con ciudades (p. ej. Hong Kong), tiendas y salidas; los puntos de personaje se gastan en las tiendas",
+  "Gems": "Gemas",
+  "Magic gems\nGems are the score; some spaces steal or swap them\nCharacter points (shown at the top) and gems are your resources; shops sell items": "Gemas mágicas\nLas gemas son la puntuación; algunas casillas te las roban o las intercambian\nLos puntos de personaje (arriba) y las gemas son tus recursos; las tiendas venden objetos",
+  "Gems collected\nMinigames unlocked by playing boards\nMagic gems are the goal; minigames are unlocked as you play": "Gemas recogidas\nMinijuegos desbloqueados al jugar tableros\nLas gemas mágicas son el objetivo; los minijuegos se desbloquean al jugar",
+  "Progress": "Progreso",
+  "Boards cleared\nBoards cleared; most gems wins\nThe player with the most gems at the end of the board wins": "Tableros superados\nTableros superados; gana quien más gemas reúna\nGana el jugador que tenga más gemas al final del tablero"
+ }
+}

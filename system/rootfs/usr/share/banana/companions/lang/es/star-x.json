@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "Score": "Puntuación",
+  "Lives": "Vidas",
+  "Shields, lives, weapons\n3D rail shooter in the style of Star Fox: shields drop when hit, ship is lost at zero\nLives and score shown in the HUD": "Escudos, vidas, armas\nShooter de rieles 3D al estilo de Star Fox: los escudos bajan al recibir un golpe, la nave se pierde al llegar a cero\nVidas y puntuación en el HUD",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Weapons upgrade with pickups\nWeapon pickups upgrade your main gun; secondary weapons have limited ammo\nRoll or dodge to avoid incoming fire (the ship moves in a corridor on screen)": "Las armas se mejoran con recogibles\nLos recogibles de arma mejoran tu cañón principal; las armas secundarias tienen munición limitada\nRola o esquiva para evitar el fuego entrante (la nave se mueve en un corredor en pantalla)",
+  "Bosses": "Jefes",
+  "Stage-end bosses\nBosses have weak points that flash when hit: aim for those\nClear small fighters early so they don't crowd the screen during the boss": "Jefes al final del escenario\nLos jefes tienen puntos débiles que parpadean al recibir un golpe: apúntalos\nElimina pronto a los cazas pequeños para que no llenen la pantalla durante el jefe",
+  "Stages": "Escenarios",
+  "3D shooter stages in space\nStages in space and over planets, played in order, each with a boss": "Escenarios de shooter 3D en el espacio\nEscenarios en el espacio y sobre planetas, que se juegan en orden, cada uno con un jefe",
+  "Bag": "Bolsa",
+  "Weapon pickups\nShield refills and weapon power-ups drop from destroyed enemies": "Recogibles de arma\nLas recargas de escudo y los potenciadores de arma caen de los enemigos destruidos",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Bonuses\nScore bonuses for kill streaks and finishing stages with high shields": "Bonus\nBonus de puntuación por rachas de bajas y por terminar escenarios con muchos escudos",
+  "Progress": "Progreso",
+  "Stages\nStage count to the final boss; a high-score table keeps your best run": "Escenarios\nNúmero de escenarios hasta el jefe final; una tabla de récords guarda tu mejor partida"
+ }
+}

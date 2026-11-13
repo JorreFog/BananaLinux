@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Health (hearts); Spin attack (B)\nFirst Starfy game (Japan only; English fan translation): Stafy, a star prince of Pufftop, searches the sea kingdom\nHealth hearts; spinning is both attack and dash": "Salud (corazones); ataque giratorio (B)\nPrimer juego de Starfy (solo Japón; traducción fan en inglés): Stafy, príncipe estrella de Pufftop, busca en el reino del mar\nCorazones de salud; girar sirve de ataque y de embestida",
+  "Moves": "Movimientos",
+  "Spin dash, swim, float\nSpin attack (B) knocks out enemies and breaks blocks; swimming moves freely in all directions under water\nLater abilities from treasure open new paths in earlier stages": "Giro, nada, flota\nEl ataque giratorio (B) derriba a los enemigos y rompe bloques; nadar te mueve libre en todas direcciones bajo el agua\nLas habilidades que dan los tesoros abren rutas nuevas en etapas anteriores",
+  "Bosses": "Jefes",
+  "Each stage ends in a boss; spin to stun\nEvery stage ends with a boss: stun it with spins between its attacks\nMany bosses have a pattern of three attacks; spin when the pattern ends": "Cada etapa termina con un jefe; gira para aturdirlo\nTodas las etapas terminan con un jefe: atúrdelo con giros entre sus ataques\nMuchos jefes tienen un patrón de tres ataques; gira cuando el patrón acaba",
+  "Stages": "Escenarios",
+  "Stages across the sea kingdom, each with a boss at the end\nStages of the sea kingdom played in order, each split into areas": "Etapas por todo el reino del mar, cada una con un jefe al final\nEtapas del reino del mar jugadas en orden, cada una dividida en áreas",
+  "Items": "Objetos",
+  "Pearls (money), shop items\nPearls are the currency for the shop; items heal or give bonuses": "Perlas (dinero), objetos de la tienda\nLas perlas son la moneda de la tienda; los objetos curan o dan ventajas",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Treasures and costumes\nTreasures and costumes hidden in stages": "Tesoros y disfraces\nTesoros y disfraces escondidos en las etapas",
+  "Progress": "Progreso",
+  "Stages cleared\nStages cleared to the final boss\nEach stage has several areas; the boss door is at the end\nEnglish translation in the Translations folder; version 4-7-20 (from the file name)": "Etapas superadas\nEtapas superadas hasta el jefe final\nCada etapa tiene varias áreas; la puerta del jefe está al final\nTraducción al inglés en la carpeta Translations; versión 4-7-20 (según el nombre del archivo)"
+ }
+}

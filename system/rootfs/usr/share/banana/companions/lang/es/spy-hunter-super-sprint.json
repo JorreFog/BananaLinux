@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Two games in one: Spy Hunter and Super Sprint": "Dos juegos en uno: Spy Hunter y Super Sprint",
+  "Two-in-one cartridge": "Cartucho dos en uno",
+  "Spy Hunter (spy car action) and Super Sprint (Atari's top-down racer)": "Spy Hunter (acción con el auto de espía) y Super Sprint (carrera de vista cenital de Atari)",
+  "Modes": "Modos",
+  "armed car; Super Sprint: top-down racing": "auto armado; Super Sprint: carrera cenital",
+  "armed car with guns, missiles, oil, smoke": "auto armado con armas, misiles, aceite y humo",
+  "race around single-screen tracks against CPU cars": "carrera en circuitos de una sola pantalla contra autos de la CPU",
+  "Tips": "Consejos",
+  "grab wrenches to upgrade the car": "agarra llaves para mejorar el auto",
+  "avoid the hazards and tornadoes; wrenches upgrade traction, top speed or acceleration": "evita los peligros y tornados; las llaves mejoran la tracción, la velocidad máxima o la aceleración",
+  "Tracks": "Pistas",
+  "Spy Hunter roads; Super Sprint tracks\nPick the game from the menu; Super Sprint has a set of tracks played in order": "Calles de Spy Hunter; circuitos de Super Sprint\nElige el juego desde el menú; Super Sprint tiene un conjunto de circuitos que se juegan en orden",
+  "Upgrades": "Mejoras",
+  "Bag": "Bolsa",
+  "Super Sprint upgrades: speed, traction, acceleration\nWrenches collected on Super Sprint tracks are spent on car upgrades": "Mejoras de Super Sprint: velocidad, tracción, aceleración\nLas llaves recogidas en los circuitos de Super Sprint se gastan en mejorar el auto",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Tracks\nSuper Sprint high scores per track\nBest times and scores per track are kept": "Circuitos\nRécords de Super Sprint por circuito\nSe guardan los mejores tiempos y puntuaciones por circuito",
+  "Progress": "Progreso",
+  "Tracks cleared\nSpy Hunter missions; Super Sprint track progression": "Circuitos superados\nMisiones de Spy Hunter; progreso de circuitos de Super Sprint"
+ }
+}

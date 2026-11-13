@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "You": "Tú",
+  "Your health": "Tu salud",
+  "Rounds won": "Rondas ganadas",
+  "Score": "Puntuación",
+  "Timer": "Temporizador",
+  "Health, super meter": "Salud, medidor de super",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "16 World Warriors + Akuma (hidden)": "16 luchadores de World Warriors + Akuma (oculto)",
+  "Roster": "Plantilla",
+  "Ryu, E. Honda, Blanka, Guile, Ken, Chun-Li, Zangief, Dhalsim, M. Bison, Sagat, Balrog, Vega, Cammy, T. Hawk, Fei Long, Dee Jay, plus Akuma": "Ryu, E. Honda, Blanka, Guile, Ken, Chun-Li, Zangief, Dhalsim, M. Bison, Sagat, Balrog, Vega, Cammy, T. Hawk, Fei Long, Dee Jay, más Akuma",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Opponent": "Rival",
+  "Opponent health": "Salud del rival",
+  "Opponent rounds won": "Rondas ganadas del rival",
+  "Specials by motion": "Especiales por movimiento",
+  "quarter circle, charge": "cuarto de círculo, carga",
+  "Modes": "Modos",
+  "Stage": "Escenario",
+  "Moves": "Movimientos",
+  "Command list per fighter\nSuper combos need a full super meter; special moves use motions or charge": "Lista de comandos por combatiente\nLos super combos necesitan el medidor de super lleno; los movimientos especiales usan comandos o carga",
+  "Hidden Akuma\nAkuma (and Shin Akuma in RAM) are hidden characters": "Akuma oculto\nAkuma (y Shin Akuma en RAM) son personajes ocultos",
+  "Progress": "Progreso",
+  "Arcade clears\nArcade clears; time challenge records\nScore and rounds won are tracked during fights": "Superaciones de arcade\nSuperaciones de arcade; récords del reto de tiempo\nLa puntuación y las rondas ganadas se registran en los combates"
+ }
+}

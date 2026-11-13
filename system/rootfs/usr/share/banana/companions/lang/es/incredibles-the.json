@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "The Incredibles": "Los Increíbles",
+  "Family": "Familia",
+  "Characters": "Personajes",
+  "Mr. Incredible (strength), Elastigirl (stretch), Dash (speed), Violet (invisibility/force field).": "Mr. Increíble (fuerza), Elastigirl (estiramiento), Dash (velocidad), Violeta (invisibilidad/campo de fuerza).",
+  "Powers": "Poderes",
+  "Use": "Usar",
+  "Each level tells which family member to use; their power solves the level's obstacles.": "Cada nivel indica a qué miembro de la familia usar; su poder resuelve los obstáculos.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Omnidroid fights: dodge its limbs and attack the exposed core.": "Combates contra el Omnidroid: esquiva sus extremidades y ataca el núcleo expuesto.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Story levels following the film, from Metroville to Nomanisan Island.": "Niveles de historia que siguen la película, de Metroville a la Isla Nomanisan.",
+  "Pickups": "Recogibles",
+  "Items": "Objetos",
+  "Health and power pickups; Incredi-points from enemies.": "Recogibles de salud y poder; Incredi-puntos de los enemigos.",
+  "Collectables": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items in each level unlock extras.": "Los objetos ocultos en cada nivel desbloquean extras.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Syndrome and the Omnidroid.": "Derrota a Síndrome y al Omnidroid."
+ }
+}
