@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Life counter": "Contador de vidas",
+  "Character id": "ID de personaje",
+  "Wolverine, Cyclops, Storm, Rogue; health": "Wolverine, Cyclops, Storm, Rogue; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Each X-Man has unique special attacks": "Cada X-Man tiene ataques especiales únicos",
+  "Playable X-Men": "X-Men jugables",
+  "Wolverine, Cyclops, Storm and Rogue, each with different specials": "Wolverine, Cyclops, Storm y Rogue, cada uno con especiales distintos",
+  "Bosses": "Jefes",
+  "First boss HP": "HP del primer jefe",
+  "Apocalypse's minions": "Los secuaces de Apocalypse",
+  "Levels": "Niveles",
+  "Alternate reality levels\nLevels set in an alternate reality ruled by Apocalypse": "Niveles de realidad alternativa\nNiveles ambientados en una realidad alternativa gobernada por Apocalypse",
+  "Items": "Objetos",
+  "Health\nHealth pickups dropped by enemies and in crates\nLife counter and boss health are shown during fights": "Salud\nRecogibles de salud que sueltan los enemigos y hay en las cajas\nEl contador de vidas y la salud del jefe se muestran durante los combates",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden items in side areas of each level\nPlay every X-Man to see all specials": "Objetos ocultos\nObjetos ocultos en las zonas laterales de cada nivel\nJuega con cada X-Man para ver todos los especiales",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels in order to Apocalypse\nMission time is tracked per level": "Niveles superados\nNiveles en orden hasta Apocalypse\nEl tiempo de misión se registra en cada nivel"
+ }
+}

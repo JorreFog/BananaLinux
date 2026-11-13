@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Map": "Mapa",
+  "Beyblade parts": "Piezas de beyblade",
+  "Attack ring": "Anillo de ataque",
+  "Contact shape: attack/defense/balance": "Forma de contacto: ataque/defensa/equilibrio",
+  "Weight disk": "Disco de peso",
+  "Heavier = more stamina and knockback": "Más pesado = más resistencia y empuje",
+  "Spin gear": "Engranaje de giro",
+  "Spin direction and core": "Dirección de giro y núcleo",
+  "Blade base": "Base de la hoja",
+  "Movement pattern": "Patrón de movimiento",
+  "Battles": "Combates",
+  "Launch timing sets the spin power; then steer and use the bit-beast special when the gauge fills. Attack types beat stamina, stamina beats defense, defense beats attack.": "El momento del lanzamiento define la potencia de giro; luego dirige y usa el especial de bit-beast cuando el medidor se llene. El ataque vence a la resistencia, la resistencia vence a la defensa y la defensa vence al ataque.",
+  "World map": "Mapa del mundo",
+  "Map id": "ID de mapa",
+  "Travel between tournament venues on the world map.": "Viaja entre las sedes de torneo en el mapa del mundo.",
+  "Parts": "Partes",
+  "Win battles to collect parts and customize your beyblade between matches.": "Gana combates para recoger piezas y personalizar tu beyblade entre combates.",
+  "Hidden items": "Objetos ocultos",
+  "Hidden items found": "Objetos ocultos encontrados",
+  "Progress": "Progreso",
+  "The story follows the G-Revolution tournament up to the BEGA league.": "La historia sigue el torneo G-Revolution hasta la liga BEGA."
+ }
+}

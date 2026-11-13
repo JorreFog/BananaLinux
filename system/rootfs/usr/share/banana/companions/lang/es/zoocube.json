@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Score": "Puntuación",
+  "Score, level; cube rotation\nPuzzle game by Acclaim: animal shapes fly in from four sides towards a cube in the middle\nScore and level; the game ends when shapes pile too high on a side": "Puntuación, nivel; rotación del cubo\nJuego de puzle de Acclaim: las formas de animales entran volando por cuatro lados hacia un cubo en el centro\nPuntuación y nivel; la partida termina cuando las formas se apilan demasiado alto en un lado",
+  "Pieces": "Piezas",
+  "Animal pieces fall on the cube's sides\nRotate the cube so a shape lands on the side with the same animal: two matching animals disappear\nAnimals include lions, elephants, penguins and other zoo animals (each a coloured shape)": "Las piezas de animales caen sobre los lados del cubo\nGira el cubo para que una forma caiga en el lado con el mismo animal: dos animales iguales desaparecen\nLos animales incluyen leones, elefantes, pingüinos y otros animales de zoológico (cada uno es una forma de color)",
+  "Tips": "Consejos",
+  "Match two same animals to clear\nKeep every side low; match quickly when shapes speed up at higher levels\nShapes coming from opposite sides at once: rotate to the side that clears the most": "Empareja dos animales iguales para limpiar\nMantén todos los lados bajos; empareja rápido cuando las formas aceleran en niveles altos\nSi llegan formas de lados opuestos a la vez: gira hacia el lado que más limpia",
+  "Modes": "Modos",
+  "Puzzle and Arcade": "Puzle y Arcade",
+  "puzzle (fixed starting layouts) and arcade (endless levels)": "puzle (distribuciones iniciales fijas) y arcade (niveles infinitos)",
+  "Next pieces\nNext shapes are shown at the screen edges\nShapes come from all four sides at once at higher levels": "Siguientes piezas\nLas siguientes formas se muestran en los bordes de la pantalla\nLas formas llegan por los cuatro lados a la vez en niveles altos",
+  "Animals": "Animales",
+  "Collect": "Coleccionar",
+  "Animals\nLevel and high scores per mode\nPuzzle mode has set layouts to solve": "Animales\nNivel y récords por modo\nEl modo puzle tiene distribuciones fijas para resolver",
+  "Progress": "Progreso",
+  "Levels\nLevels cleared in puzzle mode; high score in arcade\nArcade levels speed up after each set of matches": "Niveles\nNiveles superados en modo puzle; récord en arcade\nLos niveles de arcade aceleran tras cada tanda de combinaciones"
+ }
+}

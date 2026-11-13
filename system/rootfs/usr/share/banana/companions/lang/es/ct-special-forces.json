@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Soldier": "Soldado",
+  "Lives": "Vidas",
+  "Health": "Salud",
+  "Grenades": "Granadas",
+  "Controls": "Controles",
+  "Jump": "Saltar",
+  "Fire": "Fuego",
+  "Throw grenade": "Lanzar granada",
+  "Switch weapon": "Cambiar de arma",
+  "Down": "Abajo",
+  "Crouch / climb down": "Agacharse / bajar",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Pick one of two commandos per mission; both play the same. Hostages freed give points.": "Elige uno de dos comandos por misión; ambos se juegan igual. Los rehenes liberados dan puntos.",
+  "Missions": "Misiones",
+  "Tips": "Consejos",
+  "Missions alternate side-scrolling shooting, sniping and helicopter sections. Bosses are usually vehicles: stay out of their straight firing lines and use rockets.": "Las misiones alternan disparos de scroll lateral, francotirador y secciones de helicóptero. Los jefes suelen ser vehículos: sal de sus líneas de tiro recto y usa cohetes.",
+  "Four theatres of operations (jungle, Asia, desert, Arctic), each a series of short missions with a password at the end.": "Cuatro teatros de operaciones (jungla, Asia, desierto, Ártico), cada uno con una serie de misiones cortas que terminan en contraseña.",
+  "Weapons": "Armas",
+  "Machine gun ammo": "Munición de ametralladora",
+  "Rockets": "Cohetes",
+  "Flamethrower": "Lanzallamas",
+  "Grappling hooks": "Ganchos",
+  "Hostages": "Rehenes",
+  "Rescue the hostages in each level for a better mission score.": "Rescata a los rehenes en cada nivel para mejorar la puntuación de la misión.",
+  "Progress": "Progreso",
+  "Passwords are shown after each completed mission; note them to continue.": "Las contraseñas aparecen tras cada misión completada; anótalas para continuar."
+ }
+}

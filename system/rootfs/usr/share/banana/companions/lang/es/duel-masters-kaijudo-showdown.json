@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Your record and deck are shown in the game's menus; no live data yet.": "Tu récord y tu mazo se muestran en los menús del juego; aún no hay datos en vivo.",
+  "Rules": "Reglas",
+  "Turn": "Turno",
+  "Draw, charge one card as mana, summon/cast, attack": "Roba, carga una carta como maná, invoca/lanza, ataca",
+  "Shields": "Escudos",
+  "Each player starts with 5 shields; broken shields go to your hand": "Cada jugador empieza con 5 escudos; los escudos rotos van a tu mano",
+  "Win": "Gana",
+  "Attack the opponent directly when they have no shields left": "Ataca directamente al rival cuando se quede sin escudos",
+  "Blockers": "Bloqueadores",
+  "Creatures with Blocker can stop an attack": "Las criaturas con Bloqueador pueden detener un ataque",
+  "Civilizations": "Civilizaciones",
+  "Light, Water, Darkness, Fire, Nature: mana must include the card's colour": "Luz, Agua, Oscuridad, Fuego, Naturaleza: el maná debe incluir el color de la carta",
+  "Duel": "Duelo",
+  "Tip": "Consejo",
+  "Count the opponent's untapped blockers before attacking, and keep a removal spell for their biggest creature.": "Cuenta los bloqueadores sin usar del rival antes de atacar y guarda un hechizo de eliminación para su criatura más grande.",
+  "Tournament": "Torneo",
+  "Duel through the tournament ladder to unlock tougher opponents.": "Duel a lo largo de la escalera del torneo para desbloquear rivales más duros.",
+  "Cards": "Cartas",
+  "Win duels for booster packs; build a 40-card deck in one or two civilizations.": "Gana duelos para conseguir sobres de expansiones; monta un mazo de 40 cartas con una o dos civilizaciones.",
+  "Collect cards from all five civilizations.": "Colecciona cartas de las cinco civilizaciones.",
+  "Progress": "Progreso",
+  "Beat the ladder's final duelist for the ending.": "Vence al último duelista de la escalera para ver el final."
+ }
+}

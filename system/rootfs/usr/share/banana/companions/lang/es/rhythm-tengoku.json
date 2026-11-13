@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Rhythm": "Ritmo",
+  "Minigame number": "Número de minijuego",
+  "Score counter": "Contador de puntos",
+  "Hits": "Impactos",
+  "Each game": "Cada juego",
+  "press A (or A + B) on the beat; results: Try Again, OK, Superb": "pulsa A (o A + B) al ritmo; resultados: Reintentar, Bien, Excelente",
+  "4 games + a remix per stage": "4 juegos + un remix por escenario",
+  "Games": "Juegos",
+  "Karate Man, Clappy Trio, Rhythm Tweezers, Space Dance, Sneaky Spirits, Night Walk, Ninja Bodyguard, Tap Trial and more": "Karate Man, Clappy Trio, Rhythm Tweezers, Space Dance, Sneaky Spirits, Night Walk, Ninja Bodyguard, Tap Trial y más",
+  "Tip": "Consejo",
+  "Listen rather than look: every game uses audio cues": "Escucha en lugar de mirar: cada juego usa señales de audio",
+  "Medals": "Medallas",
+  "get Superb on a game to earn a medal": "consigue Excelente en un juego para ganar una medalla",
+  "Stages": "Escenarios",
+  "Stages of 4 games, each closed by a Remix of them\nLater stages bring harder '2' versions of earlier games": "Escenarios de 4 juegos, cada uno cerrado por un Remix de ellos\nLos escenarios posteriores traen versiones \"2\" más difíciles de juegos anteriores",
+  "Toys": "Juguetes",
+  "Medals held": "Medallas obtenidas",
+  "Medals unlock Rhythm Toys and Endless games in the Café": "Las medallas desbloquean Rhythm Toys y los juegos Endless en el Café",
+  "Perfect campaigns": "Campañas perfectas",
+  "One medal per Superb rank; Perfect campaigns award special items": "Una medalla por rango Excelente; las campañas perfectas dan objetos especiales",
+  "Progress": "Progreso",
+  "Perfects": "Perfectos",
+  "Karate Man finished (times)": "Karate Man terminado (veces)",
+  "Quiz Ex high score": "Récord de Quiz Ex",
+  "Stage clears; Remix 6 is the finale\nEnglish translation in the Translations folder; version Beta 13a (from the file name; an early or partial patch, so some text may still be Japanese)": "Escenarios superados; Remix 6 es el final\nTraducción al inglés en la carpeta Translations; versión Beta 13a (según el nombre del archivo; un parche temprano o parcial, así que parte del texto puede seguir en japonés)"
+ }
+}

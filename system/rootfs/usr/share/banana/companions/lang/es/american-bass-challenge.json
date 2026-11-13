@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Fishing": "Pesca",
+  "Cast": "Lanzar",
+  "Hold A to set power, release to cast": "Mantén A para marcar la fuerza y suelta para lanzar",
+  "Reel": "Recoger",
+  "Tap/hold A to reel in": "Toca/mantén A para recoger",
+  "Set hook": "Clavar el anzuelo",
+  "Pull back (D-pad) when the bobber/line twitches": "Tira hacia atrás (D-pad) cuando el flotador o el hilo se mueven",
+  "Tension": "Tensión",
+  "Ease off when the line meter turns red": "Suelta cuando el medidor del hilo se ponga rojo",
+  "Lures": "Cebos",
+  "Topwater lures work early and late in the day; crankbaits and worms for deeper water in the midday heat. Match the lure colour to water clarity: bright in murky water, natural in clear.": "Los cebos de superficie funcionan temprano y al atardecer; crankbaits y lombrices para aguas más profundas en el calor del mediodía. Ajusta el color del cebo a la claridad del agua: colores vivos en agua turbia, naturales en agua limpia.",
+  "The fight": "La pelea",
+  "Big bass run: let them pull against light drag instead of reeling, then reel when they turn. Jumps can throw the hook: keep tension steady.": "Cuando sube una lubina grande: deja que tire contra un freno ligero en vez de recoger, y recoge cuando gire. Los saltos pueden sacar el anzuelo: mantén la tensión constante.",
+  "Lakes": "Lagos",
+  "Tournaments move between lakes; each lake has weed beds, drop-offs and docks. Bass hold near cover.": "Los torneos se mueven entre lagos; cada lago tiene manchas de algas, desniveles y embarcaderos. Las lubinas se quedan cerca de la cobertura.",
+  "Tackle": "Equipo de pesca",
+  "Winnings buy new rods, reels and lures between tournaments.": "Los premios compran cañas, carretes y cebos nuevos entre torneos.",
+  "Catches": "Capturas",
+  "The record book keeps your heaviest catch per lake.": "El libro de récords guarda tu captura más pesada de cada lago.",
+  "Tournaments": "Torneos",
+  "Win tournaments to qualify for the championship; standings rank anglers by the total weight of their best catches.": "Gana torneos para clasificarte para el campeonato; la clasificación ordena a los pescadores por el peso total de sus mejores capturas."
+ }
+}

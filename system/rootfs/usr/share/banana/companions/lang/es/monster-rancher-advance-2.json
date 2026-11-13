@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Monster": "Monstruo",
+  "How it plays": "Cómo se juega",
+  "Raise monsters: train, feed, rest, and fight in tournaments.": "Cría monstruos: Entrénalos, dales de comer, descánsalos y compite en torneos.",
+  "Lifespan": "Longevidad",
+  "Monsters age; overwork shortens life.": "Los monstruos envejecen; sobrecargarlos acorta su vida.",
+  "Stats": "Estadísticas",
+  "Monster energy": "Energía del monstruo",
+  "Life stage": "Etapa de vida",
+  "Life, Power, Intelligence, Skill, Speed, Defense.": "Vida, Poder, Inteligencia, Habilidad, Velocidad, Defensa.",
+  "Battle": "Batalla",
+  "Monster 1 max HP": "HP máx. del monstruo 1",
+  "Monster 2 max HP": "HP máx. del monstruo 2",
+  "Battle timer": "Temporizador de batalla",
+  "Tips": "Consejos",
+  "Guts gauge powers techniques.": "El medidor de valor potencia las técnicas.",
+  "Ranch": "Rancho",
+  "Structure": "Estructura",
+  "Ranch, town, tournaments, expeditions.": "Rancho, pueblo, torneos, expediciones.",
+  "Items": "Objetos",
+  "Food and items.": "Comida y objetos.",
+  "Monsters": "Monstruos",
+  "Collect": "Coleccionar",
+  "Monster breeds.": "Razas de monstruos.",
+  "Ranks": "Rangos",
+  "Goal": "Objetivo",
+  "Win the top ranks.": "Gana los primeros puestos."
+ }
+}

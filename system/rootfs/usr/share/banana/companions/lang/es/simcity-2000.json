@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "City": "Ciudad",
+  "Mayor": "Alcalde",
+  "Funds": "Fondos",
+  "Year": "Año",
+  "Month": "Mes",
+  "Game speed": "Velocidad del juego",
+  "Funds, population, date": "Fondos, población, fecha",
+  "Zones": "Zonas",
+  "Residential, Commercial, Industrial; demand meter\nZone low or high density; water pipes and power lines must reach every zone": "Residencial, Comercial, Industrial; medidor de demanda\nZona de densidad baja o alta; las tuberías de agua y las líneas eléctricas deben llegar a cada zona",
+  "Disasters": "Desastres",
+  "Battle": "Batalla",
+  "Fire, flood, earthquake, monster: keep fire and police coverage": "Incendio, inundación, terremoto, monstruo: mantén cobertura de bomberos y policía",
+  "Your city map, overlays for crime/pollution/power/water\nUnderground view shows pipes and subways; overlays help find problem areas": "El mapa de tu ciudad, capas de crimen/contaminación/energía/agua\nLa vista subterránea muestra tuberías y metro; las capas ayudan a encontrar zonas con problemas",
+  "Budget": "Presupuesto",
+  "Taxes per zone type; city ordinances": "Impuestos por tipo de zona; ordenanzas municipales",
+  "Buildings": "Edificios",
+  "Collect": "Coleccionar",
+  "Rewards": "Recompensas",
+  "Mayor's house, statues, arcologies at high population": "Casa del alcalde, estatuas, arcologías con población alta",
+  "Reward buildings appear as gifts when the city reaches milestones": "Los edificios de recompensa aparecen como regalos cuando la ciudad llega a sus metas",
+  "Progress": "Progreso",
+  "Population milestones; scenarios\nPopulation, year and funds; scenario mode has disaster and growth goals": "Hitos de población; escenarios\nPoblación, año y fondos; el modo escenario tiene metas de desastres y crecimiento"
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "Gems": "Gemas",
+  "Characters": "Personajes",
+  "Aragorn, Gandalf, Frodo and more; each path follows a character.": "Aragorn, Gandalf, Frodo y más; cada camino sigue a un personaje.",
+  "Skills": "Habilidades",
+  "Level up and buy skills.": "Sube de nivel y compra habilidades.",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Use special attacks on large enemies.": "Usa ataques especiales contra los enemigos grandes.",
+  "Levels": "Niveles",
+  "Map id": "ID de mapa",
+  "Route": "Ruta",
+  "Paths through Minas Tirith, Paths of the Dead, Pelennor Fields, Mount Doom.": "Caminos por Minas Tirith, Sendas de los Muertos, Campos del Pelennor y Monte Doom.",
+  "Items": "Objetos",
+  "Equipment and potions.": "Equipo y pociones.",
+  "Collect": "Coleccionar",
+  "Hidden items and equipment.": "Objetos ocultos y equipo.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Destroy the Ring.": "Destruye el Anillo."
+ }
+}

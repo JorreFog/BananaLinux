@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Items carried": "Objetos que llevas",
+  "Selected slot": "Espacio seleccionado",
+  "Dialogue id": "ID de diálogo",
+  "George Stobbart, an American tourist, investigates a café bombing in Paris that leads to the Knights Templar.": "George Stobbart, un turista estadounidense, investiga el bombardeo de un café en París que lo lleva hasta los Templarios.",
+  "Characters": "Personajes",
+  "You": "Tú",
+  "Paris journalist, ally": "Periodista en París, aliado",
+  "The assassin in the clown suit": "El asesino con traje de payaso",
+  "Paris police inspector": "Inspector de policía de París",
+  "Rosso's sergeant": "Sargento de Rosso",
+  "Historian, Templar expert": "Historiador, experto en Templarios",
+  "Hints": "Pistas",
+  "Stuck? Talk to everyone about every item and topic (use items on people too). Re-examine hotspots after new events. Most puzzles in a location use only items found nearby or the last thing you picked up.": "¿Atascado? Habla con todos sobre cada objeto y tema (usa también los objetos en la gente). Vuelve a examinar los puntos calientes tras los nuevos sucesos. La mayoría de puzles de una ubicación usan solo objetos encontrados cerca o lo último que recogiste.",
+  "Locations": "Ubicaciones",
+  "Paris (café, Nico's flat, hospital, Hotel Ubu), Ireland (Lochmarne), Syria (Marib), Spain (the Villa), Scotland (Bull's Head finale).": "París (café, piso de Nico, hospital, Hotel Ubu), Irlanda (Lochmarne), Siria (Marib), España (la Villa), Escocia (final en Bull's Head).",
+  "Inventory": "Inventario",
+  "Items": "Objetos",
+  "Item ids": "IDs de objetos",
+  "Item id": "ID de objeto",
+  "Clues": "Pistas",
+  "Key clues: the clown's newspaper, the Templar manuscript, the tripod and the chess piece. Keep every document: later puzzles refer back to them.": "Claves: el periódico del payaso, el manuscrito templario, el trípode y la pieza de ajedrez. Guarda todos los documentos: puzles posteriores los mencionan.",
+  "Progress": "Progreso",
+  "Paris -> Ireland -> Paris -> Syria -> Paris -> Spain -> Paris -> Scotland.": "París -> Irlanda -> París -> Siria -> París -> España -> París -> Escocia."
+ }
+}

@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Accelerate": "Acelerar",
+  "Turbo (heats the engine)": "Turbo (calienta el motor)",
+  "Up/Down": "Arriba/Abajo",
+  "Change lane": "Cambia de carril",
+  "Left/Right (air)": "Izquierda/Derecha (en el aire)",
+  "Tilt the bike": "Inclina la moto",
+  "Engine": "Motor",
+  "Turbo raises the temperature gauge; at the top the engine overheats and you stop by the track to cool down. Driving over the arrow strips cools the engine.": "El turbo sube el medidor de temperatura; en el máximo el motor se sobrecalienta y tienes que parar junto a la pista para enfriarlo. Pasando por encima de las franjas de flechas se enfría el motor.",
+  "Racing": "Carreras",
+  "Land on both wheels, matching the slope (tilt with Left/Right in the air). Hitting another rider's back wheel crashes you; clipping his front wheel crashes him.": "Aterriza con las dos ruedas, coincidiendo con la pendiente (inclina con Izquierda/Derecha en el aire). Chocar con la rueda trasera de otro piloto te hace caer; tocar su rueda delantera lo hace caer a él.",
+  "Tracks": "Pistas",
+  "Five tracks; Selection A races alone, Selection B adds rival riders. Design mode lets you build tracks.": "Cinco pistas; la Selección A compita solo, la Selección B añade rivales. El modo de diseño te deja construir pistas.",
+  "Track pieces": "Piezas de pista",
+  "Ramps": "Rampas",
+  "Land matching the slope": "Aterriza coincidiendo con la pendiente",
+  "Mud / grass": "Lodo / césped",
+  "Slows you down": "Te frena",
+  "Arrows": "Flechas",
+  "Cool the engine instantly": "Enfría el motor al instante",
+  "Hurdles": "Vallas",
+  "Jump or lose speed": "Salta o pierdes velocidad",
+  "Records": "Récords",
+  "Qualify under the target time (3rd place or better) to move to the next track.": "Clasifícate bajo el tiempo objetivo (3.º lugar o mejor) para pasar a la siguiente pista.",
+  "Progress": "Progreso",
+  "Clear all five tracks in a selection. Each track shows a qualifying time; a run under it (3rd place or better) moves you on, and the best times are kept for the session.": "Supera las cinco pistas de una selección. Cada pista muestra un tiempo de clasificación; hacer un tiempo mejor (3.º lugar o mejor) te deja avanzar, y los mejores tiempos se guardan para la sesión."
+ }
+}

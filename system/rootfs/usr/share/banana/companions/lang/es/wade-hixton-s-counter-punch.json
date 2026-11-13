@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Boxer": "Boxeador",
+  "Wade HP": "HP de Wade",
+  "Money": "Dinero",
+  "Round time (s)": "Tiempo del round (s)",
+  "Stamina, health, opponent's guard": "Resistencia, salud, guardia del rival",
+  "Moves": "Movimientos",
+  "Jab, hook, uppercut; dodge left/right; counter\nWatch the opponent's tells, dodge left or right, then punish with the counter punch": "Directo, gancho, uppercut; esquiva a izquierda/derecha; contraataca\nObserva los telegrafiados del rival, esquiva a izquierda o derecha y castígalo con el contraataque",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Opponent HP": "HP del rival",
+  "Watch the opponent's tell, dodge, then counter": "Observa el telegrafiado del rival, esquiva y contraataca",
+  "Circuit": "Circuito",
+  "Map": "Mapa",
+  "Zone": "Zona",
+  "Boxing circuits": "Circuitos de boxeo",
+  "Training": "Entrenamiento",
+  "Bag": "Bolsa",
+  "Training between fights": "Entrenamiento entre combates",
+  "Opponents": "Rivales",
+  "Collect": "Coleccionar",
+  "Opponents beaten\nOpponents across the circuits; challenges per opponent (e.g. Killa)": "Rivales derrotados\nRivales en los circuitos; un reto por rival (p. ej. Killa)",
+  "Progress": "Progreso",
+  "Titles won\nCircuit titles won; money from fights is spent on training": "Títulos ganados\nTítulos de circuito ganados; el dinero de los combates se gasta en entrenamiento"
+ }
+}

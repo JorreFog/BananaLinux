@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Lap": "Vuelta",
+  "Race time: minutes": "Tiempo de carrera: minutos",
+  "Race time: seconds": "Tiempo de carrera: segundos",
+  "Road Trip score": "Puntuación de Road Trip",
+  "Car id": "ID de auto",
+  "Choro-Q style cars; position, lap": "Autos estilo Choro-Q; posición, vuelta",
+  "Parts upgrades change performance": "Las mejoras de piezas cambian el rendimiento",
+  "Choro-Q style": "Estilo Choro-Q",
+  "buy engines, tires, brakes and bodies; each part changes speed, grip or weight": "compra motores, neumáticos, frenos y carrocería; cada pieza cambia velocidad, agarre o peso",
+  "Race tips": "Consejos de carrera",
+  "Battle": "Batalla",
+  "Upgrade tires for grip on dirt\nLaps and lap times are shown on the Status page; the race total sets your prize": "Mejora los neumáticos para agarrar en tierra\nLas vueltas y los tiempos por vuelta se muestran en la página Estado; el total de la carrera define tu premio",
+  "World": "Mundo",
+  "Track id": "ID de pista",
+  "Towns and race tracks": "Pueblos y circuitos",
+  "Parts": "Partes",
+  "Money": "Dinero",
+  "Weapon": "Arma",
+  "Parts shop; money from races": "Tienda de piezas; dinero de las carreras",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Cars with data (of 17)": "Autos con datos (de 17)",
+  "Parts and cars": "Piezas y autos",
+  "Progress": "Progreso",
+  "Races and licenses\nWin races in each town to raise your license; new roads and races open with it": "Carreras y licencias\nGana carreras en cada pueblo para subir de licencia; con ella se abren nuevas carreteras y carreras"
+ }
+}

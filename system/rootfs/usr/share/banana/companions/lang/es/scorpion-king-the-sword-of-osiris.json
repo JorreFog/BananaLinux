@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Weapon id": "ID de arma",
+  "Health; weapons": "Salud; armas",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Swords and magic weapons\nWeapons switch from swords to magic weapons; gauntlet gems power them up": "Espadas y armas mágicas\nLas armas alternan entre espadas y armas mágicas; las gemas del guantelete las potencian",
+  "Bosses": "Jefes",
+  "Boss fights at temple ends\nTemple bosses guard runes; dodge their big swings then counter": "Combates con jefes al final de los templos\nLos jefes de los templos custodian runas; esquiva sus grandes barridos y contraataca",
+  "Levels": "Niveles",
+  "World": "Mundo",
+  "Area": "Área",
+  "Egyptian desert and temples": "Desierto egipcio y templos",
+  "Items": "Objetos",
+  "Gauntlet gem 1": "Gema del guantelete 1",
+  "Gauntlet gem 2": "Gema del guantelete 2",
+  "Gauntlet gem 3": "Gema del guantelete 3",
+  "Gauntlet gem 4": "Gema del guantelete 4",
+  "Weapons, health": "Armas, salud",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Runes collected (bits)": "Runas coleccionadas (bits)",
+  "Scorpions collected": "Escorpiones coleccionados",
+  "Hidden items": "Objetos ocultos",
+  "Progress": "Progreso",
+  "Levels cleared\nRunes and scorpion statues are collected along the way; worlds open in order": "Niveles completados\nLas runas y las estatuas de escorpión se recogen por el camino; los mundos se abren en orden"
+ }
+}

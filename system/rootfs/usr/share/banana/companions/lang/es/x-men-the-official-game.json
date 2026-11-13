@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Wolverine health": "Salud de Wolverine",
+  "Colossus health": "Salud de Colossus",
+  "Nightcrawler health": "Salud de Nightcrawler",
+  "Wolverine energy": "Energía de Wolverine",
+  "Colossus energy": "Energía de Colossus",
+  "Iceman energy": "Energía de Iceman",
+  "Nightcrawler energy": "Energía de Nightcrawler",
+  "Health": "Salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Wolverine, Iceman and Nightcrawler (with Colossus energy also tracked in RAM)": "Wolverine, Iceman y Nightcrawler (con la energía de Colossus también rastreada en RAM)",
+  "Bosses": "Jefes",
+  "Sentinels and others\nSentinels and Brotherhood mutants; switch heroes for the right power": "Sentinelas y otros\nSentinelas y mutantes de la Hermandad; cambia de héroe para usar el poder adecuado",
+  "Levels": "Niveles",
+  "Level": "Nivel",
+  "Story levels": "Niveles de historia",
+  "Items": "Objetos",
+  "Health\nHealth and energy pickups; energy powers each hero's special moves": "Salud\nRecogibles de salud y energía; la energía potencia los movimientos especiales de cada héroe",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden items in each level\nSwitch heroes for hidden areas": "Objetos ocultos\nObjetos ocultos en cada nivel\nCambia de héroe para las zonas ocultas",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels following the story between the second and third films": "Niveles superados\nNiveles que siguen la historia entre la segunda y la tercera película"
+ }
+}

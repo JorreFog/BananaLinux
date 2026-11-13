@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Controls": "Controles",
+  "A jump, B attack, R gadget.": "A saltar, B atacar, R aparato.",
+  "Gadgets": "Aparatos",
+  "Grappling hairdryer, laser lipstick and more from Wade.": "Secador de pelo con gancho, labial láser y más de Wade.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Use gadgets to reach boss weak points.": "Usa los aparatos para alcanzar los puntos débiles de los jefes.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Missions around the world.": "Misiones por todo el mundo.",
+  "Items": "Objetos",
+  "Gadgets and health.": "Aparatos y salud.",
+  "Collectables": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items.": "Objetos ocultos.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Stop Monkey Fist.": "Detén a Monkey Fist."
+ }
+}

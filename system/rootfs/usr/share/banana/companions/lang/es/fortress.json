@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Fortress": "Fortaleza",
+  "Rules": "Reglas",
+  "A Tetris-style castle builder: falling wall pieces build your fortress, which then grows cannons and towers that fire at the rival fortress.": "Un constructor de castillos tipo Tetris: las piezas de muro que caen construyen tu fortaleza, que luego hace crecer cañones y torres que disparan a la fortaleza rival.",
+  "Controls": "Controles",
+  "Move piece": "Mover pieza",
+  "Rotate": "Rotar",
+  "Down": "Abajo",
+  "Drop": "Soltar",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Tips": "Consejos",
+  "Closed rings of wall turn into buildings: bigger rings make stronger buildings. Protect your keep; repair holes before adding new rings.": "Los anillos cerrados de muro se convierten en edificios: anillos más grandes hacen edificios más fuertes. Protege tu torreón; repara los huecos antes de añadir anillos nuevos.",
+  "Campaign": "Campaña",
+  "Four kingdoms (Viking, Ogre, Wizard, Elf style) with several battles each.": "Cuatro reinos (vikingo, ogro, mago, elfo) con varias batallas cada uno.",
+  "Buildings": "Edificios",
+  "Cannon": "Cañón",
+  "Fires at enemy walls": "Dispara a los muros enemigos",
+  "Tower": "Torre",
+  "Defends against flyers": "Defiende contra los voladores",
+  "Keep": "Torreón",
+  "Your king: losing it loses the battle": "Tu rey: si lo pierdes, pierdes la batalla",
+  "Units": "Unidades",
+  "New pieces and building types unlock as you move through the campaign.": "Se desbloquean nuevas piezas y tipos de edificio según avanzas en la campaña.",
+  "Progress": "Progreso",
+  "Win every battle in a kingdom to move to the next.": "Gana todas las batallas de un reino para pasar al siguiente."
+ }
+}

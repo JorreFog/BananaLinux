@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Xevious (Classic NES)": "Xevious (NES clásico)",
+  "Zapper (air targets)": "Zapper (objetivos aéreos)",
+  "Blaster bomb (ground targets, at the crosshair)": "Bomba blaster (objetivos terrestres, en la mira)",
+  "Move": "Mover",
+  "Weapons": "Armas",
+  "Air and ground enemies need different weapons: zapper for flyers, blaster for tanks, domes and turrets.": "Los enemigos aéreos y terrestres necesitan armas distintas: zapper para los voladores, blaster para tanques, cúpula y torretas.",
+  "The mothership: blast its core (the reactor in the middle) with the bomb while dodging its turrets.": "La nave nodriza: destruye su núcleo (el reactor del centro) con la bomba mientras esquivas sus torretas.",
+  "Areas": "Áreas",
+  "16 areas of forest, desert, roads and Nazca-style lines; the game loops after area 16. The mothership Andor Genesis appears in several areas.": "16 áreas de bosque, desierto, carreteras y líneas tipo Nazca; el juego se repite tras el área 16. La nave nodriza Andor Genesis aparece en varias áreas.",
+  "Secrets": "Secretos",
+  "Bombing certain empty spots reveals hidden Sol citadels for bonus points, and special flags give an extra life.": "Bombear ciertos puntos vacíos revela fortalezas ocultas de Sol con puntos extra, y las banderas especiales dan una vida extra.",
+  "Hidden Sol towers rise out of the ground when you bomb their spot: 2,000 points each. A few areas also hide a special flag worth an extra life. Bomb the ground in open stretches while the crosshair flashes red over nothing visible.": "Las torres ocultas de Sol asoman del suelo cuando bombas su lugar: 2.000 puntos cada una. Algunas áreas también esconden una bandera especial que vale una vida extra. Bombee el suelo en zonas abiertas mientras la mira parpadea en rojo sobre nada visible.",
+  "Progress": "Progreso",
+  "Survive to the next area; dying sends you back to the area's checkpoint.": "Sobrevive para pasar al área siguiente; si mueres vuelves al punto de control del área."
+ }
+}

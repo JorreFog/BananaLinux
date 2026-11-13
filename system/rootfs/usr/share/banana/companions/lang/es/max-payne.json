@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Bullet time": "Tiempo bala",
+  "Controls": "Controles",
+  "Isometric shooter. R bullet time (slow motion), L shoot dodge.": "Shooter isométrico. R tiempo bala (cámara lenta), L dispara, esquiva.",
+  "Weapons": "Armas",
+  "Beretta, Desert Eagle, shotguns, Ingram, Uzi, sniper rifle, grenades, molotovs.": "Beretta, Desert Eagle, escopetas, Ingram, Uzi, francotirador, granadas, molotovs.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Bullet time fills by killing; painkillers heal.": "El tiempo bala se llena al matar; los analgésicos curan.",
+  "Chapters": "Capítulos",
+  "Mission": "Misión",
+  "Structure": "Estructura",
+  "Three parts, many chapters.": "Tres partes, muchos capítulos.",
+  "Items": "Objetos",
+  "Painkillers, ammo.": "Analgésicos, munición.",
+  "Collect": "Coleccionar",
+  "Weapons found.": "Armas encontradas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Avenge Max's family.": "Venga la familia de Max."
+ }
+}

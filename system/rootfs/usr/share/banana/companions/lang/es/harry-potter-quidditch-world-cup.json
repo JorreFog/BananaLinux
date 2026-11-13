@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Harry Potter - Quidditch World Cup": "Harry Potter - Copa Mundial de Quidditch",
+  "Team": "Equipo",
+  "Controls": "Controles",
+  "A pass, B tackle/shoot, R special move (when the bar is full)\nSeeker: chase the Snitch when it appears": "A pasar, B placar/disparar, R movimiento especial (cuando la barra está llena)\nBuscador: persigue la Snitch cuando aparece",
+  "Positions": "Posiciones",
+  "Chasers score with the Quaffle (10 points).\nBeaters hit Bludgers.\nKeeper guards the hoops.\nSeeker: catching the Golden Snitch ends the match (+150).": "Los cazadores anotan con el Quaffle (10 puntos).\nLos bateadores golpean los Bludgers.\nEl guardameta protege los aros.\nBuscador: atrapar la Snitch Dorada termina el partido (+150).",
+  "Match": "Partido",
+  "Tips": "Consejos",
+  "Pass to build the combo meter for special moves.\nBuild a lead before the Snitch: a big gap makes the catch less risky.": "Pasa para cargar el medidor de combo de los movimientos especiales.\nToma ventaja antes de la Snitch: un fallo grande hace la captura menos arriesgada.",
+  "Cups": "Copas",
+  "Structure": "Estructura",
+  "Hogwarts House Cup, then the Quidditch World Cup with national teams.": "Copa de Casas de Hogwarts y luego la Copa Mundial de Quidditch con equipos nacionales.",
+  "Cards": "Cartas",
+  "Rewards": "Recompensas",
+  "Winning earns Quidditch cards that unlock extras.": "Ganar da cartas de Quidditch que desbloquean extras.",
+  "Collect": "Coleccionar",
+  "Quidditch cards for players and teams.": "Cartas de Quidditch de jugadores y equipos.",
+  "Goal": "Objetivo",
+  "Win the House Cup, then the World Cup.": "Gana la Copa de Casas y luego la Copa Mundial."
+ }
+}

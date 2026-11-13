@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Left/right walk, A jump. One hit kills.": "Izquierda/derecha para caminar, A salta. Un golpe mata.",
+  "Air": "Aire",
+  "The air supply runs down: finish each cavern before it runs out.": "El aire se acaba: termina cada cueva antes de que se agote.",
+  "Jumps": "Saltos",
+  "Jumps are fixed arcs: commit before you jump.": "Los saltos son arcos fijos: decide antes de saltar.",
+  "Guardians": "Guardianes",
+  "Tips": "Consejos",
+  "Guardians move on fixed paths: time your crossing. Crumbling floors vanish after standing on them.": "Los guardianes siguen rutas fijas: cronometra el cruce. Los suelos que se desmoronan desaparecen al pisarlos.",
+  "Caverns": "Cuevas",
+  "Structure": "Estructura",
+  "20 caverns; collect all flashing keys then reach the portal.": "20 cuevas; recoge todas las llaves parpadeantes y llega al portal.",
+  "Keys": "Llaves",
+  "Items": "Objetos",
+  "Flashing keys (items) must all be collected to open the portal.": "Hay que recoger todas las llaves parpadeantes (objetos) para abrir el portal.",
+  "Collect": "Coleccionar",
+  "Caverns cleared.": "Cuevas despejadas.",
+  "Goal": "Objetivo",
+  "Clear all 20 caverns.": "Despeja las 20 cuevas."
+ }
+}

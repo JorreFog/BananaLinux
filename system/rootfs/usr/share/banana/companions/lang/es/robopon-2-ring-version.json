@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Slot 1 level": "Nivel del espacio 1",
+  "Slot 3 level": "Nivel del espacio 3",
+  "Cody and his team of Robopon (robot monsters), up to 4 in battle\nHP, level, energy; each Robopon has a type": "Cody y su equipo de Robopon (monstruos robot), hasta 4 en combate\nHP, nivel, energía; cada Robopon tiene un tipo",
+  "Detail": "Detalle",
+  "Robopon gain levels and can be powered up with parts\nMoves come from software (installed programs)": "Los Robopon suben de nivel y se potencian con piezas\nLos movimientos vienen del software (programas instalados)",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Use software that matches the opponent's weakness\nBatteries in the field restore energy": "Usa el software que coincida con la debilidad del rival\nLas baterías en el campo restauran energía",
+  "World": "Mundo",
+  "Main map": "Mapa principal",
+  "Sub-map": "Submapa",
+  "Island towns and routes; Robopon battle sites": "Pueblos y rutas de las islas; zonas de batalla Robopon",
+  "Items": "Objetos",
+  "Software (moves), batteries, parts, money\nSoftware slots give moves; parts boost stats; batteries refill energy in the field": "Software (movimientos), baterías, piezas, dinero\nLos espacios de software dan movimientos; las piezas suben las estadísticas; las baterías recargan energía en el campo",
+  "Collect": "Coleccionar",
+  "Robopon owned": "Robopon poseídos",
+  "Many Robopon to collect; Cross and Ring versions differ": "Muchos Robopon para coleccionar; las versiones Cross y Ring difieren",
+  "Progress": "Progreso",
+  "Beat the story's rival tamers and bosses island by island\nRobopon owned are counted; levels per slot shown on Status": "Derrota a los domesticadores rivales y a los jefes isla por isla\nSe cuentan los Robopon poseídos; los niveles por espacio se ven en Estado"
+ }
+}

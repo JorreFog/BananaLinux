@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Easy": "Fácil",
+  "Medium": "Media",
+  "Hard": "Difícil",
+  "Agent": "Agente",
+  "Health": "Salud",
+  "Difficulty": "Dificultad",
+  "Level time": "Tiempo de nivel",
+  "Combat rifle": "Rifle de combate",
+  "Bolt rifle": "Rifle de cerrojo",
+  "Rocket launcher": "Lanzacohetes",
+  "Zoom scope": "Mira con zoom",
+  "Pulse rifle": "Rifle de pulso",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "A first-person shooter against a genetic-experiment base: strafe around corners, keep the rocket launcher for the large mutants, and reload behind cover.": "Un shooter en primera persona contra una base de experimentos genéticos: desplázate en lateral al rodear las esquinas, guarda el lanzacohetes para los mutantes grandes y recarga tras las coberturas.",
+  "Level": "Nivel",
+  "Each level asks you to find key cards and reach the exit; check the map for locked doors.": "Cada nivel te pide encontrar tarjetas clave y llegar a la salida; revisa el mapa para ver las puertas bloqueadas.",
+  "Ammo": "Munición",
+  "Rockets": "Cohetes",
+  "Pickups": "Recogibles",
+  "Health packs, armor and ammo crates are hidden in side rooms; secret walls look slightly different from the rest.": "Los botiquines, armaduras y cajas de munición se esconden en salas laterales; las paredes secretas se ven algo distintas del resto.",
+  "Progress": "Progreso"
+ }
+}

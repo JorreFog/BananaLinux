@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Puzzle": "Puzle",
+  "Moves": "Movimientos",
+  "Time": "Tiempo",
+  "Puzzle type": "Tipo de puzle",
+  "Save slot": "Espacio de guardado",
+  "How it works": "Cómo funciona",
+  "Tilt the board with the d-pad: every loose block slides at once. Blocks of the same colour that touch stick together for good. Make the shape the puzzle asks for (or join all colours) in as few moves as you can. Grey blocks never move; L undoes a move.": "Inclina el tablero con el d-pad: todos los bloques sueltos se deslizan a la vez. Los bloques del mismo color que se tocan se quedan pegados. Arma la forma que pide el puzle (o une todos los colores) en los menos movimientos posibles. Los bloques grises nunca se mueven; L deshace un movimiento.",
+  "Tournament": "Torneo",
+  "Board": "Tablero",
+  "Tip": "Consejo",
+  "Tournament puzzles are a race: plan the first two tilts before touching the pad.": "Los puzles de torneo son una carrera: planifica los dos primeros inclinamientos antes de tocar el d-pad.",
+  "Where": "Dónde",
+  "Slide puzzle level": "Nivel de puzle deslizante",
+  "Perfecto! level": "Nivel de ¡Perfecto!",
+  "Special puzzle": "Puzle especial",
+  "Tutorial lesson": "Lección del tutorial",
+  "Tips": "Consejos",
+  "Work on one colour at a time; park finished groups in a corner. A block against a grey wall is a pivot: tilt so others hit it.": "Trabaja un color a la vez; apila los grupos terminados en una esquina. Un bloque contra un muro gris hace de pivote: inclina para que los demás choquen contra él.",
+  "Puzzles": "Puzles",
+  "Puzzle flags (slot 1, first part)": "Banderas de puzle (espacio 1, primera parte)",
+  "Progress": "Progreso",
+  "Puzzle flags (slot 1)": "Banderas de puzle (espacio 1)"
+ }
+}

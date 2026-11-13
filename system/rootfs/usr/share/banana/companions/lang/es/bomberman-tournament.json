@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Bomb level": "Nivel de bomba",
+  "Fire level": "Nivel de fuego",
+  "Gold": "Oro",
+  "Karabon stats (attack, defense, special)": "Estadísticas de karabon (ataque, defensa, especial)",
+  "Attack": "Ataque",
+  "Defense": "Defensa",
+  "Special": "Especial",
+  "Order: Pommy, Ceedrun, Elifan, P. Fangs, Sharkun, Liger, Kai-man, Twin Dragon, P. Knuckles, P. Sea, ToughGuy, P. Beast, Pteradon, Dorako, P. Dragon, Youno, Sibaloon, P. Animal, Unagi, Elekong, Youni, Seawing, KameKing, MarinGon, Firekong. Karabons fight in the Karabon battle arena and lend field abilities (Pommy jumps, Elifan breaks rocks, Sharkun swims...).": "Orden: Pommy, Ceedrun, Elifan, P. Fangs, Sharkun, Liger, Kai-man, Twin Dragon, P. Knuckles, P. Sea, ToughGuy, P. Beast, Pteradon, Dorako, P. Dragon, Youno, Sibaloon, P. Animal, Unagi, Elekong, Youni, Seawing, KameKing, MarinGon, Firekong. Los karabons combaten en la arena y dan habilidades de campo (Pommy salta, Elifan rompe rocas, Sharkun nada...).",
+  "Boss": "Jefe",
+  "Enemy HP": "HP enemigo",
+  "Second enemy HP": "HP del segundo enemigo",
+  "Quest bosses (the Bomber Spirits and Magnet Bomber) take several bomb hits: trap them between two bombs and keep moving; remote bombs help.": "Los jefes de misión (los Bomber Spirits y Magnet Bomber) aguantan varios impactos de bomba: átelos entre dos bombas y sigue moviéndote; las bombas a distancia ayudan.",
+  "Planet Alcatraz": "Planeta Alcatraz",
+  "Map id": "ID de mapa",
+  "Quest mode explores Planet Alcatraz's six areas to recover the stolen Bomber Spirits. Battle mode has its own stages and options (skulls, revenge carts).": "El modo misión explora las seis zonas del Planeta Alcatraz para recuperar los Bomber Spirits robados. El modo combate tiene sus propios escenarios y opciones (calaveras, carritos de venganza).",
+  "Bombs & gold": "Bombas y oro",
+  "Equipped bomb": "Bomba equipada",
+  "Bomb types found in the quest: Remote, Fire, Ice, Power, Land Mine, Pierce. Shops sell health upgrades.": "Tipos de bomba hallados en la misión: Remota, Fuego, Hielo, Potencia, Mina, Perforante. Las tiendas venden mejoras de salud.",
+  "25 karabons, caught by defeating them with bombs and then winning them over. Each grows by training in the arena.": "25 karabons, que se capturan derotándolos con bombas y luego ganándoselos. Cada uno crece entrenando en la arena.",
+  "Progress": "Progreso",
+  "Bosses": "Jefes",
+  "Battle wins (P1)": "Victorias en combate (J1)"
+ }
+}

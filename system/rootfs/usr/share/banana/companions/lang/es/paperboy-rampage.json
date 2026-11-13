@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Games": "Juegos",
+  "Paperboy and Rampage.": "Paperboy y Rampage.",
+  "Notes": "Notas",
+  "Paperboy: deliver papers to subscribers only.": "Paperboy: entrega periódicos solo a los suscriptores.",
+  "Tips": "Consejos",
+  "Rampage: destroy buildings.": "Rampage: destruye edificios.",
+  "Menu": "Menú",
+  "Pick a game.": "Elige un juego.",
+  "Items": "Objetos",
+  "Papers.": "Periódicos.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

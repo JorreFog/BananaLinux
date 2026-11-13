@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Table": "Mesa",
+  "Score": "Puntuación",
+  "Story mission time left (s)": "Tiempo restante de la misión de historia (s)",
+  "Pinball with Sonic as the ball": "Pinball con Sonic como bola",
+  "Flippers": "Aletas",
+  "left and right flipper buttons (L/R by default)": "botones de flipper izquierdo y derecho (L/R por defecto)",
+  "Ball save at the start of a ball\nScore + balls left on the table screen": "Guardado de bola al inicio de cada bola\nPuntuación + bolas restantes en la pantalla de la mesa",
+  "Modes": "Modos",
+  "Story mode": "Modo historia",
+  "beat tables to save Sonic's friends from Eggman": "supera las mesas para salvar a los amigos de Sonic de Eggman",
+  "Casino-style minigames are part of the tables\nChao Garden link to Sonic Advance titles": "Los minijuegos de casino forman parte de las mesas\nChao Garden enlaza con los títulos de Sonic Advance",
+  "Boss": "Jefe",
+  "Story bosses": "Jefes de la historia",
+  "hit targets to drain the boss's meter": "golpea las dianas para vaciar el medidor del jefe",
+  "Eggman machines appear on tables in story mode\nKeep the ball moving between ramps for big multipliers": "Las máquinas de Eggman aparecen en las mesas del modo historia\nMantén la bola en movimiento entre rampas para grandes multiplicadores",
+  "Tables": "Mesas",
+  "Sonic Table (Eggman's base)\nNiGHTS Table (Nightopians and the Ideya)\nSamba de Amigo Table (music themed)\nBonus casino games (slots, roulette, bingo)": "Mesa Sonic (la base de Eggman)\nMesa NiGHTS (Nightopians e Ideya)\nMesa Samba de Amigo (con música)\nJuegos extra de casino (tragamonedas, ruleta, bingo)",
+  "Rings": "Anillos",
+  "Rings collected on tables = currency in the casino\nSpend rings on casino games for items and cards": "Los anillos recogidos en las mesas son la moneda del casino\nGasta anillos en los juegos de casino para obtener objetos y cartas",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Story mode unlocks characters and tables": "El modo historia desbloquea personajes y mesas",
+  "Casino prizes": "Premios del casino",
+  "card illustrations and sound tests": "ilustraciones de cartas y pruebas de sonido",
+  "Story": "Historia",
+  "Clear the story chapter by chapter\nHigh scores saved per table": "Completa la historia capítulo por capítulo\nRécords guardados por mesa"
+ }
+}

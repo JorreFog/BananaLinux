@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Story": "Historia",
+  "Current story": "Historia actual",
+  "Harry's checkpoint": "Punto de control de Harry",
+  "Cybil's checkpoint": "Punto de control de Cybil",
+  "Harry Mason (and Cybil) in the town of Silent Hill": "Harry Mason (y Cybil) en el pueblo de Silent Hill",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Choices": "Decisiones",
+  "Battle": "Batalla",
+  "Choices change the route; some lead to bad endings": "Las decisiones cambian la ruta; algunas llevan a finales malos",
+  "Read carefully": "Lee con atención",
+  "some puzzle questions must be answered correctly to continue": "algunas preguntas de acertijos deben responderse bien para continuar",
+  "Places": "Lugares",
+  "school, hospital, amusement park, lake": "escuela, hospital, parque de atracciones, lago",
+  "Locations from the original PlayStation game: the school, the hospital, the amusement park and the lake": "Lugares del juego original de PlayStation: la escuela, el hospital, el parque de atracciones y el lago",
+  "Items": "Objetos",
+  "Items gathered by reading choices\nTelephone numbers and cards found in the story are tracked by the game": "Objetos que se obtienen al leer decisiones\nEl juego registra los números de teléfono y las tarjetas que aparecen en la historia",
+  "Endings": "Finales",
+  "Collect": "Coleccionar",
+  "Cards collected (bits set)": "Tarjetas recopiladas (bits activados)",
+  "Stories unlocked (raw)": "Historias desbloqueadas (crudo)",
+  "Multiple endings; second scenario after the first": "Múltiples finales; segundo escenario tras el primero",
+  "Progress": "Progreso",
+  "Chapters read; endings reached\nA second scenario (Cybil's) opens after the first ending\nEnglish translation in the Translations folder; version 0.1 (from the file name; an early or partial patch, so some text may still be Japanese)": "Capítulos leídos; finales alcanzados\nTras el primer final se abre un segundo escenario (el de Cybil)\nTraducción al inglés en la carpeta Translations; versión 0.1 (según el nombre del archivo; un parche temprano o parcial, así que parte del texto puede seguir en japonés)"
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B dash.": "A salta, B embiste.",
+  "Abilities": "Habilidades",
+  "Dashes.": "Embestidas.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Dash attacks hit hard; dodge with a dash too.": "Los ataques de embestida pegan fuerte; esquiva también con una embestida.",
+  "Worlds": "Mundos",
+  "Structure": "Estructura",
+  "Areas.": "Áreas.",
+  "Items": "Objetos",
+  "Power-ups and pickups found in the areas.": "Potenciadores y recogibles hallados en las áreas.",
+  "Areas": "Áreas",
+  "Collect": "Coleccionar",
+  "Areas and routes cleared.": "Áreas y rutas superadas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Rescue Grandpa.": "Rescata al abuelo."
+ }
+}

@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Life": "Vida",
+  "Lives": "Vidas",
+  "Time": "Tiempo",
+  "Controls": "Controles",
+  "A jump, B main weapon, R sub weapon, L dash (config).": "A salta, B arma principal, R subarma, L dash (config).",
+  "Weapons": "Armas",
+  "Z-Saber combos, Buster charge shots.": "Combos de Z-Saber, disparos cargados de Buster.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Element chips (fire, ice, thunder) on charged attacks exploit boss weaknesses.": "Los chips elementales (fuego, hielo, trueno) en los ataques cargados explotan las debilidades de los jefes.",
+  "Missions": "Misiones",
+  "Stage id": "ID de escenario",
+  "Structure": "Estructura",
+  "Missions; weather system.": "Misiones; sistema de clima.",
+  "Parts": "Partes",
+  "Sub tank 1": "Tanque sub 1",
+  "Items": "Objetos",
+  "Z-Knuckle, crafting parts.": "Z-Knuckle, piezas de fabricación.",
+  "Collect": "Coleccionar",
+  "Crafting parts.": "Piezas de fabricación.",
+  "Goal": "Objetivo",
+  "Stop Dr. Weil.": "Detén al Dr. Weil."
+ }
+}

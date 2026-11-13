@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Controls": "Controles",
+  "A accelerate, B brake, R nitro.": "A acelera, B frena, R nitro.",
+  "Car": "Auto",
+  "Upgrades": "Mejoras",
+  "Engine, tyres, body.": "Motor, neumáticos, carrocería.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Nitro on straights.": "Nitro en las rectas.",
+  "City": "Ciudad",
+  "Track id": "ID de pista",
+  "Modes": "Modos",
+  "Territory races.": "Carreras por territorio.",
+  "Parts": "Partes",
+  "Items": "Objetos",
+  "Parts.": "Piezas.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Cars.": "Autos.",
+  "Goal": "Objetivo",
+  "Own the city.": "Domina la ciudad."
+ }
+}

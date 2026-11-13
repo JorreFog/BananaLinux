@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Soldier": "Soldado",
+  "Health is the bar on screen; lives are lost when it empties. Pick-ups refill health and ammo.": "La salud es la barra en pantalla; pierdes vidas cuando se vacía. Los recogibles recargan salud y munición.",
+  "Controls": "Controles",
+  "Jump": "Saltar",
+  "Fire": "Fuego",
+  "Throw grenade": "Lanzar granada",
+  "Switch weapon": "Cambiar de arma",
+  "Down": "Abajo",
+  "Crouch / climb down": "Agacharse / bajar",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Bosses are mostly armoured vehicles and gunships: keep moving, crouch under the fire and use rockets or grenades when they stop.": "Los jefes son sobre todo vehículos blindados y helicópteros: sigue moviéndote, agáchate bajo el fuego y usa cohetes o granadas cuando se detengan.",
+  "Missions": "Misiones",
+  "Adds sniper and Mode-7 style shooting sections between the run-and-gun levels. Each mission ends with a password.": "Añade secciones de francotirador y de disparo tipo Mode-7 entre los niveles de correr y disparar. Cada misión termina con una contraseña.",
+  "Weapons": "Armas",
+  "Machine gun": "Ametralladora",
+  "Unlimited basic fire": "Fuego básico ilimitado",
+  "Grenades": "Granadas",
+  "Arc over cover": "Tiro por encima de la cobertura",
+  "Rockets": "Cohetes",
+  "Heavy damage on vehicles": "Mucho daño a vehículos",
+  "Grappling hook": "Gancho",
+  "Climb to ledges": "Trepar a repisas",
+  "Hostages": "Rehenes",
+  "Free hostages and pick up intel for score.": "Libera rehenes y recoge información para puntuar.",
+  "Progress": "Progreso",
+  "Missions unlock in order; passwords save your place.": "Las misiones se desbloquean en orden; las contraseñas guardan tu avance."
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Hero HP": "HP del héroe",
+  "Hero MP": "MP del héroe",
+  "Hero, Heroine and allies + recruited demons": "Héroe, heroine y aliados + demonios reclutados",
+  "HP/MP; alignment": "HP/MP; alineamiento",
+  "Law, Neutral, Chaos": "Ley, Neutral, Caos",
+  "Demons": "Demonios",
+  "Hero St (strength)": "St del héroe (fuerza)",
+  "Hero In (intelligence)": "In del héroe (inteligencia)",
+  "Hero Ma (magic)": "Ma del héroe (magia)",
+  "Hero Vi (vitality)": "Vi del héroe (vitalidad)",
+  "Hero Ag (agility)": "Ag del héroe (agilidad)",
+  "Hero Lu (luck)": "Lu del héroe (suerte)",
+  "Negotiate with demons to recruit them (talk in battle)\nFuse demons at the Cathedral of Shadows": "Negocia con los demonios para reclutarlos (habla en batalla)\nFusiona demonios en la Catedral de las Sombras",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Talk instead of fight to recruit; MAG is spent to summon\nDemons have affinities; fuse for stronger ones": "Habla en vez de pelear para reclutar; se gasta MAG para invocar\nLos demonios tienen afinidades; fusiona para obtener más fuertes",
+  "Kichijoji, Shinjuku, Roppongi, Ginza...; first-person dungeons": "Kichijoji, Shinjuku, Roppongi, Ginza...; mazmorras en primera persona",
+  "Items": "Objetos",
+  "Weapons, guns + bullets, armor; Macca (money), MAG\nMAG is spent to keep demons summoned; Macca buys equipment and healing": "Armas, armas de fuego + balas, armaduras; Macca (dinero), MAG\nEl MAG se gasta para mantener demonios invocados; el Macca compra equipo y cura",
+  "Compendium": "Compendio",
+  "Collect": "Coleccionar",
+  "Demons recruited/fused\nDemons recruited by talking or made by fusion; the demon compendium keeps them": "Demonios reclutados/fusionados\nDemonios reclutados hablando o creados por fusión; el compendio de demonios los guarda",
+  "Progress": "Progreso",
+  "Story events; ending depends on alignment\nChoices tilt you to Law, Neutral or Chaos; the alignment decides the ending route\nEnglish translation in the Translations folder; version Hotfix 2 (from the file name)": "Eventos de historia; el final depende de la alineación\nTus decisiones te inclinan a Ley, Neutral o Caos; la alineación decide la ruta del final\nTraducción al inglés en la carpeta Translations; versión Hotfix 2 (según el nombre del archivo)"
+ }
+}

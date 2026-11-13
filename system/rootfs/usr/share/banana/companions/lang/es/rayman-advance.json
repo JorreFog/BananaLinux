@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Continues": "Continuaciones",
+  "100 Tings = an extra life; the max health rises with the golden \"P\" power": "100 Tings = una vida extra; la salud máxima sube con el poder dorado \"P\"",
+  "Powers": "Poderes",
+  "Telescopic fist": "Puño telescópico",
+  "Grab ledges": "Agarrar repisas",
+  "Helicopter": "Helicóptero",
+  "Super helicopter": "Superhelicóptero",
+  "Run": "Correr",
+  "Normal fist": "Puño normal",
+  "Speed fist 1": "Puño de velocidad 1",
+  "Speed fist 2": "Puño de velocidad 2",
+  "Golden fist": "Puño dorado",
+  "Powers come from Betilla the fairy as the story goes on; charge the fist by holding B": "Los poderes llegan de Betilla, el hada, según avanza la historia; carga el puño manteniendo pulsado B",
+  "Bosses": "Jefes",
+  "Moskito (Dream Forest), Mr. Sax (Band Land), Mr. Stone (Blue Mountains)\nSpace Mama (Picture City), Mr. Skops (Caves of Skops), Mr. Dark (Candy Château)\nCharge your fist; learn each boss's attack rhythm": "Moskito (Bosque de los Sueños), Sr. Sax (Tierra de la Música), Sr. Stone (Montañas Azules)\nSpace Mama (Ciudad de Cuadros), Sr. Skops (Cuevas de Skops), Sr. Dark (Castillo de Caramelos)\nCarga el puño; aprende el ritmo de ataque de cada jefe",
+  "Worlds": "Mundos",
+  "Where": "Dónde",
+  "Dream Forest, Band Land, Blue Mountains, Picture City, Caves of Skops, Candy Château": "Bosque de los Sueños, Tierra de la Música, Montañas Azules, Ciudad de Cuadros, Cuevas de Skops, Castillo de Caramelos",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Tings (blue spheres), lives, power-ups (fist upgrade, health)\nMagician's bonus levels (enough Tings to enter)": "Tings (esferas azules), vidas, potenciadores (mejora del puño, salud)\nNiveles extra del mago (suficientes Tings para entrar)",
+  "Collect": "Coleccionar",
+  "Electoons freed": "Electoons liberados",
+  "Free the Electoons from cages: 6 cages in most levels\nAll cages are needed to reach Candy Château": "Libera a los Electoons de las jaulas: 6 jaulas en la mayoría de los niveles\nSe necesitan todas las jaulas para llegar al Castillo de Caramelos",
+  "Progress": "Progreso",
+  "Worlds cleared; cages freed; Mr. Dark beaten": "Mundos superados; jaulas liberadas; Sr. Dark derrotado"
+ }
+}

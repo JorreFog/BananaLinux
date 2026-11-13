@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "None": "Ninguno",
+  "Throttle Copter": "Helicóptero Acelerador",
+  "Fire Protection": "Protección de Fuego",
+  "Playing": "Jugando",
+  "Health": "Salud",
+  "Score": "Puntuación",
+  "Power-up can": "Lata de potenciador",
+  "Health; Lums": "Salud; Lums",
+  "Powers": "Poderes",
+  "Fist, helicopter; Combo powers from Globox": "Puño, helicóptero; poderes Combo de Globox",
+  "Power-up cans": "Latas de potenciador",
+  "Rocket, Lock-Jaw, Shock Rocket, Throttle Copter, Heavy Metal Fist": "Cohete, Mandíbula de Bloqueo, Cohete de Choque, Helicóptero Acelerador, Puño de Metal Pesado",
+  "Bosses": "Jefes",
+  "Boss": "Jefe",
+  "Bosses per world; dodge then strike": "Jefes por mundo; esquiva y luego golpea",
+  "Worlds": "Mundos",
+  "Level id": "ID de nivel",
+  "Isometric levels across the Fairy Council worlds": "Niveles isométricos en los mundos del Consejo de Hadas",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Lums, health, cans": "Lums, salud, latas",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Lums collected": "Lums recogidos",
+  "Teensies in this level": "Teensies en este nivel",
+  "Hidden Lums and cages per level": "Lums ocultos y jaulas por nivel",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels with teensies to free and lums to collect; Globox is playable too": "Niveles superados\nNiveles con teensies que liberar y lums que recoger; Globox también es jugable"
+ }
+}

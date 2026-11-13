@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Level": "Nivel",
+  "Score": "Puntuación",
+  "Total score": "Puntuación total",
+  "Best combo": "Mejor combo",
+  "Score, time": "Puntuación, tiempo",
+  "Animals": "Animales",
+  "Detail": "Detalle",
+  "Swap animals to make lines of 3": "Intercambia animales para hacer líneas de 3",
+  "monkeys, pandas, giraffes, hippos, elephants, gators, lions and bunnies": "monos, pandas, jirafas, hipopótamos, elefantes, caimanes, leones y conejos",
+  "Tips": "Consejos",
+  "Chain combos\nChains made by falling animals count as combos; the best combo is recorded": "Encadena combos\nLas cadenas hechas por animales que caen cuentan como combos; se registra el mejor combo",
+  "Modes": "Modos",
+  "Several modes, from endless play to timed goals\nQuest mode has clear, time and hint bonuses": "Varios modos, del juego infinito a los objetivos cronometrados\nEl modo misión tiene bonos de limpieza, tiempo y pistas",
+  "Bag": "Bolsa",
+  "Animals in the board\nThe board's animals; each mode counts how many of each you matched": "Animales en el tablero\nLos animales del tablero; cada modo cuenta cuántos de cada uno emparejaste",
+  "Collect": "Coleccionar",
+  "Monkeys matched": "Monos emparejados",
+  "Pandas matched": "Pandas emparejados",
+  "Giraffes matched": "Jirafas emparejadas",
+  "Hippos matched": "Hipopótamos emparejados",
+  "Elephants matched": "Elefantes emparejados",
+  "Gators matched": "Caimanes emparejados",
+  "Lions matched": "Leones emparejados",
+  "Bunnies matched": "Conejos emparejados",
+  "Progress": "Progreso",
+  "High scores\nQuest mode adds clear, time and hint bonuses at the end": "Récords\nEl modo misión suma bonos de limpieza, tiempo y pistas al final"
+ }
+}

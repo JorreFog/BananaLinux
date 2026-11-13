@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Your score": "Tu puntuación",
+  "Rival score": "Puntuación del rival",
+  "Round timer": "Temporizador de asalto",
+  "How it plays": "Cómo se juega",
+  "Match 4 same colour Puyo; chains send garbage.": "Une 4 Puyo del mismo color; las cadenas envían basura.",
+  "Chains": "Cadenas",
+  "Build chains.": "Crea cadenas.",
+  "Opponent": "Rival",
+  "Tips": "Consejos",
+  "Build chains by stacking colours so one pop triggers the next.": "Crea cadenas apilando colores para que un estallido dispare el siguiente.",
+  "Modes": "Modos",
+  "Course": "Circuito",
+  "Story, Versus.": "Historia, Versus.",
+  "Next": "Siguiente",
+  "Items": "Objetos",
+  "Next pieces.": "Siguientes piezas.",
+  "Characters": "Personajes",
+  "Collect": "Coleccionar",
+  "Opponents beaten.": "Rivales derrotados.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Health; ammo\nSide-scrolling shooter: Tal'Set (Turok) fights dinosaurs and the Slegs\nHealth bar; weapons switch with the shoulder buttons": "Salud; munición\nShooter lateral: Tal'Set (Turok) pelea contra dinosaurios y los Slegs\nBarra de salud; las armas cambian con los botones de los hombros",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Bow, guns": "Arco, armas de fuego",
+  "bow (silent, reusable arrows), guns with limited ammo, heavier weapons later": "arco (silencioso, flechas reutilizables), armas con munición limitada, armas más pesadas después",
+  "Melee knife attack for close dinosaurs when ammo is low": "Ataque cuerpo a cuerpo con cuchillo contra dinosaurios cercanos cuando falta munición",
+  "Bosses": "Jefes",
+  "Dinosaur bosses": "Jefes dinosaurio",
+  "Raptors rush fast": "Los raptores atacan rápido",
+  "keep distance and fire on the approach": "mantén la distancia y dispara cuando se acercan",
+  "Bosses are large dinosaurs and Sleg commanders; aim for exposed weak points": "Los jefes son dinosaurios grandes y comandantes Sleg; apunta a los puntos débiles expuestos",
+  "Levels": "Niveles",
+  "Jungle levels\nJungle, cliffs and enemy bases across the Lost Land": "Niveles de jungla\nJungla, acantilados y bases enemigas por la Tierra Perdida",
+  "Bag": "Bolsa",
+  "Ammo\nAmmo pickups per weapon; health packs from crates\nSwitch to the bow when ammo runs low: arrows can be picked up again": "Munición\nRecogibles de munición por arma; botiquines en cajas\nCambia al arco cuando se acabe la munición: las flechas se pueden recoger otra vez",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden ammo and health off the main path\nSecret areas with ammo and health above the main route": "Objetos ocultos\nMunición y salud ocultas fuera del camino principal\nÁreas secretas con munición y salud sobre la ruta principal",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels in order to the final base\nEach level ends at an exit after the last group of enemies or a boss": "Niveles superados\nNiveles en orden hasta la base final\nCada nivel termina en una salida tras el último grupo de enemigos o un jefe"
+ }
+}

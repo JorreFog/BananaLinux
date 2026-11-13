@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Flash": "Destello",
+  "Controls": "Controles",
+  "A jump, B attack, R speed power. Call in Justice League allies.": "A saltar, B atacar, R poder de velocidad. Convoca a los aliados de la Liga de la Justicia.",
+  "Allies": "Aliados",
+  "Heroes": "Héroes",
+  "Summon heroes for special attacks.": "Invoca héroes para ataques especiales.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Use speed dash to dodge; call allies on bosses.": "Usa la embestida de velocidad para esquivar; convoca aliados contra los jefes.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Brawler stages through Central City.": "Escenarios de pelea por Ciudad Central.",
+  "Items": "Objetos",
+  "Health pickups.": "Recogibles de salud.",
+  "Secrets": "Secretos",
+  "Collect": "Coleccionar",
+  "Unlockables.": "Desbloqueables.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Brainiac's plot.": "Detén el plan de Brainiac."
+ }
+}

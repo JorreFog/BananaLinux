@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Titans": "Titanes",
+  "Robin health": "Salud de Robin",
+  "Raven health": "Salud de Raven",
+  "Beast Boy health": "Salud de Beast Boy",
+  "Cyborg health": "Salud de Cyborg",
+  "Starfire health": "Salud de Starfire",
+  "Starfire power": "Poder de Starfire",
+  "Robin, Starfire, Raven, Cyborg, Beast Boy; health": "Robin, Starfire, Raven, Cyborg, Beast Boy; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Switch Titans for their powers\nRobin, Starfire, Raven, Cyborg and Beast Boy each have their own health; Starfire also has a power bar": "Cambia de Titán para usar sus poderes\nRobin, Starfire, Raven, Cyborg y Beast Boy tienen su propia salud; Starfire además tiene barra de poder",
+  "Bosses": "Jefes",
+  "Villains from the series\nVillains from the series; knock outs per level are tracked": "Villanos de la serie\nVillanos de la serie; los nocauts por nivel se registran",
+  "Levels": "Niveles",
+  "Checkpoint": "Punto de control",
+  "Jump City levels": "Niveles de Jump City",
+  "Items": "Objetos",
+  "Health\nHealth refills are shared out per Titan\nHealth is per Titan; switch to a healthy one": "Salud\nLa salud se reparte entre los Titanes\nLa salud es por Titán; cambia a uno sano",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nLevels unlock one by one; checkpoints save your place": "Objetos ocultos\nLos niveles se desbloquean uno a uno; los puntos de control guardan tu avance",
+  "Progress": "Progreso",
+  "Levels unlocked": "Niveles desbloqueados",
+  "Levels cleared": "Niveles completados"
+ }
+}

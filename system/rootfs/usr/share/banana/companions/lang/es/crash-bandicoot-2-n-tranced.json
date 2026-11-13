@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Wumpa fruit": "Fruta Wumpa",
+  "Crates": "Cajas",
+  "Powers": "Poderes",
+  "Jump": "Saltar",
+  "Spin attack": "Ataque giratorio",
+  "Crouch / slide (with run)": "Agacharse / deslizar (corriendo)",
+  "Down in the air": "Abajo en el aire",
+  "Body slam": "Placaje",
+  "Start": "Iniciar",
+  "Pause / save from the warp room": "Pausa / guardar desde la sala warp",
+  "Powers / bosses": "Poderes / jefes",
+  "N. Tropy beaten": "N. Tropy derrotado",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Evil Crunch: jump his ground slams and spin the rocks back.\nEvil Coco: race her and hit the switches she leaves.\nFake Crash: copy-cat fight, attack after his spin.\nN. Trance: knock his hypno-eggs back at him.\nN. Tropy: dodge the time beams, hit him when he lands.": "Evil Crunch: salta sus golpes contra el suelo y devuelve las rocas girando.\nEvil Coco: compite con ella y golpea los interruptores que deja.\nFake Crash: pelea como tú, ataca tras su giro.\nN. Trance: devuélvele sus huevos hipnóticos.\nN. Tropy: esquiva los rayos del tiempo y golpéalo cuando aterrice.",
+  "Levels": "Niveles",
+  "Warp room 1: Prints of Persia, Lagoony Tunes, Globe Trottin', Pharaoh's Funhouse, Runaway Rug.\nLater rooms: Tiki Torture, Hoppin' Coffins, Barrel Roll, Flockful of Seagulls, Magma Mania, Run From the Sun, Now It's Istanbul, Mister Lava Lava, Water Logged, Slip-N-Slidin' Sphinx, Rocks Can Roll, Rock the Casaba, Eruption Disruption, Spaced Out, King Too Uncommon, Wild Nile Ride, 101 Arabian Kites, Fire Walker.\nBosses: Evil Crunch, Evil Coco, Fake Crash, N. Trance, N. Tropy.": "Sala warp 1: Prints of Persia, Lagoony Tunes, Globe Trottin', Pharaoh's Funhouse, Runaway Rug.\nSalas posteriores: Tiki Torture, Hoppin' Coffins, Barrel Roll, Flockful of Seagulls, Magma Mania, Run From the Sun, Now It's Istanbul, Mister Lava Lava, Water Logged, Slip-N-Slidin' Sphinx, Rocks Can Roll, Rock the Casaba, Eruption Disruption, Spaced Out, King Too Uncommon, Wild Nile Ride, 101 Arabian Kites, Fire Walker.\nJefes: Evil Crunch, Evil Coco, Fake Crash, N. Trance, N. Tropy.",
+  "Gems": "Gemas",
+  "Box gems": "Gemas de caja",
+  "Coloured gems / shards": "Gemas de color / esquirlas",
+  "Crystals": "Cristales",
+  "Progress": "Progreso"
+ }
+}

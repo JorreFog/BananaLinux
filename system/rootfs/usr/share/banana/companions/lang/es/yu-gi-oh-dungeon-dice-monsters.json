@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Movement crests": "Crestas de movimiento",
+  "Attack crests": "Crestas de ataque",
+  "Defense crests": "Crestas de defensa",
+  "Magic crests": "Crestas de magia",
+  "Trap crests": "Crestas de trampa",
+  "Hearts (last hovered)": "Corazones (último señalado)",
+  "Heart capacity (last hovered)": "Capacidad de corazones (último señalado)",
+  "Dice pool; each die summons a monster when rolled\nHeart points (3) are your life: attackers reaching your Monster Lord damage it": "Pozo de dados; cada dado invoca un monstruo al sacarlo\nLos puntos de corazón (3) son tu vida: los atacantes que llegan a tu Monster Lord lo dañan",
+  "Rules": "Reglas",
+  "Roll 3 dice": "Tira 3 dados",
+  "summon crest = summon; move, attack, defense, magic, trap crests stockpile": "cresta de invocación = invocar; las crestas de movimiento, ataque, defensa, magia y trampa se acumulan",
+  "Dungeon paths unfold from summoned dice": "Los caminos de la mazmorra se abren desde los dados invocados",
+  "Tips": "Consejos",
+  "Protect your Monster Lord; build paths toward the enemy lord": "Protege a tu Monster Lord; construye caminos hacia el señor enemigo",
+  "Opponents": "Rivales",
+  "Map": "Mapa",
+  "Tournament of duelists\nTournament of duelists (Melody and others) in free duel and story": "Torneo de duelistas\nTorneo de duelistas (Melody y otros) en duelo libre e historia",
+  "Dice": "Dados",
+  "Cash": "Dinero",
+  "Dice pool (15 dice)": "Pozo de dados (15 dados)",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Monster dice won from opponents\nMonster dice (e.g. Blue-Eyes White Dragon, Dark Magician, Time Wizard) are counted in your box": "Dados de monstruo ganados a los rivales\nLos dados de monstruo (p. ej. Blue-Eyes White Dragon, Dark Magician, Time Wizard) se cuentan en tu caja",
+  "Progress": "Progreso",
+  "Free-duel wins vs Melody": "Victorias en duelo libre contra Melody",
+  "Tournament wins": "Victorias en torneo"
+ }
+}

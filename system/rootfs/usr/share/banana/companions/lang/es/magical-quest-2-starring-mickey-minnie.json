@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Coins": "Monedas",
+  "Score": "Puntuación",
+  "Controls": "Controles",
+  "A jump, B grab/throw blocks, R change costume.": "A salta, B agarra/lanza bloques, R cambia de disfraz.",
+  "Costumes": "Trajes",
+  "Each costume (e.g. Magician, Fireman, Climber) gives a power; switch with R.": "Cada disfraz (p. ej. Mago, Bombero, Trepador) da un poder; cambia con R.",
+  "Magician shoots magic (charge for more), Fireman puts out fire and melts ice blocks, Climber hooks onto ledges, and more per game.": "El Mago lanza magia (carga para más), el Bombero apaga fuegos y derrite bloques de hielo, el Trepador se engancha a las repisas, y más en cada juego.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Grab blocks or enemies and throw them; charge attacks deal more damage. Pete is the recurring villain.": "Agarra bloques o enemigos y lánzalos; los ataques cargados hacen más daño. Pete es el villano recurrente.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Stages through Pete's kingdom; costumes are earned as you go.": "Escenarios por el reino de Pete; ganas disfraces al avanzar.",
+  "Shop": "Tienda",
+  "Vacuum ammo": "Munición de aspiradora",
+  "Cork gun ammo": "Munición de la pistola de corcho",
+  "Items": "Objetos",
+  "Coins buy hearts and items in shops.": "Las monedas compran corazones y objetos en las tiendas.",
+  "Collect": "Coleccionar",
+  "Each costume adds new routes.": "Cada disfraz abre nuevas rutas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Baron Pete.": "Derrota al Barón Pete."
+ }
+}

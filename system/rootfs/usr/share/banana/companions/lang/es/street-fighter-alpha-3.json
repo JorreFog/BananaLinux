@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "Your health": "Tu salud",
+  "Score": "Puntuación",
+  "Rounds won": "Rondas ganadas",
+  "Round": "Asalto",
+  "Health, super gauge (3 levels), guard meter": "Salud, medidor de super (3 niveles), medidor de guardia",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "30+ fighters including Ryu, Ken, Chun-Li, Guile, Zangief, M. Bison and new GBA additions": "Más de 30 combatientes, incluidos Ryu, Ken, Chun-Li, Guile, Zangief, M. Bison y las novedades de GBA",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Opponent health": "Salud del rival",
+  "Opponent rounds won": "Rondas ganadas del rival",
+  "Opponent character id": "ID de personaje del rival",
+  "Alpha counter after blocking (forward + punch/kick)\nV-ism custom combos": "Contra de Alpha tras bloquear (adelante + puño/patada)\nCombos a medida del V-ism",
+  "Modes": "Modos",
+  "Stage id": "ID de escenario",
+  "Moves": "Movimientos",
+  "Command list per fighter\nEach ism changes the super meter: A-ism 3 levels, X-ism one big super, V-ism custom combos": "Lista de comandos por combatiente\nCada ism cambia el medidor de super: A-ism 3 niveles, X-ism un super grande, V-ism combos a medida",
+  "Roster": "Plantilla",
+  "Unlockable characters\nGBA additions to the roster include Eagle, Maki and Yun": "Personajes desbloqueables\nLas novedades de GBA en el reparto incluyen Eagle, Maki y Yun",
+  "Progress": "Progreso",
+  "Arcade clears; World Tour\nWorld Tour builds a custom fighter; Arcade ends with the final boss": "Superaciones de arcade; World Tour\nWorld Tour crea un combatiente a medida; arcade termina con el jefe final"
+ }
+}

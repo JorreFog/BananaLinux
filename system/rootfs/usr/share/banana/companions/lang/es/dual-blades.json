@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Bouts won": "Combates ganados",
+  "Continues": "Continuaciones",
+  "Moves": "Movimientos",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Weak slash": "Tajo débil",
+  "Strong slash": "Tajo fuerte",
+  "Kick": "Patada",
+  "Guard / special": "Guardia / especial",
+  "Quarter circle + attack": "Círculo de un cuarto + ataque",
+  "Special moves (per character)": "Movimientos especiales (por personaje)",
+  "Character id": "ID de personaje",
+  "Opponent": "Rival",
+  "Opponent HP": "HP del rival",
+  "Opponent id": "ID del rival",
+  "Block the first hit of a combo, then punish with your fastest special.": "Bloquea el primer golpe del combo y castiga con tu especial más rápido.",
+  "Stage": "Escenario",
+  "Difficulty": "Dificultad",
+  "Options": "Opciones",
+  "Options toggle rage, counter, crazy and transform modes that change how matches play.": "Las opciones activan los modos rage, counter, crazy y transform, que cambian cómo se juegan los combates.",
+  "Fighters": "Combatientes",
+  "Beating arcade mode unlocks hidden fighters.": "Superar el modo arcade desbloquea luchadores ocultos.",
+  "Progress": "Progreso"
+ }
+}

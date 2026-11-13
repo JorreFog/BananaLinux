@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Wins": "Victorias",
+  "Duels played": "Duelos jugados",
+  "Play time": "Tiempo jugado",
+  "Rules": "Reglas",
+  "Turn": "Turno",
+  "Draw, charge one card as mana, summon/cast, attack": "Roba, carga una carta como maná, invoca/lanza, ataca",
+  "Shields": "Escudos",
+  "Each player starts with 5 shields; broken shields go to your hand": "Cada jugador empieza con 5 escudos; los escudos rotos van a tu mano",
+  "Win": "Gana",
+  "Attack the opponent directly when they have no shields left": "Ataca directamente al rival cuando se quede sin escudos",
+  "Blockers": "Bloqueadores",
+  "Creatures with Blocker can stop an attack": "Las criaturas con Bloqueador pueden detener un ataque",
+  "Civilizations": "Civilizaciones",
+  "Light, Water, Darkness, Fire, Nature: mana must include the card's colour": "Luz, Agua, Oscuridad, Fuego, Naturaleza: el maná debe incluir el color de la carta",
+  "Duel": "Duelo",
+  "Tip": "Consejo",
+  "Keep at least one blocker out against aggressive decks; spend early turns on mana.": "Deja al menos un bloqueador fuera contra mazos agresivos; usa los primeros turnos para el maná.",
+  "In a duel": "En un duelo",
+  "Where": "Dónde",
+  "Map id": "ID de mapa",
+  "Cards": "Cartas",
+  "Cards in deck": "Cartas en el mazo",
+  "Different cards owned": "Cartas distintas que tienes",
+  "Medals": "Medallas",
+  "Different cards": "Cartas distintas",
+  "Progress": "Progreso"
+ }
+}

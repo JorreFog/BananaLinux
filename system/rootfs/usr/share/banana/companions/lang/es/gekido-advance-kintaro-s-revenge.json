@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A punch, B kick, R block/special\nCombos chain light and heavy strikes": "A golpe, B patada, R bloqueo/especial\nLos combos encadenan golpes ligeros y pesados",
+  "Moves": "Movimientos",
+  "Fighting": "Combate",
+  "Combos, throws and special attacks fed by a power meter.": "Combos, lanzamientos y ataques especiales alimentados por un medidor de poder.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Block, then counter right after a boss combo.\nGroup enemies to one side to avoid being surrounded.": "Bloquea y contraataca justo después de un combo del jefe.\nAgrupa a los enemigos en un lado para no quedar rodeado.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Stages through a haunted Japan full of demons, each ending in a boss.": "Escenarios por un Japón embrujado lleno de demonios, cada uno con un jefe final.",
+  "Items": "Objetos",
+  "Pickups": "Recogibles",
+  "Health pickups and power items drop from enemies and objects.": "Los recogibles de salud y los objetos de poder caen de los enemigos y los objetos.",
+  "Secrets": "Secretos",
+  "Hidden": "Oculto",
+  "Hidden areas and items in many stages.": "Áreas y objetos ocultos en muchos escenarios.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Defeat Kintaro at the end.": "Derrota a Kintaro al final."
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Turtle": "Tortuga",
+  "Level": "Nivel",
+  "Time: minutes": "Tiempo: minutos",
+  "Time: seconds": "Tiempo: segundos",
+  "Gold helmet power-ups": "Potenciadores de casco dorado",
+  "Top-down puzzle adventure: guide the turtle through maze-like levels to the exit before time runs out": "Aventura de puzles cenital: guía a la tortuga por niveles con laberinto hasta la salida antes de que se acabe el tiempo",
+  "Moves": "Movimientos",
+  "Coloured keys (green, red, blue) open doors of the same colour; holes make you fall and restart": "Las llaves de colores (verde, rojo, azul) abren puertas del mismo color; los huecos te hacen caer y reiniciar",
+  "Keys and doors": "Llaves y puertas",
+  "collect the key of a door's colour first; the HUD shows how many of each you carry": "recoge primero la llave del color de la puerta; el HUD muestra cuántas llevas de cada una",
+  "Hazards": "Peligros",
+  "Battle": "Batalla",
+  "Plan the route": "Planea la ruta",
+  "some doors need keys found deeper in the level, so explore before committing": "algunas puertas necesitan llaves que están más adentro del nivel, así que explora antes de decidirte",
+  "No fighting focus": "Sin combate",
+  "the danger is the timer and the holes; falls are counted per save": "el peligro es el temporizador y los huecos; las caídas se cuentan por partida",
+  "Levels": "Niveles",
+  "Levels in order; the level number and timer are on the Status page\nMaze-like levels seen from above; the exit opens the next level": "Niveles en orden; el número de nivel y el temporizador están en la página de Estado\nNiveles con laberinto vistos desde arriba; la salida abre el siguiente nivel",
+  "Items": "Objetos",
+  "Green keys": "Llaves verdes",
+  "Red keys": "Llaves rojas",
+  "Blue keys": "Llaves azules",
+  "Gold helmet power-ups protect the turtle for a while": "Los potenciadores de casco dorado protegen a la tortuga por un tiempo",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Keys of three colours and gold helmets\nGold helmets and keys are the pickups in each level": "Llaves de tres colores y cascos dorados\nLos cascos dorados y las llaves son los recogibles de cada nivel",
+  "Progress": "Progreso",
+  "Total falls (save 1)": "Caídas totales (partida 1)",
+  "Levels cleared in order": "Niveles superados en orden"
+ }
+}

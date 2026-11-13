@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Crystal droplets": "Gotas de cristal",
+  "Cards": "Cartas",
+  "Controls": "Controles",
+  "Hop one tile": "Salta una casilla",
+  "Jump / long hop": "Salto / salto largo",
+  "Tongue / action": "Lengua / acción",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Frogger's tongue grabs items and switches; 20 crystal droplets make a crystal frog for an extra life.": "La lengua de Frogger agarra objetos y cambia de arma; 20 gotas de cristal forman una rana de cristal para una vida extra.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "The dragon boss sleeps between attacks: sneak past or strike while it sleeps. Most bosses are dodged, then hit with thrown objects.": "El jefe dragón duerme entre ataques: pásate a hurtadillas o golpéale mientras duerme. La mayoría de los jefes se esquivan y luego se golpean con objetos lanzados.",
+  "Level": "Nivel",
+  "Level id": "ID de nivel",
+  "Map X": "Mapa X",
+  "Map Y": "Mapa Y",
+  "Furthest level": "Nivel más avanzado",
+  "Items": "Objetos",
+  "Timer (s)": "Temporizador (s)",
+  "Crystals": "Cristales",
+  "Crystals in level": "Cristales en el nivel",
+  "Progress": "Progreso",
+  "Furthest level unlocked": "Nivel más avanzado desbloqueado"
+ }
+}

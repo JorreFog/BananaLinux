@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "Jump": "Saltar",
+  "Sword attack": "Ataque de espada",
+  "Block / special": "Bloquear / especial",
+  "Switch weapon": "Cambiar de arma",
+  "Heroes": "Héroes",
+  "Pick a warrior; each has a different weapon reach and speed.": "Elige un guerrero; cada uno tiene un alcance de arma y una velocidad distintos.",
+  "Tips": "Consejos",
+  "Keep enemies on one side of you; blocking before their swing lands opens a counter.": "Mantén a los enemigos a un solo lado; bloquear antes de que caiga su golpe abre un contraataque.",
+  "Stages": "Escenarios",
+  "A side-scrolling hack-and-slash through medieval stages, each ending with a boss.": "Un hack-and-slash de desplazamiento lateral por etapas medievales, cada una con un jefe.",
+  "Items": "Objetos",
+  "Pickups restore health and power up your weapon.": "Los recogibles restauran la salud y potencian tu arma.",
+  "Clearing the game unlocks extra characters/modes.": "Terminar el juego desbloquea personajes/modos extra.",
+  "Progress": "Progreso",
+  "Clear stages in order; continues are limited.": "Supera las etapas en orden; las continuaciones son limitadas."
+ }
+}

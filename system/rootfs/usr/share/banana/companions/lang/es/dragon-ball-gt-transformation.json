@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Fighters": "Combatientes",
+  "A side-scrolling brawler over the GT story. Health and ki are in the game's own HUD; the companion has no live data for this game yet.": "Un peleador de scroll lateral sobre la historia de GT. La salud y el ki están en el HUD del propio juego; el acompañante aún no tiene datos en vivo de este juego.",
+  "How to fight": "Cómo pelear",
+  "Chain your basic attacks into combos, keep ki charged for blasts, and swap to a fresh fighter when one is low (the team is shared by the stage). Learn each fighter's special from the pause menu move list.": "Encadena tus ataques básicos en combos, mantén el ki cargado para los rayos y cambia a un luchador sano cuando uno esté flojo (el equipo lo comparte la etapa). Aprende el especial de cada luchador en la lista de movimientos del menú de pausa.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Bosses take far more hits than stage enemies: dodge their charge attacks by moving off their row, then punish with a full combo. Ranged ki blasts work best against bosses that fly.": "Los jefes aguantan muchos más golpes que los enemigos de etapa: esquiva sus embestidas saliendo de su fila y castígalos con un combo completo. Los rayos de ki a distancia son mejores contra los jefes que vuelan.",
+  "Story": "Historia",
+  "Follows Dragon Ball GT: the Black Star Dragon Ball search, the Baby arc, Super 17 and the Shadow Dragons.": "Sigue Dragon Ball GT: la búsqueda de la esfera del dragón negra, el arco de Baby, Super 17 y los dragones de las sombras.",
+  "Pickups": "Recogibles",
+  "Enemies drop food and capsules that heal HP or refill ki; grab them before a boss door.": "Los enemigos sueltan comida y cápsulas que curan HP o rellenan ki; recógelas antes de la puerta de un jefe.",
+  "Unlocks": "Desbloqueos",
+  "Finishing story chapters unlocks fighters for the other modes.": "Terminar los capítulos de la historia desbloquea luchadores para los otros modos.",
+  "Progress": "Progreso",
+  "Chapters are linear; finish a chapter to save your progress.": "Los capítulos son lineales; termina un capítulo para guardar tu progreso."
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Score": "Puntuación",
+  "Time": "Tiempo",
+  "How it plays": "Cómo se juega",
+  "4-player ninja fighting.": "Pelea de ninjas para 4 jugadores.",
+  "Chakra specials.": "Especiales de chakra.",
+  "Fight": "Pelea",
+  "Tips": "Consejos",
+  "Chain light attacks into a jutsu; jump between the stage's levels to escape crowds; grab items early.": "Encadena ataques ligeros en un jutsu; salta entre los niveles del escenario para escapar de las multitudes; recoge objetos pronto.",
+  "Modes": "Modos",
+  "Level": "Nivel",
+  "Story, Versus.": "Historia, Versus.",
+  "Items": "Objetos",
+  "Scrolls and weapons that drop during a match (health, chakra, thrown weapons).": "Pergaminos y armas que caen durante el combate (salud, chakra, armas arrojadizas).",
+  "Collect": "Coleccionar",
+  "Unlock ninjas.": "Desbloquea ninjas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Story mode.": "Modo historia."
+ }
+}

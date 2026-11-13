@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Park": "Parque",
+  "Year": "Año",
+  "Month": "Mes",
+  "Week": "Semana",
+  "How it plays": "Cómo se juega",
+  "Build a dinosaur park: hatch dinosaurs from excavated DNA, build attractions and keep visitors happy.": "Construye un parque de dinosaurios: incuba dinosaurios a partir del ADN excavado, monta atracciones y mantén felices a los visitantes.",
+  "Dinosaurs": "Dinosaurios",
+  "Each species needs its own enclosure; carnivores need strong fences.": "Cada especie necesita su propio recinto; los carnívoros necesitan vallas reforzadas.",
+  "Incidents": "Incidentes",
+  "Tips": "Consejos",
+  "Escapes and storms happen: keep rangers and fences repaired.": "Ocurren fugas y tormentas: mantén reparados a los guardaparques y las vallas.",
+  "Structure": "Estructura",
+  "Build on the island; expand as money comes in.": "Construye en la isla; amplía según entra el dinero.",
+  "Money": "Dinero",
+  "Budget": "Presupuesto",
+  "Visitor fees pay for buildings. Balance food, toilets and attractions.": "Las entradas pagan los edificios. Equilibra la comida, los baños y las atracciones.",
+  "Species": "Especies",
+  "Collect": "Coleccionar",
+  "Dig sites give DNA for new species.": "Las zonas de excavación dan ADN para nuevas especies.",
+  "Goals": "Objetivos",
+  "Goal": "Objetivo",
+  "Meet the park rating targets.": "Cumple las metas de valoración del parque."
+ }
+}

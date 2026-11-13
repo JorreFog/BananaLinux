@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Hearts": "Corazones",
+  "Wall hits this stage": "Golpes contra la pared en este escenario",
+  "How it plays": "Cómo se juega",
+  "Guide the slowly spinning stick (the Helirin) through narrow mazes without touching the walls.": "Guía el palo que gira despacio (el Helirin) por laberintos estrechos sin tocar las paredes.",
+  "Health": "Salud",
+  "Three hearts; hitting a wall costs a heart. Springs reverse the spin.": "Tres corazones; golpear una pared cuesta un corazón. Los resortes invierten el giro.",
+  "Tips": "Consejos",
+  "Hold A/B to speed up. Healing zones refill hearts.": "Mantén A/B para acelerar. Las zonas de curación recargan los corazones.",
+  "Stage": "Escenario",
+  "Area (0-11, 12 = challenge)": "Área (0-11, 12 = reto)",
+  "Structure": "Estructura",
+  "Adventure stages, Challenge, Practice.": "Escenarios de aventura, Reto, Práctica.",
+  "Items": "Objetos",
+  "Springs and healing spots.": "Resortes y puntos de curación.",
+  "Birds": "Pájaros",
+  "Collect": "Coleccionar",
+  "Rescue Kururin's family members.": "Rescata a los familiares de Kururin.",
+  "Stages": "Escenarios",
+  "Goal": "Objetivo",
+  "Clear every stage.": "Completa cada escenario."
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Dig Dug score": "Puntuación de Dig Dug",
+  "Galaxian score": "Puntuación de Galaxian",
+  "Galaga lives": "Vidas de Galaga",
+  "Galaxian stage": "Escenario de Galaxian",
+  "Games": "Juegos",
+  "Notes": "Notas",
+  "Dig Dug: pump or drop rocks on enemies. Galaga: let a ship be captured to rescue it as a dual fighter.": "Dig Dug: bombea o suelta rocas sobre los enemigos. Galaga: deja que capturen una nave para rescatarla como doble piloto.",
+  "Tips": "Consejos",
+  "Pac-Man ghosts each chase differently.": "Cada fantasma de Pac-Man persigue de forma distinta.",
+  "Menu": "Menú",
+  "Pick a game.": "Elige un juego.",
+  "Items": "Objetos",
+  "Fruit bonuses.": "Bonos de fruta.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Run": "Correr",
+  "Score, combo, special meter\nVicarious Visions' GBA version of American Wasteland: isometric levels, score, combo, special meter": "Puntuación, combo, medidor de especial\nVersión GBA de American Wasteland de Vicarious Visions: escenarios isométricos, puntuación, combo, medidor de especial",
+  "Tricks": "Trucos",
+  "Flip, grab, grind, manual\nUnlockable trick sets: lip transitions, grind transitions and flatland tricks": "Flip, grab, grind, manual\nConjuntos de trucos desbloqueables: transiciones de bordillo, transiciones de grind y trucos de flatland",
+  "Stats": "Estadísticas",
+  "rail balance, lip balance, manual balance and more, raised through play": "equilibrio en rieles, equilibrio en bordillo, equilibrio en manual y más, que se suben jugando",
+  "Goals": "Objetivos",
+  "Story goals in each skate spot\nStory goals given by skaters in each spot; some are combo or score targets, others item hunts": "Objetivos de historia en cada spot\nObjetivos de historia que dan los skaters en cada spot; algunos son metas de combo o puntuación y otros búsquedas de objetos",
+  "Levels": "Niveles",
+  "American skate spots\nSkate spots across America in story order": "Spots de skate en América\nSpots de skate por América en orden de historia",
+  "Stat points and gear\nCheats unlock through play: always special, perfect balance modes, moon physics, jet pack, matrix, turbo and mini modes": "Puntos de estadística y equipo\nLos trucos se desbloquean jugando: siempre especial, modos de equilibrio perfecto, física lunar, jet pack, matrix, turbo y mini",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden skaters and cheats\nHidden skaters and cheats unlock as you finish goals": "Objetos ocultos\nSkaters y trucos ocultos\nLos skaters y trucos ocultos se desbloquean al completar objetivos",
+  "Progress": "Progreso",
+  "Story goals\nStory goals per spot\nStory goals per spot; finish all to move on": "Objetivos de historia\nObjetivos de historia por spot\nObjetivos de historia por spot; completa todos para avanzar"
+ }
+}

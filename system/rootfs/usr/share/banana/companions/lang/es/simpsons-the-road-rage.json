@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Performance": "Rendimiento",
+  "Sunday Drive": "Paseo del domingo",
+  "Mission": "Misión",
+  "Ride": "Recorrido",
+  "Money (this run)": "Dinero (esta partida)",
+  "Total money": "Dinero total",
+  "Mode": "Modo",
+  "Fares, money, time": "Pasajes, dinero, tiempo",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Simpsons characters with their own cars\nDrivers include Homer, Marge, Bart, Lisa, Grampa, Apu and more; each has his own car": "Personajes de Los Simpson con sus propios autos\nLos conductores incluyen Homer, Marge, Bart, Lisa, Grampa, Apu y más; cada uno tiene su auto",
+  "Goal": "Objetivo",
+  "Satisfaction needed": "Se necesita satisfacción",
+  "Pick up fares, drop them off quickly": "Recoge pasajeros y déjalos rápido",
+  "Map": "Mapa",
+  "Springfield streets": "Calles de Springfield",
+  "Money": "Dinero",
+  "Money from fares\nFares pay more when delivered fast; the speed bonus is rated fast/average/slow/safe/road rage": "Dinero de los pasajes\nLos pasajes pagan más si se entregan rápido; el bono de velocidad se califica como rápido/promedio/lento/seguro/road rage",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Characters and cars\nCharacters, maps and extras unlock with money and mission progress": "Personajes y autos\nLos personajes, mapas y extras se desbloquean con dinero y progreso de misiones",
+  "Progress": "Progreso",
+  "Missions completed": "Misiones completadas",
+  "Maps unlocked (bits)": "Mapas desbloqueados (bits)",
+  "Money goals": "Metas de dinero"
+ }
+}

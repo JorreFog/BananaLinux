@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Level time": "Tiempo de nivel",
+  "How it plays": "Cómo se juega",
+  "Eat dots in 3D-ish mazes, avoid ghosts.": "Come puntos en laberintos casi 3D y esquiva a los fantasmas.",
+  "Power": "Potencia",
+  "Power-ups": "Potenciadores",
+  "Power pellets.": "Bolas de poder.",
+  "Ghosts": "Fantasmas",
+  "Tips": "Consejos",
+  "Eat ghosts after power pellets.": "Come fantasmas tras las píldoras de poder.",
+  "Worlds": "Mundos",
+  "Structure": "Estructura",
+  "Worlds of mazes.": "Mundos de laberintos.",
+  "Items": "Objetos",
+  "Fruit and power-ups.": "Frutas y potenciadores.",
+  "Stars": "Estrellas",
+  "Collect": "Coleccionar",
+  "Stars.": "Estrellas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Save Pac-Land.": "Salva Pac-Land."
+ }
+}

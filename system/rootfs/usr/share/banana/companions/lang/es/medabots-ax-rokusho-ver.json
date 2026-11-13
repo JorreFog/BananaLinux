@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "How it plays": "Cómo se juega",
+  "Medabots: robots built from four parts (Head, Right arm, Left arm, Legs) plus a Medal. Robattles: knock out the enemy leader's head.": "Medabots: robots construidos con cuatro partes (Cabeza, Brazo derecho, Brazo izquierdo, Piernas) más una Medalla. Robattles: derriba la cabeza del líder enemigo.",
+  "Parts": "Partes",
+  "Head parts have limited uses; arms attack/heal; legs set movement type.": "Las piezas de cabeza tienen usos limitados; los brazos atacan/curan; las piernas definen el tipo de movimiento.",
+  "Leader head HP": "HP de la cabeza del líder",
+  "Leader right arm HP": "HP del brazo derecho del líder",
+  "Leader left arm HP": "HP del brazo izquierdo del líder",
+  "Match timer": "Temporizador de combate",
+  "Tips": "Consejos",
+  "Break the enemy leader's head to win. Medal levels unlock Medaforce.": "Rompe la cabeza del líder enemigo para ganar. Los niveles de Medalla desbloquean Medaforce.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Action robattles, story mode.": "Robattles de acción, modo historia.",
+  "Items": "Objetos",
+  "Parts won from battles.": "Partes ganadas en batallas.",
+  "Collect": "Coleccionar",
+  "Collect parts sets.": "Recoge conjuntos de partes.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Clear the story.": "Completa la historia."
+ }
+}

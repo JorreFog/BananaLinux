@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Coins": "Monedas",
+  "Controls": "Controles",
+  "A jump, B grab/throw blocks, R change costume.": "A salta, B agarra/lanza bloques, R cambia de disfraz.",
+  "Costumes": "Trajes",
+  "Each costume (e.g. Magician, Fireman, Climber) gives a power; switch with R.": "Cada disfraz (p. ej. Mago, Bombero, Trepador) da un poder; cambia con R.",
+  "Magician shoots magic (charge for more), Fireman puts out fire and melts ice blocks, Climber hooks onto ledges, and more per game.": "El Mago lanza magia (carga para más), el Bombero apaga fuegos y derrite bloques de hielo, el Trepador se engancha a las repisas, y más en cada juego.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Grab blocks or enemies and throw them; charge attacks deal more damage. Pete is the recurring villain.": "Agarra bloques o enemigos y lánzalos; los ataques cargados hacen más daño. Pete es el villano recurrente.",
+  "Stages": "Escenarios",
+  "Level id": "ID de nivel",
+  "Structure": "Estructura",
+  "Storybook world stages.": "Escenarios de mundo de cuentos.",
+  "Shop": "Tienda",
+  "Items": "Objetos",
+  "Coins buy items.": "Las monedas compran objetos.",
+  "Collect": "Coleccionar",
+  "Costumes for Mickey and Donald.": "Disfraces para Mickey y Donald.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat King Pete and rescue Donald's nephews.": "Derrota al Rey Pete y rescata a los sobrinos de Donald."
+ }
+}

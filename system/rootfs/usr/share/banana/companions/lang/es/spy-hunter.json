@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Car": "Auto",
+  "Score (top-right counter)": "Puntuación (contador superior derecho)",
+  "G-6155 Interceptor; damage, weapons\nDrive the G-6155 Interceptor, the series' armed spy car\nDamage meter for the car; destroy enemy agents without hitting civilians": "G-6155 Interceptor; daño, armas\nConduce el G-6155 Interceptor, el auto de espía armado de la saga\nMedidor de daño del auto; destruye a los agentes enemigos sin golpear a los civiles",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Machine guns, missiles, oil slicks, smoke": "Ametralladoras, misiles, charcos de aceite, humo",
+  "machine guns forward, plus missiles, oil slick and smoke screen": "ametralladoras al frente, además de misiles, aceite y cortina de humo",
+  "Weapons van": "Furgón de armas",
+  "drive into it to refill and switch equipment": "entra en él para recargar y cambiar el equipo",
+  "Mission": "Misión",
+  "Battle": "Batalla",
+  "Mission objectives per level; protect civilians\nMission goals are listed before each mission (destroy targets, escort, reach a point in time)\nEnemy cars ram from the sides: drop oil or smoke behind you, guns in front": "Objetivos de misión por nivel; protege a los civiles\nLos objetivos de misión se listan antes de cada misión (destruir blancos, escoltar, llegar a un punto a tiempo)\nLos autos enemigos embisten de lado: suelta aceite o humo detrás, dispara al frente",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Spy missions\nMissions across several locations, each with its own objectives list": "Misiones de espía\nMisiones en varias ubicaciones, cada una con su lista de objetivos",
+  "Bag": "Bolsa",
+  "Ammo for each weapon\nAmmo for each special weapon; refills from the weapons van": "Munición de cada arma\nMunición de cada arma especial; se recarga en el furgón de armas",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Mission bonuses\nBonus objectives per mission\nPrimary and secondary objectives per mission; bonus goals give extra rank": "Bonos de misión\nObjetivos bonus por misión\nObjetivos principales y secundarios por misión; los objetivos bonus dan rango extra",
+  "Progress": "Progreso",
+  "Missions completed\nMissions completed in order\nMissions unlock one after another": "Misiones completadas\nMisiones completadas en orden\nLas misiones se desbloquean una tras otra"
+ }
+}

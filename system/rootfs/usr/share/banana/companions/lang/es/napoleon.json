@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Army": "Ejército",
+  "Soldiers": "Soldados",
+  "Funds": "Fondos",
+  "Napoleon and his generals; army units with troop counts": "Napoleón y sus generales; unidades del ejército con número de tropas",
+  "Generals": "Generales",
+  "Detail": "Detalle",
+  "Generals command units; stats affect morale and damage": "Los generales mandan las unidades; sus estadísticas afectan la moral y el daño",
+  "Unit types": "Tipos de unidad",
+  "infantry, cavalry and artillery; morale drops when units are flanked or shelled": "infantería, caballería y artillería; la moral baja cuando las unidades son flanqueadas o bombardeadas",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Real-time tactics": "Tácticas en tiempo real",
+  "flank enemy units, keep artillery protected": "flanquea a las unidades enemigas y protege la artillería",
+  "Real-time": "Tiempo real",
+  "give orders to unit groups; keep reserves behind the line": "da órdenes a los grupos de unidades; mantén las reservas detrás de la línea",
+  "Campaign": "Campaña",
+  "Map": "Mapa",
+  "European campaign maps\nCampaign battles across Europe in historical order": "Mapas de la campaña europea\nBatallas de la campaña por Europa en orden histórico",
+  "Units": "Unidades",
+  "Infantry, cavalry, artillery": "Infantería, caballería, artillería",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Generals recruited\nGenerals join your army as the campaign goes on": "Generales reclutados\nLos generales se unen a tu ejército según avanza la campaña",
+  "Progress": "Progreso",
+  "Campaign battles won\nWin each battle to continue the campaign; troop count carries over\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Batallas de campaña ganadas\nGana cada batalla para continuar la campaña; el número de tropas se mantiene\nTraducción al inglés en la carpeta Translations; versión 1.0 (según el nombre del archivo)"
+ }
+}

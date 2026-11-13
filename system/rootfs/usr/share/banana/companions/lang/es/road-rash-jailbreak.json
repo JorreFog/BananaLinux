@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Rider": "Pasajero",
+  "Speed (km/h)": "Velocidad (km/h)",
+  "Health, bike damage, position\nMotorbike racing with fist fights and weapons at speed (2003 GBA game)\nHealth bar for the rider and a damage bar for the bike: either one emptied ends the run": "Salud, daño de la moto, posición\nCarreras de motocicleta con puñetazos y armas a toda velocidad (juego de GBA de 2003)\nBarra de salud del piloto y barra de daño de la moto: si cualquiera se vacía, termina la carrera",
+  "Combat": "Combate",
+  "Punch/kick riders while racing; grab weapons\nPunch or kick riders next to you; grab their weapons when they swing one\nWeapons stay with you until you crash or lose them\nFaster bikes are harder to control in traffic": "Golpea o patea pilotos mientras compites; agarra armas\nGolpea o patea a los pilotos que tienes al lado; agarra sus armas cuando las lanzan\nLas armas se quedan contigo hasta que te estrellas o las pierdes\nLas motos más rápidas son más difíciles de controlar en el tráfico",
+  "Race tips": "Consejos de carrera",
+  "Battle": "Batalla",
+  "Knock rivals off; avoid cops\nAttack riders on your side only after matching their speed\nPolice chase you in some races: avoid being boxed in\nCrashing costs time and the weapon you carried": "Tira a los rivales; evita a la policía\nAtaca a los pilotos de tu lado solo cuando lleves su misma velocidad\nLa policía te persigue en algunas carreras: evita quedar acorralado\nChocar cuesta tiempo y el arma que llevabas",
+  "Modes": "Modos",
+  "Jailbreak story, races": "Historia de fuga, carreras",
+  "Jailbreak mode": "Modo fuga",
+  "a story of races to break a friend out of jail": "una historia de carreras para sacar a un amigo de la cárcel",
+  "Single races on the game's courses; some courses only open later": "Carreras individuales en los circuitos del juego; algunos circuitos solo se abren más tarde",
+  "Weapons": "Armas",
+  "Bag": "Bolsa",
+  "Chains, clubs and other weapons picked up from rivals": "Cadenas, garrotes y otras armas recogidas de los rivales",
+  "chains, clubs and other melee items taken from rivals": "cadenas, garrotes y otros objetos cuerpo a cuerpo tomados de los rivales",
+  "Cash from races buys or upgrades bikes in the modes that have a shop": "El dinero de las carreras compra o mejora motos en los modos con tienda",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Bikes and riders\nCourses and bikes unlock as you clear races": "Motos y pilotos\nLos circuitos y las motos se desbloquean al superar carreras",
+  "Progress": "Progreso",
+  "Races won\nFinish in the qualifying places to move to the next race\nClear the Jailbreak story to unlock the remaining modes": "Carreras ganadas\nTermina en los puestos que clasifican para pasar a la siguiente carrera\nCompleta la historia de fuga para desbloquear los modos restantes"
+ }
+}

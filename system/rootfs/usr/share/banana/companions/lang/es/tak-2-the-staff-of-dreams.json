@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Yorbels (money)": "Yorbels (dinero)",
+  "World": "Mundo",
+  "Rift countdown (s)": "Cuenta atrás de la grieta (s)",
+  "Health; Juju power": "Salud; poder de juju",
+  "Moves": "Movimientos",
+  "Club and Juju spells\nTak's club and juju spells; the Dream World changes how levels work": "Garrote y hechizos de juju\nEl garrote y los hechizos de juju de Tak; el Mundo de los Sueños cambia cómo funcionan los niveles",
+  "Bosses": "Jefes",
+  "Dream world bosses\nRift sealing sections have a countdown in seconds; bosses appear in the Dream World": "Jefes del mundo de los sueños\nLas secciones que sellan grietas tienen una cuenta atrás en segundos; los jefes aparecen en el Mundo de los Sueños",
+  "Areas": "Áreas",
+  "Dream world levels\nLevels switch between the waking world and the Dream World": "Niveles del mundo de los sueños\nLos niveles alternan entre el mundo de la vigilia y el Mundo de los Sueños",
+  "Items": "Objetos",
+  "Inventory amount": "Cantidad en el inventario",
+  "Juju items": "Objetos de juju",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden collectibles\nYorbels (money) and inventory items; cleared levels are tracked": "Coleccionables ocultos\nYorbels (dinero) y objetos del inventario; los niveles superados se registran",
+  "Progress": "Progreso",
+  "Levels cleared (bits)": "Niveles superados (bits)",
+  "Levels cleared": "Niveles completados"
+ }
+}

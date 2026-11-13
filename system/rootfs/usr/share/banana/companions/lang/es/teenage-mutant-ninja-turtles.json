@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Turtles": "Tortugas",
+  "Status": "Estado",
+  "Turtle health": "Salud de la tortuga",
+  "Score (save 1)": "Puntuación (partida 1)",
+  "Four turtles; health, lives": "Cuatro tortugas; salud, vidas",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "katanas; Raphael: sai; Donatello: bo staff; Michelangelo: nunchaku": "katanas; Raphael: sai; Donatello: bastón bo; Michelangelo: nunchaku",
+  "Bosses": "Jefes",
+  "Enemy health": "Salud del enemigo",
+  "Foot Clan bosses": "Jefes del Clan Pie",
+  "Stages": "Escenarios",
+  "New York stages\nStage select screen between stages; New York streets, sewers and rooftops": "Escenarios de Nueva York\nPantalla de selección entre escenarios; calles, alcantarillas y azoteas de Nueva York",
+  "Items": "Objetos",
+  "Pizza = health\nPizza restores health; crystals and score are saved per file": "Pizza = salud\nLa pizza restaura la salud; los cristales y la puntuación se guardan por partida",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Crystals (save 1)": "Cristales (partida 1)",
+  "Hidden items": "Objetos ocultos",
+  "Progress": "Progreso",
+  "Stages beaten (save 1)": "Escenarios superados (partida 1)",
+  "Stages cleared": "Etapas superadas"
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Fellowship": "Compañía",
+  "Party": "Grupo",
+  "Frodo, Sam, Merry, Pippin, Aragorn, Gandalf, Legolas, Gimli, Boromir join along the way.": "Frodo, Sam, Merry, Pippin, Aragorn, Gandalf, Legolas, Gimli y Boromir se unen por el camino.",
+  "Members": "Miembros",
+  "Stats": "Estadísticas",
+  "Each member levels; equip weapons and armour.": "Cada miembro sube de nivel; equipa armas y armadura.",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Turn-based fights; Gandalf's magic and Aragorn's strength.": "Combates por turnos; la magia de Gandalf y la fuerza de Aragorn.",
+  "Middle-earth": "La Tierra Media",
+  "Route": "Ruta",
+  "Shire -> Bree -> Weathertop -> Rivendell -> Moria -> Lothlorien.": "El Condado -> Bree -> Weathertop -> Rivendell -> Moria -> Lothlorien.",
+  "Items": "Objetos",
+  "Gold coins": "Monedas de oro",
+  "Bronze coins": "Monedas de bronce",
+  "Healing herbs, equipment, quest items.": "Hierbas curativas, equipo y objetos de misión.",
+  "Quests": "Misiones",
+  "Collect": "Coleccionar",
+  "Side quests.": "Misiones secundarias.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Reach the end of the Fellowship's journey.": "Llega al final del viaje de la Compañía."
+ }
+}

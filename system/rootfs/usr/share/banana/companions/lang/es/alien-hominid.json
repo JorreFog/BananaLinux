@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Continues": "Continuaciones",
+  "Score": "Puntuación",
+  "Grenades": "Granadas",
+  "Power-up id": "ID de potenciador",
+  "Power-up energy": "Energía del potenciador",
+  "Stats": "Estadísticas",
+  "Enemies killed": "Enemigos eliminados",
+  "Knife kills": "Bajas con cuchillo",
+  "Boss hits": "Golpes al jefe",
+  "Shoot (hold to charge)": "Disparar (mantén pulsado para cargar)",
+  "Jump; hold over an enemy to ride/bite": "Saltar; mantén sobre un enemigo para montarlo/morderlo",
+  "Grenade": "Granada",
+  "Close + B": "Cercano + B",
+  "Knife attack": "Ataque con cuchillo",
+  "Enemy": "Enemigo",
+  "Enemy health": "Salud del enemigo",
+  "Boss hits landed": "Golpes acertados al jefe",
+  "Bosses telegraph with a flash; grenades do big damage. Hop onto agents' heads to bite them for points. In vehicles keep shooting forward and jump debris.": "Los jefes avisan con un destello; las granadas hacen mucho daño. Salta a la cabeza de los agentes para morderlos y ganar puntos. En vehículos sigue disparando hacia delante y salta los escombros.",
+  "Stage": "Escenario",
+  "Levels unlocked": "Niveles desbloqueados",
+  "Weapons": "Armas",
+  "Power-up": "Potenciador",
+  "Energy": "Energía",
+  "Power-ups (spread, laser, etc.) run on energy; they drop from blue agents.": "Los potenciadores (dispersión, láser, etc.) gastan energía; los sueltan los agentes azules.",
+  "Kills": "Bajas",
+  "Progress": "Progreso",
+  "Stages unlocked": "Etapas desbloqueadas"
+ }
+}

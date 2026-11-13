@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "How it plays": "Cómo se juega",
+  "The Ham-Hams compete in a sports festival: pick a team and play mini-game events for medals.": "Los Ham-Ham compiten en un festival deportivo: elige un equipo y juega las pruebas de minijuegos para ganar medallas.",
+  "Controls": "Controles",
+  "Each event shows its controls first; most use rapid A presses or timing.": "Cada prueba muestra primero sus controles; casi todas usan pulsaciones rápidas de A o buen timing.",
+  "Hamsters": "Hámsters",
+  "Ham-Hams": "Ham-Ham",
+  "Event": "Evento",
+  "Tips": "Consejos",
+  "Timing events: watch the rhythm one round before pressing.\nMash events: steady fast presses beat bursts.": "Pruebas de ritmo: observa el compás una ronda antes de pulsar.\nPruebas de machaqueo: las pulsaciones rápidas y constantes baten a las ráfagas.",
+  "Structure": "Estructura",
+  "Days of the festival, each with a set of events. Talk to Ham-Hams between events.": "Días del festival, cada uno con un conjunto de pruebas. Habla con los Ham-Ham entre pruebas.",
+  "Medals": "Medallas",
+  "Rewards": "Recompensas",
+  "Medals and points from each event decide the winning team.": "Las medallas y los puntos de cada prueba deciden el equipo ganador.",
+  "Events": "Pruebas",
+  "Gold medals": "Medallas de oro",
+  "Sports such as running, swimming, high jump, rhythmic events and more, all hamster sized.": "Deportes como correr, nadar, salto alto, pruebas rítmicas y más, todo a escala de hámster.",
+  "Goal": "Objetivo",
+  "Win gold in every event to complete the festival.": "Gana oro en cada prueba para completar el festival."
+ }
+}

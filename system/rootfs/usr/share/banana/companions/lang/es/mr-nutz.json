@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B throw nuts.": "A salta, B lanza nueces.",
+  "Abilities": "Habilidades",
+  "Tail spin.": "Giro de cola.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Keep a safe distance and throw nuts during the boss's pause; jump on smaller enemies.": "Mantén la distancia y lanza nueces durante la pausa del jefe; salta sobre los enemigos pequeños.",
+  "Worlds": "Mundos",
+  "Structure": "Estructura",
+  "Worlds.": "Mundos.",
+  "Nuts": "Nueces",
+  "Items": "Objetos",
+  "Nuts are ammo; hearts restore health.": "Las nueces son munición; los corazones recuperan salud.",
+  "Coins": "Monedas",
+  "Collect": "Coleccionar",
+  "Coins in each level add up to extra lives.": "Las monedas de cada nivel se acumulan en vidas extra.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Mr. Blizzard.": "Derrota a Mr. Blizzard."
+ }
+}

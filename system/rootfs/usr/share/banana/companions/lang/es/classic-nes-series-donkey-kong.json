@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Jump (over barrels for 100 points)": "Saltar (por encima de los barriles son 100 puntos)",
+  "Walk, climb ladders": "Camina, sube escaleras",
+  "Hammer": "Mazo",
+  "Touch it to smash barrels/fire for a few seconds": "Toúcalo para romper barriles o el fuego por unos segundos",
+  "Scoring": "Puntuación",
+  "Jump a barrel": "Salta un barril",
+  "Smash with hammer": "Rompe con el martillo",
+  "Pick up Pauline's items": "Recoge los objetos de Pauline",
+  "Bonus timer": "Temporizador de bonus",
+  "Left on the clock when you reach the top": "Tiempo restante del reloj cuando llegas arriba",
+  "Hazards": "Peligros",
+  "Barrels sometimes roll down ladders: never stand right below one. Fireballs follow you slowly; climb away from them. On the rivet stage, removing all eight rivets drops Donkey Kong.": "Los barriles a veces ruedan por las escaleras: nunca te quedes justo debajo. Las bolas de fuego te persiguen despacio; aléjate subiendo. En la etapa de los remaches, quitar los ocho remaches hace caer a Donkey Kong.",
+  "Stages": "Escenarios",
+  "The NES version has three stages: 25 m (girders and barrels), 75 m (elevators) and 100 m (rivets). After 100 m the loop repeats faster.": "La versión de NES tiene tres etapas: 25 m (vigas y barriles), 75 m (ascensores) y 100 m (remaches). Tras los 100 m el bucle se repite más rápido.",
+  "Items": "Objetos",
+  "Hammers (two per stage on the girder levels) and Pauline's hat, purse and umbrella for bonus points.": "Martillos (dos por etapa en las de las vigas) y el sombrero, el bolso y el paraguas de Pauline para puntos extra.",
+  "Bonus items": "Objetos de bonus",
+  "Pauline drops her hat, purse and umbrella on the 75 m and 100 m stages: 300, 500 or 800 points each depending on the loop.": "Pauline deja su sombrero, bolso y paraguas en las etapas de 75 m y 100 m: 300, 500 u 800 puntos cada uno según el bucle.",
+  "Loops": "Bucles",
+  "The bonus timer starts higher on early loops; each completed rivet stage starts the next, faster loop. Extra life at 7,000 points (game A).": "El temporizador de bonus empieza más alto en los primeros bucles; cada etapa de remaches completada inicia el siguiente, más rápido. Vida extra a los 7.000 puntos (juego A)."
+ }
+}

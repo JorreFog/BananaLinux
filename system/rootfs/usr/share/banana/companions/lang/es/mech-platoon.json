@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Army": "Ejército",
+  "Energy sand": "Arena de energía",
+  "Units on map": "Unidades en el mapa",
+  "Timer min": "Temporizador min",
+  "Timer sec": "Temporizador seg",
+  "How it plays": "Cómo se juega",
+  "Real-time strategy with mechs: gather resources, build units, destroy the enemy base.": "Estrategia en tiempo real con mechas: reúne recursos, construye unidades y destruye la base enemiga.",
+  "Units": "Unidades",
+  "Design mechs from parts.": "Diseña mechas con partes.",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Protect harvesters; mass units before attacking.": "Protege las cosechadoras; reúne unidades antes de atacar.",
+  "Missions": "Misiones",
+  "Mission": "Misión",
+  "Structure": "Estructura",
+  "Campaign missions.": "Misiones de campaña.",
+  "Resources": "Recursos",
+  "Items": "Objetos",
+  "Resources.": "Recursos.",
+  "Parts": "Partes",
+  "Collect": "Coleccionar",
+  "New parts unlock.": "Se desbloquean nuevas partes.",
+  "Goal": "Objetivo",
+  "Finish the campaign.": "Completa la campaña."
+ }
+}

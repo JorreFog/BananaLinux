@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Health; ammo": "Salud; munición",
+  "Moves": "Movimientos",
+  "Climb, jump, shoot": "Trepar, saltar, disparar",
+  "Isometric action": "Acción isométrica",
+  "Lara climbs, jumps and shoots; health and stamina bars": "Lara trepa, salta y dispara; barras de salud y resistencia",
+  "Enemies": "Enemigos",
+  "Battle": "Batalla",
+  "Boss 1 health": "Salud del jefe 1",
+  "Boss 2 health": "Salud del jefe 2",
+  "Story bosses": "Jefes de la historia",
+  "Levels": "Niveles",
+  "Area id": "ID de área",
+  "Sub-area id": "ID de subárea",
+  "Locations across the story": "Lugares a lo largo de la historia",
+  "Items": "Objetos",
+  "Uzi ammo": "Munición de uzi",
+  "Grenade gun ammo": "Munición de lanzagranadas",
+  "Health, ammo": "Salud, munición",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nInventory items (keys, artifacts) are tracked as bit flags; uzi and grenade-gun ammo counted": "Objetos ocultos\nLos objetos del inventario (llaves, artefactos) se registran como banderas de bits; se cuenta la munición de uzi y lanzagranadas",
+  "Progress": "Progreso",
+  "Levels cleared\nAreas in order; bosses include the Great Grey One": "Niveles superados\nÁreas en orden; entre los jefes está el Great Grey One"
+ }
+}

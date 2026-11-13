@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Skater": "Patinador",
+  "Controls": "Controles",
+  "A jump, B spray / trick, R dash; grind rails by landing on them.": "A saltar, B pintar / truco, R embestir; desliza por las barandillas al aterrizar sobre ellas.",
+  "Gang": "Pandilla",
+  "GG members": "Miembros de GG",
+  "Beat, Gum, Tab and more join after challenges.": "Beat, Gum, Tab y más se unen tras los retos.",
+  "Cops": "Policía",
+  "Tips": "Consejos",
+  "Spray tags fast before the police arrive; grind to escape.": "Pinta las etiquetas rápido antes de que llegue la policía; desliza para escapar.",
+  "Districts": "Distritos",
+  "Areas": "Áreas",
+  "Shibuya-cho, Benten-cho and Kogane-cho in Tokyo-to.": "Shibuya-cho, Benten-cho y Kogane-cho en Tokio.",
+  "Items": "Objetos",
+  "Spray cans refill paint; red tags need more cans.": "Los botes de spray recargan pintura; las etiquetas rojas necesitan más botes.",
+  "Graffiti": "Grafiti",
+  "Collect": "Coleccionar",
+  "Graffiti souls hidden in levels unlock new tags.": "Las almas del grafiti ocultas en los niveles desbloquean etiquetas nuevas.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Tag every spot in each stage, beat rival gangs.": "Etiqueta cada rincón de cada escenario y derrota a las pandillas rivales."
+ }
+}

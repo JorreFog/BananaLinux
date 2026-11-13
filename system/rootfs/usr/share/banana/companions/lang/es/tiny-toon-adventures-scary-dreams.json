@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Health; lives\nBuster Bunny's side-scrolling adventure through scary dreams; a few hits cost a life": "Salud; vidas\nLa aventura lateral de Buster Bunny por sueños aterradores; unos golpes te cuestan una vida",
+  "Moves": "Movimientos",
+  "Jump, dash, attack\nJump on enemies or use Buster's dash; some areas need a running jump to cross": "Saltar, embestir, atacar\nSalta sobre los enemigos o usa la embestida de Buster; algunas zonas exigen saltar en carrera",
+  "Bosses": "Jefes",
+  "Dream bosses\nEach dream ends with a boss; Montana Max's pranks drive the story between levels": "Jefes de los sueños\nCada sueño termina con un jefe; las travesuras de Montana Max avanzan la historia entre niveles",
+  "Levels": "Niveles",
+  "Dream levels\nThemed dream levels (sports, haunted and others), played in order": "Niveles de sueño\nNiveles de sueño con temas (deportes, terror y otros), jugados en orden",
+  "Items": "Objetos",
+  "Carrots\nCarrots are the collectible pickups; extra lives are hidden along the way": "Zanahorias\nLas zanahorias son los recogibles; hay vidas extra escondidas por el camino",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nLook above the main path for hidden carrots and lives": "Objetos ocultos\nBusca zanahorias y vidas ocultas sobre el camino principal",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels cleared in order to wake up from the last dream": "Niveles superados\nNiveles superados en orden hasta despertar del último sueño"
+ }
+}

@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Match": "Partido",
+  "Your orbs": "Tus orbes",
+  "Rival orbs": "Orbes del rival",
+  "Time": "Tiempo",
+  "Points": "Puntos",
+  "Your Digimon": "Tu Digimon",
+  "Character id": "ID de personaje",
+  "Block/evolution bar": "Barra de bloqueo/evolución",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Attack": "Ataque",
+  "Jump": "Saltar",
+  "Special / Digivolve when the bar is full": "Especial / Digivolve cuando la barra esté llena",
+  "Block": "Bloquear",
+  "Goal": "Objetivo",
+  "Collect more D-Spirit orbs than the rival before time runs out": "Recoge más orbes D-Spirit que el rival antes de que se acabe el tiempo",
+  "Rival id": "ID del rival",
+  "Tip": "Consejo",
+  "Knock the rival around to make them drop orbs, then grab them. Digivolve when your meter fills.": "Golpea al rival para que suelte orbes y recógelos. Digivolve cuando tu medidor se llene.",
+  "Stage": "Escenario",
+  "Difficulty": "Dificultad",
+  "Orbs": "Orbes",
+  "Orbs held": "Orbes reunidos",
+  "Big orbs count more; orbs fly out of whoever is hit.": "Los orbes grandes valen más; los orbes salen de quien recibe el golpe.",
+  "Unlocks": "Desbloqueos",
+  "Character unlock bits": "Bits de desbloqueo de personajes",
+  "Progress": "Progreso",
+  "Total points": "Puntos totales"
+ }
+}

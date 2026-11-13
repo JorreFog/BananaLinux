@@ -1,0 +1,33 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Stars": "Estrellas",
+  "Score": "Puntuación",
+  "Health and lives": "Salud y vidas",
+  "Moves": "Movimientos",
+  "Costume": "Traje",
+  "Costumes unlocked (bits)": "Trajes desbloqueados (bits)",
+  "Hiroshi hearts": "Corazones de Hiroshi",
+  "Misae hearts": "Corazones de Misae",
+  "Himawari hearts": "Corazones de Himawari",
+  "Nevado hearts": "Corazones de Nevado",
+  "Jump and attack; special actions per film world": "Saltar y atacar; acciones especiales por mundo de película",
+  "Bosses": "Jefes",
+  "Each film world ends with a boss\nFamily members (Hiroshi, Misae, Himawari, Nevado) help with special moves": "Cada mundo de película termina con un jefe\nLos miembros de la familia (Hiroshi, Misae, Himawari, Nevado) ayudan con movimientos especiales",
+  "Worlds": "Mundos",
+  "Level": "Nivel",
+  "Area": "Área",
+  "Difficulty": "Dificultad",
+  "Film-themed worlds in Cineland": "Mundos con temática de cine en Cineland",
+  "Items": "Objetos",
+  "Pickups heal and give points": "Los recogibles curan y dan puntos",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items per world\nCostumes unlock new moves; stars are collected in levels and minigames": "Objetos ocultos por mundo\nLos trajes desbloquean movimientos nuevos; las estrellas se recogen en escenarios y minijuegos",
+  "Progress": "Progreso",
+  "Levels beaten": "Escenarios superados",
+  "Worlds cleared\nEnglish translation in the Translations folder; version 1.0 (from the file name)": "Mundos completados\nTraducción al inglés en la carpeta Translations; versión 1.0 (según el nombre del archivo)"
+ }
+}

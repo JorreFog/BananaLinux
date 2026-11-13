@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Silver suit armor": "Armadura del traje plateado",
+  "Web ammo": "Munición de telaraña",
+  "Health bar, web fluid": "Barra de salud, fluido de telaraña",
+  "Moves": "Movimientos",
+  "Web shooters, swing, punch, kick; armor upgrades\nArmor upgrades (the silver suit) add protection; web ammo is limited": "Lanzatelarañas, balanceo, puño, patada; mejoras de armadura\nLas mejoras de armadura (el traje plateado) dan protección; la munición de telaraña es limitada",
+  "Bosses": "Jefes",
+  "Rhino, Electro, Scorpion, Hammerhead and finally Mysterio": "Rhino, Electro, Scorpion, Hammerhead y finalmente Mysterio",
+  "Levels": "Niveles",
+  "Last level entered": "Último nivel visitado",
+  "Objectives found (level)": "Objetivos encontrados (nivel)",
+  "Stages unlock from a level select; revisit with new upgrades": "Los escenarios se desbloquean desde la selección de nivel; regresa con nuevas mejoras",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Upgrades": "Mejoras",
+  "Web cartridges, health, armor parts": "Cartuchos de telaraña, salud, piezas de armadura",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Upgrades found": "Mejoras encontradas",
+  "Hidden upgrades per level": "Mejoras ocultas por nivel",
+  "Progress": "Progreso",
+  "Levels complete": "Niveles completados",
+  "Bosses defeated": "Jefes derrotados"
+ }
+}

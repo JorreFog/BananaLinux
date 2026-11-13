@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "How it plays": "Cómo se juega",
+  "Auto-battles: you build a program deck of chips that the Navi uses in order.": "Autobatallas: armas un mazo de chips con el orden que usa el Navi.",
+  "Deck": "Mazo",
+  "Program the chip order.": "Programa el orden de los chips.",
+  "Battle": "Batalla",
+  "Your Navi HP": "HP de tu Navi",
+  "Enemy HP": "HP enemigo",
+  "Tips": "Consejos",
+  "Order matters.": "El orden importa.",
+  "Tournaments": "Torneos",
+  "Structure": "Estructura",
+  "Tournaments.": "Torneos.",
+  "Items": "Objetos",
+  "Collect": "Coleccionar",
+  "Collect chips.": "Recoge chips.",
+  "Goal": "Objetivo",
+  "Win the tournaments.": "Gana los torneos."
+ }
+}

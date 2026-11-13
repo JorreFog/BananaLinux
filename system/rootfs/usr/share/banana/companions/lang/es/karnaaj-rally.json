@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Controls": "Controles",
+  "A accelerate, B brake, R use weapon. Combat rally racing.": "A acelerar, B frenar, R usar arma. Rally de combate.",
+  "Car": "Auto",
+  "Upgrades": "Mejoras",
+  "Buy armour, engine and weapons between races.": "Compra armadura, motor y armas entre carreras.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Weapons damage rivals; save boosts for straights.": "Las armas dañan a los rivales; guarda los turbos para las rectas.",
+  "Tracks": "Pistas",
+  "Structure": "Estructura",
+  "Tracks over themed worlds.": "Pistas en mundos con temas.",
+  "Weapons": "Armas",
+  "Items": "Objetos",
+  "Pickups on track: missiles, mines, boosts.": "Recogibles en la pista: misiles, minas y turbos.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Unlock new cars.": "Desbloquea coches nuevos.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win the championship.": "Gana el campeonato."
+ }
+}

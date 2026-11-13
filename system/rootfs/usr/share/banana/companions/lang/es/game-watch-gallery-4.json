@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "How to play": "Cómo se juega",
+  "Each Game & Watch has a Classic (original LCD) and a Modern (Mario characters) version.\nScore points to earn stars; stars unlock more games.": "Cada Game & Watch tiene una versión Clásica (LCD original) y una Moderna (personajes de Mario).\nGana puntos para conseguir estrellas; las estrellas desbloquean más juegos.",
+  "Controls": "Controles",
+  "D-pad moves, A/B act as the original buttons\nSelect returns to the gallery": "El D-pad mueve, A/B activan los botones originales\nSelect vuelve a la galería",
+  "Games": "Juegos",
+  "Main games": "Juegos principales",
+  "Classic LCD titles such as Fire, Octopus, Chef, Mario's Cement Factory, Donkey Kong Jr. and Boxing, with more in the museum": "Títulos clásicos LCD como Fire, Octopus, Chef, Mario's Cement Factory, Donkey Kong Jr. y Boxing, y más en el museo",
+  "Stars": "Estrellas",
+  "Every game awards up to 5 stars per mode by score.": "Cada juego otorga hasta 5 estrellas por modo según la puntuación.",
+  "Tips": "Consejos",
+  "Scoring": "Puntuación",
+  "Misses end the game: most games allow 3.\nScores of 200/500 often clear the misses.\nSpeed rises with score, so stay ahead of the rhythm.": "Los fallos terminan la partida: la mayoría permite 3.\nLas puntuaciones de 200/500 suelen salvar los fallos.\nLa velocidad sube con la puntuación, así que adelántate al ritmo.",
+  "Gallery": "Galería",
+  "Menus": "Menús",
+  "Gallery: pick a game\nMuseum: unlocked extra games and records\nOptions/records: high scores per game": "Galería: elige un juego\nMuseo: juegos extra y récords desbloqueados\nOpciones/récords: mejores puntuaciones por juego",
+  "Using stars": "Usar las estrellas",
+  "Stars earned in any game open new games and museum items.": "Las estrellas ganadas en cualquier juego desbloquean nuevos juegos y objetos del museo.",
+  "Museum": "Museo",
+  "Unlocked original Game & Watch units, playable in their LCD form.\nCollect stars to fill it.": "Consolas Game & Watch originales desbloqueadas, jugables en su versión LCD.\nRecoge estrellas para llenarlo.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Earn 5 stars in both modes of every game to complete the gallery.": "Gana 5 estrellas en ambos modos de cada juego para completar la galería."
+ }
+}

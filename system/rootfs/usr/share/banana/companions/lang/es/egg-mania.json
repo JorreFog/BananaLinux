@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Score": "Puntuación",
+  "Level score": "Puntuación del nivel",
+  "Blocks placed": "Bloques colocados",
+  "Combo bricks": "Ladrillos de combo",
+  "How to play": "Cómo se juega",
+  "Catch the falling blocks and build a tower out of the rising water before your rival does. Rotate with L/R, drop with Down. Holes in the tower make it collapse; full rows are solid.": "Atrapa los bloques que caen y levanta una torre con el agua que sube antes que tu rival. Gira con L/R y baja con Abajo. Los huecos en la torre la hacen caer; las filas completas son sólidas.",
+  "Tips": "Consejos",
+  "In versus modes the rival egg's tower races yours; bombs (Bomb mode) knock chunks out of the opponent's tower.": "En los modos versus la torre del huevo rival compite con la tuya; las bombas (modo Bomb) le quitan trozos de la torre al oponente.",
+  "Level": "Nivel",
+  "Mode value": "Valor del modo",
+  "Pieces": "Piezas",
+  "Pieces are Tetris-like shapes; special bricks (bombs, stars) appear in some modes.": "Las piezas son formas tipo Tetris; en algunos modos aparecen ladrillos especiales (bombas, estrellas).",
+  "Unlocks": "Desbloqueos",
+  "Spook unlocked": "Spook desbloqueado",
+  "Yolkohama unlocked": "Yolkohama desbloqueado",
+  "Progress": "Progreso",
+  "Survival wins": "Victorias en supervivencia"
+ }
+}

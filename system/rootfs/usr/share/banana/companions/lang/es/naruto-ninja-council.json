@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "How it plays": "Cómo se juega",
+  "Side-scrolling ninja action as Naruto, Sasuke, Sakura, Kakashi...": "Acción ninja de desplazamiento lateral con Naruto, Sasuke, Sakura, Kakashi...",
+  "Special moves use chakra.": "Los movimientos especiales usan chakra.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Substitution to escape.": "Sustitución para escapar.",
+  "Missions": "Misiones",
+  "Stage": "Escenario",
+  "Sub-stage": "Subescenario",
+  "Structure": "Estructura",
+  "Missions.": "Misiones.",
+  "Items": "Objetos",
+  "Scrolls.": "Pergaminos.",
+  "Collect": "Coleccionar",
+  "Unlock ninjas.": "Desbloquea ninjas.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Finish the story.": "Termina la historia."
+ }
+}

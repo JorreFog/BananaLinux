@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Turtles": "Tortugas",
+  "Status": "Estado",
+  "Turtle EXP": "EXP de la tortuga",
+  "Difficulty": "Dificultad",
+  "Leonardo, Raphael, Donatello, Michelangelo; health": "Leonardo, Raphael, Donatello, Michelangelo; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Each turtle has a unique move\nLeonardo, Raphael, Donatello and Michelangelo each lead some acts; switch turtles where the game allows": "Cada tortuga tiene un movimiento único\nLeonardo, Raphael, Donatello y Michelangelo encabezan algunos actos; cambia de tortuga donde el juego lo permita",
+  "Bosses": "Jefes",
+  "Bosses at stage ends\nActs end with boss fights; the final blow of Act 7 closes the story": "Jefes al final de los escenarios\nLos actos terminan con combates de jefe; el golpe final del Acto 7 cierra la historia",
+  "Levels": "Niveles",
+  "City levels": "Niveles de la ciudad",
+  "Free-roaming hubs": "Centros de libre exploración",
+  "the Turtles' Lair, the Streets and the Rooftops; levels include a construction site, a retro diner and a tower with garden and lobby": "la Guarida de las Tortugas, las Calles y las Azoteas; los escenarios incluyen una construcción, un restaurante retro y una torre con jardín y vestíbulo",
+  "Items": "Objetos",
+  "Health\nHealth refills from pizza-style pickups and between acts": "Salud\nLa salud se rellena con recogibles de pizza y entre actos",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nTrophy Room and a Music Player unlock with progress": "Objetos ocultos\nLa Sala de Trofeos y el Reproductor de música se desbloquean con el progreso",
+  "Progress": "Progreso",
+  "Levels cleared\nSeven acts, each with cut scenes, then the conclusion and credits": "Niveles superados\nSiete actos, cada uno con escenas de cine, y luego el desenlace y los créditos"
+ }
+}

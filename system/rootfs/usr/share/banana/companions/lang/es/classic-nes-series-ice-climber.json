@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Jump (breaks the ice above)": "Saltar (rompe el hielo de arriba)",
+  "Swing the hammer": "Balalancea el martillo",
+  "Walk": "Camina",
+  "Climbing": "Escalar",
+  "Break through the floor above and jump up. The screen scrolls up as you climb; falling off the bottom costs a life.": "Rompe el suelo de arriba y salta. La pantalla sube a medida que escalas; caerte por abajo cuesta una vida.",
+  "Enemies": "Enemigos",
+  "Topi push ice blocks to fill holes: hit them with the hammer. Nitpicker birds swoop: hit them when they dive. Polar bears jump to scroll the screen.": "Topi empuja bloques de hielo para tapar agujeros: golpéalos con el martillo. Las aves Nitpicker se lanzan en picado: golpéalas cuando bajan. Los osos polares saltan para que la pantalla se mueva.",
+  "Mountains": "Montañas",
+  "32 mountains, each 8 floors plus a bonus stage at the top with vegetables and the condor.": "32 montañas, cada una con 8 pisos más una etapa de bonus arriba con verduras y el cóndor.",
+  "Vegetables": "Verduras",
+  "Each mountain's bonus stage has one vegetable kind (eggplant, carrot, cabbage, cucumber, corn...); every one you grab before the timer runs out adds points.": "La etapa de bonus de cada montaña tiene un tipo de verdura (berenjena, zanahoria, repollo, pepino, maíz...); cada una que agarres antes de que se acabe el temporizador suma puntos.",
+  "Catch the condor's legs at the very top of the bonus stage for the big bonus. Topi, birds and ice blocks broken also count toward the tally.": "Atrapa las patas del cóndor en lo más alto de la etapa de bonus para el gran bonus. Topi, las aves y los bloques de hielo rotos también suman al total.",
+  "Progress": "Progreso",
+  "Clear the mountain by reaching the bonus stage; the next mountain starts after the tally.": "Supera la montaña llegando a la etapa de bonus; la siguiente montaña empieza tras el recuento."
+ }
+}

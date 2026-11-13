@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Officer": "Oficial",
+  "Current character level": "Nivel actual del personaje",
+  "Equipped weapon id": "ID del arma equipada",
+  "Officer levels": "Niveles de los oficiales",
+  "Battle": "Batalla",
+  "Tips": "Consejos",
+  "Musou attack when the gauge is full clears crowds; break enemy officers' morale by taking their bases on the map. Retreat to an allied base to recover.": "El ataque Musou con el medidor lleno barre multitudes; rompe la moral de los oficiales enemigos tomando sus bases en el mapa. Retírate a una base aliada para recuperarte.",
+  "Campaign": "Campaña",
+  "Each stage is a board-like map: move between bases each turn, fight battles where you meet enemies, and take the enemy commander's base to win.": "Cada etapa es un mapa tipo tablero: muévete entre bases en cada turno, combate donde encuentres enemigos y toma la base del comandante enemigo para ganar.",
+  "Items": "Objetos",
+  "Encyclopedia items": "Objetos de la enciclopedia",
+  "Items dropped by officers boost stats; weapons unlock as characters level.": "Los objetos que sueltan los oficiales suben las estadísticas; las armas se desbloquean al subir de nivel los personajes.",
+  "Characters": "Personajes",
+  "Characters unlocked": "Personajes desbloqueados",
+  "Progress": "Progreso"
+ }
+}

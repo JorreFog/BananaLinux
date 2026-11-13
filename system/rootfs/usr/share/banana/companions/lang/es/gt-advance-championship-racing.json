@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Race HUD": "HUD de carrera",
+  "Position, lap counter, speed and the tachometer sit on the top screen.\nThis page lists what to watch for.": "Posición, contador de vueltas, velocidad y tacómetro están en la pantalla superior.\nEsta página lista lo que debes vigilar.",
+  "Controls": "Controles",
+  "A accelerate, B brake\nR shift up / L shift down (manual)\nSelect: change view": "A acelera, B frena\nR sube cambio / L baja cambio (manual)\nSelect: cambia la vista",
+  "Cars": "Autos",
+  "Car classes": "Clases de auto",
+  "Cars are tuned Japanese street and touring machines.\nWinning races unlocks more cars and tuning parts.": "Autos japoneses callejeros y de turismo ajustados.\nGanar carreras desbloquea más autos y piezas de ajuste.",
+  "Tuning": "Ajuste",
+  "Engine, tyres, suspension and weight parts raise power and grip.\nHeavier power needs better tyres to stay planted.": "Las piezas de motor, neumáticos, suspensión y peso aumentan la potencia y el agarre.\nMás potencia necesita mejores neumáticos para no levantarse.",
+  "Race": "Carrera",
+  "Racing tips": "Consejos de carrera",
+  "Brake before the corner, not in it.\nThe AI is strong on straights: win on corner exits.\nKeep the revs high in manual for faster launches.": "Frena antes de la curva, no en ella.\nLa IA es fuerte en las rectas: gana en la salida de las curvas.\nEn manual, mantén las revoluciones altas para acelerar más rápido.",
+  "Tracks": "Pistas",
+  "Track id": "ID de pista",
+  "Structure": "Estructura",
+  "Championship: a series of circuits, points per finish.\nTime Attack and quick race on unlocked courses.": "Campeonato: una serie de circuitos, puntos por posición final.\nTime Attack y carrera rápida en los circuitos desbloqueados.",
+  "Course types": "Tipos de circuito",
+  "Tight city courses, fast highway runs and technical mountain passes.": "Circuitos urbanos cerrados, tramos rápidos de autopista y pasos de montaña técnicos.",
+  "Garage": "Garaje",
+  "Parts": "Partes",
+  "Parts are earned by winning; equip them in the garage between races.\nCheck the power/weight figures after each change.": "Las piezas se ganan compitiendo; equípalas en el garaje entre carreras.\nRevisa las cifras de potencia/peso tras cada cambio.",
+  "Unlocks": "Desbloqueos",
+  "Collectables": "Coleccionables",
+  "Cars and tuning parts unlocked by winning championships.\nThe car list grows with each title won.": "Autos y piezas de ajuste que se desbloquean al ganar campeonatos.\nLa lista de autos crece con cada título ganado.",
+  "Championships": "Campeonatos",
+  "Goal": "Objetivo",
+  "Win every championship class to unlock the full garage.\nFirst-place finishes give the most points.": "Gana cada clase de campeonato para desbloquear todo el garaje.\nTerminar primero da más puntos."
+ }
+}
