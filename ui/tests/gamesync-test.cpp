@@ -156,6 +156,24 @@ int main(int argc, char** argv)
 		size_t rp = stat.rfind(')');
 		expect(kp > 0 && (kill(kp, 0) != 0 || (rp != std::string::npos && stat.compare(rp + 2, 1, "Z") == 0)), "what the sync started is killed with it");
 	}
+	// a DS game's end told to nds-saves in the background, and the next game's start waiting for it: a stand-in that
+	// takes its time has written its record by the time gamePlayedDone returns
+	{
+		std::string tool = d + "/nds-saves-slow", done = d + "/played.done";
+		std::ofstream(tool) << "#!/bin/sh\nsleep 0.5\necho \"$*\" > '" << done << "'\n";
+		chmod(tool.c_str(), 0755);
+		unlink(done.c_str());
+		setenv("BANANA_NDS_SAVES", tool.c_str(), 1);
+		expect(!gamesync::gamePlayed("gba", "/roms/gba/Game.gba"), "a GBA game's end isn't told to nds-saves");
+		expect(gamesync::gamePlayed("nds", "/roms/nds/Game.nds"), "a DS game's end is told to nds-saves");
+		expect(access(done.c_str(), F_OK) != 0, "the telling runs in the background");
+		gamesync::gamePlayedDone();
+		std::string line;
+		std::getline(std::ifstream(done), line);
+		expect(line == "/roms/nds/Game.nds --played", "the next game's start waits for the telling to end");
+		gamesync::gamePlayedDone();	// (nothing to wait for: returns at once)
+		unsetenv("BANANA_NDS_SAVES");
+	}
 	if (!fails) fprintf(stderr, "gamesync-test: all checks passed\n");
 	return fails ? 1 : 0;
 }

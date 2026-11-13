@@ -3132,6 +3132,7 @@ int main(int argc, char** argv)
 		// A sync that keeps the lock past that is told the game is starting all the same (game.pid can only name it once
 		// it runs): a save it was about to place stays unplaced, for the next sync to decide
 		std::ofstream("/run/banana/game.starting") << getpid() << "\n";
+		gamesync::gamePlayedDone();	// (the last DS game's end, told to nds-saves before this one's launcher asks it)
 		int saveLock = gamesync::holdSaves("/run/banana", 2000);
 		if (saveLock < 0) logf("game start: another sync is saving");
 		double start = nowMs();

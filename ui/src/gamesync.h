@@ -60,6 +60,10 @@ namespace gamesync
 	// resume state belongs to; a save replaced by hand before the next start then isn't played under that state.
 	// False: not a DS game, or no nds-saves
 	bool gamePlayed(const std::string& system, const std::string& rom);
+	// before a game starts: that telling, when it is still going, waited for. The launcher's own nds-saves reads the
+	// record it writes, and reading the one from before (the game started again at once, the card busy) would take the
+	// session just ended for one that never came to its end
+	void gamePlayedDone();
 
 	class Wait
 	{

@@ -1,5 +1,6 @@
 #include "gamesync.h"
 #include "json.h"
+#include <cerrno>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -135,16 +136,25 @@ namespace gamesync
 		spawnDetached({ tool, "--run", run, "--report", report, "sync", "--auto", "quit", "--rom", rom });
 		return true;
 	}
+	// nds-saves --played still going, -1 when none: the next game waits for it
+	static pid_t playedPid = -1;
+	void gamePlayedDone()
+	{
+		if (playedPid <= 0) return;
+		while (waitpid(playedPid, nullptr, 0) < 0 && errno == EINTR) {}
+		playedPid = -1;
+	}
 	bool gamePlayed(const std::string& system, const std::string& rom)
 	{
+		gamePlayedDone();
 		if (system != "nds") return false;
 		const char* env = getenv("BANANA_NDS_SAVES");	// (the tests' stand-in)
 		std::string tool = env ? env : "/usr/libexec/banana/nds-saves";
 		if (access(tool.c_str(), X_OK) != 0) return false;
 		// (in the background, as the sync after the game is: an MD5 or two of files on the card, which a busy card
-		// can take its time over, and nothing of the menu's waits on it)
-		spawnDetached({ tool, rom, "--played" });
-		return true;
+		// can take its time over, and nothing of the menu's waits on it but the next game's start, gamePlayedDone)
+		playedPid = spawnChild({ tool, rom, "--played" });
+		return playedPid > 0;
 	}
 
 	void Wait::begin(const std::string& t, const std::string& r, const std::string& run, double now)
