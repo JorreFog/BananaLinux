@@ -237,6 +237,7 @@ namespace banana
 			}
 			else if (style == "tile") { radius(32); mat(); texture(); m.ring = 2 * q; m.ringC = mcol("tileEdge"); }
 			else if (style == "plate") { radius(32); plate("plateTop", "plateMid", "plateLow", pAt); }
+			else if (style == "qfill") { radius(18); plate("stateTop", "stateMid", "stateLow", sAt); }	// (the quick menu's level in its slot)
 			else if (style == "danger") { radius(32); plate("dangerTop", "danger", "dangerLow", 0.4f); m.litC = Color(1, 1, 1, 0.3f); }
 			else if (style == "card") { radius(dh < 110 * q ? 24 : 32); mat(); dots(); m.ring = 2 * q; m.ringC = mcol("hair"); m.rim = 3 * q; m.rimC = mcol("cardRim"); }
 			else if (style == "pill") { radius(1000); mat(); m.ring = 2 * q; m.ringC = mcol("hair"); }

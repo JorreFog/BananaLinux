@@ -901,6 +901,13 @@ namespace banana
 		std::string gRomFile;			// the game's file name (gameRom): its per-game settings' key
 		// the quick menu's rows: a settings row (its index in items) or the game's performance mode (-1)
 		std::vector<int> qRows;
+		// (the board of the material look: its sliders, the handheld's state from the sysstat tool, its drawing)
+		int quickSliders() const;
+		bool quickPoll(double t);
+		void renderQuickBoard(float chipY);
+		std::map<std::string, std::string> qStats;
+		double qStatAt = 0;
+		bool qBoard = false;
 		int qSel = 0, qPerf = 0;
 		float qY = 76, qPitch = 49, qChipY = 422;	// where renderQuick put the rows and the chips (the whole screen's height)
 		Result pressQuick(Key k);

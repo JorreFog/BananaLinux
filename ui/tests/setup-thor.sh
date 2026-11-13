@@ -122,12 +122,16 @@ ts_run accounts "home 0; section Accounts; press down; press a; sleep 300; sleep
 grep -q '^logout' "$TS/run/fake-steam.log" || { echo "FAIL thor accounts: Steam wasn't logged out"; fail=1; }
 [ "$(grep -c '^login-qr' "$TS/run/fake-steam.log")" -ge 2 ] || { echo "FAIL thor accounts: A on Steam didn't start the sign-in with the app"; fail=1; }
 grep -q '^sgdb_key=KEY123$' "$TS/data/accounts.conf" || { echo "FAIL thor accounts: no sgdb_key in accounts.conf"; fail=1; }
-# the quick menu (Home held in a game): its rows on the bottom screen, a step right on Performance kept for the game, a
-# tap on the top brightness's slider, B closes it
-ts_run quick "home 0; quick $TS/roms/nds/Peel Quest.nds; quickstate; shot quick; press down; press down; press down; press right; quickstate; touch 1 400 60; quickstate; press b; quickstate"
+# the quick menu (Home held in a game), a board of tiles on the bottom screen: the sliders one under the other, then the
+# choices three a row (down from the last slider is the game's mode, right of it the fan); A steps a choice and the
+# game's mode is kept for the game; a tap on a slider sets its level; the meters show what the sysstat tool says; B closes
+printf '#!/bin/sh\nprintf "cpu=20\\ncpu_mhz=2710\\ncpu_c=50\\ngpu=4\\ngpu_mhz=680\\ngpu_c=44\\nmem_used_mb=2048\\nmem_total_mb=7300\\nmem_pct=28\\npower_mw=3300\\npower_state=Charging\\nbattery=100\\nfan_pct=16\\n"\n' > "$TS/sysstat"; chmod +x "$TS/sysstat"
+ts_run quick "home 0; quick $TS/roms/nds/Peel Quest.nds; quickstate; shot quick; press down; press down; press down; press a; quickstate; press right; press a; quickstate; press up; quickstate; touch 1 320 130; quickstate; press b; quickstate" BANANA_SYSSTAT="$TS/sysstat"
 ts_check quick "quickstate: sel=0 top=[0-9]* bottom=[0-9]* volume=[0-9]* perf= fan=[a-z]* leds=[a-z]* leds_level=[a-z]* leds_effect=[a-z]*"
-ts_check quick "quickstate: sel=3 .* perf=powersave"
-ts_check quick "quickstate: sel=0 top=400 "
+ts_check quick "quickstate: sel=3 .* perf=powersave fan=moderate"
+ts_check quick "quickstate: sel=4 .* perf=powersave fan=a"
+ts_check quick "quickstate: sel=2 "
+ts_check quick "quickstate: sel=2 top=[0-9]* bottom=[0-9]* volume=60 "
 ts_check quick "quickstate: closed"
 grep -q '^Peel Quest.nds = powersave$' "$TS/data/per-game-perf.conf" 2>/dev/null || { echo "FAIL thor quick menu: the game's performance mode wasn't kept"; fail=1; }
 # the theme's fades (no iris at these shapes): a game ending (black to the menu), the boot into the menu, the arrival,

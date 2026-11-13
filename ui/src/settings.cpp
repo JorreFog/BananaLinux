@@ -3234,6 +3234,7 @@ namespace banana
 		scrapeChanged |= pollSync(t);
 		scrapeChanged |= pollSteam();
 		scrapeChanged |= pollPickGames();
+		scrapeChanged |= quickPoll(t);
 		bool changed0 = false;
 		if (raCheck)
 		{
@@ -3395,6 +3396,7 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
+		if (page == QUICK && qBoard) return std::max(0, (int)(qStatAt + 1000 - t) + 1);	// (the meters, once a second)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
