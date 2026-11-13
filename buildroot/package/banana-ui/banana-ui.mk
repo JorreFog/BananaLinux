@@ -12,7 +12,8 @@ BANANA_UI_LICENSE_FILES = ../LICENSE
 BANANA_UI_DEPENDENCIES = freetype libdrm alsa-lib zlib host-pkgconf libcurl openssl libssh2 libsmb2
 
 define BANANA_UI_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CXX="$(TARGET_CXX)" PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" \
+	# (CC too: banana-ui links rcheevos' rhash, C built with CC - the host's cc otherwise)
+	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CXX="$(TARGET_CXX)" CC="$(TARGET_CC)" CFLAGS="$(TARGET_CFLAGS)" PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" \
 		CXXFLAGS="$(TARGET_CXXFLAGS) -O2" LDFLAGS="$(TARGET_LDFLAGS)" banana-ui banana-scrape banana-sync banana-bshare banana-fetch
 	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CC="$(TARGET_CC)" PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" CFLAGS="$(TARGET_CFLAGS)" \
 		LDFLAGS="$(TARGET_LDFLAGS)" banana-leaseshim.so libasound_module_pcm_banana_eq.so

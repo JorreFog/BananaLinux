@@ -1127,6 +1127,9 @@ namespace banana
 		wizard = false;
 		closeBshare();
 		closeServers();	// (banana-fetch's session: its answers wake the loop through the worker's eventfd)
+		if (achLoader) achLoader->stop();	// (the Achievements page's threads end after what they are doing)
+		achLoader.reset();
+		achTex.clear();
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1511,6 +1514,7 @@ namespace banana
 		if (page == BLUETOOTH) return pressBluetooth(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == GAME) return pressGame(k);
+		if (page == ACHIEVEMENTS) return pressAch(k);
 		if (page == ARTPICK) return pressArt(k);
 		if (page == COLORS) return pressColors(k);
 		if (page == SPEAKEREQ) return pressEq(k);
@@ -1700,6 +1704,7 @@ namespace banana
 		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
+		if (page == ACHIEVEMENTS) return touchAch(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
 		if (page == SPEAKEREQ) return touchEq(cx, cy);
@@ -2410,6 +2415,7 @@ namespace banana
 		pgRom = "Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds";
 		static const char* const PG[] = { "Emulator", "Shader", "Threaded 3D", "Microphone", "Name", "Sort title", "Box art", "Delete" };
 		for (int r = PG_EMU; r <= PG_DELETE; r++) one(std::string("Game page > ") + PG[r], gameHelpOf(r));
+		one("Game page > Achievements", gameHelpOf(PG_ACH));
 		pgRom = rom;
 		return n;
 	}
@@ -2430,6 +2436,7 @@ namespace banana
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == GAME) { renderGame(); return; }
+		if (page == ACHIEVEMENTS) { renderAch(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
 		if (page == COLORS) { renderColors(); return; }
 		if (page == SPEAKEREQ) { renderEq(); return; }
@@ -2687,6 +2694,7 @@ namespace banana
 		changed |= btUpdate();
 		if (fm && updateFiles(t)) changed = true;	// (a job's progress, its end)
 		if (bs && page == BSHARE && updateBshare(t)) changed = true;
+		if (page == ACHIEVEMENTS && achLoader && achLoader->gen() != achSeen) changed = true;	// (the list, a badge)
 		if (srv && updateServers(t)) changed = true;	// (also under the keyboard: a login answered; Files' row of the job)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
@@ -2795,6 +2803,7 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
+		if (page == ACHIEVEMENTS && achLoader && (achLoader->busy() || achLoader->fetchingBadges())) return 200;	// (the list, the badges as they come)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -5525,11 +5534,12 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped, const std::string& system)
 	{
 		open();
 		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
+		pgSystem = system;
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
 		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
@@ -5544,8 +5554,21 @@ namespace banana
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
 		}
+		// Achievements (a game of the library): any other game's first row; a DS game's after its own rows (before Delete,
+		// below). Its value from the card's cache (the list last seen here or in the game panel), read once now, not at
+		// each frame
+		if (!path.empty())
+		{
+			if (!nds) pgRows.insert(pgRows.begin(), PG_ACH);
+			pgAchValue = lang::tr("Show the list");
+			std::string h; uint32_t id = 0; ach::List l;
+			if (!ach::consoleFor(system)) pgAchValue = lang::tr("None for this system");
+			else if (ach::readId(achCacheDir(), ach::romKey(path), h, id) && id && ach::readList(achCacheDir(), id, l) && !l.items.empty())
+				pgAchValue = std::to_string(l.unlocked()) + " / " + std::to_string(l.items.size());
+		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
+		if (nds && !path.empty()) pgRows.push_back(PG_ACH);
 		pgDelAll = pgDelArmed = pgChanged = false;
 		if (deletableRom(path)) pgRows.push_back(PG_DELETE);	// (last: never the row the page opens on)
 		std::string cur = gameEmulator(romName);
@@ -5651,6 +5674,7 @@ namespace banana
 				return DELETED;
 			}
 			if (k == Key::START && row == PG_DELETE) return NONE;	// (START is Done, never a delete)
+			if (k == Key::A && row == PG_ACH) { openAch(); return MOVED; }
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -5674,7 +5698,7 @@ namespace banana
 			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps)
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements: its page)
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -5710,6 +5734,9 @@ namespace banana
 				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
 				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
 				  "game, no BIOS. A asks first; A again deletes.")
+				: row == PG_ACH ? lang::tr("Every achievement of this game on RetroAchievements: which are unlocked (when, and softcore or hardcore) and which "
+				  "are still locked, with their points and what each asks for. A shows the list. It is read from the site with the account in "
+				  "Settings > System > First-time setup, and kept on the card for when there is no connection.")
 				: !message.empty() ? message
 				: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
 				  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
@@ -5753,9 +5780,9 @@ namespace banana
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
 		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : "Box art"; };
 		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
@@ -5763,7 +5790,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5782,7 +5809,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || (pgRows[r] == PG_DELETE && pgDelArmed);
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || (pgRows[r] == PG_DELETE && pgDelArmed);
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -5792,7 +5819,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();

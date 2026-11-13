@@ -963,7 +963,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped,
+					lib.systemOf(ui.gameIndex()).id);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -1200,6 +1201,34 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.gameComp = on ? &gc : nullptr;
 			settings.gameOpen("Companion Test", "Game Boy Advance", scr, true);
 			logf("gcpanel %s: companion %s", rom.c_str(), on ? gc.game()->title.c_str() : "none");
+		}
+		else if (op == "achdone")
+		{
+			// achdone: real time until the Achievements page's list (and its badges asked for so far) is there, 10 s at most;
+			// its state logged
+			for (int i = 0; i < 1000 && settings.achWorking(); i++) usleep(10000);
+			settings.update(now);
+			logf("achdone: %s", settings.achState().c_str());
+		}
+		else if (op == "achopen")
+		{
+			// achopen <system id> <rom>: that game's Achievements page, as from its game page
+			std::string sys, rom;
+			cs >> sys;
+			std::getline(cs >> std::ws, rom);
+			std::string name = rom.substr(rom.rfind('/') + 1);
+			settings.openAchievements(name.substr(0, name.rfind('.')), rom, sys);
+			logf("achopen %s %s: %s", sys.c_str(), rom.c_str(), settings.achState().c_str());
+		}
+		else if (op == "gamesys")
+		{
+			// gamesys <system id> <rom>: the game panel's game (before gamepanel): its system and file, as runGame gives them
+			std::string sys, rom;
+			cs >> sys;
+			std::getline(cs >> std::ws, rom);
+			settings.gameSystem(sys);
+			settings.gameRom(rom);
+			logf("gamesys %s %s", sys.c_str(), rom.c_str());
 		}
 		else if (op == "gstates")
 		{
@@ -2311,6 +2340,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	std::string gameRomPath;	// the running game's file (the game panel's save states)
+	std::string gameSysId;		// its system (the game panel's achievements list)
 	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
 	nds::Overlay ndsOverlay;	// the DS companion's picture for BananaDS's bottom screen (nds/overlay.h)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
@@ -2489,7 +2519,8 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped,
+					lib.systemOf(g).id);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -2589,6 +2620,7 @@ int main(int argc, char** argv)
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
+			settingsView.gameSystem(gameSysId);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
@@ -2753,6 +2785,7 @@ int main(int argc, char** argv)
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;
+		gameSysId = sd.id;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
