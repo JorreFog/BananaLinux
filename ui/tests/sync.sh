@@ -1088,10 +1088,10 @@ if [ -x "$HERE/banana-ui" ]; then
     # (Device name, the paired page's row after Systems: typed, renamed in RomM by banana-sync rename, the new name on the row)
     env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-namerow; press a; press b; press b; press b; press b; press b; type Max DS; press start; sleep 300; wait 600; wait 600; shot hs-renamed" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-namerow; press a; press b; press b; press b; press b; press b; type Den DS; press start; sleep 300; wait 600; wait 600; shot hs-renamed" \
         2> "$OUT/ui-rename.log" || bad "banana-ui (rename) exited $?"
-    grep -q ' rename Max DS$' "$SL" || bad "Device name: no rename asked: $(tail -3 "$SL")"
-    grep -q '"name": "Max DS"' "$FX/data/romsync.json" || bad "Device name: the name not kept: $(cat "$FX/data/romsync.json")"
+    grep -q ' rename Den DS$' "$SL" || bad "Device name: no rename asked: $(tail -3 "$SL")"
+    grep -q '"name": "Den DS"' "$FX/data/romsync.json" || bad "Device name: the name not kept: $(cat "$FX/data/romsync.json")"
     rlog rename "home server: rename ok"
     for s in hs-namerow hs-renamed; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
     grep -q '"backend": "romm"' "$FX/data/romsync.json" 2>/dev/null || bad "RomM: no pairing written"
