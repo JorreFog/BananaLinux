@@ -76,7 +76,7 @@ Expect it. The packages are ordered here by how likely they are to need work:
 
 | Package | Where | Likely trouble |
 |---|---|---|
-| `armsx2` | `buildroot/package/armsx2` | upstream builds with clang; this recipe uses GCC and its SDL 3 front end instead of Qt |
+| `armsx2` | `buildroot/package/armsx2` | built with Buildroot's clang (ARMSX2 needs `preserve_most`), SVE off by an explicit `-march`; its SDL 3 front end instead of Qt |
 | `azahar` | `buildroot/package/azahar` | Qt 6.9 from Buildroot instead of its bundled Qt; Wayland instead of X11 |
 | `dolphin`, `vita3k` | `buildroot/package/...` | their bundled libraries cross-compiled; 17 ROCKNIX patches on Dolphin |
 | `flycast`, `libretro-flycast` | `buildroot/package/...` | their bundled libraries: built static now (`BUILD_SHARED_LIBS=OFF`), from reading the CMake |
