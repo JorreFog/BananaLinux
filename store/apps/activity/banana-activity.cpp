@@ -2150,7 +2150,11 @@ void App::drawChips(Canvas &c, int right, int y)
 void App::drawBubble(Canvas &c, const std::string &title, const std::string &sub)
 {
 	c.box(66, 58, 508, 84, bubbleStyle());
-	c.text(title, 320, 69, 26, C_INK, true, 1, 0, 0.52f);
+	/* #251: a long game title stepped down a few sizes, then cut with an ellipsis, inside the bubble */
+	const int maxw = 508 - 2 * 18;
+	int px = 26;
+	while (px > 19 && c.textWidth(title, px, true, 0.52f, false) > c.U(maxw)) px--;
+	c.text(title, 320, 69 + (26 - px) / 2, px, C_INK, true, 1, maxw, 0.52f);
 	c.text(sub, 320, 105, 14, C_MUTED, false, 1, 0, 1.3f, true);
 	c.tri(304, 138, 336, 138, 320, 154, C_LINE);
 	c.tri(308, 141, 332, 141, 320, 152, C_BUBBLE);
