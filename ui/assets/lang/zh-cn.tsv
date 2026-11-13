@@ -1774,7 +1774,7 @@ settings		Port	端口
 settings		Its address	其地址
 settings		Type RomM's address first.	请先输入 RomM 的地址。
 settings		RomM {ver}	RomM {ver}
-settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}：升级到 5.4 或更新版本前，存档只会从服务器下载，不会上传。
+settings		RomM {ver}: until it's 5.4 or newer, saves sync after a game, not before one, and there are no save slots.	RomM {ver}：升级到 5.4 或更新版本前，存档在游戏结束后同步，游戏开始前不同步，也没有存档槽位。
 settings		banana-sync didn't answer.	banana-sync 没有响应。
 settings		Asking {hsName} for a code...	正在向 {hsName} 请求配对码…
 settings		Pairing with the code...	正在用配对码配对…

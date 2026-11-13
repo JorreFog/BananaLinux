@@ -130,7 +130,7 @@ namespace banana
 	void Settings::hsRommFound(const std::string& url, const std::string& ver, bool old)
 	{
 		hsKind = "romm"; hsUrl = url; hsName = "RomM " + ver;
-		hsNote = old ? "RomM " + ver + ": until it's 5.4 or newer, saves only come down from it, none go up." : "";
+		hsNote = old ? "RomM " + ver + ": until it's 5.4 or newer, saves sync after a game, not before one, and there are no save slots." : "";
 		fprintf(stderr, "home server: RomM %s at %s\n", ver.c_str(), url.c_str());	// (what a test waits for)
 	}
 

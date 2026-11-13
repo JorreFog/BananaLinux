@@ -1715,7 +1715,7 @@ settings		Port	Порт
 settings		Its address	Его адрес
 settings		Type RomM's address first.	Сначала введите адрес RomM.
 settings		RomM {ver}	RomM {ver}
-settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}: пока версия ниже 5.4, сохранения только скачиваются с него, на сервер ничего не отправляется.
+settings		RomM {ver}: until it's 5.4 or newer, saves sync after a game, not before one, and there are no save slots.	RomM {ver}: пока версия ниже 5.4, сохранения синхронизируются после игры, но не перед ней, и слотов сохранений нет.
 settings		banana-sync didn't answer.	banana-sync не ответил.
 settings		Asking {hsName} for a code...	Запрос кода у {hsName}…
 settings		Pairing with the code...	Сопряжение по коду…

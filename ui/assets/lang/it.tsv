@@ -1723,7 +1723,7 @@ settings		Port	Porta
 settings		Its address	Il suo indirizzo
 settings		Type RomM's address first.	Digita prima l'indirizzo di RomM.
 settings		RomM {ver}	RomM {ver}
-settings		RomM {ver}: until it's 5.4 or newer, saves only come down from it, none go up.	RomM {ver}: finché non è 5.4 o più recente, i salvataggi vengono solo scaricati da lì, nessuno viene inviato.
+settings		RomM {ver}: until it's 5.4 or newer, saves sync after a game, not before one, and there are no save slots.	RomM {ver}: finché non è 5.4 o più recente, i salvataggi si sincronizzano dopo una partita ma non prima, e non ci sono slot di salvataggio.
 settings		banana-sync didn't answer.	banana-sync non ha risposto.
 settings		Asking {hsName} for a code...	Richiesta di un codice a {hsName}...
 settings		Pairing with the code...	Associazione con il codice...

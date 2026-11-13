@@ -648,24 +648,41 @@ for v in 5.3.1 development; do
     bs "$cv" sync --saves-only > "$OUT/romm-$v.log" 2>&1
     [ "$(head -c 5 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
     sent=$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+    [ "$sent" = 1 ] || bad "RomM $v: the save wasn't sent: $(cat "$OUT/romm-$v.log")"
     case $v in
     5.3.1)
-        [ "$sent" = 0 ] || bad "a save was sent to RomM 5.3.1"
-        grep -q 'RomM 5.3.1 only gives saves: update RomM to 5.4 or newer' "$OUT/romm-$v.log" || bad "RomM 5.3.1: not said: $(cat "$OUT/romm-$v.log")"
+        # (with no slot: the row Grout and RomM's page would never read on 5.4)
+        [ "$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["slot"])')" = None ] || bad "RomM 5.3.1: the save went up into a slot"
         bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "status: $(bs "$cv" status)"
-        # a save changed here and on the server (the card's never synced, the server's other bytes): held, both kept,
+        srvmd5() { curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=$1" | python3 -c 'import json,sys; print(" ".join(sorted(s["content_hash"] for s in json.load(sys.stdin))))'; }
+        # a save changed here alone since it synced: sent, over the version agreed
+        { printf "played on here"; head -c 498 /dev/zero | tr '\0' y; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] || bad "RomM 5.3.1: a save changed here alone not sent: $(cat "$OUT/romm-$v-up.log")"
+        # (the server's copy changed by another device between this sync's listing and its upload: not sent over it)
+        { printf "played once more"; head -c 496 /dev/zero | tr '\0' z; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        was=$(srvmd5 102)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "GET /api/saves/[0-9]+$", "kind": "replace", "arg": {"id": 1, "updated_at": "2031-01-01T00:00:00Z"}}' >/dev/null
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        grep -q 'Up (USA).srm: changed on the server meanwhile, next time' "$OUT/romm-$v-up.log" && [ "$(srvmd5 102)" = "$was" ] || bad "RomM 5.3.1: a save sent over a copy that moved meanwhile: $(cat "$OUT/romm-$v-up.log")"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] || bad "RomM 5.3.1: the save not sent at the next sync: $(cat "$OUT/romm-$v-up.log")"
+        # a save changed here and on the server since: held, both kept,
         # the card's as it is, the server's in the vault, nothing beside the save; never the newer by the files' times
-        curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"data\": \"0a0b0c0d0e$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
-        touch -d "@$(( $(date +%s) - 86400 ))" "$OUT/$cv/saves/gba/Up (USA).srm"
+        { printf "this handheld's"; head -c 497 /dev/zero | tr '\0' x; } > "$OUT/$cv/saves/gba/Up (USA).srm"; cp "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm"
+        # (the server's as another handheld of this kind leaves it: the same row, written over in place)
+        sleep 1; curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"emulator\": \"retroarch\", \"data\": \"0a0b0c0d0e$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        touch -d "@$(( $(date +%s) + 86400 ))" "$OUT/$cv/saves/gba/Up (USA).srm"
         bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
         cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" && grep -q 'conflict, both kept: saves/gba/Up (USA).srm (the server.s in the vault)' "$OUT/romm-$v-held.log" &&
             [ -z "$(ls "$OUT/$cv/saves/gba" | grep '\.bak$')" ] && ls "$OUT/$cv/banana/save-vault/saves/gba/Up (USA)/" 2>/dev/null | grep -q '\.srm$' &&
             python3 -c 'import json,sys; h = json.load(open(sys.argv[1]))["held"]; sys.exit(0 if h["102/autosave"]["path"] == "saves/gba/Up (USA).srm" and h["102/autosave"]["vault"] else 1)' "$OUT/$cv/banana/romsync.json" ||
             bad "RomM 5.3.1: a save changed on both sides: $(cat "$OUT/romm-$v-held.log") $(ls "$OUT/$cv/saves/gba")"
-        # (kept on the Saves page: this RomM takes no save from here, so the card's stays unsent, that version counts as seen,
-        # and the next sync has nothing to hold)
-        [ "$(bs "$cv" resolve 102/autosave card 2>/dev/null | tail -1)" = ok ] && cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" ||
-            bad "RomM 5.3.1: keeping this handheld's: $(bs "$cv" saves)"
+        # (kept on the Saves page: the card's goes up over the server's, whose copy is in the vault, and the next sync
+        # has nothing to hold)
+        [ "$(bs "$cv" resolve 102/autosave card 2> "$OUT/romm-$v-resolve.log" | tail -1)" = ok ] && cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" &&
+            srvmd5 102 | grep -q "$(md5sum < "$OUT/up-$v.srm" | cut -d' ' -f1)" ||
+            bad "RomM 5.3.1: keeping this handheld's: $(cat "$OUT/romm-$v-resolve.log") $(bs "$cv" saves) server: $(srvmd5 102)"
         bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
         ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' || bad "RomM 5.3.1: a kept save held again: $(cat "$OUT/romm-$v-held.log")"
         # a save gone from the card since it synced: left as it is and said, never put back by itself (its last good copy
@@ -679,6 +696,13 @@ for v in 5.3.1 development; do
         head -c 8192 /dev/zero > "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
         bs "$cv" saves | grep -q "^held	101/autosave	saves/gba/Down (USA).srm	blank here since the last sync" || bad "RomM 5.3.1: a blank save not noted: $(bs "$cv" saves)"
         rm "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
+        # (a new save written where the lost one was, the game started over: not the agreed save played on, so held
+        # against the server's, at every sync, never sent over it)
+        was=$(srvmd5 101); { printf "started over"; head -c 500 /dev/zero | tr '\0' w; } > "$OUT/$cv/saves/gba/Down (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1; bs "$cv" sync --saves-only >> "$OUT/romm-$v-gone.log" 2>&1
+        [ "$(srvmd5 101)" = "$was" ] && [ "$(grep -c 'conflict, both kept: saves/gba/Down (USA).srm' "$OUT/romm-$v-gone.log")" = 2 ] ||
+            bad "RomM 5.3.1: a save started over where one was lost went up over the server's: $(cat "$OUT/romm-$v-gone.log")"
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
         # (one game's save, here a game of a system the server has none of: this RomM has no slots to sync it by alone,
         # so every save of every system comes down, as after a game before)
         printf 'gba rom third' > "$LV/gba/Third (USA).gba"; cp "$LV/gba/Third (USA).gba" "$OUT/$cv/roms/gba/"
@@ -690,13 +714,8 @@ for v in 5.3.1 development; do
         n=$(lists)
         bs "$cv" sync --auto launch --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1
         [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] && bad "RomM 5.3.1: every save synced before a game: $(cat "$OUT/romm-$v-rom.log")"
-        # (nor for a save left waiting to be sent, RomM since gone back to before 5.4)
-        python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["queue"] = {"101/autosave": {"md5": "x", "vault": "", "since": 1}}; json.dump(c, open(sys.argv[1], "w"))' "$OUT/$cv/banana/romsync.json"
-        bs "$cv" sync --auto wifi > "$OUT/romm-$v-rom.log" 2>&1
-        python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["queue"] = {}; json.dump(c, open(sys.argv[1], "w"))' "$OUT/$cv/banana/romsync.json"
+        [ "$(lists)" = "$n" ] || bad "RomM 5.3.1: its games listed before a game: $(cat "$OUT/romm-$v-rom.log")"
         sed -i '/^homesync_auto/d' "$OUT/$cv/banana/settings.conf"
-        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] && bad "RomM 5.3.1: every save synced for the Wi-Fi queue: $(cat "$OUT/romm-$v-rom.log")"
-        [ "$(lists)" = "$n" ] || bad "RomM 5.3.1: its games listed before a game or for the Wi-Fi queue: $(cat "$OUT/romm-$v-rom.log")"
         # (a game started during a sync of every save: the saves not reached yet stay as they are)
         curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 2}' >/dev/null
         bs "$cv" sync --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1 & _k=$!; sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/$cv/run/game.pid"; wait $_k; kill $_g; rm "$OUT/$cv/run/game.pid"
@@ -706,6 +725,19 @@ for v in 5.3.1 development; do
         grep -q "RomM 5.3.1: every save synced, not only nds/Elsewhere (USA).nds's" "$OUT/romm-$v-rom.log" &&
             [ "$(head -c 5 "$OUT/$cv/saves/gba/Third (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0605040302 ] ||
             bad "RomM 5.3.1: --rom: $(cat "$OUT/romm-$v-rom.log")"
+        # (a game left with the server out of reach: its save waits, and the Wi-Fi's return, with no slot to send it by
+        # alone, syncs every save; nothing waits after)
+        echo 'homesync_auto = quit' >> "$OUT/$cv/banana/settings.conf"
+        { printf "played offline"; head -c 498 /dev/zero | tr '\0' q; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        sed -i "s|\"server\": \"http://127.0.0.1:$p\"|\"server\": \"http://127.0.0.1:1\"|" "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --rom "gba/Up (USA).gba" > "$OUT/romm-$v-q.log" 2>&1
+        sed -i "s|\"server\": \"http://127.0.0.1:1\"|\"server\": \"http://127.0.0.1:$p\"|" "$OUT/$cv/banana/romsync.json"
+        python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("queue") else 1)' "$OUT/$cv/banana/romsync.json" || bad "RomM 5.3.1: a save not left waiting with the server out of reach: $(cat "$OUT/romm-$v-q.log")"
+        bs "$cv" sync --auto wifi > "$OUT/romm-$v-q.log" 2>&1
+        srvmd5 102 | grep -q "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" &&
+            python3 -c 'import json, sys; sys.exit(1 if json.load(open(sys.argv[1])).get("queue") else 0)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a waiting save not sent when Wi-Fi came back, or still waiting: $(cat "$OUT/romm-$v-q.log")"
+        sed -i '/^homesync_auto/d' "$OUT/$cv/banana/settings.conf"
         rm "$LV/gba/Third (USA).gba"	# (the next RomM's ids as before)
         # (RomM updated, or downgraded, since the pairing: the name follows the heartbeat)
         sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
@@ -715,8 +747,7 @@ for v in 5.3.1 development; do
         bs "$cv" sync --rom "nds/Elsewhere (USA).nds" >/dev/null 2>&1
         bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "--rom: the server's name didn't follow its version: $(bs "$cv" status)" ;;
     *)
-        [ "$sent" = 1 ] || bad "RomM $v: the save wasn't sent: $(cat "$OUT/romm-$v.log")"
-        grep -q 'only gives saves' "$OUT/romm-$v.log" && bad "RomM $v taken for an old one" ;;
+        [ "$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["slot"])')" = autosave ] || bad "RomM $v taken for an old one: its save not sent to the slot" ;;
     esac
 done
 

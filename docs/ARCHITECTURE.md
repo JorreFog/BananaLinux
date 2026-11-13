@@ -328,6 +328,14 @@ go (said, its copy kept in the vault, and the Saves page stops listing it as soo
 versions agreed stay per slot, so going back finds them agreed; in the new slot every game is a save never agreed with
 it.
 
+A RomM before 5.4 has no slots: a save there is one row per file name and emulator, written over in place. Its saves
+sync all at once (after a game, by Sync now, and when Wi-Fi comes back with one waiting), never before a game, and by
+content as the slots do: a save changed here alone goes up, over the version this card last agreed and no other (the
+row is asked for once more right before, since a server with no record of what this device saw refuses no late upload); one changed on the server alone
+comes down; one changed on both is held, both kept, until its owner chooses. This has only been run against the
+stand-in saying it is 5.3.1, not a real RomM of that age; one too old to give a save's checksum has nothing taken
+from it or sent over its copy.
+
 Romhost is unchanged: the card follows the server's list (Games to sync: All, or the games ticked in Choose games), and
 Homeport decides the rest.
 
@@ -352,9 +360,9 @@ What the sync holds to, whatever happens around it:
   vault, the menu asks before the game starts (take the server's, or play without), and the Saves page offers it. A new
   save written there afterwards (the game started over) is not the old save played on, so it is decided as one that
   never agreed, at every sync until a version is agreed: the same bytes as the server's agree, anything else is a
-  conflict, both kept, never a version sent over the server's as the newer. On a RomM before 5.4 the card's saves never
-  go up, so only the first half applies: the save is noted on the Saves page, its last good copy in the vault, with
-  nothing fetched to take back. On Romhost, Homeport decides, by its plan.
+  conflict, both kept, never a version sent over the server's as the newer. On a RomM before 5.4 the same holds by the
+  save's path: the record of a save found gone or blank names no server version from then on, so a save written there
+  after is held against the server's, never sent over it. On Romhost, Homeport decides, by its plan.
 - A save put in place has the quick-resume states that belonged with the old one removed: BananaDS's resume state, and
   RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. (A save
   in the flat `saves/` doesn't say its core, so every core's folder but the DS's is looked in by the save's name:

@@ -60,7 +60,8 @@
 // A save comes down to /run first, is checked against the server's hash and installed through the vault (the save it
 // replaces kept, the install journalled: save_vault.h), after the journal of a run cut short is recovered; a blank
 // save is neither sent nor taken (save_adapt.h). RomM's saves are each game's one save file, the one its emulator
-// reads, for a game whose ROM is the server's by its contents (save_paths.h); a RomM before 5.4 only gives saves, and
+// reads, for a game whose ROM is the server's by its contents (save_paths.h); a RomM before 5.4, which has no slots,
+// syncs every save at once, each way by content, and never before a game; and
 // one that has this handheld's sync switched off gives none.
 #include "get_list.h"
 #include "json.h"

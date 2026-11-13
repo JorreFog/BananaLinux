@@ -930,7 +930,7 @@ namespace banana
 			add(HS, "phone", "Manage saves", "Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.", "", "hs_saves", {}, {}, Item::PAGE);
 			add(HS, "phone", "Systems", "Which systems' saves sync. For one game: X on it in the library, then Save sync.", "", "hs_systems", {}, {}, Item::PAGE);
 			add(HS, "phone", "Device name", "This handheld's name in RomM, shown on the saves it sends.", "", "hs_name", {}, {}, Item::PAGE);
-			// (a RomM before 5.4 has no slots: its saves only come down)
+			// (a RomM before 5.4 has no slots to choose among)
 			slotShown = hsSlot();
 			if (hsSlotsKept())
 				add(HS, "phone", "Save slot", "The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.", "", "hs_slot", {}, {}, Item::PAGE);
