@@ -117,6 +117,30 @@ namespace banana
 		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
 	}
 
+	// the key's lines taken out of a key = value file (a system's own value set back to Same as all): written beside
+	// and renamed over, only when it had one; an unreadable file left alone
+	static void dropConfValue(const std::string& path, const std::string& key)
+	{
+		std::ifstream f(path);
+		if (!f) return;
+		std::string ln, out;
+		bool had = false;
+		while (std::getline(f, ln))
+		{
+			size_t eq = ln.find('=');
+			if (!ln.empty() && ln[0] != '#' && eq != std::string::npos && trim(ln.substr(0, eq)) == key) { had = true; continue; }
+			out += ln + "\n";
+		}
+		if (!had) return;
+		std::string tmp = path + ".new";
+		FILE* w = fopen(tmp.c_str(), "w");
+		if (!w) return;
+		bool ok = fwrite(out.data(), 1, out.size(), w) == out.size();
+		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
+		ok &= fclose(w) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
+	}
+
 	static std::string readLine(const std::string& path)
 	{
 		std::ifstream f(path);
@@ -386,6 +410,31 @@ namespace banana
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
 	};
+	// Per system configurations' rows: "Manufacturer - System", listed by manufacturer then system (arcade boards with no
+	// one maker: the name alone)
+	static std::string systemRowLabel(const std::string& id)
+	{
+		static const std::map<std::string, std::pair<const char*, const char*>> MAKER = {
+			{ "atari2600", { "Atari", "2600" } }, { "atari7800", { "Atari", "7800" } }, { "atarilynx", { "Atari", "Lynx" } },
+			{ "wonderswan", { "Bandai", "WonderSwan" } }, { "wonderswancolor", { "Bandai", "WonderSwan Color" } },
+			{ "cps1", { "Capcom", "CPS-1" } }, { "cps2", { "Capcom", "CPS-2" } }, { "cps3", { "Capcom", "CPS-3" } },
+			{ "colecovision", { "Coleco", "ColecoVision" } }, { "vectrex", { "GCE", "Vectrex" } },
+			{ "c64", { "Commodore", "64" } }, { "zxspectrum", { "Sinclair", "ZX Spectrum" } },
+			{ "odyssey2", { "Magnavox", "Odyssey 2" } }, { "intellivision", { "Mattel", "Intellivision" } },
+			{ "pcengine", { "NEC", "PC Engine" } }, { "pcenginecd", { "NEC", "PC Engine CD" } },
+			{ "fds", { "Nintendo", "Famicom Disk System" } }, { "gameandwatch", { "Nintendo", "Game & Watch" } },
+			{ "gb", { "Nintendo", "Game Boy" } }, { "gba", { "Nintendo", "Game Boy Advance" } }, { "gbc", { "Nintendo", "Game Boy Color" } },
+			{ "nes", { "Nintendo", "NES" } }, { "n64", { "Nintendo", "Nintendo 64" } }, { "pokemini", { "Nintendo", "Pokémon mini" } },
+			{ "snes", { "Nintendo", "Super Nintendo" } }, { "virtualboy", { "Nintendo", "Virtual Boy" } },
+			{ "sega32x", { "Sega", "32X" } }, { "gamegear", { "Sega", "Game Gear" } }, { "mastersystem", { "Sega", "Master System" } },
+			{ "megacd", { "Sega", "Mega CD" } }, { "megadrive", { "Sega", "Mega Drive" } }, { "sg-1000", { "Sega", "SG-1000" } },
+			{ "neogeo", { "SNK", "Neo Geo" } }, { "ngp", { "SNK", "Neo Geo Pocket" } }, { "ngpc", { "SNK", "Neo Geo Pocket Color" } },
+			{ "psx", { "Sony", "PlayStation" } },
+		};
+		auto it = MAKER.find(id);
+		if (it == MAKER.end()) return "";
+		return std::string(it->second.first) + " - " + it->second.second;
+	}
 	static bool coreInstalled(const std::string& core)
 	{
 		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
@@ -397,9 +446,6 @@ namespace banana
 		for (const auto& c : sys.cores)
 			if (coreInstalled(c.first)) { names.push_back(c.second); values.push_back(c.first); }
 	}
-	// a RetroArch system's own buttons page (Other systems > Buttons > the system): its row's key, its section
-	static std::string raButtonsKey(const RaSystem& sys) { return std::string("ra_buttons.") + sys.id; }
-	static std::string raButtonsSection(const RaSystem& sys) { return std::string(sys.label) + " buttons"; }
 	// which cores are installed, for every system: Settings builds its rows again when a download changed it
 	static std::string coreSignature()
 	{
@@ -612,8 +658,9 @@ namespace banana
 			add(SD, "nds", "Reset DraStic", "Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.",
 				"", "nds-reset-drastic", { "" }, { "" }, Item::ACTION);
 		}
-		// Other systems (RetroArch): what every game shares, then pages: Second screen (the game panel and its companions),
-		// Picture & sound, Emulators (each system's core, when it has a choice) and Buttons (a page for each system)
+		// Other systems (RetroArch and BananaFront): first what every system's games share (Second screen and Picture &
+		// sound as pages), then Per system configurations: a page for each system (addSystemRows) with its emulator,
+		// its own values over the shared ones and its buttons; Reset RetroArch last
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which screen other systems' games play on.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
@@ -651,7 +698,7 @@ namespace banana
 		}
 		{
 			const char* PS = "Picture & sound";
-			add(PS, "picture", "Shader", "A look for RetroArch's games.",
+			add(PS, "picture", "Shader", "A look for other systems' games.",
 				menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
 			items.back().hints = { "The picture as it is.", "A handheld's LCD grid.", "A CRT's scanlines.", "Sharp pixels at any size." };
 			add(PS, "picture", "Screen border", "What fills the space around a game's picture.",
@@ -669,27 +716,73 @@ namespace banana
 				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
 			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
 		}
-		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
+		// each system's page (Other systems > Per system configurations > the system; its row: addSystemRows): its emulator, then its own screen, second
+		// screen, shader and border, each "Same as all" at first (no line in settings.conf: the general
+		// value, which the choice shows in brackets), then its buttons. Read by run-retroarch, run-bananafront and the
+		// game's start in banana-ui (the screen and the second screen)
 		{
-			const char* EM = "Emulators";
-			const size_t before = items.size();
-			// each system's emulator, among the cores installed for it (a row once there are two to choose from)
 			coreSig = coreSignature();
+			const std::vector<std::string> btnNames = { "Game's own", "Fast-forward", "Save state", "Load state", "Menu", "Pause", "Screenshot", "Nothing" };
+			const std::vector<std::string> btnValues = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none" };
+			const char* btnHelp = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
 			for (const auto& sys : RA_SYSTEMS)
 			{
+				const std::string sec = sys.label, id = sys.id;
+				const char* S = sec.c_str();
+				// its emulator among the cores installed for it (the image's, then those RetroArch's Core Downloader got)
 				std::vector<std::string> names, values;
 				coreChoices(sys, names, values);
-				if (names.size() < 2) continue;
-				const char* help = std::string(sys.id) == "gba"
-					? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
-					: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
-				add(EM, "gamepad", sys.label, help, menu, (std::string("core.") + sys.id).c_str(), names, values);
+				if (!names.empty())
+				{
+					const char* help = id == "gba"
+						? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
+						: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
+					add(S, "gamepad", "Emulator", help, menu, ("core." + id).c_str(), names, values);
+				}
+				// a value of its own, or the general one (general: that row's key)
+				auto own = [&](const char* icon, const char* label, const char* help, const char* key, const char* general,
+					std::vector<std::string> names, std::vector<std::string> values, std::vector<std::string> hints)
+				{
+					names.insert(names.begin(), "Same as all"); values.insert(values.begin(), "");
+					hints.insert(hints.begin(), "As set for all systems, in brackets.");
+					add(S, icon, label, help, menu, (std::string(key) + "." + id).c_str(), names, values);
+					items.back().hints = hints;
+					items.back().inherit = general;
+				};
+				own("gamepad", "Screen", "Which screen this system's games play on.", "ra_screen", "video_monitor_index",
+					{ "Top", "Bottom" }, { "top", "bottom" }, { "Its games play on the top screen.", "Its games play on the bottom screen." });
+				own("gamepad", "Second screen", "What the other screen shows while this system's games play.", "retroarch_panel", "retroarch_panel",
+					{ "Game panel", "Off" }, { "panel", "off" },
+					{ "Achievements and tiles to save, load, open the menu, fast-forward and quit.", "The other screen stays dark." });
+				own("picture", "Shader", "A look for this system's games.", "ra_shader", "ra_shader",
+					{ "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" },
+					{ "The picture as it is.", "A handheld's LCD grid.", "A CRT's scanlines.", "Sharp pixels at any size." });
+				own("picture", "Screen border", "What fills the space around this system's picture.", "ra_border", "ra_border",
+					{ "Off", "On" }, { "off", "on" },
+					{ "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." });
+				// L2, R2, L3 and R3 alone, and A/B and X/Y swapped (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch).
+				// No line: the image's template (R2 fast-forwards in the 2D systems' games), else the game's own
+				if (id == "gba")
+				{
+					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
+					// button does; Back, beside F, by default)
+					std::vector<std::string> n = btnNames, v = btnValues;
+					n.insert(n.end() - 1, "Companion");
+					v.insert(v.end() - 1, "companion");
+					buttonRows(S, "gamepad", std::string(btnHelp) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
+						menu, "ra_btn_", "." + id, n, v);
+					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
+					add(S, "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
+						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
+				}
+				else
+					buttonRows(S, "gamepad", btnHelp, menu, "ra_btn_", "." + id, btnNames, btnValues);
+				add(S, "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
+					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
-			if (items.size() > before)
-				add(O, "gamepad", "Emulators", "Which emulator each system uses, where there is more than one.", "", "ra_cores", {}, {}, Item::PAGE);
 		}
-		// L2, R2, L3 and R3 alone in RetroArch's games (the page below; run-retroarch, bananad)
-		add(O, "gamepad", "Buttons", "Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.", "", "ra_buttons", {}, {}, Item::PAGE);
+		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
+			"", "ra_systems", {}, {}, Item::PAGE);
 		add(O, "gamepad", "Reset RetroArch", "Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
@@ -854,39 +947,6 @@ namespace banana
 			add(DB, "nds", "Reset buttons", "Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.",
 				"", "nds-reset-ds-buttons", { "" }, { "" }, Item::ACTION);
 		}
-		// the other systems' buttons (Other systems > Buttons): a page for each system, its L2, R2, L3 and R3's jobs and
-		// Swap A/B and X/Y in banana/settings.conf (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch). No line:
-		// the image's template (R2 fast-forwards in the 2D systems' games), else the game's own and as printed
-		{
-			const char* RB = "Other systems buttons";
-			for (const auto& sys : RA_SYSTEMS)
-				add(RB, "gamepad", sys.label, "This system's buttons: what L2, R2, L3 and R3 do alone in its games, and A/B and X/Y swapped or not.",
-					"", raButtonsKey(sys).c_str(), {}, {}, Item::PAGE);
-			const std::vector<std::string> names = { "Game's own", "Fast-forward", "Save state", "Load state", "Menu", "Pause", "Screenshot", "Nothing" };
-			const std::vector<std::string> values = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none" };
-			for (const auto& sys : RA_SYSTEMS)
-			{
-				const std::string sec = raButtonsSection(sys), id = sys.id;
-				const char* help = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
-				if (id == "gba")
-				{
-					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
-					// button does; Back, beside F, by default)
-					std::vector<std::string> n = names, v = values;
-					n.insert(n.end() - 1, "Companion");
-					v.insert(v.end() - 1, "companion");
-					buttonRows(sec.c_str(), "gamepad", std::string(help) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
-						menu, "ra_btn_", "." + id, n, v);
-					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
-					add(sec.c_str(), "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
-						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
-				}
-				else
-					buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
-				add(sec.c_str(), "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
-					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
-			}
-		}
 		const char* PW = "Power";
 		add(PW, "moon", "Sleep", "Puts the handheld to sleep, as a press of the power button does. Your game pauses. Press A twice.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
@@ -927,6 +987,7 @@ namespace banana
 			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
 		}
 		addShelfRows();
+		addSystemRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
 		// section's rows together: a subpage's rows are added beside the row that opens it, wherever that is
 		// The grid's tiles and each page's rows most used first (ORDER, by section and label); what ORDER doesn't name keeps
@@ -935,7 +996,7 @@ namespace banana
 			{ "", { "Nintendo DS", "Other systems", "Look & sound", "Network", "Sleep & power", "System" } },	// the tiles
 			// (what runs the games first, as in Other systems)
 			{ "Nintendo DS", { "Emulator", "Emulator settings", "Buttons", "Quick resume", "DS language", "DS name" } },
-			{ "Other systems", { "Emulators", "Frontend", "Buttons", "Picture & sound", "Screen", "Second screen", "Quick resume", "RetroAchievements", "Reset RetroArch" } },
+			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
 			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Box art", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds", "Speaker EQ" } },
 			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
@@ -1043,6 +1104,15 @@ namespace banana
 		bool goneShader = (it.key == "DSFLIP_SHADER" || it.key == "kms.shader") && access(("/usr/lib/superdrastic/shaders/" + v + ".frag").c_str(), F_OK) != 0;
 		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme" && !goneShader) { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
 		if (it.at < 0) it.at = 0;
+		// a system's own: "Same as all" says what that is now (the general row's value)
+		if (!it.inherit.empty())
+			if (const Item* g = itemByKey(it.inherit))
+			{
+				Item c = *g;
+				load(c);
+				// (made of translated parts: the whole line is in no language's file)
+				if (c.at >= 0 && c.at < (int)c.names.size()) it.names[0] = lang::tr("Same as all") + " (" + lang::tr(c.names[c.at]) + ")";
+			}
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
 		{
@@ -1220,6 +1290,8 @@ namespace banana
 			std::ofstream(data + "/backlight") << (i == 0 ? pm : other) << " " << (i == 0 ? other : pm) << "\n";
 			return;
 		}
+		// a system's own value set back to Same as all: its line taken out (the launchers then read the general one)
+		if (!it.inherit.empty() && v.empty()) { dropConfValue(it.file, it.key); return; }
 		if (it.kind == Item::VOLUME)
 		{
 			if (system(("/usr/libexec/banana/volume set " + std::to_string(atoi(v.c_str())) + " 2>/dev/null").c_str()) != 0) {}
@@ -1285,7 +1357,7 @@ namespace banana
 				{ "hotkeys_bds", "BananaDS hotkeys" },
 					{ "ra_second", "Second screen", "retroarch_panel" },
 				{ "ra_picture", "Picture & sound" },	// (a submenu: its shader's "Off" is not the page's state)
-				{ "ra_cores", "Emulators" },
+				{ "ra_systems", "Per system configurations" },
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
@@ -1293,12 +1365,12 @@ namespace banana
 				{ "sys_reset", "Reset options" },
 				{ "menu_look", "Menu look" },
 				{ "ds_buttons", "DS buttons" },
-				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
 				{ "developer", "Developer options" },	// (PR #94: System's last row, once unlocked)
 			};
-			for (const auto& sys : RA_SYSTEMS) v.push_back({ raButtonsKey(sys), raButtonsSection(sys) });
+			// each system's page (Other systems > Per system configurations), its row showing its emulator
+			for (const auto& sys : RA_SYSTEMS) v.push_back({ std::string("ra_sys.") + sys.id, sys.label, std::string("core.") + sys.id });
 			return v;
 		}();
 		return all;
@@ -1648,9 +1720,30 @@ namespace banana
 	{
 		shelfSystems = systems;
 		addShelfRows();
+		addSystemRows();
 		groups.clear();
 		for (auto& it : items) if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
 		if (sel >= (int)items.size()) sel = 0;
+	}
+	void Settings::addSystemRows()
+	{
+		// Other systems > Per system configurations: a row for each system (A opens its page), "Manufacturer - System"
+		// (systemRowLabel) in alphabetical order, manufacturer first
+		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.key.rfind("ra_sys.", 0) == 0; }),
+			items.end());
+		std::vector<Item> rows;
+		for (const auto& sys : RA_SYSTEMS)
+		{
+			Item it;
+			const std::string label = systemRowLabel(sys.id);
+			it.section = "Per system configurations";
+			it.icon = "gamepad"; it.label = label.empty() ? sys.label : label; it.key = std::string("ra_sys.") + sys.id; it.kind = Item::PAGE;
+			it.help = "This system's own settings: its emulator, screen, look and buttons.";
+			rows.push_back(it);
+		}
+		auto key = [](const std::string& l) { std::string k = l; for (auto& c : k) c = (char)std::tolower((unsigned char)c); return k; };
+		std::stable_sort(rows.begin(), rows.end(), [&](const Item& a, const Item& b) { return key(a.label) < key(b.label); });
+		items.insert(items.end(), rows.begin(), rows.end());
 	}
 	void Settings::addShelfRows()
 	{

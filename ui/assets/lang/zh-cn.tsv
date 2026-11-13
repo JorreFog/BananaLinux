@@ -1603,3 +1603,16 @@ settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting 
 # (the game page's "Fast, DSi CPU" timing below is a machine-translated draft, not Majirefy's: for them to check)
 settings		Fast, DSi CPU	快速，DSi CPU
 settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's 133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of the handheld's power. The others follow Settings > Nintendo DS > Timing.	仅限 BananaDS。快速：本游戏中 DS 的两颗 CPU 在同步间隔更长（在心金及其改版如起源心金中最多约快 10%）；精确：melonDS 自身的方式。快速可能会让游戏出错（黄金太阳：漆黑的黎明会丢失 3D 世界）：如果本游戏出问题，请改回来。“快速，DSi CPU”还会让游戏的主 CPU 以 DSi 的 133 MHz 运行：在 DS 上自身会变慢的游戏（起源心金的热闹城镇）可保持速度，但会多用掌机的性能。其他游戏遵循 设置 > Nintendo DS > 时序。
+# Other systems: each system's own page (my own translations; corrections welcome)
+settings		Same as all	与全部相同
+settings		As set for all systems, in brackets.	沿用所有系统的设置（括号内）。
+settings		Which screen this system's games play on.	此系统的游戏在哪块屏幕上运行。
+settings		Its games play on the top screen.	游戏在上屏运行。
+settings		Its games play on the bottom screen.	游戏在下屏运行。
+settings		What the other screen shows while this system's games play.	此系统的游戏运行时另一块屏幕显示什么。
+settings		A look for this system's games.	此系统游戏的画面风格。
+settings		What fills the space around this system's picture.	此系统画面周围的空白处显示什么。
+settings		This system's own settings: its emulator, screen, look and buttons.	此系统自己的设置：模拟器、屏幕、画面和按键。
+settings		Swap A/B and X/Y	交换 A/B 和 X/Y
+settings		Per system configurations	各系统配置
+settings		Each system's own settings: its emulator, screen, look and buttons.	每个系统自己的设置：模拟器、屏幕、画面和按键。

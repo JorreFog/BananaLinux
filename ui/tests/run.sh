@@ -120,7 +120,7 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press right; shot settings-tz; press b; press b; row Other systems ra_systems; shot settings-other; row Per system configurations ra_sys.gba; shot settings-systems; row Game Boy Advance ra_screen.gba; press right; press right; shot settings-gba; row Game Boy Advance ra_shader.gba; press right; press left; press start; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
             outro bye-start 0; outro bye-eject 330; outro bye-word 520; outro bye-fall 820; outro bye-crt 1030; outro bye-end 1300" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
@@ -151,7 +151,12 @@ for size in 640x480 1024x768; do
     done
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
-    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-list settings-system settings-tz battery-low battery-empty battery-charging; do
+    # Other systems > a system's own values (ra_screen.gba Bottom kept; ra_shader.gba set and back to Same as all: no line)
+    if [ $size = 640x480 ]; then
+        grep -q '^ra_screen.gba = bottom$' "$FX/data/settings.conf" || { echo "FAIL $size: Game Boy Advance > Screen: Bottom wasn't kept: $(grep '^ra_screen' "$FX/data/settings.conf")"; fail=1; }
+        grep -q '^ra_shader.gba' "$FX/data/settings.conf" && { echo "FAIL $size: Game Boy Advance > Shader back to Same as all kept a line"; fail=1; }
+    fi
+    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-list settings-system settings-tz settings-other settings-systems settings-gba battery-low battery-empty battery-charging; do
         for p in top bot; do
             f=$OUT/$size-$s-$p.png
             [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

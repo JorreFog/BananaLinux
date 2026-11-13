@@ -2838,7 +2838,15 @@ int main(int argc, char** argv)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
+		// a system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+		auto own = [&](const std::string& key) -> std::string
+		{
+			auto i = settings.find(key + "." + sd.id);
+			if (i != settings.end() && !i->second.empty()) return i->second;
+			i = settings.find(key);
+			return i == settings.end() ? "" : i->second;
+		};
+		bool panel = ra && own("retroarch_panel") != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
 		const char* OUT = "/run/banana/retroarch.out";	// RetroArch's stdout, for the Pokémon companion
 		if (panel)
@@ -2846,6 +2854,9 @@ int main(int argc, char** argv)
 			// the panel RetroArch is set to use (Settings > Other systems > Screen: video_monitor_index 2 the top, 1 the
 			// bottom)
 			gameScreen = getConfValue("/data/retroarch/retroarch.cfg", "video_monitor_index", "2") == "1" ? 1 : 0;
+			// (or the system's own screen: ra_screen.<system>, top or bottom)
+			const std::string screen = own("ra_screen");
+			if (screen == "top") gameScreen = 0; else if (screen == "bottom") gameScreen = 1;
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)

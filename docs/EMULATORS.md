@@ -110,7 +110,17 @@ has them) when none of the four is set to them: SuperDrastic presses them for F 
 Load and Quick resume (`buildroot/patches/superdrastic/0001-*`). Those lines of `drastic.cfg` are Banana's, set again
 at every start; the rest of DraStic's buttons stay its own menu's.
 
-The other systems have a **Buttons** page too (Settings > Other systems > Buttons; one page for each system, `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
+Settings > Other systems starts with what every system's games share (Frontend, Screen, Second screen, Picture &
+sound, Quick resume, RetroAchievements), then **Per system configurations**: every system as "Manufacturer - System"
+(Commodore - 64 ... Sony - PlayStation, by manufacturer then system), each opening its own page. A system's page has its **Emulator** (`core.<system>`), then its own **Screen**, **Second screen**,
+**Shader** and **Screen border** (`ra_screen.<system>`, `retroarch_panel.<system>`, `ra_shader.<system>`,
+`ra_border.<system>` in `banana/settings.conf`; Quick resume stays one setting for all), each **Same as all** at
+first: no line, and the general value is used (the choice shows it in brackets). `run-retroarch` and `run-bananafront`
+read a system's own value first (`own`); banana-ui does for the screen it lends the game and the game panel. A
+system's own screen goes into RetroArch's appended config for that game only, and `retroarch.cfg` keeps the
+general one.
+
+The other systems have their buttons too, on each system's page (Settings > Other systems > Per system configurations > the system; `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
 R2, L3 or R3 pressed alone does a job of RetroArch's instead of the game's button (fast-forward on and off, save or
 load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by default). RetroArch's own hotkeys only work
 with F held, so `run-retroarch` lists the jobs in `/run/banana/ra-buttons` and moves those buttons' RetroPad binds to
@@ -277,7 +287,7 @@ BananaSNES (`libretro-bananasnes`, `bananasnes_libretro.so`; https://github.com/
 0.5.0 ships) tuned for the two handhelds and run by BananaFront. Snes9x's licence allows free distribution only, so BananaSNES is free
 too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo).
 
-- **Chosen** per system in Settings > Other systems > Super Nintendo > core (BananaSNES next to Snes9x); the default stays Snes9x in RetroArch until
+- **Chosen** per system in Settings > Other systems > Per system configurations > Nintendo - Super Nintendo > Emulator (BananaSNES next to Snes9x); the default stays Snes9x in RetroArch until
   it is switched after the tests on both handhelds. Chosen, BananaSNES runs in BananaFront even with Frontend on Auto (`run-retroarch`).
 - **What differs from Snes9x**: only changes that measured faster on the handhelds' stress ROM and left the picture and sound bit-identical
   (checked on 70 example ROMs and the stress ROM's three variants, and EarthBound's first minute on the Plus): a lazily advanced SPC700 timer set,

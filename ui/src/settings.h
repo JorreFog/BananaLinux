@@ -56,6 +56,7 @@ namespace banana
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
+		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
 		void openFiles();
@@ -220,6 +221,8 @@ namespace banana
 		{
 			std::string section, icon, label, help;
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
+			std::string inherit;					// a system's own (Other systems > the system): the general row's key,
+													// whose value its first choice, "Same as all", follows (no line kept)
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)

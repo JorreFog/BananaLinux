@@ -36,6 +36,7 @@ namespace banana
 		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const TOP_BOTTOM[] = { "top", "bottom", nullptr };
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
@@ -44,7 +45,7 @@ namespace banana
 		const char* const LOGIN[] = { "password", "guest", nullptr };
 		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
 		// Nintendo DS > Buttons: L2, R2, L3 and R3's job in both DS emulators (nds-buttons)
-		// Other systems > Buttons > a system: L2, R2, L3 and R3 in its RetroArch games (run-retroarch, bananad)
+		// Other systems > Per system configurations > a system: L2, R2, L3 and R3 in its RetroArch games (run-retroarch, bananad)
 		const char* const RA_BTN[] = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "companion", "none", nullptr };
 		const char* const RA_BTN_BACK[] = { "companion", "none", nullptr };
 		const char* const NDS_BTN[] = { "a", "b", "x", "y", "l", "r", "start", "select", "swap", "save", "load", "ff", "blow", "menu", "none", nullptr };
@@ -80,8 +81,12 @@ namespace banana
 			{ "ra_frontend", "auto", ENUM, FRONTEND, 0, 0, true },
 			{ "bananafront_cpugov", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "bananafront_lowlat", "on", ENUM, ON_OFF, 0, 0, true },
-			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
-			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
+			// (these two for each system too, Other systems > the system: ra_shader.gba... No line: the general value)
+			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true, true },
+			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true, true },
+			// only a system's own, no general line (the general one is RetroArch's video_monitor_index):
+			// ra_screen.<system> top or bottom
+			{ "ra_screen", "", ENUM, TOP_BOTTOM, 0, 0, true, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
 			// (only as <key>.<system>, a system's own: these are their values; the template has R2's fast-forward)
@@ -101,7 +106,7 @@ namespace banana
 			{ "share_login", "password", ENUM, LOGIN, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
-			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
+			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0, false, true },
 			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "game_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
@@ -128,7 +133,7 @@ namespace banana
 			return nullptr;
 		}
 
-		// <key>.<system> for a perSystem key (Other systems > Buttons > a system's page: ra_btn_l2.gba, ra_swap_ab.snes...;
+		// <key>.<system> for a perSystem key (Other systems > a system's page: ra_btn_l2.gba, ra_shader.snes, ra_screen.gba, ra_swap_ab.snes...;
 		// run-retroarch): the key's own values. No default here: a card without the line has the template's, else the
 		// row's first (the game's own, off)
 		const KeyDef* findSystem(const std::string& key)

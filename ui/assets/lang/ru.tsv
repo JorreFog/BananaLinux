@@ -1539,3 +1539,16 @@ bananads		or press L3	или нажмите L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение выше красной линии (чувствительность: %s).
 bananads		Edge marking	Контуры
 bananads		Fog	Туман
+# Other systems: each system's own page (my own translations; corrections welcome)
+settings		Same as all	Как для всех
+settings		As set for all systems, in brackets.	Как задано для всех систем (в скобках).
+settings		Which screen this system's games play on.	На каком экране идут игры этой системы.
+settings		Its games play on the top screen.	Игры идут на верхнем экране.
+settings		Its games play on the bottom screen.	Игры идут на нижнем экране.
+settings		What the other screen shows while this system's games play.	Что показывает другой экран во время игр этой системы.
+settings		A look for this system's games.	Вид игр этой системы.
+settings		What fills the space around this system's picture.	Чем заполнено место вокруг изображения этой системы.
+settings		This system's own settings: its emulator, screen, look and buttons.	Собственные настройки системы: эмулятор, экран, вид и кнопки.
+settings		Swap A/B and X/Y	Поменять A/B и X/Y
+settings		Per system configurations	Настройки систем
+settings		Each system's own settings: its emulator, screen, look and buttons.	Собственные настройки каждой системы: эмулятор, экран, вид и кнопки.

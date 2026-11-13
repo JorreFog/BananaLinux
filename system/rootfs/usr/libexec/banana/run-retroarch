@@ -9,6 +9,12 @@ setting() {
     [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
+# own <key>: the system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+own() {
+    o=; [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM")
+    [ -n "$o" ] || o=$(setting "$1")
+    printf '%s' "$o"
+}
 # Settings > Other systems > Frontend (ra_frontend): BananaOS's own BananaFront instead of RetroArch for the 2D
 # systems (the same cores, saves, states and settings; RetroArch stays as the fallback). Auto: BananaFront only for the
 # systems checked on it (BF_SYSTEMS, both handhelds: stress ROM at least as fast, saves carried over, a game played);
@@ -21,7 +27,7 @@ n64|psx|"") ;;
     bananafront) bf=1 ;;
     retroarch) bf=0 ;;
     *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac
-        # BananaSNES (Settings > Other systems > Super Nintendo > core) is made for BananaFront: chosen, it runs there in Auto too
+        # BananaSNES (Settings > Other systems > Super Nintendo > Emulator) is made for BananaFront: chosen, it runs there in Auto too
         [ "$BANANA_SYSTEM" = snes ] && [ "$(setting core.snes)" = bananasnes ] && bf=1
         # (RetroAchievements in Hardcore: RetroArch, which retroachievements.org knows; an unknown client's hardcore
         # unlocks are only accepted with its warning)
@@ -32,7 +38,7 @@ n64|psx|"") ;;
     [ $bf = 1 ] && [ -x $bfbin ] && [ -x /usr/libexec/banana/run-bananafront ] &&
         BANANAFRONT_BIN=$bfbin exec /usr/libexec/banana/run-bananafront "$@" ;;
 esac
-# Settings > Other systems > Emulators > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
+# Settings > Other systems > the system > Emulator (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
 # installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
 # with RetroArch's Core Downloader; one not installed is ignored
 if [ -n "$BANANA_SYSTEM" ]; then
@@ -154,10 +160,11 @@ if [ -z "$font" ] || [ "$font" = "$(cat $F 2>/dev/null)" ]; then
         set_cfg video_font_path ""; set_cfg video_font_size 32; rm -f $F
     fi
 fi
-# Settings > Other systems > Picture & sound > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
-# global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
+# Settings > Other systems > Picture & sound > Shader (or the system's own): RetroArch's global preset, a reference to one
+# of the image's presets, written for each game. Only a global.glslp Banana wrote (its first line) is changed or
+# removed: one saved from RetroArch's own menu stays.
 GP=/data/retroarch/config/global.glslp
-look=$(setting ra_shader)
+look=$(own ra_shader)
 SHADE=/data/banana/.ra-shader
 # Only when Settings' value changed (or on a card from before the marker): a shader picked in RetroArch's own
 # menu is kept from launch to launch, as the comment above says.
@@ -234,7 +241,7 @@ if [ -f $KEEP ]; then
     echo "run-retroarch: the hotkey lines of a run cut short put back" >&2
 fi
 grep -q '^joypad_autoconfig_dir = "/run/' $CFG && set_cfg joypad_autoconfig_dir /usr/share/libretro/autoconfig
-# Settings > Other systems > Buttons > the system (ra_btn_l2.<system> ... ra_btn_r3.<system>): L2, R2, L3 or R3 alone, a job of
+# Settings > Other systems > the system > L2 ... R3 (ra_btn_l2.<system> ... ra_btn_r3.<system>): L2, R2, L3 or R3 alone, a job of
 # RetroArch's instead of the game's button (fast-forward on and off, save or load a state, its menu, pause, a
 # screenshot, nothing), as Nintendo DS > Buttons is for the DS. RetroArch's hotkeys only work with F held, so bananad
 # sends the job's command down RetroArch's stdin pipe (/run/banana/ra-buttons: "<button> <command>" lines, its list
@@ -269,7 +276,7 @@ case $BANANA_SYSTEM in
         fi
         n=$((n + 1))
     done
-    # Other systems > Buttons > the system > Swap A/B and X/Y (ra_swap_ab.<system>): the RetroPad's A on the pad's B and
+    # Other systems > the system > Swap A/B and X/Y (ra_swap_ab.<system>): the RetroPad's A on the pad's B and
     # so on (the profile's A 1, B 0, X 2, Y 3), in the game and in RetroArch's menu
     [ "$(setting "ra_swap_ab.$BANANA_SYSTEM")" = on ] && printf 'input_player1_a_btn = "0"\ninput_player1_b_btn = "1"\ninput_player1_x_btn = "3"\ninput_player1_y_btn = "2"\n' >> $RBCFG
     # the left stick as the d-pad (#142) on every system whose pad had no stick: all but N64. RetroArch's "Left Analog"
@@ -299,7 +306,7 @@ if [ -f $BKEEP ]; then
 fi
 rm -f $BCFG
 BA=
-if [ "$(setting ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
+if [ "$(own ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
     BD=/usr/share/banana/borders
     MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
     read BX BY BW BH <<EOF
@@ -394,6 +401,10 @@ fi
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
 MON=$(sed -n '/^video_monitor_index = "\([0-9]\)"/{s//\1/;h};${x;p}' $CFG)
+# the screen this system's games play on (Settings > Other systems > the system > Screen, ra_screen.<system>), else the
+# general one (Other systems > Screen, retroarch.cfg's). With the game panel banana-ui lent the right one already
+SMON=${MON:-2}
+case $BANANA_SYSTEM in ?*) case $(setting "ra_screen.$BANANA_SYSTEM") in top) SMON=2 ;; bottom) SMON=1 ;; esac ;; esac
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the game panel (banana-ui keeps the other panel): RetroArch draws on the panel it was lent (a DRM lease, its
     # only connector, so monitor 1, through banana-leaseshim.so), takes banana-ui's tiles as commands on its stdin,
@@ -414,13 +425,14 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
 else
     # the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays dark while the game runs
     . /usr/libexec/banana/one-panel
-    case ${MON:-2} in 2) one_panel_dark top ;; *) one_panel_dark bottom ;; esac
+    case $SMON in 2) one_panel_dark top ;; *) one_panel_dark bottom ;; esac
     # commands on its stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), through the pipe the
     # game panel uses; held open here (fd 3) so RetroArch never reads an end
     FIFO=/run/banana/retroarch.cmd
     rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
+    [ "$SMON" != "${MON:-2}" ] && echo "video_monitor_index = \"$SMON\"" >> $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
     retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" -L "$CORE" "$2" < $FIFO &
@@ -460,6 +472,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
 else
     exec 3>&-; rm -f $FIFO
     fix stdin_cmd_enable false
+    [ "$SMON" != "${MON:-2}" ] && fix video_monitor_index ${MON:-2}
     one_panel_restore
 fi
 [ -n "$fix_d" ] && sed -i "$fix_d" $CFG && printf '%s' "$fix_l" >> $CFG
