@@ -10,6 +10,11 @@ SDL2_CONF_OPTS += --enable-video-offscreen
 # and Vulkan surfaces (Buildroot builds SDL2 without): the Thor's Flycast and Vita3K draw through them
 SDL2_CONF_OPTS += --enable-video-vulkan
 
+# host-zstd's makefile turns lz4 support on when the build machine has lz4's headers, and zstd 1.5.7's fileio.c uses
+# contentChecksum_t, a name lz4 1.11 removed: the host build fails on a PC with lz4 1.11 installed. Buildroot gives
+# host-zstd no lz4 of its own, so it must not pick up the PC's (the zstd tool would link a library outside HOST_DIR).
+HOST_ZSTD_OPTS += HAVE_LZ4=0
+
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the
