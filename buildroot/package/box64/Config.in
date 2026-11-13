@@ -2,6 +2,7 @@ config BR2_PACKAGE_BOX64
 	bool "box64"
 	depends on BR2_aarch64
 	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_NCURSES # libtinfo.so.6 for box64-bash
 	help
 	  Runs x86_64 Linux programs on ARM64 with a dynamic
 	  recompiler, handing their calls into system libraries

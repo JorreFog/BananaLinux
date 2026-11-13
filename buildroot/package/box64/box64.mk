@@ -40,6 +40,16 @@ define BOX64_MOVE_X86_BASH
 endef
 BOX64_POST_INSTALL_TARGET_HOOKS += BOX64_MOVE_X86_BASH
 
+# box64-bash needs libtinfo.so.6, which Box64 doesn't run as x86 code but hands to the system's (wrappedlibtinfo6):
+# Buildroot's ncurses has no separate libtinfo, its terminfo functions (setupterm, tgetent, tigetstr, tputs...) are in
+# libncurses.so.6. libtinfo.so.6 as a link to it, as Arch Linux ships it; left alone where a real libtinfo is built.
+BOX64_DEPENDENCIES += ncurses
+define BOX64_LIBTINFO_LINK
+	[ -e $(TARGET_DIR)/usr/lib/libtinfo.so.6 ] || \
+		ln -sf libncurses.so.6 $(TARGET_DIR)/usr/lib/libtinfo.so.6
+endef
+BOX64_POST_INSTALL_TARGET_HOOKS += BOX64_LIBTINFO_LINK
+
 # its settings per program (box64.box64rc: the known-good switches for Wine, Steam and many games) where it looks
 define BOX64_INSTALL_RC
 	$(INSTALL) -D -m 0644 $(@D)/system/box64.box64rc $(TARGET_DIR)/etc/box64.box64rc
