@@ -450,6 +450,9 @@ def unslotted_rows():
     check(b1["id"] != a1["id"], f"another emulator replaced the row {a1['id']}")
     # (a listing by rom_ids with no slot named gives those rows beside a slot's, their slot null and their MD5 given;
     # one that names the slot gives none of them)
+    # (the slot's head taken note of first: on a server an earlier run left a save in this ROM's slot, a device that
+    # never saw it is refused, 409)
+    join(TA, A, rom)
     sl = ok(*call("POST", "/api/saves", token=TA, query={"rom_id": rom, "device_id": A, "slot": SLOT, "emulator": f"u3{RUN}"},
                   files={"saveFile": ("Plain.srm", b"in the slot")}), "slotted")
     rows = ok(*call("GET", "/api/saves", token=TA, query={"rom_ids": rom}), "listing with no slot")
