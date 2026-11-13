@@ -62,7 +62,7 @@ BR2_PACKAGE_HOST_MTOOLS=y
 # firmware: the WCN7850's Wi-Fi and Bluetooth (linux-firmware; its Bluetooth files come by external.mk), the Adreno
 # 740's three files (thor-gpu-firmware: linux-firmware's Adreno option has none of them, only other chips'), and the
 # Thor's own: the audio DSP and compute DSP, the speaker amplifiers' tuning, the sound topology
-# (rocknix-extra-firmware, at the commit ROCKNIX pins)
+# (rocknix-extra-firmware, at a later commit than the one ROCKNIX pins: that one has no topology; the package says)
 BR2_PACKAGE_LINUX_FIRMWARE=y
 BR2_PACKAGE_LINUX_FIRMWARE_QUALCOMM_WCN7850=y
 BR2_PACKAGE_ROCKNIX_EXTRA_FIRMWARE=y

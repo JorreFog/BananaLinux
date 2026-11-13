@@ -202,8 +202,10 @@ Checked on a PC:
 - the defconfig loads in Buildroot 2026.02.3 and keeps every option it sets; the new packages' dependencies resolve;
 - Box64's package was cross-compiled for the Thor's CPU with this configuration (an ARM64 `box64` with Box32, built
   by Buildroot from the recipe here; the recipe installs its x86 helper libraries since, which was not rebuilt);
-- the kernel with its device tree, Mesa with Turnip, wlroots, sway-lite, wvkbd and 30 of the 35 new cores were
-  cross-compiled the same way (`docs/THOR-EMULATORS.md`, "Build state"). None of it has run;
+- the kernel with its device tree and modules, Mesa with Turnip, wlroots, sway-lite, wvkbd, the menu, `bananad`
+  and 34 of the 35 new cores (all but SAME_CDI) were cross-compiled the same way (`docs/THOR-EMULATORS.md`, "Build
+  state"); the SwanStation and Flycast cores need a rebuild since their recipes changed. The standalone emulators,
+  Qt 6, WPE WebKit and PipeWire were never compiled. None of it has run;
 - `run-wayland` under a headless sway with two outputs: the environment, the exit status, the second-screen rule,
   `--keep-bottom`, SIGTERM (`system/tests/run-wayland-test.sh`);
 - `pc-games` against stand-ins: downloads refused on a wrong checksum, the unpacking, the prefix's setup calls, the

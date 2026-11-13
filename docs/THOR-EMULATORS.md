@@ -6,8 +6,8 @@ What each system on the AYN Thor's shelf runs, where its files go, and how far e
 
 **Status: partly built, never run.** Every package below passes Buildroot's Kconfig and `show-info` with the Thor's
 defconfig, every pinned commit exists upstream, and every patch taken from ROCKNIX applies to its pinned source
-(checked file by file). 30 of the 35 new cores have been cross-compiled for the Thor; no standalone emulator has
-("Build state" below says which). None has run on a Thor.
+(checked file by file). 34 of the 35 new cores have been cross-compiled for the Thor (all but SAME_CDI; two of them
+need a rebuild); no standalone emulator has ("Build state" below says which). None has run on a Thor.
 
 ## How a game starts
 
@@ -165,17 +165,19 @@ none of it has run. Some recipes changed after they were built; those are marked
 | libretro-a5200, -beetle-ngp, -beetle-pce-fast, -beetle-vb, -beetle-wswan, -beetle-saturn, -bluemsx, -cap32, -crocods, -freeintv, -gearcoleco, -genesis-plus-gx, -handy, -neocd, -nestopia, -o2em, -opera, -pokemini, -prosystem, -puae2021, -px68k, -stella, -virtualjaguar | built |
 | libretro-beetle-pcfx, -beetle-psx, -dosbox-pure | built, after a fix: their makefiles asked the build machine's `uname` or `strip` |
 | libretro-vecx, -parallel-n64, -yabasanshiro | built, after a fix: the GLES libraries were missing from their dependencies |
-| libretro-swanstation | compiled, but that build can't be loaded: its own parts came out as shared libraries left in the build folder. The recipe has `BUILD_SHARED_LIBS=OFF` now; not rebuilt |
-| libretro-fbneo, -mame2003-plus | not built yet |
-| libretro-same-cdi | not built yet. Its recipe was rewritten from reading the source (a plain `Makefile.libretro` at the pin) |
-| libretro-flycast | not built yet. Now with `BUILD_SHARED_LIBS=OFF` and its bundled libzip (zlib is the system's), from reading its CMake |
-| libretro-ppsspp | not built yet |
+| libretro-fbneo, -mame2003-plus, -ppsspp | built |
+| libretro-swanstation | compiled, but that build can't be loaded: its own parts (`libcore.so`, `libcommon.so`, `libvixl.so`...) came out as shared libraries left in the build folder. The recipe has `BUILD_SHARED_LIBS=OFF` now; needs a rebuild |
+| libretro-flycast | compiled, but that build can't be loaded: it asks for its bundled nowide and libzip as shared libraries, which aren't in the image. The recipe has `BUILD_SHARED_LIBS=OFF` now (from reading its CMake); needs a rebuild |
+| libretro-same-cdi | not built yet (the only new core that isn't). Its recipe was rewritten from reading the source (a plain `Makefile.libretro` at the pin) |
 | the 14 cores the RG DS image has too (`package/retroarch/cores.in`) and RetroArch | not built in this tree with the Thor's toolchain; they build for the RG DS |
 | box64 | built; its recipe changed since (the x86 helper libraries are installed now), not rebuilt |
-| mesa3d (26.2.6, Turnip), wlroots, sway-lite, wvkbd, the kernel with its device tree | built |
+| the kernel (7.2: `Image`, `qcs8550-ayn-thor.dtb`, 209 modules) | built |
+| mesa3d (26.2.6, with the five Turnip patches), wlroots, sway-lite, wvkbd (the on-screen keyboard) | built |
+| banana-ui (the menu), bananad | built |
+| linux-firmware, rocknix-extra-firmware, thor-gpu-firmware | built (installed: they are files) |
 | libxkbcommon | built before its xkbregistry option was added; not rebuilt |
-| dolphin, armsx2, azahar, ppsspp, vita3k, flycast, scummvm | not built yet |
-| xemu | not in the image (above) |
+| dolphin, armsx2, azahar, ppsspp, vita3k, flycast, scummvm (the standalone emulators) | not built yet |
+| xemu | left out of the image: it needs desktop OpenGL (above) |
 | Qt 6, WPE WebKit and Cog, PipeWire and WirePlumber | not built yet |
 
 ## Known gaps
@@ -187,8 +189,8 @@ none of it has run. Some recipes changed after they were built; those are marked
   - ARMSX2 with GCC (upstream builds it with clang);
   - Azahar against Qt 6.9 (it downloads Qt 6.10 when not told to use the system's);
   - Dolphin's and Vita3K's bundled dependencies cross-compiled.
-- The latest changes to Flycast (both), Vita3K, Box64 and libxkbcommon were made from reading their sources and are
-  unproven until a build.
+- The latest changes to Flycast (both), SwanStation, Vita3K, Box64 and libxkbcommon were made from reading their
+  sources and are unproven until a build.
 - ARMSX2 and Azahar don't set `BUILD_SHARED_LIBS`. After their first build, `readelf -d` on each binary must show no
   `NEEDED` library that isn't in the image (Flycast's bundled libraries were left behind in the build folder that
   way).

@@ -24,6 +24,10 @@ namespace banana
 	// Pressed past half way out, let go back under a third (a deadzone, and no flicker at the edge); flicked straight
 	// to the other side, the other direction
 	int stickStep(int dir, int v, int half);
+	// an axis pushed over half way out, of a device at rest otherwise (before the menu takes it for itself). ABS_Z and
+	// ABS_RZ are triggers, resting at their lowest value, only on a pad whose right stick is on ABS_RX/RY (rightStick);
+	// without those they are the right stick itself (many pads: 0..255, at rest 128), resting in the middle as the others
+	bool absPushed(int axis, bool rightStick, int lo, int hi, int value);
 	// a button's evdev code as the menu's key (the face buttons by BANANA_CONFIRM, as a press is read)
 	Key inputKey(int code);
 
@@ -56,6 +60,7 @@ namespace banana
 		struct Dev
 		{
 			int fd = -1;
+			std::string node;		// its /dev/input path (grab's look at what is held opens it again)
 			bool shared = false;	// (bananad's too: never grabbed)
 			bool ours = false;		// grabbed now
 			bool touch = false, pointer = false;	// pointer: an absolute pointer whose button is BTN_LEFT

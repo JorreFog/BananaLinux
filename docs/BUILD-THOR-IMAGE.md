@@ -53,18 +53,20 @@ is built again with xkbregistry.
 Checked on a PC, with this repository's configuration and Buildroot's cross compiler for the Thor:
 
 - the configuration loads and keeps every option; every package's dependencies resolve;
-- cross-compiled, never run: the kernel with ROCKNIX's patches and the Thor's device tree, Mesa 26.2.6 with the
-  Turnip patches, wlroots, sway-lite, wvkbd, Box64, and 30 of the 35 new RetroArch cores. The table in
-  `docs/THOR-EMULATORS.md` ("Build state") says for each package whether it was compiled, and which recipes changed
-  after they were;
-- the menu (`banana-ui`) builds for a PC and passes its tests there.
+- cross-compiled, never run: the kernel with ROCKNIX's patches (`Image`, the Thor's device tree, 209 modules), Mesa
+  26.2.6 with the Turnip patches, wlroots, sway-lite, wvkbd (the on-screen keyboard), the menu (`banana-ui`),
+  `bananad`, Box64, the three firmware packages, and 34 of the 35 new RetroArch cores (all but SAME_CDI). Two of
+  those cores, SwanStation and Flycast, were compiled before their recipes were changed to link their own libraries
+  in, and need a rebuild. The table in `docs/THOR-EMULATORS.md` ("Build state") says for each package whether it was
+  compiled, and which recipes changed after they were;
+- the menu (`banana-ui`) also builds for a PC and passes its tests there.
 
-Not compiled at all: Qt 6, WPE WebKit, PipeWire, RetroArch with the Thor's toolchain, five of the new cores, and the
-seven standalone emulators (Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K, Flycast, ScummVM). xemu (the Xbox) is not in
-the image: it needs desktop OpenGL, which this GLES-only image doesn't have.
+Not compiled at all: Qt 6, WPE WebKit, PipeWire, RetroArch with the Thor's toolchain, the SAME_CDI core, and the
+seven standalone emulators (Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K, Flycast, ScummVM). xemu (the Xbox) is left out
+of the image: it needs desktop OpenGL, which this GLES-only image doesn't have.
 
-Changed from reading sources and unproven until a build: Flycast and its core, Vita3K (Buildroot's Boost and
-libcurl, a prebuilt ffmpeg archive), Box64 (its x86 helper libraries installed) and the libxkbcommon option. After the
+Changed from reading sources and unproven until a build: Flycast and its core, the SwanStation core, Vita3K
+(Buildroot's Boost and libcurl, a prebuilt ffmpeg archive), Box64 (its x86 helper libraries installed) and the libxkbcommon option. After the
 first build of ARMSX2 and Azahar, check `readelf -d` on their binaries for a `NEEDED` library that isn't in the image:
 neither recipe sets `BUILD_SHARED_LIBS`, and Buildroot's default makes bundled libraries shared.
 
@@ -78,7 +80,7 @@ Expect it. The packages are ordered here by how likely they are to need work:
 | `azahar` | `buildroot/package/azahar` | Qt 6.9 from Buildroot instead of its bundled Qt; Wayland instead of X11 |
 | `dolphin`, `vita3k` | `buildroot/package/...` | their bundled libraries cross-compiled; 17 ROCKNIX patches on Dolphin |
 | `flycast`, `libretro-flycast` | `buildroot/package/...` | their bundled libraries: built static now (`BUILD_SHARED_LIBS=OFF`), from reading the CMake |
-| the cores not built yet | `buildroot/package/libretro-*` | a compiler flag one core's makefile doesn't take; SAME_CDI and FinalBurn Neo are the long ones |
+| `libretro-same-cdi`, and the rebuilds of `libretro-swanstation` and `libretro-flycast` | `buildroot/package/libretro-*` | SAME_CDI is the one core never compiled (a MAME build: long, and a compiler flag its makefile may not take); the other two must come out with no `NEEDED` library that isn't in the image |
 | `mesa3d` | `buildroot/patches/mesa3d` | cross-compiled with the five Turnip patches (4,000 lines); never run |
 | `sway-lite`, `wvkbd` | `buildroot/package/...` | written here (Buildroot's sway needs systemd); cross-compiled, never run |
 | `linux` | `buildroot/board/thor` | ROCKNIX's patch series on 7.2 with two config fragments on top; cross-compiled, never booted |

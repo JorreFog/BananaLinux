@@ -1152,6 +1152,22 @@ for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; d
         --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
     grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
 done
+# a running game found again (findGame, what the Home menu's "back to the game" and a game's end go by): by its shelf
+# and its file after another shelf was opened and after the card was read again, and one started from the search's
+# shelf on its own system's once the search is cleared
+"$HERE/banana-ui" --headless "$OUT/findgame-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$SX/roms" --data "$SX/data" --script "lib 0 2; mark; lib 3 0; findgame; rescan; findgame; \
+        search smoothie; press start; mark; findgame; rescan; findgame; search ; press start; findgame; rescan; findgame" 2> "$OUT/findgame.log" || { echo "FAIL: banana-ui (findgame) exited $?"; fail=1; }
+FM1=$(grep -m1 '^banana-ui: mark: ' "$OUT/findgame.log" | sed 's/^banana-ui: mark: shelf \([^,]*\), \(.*\)$/\1|\2/')
+case "$FM1" in search\|*|*\|) echo "FAIL: findgame: the script's first game is not one on a system's shelf ($FM1)"; fail=1 ;; esac
+# (the third game of its shelf: an index that only its own shelf gives)
+[ "$(grep -c "^banana-ui: findgame: shelf ${FM1%%|*}, game 2, ${FM1#*|}\$" "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: not found again on its shelf after another was opened and after a rescan: $(grep -m2 'findgame: ' "$OUT/findgame.log" | tr '\n' '|')"; fail=1; }
+[ "$(grep -c '^banana-ui: findgame: shelf search, game 0, .*/snes/Super Smoothie World\.sfc$' "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: a game of the search's shelf not found there (and after a rescan)"; fail=1; }
+[ "$(grep -c '^banana-ui: findgame: shelf snes, game [0-9]*, .*/snes/Super Smoothie World\.sfc$' "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: the search cleared, its game not found on its system's shelf: $(grep 'findgame: ' "$OUT/findgame.log" | tail -2 | tr '\n' '|')"; fail=1; }
+if grep -q 'findgame: gone' "$OUT/findgame.log"; then echo "FAIL: findgame: a game that is there counted as gone"; fail=1; fi
 # a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
 # under its name gets its own again
 IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null

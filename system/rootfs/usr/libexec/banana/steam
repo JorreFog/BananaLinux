@@ -18,7 +18,7 @@
 #                             /run/banana/steam.state: starting | code app | code email <address> | confirm |
 #                             wrong-code | ok <account> | failed <why>
 #   steam code <code>         the Steam Guard code the login waits for
-#   steam cancel              stop a login
+#   steam cancel              stop a login, and tidy up what one that was killed left behind
 #   steam logout              forget the token
 #   steam library             the account's games as <Game>.pc entries on the shelf, then their box art
 #   steam install <file.pc>   download that game (its "steam = <app id>" line), then guess its program; how far it
@@ -67,15 +67,19 @@ val() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$2" 2>/dev/null 
 mkdir -p "${LOG%/*}" 2>/dev/null
 state() { echo "$*" > "$STATE.new" && mv "$STATE.new" "$STATE"; }
 
-# the downloader, fetched once (32 MB down, 86 MB on the card)
+# the downloader, fetched once (32 MB down, 86 MB on the card). A network that doesn't answer is given up on after
+# 15 s a try. Unpacked in a folder beside its place and moved there whole: an unzip cut short (the login cancelled, the
+# power gone) leaves no half of a program that looks ready
 need() {
     [ -x "$DD" ] && return 0
     mkdir -p "$ST/home" || return 1
     say "fetching DepotDownloader $DD_VER"
-    curl -fL --retry 3 -o "$ST/dd.zip" "$DD_URL" || { rm -f "$ST/dd.zip"; return 1; }
+    rm -rf "$ST/dd.tmp"
+    curl -fL --retry 3 --connect-timeout 15 -o "$ST/dd.zip" "$DD_URL" || { rm -f "$ST/dd.zip"; return 1; }
     [ "$(sha256sum "$ST/dd.zip" | cut -d' ' -f1)" = "$DD_SUM" ] || { say "the download's checksum is wrong"; rm -f "$ST/dd.zip"; return 1; }
-    unzip -o -q "$ST/dd.zip" DepotDownloader -d "$ST" && chmod +x "$DD" 2>/dev/null
-    rm -f "$ST/dd.zip"
+    mkdir -p "$ST/dd.tmp" && unzip -o -q "$ST/dd.zip" DepotDownloader -d "$ST/dd.tmp" &&
+        chmod +x "$ST/dd.tmp/DepotDownloader" && mv -f "$ST/dd.tmp/DepotDownloader" "$DD"
+    rm -rf "$ST/dd.zip" "$ST/dd.tmp"
     [ -x "$DD" ]
 }
 
@@ -262,6 +266,11 @@ code)
     ;;
 cancel)
     [ -f "$RUN/steam.pid" ] && kill "$(cat "$RUN/steam.pid")" 2>/dev/null
+    # a login tidies up after itself when its downloader ends; one that was killed (the menu ends a login that is
+    # still fetching the downloader, with its curl or unzip) can't: its files here and the half-fetched downloader
+    rm -f "$RUN/steam.pid" "$RUN/steam.qr" "$RUN/steam.qr.new" "$IN" "$ST/dd.zip"
+    rm -rf "${RUN:?}/steam-480" "${ST:?}/dd.tmp"
+    mkdir -p "$RUN"
     state "failed cancelled"
     ;;
 logout)

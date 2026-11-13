@@ -352,6 +352,21 @@ static void drain_inputs(void)
  * and the menu go on first, then the post-sleep hooks in the background. Woken with the lid still shut (the power
  * button pressed in a bag, the battery check): straight back to sleep, without running anything again. */
 static void shutdown_now(const char *why);
+
+/* the game in game.pid is the one the Home menu holds: game.held carries its pid. One left behind (the menu died with
+ * its Home menu up) names an older game, and no later game is held by it */
+static int held_game(void)
+{
+	int held = 0, game = 0;
+	FILE *f = fopen("/run/banana/game.held", "r");
+	if (!f) return 0;
+	if (fscanf(f, "%d", &held) != 1) held = 0;
+	fclose(f);
+	if (held <= 0 || !(f = fopen("/run/banana/game.pid", "r"))) return 0;
+	if (fscanf(f, "%d", &game) != 1) game = 0;
+	fclose(f);
+	return held == game;
+}
 static int battery_discharging_pct(void);
 /* shutting down (#46): shutdown_now started, or rcK runs (a shutdown from the menu or over SSH writes
  * /run/banana/powering-off first). No sleep from then on: the lid still shut while the game saves and the card is
@@ -796,6 +811,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			char *mute[] = { "/usr/libexec/banana/volume", "set", "0", NULL };
 			run(mute);
 		}
+		/* (one the Home menu holds is frozen in its control group too, banana-ui's gameFreeze: SIGCONT doesn't thaw
+		 * it, and the signal that asks for the save would wait. Thawed first, as shutdown_now does) */
+		if (held_game()) write_file("/sys/fs/cgroup/banana-game/cgroup.freeze", "0");
 		char rom[1024];
 		game_rom(game, rom, sizeof rom);
 		const char *emu = NULL;
@@ -1024,9 +1042,10 @@ static void suspend_now(const char *why)
 	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
 	if (dark || !lid_closed) backlights_power(!lid_closed);
 	/* (a game the menu itself holds stopped, the Home button's menu over it: left so, the menu lets it go on) */
-	if (pg > 0 && access("/run/banana/game.held", F_OK) != 0) kill(-pg, SIGCONT);
+	int held = held_game();
+	if (pg > 0 && !held) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
-	if (ui && (!game || access("/run/banana/game.held", F_OK) == 0)) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
+	if (ui && (!game || held)) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
 	undim();
 	hooks("post", 1);
@@ -1057,7 +1076,7 @@ static void shutdown_now(const char *why)
 		pid_t pg = getpgid(game);
 		/* (one the Home menu holds: frozen in its control group, banana-ui's gameFreeze, and stopped by a sleep before
 		 * this, it would get the signal only once the menu let it go; thawed and continued for its saves) */
-		int held = access("/run/banana/game.held", F_OK) == 0;
+		int held = held_game();
 		if (held) write_file("/sys/fs/cgroup/banana-game/cgroup.freeze", "0");
 		kill(pg > 0 ? -pg : game, SIGTERM);	/* let the emulator write its saves */
 		if (held) kill(pg > 0 ? -pg : game, SIGCONT);
@@ -1796,7 +1815,7 @@ static int game_held(void)
 {
 	static struct timespec seen;
 	struct stat st;
-	if (stat("/run/banana/game.held", &st) != 0) return 0;
+	if (stat("/run/banana/game.held", &st) != 0 || !held_game()) return 0;
 	if (st.st_mtim.tv_sec != seen.tv_sec || st.st_mtim.tv_nsec != seen.tv_nsec) {
 		struct timespec rt;
 		seen = st.st_mtim;

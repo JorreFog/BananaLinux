@@ -258,5 +258,31 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+echo "run-flycast: Vulkan once on a card whose emu.cfg is from before the image's chose it"
+fn "$L/run-flycast" vulkan_once
+F=$T/flycast; mkdir -p "$F"
+rend() { { printf '[audio]\nbackend = alsa\n\n[config]\n'; [ -n "$1" ] && echo "pvr.rend = $1"; echo 'rend.Resolution = 480'; } > "$F/emu.cfg"; rm -f "$F/.vulkan-1"; }
+now() { sed -n 's/^pvr\.rend = //p' "$F/emu.cfg" | tr '\n' ' '; }
+rend 0; vulkan_once "$F"; check "$(now)" "4 " "the old template's OpenGL becomes Vulkan"
+check "$(grep -c . "$F/emu.cfg")" "5" "...and nothing else in the file changed"
+sed -i 's/^pvr\.rend = .*/pvr.rend = 0/' "$F/emu.cfg"; vulkan_once "$F"; check "$(now)" "0 " "OpenGL picked again afterwards is kept"
+rend 3; vulkan_once "$F"; check "$(now)" "3 " "another renderer the owner picked before is kept"
+rend 4; vulkan_once "$F"; check "$(now)" "4 " "the image's own emu.cfg stays as it is"
+rend ""; vulkan_once "$F"; check "$(sed -n '/^\[config\]$/{n;p}' "$F/emu.cfg")" "pvr.rend = 4" "no line (OpenGL by default): Vulkan, in [config]"
+
+echo "run-retroarch: the PPSSPP core's assets in the system folder"
+fn "$L/run-retroarch" core_assets
+A=$T/ppa; mkdir -p "$A/share/flash0/font" "$A/bios" "$A/empty"; echo x > "$A/share/compat.ini"
+pp() { (BANANA_LIBEXEC=$L; core_assets "$@" 2>&1; [ -f "$A/bios/PPSSPP/compat.ini" ] && echo there || echo missing); }
+check "$(pp gpsp "$A/share" "$A/bios")" "missing" "another core: nothing made"
+check "$(pp ppsspp "$A/empty" "$A/bios")" "missing" "an image without PPSSPP's assets: nothing made"
+check "$(pp ppsspp "$A/share" default)" "missing" "a system folder that is no path: nothing made"
+check "$(pp ppsspp "$A/share" "$A/bios")" "there" "the PPSSPP core: compat.ini where it looks"
+check "$(pp ppsspp "$A/share" "$A/bios")" "there" "...and at the next start"
+check "$(ls "$A/share" | tr '\n' ' ')" "compat.ini flash0 " "...the image's folder as it was"
+# (the call: the core's name from CORE, not from c, which the button block reuses when the menu names the system)
+check "$(grep -c '^core_assets "\$c"' "$L/run-retroarch")" "0" "the call doesn't pass the button block's variable"
+check "$(CORE=/usr/lib/libretro/ppsspp_libretro.so; eval "$(grep -B1 '^core_assets "' "$L/run-retroarch" | grep '^CN=')"; echo "${CN%_libretro.so}")" "ppsspp" "...but the core's name, from its path"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

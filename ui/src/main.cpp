@@ -973,6 +973,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	double now = 100000;
 	std::stringstream ss(o.script);
 	std::string cmd;
+	std::string markShelf, markPath;	// (the script's mark)
 	auto settle = [&] { ui.update(now); ui.finishWork(); ui.update(now); };
 	auto save = [&](int s, const std::string& path)
 	{
@@ -1025,6 +1026,24 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		// mark: the game the menu is on as one running (its shelf and its file, what a launch keeps); findgame: found
+		// again as the Home menu does, the menu put on it; rescan: the card read again meanwhile
+		else if (op == "mark")
+		{
+			const auto& sh = lib.shelf(ui.systemIndex());
+			markShelf = sh.def.id;
+			markPath = ui.gameIndex() >= 0 && ui.gameIndex() < (int)sh.games.size() ? sh.games[ui.gameIndex()].path : "";
+			logf("mark: shelf %s, %s", markShelf.c_str(), markPath.c_str());
+		}
+		else if (op == "findgame")
+		{
+			const int at = findGame(lib, markShelf, markPath);
+			if (at >= 0) ui.setLibrary(lib.currentShelf(), at);
+			else ui.setHome(0);
+			if (at < 0) logf("findgame: gone");
+			else logf("findgame: shelf %s, game %d, %s", lib.shelf(lib.currentShelf()).def.id.c_str(), at, lib.shelf(lib.currentShelf()).games[at].path.c_str());
+		}
+		else if (op == "rescan") { lib.scan(); ui.dataChanged(); logf("rescan: %d shelves", lib.systemCount()); }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
@@ -2550,6 +2569,7 @@ int main(int argc, char** argv)
 	settingsView.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
 	unlink("/run/banana/files.pid");	// (a job of a menu that went away mid-way holds no sleep)
+	unlink("/run/banana/game.held");	// (a menu that went away with its Home menu up: bananad holds no later game for it)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
@@ -3503,6 +3523,7 @@ int main(int argc, char** argv)
 		int status = 0;
 		if (pid > 0)
 		{
+			unlink("/run/banana/game.held");	// (an older game's, left behind: this one is not held)
 			std::ofstream f("/run/banana/game.pid");	// bananad: the game to pause before a sleep
 			f << pid;
 			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)

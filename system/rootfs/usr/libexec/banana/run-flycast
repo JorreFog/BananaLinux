@@ -20,6 +20,21 @@ for f in "$T"/mappings/*; do
     [ -f "$D/mappings/${f##*/}" ] || cp "$f" "$D/mappings/"
 done
 sed -i 's/^backend = .*/backend = alsa/' "$D/emu.cfg"
+# The renderer: Vulkan (pvr.rend = 4), which the image's emu.cfg has now; a card's from before it has OpenGL
+# (pvr.rend = 0), which was that template's line and nobody's choice. Set once ($1/.vulkan-1 says it was): any other
+# value before it is the owner's (only Flycast's own menu writes one), and so is OpenGL picked again after it.
+#   vulkan_once <settings folder>
+vulkan_once() {
+    [ -e "$1/.vulkan-1" ] && return
+    if grep -q '^pvr\.rend = 0$' "$1/emu.cfg"; then
+        sed -i 's/^pvr\.rend = 0$/pvr.rend = 4/' "$1/emu.cfg"
+    elif ! grep -q '^pvr\.rend = ' "$1/emu.cfg"; then
+        # (no line is OpenGL too, the build's default)
+        sed -i 's/^\[config\]$/&\npvr.rend = 4/' "$1/emu.cfg"
+    fi
+    : > "$1/.vulkan-1"
+}
+vulkan_once "$D"
 [ -f /data/bios/dc/dc_boot.bin ] || echo "run-flycast: no dc_boot.bin in /data/bios/dc (Flycast's HLE BIOS is used)"
 for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
     [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }

@@ -2,7 +2,8 @@
 # usr/libexec/banana/steam against stand-ins (no Steam, no network): a downloader that asks what DepotDownloader asks
 # (the password, a Steam Guard code, wrong once) and keeps a token the way it does; a web server with Steam's library,
 # store search and covers. The login's states as the menu reads them, the library's entries on the shelf, their box
-# art, a game copied by hand found by its name, a download and its program, the logout.
+# art, a game copied by hand found by its name, a download and its program, the logout. The downloader's own fetch
+# (a stand-in curl with a zip of the stand-in): in place only when it was unpacked whole; cancel after a killed login.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 S=$HERE/rootfs/usr/libexec/banana/steam
 T=$(mktemp -d)
@@ -83,7 +84,8 @@ else
     head -c 4000 /dev/zero > "$dir/bin/game.exe"; head -c 9000 /dev/zero > "$dir/unins000.exe"
     echo " 42.17% $dir/unins000.exe"
     if [ -e "$T/dl-fail" ]; then echo "Failed to find any server with chunk 0a for depot 621. Aborting."; exit 1; fi
-    if [ -e "$T/dl-hang" ]; then : > "$T/dl-hung"; sleep 30; exit 1; fi
+    # (the sleep off the pipe: "stop" ends this script, and its reader mustn't wait for the sleep to end)
+    if [ -e "$T/dl-hang" ]; then : > "$T/dl-hung"; sleep 30 > /dev/null 2>&1; exit 1; fi
     echo "100.00% $dir/bin/game.exe"
     echo "Total downloaded: 13000 bytes (13000 bytes uncompressed) from 1 depots"
 fi
@@ -211,6 +213,57 @@ sh "$S" login-qr >/dev/null 2>&1 & QP=$!
 until_state "qr 1" || bad "no code the second time: $(st)"
 sh "$S" cancel; wait $QP && bad "a cancelled sign-in said it worked"
 sh "$S" status | grep -q '^user=Scanner$' || bad "a cancelled sign-in changed the account"
+# the downloader fetched (the first login on a card): a stand-in curl that hands over a zip of the stand-in downloader
+# and a sha256sum that agrees with it; the rest is the tool's own
+if command -v unzip >/dev/null; then
+    mkdir "$T/fake" "$T/zip"; cp "$T/dd" "$T/zip/DepotDownloader"
+    python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w"); z.write(sys.argv[2], "DepotDownloader"); z.close()' "$T/dd.zip" "$T/zip/DepotDownloader"
+    { echo '#!/bin/sh'; echo "T='$T'; REAL='$(command -v curl)'"; cat <<'SH'; } > "$T/fake/curl"
+case "$*" in *DepotDownloader-linux-arm64.zip*) ;; *) exec "$REAL" "$@" ;; esac
+echo "$*" > "$T/curl.args"
+while [ $# -gt 1 ]; do [ "$1" = -o ] && cp "$T/dd.zip" "$2"; shift; done
+SH
+    printf '#!/bin/sh\necho "%s  $1"\n' "$(sed -n 's/^DD_SUM=//p' "$S")" > "$T/fake/sha256sum"
+    chmod +x "$T/fake/curl" "$T/fake/sha256sum"
+    fetch() { env -u BANANA_STEAM_DD BANANA_PC="$T/pc2" PATH="$T/fake:$PATH" "$@"; }
+    # an unzip killed half way (a stand-in: the start of the program written, as a program, then killed): no
+    # downloader in its place, nothing of the fetch left, the login says so
+    { echo '#!/bin/sh'; cat <<'SH'; } > "$T/fake/unzip"
+while [ $# -gt 1 ]; do [ "$1" = -d ] && d=$2; shift; done
+echo '#!/bin/sh' > "$d/DepotDownloader"; chmod +x "$d/DepotDownloader"
+kill -KILL $$
+SH
+    chmod +x "$T/fake/unzip"
+    fetch sh "$S" login-qr >/dev/null 2>&1 && bad "a login with a downloader unpacked by half said it worked"
+    [ "$(st)" = "failed the downloader couldn't be fetched (no internet?)" ] || bad "the state after an unzip cut short: $(st)"
+    [ -e "$T/pc2/steam/DepotDownloader" ] && bad "half a downloader is in its place"
+    [ -e "$T/pc2/steam/dd.zip" ] || [ -e "$T/pc2/steam/dd.tmp" ] && bad "the fetch's files were left behind: $(ls "$T/pc2/steam")"
+    fetch sh "$S" status | grep -q '^ready=no$' || bad "status says ready with no downloader"
+    grep -q -- '--connect-timeout 15' "$T/curl.args" 2>/dev/null || bad "the fetch waits without end for a network that doesn't answer: $(cat "$T/curl.args" 2>/dev/null)"
+    # ...and what a killed fetch itself leaves (half a downloader in the folder beside) is not taken for it either
+    mkdir -p "$T/pc2/steam/dd.tmp"; echo '#!/bin/sh' > "$T/pc2/steam/dd.tmp/DepotDownloader"; chmod +x "$T/pc2/steam/dd.tmp/DepotDownloader"
+    fetch sh "$S" status | grep -q '^ready=no$' || bad "half a downloader beside its place counts as ready"
+    # whole: in its place, and the login goes on with it. The login then killed with everything it started, as the
+    # menu ends one (its own session): cancel tidies up what it left, and what a fetch cut short would have
+    rm -f "$T/fake/unzip"
+    # (the session's leader writes its own number down: the shell's $! is a subshell around it)
+    fetch setsid sh -c 'echo $$ > "$1"; exec sh "$2" login-qr' sh "$T/sid" "$S" >/dev/null 2>&1 & QP=$!
+    until_state "qr 1" || bad "no code from a downloader just fetched: $(st)"
+    [ -x "$T/pc2/steam/DepotDownloader" ] && cmp -s "$T/pc2/steam/DepotDownloader" "$T/dd" || bad "the fetched downloader isn't in its place"
+    [ -e "$T/pc2/steam/dd.zip" ] || [ -e "$T/pc2/steam/dd.tmp" ] && bad "the fetch's files were left behind after it worked: $(ls "$T/pc2/steam")"
+    kill -KILL -"$(cat "$T/sid")" 2>/dev/null; wait $QP 2>/dev/null
+    [ -e "$T/run/steam.pid" ] && [ -e "$T/run/steam.qr" ] || bad "the stand-in for a killed login left nothing to tidy"
+    : > "$T/run/steam.qr.new"; mkfifo "$T/run/steam.in"; mkdir -p "$T/run/steam-480/.DepotDownloader" "$T/pc2/steam/dd.tmp"
+    : > "$T/pc2/steam/dd.zip"; : > "$T/pc2/steam/dd.tmp/DepotDownloader"
+    fetch sh "$S" cancel
+    [ "$(st)" = "failed cancelled" ] || bad "the state after cancel: $(st)"
+    for f in "$T/run/steam.pid" "$T/run/steam.qr" "$T/run/steam.qr.new" "$T/run/steam.in" "$T/run/steam-480" "$T/pc2/steam/dd.zip" "$T/pc2/steam/dd.tmp"; do
+        [ -e "$f" ] && bad "cancel left ${f##*/} of a killed login"
+    done
+    [ -x "$T/pc2/steam/DepotDownloader" ] || bad "cancel took the downloader"
+else
+    echo "steam: the downloader's fetch not checked (no unzip)"
+fi
 # logout: the token and the account gone, the games stay
 sh "$S" logout >/dev/null
 sh "$S" status | grep -q '^user=$' || bad "still logged in after logout"

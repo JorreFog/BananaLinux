@@ -36,6 +36,16 @@ if [ "${2:-rgds}" = thor ]; then
     grep -qx 'core.gba = bananagba' "$T/etc/banana/settings.conf" || {
         echo "post-build: no core.gba line in etc/banana/settings.conf" >&2; exit 1; }
 fi
+# The overlay is every board's, and so are the launchers of what only the AYN Thor's image has: the compositor and
+# what runs in it (the standalone emulators, the browser, PC games and Steam), the standalone emulators' achievements
+# login, USB debugging. Nothing on the other boards starts them (no system in their list, no profile key, and the menu
+# shows Steam only where its tool is), and their programs aren't there: out of those images
+if [ "${2:-rgds}" != thor ]; then
+    for f in run-wayland run-armsx2 run-azahar run-dolphin run-flycast run-ppsspp run-scummvm run-vita3k run-xemu \
+            ra-standalone run-browser run-pc pc-games steam usb-debug; do
+        rm -f "$T/usr/libexec/banana/$f"
+    done
+fi
 # who we are, for programs that ask (PortMaster names the firmware from it)
 V=$(cat "$(dirname "$0")/../../../VERSION")
 printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \

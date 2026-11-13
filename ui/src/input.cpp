@@ -116,6 +116,7 @@ namespace banana
 			ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
 			Dev dv;
 			dv.fd = fd;
+			dv.node = path;
 			{
 				unsigned long sw[SW_MAX / (8 * sizeof(long)) + 1] = {};
 				ioctl(fd, EVIOCGBIT(EV_SW, sizeof sw), sw);
@@ -182,27 +183,41 @@ namespace banana
 		if (grabbed) grab(true);
 	}
 
-	// nothing held on a device: no key down (a finger on a touchscreen is BTN_TOUCH), no stick, trigger or d-pad pushed
-	static bool atRest(int fd, bool touch)
+	bool absPushed(int axis, bool rightStick, int lo, int hi, int value)
 	{
+		if (hi <= lo) return false;
+		// (a trigger rests at its lowest value, a stick and the d-pad in the middle; pushed: over half way out)
+		const bool trigger = (axis == ABS_Z || axis == ABS_RZ) && rightStick && lo >= 0;
+		const long range = (long)hi - lo;
+		const long out = trigger ? 2 * ((long)value - lo) : labs(2L * value - lo - hi);
+		return 2 * out > range;
+	}
+
+	// nothing held on a device: no key down (a finger on a touchscreen is BTN_TOUCH), no stick, trigger or d-pad pushed.
+	// Asked on an open of its own: EVIOCGKEY drops the key events still queued for the descriptor it is asked on (the
+	// kernel's evdev_handle_get_val), and on the one the menu reads those are presses not handled yet
+	static bool atRest(const std::string& node, bool touch)
+	{
+		int fd = ::open(node.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) return true;	// (gone: the grab fails, and the rescan drops it)
+		bool rest = true;
 		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = {};
-		if (ioctl(fd, EVIOCGKEY(sizeof keys), keys) < 0) return true;
-		for (unsigned long w : keys) if (w) return false;
-		if (touch) return true;
-		unsigned long abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
-		ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
-		static const int axes[] = { ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ, ABS_HAT0X, ABS_HAT0Y };
-		for (int a : axes)
+		if (ioctl(fd, EVIOCGKEY(sizeof keys), keys) >= 0)
 		{
-			input_absinfo ai = {};
-			if (!testBit(abs, a) || ioctl(fd, EVIOCGABS(a), &ai) != 0 || ai.maximum <= ai.minimum) continue;
-			// (a trigger rests at its lowest value, a stick and the d-pad in the middle; pushed: over half way out)
-			const bool trigger = (a == ABS_Z || a == ABS_RZ) && ai.minimum >= 0;
-			const long range = (long)ai.maximum - ai.minimum;
-			const long out = trigger ? 2 * ((long)ai.value - ai.minimum) : labs(2L * ai.value - ai.minimum - ai.maximum);
-			if (2 * out > range) return false;
+			for (unsigned long w : keys) if (w) rest = false;
+			unsigned long abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
+			if (rest && !touch) ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
+			const bool rightStick = testBit(abs, ABS_RX) && testBit(abs, ABS_RY);
+			static const int axes[] = { ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ, ABS_HAT0X, ABS_HAT0Y };
+			for (int a : axes)
+			{
+				input_absinfo ai = {};
+				if (!rest || !testBit(abs, a) || ioctl(fd, EVIOCGABS(a), &ai) != 0) continue;
+				if (absPushed(a, rightStick, ai.minimum, ai.maximum, ai.value)) rest = false;
+			}
 		}
-		return true;
+		::close(fd);
+		return rest;
 	}
 
 	void Input::grab(bool on)
@@ -213,7 +228,7 @@ namespace banana
 			if (d.shared || d.ours == on) continue;
 			// (a device another program has grabbed already says EBUSY: left, it sends the menu nothing either)
 			if (!on) { ioctl(d.fd, EVIOCGRAB, 0); d.ours = false; }
-			else if (atRest(d.fd, d.touch)) d.ours = ioctl(d.fd, EVIOCGRAB, 1) == 0;
+			else if (atRest(d.node, d.touch)) d.ours = ioctl(d.fd, EVIOCGRAB, 1) == 0;
 		}
 	}
 

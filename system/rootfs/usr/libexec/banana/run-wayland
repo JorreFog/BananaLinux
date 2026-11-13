@@ -18,7 +18,8 @@
 #   run-wayland [--two-screens] [--keep-bottom] [--keyboard] [--x11] -- <command> [arguments...]
 #     --two-screens   the program opens a window for each screen (the rule above is always on; this only says so in the log)
 #     --x11           the program is an X11 one: Xwayland is started for it (DISPLAY set)
-# (host tests: BANANA_SWAY for the compositor, BANANA_WL_OUTPUTS="TOP BOTTOM" for the outputs' names, WLR_BACKENDS)
+# (host tests: BANANA_SWAY for the compositor, BANANA_WL_OUTPUTS="TOP BOTTOM" for the outputs' names, BANANA_FBCON_ROTATE
+# for the kernel's word on how the panel is turned, WLR_BACKENDS)
 two=; keepbottom=; keyboard=; x11=
 while [ $# -gt 0 ]; do
     case $1 in
@@ -53,11 +54,14 @@ else
         case $n in "$TOP") ;; DSI-*|eDP-*|LVDS-*) [ -z "$BOT" ] && BOT=$n ;; esac
     done
 fi
-# how the panels are turned: hw.conf's word, else the kernel's (fbcon's rotate: quarter turns)
+# how the panels are turned: hw.conf's word, else the kernel's (fbcon's rotate: quarter turns). Neither (a kernel
+# without fbcon): nothing, and no "transform" line below, so the compositor turns each output as its connector's
+# "panel orientation" says; "normal" written out would be an order not to
 rot() {
     r=$1
     if [ -z "$r" ]; then
-        case $(cat /sys/class/graphics/fbcon/rotate 2>/dev/null) in 1) r=90 ;; 2) r=180 ;; 3) r=270 ;; *) r=0 ;; esac
+        case $(cat "${BANANA_FBCON_ROTATE:-/sys/class/graphics/fbcon/rotate}" 2>/dev/null) in
+        0) r=0 ;; 1) r=90 ;; 2) r=180 ;; 3) r=270 ;; *) return ;; esac
     fi
     case $r in 90|180|270) echo "$r" ;; *) echo normal ;; esac
 }
@@ -73,13 +77,13 @@ CFG=$RUN/wl/sway.conf
     echo "focus_follows_mouse no"
     echo "seat * hide_cursor 2000"
     echo "output * bg #000000 solid_color"
-    echo "output $TOP transform $RT"
+    [ -n "$RT" ] && echo "output $TOP transform $RT"
     echo "workspace 1 output $TOP"
     if [ -n "$BOT" ]; then
         if [ -n "$keepbottom" ]; then
             echo "output $BOT power off"
         else
-            echo "output $BOT transform $RB"
+            [ -n "$RB" ] && echo "output $BOT transform $RB"
             echo "workspace 2 output $BOT"
             # (the second window of a two-screen program: by its title, as ROCKNIX's rule)
             echo 'for_window [title=".*(Secondary|\[w2\]|Sub|Bottom|Screen 2|GamePad).*"] move window to output '"$BOT"', fullscreen enable'
@@ -95,7 +99,7 @@ CFG=$RUN/wl/sway.conf
 
 # the program, started by the compositor once it is up (its environment the compositor's); its status kept for this
 # script, and the compositor told to end when it does
-ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid"
+ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid" "$RUN/wl/quit"
 {
     echo '#!/bin/sh'
     echo "export SDL_VIDEODRIVER=wayland QT_QPA_PLATFORM=wayland GDK_BACKEND=wayland CLUTTER_BACKEND=wayland"
@@ -105,6 +109,8 @@ ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid"
     # (the menu's lease shim is the compositor's, which opens the display device; a program in it has no use for it,
     # and Box64 would try to load it into a Windows game as an x86 library)
     echo 'case "$LD_PRELOAD" in */banana-leaseshim.so) unset LD_PRELOAD ;; esac'
+    # (a Quit that came while the compositor was coming up, and didn't end it: nothing is started)
+    echo "[ -e $RUN/wl/quit ] && { swaymsg exit >/dev/null 2>&1; exit 0; }"
     # the keyboard, shown from the start (nothing would bring a hidden one up). It is a layer surface that names no
     # output, and the compositor puts such a one on the focused output (no window rule applies to it): the bottom
     # panel focused while it comes up, the top one again before the program opens its window
@@ -119,6 +125,8 @@ ST=$RUN/wl/status; rm -f "$ST" "$RUN/wl/pid"
     for a in "$@"; do printf " '%s'" "$(printf '%s' "$a" | sed "s/'/'\\\\''/g")"; done
     echo ' &'
     echo "echo \$! > $RUN/wl/pid"
+    # (a Quit that came before that line; the program itself where it has no group of its own yet)
+    echo "[ -e $RUN/wl/quit ] && { kill -TERM -\$! 2>/dev/null || kill -TERM \$! 2>/dev/null; }"
     echo 'wait $!'
     echo "echo \$? > $ST"
     echo 'pkill -x wvkbd-mobintl 2>/dev/null'
@@ -131,9 +139,19 @@ export XDG_RUNTIME_DIR=$RUN/wl
 export LIBSEAT_BACKEND=${LIBSEAT_BACKEND:-builtin} SEATD_VTBOUND=0
 # (no bar, no wallpaper program, no D-Bus session; Xwayland only when asked for: the configuration says so)
 export WLR_NO_HARDWARE_CURSORS=1
-# Quit from the menu: the program first (it saves), the compositor follows it out
-trap 'p=$(cat "$RUN/wl/pid" 2>/dev/null); [ -n "$p" ] && kill -TERM -"$p" 2>/dev/null' TERM INT HUP
-say "$* (top $TOP $RT, bottom ${BOT:-none} ${keepbottom:+off}${two:+ two-screens})"
+# Quit from the menu: the program first (it saves), the compositor follows it out. A Quit before the program is
+# there (the compositor still coming up, no pid written yet) ends the compositor instead, and is left written down:
+# a program the compositor starts all the same is ended as soon as its pid is known
+SP=
+quit() {
+    : > "$RUN/wl/quit"
+    p=$(cat "$RUN/wl/pid" 2>/dev/null)
+    if [ -n "$p" ]; then kill -TERM -"$p" 2>/dev/null
+    elif [ -n "$SP" ]; then kill -TERM "$SP" 2>/dev/null
+    fi
+}
+trap quit TERM INT HUP
+say "$* (top $TOP ${RT:-as the panel}, bottom ${BOT:-none} ${keepbottom:+off}${two:+ two-screens})"
 # (the compositor in a session of its own: the menu's Quit signals the launcher's whole process group, and the
 # compositor must not end on it before the program has saved; the trap above is what the group's signal does here)
 setsid "$SWAY" -c "$CFG" >> "$LOG" 2>&1 &
