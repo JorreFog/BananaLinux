@@ -128,9 +128,14 @@ The button under the bottom screen is the menu's while a game runs:
 - **A press** stops the game where it is and shows BananaOS's menu on both screens. Nothing is saved and nothing
   ends: the game's process is frozen. **A press again**, or picking the same game, goes back into it at the same
   frame. Picking another game ends the frozen one first (it gets the signal to write its saves).
-- **Held for three seconds**, it opens the quick menu on the bottom screen (brightness, performance mode, the fan,
-  the stick lights) with the game's picture kept on the top one. The Home button or B closes it. The performance
-  row is there for games that take both panels too.
+- **Held for three seconds**, it brings the quick menu up onto the bottom screen with a bounce (brightness,
+  performance mode, the fan, the stick lights). The game is not stopped and the top screen is never touched: a 3DS
+  game goes on playing there while the sheet covers the bottom one. The Home button or B drops it back down. Over
+  a game that draws on both panels the sheet is an overlay plane of the bottom panel that the menu keeps out of the
+  game's lease (`Display::sheetOpen`); over the game panel it is drawn on the menu's own screen. Only on a display
+  with no free plane is the game stopped and its bottom panel borrowed instead. While the sheet is up the buttons
+  and the touchscreen are the menu's. Unproven on a Thor: that the plane sits above the game's (its `zpos` is
+  raised where the driver allows).
 
 The freeze is the kernel's: the game runs in a control group of its own and every process in it stops at once, an
 emulator inside the compositor included (a signal to the launcher alone would have left it playing).
