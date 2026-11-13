@@ -342,6 +342,12 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press right" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (4x prompt 3) exited $?"; fail=1; }
     [ -e "$FR" ] && { echo "FAIL $size: leaving 4x asked or kept it: $(cat "$FR")"; fail=1; }
+    # Settings > Nintendo DS > BananaDS > 3D resolution lists 1x, 2x, 3x, 4x left to right (#250: it was 2x, 1x, 3x, 4x,
+    # so Left from the default 2x went round to the 4x question): Left from 2x is 1x, a change, not the question
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press a; press down; press left" 2> "$OUT/$size-res-order.log" \
+        || { echo "FAIL $size: banana-ui (3D resolution order) exited $?"; fail=1; }
+    grep -q 'press left: settings result 2' "$OUT/$size-res-order.log" || { echo "FAIL $size: Left from 2x on BananaDS's 3D resolution: $(grep 'press left' "$OUT/$size-res-order.log")"; fail=1; }
     # a DS game's own BananaDS timing (Origin HeartGold's Fast while Golden Sun stays Accurate): down to Timing (the row
     # after Microphone), right (Accurate), right (Fast): kept at once; left twice back to "As in Settings": no file left
     FT="$FX/data/nds-per-game-timing.conf"; rm -f "$FT"
