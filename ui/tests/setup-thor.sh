@@ -90,10 +90,11 @@ grep -q '^login-qr' "$TS/run/fake-steam.log" || { echo "FAIL thor setup: steam l
 d1=$(grep -o 'qrn=1 qrdark=[0-9]*' "$OUT/thor-st-qr.log" | head -n 1 | cut -d= -f3); d2=$(grep -o 'qrn=2 qrdark=[0-9]*' "$OUT/thor-st-qr.log" | head -n 1 | cut -d= -f3)
 [ -n "$d1" ] && [ -n "$d2" ] && [ "$d1" != "$d2" ] || { echo "FAIL thor setup: the new code wasn't read (${d1:-?} / ${d2:-?} dark modules)"; fail=1; }
 if command -v convert >/dev/null; then
-    # the card: pure white and pure black right of the text column, both a good part of it
+    # the card: its light ground (Thor OLED's ink, #EFE9DE: the material look's code is on the ink, not on white) and
+    # pure black right of the text column, both a good part of it
     hist=$(convert "$OUT/thor-st-steam-qr-top.png" -crop 600x900+1320+90 +repage -format %c histogram:info: 2>/dev/null)
-    wpx=$(echo "$hist" | grep -i '#FFFFFF' | awk '{ print $1 }' | tr -d ':'); bpx=$(echo "$hist" | grep -i '#000000 ' | awk '{ print $1 }' | tr -d ':')
-    [ "${wpx:-0}" -gt 60000 ] && [ "${bpx:-0}" -gt 40000 ] || { echo "FAIL thor setup: no code drawn on the top screen (white ${wpx:-0}, black ${bpx:-0})"; fail=1; }
+    wpx=$(echo "$hist" | grep -i '#EFE9DE' | awk '{ print $1 }' | tr -d ':'); bpx=$(echo "$hist" | grep -i '#000000 ' | awk '{ print $1 }' | tr -d ':')
+    [ "${wpx:-0}" -gt 60000 ] && [ "${bpx:-0}" -gt 40000 ] || { echo "FAIL thor setup: no code drawn on the top screen (light ${wpx:-0}, black ${bpx:-0})"; fail=1; }
 fi
 rm -f "$TS/run/fake-steam.user"
 ts_run qrcancel "home 0; setupat steam; press a; sleep 300; sleep 300; sleep 300; press b; sleep 300; sleep 300; sleep 300; setupstate"

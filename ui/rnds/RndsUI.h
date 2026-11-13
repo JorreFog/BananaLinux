@@ -34,6 +34,8 @@ namespace rnds
 		std::string resumeTitle;
 		std::string resumeBox;		// the chip's cartridge: box cover, the real cart scan, the label art (see GameInfo)
 		std::string resumeCart, resumeLabel;
+		std::string resumeWhen;		// when it was last played: "Today", "Yesterday", "12 Oct" ("" never)
+		std::string recentArt[2];	// the covers of the next two games played before it (else the shelf's first ones with art)
 	};
 
 	struct GameInfo
@@ -118,6 +120,10 @@ namespace rnds
 		// screen's background (its wallpaper, its "screen" box) is drawn over all of it, so the screen is filled; what
 		// sits on it keeps its place in the canvas. false: the screen is the canvas (the RG DS)
 		virtual bool stageArea(float& x, float& y, float& w, float& h) const { (void)x; (void)y; (void)w; (void)h; return false; }
+		// how many of the screen's own pixels one of those device px is, when a staged canvas is fitted to a screen
+		// narrower than it (the AYN Thor's bottom: 0.86): what is drawn w wide covers w times this many pixels. A menu
+		// that makes its pictures at this scale and draws them w / stageScale() wide has them pixel for pixel
+		virtual float stageScale() const { return 1; }
 	};
 
 	// the current screen's background area in the menu's 640x480 units (scale s: device px per unit): the stage's
@@ -151,6 +157,9 @@ namespace rnds
 	extern Accent accent;
 	bool setAccent(const std::string& name);		// false: unknown, the yellow kept
 	void setAccent(const Accent& a);				// a theme's own accent
+	bool accentNamed(const std::string& name, Accent& a);	// one of the six by its setting's value
+	// the ink a theme gives for text on its accent (0xff000000 | rgb), 0: none (inkOn's, by contrast)
+	extern uint32_t accentInk;
 	// a user theme's colours over the palette, by the palette's names ("ink", "screenBg", ...), 0xAARRGGBB; empty: none.
 	// Applied when a palette is set (UI and Banana's settings screen alike)
 	extern std::map<std::string, uint32_t> themeColors;
@@ -164,7 +173,9 @@ namespace rnds
 		std::map<std::string, std::string> sounds;	// scroll, select, back, fav, ready, insert -> .wav, or "off"
 		bool dither = true;							// the screens' dot pattern
 		// Settings' panels: "" the Pixel look (banded, thick outlines, hard shadows), "flat" flat ones with a hairline
-		// edge and a highlight along the top (the Thor OLED theme: lit surfaces on true black)
+		// edge and a highlight along the top; "material" Thor OLED's (a dark gradient lit along its top edge, a hairline
+		// inside it, the selection on the accent's plate or in an accent ring, button hints shaped like the buttons,
+		// labels in Inter)
 		std::string panels;
 		// Settings, the setup, the keyboard and the game panel in a theme's own way (its "settings" member; empty: the
 		// Pixel look's, as the RG DS's themes have it):
@@ -175,6 +186,21 @@ namespace rnds
 		std::string setHints;		// "pill": B / A as pills with a round key, A's edge in the accent
 		std::string setHeader;		// "rule": a page's title over a hairline instead of in a box
 		std::string bodyFont;		// the help texts' font (.ttf; "" the theme's regular one)
+		// "screen": Settings' pages laid out on each screen's own shape (the AYN Thor's: the bottom screen's pages from
+		// edge to edge with the title at the top and the hints at the bottom, the top screen's as a crumb, a large title
+		// and the help under it); "" in the 4:3 canvas
+		std::string setLayout;
+		// the material look's plate (the selection) and its "state" (a switch that's on, a bar's fill, the main hint's
+		// key) from the accent: how much white at the top, where the accent itself sits (0..1 down), how much black at
+		// the bottom, and the bottom lip's height in px ("settings": { "plate": { "light", "at", "dark", "lip" },
+		// "state": { ... } }). stateMix[0] < 0: the state is the plate
+		float plateMix[4] = { 0.18f, 0.38f, 0.14f, 6 }, stateMix[4] = { -1, 0.38f, 0.14f, 6 };
+		bool accentLogo = true;		// the boot animation's banana in the accent's hue ("accentLogo": false: it stays yellow)
+		std::string setTexture;		// a picture tiled over the look's cards, rows and tiles in place of the dots (.png); "" none
+		// the theme's own words for a row's help on the top screen, by the row's key ("settings": { "help": { "theme":
+		// "...", "accent": "..." } }): what this theme is, what its accent colours
+		std::map<std::string, std::string> setHelp;
+		std::string setGlyphs;		// a folder of line icons (<name>-32.png, <name>-88.png: white, tinted) for rows and tiles; "" none
 		// the moments between screens ("transitions": "fade"): smooth fades instead of the iris and the stepped fades
 		std::string transitions;
 	};

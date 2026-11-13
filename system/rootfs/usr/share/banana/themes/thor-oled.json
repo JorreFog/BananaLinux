@@ -1,411 +1,510 @@
 {
-  // Thor OLED: the Dark look rebuilt for the AYN Thor's two AMOLED panels. True black around lit surfaces, a hairline
-  // on every card, the accent glowing where the selection is, Pixelify Sans and Inter. It lays out on each screen's
-  // own size ("stage": "screen": 853 x 480 units on the 16:9 top, 640 x 557 on the bottom) and reflows on the RG DS's
-  // 4:3 panels. The accent is Settings' (Display & sound > Accent colour): Banana's yellow is the theme's own.
+  // Thor OLED: the Dark look rebuilt for the AYN Thor's two AMOLED panels. True black; every surface one warm
+  // "material" (a dark gradient with a lit top line and a hairline); colour only from the accent's plate under the
+  // selection, the systems' tinted tiles and the games' own art; nothing glows and nothing loops. Pixelify Sans for
+  // names, titles and numbers, Inter for everything else; button hints shaped like the Thor's own buttons.
+  // It lays out on each screen's own size ("stage": "screen": 853 x 480 units on the 16:9 top, 640 x 557 on the
+  // bottom). Its measures are the design's, in the panels' pixels: "=160 * v" is 160 px of the 1920 x 1080 top screen,
+  // "=64 * u" 64 px of the 1240 x 1080 bottom one (vars u, v: units a pixel), so on the RG DS's 4:3 panels it shrinks
+  // to fit. The accent is Settings' (Display & sound > Accent colour): Banana's yellow is the theme's own.
   // docs/THEMES.md describes the format.
   "name": "Thor OLED",
   "author": "BananaOS",
   "stage": "screen",
   "font": "pixel",
 
-  // Settings, the keyboard and the game panel: the same black, surfaces and accent, flat panels with a hairline edge
+  // Settings, the setup, the lists, the keyboard, the quick menu and the game panel in the same language: the
+  // "material" look (every surface the dark gradient with a lit top line and a hairline, the selection on the accent's
+  // plate or in an accent ring, hints as pills with keys shaped like the Thor's buttons, labels in Inter)...
   "base": "dark",
-  "panels": "flat",
-  // ...laid out as the mockup's secondary screens: on the top screen the text straight on the black (no card), its
-  // column 58 units from the screen's left edge, the icon on a lit tile, the help in Inter; the picked row outlined in
-  // the accent with its glow, the button hints as pills, a page's title over a hairline. screens.settings below draws
-  // the status bar and the accent's glow under them
-  "settings": { "top": "open", "left": 58, "icons": "tile", "pick": "outline", "hints": "pill", "header": "rule", "bodyFont": "inter" },
+  "panels": "material",
+  // ...laid out on each screen's own shape ("layout": "screen"): on the top screen a crumb, the title large and the
+  // help under it, straight on the black, 160 px (71 units) from the left edge, no icon; on the bottom one the page
+  // from edge to edge with 64 px margins, its title at the top and the hints at the foot. "glyphs": the line icons of
+  // rows and tiles. screens.settings below draws the status bar over them
+  "settings": { "top": "open", "left": 71.1, "icons": "none", "pick": "outline", "hints": "pill", "bodyFont": "inter",
+                "layout": "screen", "glyphs": "thor-oled/ui",
+                // the theme's own words on its Theme and Accent colour rows' page
+                "help": { "theme": "Thor OLED keeps Dark's layout and banana accent on true black, so the pixels around the cards stay off on both AMOLED panels. Depth comes from surface steps and thin hairlines.",
+                          "accent": "The selection, the Start plate and the progress bars follow the accent. Banana is the stock one." } },
+  // Settings > Display & sound > Accent colour in this theme: the design's names, colours and inks for Banana's six
+  // (pink stays as it is). The variants (thor-white.json, thor-purple.json, thor-rainbow.json) add their own first
+  "accents": {
+    "yellow": { "name": "Banana", "ink": "#17120a" }, "green": { "name": "Lime", "color": "#9be15d", "ink": "#0d1606" },
+    "blue": { "name": "Sky", "color": "#4cb8ff", "ink": "#04121e" }, "red": { "name": "Coral", "color": "#ff6f61", "ink": "#1e0604" },
+    "purple": { "name": "Violet", "color": "#a98bff", "ink": "#0e0a1f" }
+  },
+  // the boot animation's banana stays yellow whatever the accent (the line under it is the accent's)
+  "accentLogo": false,
   // smooth fades between the boot, the menu, a game and the shutdown, in place of the iris
   "transitions": "fade",
   "background": { "dither": false },
+  // the palette: the engine's names, then the material look's own (docs/THEMES.md lists them; the plate's are the
+  // accent's unless given here)
   "colors": {
     "screenBg": "#000000", "screenFrame": "#000000", "screenBand": "#000000",
     "ditherA": "#00000000", "ditherB": "#00000000",
-    "ink": "#f1ede2", "muted": "#8f897c", "line": "#3a3a40", "edge": "#2a2a30", "navy": "#ffffff", "red": "#ff4b5a",
-    "panelBand": "#2a2a31", "panelBody": "#111115", "panelLow": "#08080a",
-    "chipBand": "#1b1b21", "chipBody": "#0b0b0d",
-    "bubbleBand": "#2a2a31", "bubbleBody": "#0f0f12", "bubbleLow": "#08080a",
-    "frameBorder": "#2a2a30", "frameBg": "#0b0b0d",
-    "meterBg": "#1b1b21", "brandBg": "#0b0b0d", "rule": "#2a2a30",
-    "trackBg": "#0b0b0d", "trackHi": "#1b1b21", "railBg": "#0b0b0d", "faceMuted": "#2a2a30",
-    "favBorder": "#ff4b5a", "favBand": "#3a1218", "favBody": "#1e0a0d", "favInk": "#ff8a96",
+    "ink": "#efe9de", "muted": "#aaa398", "line": "#2a2824", "edge": "#23211e", "navy": "#ffffff", "red": "#f0767c",
+    "panelBand": "#1f1e1b", "panelBody": "#141311", "panelLow": "#100f0e",
+    "chipBand": "#1f1e1b", "chipBody": "#141311",
+    "bubbleBand": "#1f1e1b", "bubbleBody": "#141311", "bubbleLow": "#100f0e",
+    "frameBorder": "#23211e", "frameBg": "#0f0e0d",
+    "meterBg": "#23211e", "brandBg": "#0f0e0d", "rule": "#23211e",
+    "trackBg": "#0a0a09", "trackHi": "#23211e", "railBg": "#0f0e0d", "faceMuted": "#23211e",
+    "favBorder": "#f27fb2", "favBand": "#3a1828", "favBody": "#1e0c15", "favInk": "#f27fb2",
     "blackish": "#000000", "shade35": "#00000059", "shade40": "#00000066", "shade45": "#00000073",
-    "slotDark": "#000000", "slotLip": "#2a2a30"
+    "slotDark": "#000000", "slotLip": "#23211e",
+    "kbdBg": "#efe9de", "kbdInk": "#141312",
+    "matTop": "#1f1e1b", "matMid": "#141311", "matLow": "#100f0e", "selTop": "#2a2824", "selLow": "#1d1c19",
+    "lit": "#fffaf012", "hair": "#efe9de14", "hair2": "#efe9de24", "tileEdge": "#efe9de1a",
+    "ink2": "#aaa398", "dim": "#8a847a", "surface": "#0f0e0d", "raised": "#181715", "raised2": "#23211e",
+    "danger": "#c93338", "dangerText": "#f0767c", "fav": "#f27fb2", "ok": "#4cc38a",
+    "keyTop": "#fffaf0", "keyInk": "#141312", "dots": "#fffaf00b"
+  },
+
+  // the theme's own words for the systems: the short name on the tab strip and in the bubble (else the id in
+  // capitals), and the year beside the maker (sys.short, sys.year; item.short in a list)
+  "systems": {
+    "favorites": { "short": "★ Fav" }, "recently-played": { "short": "Recent" },
+    "nds": { "short": "DS", "year": "2004" }, "3ds": { "short": "3DS", "year": "2011" },
+    "gb": { "short": "GB", "year": "1989" }, "gbc": { "short": "GBC", "year": "1998" }, "gba": { "short": "GBA", "year": "2001" },
+    "nes": { "short": "NES", "year": "1985" }, "snes": { "short": "SNES", "year": "1990" }, "n64": { "short": "N64", "year": "1996" },
+    "gc": { "short": "GC", "year": "2001" }, "wii": { "short": "WII", "year": "2006" }, "wiiu": { "short": "WIIU", "year": "2012" },
+    "switch": { "short": "SWITCH", "year": "2017" }, "vb": { "short": "VB", "year": "1995" }, "pmini": { "short": "MINI", "year": "2001" },
+    "gw": { "short": "G&W", "year": "1980" }, "gameandwatch": { "short": "G&W", "year": "1980" },
+    "psx": { "short": "PS1", "year": "1994" }, "ps2": { "short": "PS2", "year": "2000" }, "ps3": { "short": "PS3", "year": "2006" },
+    "psp": { "short": "PSP", "year": "2004" }, "vita": { "short": "VITA", "year": "2011" },
+    "xbox": { "short": "XBOX", "year": "2001" }, "x360": { "short": "X360", "year": "2005" },
+    "sms": { "short": "SMS", "year": "1986" }, "md": { "short": "MD", "year": "1988" }, "megadrive": { "short": "MD", "year": "1988" },
+    "segacd": { "short": "SCD", "year": "1991" }, "32x": { "short": "32X", "year": "1994" }, "saturn": { "short": "SATURN", "year": "1994" },
+    "dc": { "short": "DC", "year": "1998" }, "gg": { "short": "GG", "year": "1990" },
+    "a2600": { "short": "2600", "year": "1977" }, "a5200": { "short": "5200", "year": "1982" }, "a7800": { "short": "7800", "year": "1986" },
+    "lynx": { "short": "LYNX", "year": "1989" }, "jaguar": { "short": "JAGUAR", "year": "1993" },
+    "pce": { "short": "PCE", "year": "1987" }, "pcecd": { "short": "PCECD", "year": "1991" }, "pcfx": { "short": "PCFX", "year": "1994" },
+    "neogeo": { "short": "NEO", "year": "1990" }, "neocd": { "short": "NEOCD", "year": "1994" }, "ngpc": { "short": "NGPC", "year": "1999" },
+    "wsc": { "short": "WSC", "year": "2000" }, "3do": { "short": "3DO", "year": "1993" }, "arcade": { "short": "ARCADE", "year": "1978" },
+    "coleco": { "short": "COLECO", "year": "1982" }, "intv": { "short": "INTV", "year": "1979" }, "vectrex": { "short": "VECTREX", "year": "1982" },
+    "o2": { "short": "O2", "year": "1978" }, "cdi": { "short": "CDI", "year": "1991" }, "msx": { "short": "MSX", "year": "1983" },
+    "c64": { "short": "C64", "year": "1982" }, "amiga": { "short": "AMIGA", "year": "1987" },
+    "zx": { "short": "ZX", "year": "1982" }, "zxspectrum": { "short": "ZX", "year": "1982" }, "cpc": { "short": "CPC", "year": "1984" },
+    "x68k": { "short": "X68K", "year": "1987" }, "dos": { "short": "DOS", "year": "1981" },
+    "pico8": { "short": "PICO-8", "year": "2015" }, "pico-8": { "short": "PICO-8", "year": "2015" },
+    "scummvm": { "short": "SCUMM", "year": "2001" }, "pc": { "short": "PC" }, "ports": { "short": "PORTS" },
+    "files": { "short": "FILES" }, "bshare": { "short": "BSHARE" }, "activity": { "short": "STATS" }, "storeapps": { "short": "APPS" },
+    "dodakvarter": { "short": "DODA" }, "rocknixdsstore": { "short": "STORE" }
   },
 
   "vars": {
-    // the mockup's tokens
-    "ink": "#f1ede2", "muted": "#8f897c",
-    "surface": "#0b0b0d", "raised": "#111115", "raised2": "#1b1b21",
-    "hair2": "#ffffff26", "tb": "#ffffff14", "red": "#ff4b5a", "fav": "#ff8a96",
-    "a": "=accent", "aHi": "=accent.band", "aLo": "=accent.dark", "aLow": "=accent.low", "aInk": "=accent.ink",
-    // the bottom screen's rows, by its height (557 units on the Thor, 480 on the RG DS)
-    "lrY": "=H * 0.0527", "bubY": "=H * 0.1148", "bubH": "=min(105, H * 0.19)",
-    "railY": "=H * 0.5047", "scrubY": "=H * 0.764",
-    // the cards' corner (34 px of a 1080-line panel)
-    "R": 16
+    // units a pixel of the design: of the bottom screen (1240 x 1080) and of the top one (1920 x 1080), and the
+    // screens' widths in those pixels
+    "u": "=min(H / 1080, W / 1240)", "v": "=min(H / 1080, W / 1920)",
+    "PW": "=W / min(H / 1080, W / 1240)", "TW": "=W / min(H / 1080, W / 1920)",
+    // the design's tokens
+    "ink": "#efe9de", "ink2": "#aaa398", "muted": "#8a847a",
+    "surface": "#0f0e0d", "raised": "#181715", "raised2": "#23211e",
+    "hair": "#efe9de14", "hair2": "#efe9de24", "fav": "#f27fb2", "ok": "#4cc38a",
+    // the material every card, tile and pill is made of: three stops, and its lit top line
+    "mat0": "#1f1e1b", "mat1": "#141311", "mat2": "#100f0e", "matLit": "#2f2e2a", "litPx": 2,
+    // a card's own: what is tiled over the material (the LCD's dots), and the lit line along its top
+    "cardTex": "thor-oled/dots.png", "cardLit": "#2f2e2a", "cardLitPx": 2,
+    // the accent and its plate (the selected thing): lighter at the top, the accent itself pAt % down, darker at the
+    // bottom, a lit lip along the top (pLitPx) and a low one along the bottom (pLowPx); the text on it
+    "a": "=accent", "aInk": "=accent.ink",
+    "pTop": "=mix(accent, '#ffffff', 0.18)", "pMid": "=accent", "pBot": "=mix(accent, '#000000', 0.18)", "pAt": 38,
+    "pLit": "=mix(mix(accent, '#ffffff', 0.18), '#ffffff', 0.4)", "pLow": "=mix(mix(accent, '#000000', 0.18), '#000000', 0.16)",
+    "pLitPx": 3, "pLowPx": 6, "pInk": "=accent.ink",
+    // what says "on" or "this much" (the main hint's key, a bar's fill): the plate here; a variant can have another
+    "sTop": "=mix(accent, '#ffffff', 0.18)", "sMid": "=accent", "sBot": "=mix(accent, '#000000', 0.18)", "sAt": 38, "sInk": "=accent.ink",
+    // a key cap: cream, its glyph dark; its lower lip darker by kLip, a lit line along its top (kLitPx: none here)
+    "kTop": "#fffaf0", "kMid": "=mix('#fffaf0', '#efe9de', 0.38)", "kAt": 38, "kBot": "#efe9de", "kInk": "#141312", "kLip": 0.22,
+    "kLit": "#fffaf0", "kLitPx": 0, "wTop": "#f79ac1",
+    // the selected tile's window: the light line under it, a rim round it (none here), and the tiles' own darks
+    "winLight": "#ffffff59", "winRim": "#00000000", "winRimPx": 0, "tileHi": "#1d1b18", "tileLo": "#0e0d0c",
+    // the last game's little cover: a bezel round it (bz px; none here)
+    "bz": 0, "bzTop": "#ffffff", "bzBot": "#e4e5e0",
+    // the shelf and the bubble's pointer (pictures: one set a look)
+    "shelfImg": "thor-oled/shelf.png", "tailImg": "thor-oled/tail.png",
+    // a view arriving (it rises 12 px and fades in over 300 ms), the top screen changing as the selection moves (a
+    // 150 ms fade), and the menu leaving for a game (after the plate's press: up 12 px and out in 150 ms)
+    "in": "=easeOut(progress(view == 'launch' ? 9999 : entered, 300))",
+    "xf": "=easeOut(progress(moved, 150))",
+    "press": "=view == 'launch' ? easeOut(progress(launch.t, 120)) : 0",
+    "leave": "=view == 'launch' ? easeOut(progress(launch.t - 140, 150)) : 0"
   },
 
-  // the shelf moves softly, as the mockup's springs (approximated by easing); A on a game starts it within 240 ms
-  "behavior": { "scrollMs": 110, "settleMs": 700, "launchMs": 240, "cues": { "insert": 140 } },
-  "hints": { "home": [["Y", "Fav"]], "library": [["B", "Back"], ["X", "Options"], ["Y", "Fav"]] },
+  // the shelf glides in about 200 ms; A on a game presses the plate, the menu leaves and the game starts (290 ms)
+  "behavior": { "scrollMs": 60, "settleMs": 700, "launchMs": 290, "cues": { "insert": 140 } },
+  "hints": { "home": [["Y", "Favourite"]], "library": [["B", "Back"], ["X", "Options"], ["Y", "Favourite"]] },
 
   "components": {
-    // a button's key: a light round chip with its name (wider for SEL, ST)
-    "key": {
-      "type": "group", "w": "=max(21.7, len(k) * 7.6 + 9)", "h": 21.7, "radius": 10.85,
-      "gradient": { "angle": 180, "stops": [ "#ffffff", "=on ? a : ink" ] },
-      "children": [ { "type": "text", "w": "100%", "h": "100%", "align": "center", "valign": "middle", "text": "{k}",
-                      "size": 12.4, "color": "#111111" } ]
+    // a surface of the material hp px high: the gradient, the lit line along its top, a hairline round it
+    "mat": {
+      "type": "rect", "border": "=2 * u", "borderColor": "=hair",
+      "gradient": { "angle": 180, "stops": [ "=matLit", "=matLit + ' ' + (litPx * 100 / hp) + '%'", "=mat0 + ' ' + (litPx * 100 / hp) + '%'", "=mat1 + ' 70%'", "=mat2" ] }
     },
-    // a button hint: the key and what it does, in a pill with a hairline (accent or red when it's on)
+    // a card: the material under the LCD's dots (a dot every 8 px)
+    "card": { "type": "group", "children": [
+      { "use": "mat", "radius": "=32 * u", "with": { "matLit": "=cardLit", "litPx": "=cardLitPx" } },
+      { "type": "image", "src": "=cardTex", "fit": "tile", "w": "100%", "h": "100%", "radius": "=32 * u" }
+    ] },
+    // the accent's plate hp px high: its gradient, the lit lip along the top (3 px) and the darker one at the bottom (6)
+    "plate": {
+      "type": "rect",
+      "gradient": { "angle": 180, "stops": [ "=pLit", "=pLit + ' ' + (pLitPx * 100 / hp) + '%'", "=pTop + ' ' + (pLitPx * 100 / hp) + '%'", "=pMid + ' ' + pAt + '%'",
+                                             "=pBot + ' ' + (100 - pLowPx * 100 / hp) + '%'", "=pLow + ' ' + (100 - pLowPx * 100 / hp) + '%'", "=pLow" ] }
+    },
+    // a button's key, shaped like the Thor's own: A B X Y round, L R shoulders, Start Select Home a rounded box with
+    // the word. mode 0: cream; 1: the plate (the main action); 2: pink (take away from the favourites)
+    // (its colours are worked out here from k and mode: c0 c1 c2 the cap's gradient, c1 cAt % down, ci the glyph, cl
+    // the lit line, cLip the lower lip; a variant gives others, the Rainbow's a colour a button)
+    "key": {
+      "type": "group", "layout": "row", "align": "center", "h": "=48 * u",
+      "with": { "c0": "=pick(mode, kTop, sTop, wTop)", "c1": "=pick(mode, kMid, sMid, mix(wTop, fav, 0.38))", "cAt": "=pick(mode, kAt, sAt, 38)",
+                "c2": "=pick(mode, kBot, sBot, fav)", "ci": "=pick(mode, kInk, sInk, kInk)", "cl": "=pick(mode, kLit, sTop, wTop)", "cLip": "=kLip" },
+      "children": [
+        { "type": "group", "visible": "=len(k) == 1 && k != 'L' && k != 'R'", "w": "=48 * u", "h": "=48 * u", "radius": "=24 * u",
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 48) + '%'", "=c0 + ' ' + (kLitPx * 100 / 48) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.8%'", "=darken(c2, cLip) + ' 93.9%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "image", "src": "thor-oled/key-{k}.png", "fit": "pixel", "x": "=16.5 * u", "y": "=13.5 * u", "w": "=15 * u", "h": "=21 * u",
+                          "tint": "=ci" } ] },
+        { "type": "group", "visible": "=k == 'L' || k == 'R'", "w": "=64 * u", "h": "=44 * u", "radius": [ "=20 * u", "=20 * u", "=8 * u", "=8 * u" ],
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 44) + '%'", "=c0 + ' ' + (kLitPx * 100 / 44) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.2%'", "=darken(c2, cLip) + ' 93.3%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "image", "src": "thor-oled/key-{k}.png", "fit": "pixel", "x": "=24.5 * u", "y": "=11.5 * u", "w": "=15 * u", "h": "=21 * u",
+                          "tint": "=ci" } ] },
+        { "type": "group", "visible": "=len(k) > 1", "layout": "row", "align": "center", "padding": "=12 * u", "h": "=44 * u", "radius": "=12 * u",
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 44) + '%'", "=c0 + ' ' + (kLitPx * 100 / 44) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.2%'", "=darken(c2, cLip) + ' 93.3%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "text", "text": "{k}", "font": "inter-medium", "size": "=24 * u", "color": "=ci" } ] }
+      ]
+    },
+    // a button hint straight on the screen: the key and what it does
     "chip": {
-      "type": "group", "layout": "row", "align": "center", "gap": 6.2, "padding": 5.2, "h": 32, "radius": 16,
-      "gradient": { "angle": 180, "stops": [ "=raised2", "=surface" ] },
-      "border": 1, "borderColor": "=on ? a : warn ? red : hair2",
+      "type": "group", "layout": "row", "align": "center", "gap": "=12 * u", "h": "=48 * u",
       "children": [
         { "use": "key" },
-        { "type": "text", "text": "{label}", "size": 15.5, "color": "=on ? a : warn ? fav : ink", "y": 0.5 },
-        { "type": "rect", "w": 6.2, "h": 1 }
+        { "type": "text", "text": "{label}", "font": "inter-medium", "size": "=fs * u", "color": "=mode == 1 ? ink : mode == 2 ? fav : ink2" }
       ]
     },
-    // a small capital label (GAMES, LAST PLAYED)
-    "label": { "type": "text", "size": 11.6, "spacing": 1.6, "upper": true, "color": "=muted" },
-    // a stat: its number over its label, centred in a column
-    "stat": {
-      "type": "group", "layout": "column", "align": "center", "gap": 2,
+    // ...and on the bottom screen, where it is a button to touch: in a pill of the material
+    "pill": {
+      "type": "group", "h": "=72 * u", "layout": "row", "align": "center", "gap": "=12 * u", "radius": "=36 * u",
+      "border": "=2 * u", "borderColor": "=hair",
+      "gradient": { "angle": 180, "stops": [ "=matLit", "=matLit + ' ' + (litPx * 100 / 72) + '%'", "=mat0 + ' ' + (litPx * 100 / 72) + '%'", "=mat1 + ' 70%'", "=mat2" ] },
       "children": [
-        { "type": "text", "text": "{v}", "font": "inter-semibold", "size": "=big", "color": "=ink" },
-        { "use": "label", "text": "{l}" }
+        { "type": "rect", "w": 0, "h": 1 },
+        { "use": "key" },
+        { "type": "text", "text": "{label}", "font": "inter-medium", "size": "=30 * u", "color": "=ink" },
+        { "type": "rect", "w": "=16 * u", "h": 1 }
       ]
     },
-    // the line between stats
-    "vsep": { "type": "rect", "w": 0.9, "h": "=big + 6", "y": 6, "fill": "=hair2" },
-    // a soft light: a box with no fill, only its glow, in the colour c
-    "glow": { "type": "rect", "anchor": "center", "radius": "50%", "shadow": { "blur": "=blur", "color": "=c" } },
+    // a stat: its number over its label
+    "stat": {
+      "type": "group", "layout": "column", "gap": "=12 * v",
+      "children": [
+        { "type": "text", "text": "{n}", "size": "=big * v", "h": "=big * v", "valign": "middle", "color": "=ink" },
+        { "type": "text", "text": "{l}", "font": "inter", "size": "=30 * v", "h": "=36 * v", "valign": "middle", "color": "=ink2" }
+      ]
+    },
     // the speech bubble over the shelf, its pointer under it, and two lines in it
     "bubble": {
-      "type": "group", "x": 46.5, "y": "=bubY", "w": "=W - 93", "h": "=bubH",
+      "type": "group", "x": "=96 * u", "y": "=128 * u", "w": "=(PW - 192) * u", "h": "=192 * u",
       "children": [
-        { "type": "rect", "radius": "=R + 1.5", "border": 1, "borderColor": "=hair2",
-          "gradient": { "angle": 180, "stops": [ "=raised2", "=surface + ' 70%'" ] } },
-        { "type": "rect", "x": 6, "right": 6, "y": 0.6, "h": 0.8, "fill": "#ffffff14" },
-        { "type": "image", "src": "thor-oled/tail.png", "fit": "fill", "x": "=(W - 93) / 2", "y": "=bubH - 2.06", "w": 21.7, "h": 13.9, "ax": 0.5 },
-        { "type": "text", "x": 20, "w": "=W - 133", "y": "=bubH / 2 - 30", "align": "center", "text": "{t}", "size": 26.8, "color": "=ink" },
-        { "type": "group", "layout": "row", "align": "center", "gap": 9.3, "x": "=(W - 93) / 2", "ax": 0.5, "y": "=bubH / 2 + 6",
-          "children": [
-            { "type": "group", "layout": "row", "padding": 2.5, "radius": 8, "border": 1, "borderColor": "=hair2", "visible": "=pill != ''",
-              "children": [ { "type": "rect", "w": 4, "h": 1 },
-                            { "type": "text", "text": "{pill}", "size": 11.4, "spacing": 1.1, "color": "=muted" },
-                            { "type": "rect", "w": 4, "h": 1 } ] },
-            { "type": "text", "text": "{s}", "font": "inter", "size": 16.5, "color": "=muted" }
-          ] }
+        { "use": "card", "with": { "hp": 192 } },
+        { "type": "image", "src": "=tailImg", "fit": "fill", "x": "50%", "ax": 0.5, "y": "=192 * u", "w": "=48 * u", "h": "=24 * u" },
+        { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=39 * u", "h": "=63 * u", "align": "center", "valign": "middle", "text": "{t}",
+          "size": "=52 * u", "color": "=ink" },
+        { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=114 * u", "h": "=39 * u", "align": "center", "valign": "middle", "text": "{s}",
+          "font": "inter", "size": "=32 * u", "color": "=ink2" }
       ]
     },
-    // the shelf's rail behind the tiles, its dots, the arrows at its ends and the accent's glow under the selection
-    "rail": { "type": "group", "children": [
-      { "use": "glow", "x": "=W / 2", "y": "=railY + 95", "w": 300, "h": 110, "with": { "blur": 70, "c": "=alpha(a, 0.13)" } },
-      { "type": "rect", "x": 0, "w": "=W", "y": "=railY", "h": 1,
-        "gradient": { "angle": 90, "stops": [ "#ffffff00", "=hair2 + ' 20%'", "=hair2 + ' 80%'", "#ffffff00" ] } },
-      { "type": "list", "source": "range", "count": 9, "direction": "free", "range": 64,
-        "item": { "type": "rect", "x": "=W * (0.1 + i * 0.1) - 2", "y": "=railY - 1.5", "w": 4.1, "h": 4.1, "radius": 2, "fill": "=hair2" } },
-      { "type": "text", "x": 5, "y": "=railY - 15", "text": "‹", "size": 25.8, "color": "=muted", "visible": "=cursor > 0", "onTap": "left" },
-      { "type": "text", "right": 5, "y": "=railY - 15", "text": "›", "size": 25.8, "color": "=muted", "visible": "=cursor < count - 1", "onTap": "right" }
+    // the shelf the tiles stand on, and the arrows at its ends
+    "shelf": { "type": "group", "children": [
+      { "type": "image", "src": "=shelfImg", "fit": "fill", "x": "=16 * u", "y": "=660 * u", "w": "=(PW - 32) * u", "h": "=56 * u" },
+      { "type": "image", "src": "thor-oled/chevL-48.png", "fit": "fill", "x": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
+        "visible": "=view == 'home' ? count > 1 : cursor > 0", "onTap": "left" },
+      { "type": "image", "src": "thor-oled/chevR-48.png", "fit": "fill", "right": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
+        "visible": "=view == 'home' ? count > 1 : cursor < count - 1", "onTap": "right" }
     ] },
     // a tile on the shelf: where it stands by its eased distance from the selection (pos), and how selected it is (d,
-    // 0..1 in tenths: the boxes for its sizes are made once): 103 units square, the selected one 138 x 175 on the
-    // accent's plate with START
+    // 0..1 in tenths: the boxes for its sizes are made once). 200 px square, standing 12 px into the shelf; the selected
+    // one's face slides 36 px up into the accent's plate (264 x 336), black behind it, Start under it
     "tile": {
       "type": "group",
       "with": { "d": "=round(clamp(1 - abs(pos), 0, 1), 1)" },
-      "x": "=W / 2 + clamp(pos, -4, 4) * 129 + clamp(pos, -1, 1) * 17.5", "ax": 0.5,
-      "y": "=railY - 51.1 - d * 34.1", "w": "=103.2 + d * 35.1", "h": "=103.2 + d * 72.3",
-      "opacity": "=abs(pos) <= 1 ? 1 : abs(pos) <= 2 ? 1 - 0.45 * (abs(pos) - 1) : abs(pos) <= 3 ? 0.55 - 0.35 * (abs(pos) - 2) : max(0, 0.2 - 0.2 * (abs(pos) - 3))",
+      "x": "=(PW / 2 - 132 + clamp(pos, -4, 4) * 248 + clamp(pos, -1, 1) * 32) * u", "y": "=(404 + 6 * press * sel) * u", "w": "=264 * u", "h": "=336 * u",
+      "opacity": "=abs(pos) <= 1 ? 1 : abs(pos) <= 2 ? 1 - 0.4 * (abs(pos) - 1) : abs(pos) <= 3 ? 0.6 - 0.35 * (abs(pos) - 2) : max(0, 0.25 - 0.25 * (abs(pos) - 3))",
       "children": [
-        // the halo round the selection
-        { "type": "rect", "x": -5, "y": -5, "w": "=103.2 + d * 35.1 + 10", "h": "=103.2 + d * 72.3 + 10", "radius": 24,
-          "shadow": { "blur": 16, "color": "=alpha(a, 0.42)" }, "visible": "=d > 0.05", "opacity": "=d" },
-        // the tile: lit from above, a hairline round it
-        { "type": "rect", "radius": "=R + 1.5", "border": 1, "borderColor": "=tb",
-          "gradient": { "angle": 180, "stops": [ "=raised2", "=raised + ' 60%'", "#08080a" ] } },
-        { "type": "rect", "x": 9, "right": 9, "y": 0.5, "h": 0.8, "fill": "#ffffff17" },
-        // the plate: the accent, lighter at the top, a light edge along it and a darker one at the bottom, ribbed
-        { "type": "group", "opacity": "=d", "visible": "=d > 0.05", "children": [
-          { "type": "rect", "radius": "=R + 1.5",
-            "gradient": { "angle": 180, "stops": [ "=aHi", "=a + ' 30%'", "=a + ' 66%'", "=aLow" ] } },
-          { "type": "rect", "x": 10, "right": 10, "y": 0.6, "h": 1.5, "radius": 0.75, "fill": "#ffffff80" },
-          { "type": "rect", "x": 8, "right": 8, "bottom": 0, "h": 2.6, "radius": 1.3, "fill": "#00000033" },
-          { "type": "list", "source": "range", "count": 26, "direction": "free", "range": 64,
-            "item": { "type": "rect", "x": "=2 + i * 5.16", "bottom": 2.6, "w": 2.06, "h": 47, "fill": "#0000000f",
-                      "visible": "=2 + i * 5.16 < 103.2 + d * 35.1 - 4" } }
-        ] },
-        // the selected one's face: black in the plate, a light line under it
-        { "type": "rect", "x": "=11.35 * d", "y": "=11.35 * d + 1", "w": "=103.2 + 12.4 * d", "h": "=103.2 + 12.4 * d",
-          "radius": 12.4, "fill": "#ffffff59", "opacity": "=d", "visible": "=d > 0.05" },
-        { "type": "rect", "x": "=11.35 * d", "y": "=11.35 * d", "w": "=103.2 + 12.4 * d", "h": "=103.2 + 12.4 * d",
-          "radius": "=R + 1.5 - 5 * d", "gradient": { "angle": 180, "stops": [ "#15151a", "#000000 70%" ] },
+        // a system's tile: tinted in its colour, a lit line along its top
+        { "type": "rect", "x": "=32 * u", "y": "=68 * u", "w": "=200 * u", "h": "=200 * u", "radius": "=32 * u", "opacity": "=1 - d",
+          "visible": "=view == 'home' && d < 0.95", "border": "=2 * u", "borderColor": "=alpha(item.color, 0.22)",
+          "gradient": { "angle": 180, "stops": [ "=mix(mix(tileHi, item.color, 0.3), '#ffffff', 0.14)", "=mix(mix(tileHi, item.color, 0.3), '#ffffff', 0.14) + ' 1%'",
+                                                 "=mix(tileHi, item.color, 0.3) + ' 1%'", "=mix(tileLo, item.color, 0.14)" ] } },
+        // the plate
+        { "use": "plate", "radius": "=48 * u", "opacity": "=d", "visible": "=d > 0.05", "with": { "hp": 336 } },
+        // the selected one's face: a black window in the plate, a light line under it
+        { "type": "rect", "x": "=(32 - winRimPx) * u", "y": "=(34 + 36 * (1 - d)) * u", "w": "=(200 + 2 * winRimPx) * u", "h": "=(200 + winRimPx) * u",
+          "radius": "=(16 + winRimPx) * u", "fill": "=winLight", "opacity": "=d", "visible": "=d > 0.05" },
+        { "type": "rect", "x": "=(32 - winRimPx) * u", "y": "=(32 - winRimPx + 36 * (1 - d)) * u", "w": "=(200 + 2 * winRimPx) * u", "h": "=(200 + 2 * winRimPx) * u",
+          "radius": "=(16 + winRimPx) * u", "fill": "=winRim", "opacity": "=d", "visible": "=d > 0.05 && winRimPx > 0" },
+        { "type": "rect", "x": "=32 * u", "y": "=(32 + 36 * (1 - d)) * u", "w": "=200 * u", "h": "=200 * u", "radius": "=16 * u", "fill": "#000000",
           "opacity": "=d", "visible": "=d > 0.05" },
-        // what's on it (the item's picture), and START
-        { "type": "group", "x": "=11.35 * d", "y": "=11.35 * d", "w": "=103.2 + 12.4 * d", "h": "=103.2 + 12.4 * d",
+        // what's on it (the item's picture)
+        { "type": "group", "x": "=32 * u", "y": "=(32 + 36 * (1 - d) - 24 * press * sel) * u", "w": "=200 * u", "h": "=200 * u",
           "children": [ { "use": "sysface", "visible": "=view == 'home'" }, { "use": "gameface", "visible": "=view != 'home'" } ] },
-        { "type": "group", "layout": "row", "align": "center", "gap": 3, "x": "=(103.2 + d * 35.1) / 2", "ax": 0.5,
-          "bottom": "=15.5 - (1 - d) * 7", "opacity": "=d", "visible": "=d > 0.05",
+        // Start
+        { "type": "group", "layout": "row", "align": "center", "gap": "=12 * u", "x": "=132 * u", "ax": 0.5, "y": "=263 * u", "h": "=41 * u",
+          "opacity": "=d", "visible": "=d > 0.05",
           "children": [
-            { "type": "text", "text": "▶", "font": "inter", "size": 9, "color": "=aInk", "y": 1 },
-            { "type": "text", "text": "START", "size": 17.5, "spacing": 5.2, "color": "=aInk" }
+            { "type": "image", "src": "thor-oled/play-28.png", "fit": "fill", "w": "=28 * u", "h": "=28 * u", "tint": "=pInk" },
+            { "type": "text", "text": "Start", "size": "=34 * u", "color": "=pInk" }
           ] },
-        { "type": "text", "text": "♥", "font": "inter", "size": 16.5, "color": "=fav", "right": 6, "y": 2, "visible": "=item.fav" }
+        { "type": "image", "src": "thor-oled/heart-40.png", "fit": "fill", "x": "=(200 - 8 * d) * u", "y": "=(48 - 24 * d) * u", "w": "=40 * u", "h": "=40 * u",
+          "tint": "=fav", "visible": "=item.fav" }
       ]
     },
-    // the system's picture on its tile
-    "sysface": { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "64%", "h": "64%", "anchor": "center" },
-    // a game's: its cover (else the system's picture)
+    // the system's picture on its tile: its 32 px icon four times as large, darker far from the selection
+    "sysface": { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=128.5 * u", "h": "=128.5 * u", "anchor": "center",
+                 "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" },
+    // a game's: its cover filling the tile (else the system's picture on the material)
     "gameface": { "type": "group", "children": [
-      { "type": "image", "src": "{item.art}", "fit": "cover", "x": "=12.4 - 5.2 * d", "y": "=12.4 - 5.2 * d",
-        "right": "=12.4 - 5.2 * d", "bottom": "=12.4 - 5.2 * d", "radius": 6, "visible": "=item.art != ''" },
-      { "type": "image", "src": "=either(item.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "60%", "h": "60%",
-        "anchor": "center", "visible": "=item.art == ''" }
+      { "type": "image", "src": "{item.art}", "fit": "cover", "w": "100%", "h": "100%", "radius": "=(32 - 16 * d) * u", "visible": "=item.art != ''",
+        "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" },
+      { "use": "mat", "radius": "=32 * u", "opacity": "=1 - d", "visible": "=item.art == '' && d < 0.95", "with": { "hp": 200 } },
+      { "type": "image", "src": "=either(item.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=128.5 * u", "h": "=128.5 * u",
+        "anchor": "center", "visible": "=item.art == ''", "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" }
     ] },
-    // the progress line under the shelf: a dot per item (up to 64), the accent's thumb over the selection, n / total
-    "scrub": { "type": "group", "children": [
-      { "type": "rect", "x": 31, "w": "=W - 129", "y": "=scrubY - 2.05", "h": 4.1, "radius": 2.05, "fill": "=raised2" },
-      { "type": "list", "source": "range", "count": "=count <= 64 ? count : 0", "direction": "free", "range": 64,
-        "item": { "type": "rect", "x": "=31 + (W - 129) * (i + 0.5) / n - 1", "y": "=scrubY - 1", "w": 2, "h": 2, "radius": 1, "fill": "=hair2" } },
-      { "type": "rect", "x": "=31 + (W - 129) * scroll / max(1, count)", "w": "=max(8, (W - 129) / max(1, count))",
-        "y": "=scrubY - 5.15", "h": 10.3, "radius": 5.15,
-        "gradient": { "angle": 180, "stops": [ "=aHi", "=a" ] }, "shadow": { "blur": 8, "color": "=alpha(a, 0.7)" } },
-      { "type": "text", "right": 31, "w": 60, "align": "right", "y": "=scrubY - 10", "size": 16.5, "color": "=muted",
-        "text": "{pad(cursor + 1, 2, '0')} / {pad(count, 2, '0')}" }
-    ] },
-    // L and R: the neighbours' names either side of a hairline
-    "lrline": { "type": "rect", "x": "=W * 0.3", "w": "=W * 0.4", "y": "=lrY", "h": 1,
-                "gradient": { "angle": 90, "stops": [ "#ffffff00", "=hair2", "#ffffff00" ] } },
-    // the status bar: Wi-Fi, the battery, the BANANA OS chip and the version; the date and the clock
-    "statusbar": { "type": "group", "children": [
-        { "type": "group", "layout": "row", "align": "center", "gap": 11.6, "x": 25.3, "y": 0, "h": 41,
+    // the progress line under the shelf: a thin track, the accent's thumb as wide as one item's share, n / total
+    "scrub": {
+      "type": "group", "x": "=96 * u", "y": "=864 * u", "w": "=(PW - 192) * u", "h": "=36 * u",
+      "with": { "cw": "=len(str(cursor + 1) + ' / ' + str(count)) * 15", "tw": "=PW - 192 - 32 - len(str(cursor + 1) + ' / ' + str(count)) * 15" },
+      "children": [
+        { "type": "rect", "x": 0, "w": "=tw * u", "y": "=14 * u", "h": "=8 * u", "radius": "=4 * u", "fill": "=raised2" },
+        { "type": "rect", "x": "=tw * scroll / max(1, count) * u", "w": "=max(8, tw / max(1, count)) * u", "y": "=14 * u", "h": "=8 * u", "radius": "=4 * u", "fill": "=a" },
+        { "type": "text", "right": 0, "w": "=(cw + 20) * u", "h": "=36 * u", "align": "right", "valign": "middle", "font": "inter", "size": "=30 * u", "color": "=muted",
+          "text": "{cursor + 1} / {count}" }
+      ]
+    },
+    // the status bar: the banana, BananaOS and the version (or the game stopped behind the menu); the date, the clock,
+    // Wi-Fi and the battery
+    "statusbar": { "type": "group", "opacity": "=1 - leave", "children": [
+        { "type": "group", "layout": "row", "align": "center", "gap": "=24 * v", "x": "=64 * v", "y": 0, "h": "=96 * v",
           "children": [
-            { "type": "image", "src": "thor-oled/wifi.png", "fit": "contain", "w": 17, "h": 17, "tint": "=online ? ink : muted",
-              "opacity": "=online ? 1 : 0.5" },
-            { "type": "group", "layout": "row", "align": "center", "gap": 5.3, "visible": "=battery >= 0",
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v",
               "children": [
-                { "type": "text", "text": "{battery}%", "size": 15, "color": "=ink" },
-                { "type": "group", "w": 26.5, "h": 11.6, "children": [
-                  { "type": "rect", "w": 24, "h": 11.6, "radius": 3.1, "border": 1.33, "borderColor": "=battery < 20 && !charging ? red : ink" },
-                  { "type": "rect", "x": 2.7, "y": 2.7, "w": "=max(1, 18.6 * battery / 100)", "h": 6.2, "radius": 0.9,
-                    "fill": "=battery < 20 && !charging ? red : charging ? a : ink" },
-                  { "type": "rect", "x": 24.4, "y": 3.8, "w": 2.1, "h": 4, "radius": 1, "fill": "=ink" }
-                ] }
+                { "type": "image", "src": "thor-oled/banana.png", "fit": "pixel", "w": "=40 * v", "h": "=40 * v" },
+                { "type": "text", "text": "BananaOS", "size": "=34 * v", "color": "=ink" }
               ] },
-            { "type": "rect", "w": 0.9, "h": 13.3, "fill": "=hair2" },
-            { "type": "group", "layout": "row", "align": "center", "gap": 5.3, "padding": 3.6, "h": 24.4, "radius": 12.2,
-              "border": 0.9, "borderColor": "=hair2", "gradient": { "angle": 180, "stops": [ "#ffffff0d", "#ffffff00" ] },
-              "children": [
-                { "type": "rect", "w": 1.7, "h": 1 },
-                { "type": "image", "src": "thor-oled/banana.png", "fit": "pixelContain", "w": 16, "h": 16 },
-                { "type": "text", "text": "BANANA OS", "size": 13.3, "spacing": 1.07, "color": "=a", "y": 0.5 },
-                { "type": "rect", "w": 4.6, "h": 1 }
-              ] },
-            { "type": "text", "text": "{brand}", "size": 12.4, "color": "=muted" },
+            { "type": "text", "text": "=brand != '' ? brand + ' for Thor' : ''", "font": "inter", "size": "=28 * v", "color": "=muted", "visible": "=paused == ''" },
             // a game stopped behind the menu (the Home button): its name, and how to go back
-            { "type": "group", "layout": "row", "align": "center", "gap": 6.2, "padding": 3.6, "h": 24.4, "radius": 12.2,
-              "border": 0.9, "borderColor": "=alpha(a, 0.6)", "visible": "=paused != ''",
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=paused != ''",
               "children": [
-                { "type": "rect", "w": 1.7, "h": 1 },
-                { "type": "rect", "w": 2.7, "h": 9.8, "fill": "=a" }, { "type": "rect", "w": 2.7, "h": 9.8, "fill": "=a" },
-                { "type": "text", "text": "{paused}", "size": 13.3, "color": "=ink", "y": 0.5 },
-                { "type": "text", "text": "HOME TO RETURN", "size": 11.1, "spacing": 0.9, "color": "=muted", "y": 0.5 },
-                { "type": "rect", "w": 4.6, "h": 1 }
+                { "type": "image", "src": "thor-oled/pause-32.png", "fit": "fill", "w": "=32 * v", "h": "=32 * v", "tint": "=ink2" },
+                { "type": "text", "text": "{paused}", "font": "inter-medium", "size": "=28 * v", "color": "=ink2" },
+                { "type": "text", "text": "· Home to return", "font": "inter", "size": "=28 * v", "color": "=muted" }
               ] }
           ] },
-        { "type": "group", "layout": "row", "align": "center", "gap": 11.6, "right": 25.3, "y": 0, "h": 41,
+        { "type": "group", "layout": "row", "align": "center", "gap": "=24 * v", "right": "=64 * v", "y": 0, "h": "=96 * v",
           "children": [
-            { "type": "text", "text": "{day} {date}", "size": 15, "color": "=ink" },
-            { "type": "rect", "w": 0.9, "h": 13.3, "fill": "=hair2" },
-            { "type": "text", "text": "{clock}", "size": 15, "color": "=ink" }
+            { "type": "text", "text": "{day} {monthDay} {month}", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+            { "type": "text", "text": "{clock}", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+            { "type": "rect", "w": "=2 * v", "h": "=32 * v", "fill": "=hair2" },
+            { "type": "image", "src": "thor-oled/wifi-40.png", "fit": "fill", "w": "=40 * v", "h": "=40 * v", "tint": "=online ? ink : muted",
+              "opacity": "=online ? 1 : 0.5" },
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=battery >= 0",
+              "children": [
+                { "type": "text", "text": "{battery}%", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+                { "type": "group", "w": "=52 * v", "h": "=28 * v", "children": [
+                  { "type": "rect", "w": "=52 * v", "h": "=28 * v", "radius": "=8 * v", "border": "=3 * v", "borderColor": "=battery < 20 && !charging ? '#f0767c' : ink2" },
+                  { "type": "rect", "x": "=6 * v", "y": "=6 * v", "w": "=max(2, 40 * battery / 100) * v", "h": "=16 * v", "radius": "=3 * v",
+                    "fill": "=battery < 20 && !charging ? '#f0767c' : charging ? ok : ink" },
+                  { "type": "rect", "x": "=53 * v", "y": "=10 * v", "w": "=4 * v", "h": "=8 * v", "radius": [ 0, "=2 * v", "=2 * v", 0 ], "fill": "=ink2" }
+                ] }
+              ] }
           ] }
-    ] },
-    // the top screen's coloured light: two soft blobs of the selection's colour on the black
-    "ambient": { "type": "group", "children": [
-      { "use": "glow", "x": "=W / 2 - 49", "y": 231, "w": 230, "h": 140, "with": { "blur": 120, "c": "=alpha(tint, 0.26)" } },
-      { "use": "glow", "x": "=W / 2 + 151", "y": 302, "w": 150, "h": 90, "with": { "blur": 95, "c": "=alpha(tint, 0.15)" } }
     ] }
   },
 
   "screens": {
-    // the status bar over every view: Wi-Fi, the battery, the BANANA OS chip and the version; the date and the clock
+    // the status bar over every view
     "all": { "top": [ { "use": "statusbar" } ] },
 
-    // under Settings, the setup, the keyboard and the lists (the engine's own pages): the status bar, and the accent's
-    // light behind the top screen's text
-    "settings": {
-      "top": [
-        { "use": "glow", "x": "=W * 0.32", "y": 250, "w": 360, "h": 170, "with": { "blur": 150, "c": "=alpha(a, 0.10)" } },
-        { "use": "statusbar" }
-      ]
-    },
+    // under Settings, the setup, the keyboard and the lists (the engine's own pages): the status bar
+    "settings": { "top": [ { "use": "statusbar" } ] },
 
     "home": {
-      // the system: its picture on a lit tile glowing in its colour, its name and maker, three stats, the last game
+      // the system: its maker and year, its name, three stats and the last game played down the left; the last games'
+      // covers fanned out on the right, the last one's colours as a soft light behind them
       "top": [
         { "type": "rect", "fill": "#000000" },
-        { "use": "ambient", "with": { "tint": "=sys.color" } },
-        // its picture again, huge and faint, off the right edge
-        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=W - 347", "y": 27, "w": 400, "h": 400, "opacity": 0.05,
-          "visible": "=W > 800" },
-        // the tile
-        { "use": "glow", "x": "=W / 2", "y": 146.7, "w": 120, "h": 120, "with": { "blur": 60, "c": "=alpha(sys.color, 0.42)" } },
-        { "type": "rect", "x": "=W / 2 - 71.1", "y": 75.6, "w": 142.2, "h": 142.2, "radius": 33.8, "border": 0.9, "borderColor": "=hair2",
-          "gradient": { "angle": 160, "stops": [ "#202027", "#0d0d10 60%", "#050506" ] } },
-        { "type": "rect", "x": "=W / 2 - 70.2", "y": 76.5, "w": 140.4, "h": 140.4, "radius": 32.9,
-          "gradient": { "angle": 160, "stops": [ "#ffffff14", "#ffffff00 40%" ] } },
-        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=W / 2", "y": 146.7, "w": 85.3, "h": 85.3, "anchor": "center" },
-        // its name, maker, stats
-        { "type": "text", "x": 0, "w": "=W", "y": 236, "align": "center", "text": "{sys.name}", "size": 33.8, "color": "=ink" },
-        { "type": "text", "x": 0, "w": "=W", "y": 280, "align": "center", "text": "{sys.maker}", "font": "inter", "size": 14.2, "color": "=muted" },
-        { "type": "group", "layout": "row", "gap": 31, "x": "=W / 2", "ax": 0.5, "y": 314.7,
-          "children": [
-            { "use": "stat", "with": { "v": "=sys.games", "l": "Games", "big": 28.4 } },
-            { "use": "vsep", "with": { "big": 28.4 } },
-            { "use": "stat", "with": { "v": "=sys.played", "l": "Played", "big": 28.4 } },
-            { "use": "vsep", "with": { "big": 28.4 } },
-            { "use": "stat", "with": { "v": "=either(sys.time, '0m')", "l": "Time", "big": 28.4 } }
-          ] },
-        // the last game played: X takes you back to it
-        { "type": "group", "x": "=W / 2 - 191.1", "y": 394.7, "w": 382.2, "h": 60.4, "visible": "=sys.hasResume", "onTap": "x",
-          "children": [
-            { "type": "rect", "radius": 15.1, "border": 0.9, "borderColor": "=hair2",
-              "gradient": { "angle": 180, "stops": [ "=alpha(raised2, 0.92)", "=alpha(surface, 0.92)" ] } },
-            { "type": "rect", "x": 8, "right": 8, "y": 0.5, "h": 0.8, "fill": "#ffffff14" },
-            { "type": "rect", "x": 9.8, "y": 8.85, "w": 42.7, "h": 42.7, "radius": 4.3, "fill": "=raised2", "border": 0.5, "borderColor": "#ffffff1f" },
-            { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": 9.8, "y": 8.85, "w": 42.7, "h": 42.7, "radius": 4.3,
-              "visible": "=sys.resumeArt != ''" },
-            { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 31.15, "y": 30.2, "w": 30, "h": 30, "anchor": "center",
-              "visible": "=sys.resumeArt == ''" },
-            { "use": "label", "x": 65, "y": 14, "text": "=either(sys.resumeEyebrow, 'Last played')" },
-            { "type": "text", "x": 65, "y": 28, "w": 270, "text": "{sys.resumeTitle}", "font": "inter-semibold", "size": 16.9, "color": "=ink" },
-            { "use": "key", "x": 343.6, "y": 19.35, "with": { "k": "X", "on": 0 } }
-          ] }
+        { "type": "group", "opacity": "=in * (0.15 + 0.85 * xf)", "y": "=12 * (1 - in) * v", "children": [
+          { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=760 * v", "y": "=-120 * v", "w": "=1300 * v", "h": "=1300 * v",
+            "opacity": 0.34, "blur": "=110 * v", "saturate": 1.25, "mask": { "shape": "radial", "from": 0.3, "to": 1 },
+            "visible": "=sys.hasResume && sys.resumeArt != ''" },
+          { "type": "text", "x": "=160 * v", "y": "=256 * v", "w": "=880 * v", "h": "=41 * v", "valign": "middle", "font": "inter", "size": "=34 * v", "color": "=ink2",
+            "text": "=sys.year != '' ? sys.maker + ' · ' + sys.year : sys.maker" },
+          // (a long name in smaller letters, 4 px at a time down to 56)
+          { "type": "text", "x": "=160 * v", "y": "=313 * v", "w": "=880 * v", "h": "=124 * v", "valign": "bottom", "text": "{sys.name}", "color": "=ink",
+            "size": "=max(56, min(112, floor(880 / (max(1, len(sys.name)) * 0.56) / 4) * 4)) * v",
+            "lineHeight": "=max(56, min(112, floor(880 / (max(1, len(sys.name)) * 0.56) / 4) * 4)) * 1.1 * v" },
+          { "type": "group", "layout": "row", "gap": "=64 * v", "x": "=160 * v", "y": "=501 * v",
+            "children": [
+              { "use": "stat", "with": { "n": "=round(sys.games * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=sys.games == 1 ? 'Game' : 'Games'", "big": 64 } },
+              { "use": "stat", "with": { "n": "=round(sys.played * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "Played", "big": 64 } },
+              { "use": "stat", "with": { "n": "=either(sys.time, '0m')", "l": "Play time", "big": 64 } }
+            ] },
+          // the last game played: X takes you back to it
+          { "type": "group", "x": "=160 * v", "y": "=685 * v", "w": "=880 * v", "h": "=168 * v", "visible": "=sys.hasResume", "onTap": "x",
+            "children": [
+              { "use": "card", "with": { "hp": 168, "u": "=v" } },
+              { "type": "rect", "x": "=24 * v", "y": "=24 * v", "w": "=120 * v", "h": "=120 * v", "radius": "=14 * v", "visible": "=bz > 0",
+                "gradient": { "angle": 180, "stops": [ "=bzTop", "=bzBot" ] } },
+              { "type": "rect", "x": "=(24 + bz) * v", "y": "=(24 + bz) * v", "w": "=(120 - 2 * bz) * v", "h": "=(120 - 2 * bz) * v", "radius": "=8 * v", "fill": "=raised2", "visible": "=sys.resumeArt == ''" },
+              { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=(24 + bz) * v", "y": "=(24 + bz) * v", "w": "=(120 - 2 * bz) * v", "h": "=(120 - 2 * bz) * v", "radius": "=8 * v",
+                "visible": "=sys.resumeArt != ''" },
+              { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=84 * v", "y": "=84 * v", "w": "=96.5 * v", "h": "=96.5 * v", "anchor": "center",
+                "visible": "=sys.resumeArt == ''" },
+              { "type": "text", "x": "=176 * v", "y": "=40 * v", "w": "=460 * v", "h": "=34 * v", "valign": "middle", "font": "inter", "size": "=28 * v", "color": "=ink2",
+                "text": "=sys.resumeWhen != '' ? 'Last played · ' + lower(sys.resumeWhen) : either(sys.resumeEyebrow, 'Last played')" },
+              { "type": "text", "x": "=176 * v", "y": "=83 * v", "w": "=460 * v", "h": "=44 * v", "valign": "middle", "font": "inter-medium", "size": "=36 * v", "color": "=ink",
+                "text": "{sys.resumeTitle}" },
+              { "use": "chip", "right": "=32 * v", "y": "=60 * v", "with": { "k": "X", "label": "Continue", "mode": 0, "fs": 30, "u": "=v" } }
+            ] },
+          // the fan: the game played before the last one, the last one over them, the one before that
+          { "type": "group", "x": "=1088 * v", "y": "=(236 + 24 * (1 - easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 500)))) * v", "w": "=704 * v", "h": "=640 * v",
+            "opacity": "=easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 300))", "visible": "=sys.hasResume && sys.resumeArt != ''",
+            "children": [
+              { "type": "image", "src": "{sys.recent1Art}", "fit": "cover", "x": "=40 * v", "y": "=48 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "rotate": -9, "pivot": [ 0.5, 1 ], "visible": "=sys.recent1Art != ''" },
+              { "type": "image", "src": "{sys.recent2Art}", "fit": "cover", "x": "=312 * v", "y": "=48 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "rotate": 9, "pivot": [ 0.5, 1 ], "visible": "=sys.recent2Art != ''" },
+              { "type": "rect", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "shadow": { "y": "=40 * v", "blur": "=80 * v", "color": "#000000bf" } },
+              { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v" },
+              { "type": "rect", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v", "border": "=1 * v", "borderColor": "#ffffff1a" }
+            ] },
+          // a system with no cover to show (no games yet, an app): its own picture there
+          { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=1440 * v", "y": "=540 * v", "w": "=384.5 * v", "h": "=384.5 * v", "anchor": "center",
+            "opacity": 0.9, "visible": "=!(sys.hasResume && sys.resumeArt != '')" }
+        ] }
       ],
-      // L and R's systems, the bubble, the shelf, the progress line, the hints
+      // L and R's systems as a strip of seven, the bubble, the shelf, the progress line, the hints
       "bottom": [
         { "type": "rect", "fill": "#000000" },
-        { "use": "lrline" },
-        { "type": "list", "source": "systems", "direction": "free", "range": 1, "loop": true, "selectedOnTop": false,
-          "item": [
-            { "type": "group", "layout": "row", "align": "center", "gap": 7.2, "x": 22.7, "y": "=lrY - 10.85", "visible": "=rel == -1",
-              "onTap": "l",
-              "children": [ { "use": "key", "with": { "k": "L", "on": 0 } },
-                            { "type": "text", "text": "{item.name}", "size": 16.5, "color": "=ink", "w": "=min(242, W * 0.4)" } ] },
-            { "type": "group", "layout": "row", "align": "center", "gap": 7.2, "right": 22.7, "y": "=lrY - 10.85", "visible": "=rel == 1",
-              "onTap": "r",
-              "children": [ { "type": "text", "text": "{item.name}", "size": 16.5, "color": "=ink", "align": "right" },
-                            { "use": "key", "with": { "k": "R", "on": 0 } } ] }
-          ] },
-        { "use": "bubble", "with": { "t": "=sys.name", "s": "=sys.maker", "pill": "=upper(sys.id)" } },
-        { "use": "rail" },
-        { "type": "list", "source": "systems", "direction": "free", "range": 4, "loop": true,
-          "item": { "use": "tile" } },
-        { "use": "scrub" },
-        { "use": "chip", "x": 22.7, "bottom": 22.7, "onTap": "y", "with": { "k": "Y", "label": "Fav", "on": 0, "warn": "=sys.fav" } },
-        { "use": "chip", "x": "=W / 2", "ax": 0.5, "bottom": 22.7, "with": { "k": "SEL", "label": "Search", "on": 0, "warn": 0 } },
-        { "use": "chip", "right": 22.7, "bottom": 22.7, "with": { "k": "ST", "label": "Settings", "on": 0, "warn": 0 } }
+        { "type": "group", "opacity": "=in", "y": "=12 * (1 - in) * u", "children": [
+          { "use": "key", "x": "=64 * u", "y": "=44 * u", "onTap": "l", "with": { "k": "L", "mode": 0 } },
+          { "use": "key", "right": "=64 * u", "y": "=44 * u", "onTap": "r", "with": { "k": "R", "mode": 0 } },
+          { "type": "list", "source": "systems", "direction": "free", "range": 3, "loop": true, "selectedOnTop": false,
+            "item": { "type": "group", "x": "=(144 + (rel + 3) * ((PW - 288 + 8) / 7)) * u", "y": "=49 * u", "w": "=((PW - 288 + 8) / 7 - 8) * u", "h": "=39 * u", "clip": true,
+              "children": [
+                { "type": "rect", "radius": "=19.5 * u", "visible": "=sel",
+                  "gradient": { "angle": 180, "stops": [ "=pLit", "=pLit + ' 5.2%'", "=pTop + ' 5.2%'", "=pMid + ' ' + pAt + '%'", "=pBot" ] } },
+                { "type": "text", "w": "100%", "h": "100%", "align": "center", "valign": "middle", "ellipsis": false, "size": "=26 * u",
+                  "text": "=either(item.short, upper(item.id))", "color": "=sel ? aInk : muted" }
+              ] } },
+          { "use": "bubble", "with": { "t": "=sys.name", "s": "=either(sys.short, upper(sys.id)) + ' · ' + sys.maker + (sys.year != '' ? ' · ' + sys.year : '')" } },
+          { "use": "shelf" },
+          { "type": "list", "source": "systems", "direction": "free", "range": 4, "loop": true,
+            "item": { "use": "tile" } },
+          { "use": "scrub" },
+          { "use": "pill", "x": "=64 * u", "y": "=968 * u", "with": { "k": "Select", "label": "Search", "mode": 0 } },
+          { "use": "pill", "right": "=64 * u", "y": "=968 * u", "with": { "k": "Start", "label": "Settings", "mode": 0 } }
+        ] }
       ]
     },
 
     "library": {
-      // the game: its cover glowing in the system's colour, its system and whether it's a favourite, its name, what it
-      // is, its stats and achievements
+      // the game: its cover as a case seen a little from the side, its own colours as a light behind it; its system
+      // and whether it's a favourite, its name, what it is, its stats and achievements
       "top": [
         { "type": "rect", "fill": "#000000" },
-        { "use": "ambient", "with": { "tint": "=sys.color" } },
-        { "use": "glow", "x": "=W * 0.068 + 133", "y": 213, "w": 220, "h": 200, "with": { "blur": 70, "c": "=alpha(sys.color, 0.4)" } },
-        { "type": "group", "x": "=W * 0.068", "y": 88.9, "w": "=min(266.7, W * 0.32)", "h": 248.9,
-          "children": [
-            { "type": "rect", "radius": 12.4, "gradient": { "angle": 160, "stops": [ "#202027", "#0d0d10 60%", "#050506" ] } },
-            { "type": "image", "src": "{game.art}", "fit": "cover", "radius": 12.4, "visible": "=game.art != ''" },
-            { "type": "image", "src": "=either(game.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "48%", "h": "48%",
-              "anchor": "center", "visible": "=game.art == ''" },
-            { "type": "rect", "radius": 12.4, "border": 0.9, "borderColor": "#ffffff24",
-              "gradient": { "angle": 125, "stops": [ "#ffffff22", "#ffffff00 35%", "#ffffff00 70%", "#ffffff0a" ] } }
-          ] },
-        { "type": "group", "x": "=W * 0.068 + min(266.7, W * 0.32) + 44.4", "right": 53.3, "y": 88.9, "h": 280,
-          "children": [
-            { "type": "group", "layout": "row", "gap": 6.2, "y": 0, "children": [
-              { "type": "group", "layout": "row", "padding": 5, "radius": 10.7, "fill": "=a", "border": 0.9, "borderColor": "=a",
-                "children": [ { "type": "rect", "w": 4, "h": 1 }, { "type": "text", "text": "=upper(sys.id)", "size": 10.7, "spacing": 1.3, "color": "=aInk" }, { "type": "rect", "w": 4, "h": 1 } ] },
-              { "type": "group", "layout": "row", "padding": 5, "radius": 10.7, "border": 0.9, "borderColor": "=red", "visible": "=game.fav",
-                "children": [ { "type": "rect", "w": 4, "h": 1 }, { "type": "text", "text": "♥", "font": "inter", "size": 10.7, "color": "=fav" },
-                              { "type": "text", "text": " FAVOURITE", "size": 10.7, "spacing": 1.3, "color": "=fav" }, { "type": "rect", "w": 4, "h": 1 } ] }
+        { "type": "group", "opacity": "=in * (1 - leave) * (0.15 + 0.85 * xf)", "y": "=(12 * (1 - in) - 12 * leave) * v", "children": [
+          { "type": "image", "src": "{game.art}", "fit": "cover", "x": "=-160 * v", "y": "=-160 * v", "w": "=1400 * v", "h": "=1400 * v",
+            "opacity": 0.42, "blur": "=96 * v", "saturate": 1.3, "mask": { "shape": "linear", "angle": 90, "from": 0.2, "to": 0.9 },
+            "visible": "=game.art != ''" },
+          // the case: its shadow, the cover swung 9 degrees about its left edge, the spine along that edge
+          { "type": "rect", "x": "=160 * v", "y": "=184 * v", "w": "=534 * v", "h": "=600 * v", "radius": "=24 * v", "visible": "=game.art != ''",
+            "shadow": { "x": "=-24 * v", "y": "=48 * v", "blur": "=96 * v", "color": "#000000bf" } },
+          { "type": "image", "src": "{game.art}", "fit": "cover", "x": "=160 * v", "y": "=176 * v", "w": "=560 * v", "h": "=616 * v", "radius": "=24 * v",
+            "tilt": 9, "perspective": "=2400 * v", "pivot": [ 0, 0.5 ], "visible": "=game.art != ''" },
+          { "type": "rect", "x": "=160 * v", "y": "=176 * v", "w": "=20 * v", "h": "=616 * v", "radius": [ "=24 * v", 0, 0, "=24 * v" ], "visible": "=game.art != ''",
+            "gradient": { "angle": 90, "stops": [ "#00000073", "#ffffff14 60%", "#ffffff00" ] } },
+          // (a game with no cover: its system's picture on the material)
+          { "type": "group", "x": "=160 * v", "y": "=176 * v", "w": "=534 * v", "h": "=616 * v", "visible": "=game.art == '' && !empty",
+            "children": [
+              { "use": "mat", "radius": "=24 * v", "with": { "hp": 616, "u": "=v" } },
+              { "type": "image", "src": "=either(game.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=256.5 * v", "h": "=256.5 * v", "anchor": "center" }
             ] },
-            { "type": "text", "x": 0, "w": "100%", "y": 32, "text": "{game.title}", "size": 33.8, "color": "=ink" },
-            { "type": "text", "x": 0, "w": "100%", "y": 76, "text": "{game.sub}", "font": "inter", "size": 16, "color": "=muted" },
-            { "type": "rect", "x": 0, "right": 0, "y": 115.5, "h": 0.9, "gradient": { "angle": 90, "stops": [ "=hair2", "#ffffff00" ] } },
-            { "type": "group", "layout": "row", "gap": 26.7, "y": 135,
-              "children": [
-                { "use": "stat", "align": "start", "with": { "v": "=either(game.plays, '0')", "l": "Plays", "big": 24 } },
-                { "use": "vsep", "with": { "big": 24 } },
-                { "use": "stat", "align": "start", "with": { "v": "=either(game.last, 'Never')", "l": "Last played", "big": 24 } },
-                { "use": "vsep", "with": { "big": 24 } },
-                { "use": "stat", "align": "start", "with": { "v": "=either(game.time, '0m')", "l": "Time", "big": 24 } }
+          { "type": "group", "x": "=816 * v", "right": "=160 * v", "y": "=184 * v", "h": "=700 * v", "visible": "=!empty",
+            "children": [
+              { "type": "group", "layout": "row", "align": "center", "gap": "=32 * v", "y": 0, "h": "=36 * v", "children": [
+                { "type": "text", "text": "{game.systemName}", "font": "inter", "size": "=30 * v", "color": "=ink2" },
+                { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=game.fav",
+                  "children": [ { "type": "image", "src": "thor-oled/heart-32.png", "fit": "fill", "w": "=32 * v", "h": "=32 * v", "tint": "=fav" },
+                                { "type": "text", "text": "Favourite", "font": "inter", "size": "=30 * v", "color": "=fav" } ] }
               ] },
-            // achievements: how many of how many, and a bar of them glowing in the accent
-            { "type": "group", "x": 0, "right": 0, "y": 201, "h": 40, "visible": "=game.achB > 0",
-              "children": [
-                { "use": "label", "x": 0, "y": 0, "text": "Achievements" },
-                { "use": "label", "right": 0, "y": 0, "text": "{game.achA} / {game.achB}", "color": "=ink" },
-                { "type": "rect", "x": 0, "right": 0, "y": 21, "h": 7.1, "radius": 3.55, "fill": "=raised2" },
-                { "type": "rect", "x": 0, "y": 21, "w": "=max(0.015, game.achProgress) * 100 + '%'", "h": 7.1, "radius": 3.55,
-                  "gradient": { "angle": 90, "stops": [ "=aLo", "=a + ' 60%'", "=aHi" ] }, "shadow": { "blur": 9, "color": "=alpha(a, 0.6)" } }
-              ] },
-            { "type": "text", "x": 0, "w": "100%", "y": 201, "text": "{game.achLabel}", "size": 11.6, "spacing": 1.2, "color": "=muted",
-              "visible": "=game.achB <= 0 && game.achLabel != ''" }
-          ] }
+              // (two lines; a long name in smaller letters, 4 px at a time down to 48)
+              { "type": "text", "x": 0, "w": "100%", "y": "=68 * v", "text": "{game.title}", "color": "=ink", "wrap": true, "maxLines": 2,
+                "size": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * v",
+                "lineHeight": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * 1.1 * v" },
+              { "type": "text", "x": 0, "w": "100%", "y": "=278 * v", "h": "=44 * v", "valign": "middle", "text": "{game.sub}", "font": "inter", "size": "=36 * v", "color": "=ink2",
+                "visible": "=game.sub != game.systemName" },
+              { "type": "group", "layout": "row", "gap": "=64 * v", "y": "=378 * v",
+                "children": [
+                  { "use": "stat", "with": { "n": "=round(num(either(game.plays, '0')) * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=game.plays == '1' ? 'Play' : 'Plays'", "big": 56 } },
+                  { "use": "stat", "with": { "n": "=either(game.last, 'Never')", "l": "Last played", "big": 56 } },
+                  { "use": "stat", "with": { "n": "=either(game.time, '0m')", "l": "Play time", "big": 56 } }
+                ] },
+              // achievements: how many of how many, and a bar of them in the plate's colours
+              { "type": "group", "x": 0, "right": 0, "y": "=538 * v", "h": "=64 * v", "visible": "=game.achB > 0",
+                "children": [
+                  { "type": "text", "x": 0, "y": 0, "h": "=36 * v", "valign": "middle", "text": "Achievements", "font": "inter", "size": "=30 * v", "color": "=ink2" },
+                  { "type": "group", "layout": "row", "align": "center", "right": 0, "y": 0, "h": "=36 * v", "children": [
+                    { "type": "text", "text": "{game.achA} of {game.achB}", "font": "inter-medium", "size": "=30 * v", "color": "=ink" },
+                    { "type": "text", "text": " · {round(game.achProgress * 100)}%", "font": "inter", "size": "=30 * v", "color": "=ink2" } ] },
+                  { "type": "rect", "x": 0, "right": 0, "y": "=52 * v", "h": "=12 * v", "radius": "=6 * v", "fill": "#0a0a09" },
+                  { "type": "rect", "x": 0, "y": "=52 * v", "w": "=max(0.013, game.achProgress * easeOut(progress((view == 'launch' ? 9999 : entered) - 120, 600))) * 100 + '%'", "h": "=12 * v", "radius": "=6 * v",
+                    "gradient": { "angle": 180, "stops": [ "=sTop", "=sMid + ' ' + sAt + '%'", "=sBot" ] } }
+                ] },
+              { "type": "text", "x": 0, "w": "100%", "y": "=538 * v", "h": "=36 * v", "valign": "middle", "text": "{game.achLabel}", "font": "inter", "size": "=30 * v", "color": "=ink2",
+                "visible": "=game.achB <= 0 && game.achLabel != ''" }
+            ] },
+          // a shelf with nothing on it
+          { "type": "text", "x": "=160 * v", "y": "=313 * v", "w": "=(TW - 320) * v", "text": "{empty.title}", "size": "=96 * v", "color": "=ink", "visible": "=empty" },
+          { "type": "text", "x": "=160 * v", "y": "=460 * v", "w": "=1240 * v", "wrap": true, "text": "{empty.hint}", "font": "inter", "size": "=38 * v", "lineHeight": "=57 * v",
+            "color": "=ink2", "visible": "=empty" }
+        ] }
       ],
       "bottom": [
         { "type": "rect", "fill": "#000000" },
-        { "use": "lrline" },
-        { "type": "group", "layout": "row", "align": "center", "gap": 7.2, "x": 22.7, "y": "=lrY - 10.85", "onTap": "left",
-          "children": [ { "use": "key", "with": { "k": "L", "on": 0 } },
-                        { "type": "text", "text": "◀", "font": "inter", "size": 10, "color": "=ink", "visible": "=cursor > 0" },
-                        { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=min(230, W * 0.38)", "h": 21.7, "visible": "=cursor > 0",
-                          "item": { "type": "text", "text": "{item.title}", "size": 16.5, "color": "=ink", "y": 1, "w": "=min(230, W * 0.38)", "visible": "=rel == -1" } },
-                        { "type": "text", "text": "{sys.name}", "size": 16.5, "color": "=ink", "visible": "=cursor == 0" } ] },
-        { "type": "group", "layout": "row", "align": "center", "gap": 7.2, "right": 22.7, "y": "=lrY - 10.85", "onTap": "right",
-          "visible": "=cursor < count - 1",
-          "children": [ { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=min(230, W * 0.38)", "h": 21.7,
-                          "item": { "type": "text", "text": "{item.title}", "size": 16.5, "color": "=ink", "y": 1, "w": "=min(230, W * 0.38)", "align": "right", "visible": "=rel == 1" } },
-                        { "type": "text", "text": "▶", "font": "inter", "size": 10, "color": "=ink" },
-                        { "use": "key", "with": { "k": "R", "on": 0 } } ] },
-        { "use": "bubble", "with": { "t": "=game.title", "s": "=game.sub", "pill": "" } },
-        { "use": "rail" },
-        { "type": "list", "source": "games", "direction": "free", "range": 4,
-          "item": { "use": "tile" } },
-        { "use": "scrub" },
-        { "use": "chip", "x": 22.7, "bottom": 22.7, "onTap": "b", "with": { "k": "B", "label": "Back", "on": 0, "warn": 0 } },
-        { "use": "chip", "x": 117, "bottom": 22.7, "with": { "k": "X", "label": "Options", "on": 0, "warn": 0 } },
-        { "use": "chip", "right": 22.7, "bottom": 22.7, "onTap": "y", "with": { "k": "Y", "label": "=game.fav ? 'Faved' : 'Fav'", "on": 0, "warn": "=game.fav" } }
-      ]
-    },
-
-    "launch": {
-      // A on a game: its cover lights up and START fills the line, then the game starts
-      "top": [
-        { "type": "rect", "fill": "#000000" },
-        { "use": "glow", "x": "=W / 2", "y": 210, "w": 200, "h": 180, "with": { "blur": 90, "c": "=alpha(a, 0.25 + 0.25 * launch.progress)" } },
-        { "type": "group", "x": "=W / 2", "y": 210, "w": 200, "h": 186.6, "anchor": "center", "scale": "=0.9 + 0.1 * easeOutBack(launch.progress)",
-          "children": [
-            { "type": "rect", "radius": 12.4, "gradient": { "angle": 160, "stops": [ "#202027", "#0d0d10 60%", "#050506" ] } },
-            { "type": "image", "src": "{game.art}", "fit": "cover", "radius": 12.4, "visible": "=game.art != ''" },
-            { "type": "image", "src": "=either(game.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "48%", "h": "48%",
-              "anchor": "center", "visible": "=game.art == ''" },
-            { "type": "rect", "radius": 12.4, "border": 0.9, "borderColor": "#ffffff24" }
+        { "type": "group", "opacity": "=in * (1 - leave)", "y": "=(12 * (1 - in) - 12 * leave) * u", "children": [
+          // L and R: the game before (the system's name on the first one) and the game after
+          { "type": "group", "layout": "row", "align": "center", "gap": "=16 * u", "x": "=64 * u", "y": "=40 * u", "h": "=56 * u", "onTap": "left",
+            "children": [ { "use": "key", "with": { "k": "L", "mode": 0 } },
+                          { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=392 * u", "h": "=40 * u", "visible": "=cursor > 0",
+                            "item": { "type": "text", "text": "{item.title}", "font": "inter", "size": "=30 * u", "color": "=ink2", "w": "=392 * u", "h": "=40 * u",
+                                      "valign": "middle", "visible": "=rel == -1" } },
+                          { "type": "text", "text": "{sys.name}", "font": "inter", "size": "=30 * u", "color": "=ink2", "visible": "=cursor == 0" } ] },
+          { "type": "group", "layout": "row", "align": "center", "gap": "=16 * u", "right": "=64 * u", "y": "=40 * u", "h": "=56 * u", "onTap": "right",
+            "children": [ { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=392 * u", "h": "=40 * u", "visible": "=cursor < count - 1",
+                            "item": { "type": "text", "text": "{item.title}", "font": "inter", "size": "=30 * u", "color": "=ink2", "w": "=392 * u", "h": "=40 * u",
+                                      "align": "right", "valign": "middle", "visible": "=rel == 1" } },
+                          { "use": "key", "with": { "k": "R", "mode": 0 } } ] },
+          { "use": "bubble", "with": { "t": "=empty ? empty.title : game.title", "s": "=empty ? empty.hint : game.sub" } },
+          { "use": "shelf" },
+          { "type": "list", "source": "games", "direction": "free", "range": 4,
+            "item": { "use": "tile" } },
+          { "use": "scrub", "visible": "=!empty" },
+          { "type": "group", "layout": "row", "gap": "=24 * u", "x": "=64 * u", "y": "=968 * u", "children": [
+            { "use": "pill", "onTap": "b", "with": { "k": "B", "label": "Back", "mode": 0 } },
+            { "use": "pill", "onTap": "x", "visible": "=!empty", "with": { "k": "X", "label": "Options", "mode": 0 } }
           ] },
-        { "type": "text", "x": 0, "w": "=W", "y": 330, "align": "center", "text": "{game.title}", "size": 28, "color": "=ink" },
-        { "type": "rect", "x": "=W / 2 - 93", "y": 378, "w": 186.7, "h": 2.7, "radius": 1.3, "fill": "#1a1a1d" },
-        { "type": "rect", "x": "=W / 2 - 93", "y": 378, "w": "=max(1, 186.7 * easeOut(launch.progress))", "h": 2.7, "radius": 1.3, "fill": "=a",
-          "shadow": { "blur": 5, "color": "=alpha(a, 0.8)" } }
+          { "use": "pill", "right": "=64 * u", "y": "=968 * u", "onTap": "y", "visible": "=!empty",
+            "with": { "k": "Y", "label": "=game.fav ? 'Remove from favourites' : 'Add to favourites'", "mode": "=game.fav ? 2 : 0" } }
+        ] }
       ]
     }
   }

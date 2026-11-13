@@ -31,7 +31,7 @@ namespace banana
 		const char* const ALL_CHOSEN[] = { "all", "chosen", nullptr };
 		const char* const BSHARE_RECEIVE[] = { "off", "ask", "auto", nullptr };
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
-		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
+		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", "theme", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
 		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };

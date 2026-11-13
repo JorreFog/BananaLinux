@@ -63,6 +63,7 @@ namespace banana
 		int screenHeight(int s) const { return SH[s]; }
 		bool staged(int s) const { return !ident[s]; }
 		bool stageArea(float& x, float& y, float& w, float& h) const override;
+		float stageScale() const override { return ident[cur] ? 1.0f : sk[cur]; }
 		// a point of screen s (its px) in the canvas; false outside the stage
 		bool screenToCanvas(int s, float px, float py, float& x, float& y) const;
 		// the composed screen, 0xXXRRGGBB rows of screenWidth(screen) words

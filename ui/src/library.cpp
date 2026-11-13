@@ -947,6 +947,21 @@ namespace banana
 				std::string ic = romIconCover(dataDir, g.path);
 				if (!ic.empty()) { r.resumeLabel = ic; r.resumeCart.clear(); }
 			}
+			if (g.last > 0) r.resumeWhen = relDay(g.last);
+			// the two games played before it, for a theme that shows more than one cover (then the shelf's first with art)
+			auto artOf = [](const Game& o) { return !o.box.empty() ? o.box : !o.label.empty() ? o.label : o.cart; };
+			int picked[2] = { -1, -1 };
+			for (int k = 0; k < 2; k++)
+			{
+				int best = -1;
+				for (int i = 0; i < (int)s.games.size(); i++)
+				{
+					if (i == res || i == picked[0] || artOf(s.games[i]).empty()) continue;
+					if (best < 0 || s.games[i].last > s.games[best].last) best = i;
+				}
+				picked[k] = best;
+				if (best >= 0) r.recentArt[k] = artOf(s.games[best]);
+			}
 		}
 		return r;
 	}
@@ -1066,6 +1081,7 @@ namespace banana
 
 	bool Library::online()
 	{
+		if (testOnline >= 0) return testOnline == 1;
 		double now = monoSec();
 		if (onlineAt > 0 && now - onlineAt < 2) return onlineSeen;
 		onlineAt = now;

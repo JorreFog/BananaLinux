@@ -1,4 +1,5 @@
 #pragma once
+#include "theme.h"
 #include "complink.h"
 #include <sys/types.h>
 #include <cmath>
@@ -104,6 +105,7 @@ namespace banana
 		static void bshareServe(bool want);
 		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
+		void settle() { aPick = (float)sel; aTop = (float)top; aCol = (float)(gsel % 3); aRow = (float)(gsel / 3); }	// (a still picture: the glides at rest)
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
@@ -122,6 +124,9 @@ namespace banana
 		// the panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the virtual keyboard the emulator
 		// reads as a USB one (vkbd.h), made before the game starts. null: no Keys tile on the panel
 		void gameKeyboard(VirtualKeyboard* k) { vkbd = k; }
+		// the handheld has a Home button that stops the game for the menu (a press) or the quick menu (held): the panel's
+		// hints say so in a theme's screen layout (set before gameOpen)
+		bool gameHome = false;
 		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
 		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
 		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
@@ -239,11 +244,43 @@ namespace banana
 			float dx = 0, cw = 640, ch = 480;	// (the canvas, device px)
 			float left = -1, k = 1;				// the column's edge from the screen's (units; < 0 none), device px a unit
 			int screen = -1;
+			// a theme's pages on the screen's own shape (settings.layout "screen"; lay): what a page draws in the canvas's
+			// units is put on the screen scaled by g from (tx, ty), in whole screen pixels. The bottom screen: the
+			// canvas's 18..622 across the screen with the design's 64 px margins, its top a little over the screen's, the
+			// button hints (chips, while face() draws them) dropped to the screen's bottom edge. The top screen: the text
+			// column at `left`, what is under the header (from bodyFrom on) moved down by bodyDy to make room for the
+			// large title. rk: screen pixels a device px there (what is drawn is made at that size: nothing is scaled)
+			bool lay = false, chips = false;
+			float g = 1, tx = 0, ty = 0, drop = 0, sk = 1, q = 1, ax = 0, ay = 0, bodyFrom = 1e9f, bodyDy = 0;
+			bool on() const { return lay && screen >= 0; }
+			float rk() const { return on() ? g * sk : 1.0f; }
+			float px() const { return on() ? q : k / 2.25f; }
+			float u1 = 0;	// the bottom screen's units a design px (set when it was begun)	// screen pixels a pixel of the 1080-line design
+			float snapX(float v) const { return std::round((v - ax) * sk) / sk + ax; }
+			float snapY(float v) const { return std::round((v - ay) * sk) / sk + ay; }
+			float mapX(float x) const { return tx + x * g; }
+			float mapY(float y) const { return ty + y * g + (chips ? drop : 0) + (y >= bodyFrom ? bodyDy : 0); }
 			float off() const { return screen == 0 ? dx : 0; }
 			rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override { return real->upload(b, smooth); }
-			void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override { real->draw(t, x + off(), y, w, h, tint); }
-			void fill(float x, float y, float w, float h, const rnds::Color& c) override { real->fill(x + off(), y, w, h, c); }
-			void pushClip(float x, float y, float w, float h) override { real->pushClip(x + off(), y, w, h); }
+			void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override
+			{
+				if (on()) real->draw(t, snapX(mapX(x)), snapY(mapY(y)), w * g, h * g, tint);
+				else real->draw(t, x + off(), y, w, h, tint);
+			}
+			void fill(float x, float y, float w, float h, const rnds::Color& c) override
+			{
+				if (!on()) { real->fill(x + off(), y, w, h, c); return; }
+				float x0 = snapX(mapX(x)), x1 = snapX(mapX(x + w)), y0 = snapY(mapY(y)), y1 = snapY(y0 + h * g);
+				if (w > 0 && x1 - x0 < 1 / sk) x1 = x0 + 1 / sk;
+				if (h > 0 && y1 - y0 < 1 / sk) y1 = y0 + 1 / sk;
+				real->fill(x0, y0, x1 - x0, y1 - y0, c);
+			}
+			void pushClip(float x, float y, float w, float h) override
+			{
+				if (!on()) { real->pushClip(x + off(), y, w, h); return; }
+				float x0 = snapX(mapX(x)), y0 = snapY(mapY(y));
+				real->pushClip(x0, y0, snapX(mapX(x + w)) - x0, snapY(y0 + h * g) - y0);
+			}
 			void popClip() override { real->popClip(); }
 			void beginScreen(int sc) override
 			{
@@ -251,17 +288,49 @@ namespace banana
 				real->beginScreen(sc);
 				// the text column (x 50 of the canvas) put at `left` from the screen's own left edge
 				dx = 0;
-				float ax = 0, ay, aw, ah;
-				if (sc == 0 && left >= 0) { if (!real->stageArea(ax, ay, aw, ah)) ax = 0; dx = std::round(ax + (left - 50) * k); }
+				float ax0 = 0, ay0 = 0, aw = cw, ah = ch;
+				const bool staged = real->stageArea(ax0, ay0, aw, ah);
+				if (!staged) { ax0 = 0; ay0 = 0; aw = cw; ah = ch; }
+				if (sc == 0 && left >= 0) dx = std::round(ax0 + (left - 50) * k);
+				chips = false;
+				if (!lay) return;
+				ax = ax0; ay = ay0;
+				sk = staged ? std::max(0.05f, real->stageScale()) : 1.0f;
+				q = ah * sk / 1080;
+				if (sc == 1)
+				{
+					g = (aw * sk - 128 * q) / 604 / (k * sk);
+					tx = 64 * q / sk + ax - 18 * k * g; ty = -14 * q / sk + ay;
+					drop = (968 + 14) * q / sk - 422 * k * g;
+					bodyFrom = 1e9f; bodyDy = 0;
+					u1 = q / (k * g * sk);
+				}
+				else { g = 1; tx = dx; ty = 0; drop = 0; bodyFrom = 140 * k; bodyDy = 24 * k; }
 			}
 			void endScreen() override { screen = -1; real->endScreen(); }	// (the host's overlay, drawn in it, isn't moved)
 			bool stageArea(float& x, float& y, float& w, float& h) const override
 			{
 				bool r = real->stageArea(x, y, w, h);
+				if (on())
+				{
+					if (!r) { x = 0; y = 0; w = cw; h = ch; }
+					x = (x - tx) / g; y = (y - ty) / g; w /= g; h /= g;
+					return true;
+				}
 				if (!off()) return r;
 				if (!r) { x = 0; y = 0; w = cw; h = ch; }
 				x -= off();
 				return true;
+			}
+			// a touch on the bottom screen (device px of the canvas, as the host hands it) where the page drew it: the
+			// hints' band (the screen's last 120 px of the design's 1080) back up at the canvas's chips
+			void untouch(float& x, float& y) const
+			{
+				if (!lay) return;
+				const float yChips = (1080 - 120) * q / sk + ay;
+				if (y >= yChips) y = (y - ty - drop) / g;
+				else y = std::min((y - ty) / g, 414 * k);
+				x = (x - tx) / g;
 			}
 		};
 		StageShift shift;
@@ -627,6 +696,39 @@ namespace banana
 		std::string bodyLoaded;
 		bool bodyNow = false;			// wrapped() is drawing: text() takes B
 		void loadBody();				// B as the theme says (again when it changed)
+		// Thor OLED's look and layout (settings_v3.cpp): a theme's "panels": "material" and "settings.layout": "screen"
+		std::shared_ptr<rnds::Font> IM, IR;	// Inter Medium and Regular (labels and values in the material look)
+		bool material() const { return rnds::themeFiles.panels == "material" && IM && IR; }
+		bool lay() const { return shift.on(); }
+		void role(bool medium, float& size, std::shared_ptr<rnds::Font>& font, bool& upper, float& ls) const;	// a text's font and size by its role
+		bool mbox(const std::string& kind, bool on, float x, float y, float w, float h);	// a box in the material look (false: not one of its)
+		void mpaint(const std::string& style, float x, float y, float w, float h);	// one of the look's surfaces by name (canvas units)
+		void glyph(const std::string& name, int size, float x, float y, const rnds::Color& c);	// a line icon (design px size: 32, 88), tinted
+		bool hasGlyph(const std::string& name, int size);
+		void glyphAt(const std::string& name, int size, float x, float y, float w, const rnds::Color& c);	// (drawn w units wide)
+		void gameTile(int i, int n, float& x, float& y, float& w, float& h) const;	// the game panel's tile i of n
+		float keycapWidth(const std::string& key);	// a button hint's key in the shape of the button (units)
+		void keycap(const std::string& key, float x, float y, int state);	// state: 0 plain, 1 the main action's (plate), 2 a warning's (pink)
+		void mswitch(float x, float y, bool on);	// a switch (88 x 48 design px)
+		void mbar(float x, float y, float w, double fraction);	// a 12 px bar, its fill the plate
+		rnds::Color mcol(const char* name) const;	// one of the look's colours (the theme's "colors", else Thor OLED's)
+		// the groups' tiles and the list's rows, where they are (canvas units): the canvas's, or the design's when the
+		// pages are laid out on the screen (after the bottom screen was drawn once)
+		struct Measures { float rowY = 82, rowH = 56, rowPitch = 64, gridY = 82, gridW = 196, gridH = 158, gridPX = 204, gridPY = 166; };
+		Measures measures() const;
+		int listRows() const { return rnds::themeFiles.panels == "material" && shift.lay ? 7 : ROWS; }
+		// a Settings row in the material look: an icon tile, the label, the value (a switch for on and off, a meter
+		// for a level, the accent's dot), chevrons either side of it on the picked row
+		void listRow(const Item& it, float y, float h, bool on, const std::string& value, bool arrows, bool armedNow);
+		std::string rowGlyph(const Item& it) const;
+		std::vector<ThemeAccent> accentChoices;	// the Accent colour row's, as the theme in use has them (theme.h)
+		void themeAccent(const std::string& theme);
+		void listExtras(const Item& it);	// the top screen's swatches (Theme) and caps (Accent colour)
+		int iconPx = 0;		// (iconCentred: screen px an icon pixel, when a page says)
+		float helpWide = 0, wrapEnd = 0;	// (the help's column when not HELP_W; where wrapped()'s last line ended)
+		void miniPreview(float x, float y);	// the split page's picture: three tiles, the middle one on the plate
+		float crumbEnd = 0;		// (the top screen's header: where the crumb ended, for the value after it)
+		float px(float v) const { return v * shift.px() / (s * shift.rk()); }	// design px (of 1080 lines) in the page's units
 		void iconTile(float x, float y, float w, float h);	// a theme's lit tile behind a top screen icon (settings.icons "tile")
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
 		std::string drawnLook;	// what the cache's pictures were drawn for (setVariant): the same look again keeps them
@@ -866,6 +968,9 @@ namespace banana
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
+		// text()'s line in a font given (tag: the font's mark in the cache's key)
+		float textWith(const std::string& t, const std::shared_ptr<rnds::Font>& font, const char* tag, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
+		float headText(const std::string& t, float size, const rnds::Color& c);	// (the material look's top screen: crumb, title, value)
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
 		// right: against the box's right edge
