@@ -14,6 +14,10 @@ SDL2_CONF_OPTS += --enable-video-vulkan
 # contentChecksum_t, a name lz4 1.11 removed: the host build fails on a PC with lz4 1.11 installed. Buildroot gives
 # host-zstd no lz4 of its own, so it must not pick up the PC's (the zstd tool would link a library outside HOST_DIR).
 HOST_ZSTD_OPTS += HAVE_LZ4=0
+# host-qt6base, the same way: Buildroot pins its zlib, pcre2, libb2 and double-conversion, not md4c, so Qt's CMake took
+# the build machine's md4c (0.6.0), whose flag values Qt 6.9.1's static_assert in qtextmarkdownimporter.cpp doesn't
+# match. Qt's bundled md4c is the one it was written for.
+HOST_QT6BASE_CONF_OPTS += -DFEATURE_system_textmarkdownreader=OFF
 
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
