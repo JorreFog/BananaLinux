@@ -43,14 +43,17 @@
 #                                    the card by hand, or gone), the state is dropped, said, rather than loaded, which
 #                                    would put the old save's memory back over the new one. No record (a card from
 #                                    before) leaves the state as it is. A start takes that emulator's line up and
-#                                    leaves "started dsv" or "started sav" in its place: found still there at that
-#                                    emulator's next start, the game never came to --played (the battery ran out),
-#                                    so a state not written since that start (older than the record, which the start
-#                                    wrote) is the session before's, and what was saved in the game since would be
-#                                    put back by it: dropped as well, said. One written since stays: the session came
-#                                    to its end and only the telling is late (the menu's --played still running).
-#                                    --played finding "started" and the state not written since (the emulator
-#                                    crashed, or quit without one) drops it the same way
+#                                    leaves "started dsv|sav <the save's MD5> <the state's MD5>" in its place (- for
+#                                    one not there): found still there at that emulator's next start, the game never
+#                                    came to --played (the battery ran out). The state still the one of that line is
+#                                    the session before's, and with the save another since, what was saved in the
+#                                    game would be put back by it: dropped as well, said. The save still that one,
+#                                    nothing was saved in the game, and the state is its own save's still: it stays.
+#                                    A state that is another stays too: the session came to its end and only the
+#                                    telling is late (the menu's --played still running). --played finding the
+#                                    line, the state the same and the save another (the emulator crashed, or quit
+#                                    without a state) drops it the same way. Told by what the files hold, never by
+#                                    their times: the clock is lost with the battery
 #   BANANA_ROOT=<dir> nds-saves ...  the data partition somewhere else than /data (the tests' cards; banana-sync's
 #                                    --root, not BANANA_DATA: that is banana/ to banana-ui and update)
 DATA=${BANANA_ROOT:-/data}
@@ -137,11 +140,17 @@ rec() { mkdir -p "${REC%/*}" && echo "$1" > "$REC$T" && put "$REC$T" "$REC"; }
 sav_to_dsv() { rm -f "$DATA/drastic/savestates/$G.resume.dss"; cat "$SAV" > "$DSV$T" && [ "$(size "$DSV$T")" = "$(size "$SAV")" ] && put "$DSV$T" "$DSV"; }
 dsv_to_sav() { rm -f "$DATA/states/nds/$G.resume.mst"; put "$RAW" "$SAV"; }
 
-# state_of <dsv|sav>: that emulator's quick-resume state; stale <state>: there, and not written since the record of
-# the game's end was, which a start leaves "started" in: the state that session started from, not one it wrote (the
-# two files' times against each other, both written on this card in one session, never against the clock)
+# state_of <dsv|sav>: that emulator's quick-resume state; mark <save's md5> <state>: what a start leaves after
+# "started <emulator>", - for a file not there or not read; stale <emulator> <save's md5 now> <state>: the record's
+# "started" line for that emulator names this very state, the session having written none, and another save, the game
+# having saved since. (A bare "started <emulator>", as the release before this left it, says neither: the state stays)
 state_of() { case $1 in dsv) echo "$DATA/drastic/savestates/$G.resume.dss" ;; sav) echo "$DATA/states/nds/$G.resume.mst" ;; esac; }
-stale() { [ -f "$1" ] && [ "$END" -nt "$1" ]; }
+mark() { _m=; [ -f "$2" ] && _m=$(md5 "$2"); echo "${1:--} ${_m:--}"; }
+stale() {
+    [ -f "$3" ] || return 1
+    _l=$(sed -n "s/^started $1 \([0-9a-f-]\{1,32\}\) \([0-9a-f]\{32\}\)\$/\1 \2/p" "$END" 2>/dev/null)
+    [ -n "$_l" ] && [ "${_l#* }" = "$(md5 "$3")" ] && [ "${_l% *}" != "${2:--}" ]
+}
 
 RAW="$SAV$T"
 done_() { rm -f "$RAW"; exit "${1:-0}"; }
@@ -149,14 +158,17 @@ done_() { rm -f "$RAW"; exit "${1:-0}"; }
 if [ -n "$PLAYED" ]; then
     # (the session that left "started" wrote no state at its end: the one from before it would put back what the game
     # saved since, as at a start that finds the end never told)
-    for _e in dsv sav; do
-        grep -qx "started $_e" "$END" 2>/dev/null && stale "$(state_of $_e)" && rm -f "$(state_of $_e)" &&
-            echo "nds-saves: $G: the game ended with no resume state written: the one from before the session dropped ($_e)"
-    done
-    _o=
-    [ -f "$DSV" ] && raw_of_dsv "$DSV" "$RAW" && _o="dsv $(md5 "$RAW")"
-    [ -f "$SAV" ] && _o="$_o${_o:+
-}sav $(md5 "$SAV")"
+    # (a save that can't be read isn't one that changed: its emulator's state is left)
+    _o=; _pd=; _ps=; _rd=1; _rs=1
+    if [ -f "$DSV" ]; then raw_of_dsv "$DSV" "$RAW" && _pd=$(md5 "$RAW"); [ -n "$_pd" ] || _rd=; fi
+    if [ -f "$SAV" ]; then _ps=$(md5 "$SAV"); [ -n "$_ps" ] || _rs=; fi
+    [ -n "$_rd" ] && stale dsv "$_pd" "$(state_of dsv)" && rm -f "$(state_of dsv)" &&
+        echo "nds-saves: $G: the game ended with no resume state written: the one from before the session dropped (dsv)"
+    [ -n "$_rs" ] && stale sav "$_ps" "$(state_of sav)" && rm -f "$(state_of sav)" &&
+        echo "nds-saves: $G: the game ended with no resume state written: the one from before the session dropped (sav)"
+    [ -n "$_pd" ] && _o="dsv $_pd"
+    [ -n "$_ps" ] && _o="$_o${_o:+
+}sav $_ps"
     mkdir -p "${END%/*}" && printf '%s\n' "$_o" > "$END$T" && put "$END$T" "$END" || done_ "$FAILED"
     done_
 fi
@@ -186,21 +198,22 @@ fi
 # held then (--played's record, written by the menu or bananad at the game's end). That emulator's save another since, or gone:
 # loaded, the state would put the old save's memory back over it, so it goes instead. That emulator's line of the record
 # is taken up by the start it was written for, whether or not there was a state to judge, and "started" left in its
-# place (the other emulator's line stays for its own next start). Found again at the next start, no game's end was told
-# in between: the session ended with the battery, a state not written since that start is the one the session started
-# from, and what the game saved during it would be put back by it, so it goes too (one written since stays: the
-# session came to its end, and its telling is only late)
+# place with what the save and the state hold (the other emulator's line stays for its own next start). Found again at
+# the next start, no game's end was told in between: the session ended with the battery. The state still the one that
+# start found is the one the session started from, and with the save another since, what the game saved during it
+# would be put back by it, so it goes too. The save the same, the game saved nothing, and the state stays with its
+# save; a state that is another stays as well (the session came to its end, and its telling is only late)
 if [ -n "$PREFER" ] && [ -f "$END" ]; then
     _st=$(state_of "$PREFER")
     case $PREFER in dsv) _now=$d ;; sav) _now=$s ;; esac
     _was=$(sed -n "s/^$PREFER //p" "$END")
-    if grep -qx "started $PREFER" "$END"; then
-        stale "$_st" && rm -f "$_st" && echo "nds-saves: $G: the game's last session never came to its end: the resume state from before it dropped ($PREFER)"
+    if grep -q -e "^started $PREFER\$" -e "^started $PREFER " "$END"; then
+        stale "$PREFER" "$_now" "$_st" && rm -f "$_st" && echo "nds-saves: $G: the game's last session never came to its end: the resume state from before it dropped ($PREFER)"
     elif [ -f "$_st" ] && [ -n "$_was" ] && [ "$_now" != "$_was" ]; then
         rm -f "$_st" && echo "nds-saves: $G: the save isn't the one the game was quit with: its resume state dropped ($PREFER)"
     fi
     # (a record that can't be written is taken off, as it was before this: one start's judgement, never a second's)
-    { grep -v -e "^$PREFER " -e "^started $PREFER\$" "$END"; echo "started $PREFER"; } > "$END$T" && put "$END$T" "$END" || rm -f "$END" "$END$T"
+    { grep -v -e "^$PREFER " -e "^started $PREFER\$" -e "^started $PREFER " "$END"; echo "started $PREFER $(mark "$_now" "$_st")"; } > "$END$T" && put "$END$T" "$END" || rm -f "$END" "$END$T"
 fi
 A=$(cat "$REC" 2>/dev/null)
 # (a record there but not an MD5, as a power cut while it was written leaves it: two that differ are held as both

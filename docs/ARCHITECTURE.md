@@ -385,15 +385,15 @@ What the sync holds to, whatever happens around it:
   as a DS game ends, the menu tells `nds-saves` what the two saves hold (`--played`), and so does bananad when it quits
   the game itself (Power off after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the
   state of the emulator starting when its save is another since (one copied onto the card by hand, or gone) rather than
-  load it. A start leaves `started` in that record where the emulator's line was, and a start that finds it still
-  there, no game's end told in between (the battery ran out), drops that emulator's state too when it wasn't written
-  since that start (it is older than the record): it is the one the lost session started from, older than what the game
-  saved during it. A game's end told with the state not written since the start (the emulator crashed, or quit without
-  one) drops it the same way. The menu waits for that telling before it starts the next game, and a state written since
-  the start stays in either case. With no record (a card from
-  before this) the state is loaded. File times decide none of this: the handheld's
-  clock is lost with its battery, and a state judged older or newer than its save by their dates would be judged wrong
-  with it.
+  load it. A start leaves `started` in that record where the emulator's line was, with the MD5 of its save and of its
+  state, and a start that finds it still there, no game's end told in between (the battery ran out), drops that
+  emulator's state too when the state is still that one and the save is another: it is the one the lost session
+  started from, older than what the game saved during it. The save still the same, the game saved nothing, and the
+  state stays with it. A game's end told with the state still the one from the start and the save another (the
+  emulator crashed, or quit without one) drops it the same way. The menu waits for that telling before it starts the
+  next game, and a state the session wrote stays in either case. With no record (a card from before this) the state
+  is loaded. File times decide none of this: the handheld's clock is lost with its battery, and a state judged older
+  or newer than its save by their dates would be judged wrong with it.
 - A sync of the saves placing one checks that no game is running before each write, and the menu marks a game as
   starting (`/run/banana/game.starting`) before it waits for the save lock, so a sync that keeps the lock past the 2 s
   the menu gives it leaves that game's save unplaced for the next sync to decide, rather than placing it under an

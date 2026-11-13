@@ -340,46 +340,67 @@ echo "nds-saves: a resume state is loaded only over the save the game was quit w
 MST=$D/states/nds/Game.resume.mst DSS=$D/drastic/savestates/Game.resume.dss
 nds() { BANANA_ROOT=$D sh "$L/nds-saves" /roms/nds/Game.nds "$@" > "$T/log"; }
 states() { printf '%s %s' "$( [ -f "$MST" ] && echo mst || echo -)" "$( [ -f "$DSS" ] && echo dss || echo -)"; }
-saves 8192 - x; mkdir -p "$D/states/nds" "$D/drastic/savestates"; : > "$MST"; : > "$DSS"
+# st <file>: a state written anew, as an emulator leaves one: never the bytes of the one before
+STN=0; st() { for _f; do STN=$((STN + 1)); echo "state $STN" > "$_f"; done; }
+# sav <letter>, dsv <letter>: that save as the game writes another in play
+sav() { head -c 8192 /dev/zero | tr '\0' "$1" > "$D/saves/nds/Game.sav"; }
+dsv() { head -c 8192 /dev/zero | tr '\0' "$1" > "$D/drastic/backup/Game.dsv"; }
+# record: the game-end record, its MD5s told only as that
+record() { sed 's/[0-9a-f]\{32\}/md5/g' "$D/banana/nds-saves/Game.played" | tr '\n' ' '; }
+saves 8192 - x; mkdir -p "$D/states/nds" "$D/drastic/savestates"; st "$MST" "$DSS"
 nds --played
-check "$(sed 's/ [0-9a-f]\{32\}$/ md5/' "$D/banana/nds-saves/Game.played" | tr '\n' ' ')" "dsv md5 sav md5 " "--played: the raw save each file holds, recorded"
+check "$(record)" "dsv md5 sav md5 " "--played: the raw save each file holds, recorded"
 nds --prefer sav
-check "$(states) $(sed 's/ [0-9a-f]\{32\}$/ md5/' "$D/banana/nds-saves/Game.played" | tr '\n' ' ')" "mst dss dsv md5 started sav " "the save as the game left it: BananaDS's state stays, its line of the record taken up, DraStic's left"
+check "$(states) $(record)" "mst dss dsv md5 started sav md5 md5 " "the save as the game left it: BananaDS's state stays, its line of the record taken up with what the save and the state hold, DraStic's left"
 # (the session quit: its state written anew, as an emulator leaves it)
-: > "$MST"; nds --played; head -c 8192 /dev/zero | tr '\0' n > "$D/saves/nds/Game.sav"
+st "$MST"; nds --played; sav n
 nds --prefer sav
 check "$(states) $(grep -c 'resume state dropped' "$T/log")" "- - 1" "the .sav replaced by hand since: BananaDS's state dropped, said (DraStic's goes with the save nds-saves gives it)"
-: > "$MST"; : > "$DSS"; head -c 8192 /dev/zero | tr '\0' m > "$D/saves/nds/Game.sav"; rm -f "$D/banana/nds-saves/Game.played"
+st "$MST" "$DSS"; sav m; rm -f "$D/banana/nds-saves/Game.played"
 nds --prefer sav
 check "$(states)" "mst -" "no record of the game's end (a power-off's resume, a card from before): BananaDS's state kept"
-nds --played; head -c 8192 /dev/zero | tr '\0' e > "$D/drastic/backup/Game.dsv"
+nds --played; dsv e
 nds --prefer dsv
 check "$(states)" "- -" "the .dsv replaced: DraStic's state dropped, and BananaDS's with the save nds-saves gives it"
 # a session that never came to its end (the battery, a crash: no --played): the state it started from would put back
-# what the game saved during it, so that emulator's goes at its next start; the other's, and a clean quit's, stay
-: > "$MST"; : > "$DSS"; nds --played; nds --prefer sav
+# what the game saved during it, so that emulator's goes at its next start; the other's, and a clean quit's, stay.
+# Nothing saved in the game, the state is its save's still, and stays: the spot it holds is the only one there is
+st "$MST" "$DSS"; nds --played; nds --prefer sav
 check "$(states)" "mst dss" "a start after a clean quit: both states stay"
-# (no state written from here on: both are from before the start just made)
-touch -t 202001010000 "$MST" "$DSS"
+# (no state written from here on: both are the ones the start just made found)
 nds --prefer sav
-check "$(states) $(grep -c 'never came to its end' "$T/log")" "- dss 1" "a start after a session with no end told: BananaDS's state from before it dropped, said, DraStic's left"
-nds --prefer dsv
-check "$(states)" "- dss" "...and DraStic's next start, its own line of the record still there: its state stays"
-nds --prefer dsv
-check "$(states)" "- -" "...its session with no end told either: dropped at the start after"
-: > "$DSS"; nds --played; nds --prefer dsv
-check "$(states) $(tr '\n' ' ' < "$D/banana/nds-saves/Game.played" | sed 's/ [0-9a-f]\{32\} / md5 /')" "- dss sav md5 started dsv " "a clean quit writes the record afresh: the state stays"
-# the state a session wrote at its end is told from the one it started from by the record's own time, written at the
-# start: a start that finds the end not yet told (the menu's --played still running, the game started again at once)
-# keeps a state written since, and an end told with no state written since (the emulator crashed, the menu still
-# there to tell it) drops the one from before
-nds --played; nds --prefer sav; : > "$MST"
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "mst dss 0" "a start after a session with no end told, nothing saved in the game: BananaDS's state stays"
+nds --prefer sav
+check "$(states)" "mst dss" "...and after a second such session"
+# (the files' times say nothing: a clock set back, or forward, between the sessions)
+touch -t 202001010000 "$MST" "$D/banana/nds-saves/Game.played"; nds --prefer sav
+touch -t 203001010000 "$MST"; nds --prefer sav
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "mst dss 0" "...whatever the files' times say"
+sav p; touch -t 203001010000 "$MST"
+nds --prefer sav
+check "$(states | cut -d' ' -f1) $(grep -c 'never came to its end' "$T/log")" "- 1" "the game saved in a session with no end told: BananaDS's state from before it dropped, said, though its time is the newer"
+st "$DSS"; nds --played; nds --prefer dsv
+check "$(states)" "- dss" "DraStic's start after a clean quit: its state stays"
+dsv q; nds --prefer dsv
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "- - 1" "...its session with no end told, the game saved in it: dropped at the start after"
+st "$DSS"; nds --played; nds --prefer dsv
+check "$(states) $(record)" "- dss sav md5 started dsv md5 md5 " "a clean quit writes the record afresh: the state stays"
+# a start that finds the end not yet told (the menu's --played still running, the game started again at once) keeps a
+# state the session wrote, and an end told with the state the one from before (the emulator crashed, the menu still
+# there to tell it) drops it when the game saved, and leaves it when it didn't
+nds --played; st "$MST"; nds --played; nds --prefer sav; sav r; st "$MST"
 nds --prefer sav
 check "$(states | cut -d' ' -f1) $(grep -c 'never came to its end' "$T/log")" "mst 0" "started again before its end was told: the state the session wrote stays"
-touch -t 202001010000 "$MST"; nds --played
-check "$(states | cut -d' ' -f1) $(grep -c 'no resume state written' "$T/log")" "- 1" "an end told with the state still the one from before the session: dropped, said"
-: > "$MST"; nds --prefer sav; touch -t 202001010000 "$MST" "$DSS"; nds --played
+nds --played
+check "$(states | cut -d' ' -f1) $(grep -c 'no resume state written' "$T/log")" "mst 0" "an end told with no state written and nothing saved in the game: the state stays"
+nds --prefer sav; sav u; nds --played
+check "$(states | cut -d' ' -f1) $(grep -c 'no resume state written' "$T/log")" "- 1" "an end told with the state still the one from before the session, the game having saved: dropped, said"
+st "$MST"; nds --played; nds --prefer sav; st "$DSS"; sav v; nds --played
 check "$(states)" "- dss" "...the other emulator's state, whose session it wasn't, left"
+# (the record as the release before left it, a bare "started": nothing known of that start, so the state stays)
+st "$MST"; nds --played; nds --prefer sav; sed -i 's/^started sav .*/started sav/' "$D/banana/nds-saves/Game.played"; sav w
+nds --prefer sav
+check "$(states | cut -d' ' -f1) $(record | grep -c 'started sav md5 md5')" "mst 1" "a bare \"started\" from the release before: the state stays, and the line is written as it is now"
 
 echo "nds-saves: BananaDS's save cut short (a power cut as it was written) is never written for DraStic"
 card sav; nds; cp "$D/drastic/backup/Game.dsv" "$T/good.dsv"
