@@ -386,8 +386,11 @@ What the sync holds to, whatever happens around it:
   the game itself (Power off after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the
   state of the emulator starting when its save is another since (one copied onto the card by hand, or gone) rather than
   load it. A start leaves `started` in that record where the emulator's line was, and a start that finds it still
-  there, no game's end told in between (the battery ran out, the emulator crashed), drops that emulator's state too: it
-  is the one the lost session started from, older than what the game saved during it. With no record (a card from
+  there, no game's end told in between (the battery ran out), drops that emulator's state too when it wasn't written
+  since that start (it is older than the record): it is the one the lost session started from, older than what the game
+  saved during it. A game's end told with the state not written since the start (the emulator crashed, or quit without
+  one) drops it the same way. The menu waits for that telling before it starts the next game, and a state written since
+  the start stays in either case. With no record (a card from
   before this) the state is loaded. File times decide none of this: the handheld's
   clock is lost with its battery, and a state judged older or newer than its save by their dates would be judged wrong
   with it.
