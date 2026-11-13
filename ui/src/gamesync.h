@@ -48,6 +48,11 @@ namespace gamesync
 
 	std::string syncTool();
 	bool syncsAfterGame(const std::string& autoSync);
+	// the game's end is a shutdown: bananad quit the game to turn the handheld off (it writes <run>/powering-off before
+	// it asks, as rcK does first of all, and for Power off after sleeping names the game in <data>/resume-boot). No
+	// sync then: the power would cut it, or it would put the server's save in place over the resume state just
+	// written; the game's next start sends the save
+	bool shutdownAtGameEnd(const std::string& data, const std::string& run);
 	// the game's save to the server now the game has let go of it, in the background, its lines in report (the
 	// banner's file for this game's end, so an earlier game's sync still going writes to its own). False: no banana-sync
 	bool syncAfterGame(const std::string& tool, const std::string& rom, const std::string& run, const std::string& report);
@@ -79,6 +84,9 @@ namespace gamesync
 		void press(char button);
 		bool backed() { bool b = back; back = false; return b; }	// the owner went back: this game isn't to start
 		bool active() const { return state != IDLE; }
+		// something of its own to look at again soon (Wi-Fi, a child, a notice's time), where a question only a press
+		// answers has nothing
+		bool polls() const { return state == WIFI || state == SYNCING || state == SHOWING || state == SETTLING || state == STOPPING; }
 		// the pop-up's lines (false: nothing shown)
 		bool text(std::string& l1, std::string& l2) const;
 

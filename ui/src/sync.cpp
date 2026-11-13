@@ -1188,7 +1188,8 @@ namespace
 	// a copy in the vault put in place as the save at rel, in this handheld's form as the sync would take it (a .dsv's
 	// footer cut off, the sizes checked), with DraStic's in step. expect: what the save held when this was chosen; rom:
 	// the game's path under the ROMs folder, when known
-	std::string place(const std::string& rel, const std::string& file, const std::string& serverId, const std::string& expect, const std::string& rom = "")
+	// (placed: the MD5 of what was put in place, when asked for)
+	std::string place(const std::string& rel, const std::string& file, const std::string& serverId, const std::string& expect, const std::string& rom = "", std::string* placed = nullptr)
 	{
 		bool ok, had = exists(ROOT + "/" + rel);
 		std::string data = readFile(file, &ok), local = had ? readFile(ROOT + "/" + rel) : "", why;
@@ -1197,6 +1198,7 @@ namespace
 		bool sized = had && !blankSave(local, saveFolder(rel));
 		if (rel.compare(0, 6, "saves/") == 0) why = adaptIn(systemOfSave(rel, rom), data, sized ? &local : nullptr);
 		if (!why.empty()) return why;
+		if (placed) *placed = hashStr(data, "md5");
 		std::string dl = RUN + "/sync-dl." + std::to_string(getpid()), err;
 		if (!writeAtomic(dl, data)) return "can't write the copy";
 		KillHold placing;
@@ -1207,8 +1209,10 @@ namespace
 		if (saveFolder(rel) == "nds" && ndsSaves(rom.empty() ? romOfSave(rel) : romPath(rom)) != 0) return "put in place, but DraStic's save isn't in step with it";
 		return gameRunning() ? "a game started while it was placed" : "";
 	}
-	// resolve <key> server: the server's copy, from the vault, so it needs no network; the next sync finds the two the
-	// same and agrees it
+	// resolve <key> server: the server's copy, from the vault, so it needs no network. It is recorded as the version
+	// both sides hold, as a download of it is: chosen before a game with no sync in between (the menu's question, or
+	// the server out of reach), what the game then saves is that version played on, sent as any change, where with the
+	// version agreed before still on record it came back as a second conflict with the very save it was played from
 	int settleHere(const std::string& key)
 	{
 		std::string why = lockForSaves();
@@ -1220,9 +1224,20 @@ namespace
 		std::string can = choiceOf(from == &c.conflicts, n);
 		if (heldForDs(c, key)) return answer("DraStic's and BananaDS's saves differ: start the game first");
 		if (can == "none") return answer(n.why.empty() || bothHeld(n) ? "the server's copy isn't in the vault" : "not a conflict: " + n.why);
-		why = place(n.rel, n.vault, std::to_string(n.saveId), n.localMd5, n.rom);
+		std::string md5;
+		why = place(n.rel, n.vault, std::to_string(n.saveId), n.localMd5, n.rom, &md5);
 		if (!why.empty()) return answer(why);
 		from->erase(key);
+		// (a version the server has, that is: a save outside the slots isn't the slot's, and the card's still goes there;
+		// Romhost's plan keeps its own record)
+		if (c.backend == "romm" && n.saveId > 0 && !n.outside && !md5.empty())
+		{
+			if (key.find("/state:") != std::string::npos) c.states[n.rel] = { (double)n.saveId, md5, n.updated };
+			// (RomM 5.4 and newer: the slot's record, the server's MD5 beside the card's when the card holds the save
+			// in another form; before it, the path's)
+			else if (c.serverVersion.empty() || versionAtLeast(c.serverVersion, 5, 4, 0)) c.slots[key] = { md5, n.rel, n.saveId, md5 != n.serverMd5 ? n.serverMd5 : "" };
+			else c.saves[n.rel] = { (double)n.saveId, md5, n.updated };
+		}
 		// (the save is in place either way; the note that couldn't be taken off is by the next sync, which finds the
 		// two the same)
 		if (!saveConf(c)) return answer("put in place, but that couldn't be recorded: Sync now settles it");
@@ -1714,8 +1729,7 @@ int main(int argc, char** argv)
 	if (cmd == "forget")
 	{
 		// (under the state file's lock: a run writing its part back meanwhile would write the pairing back with it)
-		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		int lk = lockConf();
 		int rc = unlink(CONF.c_str()) != 0 && errno != ENOENT ? 1 : 0;
 		unlink((CONF + ".new").c_str());	// (a copy a cut rename left, which the state is otherwise read from)
 		unlink(pinPath().c_str());			// (and the certificate trusted for that server: the next pairing asks again)

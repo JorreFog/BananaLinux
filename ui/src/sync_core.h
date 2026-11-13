@@ -187,7 +187,9 @@ namespace bsync
 	// that version played on, whatever happens to it, until a version is agreed again)
 	struct SlotSt { std::string md5, rel; long long saveId = 0; std::string wire; bool lost = false; };
 	// (rom: the game's path under the ROMs folder, which a save's name alone doesn't say: two systems can share one)
-	struct SlotNote { std::string rel, why, localMd5, serverMd5, device, updated, vault; long long saveId = 0; std::string rom = ""; };
+	// (outside: the server's side is a save outside the slots, one BananaOS up to 0.5.3.4 sent there, not the slot's
+	// head: whichever is chosen still has to go to the slot, so choosing it agrees nothing yet)
+	struct SlotNote { std::string rel, why, localMd5, serverMd5, device, updated, vault; long long saveId = 0; std::string rom = ""; bool outside = false; };
 	// a held note's why when it is DraStic's and BananaDS's saves that differ, not the card's and the server's: one of
 	// the two to choose, or DraStic's unreadable (its footer doesn't add up, or a size no DS save has), nothing to choose,
 	// or the two not brought together this time (a read or a write that failed), tried again at the next sync

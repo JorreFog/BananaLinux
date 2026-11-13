@@ -1076,7 +1076,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "gameend")
 		{
 			if (gamesync::gamePlayed(gateSys, gateRom)) logf("game end: nds-saves told");
-			if (gamesync::syncsAfterGame(homesync("homesync_auto")))
+			if (gamesync::syncsAfterGame(homesync("homesync_auto")) && !gamesync::shutdownAtGameEnd(o.data, testRun))
 			{
 				gameEnd.arm(testRun, gameTitle(lib, gateRom), now);
 				if (gamesync::syncAfterGame(gamesync::syncTool(), gateRom, testRun, gameEnd.file)) logf("game end: home server sync started");
@@ -3304,9 +3304,9 @@ int main(int argc, char** argv)
 		// Settings > Network > Home server > Auto sync: the game's save to the server now the game has let go of it
 		// (banana-sync reads the setting too, and does nothing unpaired; beside a sync copying games it takes its turn
 		// over the saves)
-		// (not when the game's end is a shutdown, Power off after sleeping: bananad named the game in resume-boot and
-		// turns the handheld off now, which would cut the sync; the game's next start, the resume, sends the save)
-		if (gamesync::syncsAfterGame(homesync("homesync_auto")) && access((o.data + "/resume-boot").c_str(), F_OK) != 0)
+		// (not when the game's end is a shutdown, bananad's own or Power off after sleeping: the handheld turns off
+		// now, which would cut the sync; the game's next start sends the save)
+		if (gamesync::syncsAfterGame(homesync("homesync_auto")) && !gamesync::shutdownAtGameEnd(o.data, "/run/banana"))
 		{
 			gameEnd.arm("/run/banana", gameTitle(lib, rom), nowMs());
 			if (gamesync::syncAfterGame(gamesync::syncTool(), rom, "/run/banana", gameEnd.file)) logf("game end: home server sync started");
@@ -3609,7 +3609,7 @@ int main(int argc, char** argv)
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		if (resumeLater.until > 0 && (timeout < 0 || timeout > 500)) timeout = 500;
-		if (gate.active() && (timeout < 0 || timeout > 100)) timeout = 100;
+		if (gate.polls() && (timeout < 0 || timeout > 100)) timeout = 100;
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;

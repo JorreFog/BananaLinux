@@ -361,7 +361,9 @@ RomM what it won't decide alone it holds. A save changed on both sides stays as 
 before the game starts or on Settings > Network > Home server > Manage saves, whose row (and the Home server row a level
 up) counts the conflicts and the saves held back. That page also lists the kept copies, which it can put back; nothing
 on the handheld removes one. All of it goes through `banana-sync` (`saves`, `resolve`, `restore`), under
-`/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the vault.
+`/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the vault,
+and is recorded at once as the version both sides hold, so a game played on it before any sync sends its save as a
+change to that version rather than holding it against the save it was played from.
 Keeping the card's is an ordinary sync that knows the choice, so a server that moved meanwhile is held again.
 
 What the sync holds to, whatever happens around it:
@@ -383,7 +385,10 @@ What the sync holds to, whatever happens around it:
   as a DS game ends, the menu tells `nds-saves` what the two saves hold (`--played`), and so does bananad when it quits
   the game itself (Power off after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the
   state of the emulator starting when its save is another since (one copied onto the card by hand, or gone) rather than
-  load it. With no record (a card from before this) the state is loaded. File times decide none of this: the handheld's
+  load it. A start leaves `started` in that record where the emulator's line was, and a start that finds it still
+  there, no game's end told in between (the battery ran out, the emulator crashed), drops that emulator's state too: it
+  is the one the lost session started from, older than what the game saved during it. With no record (a card from
+  before this) the state is loaded. File times decide none of this: the handheld's
   clock is lost with its battery, and a state judged older or newer than its save by their dates would be judged wrong
   with it.
 - A sync of the saves placing one checks that no game is running before each write, and the menu marks a game as
@@ -391,8 +396,10 @@ What the sync holds to, whatever happens around it:
   the menu gives it leaves that game's save unplaced for the next sync to decide, rather than placing it under an
   emulator that is reading it. Before the game started again after Power off after sleeping, a sync of other games
   leaves that one as it is, on any server (`/run/banana/resume-once`, `banana/resume-boot`): its save and its states,
-  the resume state among them, stay as they are on the card. The menu starts no sync after a game whose end is that
-  shutdown.
+  the resume state among them, stay as they are on the card. The menu starts no sync after a game whose end is a
+  shutdown: bananad writes `/run/banana/powering-off` (rcK's own flag) before it asks the game to quit, and
+  `resume-boot` before it tells `nds-saves` of the game's end, and the menu, back from the game while the handheld is
+  still going down, reads both.
 - The sync after a game with the server out of reach keeps a copy of the game's save in the vault at once, on any
   server, and so does an upload that fails. On RomM the save is also left waiting to be sent, which the sync when Wi-Fi
   comes back sends: under its slot when the card has synced the game before, else under the game's ROM until that sync
@@ -409,7 +416,9 @@ What the sync holds to, whatever happens around it:
 - DraStic's and BananaDS's saves not brought together before a sync (both changed, DraStic's unreadable, or a read or a
   write that failed) leave that game out of that sync, so a save that may be the older of the two is never decided on; a
   failure is tried again at the next sync. Both changed is settled at the game's next start: the emulator starting plays
-  its own, and the other is kept in the vault (`nds-saves --prefer`).
+  its own, and the other is kept in the vault (`nds-saves --prefer`). BananaDS's save of a size no DS save has (a file
+  cut short as it was written) counts as a write that failed: it is never written for DraStic, whose good save would
+  read as unreadable from then on, and BananaDS writes it whole again at the game's next start.
 - Every file is written beside its name, synced, and renamed over, the folder synced after; the exFAT card doesn't make
   the rename itself atomic under a power cut, so the journal's recovery puts a whole new file found beside an empty name
   in place, and the sync's state file is read from its copy beside it when the rename lost it. The record of a recovered

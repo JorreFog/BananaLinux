@@ -4887,16 +4887,11 @@ namespace banana
 		if (pid > 0 && comm == "banana-sync" && kill(pid, SIGTERM) == 0) message = "Stopping the sync. What came already stays on the card; Sync now carries on from there.";
 		// (the one this menu started, before it has written sync.pid: through its group, as a pairing is)
 		// (it says nothing as it goes, being stopped before it could: the menu says so)
-		else if (syncGroup > 0 && groupAlive(syncGroup) && kill(-syncGroup, SIGTERM) == 0)
-		{
-			syncGroup = 0;
-			std::ofstream(runDir + "/sync.status") << "error stopped\n";
-			syncNext = 0;
-			message = "Stopped.";
-		}
-		// (nothing running to stop, the row still saying running: it says stopped, rather than Stop doing nothing)
+		// (nothing running to stop, the row still saying running: it says stopped all the same, rather than Stop doing
+		// nothing)
 		else
 		{
+			if (syncGroup > 0 && groupAlive(syncGroup)) kill(-syncGroup, SIGTERM);
 			syncGroup = 0;
 			std::ofstream(runDir + "/sync.status") << "error stopped\n";
 			syncNext = 0;

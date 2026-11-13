@@ -65,7 +65,8 @@ int main(int argc, char **argv)
 EOF
     cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"; cp "$W/drastic" "$W/bananafront"
     # (nds-saves, as bananad runs it for a DS game it quits itself: its arguments in /run/test/nds-saves.log)
-    printf '#!/bin/sh\necho "$*" >> /run/test/nds-saves.log\n' > "$W/nds-saves"; chmod +x "$W/nds-saves"
+    # (and whether the menu, back from the game by then, could already tell the shutdown: the flag and resume-boot there)
+    printf '#!/bin/sh\necho "$*" >> /run/test/nds-saves.log\n[ -e /run/banana/powering-off ] && [ -e /data/banana/resume-boot ] && echo told > /run/test/nds-saves.when\n' > "$W/nds-saves"; chmod +x "$W/nds-saves"
     [ "$1" = --build ] && exit 0
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"
@@ -113,6 +114,7 @@ wake() { head -c 3 /sys/power/state > /dev/null; sleep 0.3; }       # read "mem"
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
+    rm -f /run/banana/powering-off                  # (a shutdown of the run before: /run is new at every boot)
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
     BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_NDS_SAVES=$W/nds-saves "$W/bananad" & BD=$!
     sleep 0.5
@@ -273,7 +275,7 @@ echo "9. Power off after sleeping: the deadline's alarm, the lid still shut: Sup
 mkdir -p /data/drastic/savestates /data/states/nds
 export TEST_RESUME="/data/drastic/savestates/Peel Quest.resume.dss"
 game drastic "/data/roms/nds/Peel Quest.nds"
-: > /run/test/ui-signals; rm -f /data/banana/resume-boot /run/test/nds-saves.log
+: > /run/test/ui-signals; rm -f /data/banana/resume-boot /run/test/nds-saves.log /run/test/nds-saves.when
 start "sleep_check_hours = 4" "poweroff_after_sleep_minutes = 0.02"    # 1.2 s
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
@@ -285,6 +287,7 @@ grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1 (save
 grep -qx saved /run/test/drastic.log 2>/dev/null && ! kill -0 $GAME 2>/dev/null && ok "the shutdown waited for the save" || bad "shut down before the save"
 [ "$(cat /data/banana/resume-boot 2>/dev/null)" = "$(printf 'rom=/data/roms/nds/Peel Quest.nds\nemulator=superdrastic')" ] && ok "resume-boot names the game" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
 [ "$(cat /run/test/nds-saves.log 2>/dev/null)" = "/data/roms/nds/Peel Quest.nds --played" ] && ok "nds-saves told what the saves hold, as at a game's end in the menu" || bad "nds-saves: $(cat /run/test/nds-saves.log 2>/dev/null)"
+[ "$(cat /run/test/nds-saves.when 2>/dev/null)" = told ] && ok "the shutdown's flag and resume-boot written before nds-saves ran (the menu, back from the game, starts no sync)" || bad "nds-saves ran before the menu could tell the shutdown"
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "the panels stayed dark" || bad "bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
 [ ! -s /run/test/ui-signals ] && ok "the menu wasn't woken" || bad "the menu was told to redraw"
 grep -q 'the game saved, then shutting down' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"

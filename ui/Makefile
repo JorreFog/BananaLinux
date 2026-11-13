@@ -93,7 +93,7 @@ tests/vault-test: tests/vault-test.cpp src/save_adapt.cpp src/save_adapt.h src/s
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/vault-test.cpp src/save_adapt.cpp src/save_vault.cpp src/sync_core.cpp src/json.cpp -ldl
 
 # the menu's side of the sync around a game (tests/run.sh runs it)
-tests/gamesync-test: tests/gamesync-test.cpp src/gamesync.cpp src/gamesync.h src/json.cpp
+tests/gamesync-test: tests/gamesync-test.cpp src/gamesync.cpp src/gamesync.h src/sync_util.h src/json.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamesync-test.cpp src/gamesync.cpp src/json.cpp
 
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
@@ -140,7 +140,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/vault-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items tests/paths-test
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/vault-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items tests/paths-test tests/gamesync-test
 
 .PHONY: host install clean
 

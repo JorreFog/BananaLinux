@@ -81,29 +81,58 @@ namespace gamesync
 		return t && *t ? t : "/usr/bin/banana-sync";
 	}
 	bool syncsAfterGame(const std::string& autoSync) { return autoSync == "quit" || autoSync == "both"; }
+	bool shutdownAtGameEnd(const std::string& data, const std::string& run)
+	{
+		return access((run + "/powering-off").c_str(), F_OK) == 0 || access((data + "/resume-boot").c_str(), F_OK) == 0;
+	}
 	std::string sd2Roms(const std::string& run)
 	{
 		std::string p;
 		std::getline(std::ifstream(run + "/sd2/roms"), p);
 		return p;
 	}
-	bool syncAfterGame(const std::string& tool, const std::string& rom, const std::string& run, const std::string& report)
+	namespace
 	{
-		if (access(tool.c_str(), X_OK) != 0) return false;
+	// a program started in its own session, nothing of the menu's open to it but /dev/null. argv[0] is its path
+	[[noreturn]] void execQuiet(const std::vector<std::string>& argv)
+	{
+		setsid();
+		// (the menu's signal mask and its ignored SIGPIPE aren't the program's)
+		sigset_t none;
+		sigemptyset(&none);
+		sigprocmask(SIG_SETMASK, &none, nullptr);
+		signal(SIGPIPE, SIG_DFL);
+		int nul = open("/dev/null", O_RDWR);
+		if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
+		std::vector<char*> a;
+		for (auto& s : argv) a.push_back(const_cast<char*>(s.c_str()));
+		a.push_back(nullptr);
+		execv(a[0], a.data());
+		_exit(127);
+	}
+	// one the menu doesn't wait for or hear from again: a grandchild of nobody here, so no zombie
+	void spawnDetached(const std::vector<std::string>& argv)
+	{
 		pid_t p = fork();
 		if (p == 0)
 		{
-			if (fork() == 0)
-			{
-				setsid();
-				int nul = open("/dev/null", O_RDWR);
-				if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-				execl(tool.c_str(), tool.c_str(), "--run", run.c_str(), "--report", report.c_str(), "sync", "--auto", "quit", "--rom", rom.c_str(), (char*)nullptr);
-				_exit(127);
-			}
+			if (fork() == 0) execQuiet(argv);
 			_exit(0);
 		}
 		if (p > 0) waitpid(p, nullptr, 0);
+	}
+	// one the menu watches and reaps: its pid, -1 when it couldn't be started
+	pid_t spawnChild(const std::vector<std::string>& argv)
+	{
+		pid_t p = fork();
+		if (p == 0) execQuiet(argv);
+		return p;
+	}
+	}
+	bool syncAfterGame(const std::string& tool, const std::string& rom, const std::string& run, const std::string& report)
+	{
+		if (access(tool.c_str(), X_OK) != 0) return false;
+		spawnDetached({ tool, "--run", run, "--report", report, "sync", "--auto", "quit", "--rom", rom });
 		return true;
 	}
 	bool gamePlayed(const std::string& system, const std::string& rom)
@@ -114,20 +143,7 @@ namespace gamesync
 		if (access(tool.c_str(), X_OK) != 0) return false;
 		// (in the background, as the sync after the game is: an MD5 or two of files on the card, which a busy card
 		// can take its time over, and nothing of the menu's waits on it)
-		pid_t p = fork();
-		if (p == 0)
-		{
-			if (fork() == 0)
-			{
-				setsid();
-				int nul = open("/dev/null", O_RDWR);
-				if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-				execl(tool.c_str(), tool.c_str(), rom.c_str(), "--played", (char*)nullptr);
-				_exit(127);
-			}
-			_exit(0);
-		}
-		if (p > 0) waitpid(p, nullptr, 0);
+		spawnDetached({ tool, rom, "--played" });
 		return true;
 	}
 
@@ -153,19 +169,7 @@ namespace gamesync
 	{
 		unlink(status.c_str());
 		asked = now;
-		pid_t p = fork();
-		if (p == 0)
-		{
-			setsid();
-			sigset_t none;
-			sigemptyset(&none);
-			sigprocmask(SIG_SETMASK, &none, nullptr);
-			signal(SIGPIPE, SIG_DFL);
-			int nul = open("/dev/null", O_RDWR);
-			if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-			execl(tool.c_str(), tool.c_str(), "--run", runDir.c_str(), "sync", "--auto", "launch", "--rom", rom.c_str(), (char*)nullptr);
-			_exit(127);
-		}
+		pid_t p = spawnChild({ tool, "--run", runDir, "sync", "--auto", "launch", "--rom", rom });
 		if (p < 0) { say("sync before the game: can't start it"); state = IDLE; return; }
 		child = p;
 		state = SYNCING;
@@ -265,18 +269,7 @@ namespace gamesync
 	}
 	void Wait::settle(const char* how)
 	{
-		pid_t p = fork();
-		if (p == 0)
-		{
-			setsid();
-			sigset_t none;
-			sigemptyset(&none);
-			sigprocmask(SIG_SETMASK, &none, nullptr);
-			int nul = open("/dev/null", O_RDWR);
-			if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-			execl(tool.c_str(), tool.c_str(), "--run", runDir.c_str(), "--rom", rom.c_str(), "resolve", conflictKey.c_str(), how, (char*)nullptr);
-			_exit(127);
-		}
+		pid_t p = spawnChild({ tool, "--run", runDir, "--rom", rom, "resolve", conflictKey, how });
 		if (p < 0) { state = IDLE; return; }
 		child = p;
 		state = SETTLING;

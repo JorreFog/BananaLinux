@@ -523,6 +523,13 @@ BANANA_SAVES_FLAT=$HERE/../system/rootfs/usr/libexec/banana/saves-flat bs
 cmp -s "$C/saves/Peel Old (USA).srm" "$OUT/old.srm" && [ ! -e "$C/saves/Snes9x/Peel Old (USA).srm" ] && [ -f "$C/run/saves-flat" ] ||
     bad "a core folder's save not moved flat before the sync: $(find "$C/saves" -name 'Peel Old*')"
 [ "$(nsaves "Peel Old (USA).sfc")" = 1 ] || bad "a save moved flat by saves-flat wasn't sent: $(cat "$OUT/bs.log")"
+# (a core folder's fresh save, newer than the flat real one: Snes9x's 0x60 fill is no save to saves-flat either, which
+# asks banana-sync as the sync counts it, so the real save isn't replaced by its time alone)
+mkdir -p "$C/saves/Snes9x" "$OUT/flatbin"; ln -sf "$(cd "$(dirname "$BIN")" && pwd)/$(basename "$BIN")" "$OUT/flatbin/banana-sync"
+blank "$C/saves/Snes9x/Peel Old (USA).srm" 8192 60; touch -d '1 hour' "$C/saves/Snes9x/Peel Old (USA).srm"; rm -f "$C/run/saves-flat"
+PATH=$OUT/flatbin:$PATH BANANA_SAVES_FLAT=$HERE/../system/rootfs/usr/libexec/banana/saves-flat bs
+cmp -s "$C/saves/Peel Old (USA).srm" "$OUT/old.srm" && [ ! -e "$C/saves/Snes9x/Peel Old (USA).srm" ] ||
+    bad "a core folder's fresh Snes9x save went over the real flat one: $(find "$C/saves" "$C/banana/saves-legacy" -name 'Peel Old*')"
 # a fresh core's blank save, of its own size, against a real one of another on the server: the blank says nothing of
 # the game's size, so the server's replaces it (kept in the vault), not held as a format this handheld can't use
 cp "$L3/snes/Peel Blank (USA).sfc" "$C/roms/snes/"; PB=$C/saves/"Peel Blank (USA).srm"
@@ -590,9 +597,14 @@ printf '# kept here\ngbx/Not Chosen (USA).gba\n' > "$C/banana/homesync-local.txt
 # (its states too, with them on: the server's not taken into the vault)
 curl -s -XPOST "$U3/test/save" -d "{\"kind\": \"states\", \"rom_id\": $(rid "Not Chosen"), \"file_name\": \"Not Chosen (USA).state\", \"data\": \"$(printf 'a state of the server' | od -An -v -tx1 | tr -d ' \n')\"}" >/dev/null
 echo 'homesync_states = on' >> "$C/banana/settings.conf"
+# (nor the card's sent: the server's rows for the game are left out, so the card's state looks like one the server lacks)
+mkdir -p "$C/states"; echo 'a state of the card' > "$C/states/Not Chosen (USA).state"
 BANANA_SYSTEMS=$OUT/sys-gbx.conf bs
 grep -q 'not synced, its saves stay on this handheld: gbx/Not Chosen (USA).gba' "$OUT/bs.log" && cmp -s "$S/Not Chosen (USA).srm" "$OUT/nc1.srm" ||
     bad "a game kept here, its system in a folder of another name: $(cat "$OUT/bs.log")"
+[ "$(curl -s "$U3/test/log" | python3 -c 'import json,sys; print(sum(1 for x in json.load(sys.stdin) if x.startswith(sys.argv[1])))' "POST /api/states?rom_id=$(rid "Not Chosen")")" = 0 ] ||
+    bad "a game kept here: its state sent over the server's: $(cat "$OUT/bs.log")"
+rm -f "$C/states/Not Chosen (USA).state"
 grep -q 'Not Chosen (USA).state' "$OUT/bs.log" && bad "a game kept here, its system in a folder of another name: the server's state taken: $(grep 'Not Chosen' "$OUT/bs.log")"
 sed -i '/^homesync_states = on$/d' "$C/banana/settings.conf"
 mv "$C/roms/gbx" "$C/roms/gba"
@@ -1046,6 +1058,14 @@ ls "$OUT/h-a/banana/save-vault/saves/gba/Shared (USA)/" | grep -q -- "-$(m "$OUT
 sed -i "s#http://127.0.0.1:9#$SURL#" "$OUT/h-a/banana/romsync.json"
 n=$(logc "POST /api/saves?"); hs a; grep -q " 0 conflicts" "$OUT/hs-a.log" && grep -q " 0 saves up" "$OUT/hs-a.log" && [ "$(logc "POST /api/saves?")" = "$n" ] && [ "$(rs a 'c["slots"]["'"$SKEY"'"]["md5"]')" = "$(m "$OUT/sb.srm")" ] ||
     bad "slots: the server's save not agreed: $(cat "$OUT/hs-a.log")"
+# (the server's chosen and the game played before any sync, as at the menu's question before a game: the choice is on
+# record as the version both hold, so what the game saved goes up as a change to it, not back as a conflict with the
+# very save it was played from)
+hold2; [ "$(rv a resolve "$SKEY" server)" = ok ] && [ "$(rs a 'c["slots"]["'"$SKEY"'"]["md5"]')" = "$(m "$OUT/sb.srm")" ] ||
+    bad "slots: the server's chosen: not on record as the agreed version: $(rs a 'c["slots"]["'"$SKEY"'"]')"
+head -c 8192 /dev/urandom > "$GA/Shared (USA).srm"; cp "$GA/Shared (USA).srm" "$OUT/sa3.srm"; hs a
+grep -q " 0 conflicts" "$OUT/hs-a.log" && [ "$(head4 "Shared (USA).gba" | cut -d' ' -f1)" = "$(m "$OUT/sa3.srm")" ] && [ "$(rs a '"'"$SKEY"'" in c["conflicts"]')" = False ] ||
+    bad "slots: a game played on the server's chosen save came back as a conflict: $(cat "$OUT/hs-a.log")"
 # (a save played since the choice was shown: never replaced. The server's moved since: held again, with what it now is)
 hold2; head -c 8192 /dev/urandom > "$GA/Shared (USA).srm"; cp "$GA/Shared (USA).srm" "$OUT/sa2.srm"
 case $(rv a resolve "$SKEY" server) in "error "*) cmp -s "$GA/Shared (USA).srm" "$OUT/sa2.srm" || bad "slots: a save played since replaced" ;; *) bad "slots: a save played since wasn't refused" ;; esac
@@ -1510,6 +1530,11 @@ n=$(logc "GET /api/states/$sid/content"); hr a --auto quit --rom "gba/Solo (USA)
 [ "$(logc "GET /api/states/$sid/content")" = "$n" ] || bad "slots: a state kept in the vault was fetched again: $(cat "$OUT/hr-a.log")"
 rm "$ST4/Solo (USA).state"; hr a --auto quit --rom "gba/Solo (USA).gba"; n=$(logc "GET /api/states/$sid/content"); hr a --auto quit --rom "gba/Solo (USA).gba"
 [ ! -e "$ST4/Solo (USA).state" ] && [ "$(logc "GET /api/states/$sid/content")" = "$n" ] || bad "slots: a state deleted here came back, or is fetched at each sync: $(cat "$OUT/hr-a.log")"
+# (nor after a sync of another game alone, which asked the server for that game's states only: the record of the one
+# kept in the vault stays, and the next sync of everything doesn't fetch it again)
+hr a --auto quit --rom "gba/Shared (USA).gba"; n=$(logc "GET /api/states/$sid/content"); hs a
+[ "$(rs a '"states/Solo (USA).state" in c["states"]')" = True ] && [ "$(logc "GET /api/states/$sid/content")" = "$n" ] ||
+    bad "slots: another game's sync dropped the record of a state kept in the vault: $(rs a 'c["states"]') $(cat "$OUT/hs-a.log")"
 # a held state settled on the Saves page: the card's goes up by its name, the server's stays in the vault; the server's
 # is placed only then, by that choice
 head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; hr a --auto quit --rom "gba/Solo (USA).gba"
@@ -1524,6 +1549,9 @@ head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; cp "$ST4/Solo (USA).state" 
 sstate "Solo (USA)" "$OUT/s-srv.state" 30; hr a --auto quit --rom "gba/Solo (USA).gba"
 [ "$(rv a resolve "$SK" server)" = ok ] && cmp -s "$ST4/Solo (USA).state" "$OUT/s-srv.state" && ls "$VS/Solo (USA)/" | grep -q -- "-$(m "$OUT/s-card.state" | cut -c1-8)\.state$" ||
     bad "slots: a held state, the server's: $(rs a 'c["held"]')"
+# (played on before any sync: the state made since goes up as a change to the one chosen, not held against it again)
+head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; n=$(logc "POST /api/states"); hr a --auto quit --rom "gba/Solo (USA).gba"
+[ "$(rs a '"'"$SK"'" in c["held"]')" = False ] && [ "$(logc "POST /api/states")" = $((n + 1)) ] || bad "slots: a state made on the server's chosen one held again: $(cat "$OUT/hr-a.log")"
 hr a --auto quit --rom "gba/Solo (USA).gba"; [ "$(rs a '"'"$SK"'" in c["held"]')" = False ] && ! grep -q 'conflict, both kept' "$OUT/hr-a.log" || bad "slots: a state settled for the server's held again: $(cat "$OUT/hr-a.log")"
 # the card's kept over the server's, the answer lost (the server took it, then answered 500): the server's copy in the
 # vault may now be the only one, and stays there

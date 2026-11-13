@@ -595,7 +595,7 @@ namespace bsync
 		for (auto& kv : j->obj)
 		{
 			const JVal& v = *kv.second;
-			out[kv.first] = { v.str("path"), v.str("why"), v.str("local_md5"), v.str("server_md5"), v.str("device"), v.str("updated_at"), v.str("vault"), (long long)v.num("save_id"), v.str("rom") };
+			out[kv.first] = { v.str("path"), v.str("why"), v.str("local_md5"), v.str("server_md5"), v.str("device"), v.str("updated_at"), v.str("vault"), (long long)v.num("save_id"), v.str("rom"), v.flag("outside") };
 		}
 	}
 	std::string notesJson(const std::map<std::string, SlotNote>& m)
@@ -607,7 +607,7 @@ namespace bsync
 			const SlotNote& n = kv.second;
 			o += std::string(first ? "\n" : ",\n") + "  " + jsonStr(kv.first) + ": {\"path\": " + jsonStr(n.rel) + (n.why.empty() ? "" : ", \"why\": " + jsonStr(n.why)) +
 				", \"local_md5\": " + jsonStr(n.localMd5) + ", \"save_id\": " + std::to_string(n.saveId) + ", \"server_md5\": " + jsonStr(n.serverMd5) +
-				", \"device\": " + jsonStr(n.device) + ", \"updated_at\": " + jsonStr(n.updated) + ", \"vault\": " + jsonStr(n.vault) + (n.rom.empty() ? "" : ", \"rom\": " + jsonStr(n.rom)) + "}";
+				", \"device\": " + jsonStr(n.device) + ", \"updated_at\": " + jsonStr(n.updated) + ", \"vault\": " + jsonStr(n.vault) + (n.rom.empty() ? "" : ", \"rom\": " + jsonStr(n.rom)) + (n.outside ? ", \"outside\": true" : "") + "}";
 			first = false;
 		}
 		return o + (first ? "}" : "\n }");
@@ -673,8 +673,7 @@ namespace bsync
 		// its own part would otherwise land between this one's and be lost. Another run may hold the other part: the
 		// file as it is now read under the lock, and only this run's part written over it. The device is this run's
 		// too whenever it has one: a run over the saves registers it, again when RomM deleted the one held)
-		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		int lk = lockConf();
 		Conf d = loadConf(), w = c;
 		bool same = d.server == c.server && d.backend == c.backend && d.token == c.token;
 		// (the handheld's name is the pairing's and rename's, never a sync's: a sync that read the file before a rename

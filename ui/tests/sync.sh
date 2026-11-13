@@ -685,6 +685,17 @@ for v in 5.3.1 development; do
             bad "RomM 5.3.1: keeping this handheld's: $(cat "$OUT/romm-$v-resolve.log") $(bs "$cv" saves) server: $(srvmd5 102)"
         bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
         ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' || bad "RomM 5.3.1: a kept save held again: $(cat "$OUT/romm-$v-held.log")"
+        # (the server's chosen instead, and the game played before any sync: the version chosen is on record as the one
+        # both hold, so what the game saved goes up as a change to it, not held against it again)
+        { printf "played here"; head -c 501 /dev/zero | tr '\0' y; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        sleep 1; curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"emulator\": \"retroarch\", \"data\": \"0a0b0c0d0f$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1; was=$(srvmd5 102)
+        [ "$(bs "$cv" resolve 102/autosave server 2> "$OUT/romm-$v-resolve.log" | tail -1)" = ok ] && [ "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" = "$was" ] ||
+            bad "RomM 5.3.1: taking the server's: $(cat "$OUT/romm-$v-resolve.log") $(bs "$cv" saves)"
+        { printf "played on"; head -c 503 /dev/zero | tr '\0' z; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' && [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] ||
+            bad "RomM 5.3.1: a game played on the server's chosen save held again: $(cat "$OUT/romm-$v-held.log")"
         # a save gone from the card since it synced: left as it is and said, never put back by itself (its last good copy
         # is in the vault); its record stays, so the next sync doesn't take the server's over nothing either
         rm "$OUT/$cv/saves/gba/Down (USA).srm"
@@ -1546,6 +1557,12 @@ if [ -x "$HERE/banana-ui" ]; then
     # (its lines to a file of this game end's own, so an earlier game's sync still going isn't read as this one's)
     [ "$(sed -E 's/gameend-[0-9]+\.status/gameend-N.status/' "$SL")" = "--run $RUNG --report $RUNG/gameend-N.status sync --auto quit --rom $ROM" ] ||
         bad "the sync after a game's call: $(cat "$SL")"
+    # (not when the game's end is a shutdown: bananad's flag there, as it writes it before it asks the game to quit, or
+    # the game named in resume-boot, and no sync is started under it)
+    : > "$RUNG/powering-off"; gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"; rm -f "$RUNG/powering-off"
+    called "a game's end under a shutdown"
+    printf 'rom=%s\nemulator=x\n' "$ROM" > "$FX/data/resume-boot"; gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"; rm -f "$FX/data/resume-boot"
+    called "a game's end with the game named in resume-boot"
     # what it did, said in the banner: sent, nothing to send, a conflict, the server out of reach; a slow one says it
     # is syncing first, and its outcome after
     for q in sent:"Save synced" same:"Save up to date" conflict:"Save conflict" note:"Save up to date: Orchard Tactics: 1 state from the server" \

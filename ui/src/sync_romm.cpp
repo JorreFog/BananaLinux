@@ -392,22 +392,33 @@ namespace bsync
 		// the same game's save in another folder, kept in the vault, said once, never sent and never removed: a core's
 		// folder from before 0.5.3's flat saves that saves-flat hasn't emptied, and for a GBA game a flat
 		// saves/<stem>.srm (a 0.5.0 download left one there; it may as well be another system's game of the same name)
+		std::vector<std::string> saveDirs;
+		bool saveDirsRead = false;
 		void keepOthers(const std::string& rel, std::vector<std::string>& errors)
 		{
 			std::string folder = saveFolder(rel), name = baseOf(rel);
 			if (folder == "nds") return;
+			// (the folders under saves/, read once a run: with flat saves it holds every game's save, hundreds of files
+			// that are no folder, and reading it again for each game was a look at each of them for each game)
+			if (!saveDirsRead)
+			{
+				saveDirsRead = true;
+				if (DIR* d = opendir((ROOT + "/saves").c_str()))
+				{
+					while (dirent* e = readdir(d))
+					{
+						std::string n = e->d_name;
+						if (n[0] == '.' || n == "nds" || n == "gba") continue;
+						struct stat st;
+						if (e->d_type == DT_DIR || (e->d_type == DT_UNKNOWN && stat((ROOT + "/saves/" + n).c_str(), &st) == 0 && S_ISDIR(st.st_mode))) saveDirs.push_back(n + "/");
+					}
+					closedir(d);
+				}
+				std::sort(saveDirs.begin(), saveDirs.end());
+			}
 			std::vector<std::string> dirs;
 			if (folder == "gba") dirs.push_back("");
-			if (DIR* d = opendir((ROOT + "/saves").c_str()))
-			{
-				while (dirent* e = readdir(d))
-				{
-					std::string n = e->d_name;
-					if (n[0] != '.' && n != folder && n != "nds" && n != "gba") dirs.push_back(n + "/");
-				}
-				closedir(d);
-			}
-			std::sort(dirs.begin(), dirs.end());
+			for (auto& d : saveDirs) if (d != folder + "/") dirs.push_back(d);
 			for (auto& d : dirs)
 			{
 				std::string o = "saves/" + d + name, p = ROOT + "/" + o;
@@ -989,7 +1000,7 @@ namespace bsync
 						// (its owner chose the card's over that one: to the slot, where nothing is written over)
 						if (key == settleKey && prior.count(key) && prior[key].serverMd5 == o->hash) { if (c.device.empty()) waiting = true; else send(); continue; }
 						Both r = conflict(g, rel, key, L, *o, errors);
-						if (r == Both::Held) { conflicts++; continue; }
+						if (r == Both::Held) { if (c.conflicts.count(key)) c.conflicts[key].outside = true; conflicts++; continue; }
 						if (r == Both::Failed) { undecided(key); continue; }
 						if (r == Both::NotTaken) continue;
 					}
@@ -1420,7 +1431,9 @@ namespace bsync
 						say("  %s, left as it is: %s", NOTE_MISSING, rel.c_str());
 						continue;
 					}
-					if (si == srv.end()) { if (st != state.end()) state.erase(st); continue; }
+					// (a run of one game, or of the saves that waited, asked the server for those games alone: another game's
+					// record, of a state kept in the vault, says nothing went, and stays for the next sync of everything)
+					if (si == srv.end()) { if (st != state.end() && !scoped()) state.erase(st); continue; }
 					if (exists(p)) continue;	// (a file the rules leave out)
 					take(SaveSt(), si->second);
 					continue;
@@ -1437,6 +1450,9 @@ namespace bsync
 					}
 					if (forSaves) rom = canonical[rel].rom;
 					else if (!matchStateRom(rel, rom)) continue;	// (no ROM of this name on the server)
+					// (a game whose saves stay on this handheld: its states stay too. The server's rows for it were left out
+					// above, so a state of its name there is one this card can't see, and would be written over)
+					if (!forSaves && keptHere(rom, onCard(rom))) continue;
 					if (upload(api, field, rom.id, p, rel, md5, state, dev, errors)) up++;
 					continue;
 				}
@@ -1452,7 +1468,7 @@ namespace bsync
 					continue;
 				}
 				if (!localChanged && !serverChanged) continue;
-				if (localChanged && !serverChanged) { if (unmoved(api, s, forSaves, rel, errors) && upload(api, field, s.rom, p, rel, md5, state, dev, errors)) up++; continue; }
+				if (localChanged && !serverChanged) { if (unmoved(api, s, forSaves, rel, errors) && upload(api, field, s.rom, p, rel, md5, state, dev, errors, false, s.id, s.updated, s.hash)) up++; continue; }
 				if (!localChanged && serverChanged) { take(st->second, s); continue; }
 				// both changed, or a card that never synced holding another version: held, both kept (the server's copy in
 				// the vault, fetched once while its version is the same), neither sent nor taken until its owner chooses.
@@ -1528,7 +1544,8 @@ namespace bsync
 			return false;
 		}
 		bool upload(const std::string& api, const std::string& field, long long romId, const std::string& p, const std::string& rel,
-			const std::string& md5, std::map<std::string, SaveSt>& state, const std::string& dev, std::vector<std::string>& errors, bool over = false)
+			const std::string& md5, std::map<std::string, SaveSt>& state, const std::string& dev, std::vector<std::string>& errors, bool over = false,
+			long long agreedId = 0, const std::string& agreedAt = "", const std::string& agreedHash = "")
 		{
 			if (dryRun) { say("  upload %s", rel.c_str()); return true; }
 			// a copy of the file as it is now: the emulator can't change what is sent halfway
@@ -1541,6 +1558,21 @@ namespace bsync
 			q.fileParts.push_back({ field, snap });
 			q.partName = baseOf(rel);
 			Resp r = http(q);
+			// (refused over the row this card holds as the version agreed, agreedId as it was at agreedAt: RomM's guard
+			// against a device writing over a version it hasn't taken note of. The card can hold a version the server
+			// was never told it has, one taken from the vault at its owner's choice with no server in reach. The row
+			// asked for once more, and still that version: downloaded as this device, which is what tells the server
+			// (its /downloaded leaves the time of a record this device's own upload made as it was), the bytes checked
+			// and dropped, and the save sent again. A row that moved is refused as before)
+			if (r.code == 409 && agreedId > 0 && api == "/api/saves" && !dev.empty())
+			{
+				Resp g = call("GET", api + "/" + std::to_string(agreedId));
+				JPtr gj = g.code == 200 ? g.json() : nullptr;
+				std::string seen = RUN + "/sync-seen." + std::to_string(getpid()), e;
+				if (gj && gj->isObj() && gj->str("updated_at") == agreedAt &&
+					fetchTo(c.server + api + "/" + std::to_string(agreedId) + "/content?" + dev, auth(), seen, -1, "md5", agreedHash, e)) r = http(q);
+				unlink(seen.c_str());
+			}
 			unlink(snap.c_str());
 			if (r.code == 409) { errors.push_back(rel + ": changed on the server meanwhile, next time"); return false; }
 			JPtr j = r.json();
