@@ -15,6 +15,7 @@
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include <linux/input.h>
+#include "sheet.h"
 #include "kms.h"
 #include "library.h"
 #include "soft.h"
@@ -2940,13 +2941,50 @@ int main(int argc, char** argv)
 	auto homeMenu = [&](pid_t pid, bool quick)
 	{
 		const double t0 = nowMs();
-		gameFreeze(pid, true);
+		// the quick menu is a sheet on the bottom screen and nothing else: the game goes on, and its top screen is
+		// never touched. On a plane of its own over a game that draws on both panels (1); on the menu's own bottom
+		// screen, over the game panel (2); and only where neither is to be had, the old way: the game stopped and its
+		// bottom panel borrowed (3). The menu proper (0) is over both screens, the game stopped behind it.
+		const int sheet = !quick ? 0 : disp.sheetOpen() ? 1 : disp.leasedScreen() == 0 ? 2 : 3;
+		const bool held = sheet == 0 || sheet == 3;
+		const int sw = disp.screenWidth(1), sh = disp.screenHeight(1);
+		std::vector<uint32_t> under;	// (what the sheet slides over, where the menu composes it itself)
+		if (sheet >= 2)
+		{
+			if (sheet == 2) under.assign(be.pixels(1), be.pixels(1) + (size_t)sw * sh);
+			else under.assign((size_t)sw * sh, 0xff000000);
+		}
+		if (held) gameFreeze(pid, true);
 		// (what is pressed and touched in the menu is not the game's: it would read it all when it goes on)
 		input.grab(true);
 		// (bananad: a sleep's end leaves this game stopped)
-		{ std::ofstream f("/run/banana/game.held"); f << pid << "\n"; }
+		if (held) { std::ofstream f("/run/banana/game.held"); f << pid << "\n"; }
 		const int wasBorrowed = disp.borrowed();
-		disp.borrow(quick ? 2 : 3);
+		if (held) disp.borrow(quick ? 2 : 3);
+		// the sheet's way up and down (sheet.h): the plane moved, or the frames composed here
+		auto slide = [&](bool up)
+		{
+			if (!sheet || !disp.isOpen()) return;
+			std::vector<uint32_t> menu, frame;
+			if (sheet >= 2) { menu.assign(be.pixels(1), be.pixels(1) + (size_t)sw * sh); frame.resize((size_t)sw * sh); }
+			const double dur = up ? SHEET_UP_MS : SHEET_DOWN_MS, s0 = nowMs();
+			for (;;)
+			{
+				const double t = std::min(1.0, (nowMs() - s0) / dur);
+				const float shown = up ? sheetUpAt(t) : sheetDownAt(t);
+				if (sheet == 1) { disp.sheetAt(shown); usleep(6000); }
+				else
+				{
+					for (int i = 0; i < 20 && disp.flipPending(); i++) { pollfd pf = { disp.pollFd(), POLLIN, 0 }; if (poll(&pf, 1, 10) > 0) disp.handleEvents(); }
+					sheetFrame(under.data(), menu.data(), sw, sh, shown, frame.data());
+					const uint32_t* scr[2] = { be.pixels(0), frame.data() };
+					Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+					if (!disp.present(scr, dmg)) usleep(4000);
+				}
+				if (t >= 1) break;
+			}
+			be.invalidate();
+		};
 		home.on = true; home.quick = quick; home.resume = home.end = false; home.pid = pid; home.rom = gameRomPath; home.next.clear();
 		home.told = nowMs();
 		// (a layout theme's "paused": the Thor's status bar says which game waits behind the menu)
@@ -2970,11 +3008,44 @@ int main(int argc, char** argv)
 		rep.key = Key::NONE;
 		be.invalidate();
 		dirty = true; drawn = false;
-		if (system("banana-perf ui &") != 0) {}	// (not waited for: the menu is up first)
-		logf("home: the game stopped, the %s up in %.0f ms", quick ? "quick menu" : "menu", nowMs() - t0);
+		if (held && system("banana-perf ui &") != 0) {}	// (not waited for: the menu is up first)
+		if (sheet)
+		{
+			// (the sheet's picture first, then its way up)
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.render();
+			}
+			if (sheet == 1)
+			{
+				const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+				Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+				disp.present(scr, dmg);
+			}
+			slide(true);
+			dirty = true; drawn = false;
+		}
+		logf("home: %s, the %s up in %.0f ms", held ? "the game stopped" : "the game goes on", quick ? "quick menu" : "menu", nowMs() - t0);
 		recordEvent("game", quick ? "quick menu" : "home");
 		if (mainLoop) mainLoop(home.resume);
 		const double t1 = nowMs();
+		if (sheet && !quit && !home.end)
+		{
+			// (down again, as it was last seen: the page drawn once more if it closed itself)
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				if (!settingsView.isOpen()) openPage(settingsView, "quick");
+				settingsView.render();
+			}
+			if (sheet == 1)
+			{
+				const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+				Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+				disp.present(scr, dmg);
+			}
+			slide(false);
+		}
+		disp.sheetClose();
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (settingsView.isOpen()) settingsView.close();
@@ -2982,14 +3053,14 @@ int main(int argc, char** argv)
 		home.on = false;
 		rnds::pausedGame.clear();
 		input.grab(false);
-		if (!wasBorrowed) disp.giveBack();
-		unlink("/run/banana/game.held");
+		if (held && !wasBorrowed) disp.giveBack();
+		if (held) unlink("/run/banana/game.held");
 		rep.key = Key::NONE;
 		if (home.end || quit)
 		{
 			// another game picked, or the menu is going (a shutdown): this one ends, writing its saves
 			kill(-pid, SIGTERM);
-			gameFreeze(pid, false);
+			if (held) gameFreeze(pid, false);
 			logf("home: the stopped game ended (%s)", quit ? "the menu is closing" : "another game was picked");
 			return;
 		}
@@ -2998,7 +3069,7 @@ int main(int argc, char** argv)
 			const std::string gp = settingsView.gamePerf(gameRomPath.substr(gameRomPath.rfind('/') + 1));
 			if (system(("banana-perf " + shellQuote(!gp.empty() ? gp : playing.perf.empty() ? "balanced" : playing.perf) + " &").c_str()) != 0) {}
 		}
-		gameFreeze(pid, false);
+		if (held) gameFreeze(pid, false);
 		be.invalidate();
 		logf("home: back in the game in %.0f ms", nowMs() - t1);
 	};

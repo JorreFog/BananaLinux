@@ -10,6 +10,7 @@
 /ui/tests/gamecomp-test
 /ui/tests/lang-test
 /ui/tests/input-test
+/ui/tests/sheet-test
 /ui/tests/panelfit-test
 /ui/tests/lang-raw-test
 /ui/tests/wav-test

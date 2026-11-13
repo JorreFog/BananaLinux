@@ -46,6 +46,7 @@ make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-tes
 make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-test" 2> "$OUT/soft-base-test.log" || { echo "FAIL the software backend's background copy: $(grep FAIL "$OUT/soft-base-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
+make -s -C "$HERE" tests/sheet-test >/dev/null && "$HERE/tests/sheet-test" > /dev/null 2> "$OUT/sheet-test.log" || { echo "FAIL the quick menu's sheet: $(head -3 "$OUT/sheet-test.log")"; fail=1; }
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # the canvas on panels of another size or way round (the AYN Thor's two portrait panels)
 make -s -C "$HERE" tests/panelfit-test >/dev/null && "$HERE/tests/panelfit-test" 2> "$OUT/panelfit-test.log" || { echo "FAIL the panels' fit: $(grep FAIL "$OUT/panelfit-test.log" | head -3)"; fail=1; }

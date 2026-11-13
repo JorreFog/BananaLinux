@@ -476,6 +476,8 @@ namespace banana
 		if (sdl) { closeSdl(); return; }
 		if (fd < 0) return;
 		for (auto& pn : p) { freeBuf(pn.buf[0]); freeBuf(pn.buf[1]); }
+		freeBuf(sheetBuf[0]); freeBuf(sheetBuf[1]);
+		sheetPlane = 0; sheetOn = sheetDrawn = false;
 		::close(fd);	// (a lease ends with its lessor's master)
 		fd = -1;
 		pending = 0;
@@ -491,7 +493,20 @@ namespace banana
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
-			if (theirs(s)) continue;	// a game draws there
+			if (theirs(s))	// a game draws there
+			{
+				// (but for the sheet over it: the whole screen into the buffer that isn't shown, then that one placed)
+				if (s == 1 && sheetOn && (!dmg[s].empty() || !sheetDrawn))
+				{
+					Buf& sb = sheetBuf[sheetFront ^ 1];
+					const Damage all = { 0, 0, screenWidth(s), screenHeight(s) };
+					p[s].fit.blit(screens[s], sb.map, sb.pitch, all);
+					sheetFront ^= 1;
+					sheetDrawn = true;
+					sheetPlace();
+				}
+				continue;
+			}
 			Panel& pn = p[s];
 			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
@@ -607,6 +622,8 @@ namespace banana
 		// every other plane the two panels can use as well (overlays, cursors): the game finds what it would with the
 		// device to itself. A driver that refuses that set gets the panels and their primary planes alone.
 		std::vector<uint32_t> all(objs, objs + n);
+		// (but one free overlay of the bottom panel's: the menu's sheet, sheetOpen)
+		sheetPlane = getenv("BANANA_NO_SHEET") ? 0 : overlayPlane(fd, p[1].crtc);
 		{
 			drmModeRes* res = drmModeGetResources(fd);
 			drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
@@ -616,7 +633,7 @@ namespace banana
 			for (uint32_t j = 0; pr && j < pr->count_planes; j++)
 				if (drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]))
 				{
-					if ((pl->possible_crtcs & bits) && std::find(all.begin(), all.end(), pl->plane_id) == all.end()) all.push_back(pl->plane_id);
+					if ((pl->possible_crtcs & bits) && pl->plane_id != sheetPlane && std::find(all.begin(), all.end(), pl->plane_id) == all.end()) all.push_back(pl->plane_id);
 					drmModeFreePlane(pl);
 				}
 			if (pr) drmModeFreePlaneResources(pr);
@@ -625,7 +642,85 @@ namespace banana
 		int l = drmModeCreateLease(fd, all.data(), (int)all.size(), 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
 		if (l < 0 && (int)all.size() > n) l = drmModeCreateLease(fd, objs, n, 0, &lessee);
 		if (l >= 0) leased = 2;
+		else sheetPlane = 0;
 		return l;
+	}
+
+	// a plane's property set by name; false when it has none of that name or the kernel refused
+	static bool setPlaneProp(int fd, uint32_t plane, const char* name, bool top)
+	{
+		bool ok = false;
+		if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, plane, DRM_MODE_OBJECT_PLANE))
+		{
+			for (uint32_t k = 0; k < pp->count_props; k++)
+				if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+				{
+					// (a range the driver lets us set: its highest value, over every other plane)
+					if (!strcmp(q->name, name) && !(q->flags & DRM_MODE_PROP_IMMUTABLE) && (q->flags & DRM_MODE_PROP_RANGE) && q->count_values >= 2)
+						ok = drmModeObjectSetProperty(fd, plane, DRM_MODE_OBJECT_PLANE, q->prop_id, top ? q->values[1] : q->values[0]) == 0;
+					drmModeFreeProperty(q);
+				}
+			drmModeFreeObjectProperties(pp);
+		}
+		return ok;
+	}
+
+	bool Display::sheetOpen()
+	{
+		if (sdl || fd < 0 || leased != 2 || !sheetPlane || (borrowMask & 2)) return false;
+		if (sheetOn) return true;
+		const int pw = panelWidth(1), ph = panelHeight(1);
+		for (int b = 0; b < 2; b++)
+			if (!sheetBuf[b].map && !makeBuf(sheetBuf[b], pw, ph))
+			{
+				fprintf(stderr, "banana-ui: no buffer for the bottom screen's sheet (%s)\n", strerror(errno));
+				for (int k = 0; k < 2; k++) freeBuf(sheetBuf[k]);
+				sheetPlane = 0;
+				return false;
+			}
+		sheetOn = true; sheetDrawn = false; sheetShown = 0; sheetFront = 0;
+		return true;
+	}
+
+	bool Display::sheetPlace()
+	{
+		if (!sheetOn || !sheetDrawn) return false;
+		const int cw = screenWidth(1), ch = screenHeight(1);
+		// the sheet's rows that are on the panel, and where: off rows down from its place (below 0: its top rows cut)
+		int off = (int)((1.f - sheetShown) * ch + (sheetShown < 1 ? .5f : -.5f));
+		if (off >= ch) return drmModeSetPlane(fd, sheetPlane, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) == 0;
+		const Damage from = off >= 0 ? Damage{ 0, 0, cw, ch - off } : Damage{ 0, -off, cw, ch };
+		const Damage to = off >= 0 ? Damage{ 0, off, cw, ch } : Damage{ 0, 0, cw, ch + off };
+		const Damage sr = p[1].fit.toPanel(from), dr = p[1].fit.toPanel(to);
+		if (sr.empty() || dr.empty()) return false;
+		const uint32_t w = std::min(sr.x1 - sr.x0, dr.x1 - dr.x0), h = std::min(sr.y1 - sr.y0, dr.y1 - dr.y0);
+		int r = -1;
+		// (the program's own flip on this panel may be on its way: the kernel says busy for that one frame)
+		for (int i = 0; i < 6 && r != 0; i++)
+		{
+			r = drmModeSetPlane(fd, sheetPlane, p[1].crtc, sheetBuf[sheetFront].fb, 0, dr.x0, dr.y0, w, h, (uint32_t)sr.x0 << 16, (uint32_t)sr.y0 << 16, w << 16, h << 16);
+			if (r != 0 && errno != EBUSY) break;
+			if (r != 0) usleep(2000);
+		}
+		static bool told = false, raised = false;
+		if (r == 0 && !raised) { raised = true; setPlaneProp(fd, sheetPlane, "zpos", true); }
+		if (r != 0 && !told) { told = true; fprintf(stderr, "banana-ui: the bottom screen's sheet: the plane was refused (%s)\n", strerror(errno)); }
+		return r == 0;
+	}
+
+	void Display::sheetAt(float shown)
+	{
+		if (!sheetOn) return;
+		sheetShown = shown < 0 ? 0 : shown;
+		sheetPlace();
+	}
+
+	void Display::sheetClose()
+	{
+		if (!sheetOn) return;
+		drmModeSetPlane(fd, sheetPlane, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		sheetOn = sheetDrawn = false;
+		sheetShown = 0;
 	}
 
 	// a plane's property by name (the kernel's plane state: where it is on the screen and what part of its picture)

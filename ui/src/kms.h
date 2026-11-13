@@ -70,6 +70,16 @@ namespace banana
 		// bottom) drawn by present() again, what the program had on them remembered; giveBack() puts that back, for
 		// the program to go on from. Nothing but a page flip either way: no mode is set, no process starts.
 		bool borrow(int mask);
+		// the bottom screen's sheet: the menu on a plane of its own over the bottom panel, while the program that has
+		// both panels goes on drawing under it (the Thor button's quick menu over a running game: nothing stops, the
+		// top screen is never touched). leaseBoth() keeps one overlay plane out of the lease for it. sheetOpen(): false
+		// when there is no such plane (the caller stops the game and borrows the panel instead). While it is open,
+		// present() draws screen 1 on the sheet; sheetAt() slides it: shown 0 below the panel, 1 fully up, past 1 a
+		// little above its place (a bounce's overshoot: the sheet's top rows off the panel's top edge).
+		bool sheetOpen();
+		void sheetAt(float shown);
+		void sheetClose();
+		bool sheetUp() const { return sheetOn; }
 		void giveBack();
 		int borrowed() const { return borrowMask; }
 		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
@@ -93,6 +103,12 @@ namespace banana
 		struct TheirPlane { uint32_t plane, crtc, fb; int32_t x, y; uint32_t w, h, sx, sy, sw, sh; };
 		std::vector<TheirPlane> theirPlanes;
 		bool theirs(int s) const { return (leased == 2 || leased == s) && !(borrowMask & (1 << s)); }
+		uint32_t sheetPlane = 0;	// (the overlay plane kept out of leaseBoth's lease)
+		bool sheetOn = false, sheetDrawn = false;
+		float sheetShown = 0;
+		Buf sheetBuf[2];
+		int sheetFront = 0;
+		bool sheetPlace();
 		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
 		bool makeBuf(Buf& b, int w, int h);
