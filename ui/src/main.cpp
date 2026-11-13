@@ -931,34 +931,171 @@ static void mixScreens(SoftBackend& be, const std::vector<uint32_t>* a, const st
 	}
 }
 
-// the first boot's arrival in the fades' look: the boot animation's last frame stays, "Welcome to" rises in over it on
-// the top screen, holds, and all of it goes to black (the setup fades in after it)
-static constexpr double ARRIVAL_IN = 420, ARRIVAL_HOLD = 1500, ARRIVAL_END = 1900;
-static void arrivalFrame(SoftBackend& be, const std::vector<uint32_t>* boot, const std::vector<uint32_t>* caption, double t)
+// the first boot's arrival in the fades' look, the setup's opening: the boot animation's last frame goes dark, a ring
+// of the accent opens from the middle of the top screen and the banana springs out of it, "BananaOS" is written in
+// under it from left to right, a line of the accent grows under the name, and on the bottom screen the words that say
+// what comes next rise in. It holds, lifts and fades, and the setup comes in after it. Everything is worked out from
+// the time alone (the headless "trans arrival" draws the same frames); nothing in it loops.
+static constexpr double ARRIVAL_DARK = 260, ARRIVAL_LOGO = 220, ARRIVAL_WORD = 820, ARRIVAL_LINE = 1300, ARRIVAL_TAG = 1500,
+	ARRIVAL_STILL = 2100, ARRIVAL_HOLD = 3300, ARRIVAL_END = 3800;
+struct IntroSprite { int w = 0, h = 0; std::vector<uint32_t> px; };	// (ARGB, straight alpha)
+struct Intro
 {
-	const float in = easeInOutF((float)(t / ARRIVAL_IN));
-	const float out = t <= ARRIVAL_HOLD ? 1 : 1 - easeInOutF((float)((t - ARRIVAL_HOLD) / (ARRIVAL_END - ARRIVAL_HOLD)));
+	IntroSprite logo, word, tag, sub;
+	uint32_t accent = 0xf2b632;
+	bool loaded = false;
+};
+// what a card drew on the top screen, cut to its lit box: light on black, its brightness its alpha
+static IntroSprite introCut(const std::vector<uint32_t>& pic, int W, int H, int y0, int y1)
+{
+	IntroSprite sp;
+	int x0 = W, x1 = -1, top = H, bot = -1;
+	y0 = std::max(0, y0); y1 = std::min(H, y1);
+	for (int y = y0; y < y1; y++)
+		for (int x = 0; x < W; x++)
+			if (pic[(size_t)y * W + x] & 0xf0f0f0u) { x0 = std::min(x0, x); x1 = std::max(x1, x); top = std::min(top, y); bot = std::max(bot, y); }
+	if (x1 < x0) return sp;
+	sp.w = x1 - x0 + 1; sp.h = bot - top + 1;
+	sp.px.resize((size_t)sp.w * sp.h);
+	for (int y = 0; y < sp.h; y++)
+		for (int x = 0; x < sp.w; x++)
+		{
+			const uint32_t c = pic[(size_t)(top + y) * W + x0 + x];
+			const uint32_t m = std::max((c >> 16) & 255, std::max((c >> 8) & 255, c & 255));
+			// (the colour at full strength, the brightness as the alpha: it mixes over anything)
+			auto full = [&](uint32_t v) { return m ? std::min(255u, v * 255 / m) : 0u; };
+			sp.px[(size_t)y * sp.w + x] = (m << 24) | (full((c >> 16) & 255) << 16) | (full((c >> 8) & 255) << 8) | full(c & 255);
+		}
+	return sp;
+}
+static void introLoad(Intro& in, SoftBackend& be, Settings& sv, const std::string& logoPng)
+{
+	if (in.loaded) return;
+	in.loaded = true;
+	in.accent = rnds::accent.base & 0xffffff;
+	const int W = be.screenWidth(0), H = be.screenHeight(0);
+	std::vector<uint32_t> pic[2];
+	sv.renderCard("BananaOS", "", 200, 46);
+	grabScreens(be, pic);
+	in.word = introCut(pic[0], W, H, 0, H);
+	sv.renderCard("Welcome", "Let's get you set up", 190, 30);
+	grabScreens(be, pic);
+	// (the card's two lines: the gap between them found by its dark rows)
+	{
+		std::vector<bool> lit(H, false);
+		for (int y = 0; y < H; y++) for (int x = 0; x < W && !lit[y]; x++) if (pic[0][(size_t)y * W + x] & 0xf0f0f0u) lit[y] = true;
+		int first = 0; while (first < H && !lit[first]) first++;
+		int gap = first; while (gap < H && lit[gap]) gap++;
+		in.tag = introCut(pic[0], W, H, first, gap);
+		in.sub = introCut(pic[0], W, H, gap, H);
+	}
+	const rnds::Bitmap b = rnds::decodeFile(logoPng);
+	if (!b.empty() && !b.alpha)
+	{
+		in.logo.w = b.w; in.logo.h = b.h; in.logo.px.resize((size_t)b.w * b.h);
+		for (size_t i = 0; i < in.logo.px.size(); i++)
+			in.logo.px[i] = ((uint32_t)b.px[i * 4 + 3] << 24) | ((uint32_t)b.px[i * 4] << 16) | ((uint32_t)b.px[i * 4 + 1] << 8) | b.px[i * 4 + 2];
+	}
+	be.invalidate();
+}
+// a sprite onto a screen: its middle at (cx, cy), scaled (nearest: the banana is pixel art), at strength k (0..1), and
+// only what is left of wipeX (a soft edge of `soft` px: the name written in)
+static void introDraw(uint32_t* d, int W, int H, const IntroSprite& sp, float cx, float cy, float scale, float k, float wipeX = 1e9f, float soft = 1)
+{
+	if (sp.px.empty() || k <= 0 || scale <= 0) return;
+	const float w = sp.w * scale, h = sp.h * scale, x0 = cx - w / 2, y0 = cy - h / 2;
+	const int ax = std::max(0, (int)std::floor(x0)), bx = std::min(W, (int)std::ceil(x0 + w)), ay = std::max(0, (int)std::floor(y0)), by = std::min(H, (int)std::ceil(y0 + h));
+	for (int y = ay; y < by; y++)
+	{
+		const int sy = std::min(sp.h - 1, std::max(0, (int)((y + 0.5f - y0) / scale)));
+		for (int x = ax; x < bx; x++)
+		{
+			float kk = k;
+			if (x > wipeX - soft) { kk *= std::max(0.0f, (wipeX - x) / soft); if (kk <= 0) break; }
+			const int sx = std::min(sp.w - 1, std::max(0, (int)((x + 0.5f - x0) / scale)));
+			const uint32_t c = sp.px[(size_t)sy * sp.w + sx];
+			const uint32_t a = (uint32_t)((c >> 24) * kk * 256 / 255);
+			if (a) { uint32_t& o = d[(size_t)y * W + x]; o = lerpPx(o, c, std::min(256u, a)); }
+		}
+	}
+}
+static inline float easeOutF(float t) { t = std::min(1.0f, std::max(0.0f, t)); return 1 - (1 - t) * (1 - t) * (1 - t); }
+static void arrivalFrame(SoftBackend& be, const std::vector<uint32_t>* boot, const Intro& in, double t)
+{
+	// the way out: everything lifts a little and goes dark
+	const float out = t <= ARRIVAL_HOLD ? 0 : easeInOutF((float)((t - ARRIVAL_HOLD) / (ARRIVAL_END - ARRIVAL_HOLD)));
 	for (int sc = 0; sc < 2; sc++)
 	{
 		const int W = be.screenWidth(sc), H = be.screenHeight(sc);
 		const size_t n = (size_t)W * H;
 		uint32_t* d = be.screenPixels(sc);
-		const int rise = (int)std::lround((1 - in) * H * 0.02f);	// (the caption comes up 2% of the screen)
-		const uint32_t kc = (uint32_t)std::lround(in * 256), ko = (uint32_t)std::lround(out * 256);
-		for (int y = 0; y < H; y++)
-			for (int x = 0; x < W; x++)
+		// the boot animation's last frame, going dark
+		const uint32_t kb = (uint32_t)std::lround((1 - easeInOutF((float)(t / ARRIVAL_DARK))) * 256);
+		if (kb && boot[sc].size() == n) for (size_t i = 0; i < n; i++) d[i] = lerpPx(0xff000000u, boot[sc][i], kb);
+		else std::fill(d, d + n, 0xff000000u);
+		const float lift = -out * H * 0.035f, vis = 1 - out;
+		if (sc == 0)
+		{
+			const float cx = W / 2.0f, cy = H * 0.40f + lift;
+			const float big = std::max(1.0f, std::round(H * 0.28f / std::max(1, in.logo.h)));	// (whole pixels of the banana's)
+			// the ring: opens from the middle and thins out as it goes
+			const float rt = (float)((t - ARRIVAL_LOGO + 60) / 760);
+			if (rt > 0 && rt < 1)
 			{
-				size_t i = (size_t)y * W + x;
-				uint32_t p = boot[sc].size() == n ? boot[sc][i] : 0xff000000u;
-				int cy = y - rise;
-				if (sc == 0 && cy >= 0 && caption[sc].size() == n)
+				const float r = easeOutF(rt) * H * 0.46f, th = std::max(2.0f, H * 0.012f * (1 - rt)), ka = (1 - rt) * (1 - rt) * 0.85f * vis;
+				const int y0 = std::max(0, (int)(cy - r - th - 2)), y1 = std::min(H, (int)(cy + r + th + 2));
+				const uint32_t ac = 0xff000000u | in.accent;
+				for (int y = y0; y < y1; y++)
 				{
-					uint32_t c = lerpPx(0xff000000u, caption[sc][(size_t)cy * W + x], kc);
-					uint32_t r = std::max(p & 0xff0000u, c & 0xff0000u), g = std::max(p & 0xff00u, c & 0xff00u), b = std::max(p & 0xffu, c & 0xffu);
-					p = 0xff000000u | r | g | b;
+					const float dy = y + 0.5f - cy, span2 = (r + th + 1) * (r + th + 1) - dy * dy;
+					if (span2 <= 0) continue;
+					const float span = std::sqrt(span2);
+					const int xa = std::max(0, (int)(cx - span)), xb = std::min(W, (int)(cx + span) + 1);
+					for (int x = xa; x < xb; x++)
+					{
+						const float dd = std::fabs(std::hypot(x + 0.5f - cx, dy) - r);
+						if (dd >= th) continue;
+						const float c = std::min(1.0f, th - dd) * ka;
+						uint32_t& o = d[(size_t)y * W + x];
+						o = lerpPx(o, ac, (uint32_t)(c * 256));
+					}
 				}
-				d[i] = lerpPx(0xff000000u, p, ko);
 			}
+			// the banana: springs out past its size and settles, then floats a hair
+			const float lt = (float)((t - ARRIVAL_LOGO) / 620);
+			if (lt > 0)
+			{
+				const float a = 8.5f * std::min(1.0f, lt);
+				const float spring = lt >= 1 ? 1 : 1 - std::exp(-a) * std::cos(a * 1.25f);
+				const float bob = t > ARRIVAL_STILL ? 0 : std::sin((float)(t - ARRIVAL_LOGO) / 420.0f) * H * 0.004f * (float)std::min(1.0, (ARRIVAL_STILL - t) / 400);
+				introDraw(d, W, H, in.logo, cx, cy + bob, big * (0.35f + 0.65f * spring), std::min(1.0f, lt * 4) * vis);
+			}
+			// the name, written in from the left as it rises
+			const float wt = (float)((t - ARRIVAL_WORD) / 560);
+			const float wy = H * 0.40f + big * in.logo.h / 2 + H * 0.09f + lift;
+			if (wt > 0)
+			{
+				const float e = easeOutF(wt), left = cx - in.word.w, soft = in.word.w * 0.36f;
+				introDraw(d, W, H, in.word, cx, wy + (1 - e) * H * 0.02f, 2, vis, wt >= 1 ? 1e9f : left + (in.word.w * 2 + soft) * e, soft);
+			}
+			// the line under it, from its middle outwards
+			const float gt = (float)((t - ARRIVAL_LINE) / 520);
+			if (gt > 0)
+			{
+				const float half = easeOutF(gt) * in.word.w, ly = wy + in.word.h + H * 0.03f, lh = std::max(2.0f, std::round(H * 0.004f));
+				const uint32_t ac = 0xff000000u | in.accent, ka = (uint32_t)(vis * 256);
+				for (int y = std::max(0, (int)ly); y < std::min(H, (int)(ly + lh)); y++)
+					for (int x = std::max(0, (int)(cx - half)); x < std::min(W, (int)(cx + half)); x++) { uint32_t& o = d[(size_t)y * W + x]; o = lerpPx(o, ac, ka); }
+			}
+		}
+		else
+		{
+			// the bottom screen: what comes next, one line after the other
+			const float cx = W / 2.0f, cy = H * 0.46f + lift;
+			const float a = easeOutF((float)((t - ARRIVAL_TAG) / 520)), b = easeOutF((float)((t - ARRIVAL_TAG - 180) / 520));
+			if (a > 0) introDraw(d, W, H, in.tag, cx, cy + (1 - a) * H * 0.03f, 2, a * vis);
+			if (b > 0) introDraw(d, W, H, in.sub, cx, cy + in.tag.h + H * 0.06f + (1 - b) * H * 0.03f, 2, b * vis);
+		}
 	}
 }
 
@@ -1563,7 +1700,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
 				grabScreens(be, other);
 			}
-			if (kind == "arrival") { settings.renderCard("Welcome to", "", 112, 26); grabScreens(be, caption); arrivalFrame(be, other, caption, t); }
+			if (kind == "arrival") { static Intro intro; introLoad(intro, be, settings, o.banana + "/banana-48.png"); arrivalFrame(be, other, intro, t); }
 			else if (kind == "game") mixScreens(be, nullptr, menu, easeInOutF((float)(t / 220)));
 			else if (kind == "boot") mixScreens(be, other, menu, easeInOutF((float)(t / 260)));
 			else if (kind == "outro") mixScreens(be, menu, nullptr, easeInOutF((float)(t / 200)));
@@ -1938,12 +2075,12 @@ static void grab(SoftBackend& be, std::vector<uint32_t>* pic)
 // a signal (a shutdown, a wake from sleep) ends it too. Its frame times go to the log.
 // the arrival in the theme's fades (arrivalFrame): no pictures needed, any screen shape. A or START skips it (to black);
 // a shutdown ends it; the other signals go back in the pipe for the menu's loop
-static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound& sound, Settings& sv, int sig, const std::function<void()>& frameTick)
+static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound& sound, Settings& sv, int sig, const std::function<void()>& frameTick, const std::string& logoPng)
 {
-	std::vector<uint32_t> boot[2], caption[2];
+	std::vector<uint32_t> boot[2];
 	grabScreens(be, boot);
-	sv.renderCard("Welcome to", "", 112, 26);
-	grabScreens(be, caption);
+	Intro intro;
+	introLoad(intro, be, sv, logoPng);
 	sound.play("ready");
 	const double t0 = nowMs();
 	bool skip = false, interrupted = false;
@@ -1966,9 +2103,9 @@ static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound&
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
 		}
-		if (t > ARRIVAL_IN && t < ARRIVAL_HOLD) { usleep(4000); continue; }	// (still: nothing to draw)
+		if (t > ARRIVAL_STILL && t < ARRIVAL_HOLD) { usleep(4000); continue; }	// (still: nothing to draw)
 		frameTick();
-		arrivalFrame(be, boot, caption, t);
+		arrivalFrame(be, boot, intro, t);
 		showFrame(disp, be, -1);
 		frames++;
 	}
@@ -1986,7 +2123,7 @@ static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound&
 static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input& input, Sound& sound, Settings& sv, int sig,
 	const std::function<void()>& frameTick)
 {
-	if (fadeTransitions(be)) { playArrivalFade(disp, be, input, sound, sv, sig, frameTick); return; }
+	if (fadeTransitions(be)) { playArrivalFade(disp, be, input, sound, sv, sig, frameTick, o.banana + "/banana-48.png"); return; }
 	Arrival a;
 	if (!a.load(o.splash, be.width(), be.height())) { logf("arrival: no pictures in %s", o.splash.c_str()); return; }
 	a.setStart(be.pixels(0), be.pixels(1));
@@ -2599,6 +2736,7 @@ int main(int argc, char** argv)
 			iris.close(was, Iris::CLOSE);
 		}
 		settingsView.setup(firstSetup || stepBoot, setupAt);
+		if (firstSetup && rnds::themeFiles.transitions == "fade") settingsView.setupComeIn(nowMs());
 		fadeInSettings(disp, be, settingsView);
 		logf("first-time setup (%s%s)", firstSetup ? "first boot" : "again", setupAt.empty() ? "" : (", back on " + setupAt).c_str());
 	}

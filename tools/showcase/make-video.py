@@ -3,7 +3,7 @@
 # "shot" draws the screens at that time), 30 frames a second, the two screens stacked as on the handheld, encoded with
 # ffmpeg. tools/showcase/render.sh makes docs/showcase's videos with it.
 #   make-video.py <name> <thor|rgds> <scene file> <output folder>
-# scene lines: hold <seconds> | press <key> [<seconds after>] | raw <headless script command> | splash
+# scene lines: hold <seconds> | press <key> [<seconds after>] | raw <headless script command> | splash | arrival
 # ({FX} in a line: the test fixture's folder, ui/tests/out/fixture). Environment: SYSTEMS, ROMS (the menu's systems.conf
 # and games), TOPCARD ("title|line": a card in place of the top screen, for a game that plays there), and anything
 # banana-ui reads (BANANA_ROCKNIX, BANANA_NOW...).
@@ -59,6 +59,13 @@ for ln in open(scenef):
         t = 0.0
         while t <= 1390 + 400:
             script.append('splash f%05d %.0f 1' % (n[0], min(t, 1390)))
+            n[0] += 1
+            t += STEP
+    elif w[0] == 'arrival':
+        # the first boot's arrival in a theme with fades (the setup's opening): every frame of it
+        t = 0.0
+        while t <= 3800:
+            script.append('trans arrival f%05d %.0f' % (n[0], t))
             n[0] += 1
             t += STEP
     else:

@@ -87,6 +87,8 @@ namespace banana
 		// takeSetupFinished), else as from Settings > System (it ends back in Settings); at: the slide to start on (a
 		// setup cut off by a restart or a language change: banana/setup-step)
 		void setup(bool boot = true, const std::string& at = "") { mOpen = true; openSetup(boot, at); }
+		// the setup's first slide comes in (after the first boot's arrival, in a theme with fades): from time t on
+		void setupComeIn(double t) { now = t; wAnimT0 = t; wAnimDir = 1; }
 		bool takeSetupFinished() { bool r = setupEnded; setupEnded = false; return r; }
 		std::string ownerName() { return dsName(); }
 		std::string setupState();	// (the tests) the slide, its choices and the checks' results, as a line	// the DS's name ("" none): the Welcome says it
@@ -260,26 +262,30 @@ namespace banana
 			float snapY(float v) const { return std::round((v - ay) * sk) / sk + ay; }
 			float mapX(float x) const { return tx + x * g; }
 			float mapY(float y) const { return ty + y * g + (chips ? drop : 0) + (y >= bodyFrom ? bodyDy : 0); }
-			float off() const { return screen == 0 ? dx : 0; }
+			// what is drawn from here to the screen's end comes in: at strength fa (0..1), fo screen px to the side (a
+			// slide of the setup arriving: Settings::renderSetup)
+			float fa = 1, fo = 0;
+			rnds::Color faded(rnds::Color c) const { c.a *= fa; return c; }
+			float off() const { return (screen == 0 ? dx : 0) + fo; }
 			rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override { return real->upload(b, smooth); }
 			void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override
 			{
-				if (on()) real->draw(t, snapX(mapX(x)), snapY(mapY(y)), w * g, h * g, tint);
-				else real->draw(t, x + off(), y, w, h, tint);
+				if (on()) real->draw(t, snapX(mapX(x)) + fo, snapY(mapY(y)), w * g, h * g, faded(tint));
+				else real->draw(t, x + off(), y, w, h, faded(tint));
 			}
 			void fill(float x, float y, float w, float h, const rnds::Color& c) override
 			{
-				if (!on()) { real->fill(x + off(), y, w, h, c); return; }
+				if (!on()) { real->fill(x + off(), y, w, h, faded(c)); return; }
 				float x0 = snapX(mapX(x)), x1 = snapX(mapX(x + w)), y0 = snapY(mapY(y)), y1 = snapY(y0 + h * g);
 				if (w > 0 && x1 - x0 < 1 / sk) x1 = x0 + 1 / sk;
 				if (h > 0 && y1 - y0 < 1 / sk) y1 = y0 + 1 / sk;
-				real->fill(x0, y0, x1 - x0, y1 - y0, c);
+				real->fill(x0 + fo, y0, x1 - x0, y1 - y0, faded(c));
 			}
 			void pushClip(float x, float y, float w, float h) override
 			{
 				if (!on()) { real->pushClip(x + off(), y, w, h); return; }
 				float x0 = snapX(mapX(x)), y0 = snapY(mapY(y));
-				real->pushClip(x0, y0, snapX(mapX(x + w)) - x0, snapY(y0 + h * g) - y0);
+				real->pushClip(x0 + fo, y0, snapX(mapX(x + w)) - x0, snapY(y0 + h * g) - y0);
 			}
 			void popClip() override { real->popClip(); }
 			void beginScreen(int sc) override
@@ -307,7 +313,7 @@ namespace banana
 				}
 				else { g = 1; tx = dx; ty = 0; drop = 0; bodyFrom = 140 * k; bodyDy = 24 * k; }
 			}
-			void endScreen() override { screen = -1; real->endScreen(); }	// (the host's overlay, drawn in it, isn't moved)
+			void endScreen() override { screen = -1; fa = 1; fo = 0; real->endScreen(); }	// (the host's overlay, drawn in it, isn't moved)
 			bool stageArea(float& x, float& y, float& w, float& h) const override
 			{
 				bool r = real->stageArea(x, y, w, h);
@@ -472,6 +478,8 @@ namespace banana
 		std::vector<bool> wskipped;		// the slides passed with Skip (the summary says so)
 		bool wizard = false, wizardBoot = false, setupEnded = false;
 		int wsel = 0, wpick = 0;		// the slide, the choice picked on it
+		double wAnimT0 = -1e9; int wAnimDir = 1;	// a slide arriving (a theme with fades): since when, from which side
+		void setupArrive(int screen);
 		int langAt = -1;				// the Language slide's choice (saved with Next: a change restarts the menu)
 		// Wi-Fi's test (wifi test: connected with an address, the internet, the clock), its lines as they come in
 		// runDir/wifi-test; -1 not known yet, 0 failed, 1 fine
@@ -491,6 +499,7 @@ namespace banana
 		std::vector<Choice> setupChoices();
 		Result setupAct(SetupAct a);
 		Result pressSetup(Key k);
+		Result pressSetupKey(Key k);
 		void renderSetup();
 		void setupDone();
 		static const char* slideKey(Slide s);

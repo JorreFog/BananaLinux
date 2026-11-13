@@ -2735,6 +2735,7 @@ namespace banana
 	bool Settings::animating() const
 	{
 		if (mOpen && mqMoving) return true;	// a marquee scrolling
+		if (mOpen && page == SETUP && now - wAnimT0 < 430) return true;	// a slide of the setup arriving
 		if (!mOpen || page != LIST) return false;
 		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
 		return aPick != sel || aTop != top;
@@ -7279,7 +7280,27 @@ namespace banana
 		return NONE;
 	}
 
+	// a slide arriving, in a theme with fades: what is on it comes in from the side it was gone to, the top screen
+	// first and the bottom one a moment after (the screens' grounds stay: only what is on them moves)
+	static constexpr double SETUP_IN_MS = 340, SETUP_IN_LAG = 70;
+	void Settings::setupArrive(int screen)
+	{
+		const float t = (float)((now - wAnimT0 - screen * SETUP_IN_LAG) / SETUP_IN_MS);
+		if (t >= 1) return;
+		const float u = std::max(0.0f, t), e = 1 - (1 - u) * (1 - u) * (1 - u);
+		shift.fa = e;
+		shift.fo = std::round((1 - e) * wAnimDir * 44 * shift.k * (shift.on() ? shift.g : 1.0f));
+	}
+
 	Settings::Result Settings::pressSetup(Key k)
+	{
+		const int was = wsel;
+		const Result r = pressSetupKey(k);
+		if (wizard && page == SETUP && wsel != was && rnds::themeFiles.transitions == "fade") { wAnimT0 = now; wAnimDir = wsel > was ? 1 : -1; }
+		return r;
+	}
+
+	Settings::Result Settings::pressSetupKey(Key k)
 	{
 		auto ch = setupChoices();
 		int n = (int)ch.size();
@@ -7438,6 +7459,7 @@ namespace banana
 		// ---- top panel: the step, its title and state, what it is for, the result ----
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
+		setupArrive(0);
 		box("hero", false, 18, 20, 604, 436);
 		icon(icons[sl], 50, 52, 3);
 		std::string stepLine = lang::tr("First-time setup") + "  \xc2\xb7  " + lang::tr("Step {n} of {m}");
@@ -7549,6 +7571,7 @@ namespace banana
 		// ---- bottom panel: the step's progress, the choices, B and A ----
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
+		setupArrive(1);
 		box("bubble", false, 18, 14, 604, 54);
 		text(titles[sl], true, 22, 38, 28, p.ink);
 		// the progress: a square a step, the one now wider, in the accent; done ones light, the rest dim

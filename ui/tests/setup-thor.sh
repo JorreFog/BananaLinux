@@ -137,10 +137,10 @@ grep -q '^Peel Quest.nds = powersave$' "$TS/data/per-game-perf.conf" 2>/dev/null
 # the theme's fades (no iris at these shapes): a game ending (black to the menu), the boot into the menu, the arrival,
 # the menu to the shutdown; each frame drawn at the screens' sizes, the first and last as they should be
 ts_run fades "home 0; wait 2400; trans game fade-game-0 0; trans game fade-game-110 110; trans game fade-game-220 220; trans boot fade-boot-130 130; \
-    trans arrival fade-arrival-420 420; trans arrival fade-arrival-1900 1900; trans outro fade-outro-200 200"
+    trans arrival fade-arrival-420 420; trans arrival fade-arrival-2400 2400; trans arrival fade-arrival-3800 3800; trans outro fade-outro-200 200"
 ts_check fades "trans game fade-game-0 at 0 ms (fades 1)"
 if command -v convert >/dev/null; then
-    for f in game-0 arrival-1900 outro-200; do
+    for f in game-0 arrival-3800 outro-200; do
         [ "$(convert "$OUT/thor-st-fade-$f-top.png" -format '%[fx:maxima]' info: 2>/dev/null)" = 0 ] || { echo "FAIL thor fades: $f isn't black"; fail=1; }
     done
     for f in game-110 game-220 boot-130 arrival-420; do
