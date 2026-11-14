@@ -1,0 +1,156 @@
+// The emulator apps in BananaOS's Android image: the open-source, redistributable ones, as their projects publish
+// them (signed by their projects, so updates from the same places install over them). The APKs are not in git:
+// android/system/emulators/fetch.sh downloads them into apks/ at pinned versions and checks their SHA-256; run it
+// before the build (a missing APK fails the build with the module's name).
+//
+// banana_emulators (in android/product/banana.mk) is what the launch table (android/system/launch.conf) uses by
+// default. banana_emulators_extra is Winlator, which the launcher can only open, not start a game in; add it to
+// PRODUCT_PACKAGES by hand if wanted. Not here: DraStic (paid, closed), MAME4droid 2024 (no pinnable release asset
+// found), and everything docs/THOR-LINEAGE-PARITY.md lists as "owner installs".
+//
+// Installed on /product as ordinary (not privileged) apps, as if installed by hand: no platform permissions, updates
+// through their own channels. Not preopted: they are prebuilt and signed by others.
+
+// RetroArch 1.22.2 (com.retroarch.aarch64), GPL-3.0
+android_app_import {
+    name: "banana-retroarch",
+    apk: "apks/RetroArch_aarch64.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// Dolphin 2609b (org.dolphinemu.dolphinemu), GPL-2.0-or-later
+android_app_import {
+    name: "banana-dolphin",
+    apk: "apks/dolphin-2609b.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// PPSSPP 1.20.4 (org.ppsspp.ppsspp), GPL-2.0-or-later
+android_app_import {
+    name: "banana-ppsspp",
+    apk: "apks/ppsspp-1.20.4.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// ScummVM 2026.3.0 (org.scummvm.scummvm), GPL-3.0-or-later
+android_app_import {
+    name: "banana-scummvm",
+    apk: "apks/scummvm-2026.3.0-android-arm64-v8a.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// Flycast 2.7 (com.flycast.emulator), GPL-2.0
+android_app_import {
+    name: "banana-flycast",
+    apk: "apks/flycast-2.7.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// Azahar 2126.2 (org.azahar_emu.azahar), GPL-2.0-or-later
+android_app_import {
+    name: "banana-azahar",
+    apk: "apks/azahar-android-vanilla-2126.2.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// melonDS 1.10.0 beta (me.magnum.melonds), GPL-3.0
+android_app_import {
+    name: "banana-melonds",
+    apk: "apks/melonDS-android-1.10.0.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// Vita3K build 4338 (org.vita3k.emulator), GPL-2.0
+android_app_import {
+    name: "banana-vita3k",
+    apk: "apks/vita3k-4338-android.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// ARMSX2 2.9.3 (com.armsx2), GPL-3.0-or-later
+android_app_import {
+    name: "banana-armsx2",
+    apk: "apks/ARMSX2-2.9.3-a15-armv8.2-sdk35.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// GameNative 1.4.0 (app.gamenative), GPL-3.0; 571 MB
+android_app_import {
+    name: "banana-gamenative",
+    apk: "apks/gamenative-v1.4.0.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+// Winlator 11.2 (com.winlator), LGPL-2.1; 158 MB
+android_app_import {
+    name: "banana-winlator",
+    apk: "apks/Winlator_11.2.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+}
+
+phony {
+    name: "banana_emulators",
+    required: [
+        "banana-retroarch",
+        "banana-dolphin",
+        "banana-ppsspp",
+        "banana-scummvm",
+        "banana-flycast",
+        "banana-azahar",
+        "banana-melonds",
+        "banana-vita3k",
+        "banana-armsx2",
+        "banana-gamenative",
+    ],
+}
+
+phony {
+    name: "banana_emulators_extra",
+    required: [
+        "banana-winlator",
+    ],
+}

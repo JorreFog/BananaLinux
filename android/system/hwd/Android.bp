@@ -1,0 +1,44 @@
+// banana-hwd: BananaOS's hardware daemon for the AYN Thor (PROTOCOL.md). In the Android tree this repository is
+// vendor/banana, so this is vendor/banana/android/system/hwd. The product (android/product/banana.mk) adds
+// "banana-hwd"; its init script, configuration and command-line client come with it.
+
+cc_defaults {
+    name: "banana-hwd-defaults",
+    system_ext_specific: true,
+    c_std: "gnu11",
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wno-format-truncation",
+    ],
+}
+
+cc_binary {
+    name: "banana-hwd",
+    defaults: ["banana-hwd-defaults"],
+    srcs: [
+        "banana-hwd.c",
+        "hw.c",
+    ],
+    init_rc: ["banana-hwd.rc"],
+    required: [
+        "banana-hwd.conf",
+        "banana-hwc",
+    ],
+}
+
+// adb shell banana-hwc STATS (and the launcher's developers' friend)
+cc_binary {
+    name: "banana-hwc",
+    defaults: ["banana-hwd-defaults"],
+    srcs: ["banana-hwc.c"],
+}
+
+prebuilt_etc {
+    name: "banana-hwd.conf",
+    system_ext_specific: true,
+    src: "hwd.conf",
+    filename: "hwd.conf",
+    relative_install_path: "banana",
+}

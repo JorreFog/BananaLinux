@@ -1,0 +1,13 @@
+# banana-hwd (a system_ext daemon, its type public in ../public) and the nodes the device's vendor policy labels with
+# vendor types, which only vendor policy can name. Each type below is one this tree's vendor policy defines:
+#   vendor_sysfs_battery_supply   /sys/class/power_supply/battery (hardware/ayn's charger_rgb.te reads it)
+r_dir_file(banana_hwd, vendor_sysfs_battery_supply)
+
+# Not granted yet, because their vendor types' names were not read in the device's policy here: the GPU's kgsl
+# nodes (busy %, clock, governor), the panels' backlights if not sysfs_leds, and hwmon's pwm1. On the first boot:
+#   adb shell dmesg | grep 'avc:.*banana_hwd'
+# names each denied node's type (tcontext=u:object_r:<type>); add a line here for each, e.g.
+#   rw_dir_file(banana_hwd, <kgsl type>)
+#   rw_dir_file(banana_hwd, <backlight type>)
+# Until then STATS has no gpu/gpu_mhz, and BACKLIGHT answers "ERR unsupported" (the framework still sets
+# brightness its own way).
