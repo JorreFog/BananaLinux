@@ -1,0 +1,130 @@
+#!/bin/sh
+# USB debugging: the handheld as a USB device a computer has complete access to, over the cable alone. For bringing a
+# board up and for working on BananaOS; there is no password anywhere on it, so it is only on where the hardware
+# profile asks for it (hw.conf's HW_USB_DEBUG=yes: the AYN Thor's bring-up build) and Settings hasn't turned it off
+# (settings.conf: usb_debug = off).
+#
+# One composite gadget (configfs), three ways in, each for a computer that has nothing set up:
+#   a network card   (CDC NCM: Linux, macOS, Windows 11): the handheld is 10.55.0.1 and hands the computer 10.55.0.2;
+#                    "ssh root@10.55.0.1" (no password), and file sharing, the menu's log and the rest over it
+#   a serial port    (CDC ACM: /dev/ttyACM0, a COM port): a root shell with no network at all, for when it is the
+#                    network that is broken (screen /dev/ttyACM0 115200)
+#   adb              (when adbd is in the image): adb shell, adb push and pull, adb forward, as on an Android device
+#
+#   usb-debug up | down | status
+# (host tests: BANANA_CONFIGFS for /sys/kernel/config, BANANA_SYS for /sys, BANANA_RUN, BANANA_DATA, BANANA_HW_CONF;
+# BANANA_USB_DRY=1 makes the gadget's tree and starts nothing; BANANA_USBGADGET, BANANA_SYSTEMCTL for ROCKNIX's)
+CFS=${BANANA_CONFIGFS:-/sys/kernel/config}
+SYS=${BANANA_SYS:-/sys}
+RUN=${BANANA_RUN:-/run/banana}
+LOG=${BANANA_DATA:-/data/banana}/logs/usb-debug.log
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+G=$CFS/usb_gadget/banana
+IP=10.55.0.1
+say() { mkdir -p "${LOG%/*}" 2>/dev/null; echo "$(date '+%H:%M:%S') usb-debug: $*" >> "$LOG" 2>/dev/null; echo "$*"; }
+setting() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "${BANANA_DATA:-/data/banana}/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+udc() { ls "$SYS/class/udc" 2>/dev/null | head -n 1; }
+
+down() {
+    [ -d "$G" ] || return 0
+    echo "" > "$G/UDC" 2>/dev/null
+    for p in "$RUN"/usb-debug.*.pid; do [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null; rm -f "$p"; done
+    [ -z "$BANANA_USB_DRY" ] && { umount /dev/usb-ffs/adb 2>/dev/null; ifconfig usb0 down 2>/dev/null; }
+    rm -f "$G"/configs/c.1/*.* 2>/dev/null
+    rmdir "$G"/configs/c.1/strings/0x409 "$G"/configs/c.1 "$G"/functions/* "$G"/strings/0x409 "$G" 2>/dev/null
+    # (a test's plain folders: what the kernel takes away by itself with the gadget)
+    if [ -n "$BANANA_USB_DRY" ]; then rm -f "$G/UDC"; rmdir "$G"/configs/c.1/strings "$G"/configs/c.1 "$G"/configs "$G"/functions "$G"/strings "$G" 2>/dev/null; fi
+}
+
+# On ROCKNIX (hw.conf's HW_SERVICES=systemd) the port's gadget is ROCKNIX's own (usbgadget: its NCM network or MTP, the
+# mode kept across boots, restored by its autostart): USB debugging is its network mode, the handheld on the address
+# usbgadget gives (169.254.170.2 unless changed; the computer gets .1) with ROCKNIX's sshd started on it (its root
+# password). Its kernel has NCM and FunctionFS but no serial function (USB_CONFIGFS_ACM) and the image no adbd, so the
+# serial console and adb are BananaOS's image only. A port the owner put in file transfer mode is left as it is.
+if [ "$HW_SERVICES" = systemd ]; then
+    UG=${BANANA_USBGADGET:-usbgadget}
+    mode() { $UG 2>/dev/null | head -n 1; }
+    case $1 in
+    up)
+        [ "$HW_USB_DEBUG" = yes ] || { echo "USB debugging isn't on for this board (hw.conf: HW_USB_DEBUG)"; exit 0; }
+        [ "$(setting usb_debug)" = off ] && { echo "USB debugging is off (settings.conf: usb_debug)"; exit 0; }
+        case $(mode) in
+        network) echo "already up"; exit 0 ;;
+        file_transfer) echo "the port is in ROCKNIX's file transfer mode: left as it is"; exit 0 ;;
+        esac
+        $UG network >> "$LOG" 2>&1 || { say "ROCKNIX's usbgadget couldn't start its network mode"; exit 1; }
+        ${BANANA_SYSTEMCTL:-systemctl} start sshd >/dev/null 2>&1
+        say "up: network $($UG address 2>/dev/null) (ROCKNIX's usbgadget), ssh"
+        ;;
+    down)
+        [ "$(mode)" = network ] && $UG disabled >> "$LOG" 2>&1
+        echo "down" ;;
+    status)
+        if [ "$(mode)" = network ]; then echo "up: network $($UG address 2>/dev/null)"; else echo "down"; fi ;;
+    *)
+        sed -n '2,/^[^#]/p' "$0" | grep '^#' | cut -c3-; exit 2 ;;
+    esac
+    exit 0
+fi
+
+case $1 in
+up)
+    [ "$HW_USB_DEBUG" = yes ] || { echo "USB debugging isn't on for this board (hw.conf: HW_USB_DEBUG)"; exit 0; }
+    [ "$(setting usb_debug)" = off ] && { echo "USB debugging is off (settings.conf: usb_debug)"; exit 0; }
+    [ -d "$G" ] && { echo "already up"; exit 0; }
+    [ -z "$BANANA_USB_DRY" ] && { mount -t configfs none "$CFS" 2>/dev/null; modprobe -q libcomposite 2>/dev/null; }
+    [ -d "$CFS/usb_gadget" ] || { say "the kernel has no USB gadget support (configfs)"; exit 1; }
+    U=$(udc)
+    [ -n "$U" ] || [ -n "$BANANA_USB_DRY" ] || { say "no USB device controller (the port is host-only, or its driver isn't up)"; exit 1; }
+    # a serial number that stays the same for this handheld (the computer keeps its settings for it)
+    SER=$(cat /etc/machine-id 2>/dev/null); [ -n "$SER" ] || SER=$(tr -d ':' < "$SYS/class/net/wlan0/address" 2>/dev/null); [ -n "$SER" ] || SER=banana0001
+    mkdir -p "$G/strings/0x409" "$G/configs/c.1/strings/0x409" || { say "the gadget can't be made"; exit 1; }
+    # (the kernel makes functions/ itself; a test's plain folder doesn't)
+    [ -n "$BANANA_USB_DRY" ] && mkdir -p "$G/functions"
+    # (the Linux Foundation's ids for a composite gadget)
+    echo 0x1d6b > "$G/idVendor"; echo 0x0104 > "$G/idProduct"; echo 0x0100 > "$G/bcdDevice"; echo 0x0200 > "$G/bcdUSB"
+    # (a composite device with interface association descriptors: Windows needs these three to bind each function)
+    echo 0xEF > "$G/bDeviceClass"; echo 0x02 > "$G/bDeviceSubClass"; echo 0x01 > "$G/bDeviceProtocol"
+    echo "$SER" > "$G/strings/0x409/serialnumber"; echo BananaOS > "$G/strings/0x409/manufacturer"
+    echo "${HW_NAME:-BananaOS handheld} (USB debugging)" > "$G/strings/0x409/product"
+    echo "network, serial console, adb" > "$G/configs/c.1/strings/0x409/configuration"; echo 500 > "$G/configs/c.1/MaxPower"
+    n=0
+    if mkdir "$G/functions/ncm.usb0" 2>/dev/null; then ln -s "$G/functions/ncm.usb0" "$G/configs/c.1/" && n=$((n + 1)); else say "no network function in the kernel (USB_CONFIGFS_NCM)"; fi
+    if mkdir "$G/functions/acm.GS0" 2>/dev/null; then ln -s "$G/functions/acm.GS0" "$G/configs/c.1/" && n=$((n + 1)); else say "no serial function in the kernel (USB_CONFIGFS_ACM)"; fi
+    ADB=
+    if command -v adbd >/dev/null 2>&1 || [ -n "$BANANA_USB_ADB" ]; then
+        if mkdir "$G/functions/ffs.adb" 2>/dev/null; then ln -s "$G/functions/ffs.adb" "$G/configs/c.1/" && { n=$((n + 1)); ADB=1; }; else say "no FunctionFS in the kernel (USB_CONFIGFS_F_FS): no adb"; fi
+    fi
+    [ $n -gt 0 ] || { say "the kernel has none of the gadget's functions"; down; exit 1; }
+    if [ -n "$BANANA_USB_DRY" ]; then echo "${U:-dry}" > "$G/UDC.asked"; say "up (dry): $n functions"; exit 0; fi
+    # adb first: its endpoints must be there before the gadget is bound to the controller
+    if [ -n "$ADB" ]; then
+        mkdir -p /dev/usb-ffs/adb && mount -t functionfs adb /dev/usb-ffs/adb 2>/dev/null
+        adbd >> "$LOG" 2>&1 &
+        echo $! > "$RUN/usb-debug.adbd.pid"
+        i=0; while [ ! -e /dev/usb-ffs/adb/ep1 ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i + 1)); done
+    fi
+    # the port as a device (a Type-C port decides by what is plugged in; where it can be told, it is)
+    for r in "$SYS"/class/usb_role/*/role; do [ -w "$r" ] && echo device > "$r" 2>/dev/null; done
+    echo "$U" > "$G/UDC" || { say "the gadget didn't bind to $U"; down; exit 1; }
+    # the network: an address for us, one handed to the computer, SSH on it with no password
+    ifconfig usb0 $IP netmask 255.255.255.0 up 2>/dev/null
+    printf 'interface usb0\nstart 10.55.0.2\nend 10.55.0.6\nmax_leases 5\nopt subnet 255.255.255.0\nopt lease 3600\nlease_file %s/usb-debug.leases\npidfile %s/usb-debug.udhcpd.pid\n' "$RUN" "$RUN" > "$RUN/usb-debug.udhcpd.conf"
+    : > "$RUN/usb-debug.leases"; udhcpd "$RUN/usb-debug.udhcpd.conf" 2>> "$LOG"
+    if command -v dropbear >/dev/null 2>&1; then
+        mkdir -p "$RUN/usb-debug-ssh"
+        # (its own host key, made on the spot; root with no password, on this cable's address only)
+        dropbear -R -B -p $IP:22 -P "$RUN/usb-debug.dropbear.pid" -r "$RUN/usb-debug-ssh/host_key" 2>> "$LOG" || dropbear -R -B -p $IP:22 -P "$RUN/usb-debug.dropbear.pid" 2>> "$LOG"
+    fi
+    # the serial port: a root shell, started again whenever it ends (a cable out and in)
+    ( while [ -d "$G" ]; do [ -c /dev/ttyGS0 ] && setsid getty -L -n -l /bin/sh 115200 ttyGS0 vt100 2>/dev/null; sleep 1; done ) &
+    echo $! > "$RUN/usb-debug.getty.pid"
+    say "up on $U: network $IP${ADB:+, adb}, serial console"
+    ;;
+down)
+    down; echo "down" ;;
+status)
+    if [ -d "$G" ]; then echo "up: $(cat "$G/UDC" 2>/dev/null) $(ls "$G/functions" 2>/dev/null | tr '\n' ' ')"; else echo "down"; fi ;;
+*)
+    sed -n '2,/^[^#]/p' "$0" | grep '^#' | cut -c3-; exit 2 ;;
+esac

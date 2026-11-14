@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LIBRETRO_SWANSTATION
+	bool "libretro-swanstation"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_PACKAGE_HAS_LIBGLES
+	help
+	  PlayStation: SwanStation (DuckStation's libretro fork from
+	  before DuckStation's no-redistribution licence).
+
+	  https://github.com/libretro/swanstation

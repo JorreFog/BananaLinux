@@ -1,0 +1,12 @@
+#!/bin/sh
+# A board whose sound is a server (hw.conf's HW_SOUND=pipewire: the AYN Thor): the server stops for a sleep. It keeps
+# the DSP's audio graph running while it is up, which on Banana Pocket (the same AudioReach DSP) was the sleep's
+# biggest measured cost: 37-42 mA with the server up, 29 mA without. Back in the background on the way out; the menu's
+# sound retries its opens until there is a sink again. From Banana Pocket's sleep.d/20-sound.
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+[ "$HW_SOUND" = pipewire ] && [ -x /usr/libexec/banana/sound-server ] || exit 0
+case $1 in
+pre) /usr/libexec/banana/sound-server down ;;
+post) /usr/libexec/banana/sound-server up >/dev/null 2>&1 & ;;
+esac
+exit 0

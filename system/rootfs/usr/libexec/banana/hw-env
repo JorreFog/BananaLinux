@@ -1,0 +1,25 @@
+#!/bin/sh
+# The handheld's hardware profile (/etc/banana/hw.conf, the board's file from etc/banana/hw/) as the environment the
+# menu, bananad and the launchers read: sourced by rcS (". /usr/libexec/banana/hw-env") so everything it starts has it,
+# by banana-ui-session for the menu and every game (init starts it beside rcS, not from it) and by rcK.
+# What a variable is already set to wins (the host tests); banana-ui-session's kernel options (tools/qemu-boot.sh)
+# are set after it.
+HW_CONF=${BANANA_HW_CONF:-/etc/banana/hw.conf}
+[ -r "$HW_CONF" ] && . "$HW_CONF"
+[ -n "$HW_TOP" ] && export BANANA_TOP=${BANANA_TOP:-$HW_TOP}
+[ -n "$HW_TOUCH" ] && export BANANA_TOUCH=${BANANA_TOUCH:-$HW_TOUCH}
+[ -n "$HW_PANEL_ROTATE" ] && export BANANA_PANEL_ROTATE=${BANANA_PANEL_ROTATE:-$HW_PANEL_ROTATE}
+[ -n "$HW_BACKLIGHT_TOP" ] && export BANANA_BACKLIGHT_TOP=${BANANA_BACKLIGHT_TOP:-$HW_BACKLIGHT_TOP}
+# a sound server (HW_SOUND=pipewire): bananad's mode, and where every program finds the server's socket
+if [ "$HW_SOUND" = pipewire ]; then
+    export BANANA_SOUND=pipewire PIPEWIRE_RUNTIME_DIR=${PIPEWIRE_RUNTIME_DIR:-/run/banana/pipewire}
+fi
+[ -n "$HW_BACKLIGHT_BOTTOM" ] && export BANANA_BACKLIGHT_BOTTOM=${BANANA_BACKLIGHT_BOTTOM:-$HW_BACKLIGHT_BOTTOM}
+# the board's own environment (HW_ENV's "NAME=value" words: the AYN Thor's cache folder and malloc tunable), each only
+# where it isn't set already
+for kv in $HW_ENV; do
+    k=${kv%%=*}
+    case $k in ''|*[!A-Za-z0-9_]*|[0-9]*) continue ;; esac
+    eval "[ -n \"\${$k+x}\" ]" || export "$kv"
+done
+:

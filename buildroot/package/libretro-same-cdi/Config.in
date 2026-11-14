@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_SAME_CDI
+	bool "libretro-same-cdi"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Philips CD-i: SAME_CDI (MAME's CD-i driver); the CD-i BIOS
+	  (cdimono1.zip) in /data/bios.
+
+	  https://github.com/libretro/same_cdi

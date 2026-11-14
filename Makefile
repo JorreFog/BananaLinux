@@ -1,8 +1,9 @@
-# Banana: a light Linux for the Anbernic RG DS and RG DS Plus.
+# Banana: a light Linux for the Anbernic RG DS and RG DS Plus, and (in bring-up) the AYN Thor.
 #
 #   make rgds          the RG DS's SD card image        -> output/rgds/images/banana-rgds.img.gz
 #   make rgds-plus     the RG DS Plus's SD card image   -> output/rgds-plus/images/banana-rgds-plus.img.gz
 #   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
+#   make thor          the AYN Thor's (SM8550; in bring-up: docs/BUILD-THOR-IMAGE.md, docs/THOR-OS.md) -> output/thor/images/banana-thor.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed), and its helpers when their
 #                      libraries are there (banana-fetch: libcurl, libssh2, OpenSSL; libsmb2 too, or it has no SMB)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick), then the
@@ -17,13 +18,31 @@ BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 ROCKNIXDS_STORE ?=	# (the Store's test: a rocknixds-store checkout with BananaOS's patches)
 OUT ?= $(CURDIR)/output
-BOARDS = rgds rgds-plus universal
+BOARDS = rgds rgds-plus universal thor
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)
 
+# Buildroot itself is downloaded, not vendored, so the few changes Banana makes to Buildroot (rather than to a
+# package's sources: those are in buildroot/patches/) sit in buildroot/buildroot-patches/ and are applied here: Mesa's
+# Turnip (Vulkan for the AYN Thor's Adreno) and a newer Mesa, as Banana Pocket has them, and libxkbcommon's xkbregistry
+# as an option (Wine's Wayland driver needs it). Idempotent: a patch already in place is left alone. (A board's
+# packages built before a new patch here: make <pkg>-dirclean-<board> first.)
+BUILDROOT_PATCHES = $(wildcard $(CURDIR)/buildroot/buildroot-patches/*.patch)
+$(BUILDROOT_DIR)/.banana-patched: $(BUILDROOT_DIR)/Makefile $(BUILDROOT_PATCHES)
+	@for p in $(BUILDROOT_PATCHES); do \
+		if git -C $(BUILDROOT_DIR) apply --reverse --check "$$p" 2>/dev/null; then \
+			echo "buildroot patch already applied: $$(basename $$p)"; \
+		else \
+			echo "applying buildroot patch: $$(basename $$p)"; \
+			git -C $(BUILDROOT_DIR) apply "$$p" || exit 1; \
+		fi; \
+	done
+	@touch $@
+buildroot-patched: $(BUILDROOT_DIR)/.banana-patched
+
 define board
-$(OUT)/$(1)/.config: $(BUILDROOT_DIR)/Makefile buildroot/configs/banana_$(subst -,_,$(1))_defconfig
+$(OUT)/$(1)/.config: $(BUILDROOT_DIR)/.banana-patched buildroot/configs/banana_$(subst -,_,$(1))_defconfig
 	$(MAKE) -C $(BUILDROOT_DIR) O=$(OUT)/$(1) BR2_EXTERNAL=$(CURDIR)/buildroot banana_$(subst -,_,$(1))_defconfig
 
 $(1): $(OUT)/$(1)/.config
@@ -64,4 +83,4 @@ clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test fuzz theme-studio theme-studio-desktop clean
+.PHONY: $(BOARDS) ui test fuzz theme-studio theme-studio-desktop clean buildroot-patched

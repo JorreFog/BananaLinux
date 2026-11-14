@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_O2EM
+	bool "libretro-o2em"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Odyssey2 / Videopac: O2EM (o2rom.bin in /data/bios).
+
+	  https://github.com/libretro/libretro-o2em

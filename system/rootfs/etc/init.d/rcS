@@ -5,6 +5,9 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
+# the handheld's hardware profile (/etc/banana/hw.conf: the panels' connectors, the touchscreen, the modules) for
+# everything started from here
+. /usr/libexec/banana/hw-env
 # both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
 # panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card
 banana-ui --panels-on </dev/null >/dev/null 2>&1 &
@@ -42,11 +45,29 @@ mark "rcS: started"
 echo 1 > /sys/kernel/rcu_expedited 2>/dev/null
 banana-perf performance
 [ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
+# the board's own kernel tunables (hw.conf's HW_SYSCTL, HW_IO...: the AYN Thor's memory, idle and card settings,
+# docs/THOR-TUNING.md); a board with none doesn't run it
+[ -n "$HW_SYSCTL$HW_IO$HW_CPUIDLE_OFF$HW_MGLRU_TTL_MS$HW_THP_DEFRAG" ] && /usr/libexec/banana/tune boot
+# a board with a Home button (hw.conf's HW_HOME=yes: the AYN Thor): the control-group hierarchy, for one thing only.
+# The menu puts a game in a group of its own and has the kernel freeze every process of it when Home is pressed
+# (a program inside the compositor is in a session of its own: a signal to the launcher's group would miss it).
+# No controller is turned on: nothing is accounted or limited.
+[ "$HW_HOME" = yes ] && [ -d /sys/fs/cgroup ] && mount -t cgroup2 -o nosuid,nodev,noexec cgroup2 /sys/fs/cgroup 2>/dev/null
 # the loopback up (127.0.0.1): nothing brought it up, so a program that talks to itself on localhost (a port, a tool,
 # a helper's local server) couldn't even bind there
 ip link set lo up 2>/dev/null
 hostname banana	# (before syslogd: it takes the name once, and the kernel's default is ROCKNIX's unfilled @DEVICENAME@)
 syslogd -O /run/banana/messages -s 256 -b 1
+# a board on udev (hw.conf's HW_DEVMGR=udev: the AYN Thor, whose drivers are mostly modules): udevd loads each device's
+# module and its firmware and runs the rules (a sound card's SOUND_INITIALIZED, the input devices' properties) as on
+# any Linux, devices found at boot ("trigger") and later alike. The boot doesn't wait for it. (The RG DS's drivers are
+# built in and it has none: devtmpfs alone.)
+if [ "$HW_DEVMGR" = udev ] && command -v udevd >/dev/null; then
+    udevd --daemon
+    udevadm trigger --type=subsystems --action=add
+    udevadm trigger --type=devices --action=add
+    mark "rcS: udev started"
+fi
 
 # the card we booted from: the system is one of its two root slots (partitions 2 and 3, banana-root-a and -b; the
 # kernel's root= says which one booted), the games and settings its fourth partition
@@ -81,6 +102,15 @@ data || {
 mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
+# a board whose sound is a server (hw.conf's HW_SOUND=pipewire: the AYN Thor): D-Bus's system bus (PipeWire's
+# Bluetooth audio talks to bluetoothd over it), then PipeWire and WirePlumber, which bring the card up from its UCM
+# profile when udev has it; bananad points "default" at the server and doesn't wait for the card
+if [ "$HW_SOUND" = pipewire ]; then
+    mkdir -p /run/dbus /tmp/dbus
+    dbus-uuidgen --ensure 2>/dev/null
+    dbus-daemon --system 2>/dev/null
+    /usr/libexec/banana/sound-server up &
+fi
 
 bananad &
 # the power and volume keys live before the menu's boot animation (#87): bananad creates bananad-ready once its loop
@@ -93,9 +123,19 @@ mark "rcS: bananad ready"
 # not needed for the menu's first frame
 (
     hwclock -s 2>/dev/null
+    # compressed swap in memory (hw.conf's HW_ZRAM, MB or a share of the RAM; the AYN Thor: the big emulators and Wine
+    # beside their shader caches get room past the RAM without touching the card): one zram device, LZ4, swapped to
+    # eagerly as zram is meant to be, one page read at a time (it is memory, not a disk), idle pages recompressed
+    [ -n "$HW_ZRAM" ] && /usr/libexec/banana/tune zram
+    # the daemons the handheld can't lose (hw.conf's HW_OOM_PROTECT) last in the OOM killer's choice
+    [ -n "$HW_OOM_PROTECT" ] && /usr/libexec/banana/tune protect
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
     # module by itself (bananad loads USB devices' drivers as they come)
-    modprobe -a panfrost rtw88_8821cs 2>/dev/null
+    modprobe -a ${HW_MODULES-panfrost rtw88_8821cs} 2>/dev/null
+    # a handheld with a fan, lights round its sticks or a GPU boost (the AYN Thor): as Settings keeps them
+    [ "$HW_HANDHELD" = yes ] && /usr/libexec/banana/handheld boot &
+    # USB debugging where the board's profile asks for it (hw.conf's HW_USB_DEBUG: the AYN Thor's bring-up build)
+    [ "$HW_USB_DEBUG" = yes ] && /usr/libexec/banana/usb-debug up >/dev/null 2>&1 &
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then

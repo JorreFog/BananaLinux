@@ -1,0 +1,47 @@
+#!/bin/sh
+# ScummVM (package/scummvm: ROCKNIX's build, SDL 2), on a compositor of its own on the top panel (run-wayland).
+# Settings in /data/scummvm/scummvm.ini (from ROCKNIX's in /usr/share/scummvm on the first run), saves in saves/scummvm.
+# A game is any of these in roms/scummvm:
+#   <name>.scummvm (or .svm) a folder with the game's files: ScummVM detects the game in it
+#   <name>.scummvm (or .svm) a file beside the game's files, holding ScummVM's game id (monkey, sky...) or ROCKNIX's
+#                            '--path="<folder>" <id>' line, or nothing (detected from the files beside it)
+# Quit: ScummVM's own menu (Ctrl+F5 / its menu button), or the menu's quit (SIGTERM, passed on).
+#   run-scummvm <game>
+ROM="$1"
+D=/data/scummvm
+T=/usr/share/scummvm
+LOGS=/data/banana/logs/scummvm
+mkdir -p "$D" "$LOGS" /data/saves/scummvm /data/screenshots
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-scummvm: $ROM"
+
+[ -f "$D/scummvm.ini" ] || cp "$T/scummvm.ini" "$D/scummvm.ini"
+if [ -d "$ROM" ]; then
+    set -- --path="$ROM" --auto-detect
+else
+    L1=$(head -n 1 "$ROM" 2>/dev/null | tr -d '\r')
+    case $L1 in
+    --path=*)
+        P=$(printf '%s' "$L1" | sed -n 's/^--path="\{0,1\}\([^"]*\)"\{0,1\} .*/\1/p')
+        ID=${L1##* }
+        set -- --path="$P" "$ID" ;;
+    "") set -- --path="$(dirname "$ROM")" --auto-detect ;;
+    *) set -- --path="$(dirname "$ROM")" "$(printf '%s' "$L1" | tr -d ' ')" ;;
+    esac
+fi
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+echo "run-scummvm: scummvm $*"
+
+/usr/libexec/banana/run-wayland -- /usr/bin/scummvm --config="$D/scummvm.ini" --savepath=/data/saves/scummvm \
+    --screenshotpath=/data/screenshots --themepath=/usr/share/scummvm --fullscreen "$@" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+echo "run-scummvm: exit $RC"
+exit $RC

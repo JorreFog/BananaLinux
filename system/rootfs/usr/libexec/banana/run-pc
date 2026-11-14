@@ -1,0 +1,52 @@
+#!/bin/sh
+# A PC game from the shelf (systems.conf's [pc]: "run-pc %ROM%"), on the AYN Thor: pc-games inside run-wayland (Wine
+# draws through Wayland), the top screen the game's, the bottom one dark. Two entries the shelf has besides the games
+# (pc-games scan makes them): "Set up PC games" (the runtime fetched, in a terminal that shows it happen) and "Steam".
+# A game of the owner's Steam library ("steam = <app id>", usr/libexec/banana/steam) is downloaded the first time.
+#   run-pc <file.pc>
+# On ROCKNIX (hw.conf's HW_SERVICES=systemd: the menu is the frontend under ROCKNIX's sway, which is already running)
+# there is no compositor to start: the program runs in sway's session as it is, its window on the top output (where the
+# menu's run-rocknix puts games), in ROCKNIX's games.slice as runemu.sh puts a game (its memory rules; the Home
+# button's freeze takes the slice), the menu's bottom window left as it is.
+F=$1
+L=${BANANA_LIBEXEC:-/usr/libexec/banana}
+SVC=$(sed -n 's/^[[:space:]]*HW_SERVICES[[:space:]]*=[[:space:]]*//p' "${BANANA_HW_CONF:-/etc/banana/hw.conf}" 2>/dev/null | tail -n 1 | tr -d '"\r')
+# wl <command...>: the command with a Wayland compositor around it (run-wayland's own, or ROCKNIX's sway)
+wl() {
+    if [ "$SVC" = systemd ]; then
+        [ "$1" = --keep-bottom ] && shift
+        [ "$1" = -- ] && shift
+        # (new windows open on the focused output; start_banana.sh's rules make Wine's and the terminal's full screen)
+        [ -n "$BANANA_TOP" ] && swaymsg focus output "$BANANA_TOP" >/dev/null 2>&1
+        if [ -z "$BANANA_NO_SCOPE" ] && [ -d /run/systemd/system ] && command -v systemd-run >/dev/null 2>&1; then
+            systemd-run --scope --quiet --slice=games.slice --unit="pc-game-$$" -p TasksMax=infinity -p OOMPolicy=continue -- "$@"
+        else
+            "$@"
+        fi
+    else
+        "$L/run-wayland" "$@"
+    fi
+}
+exe=$(sed -n 's/^[[:space:]]*exe[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+steam=$(sed -n 's/^[[:space:]]*steam[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+if [ -z "$exe" ] && [ -n "$steam" ]; then
+    # a game of the Steam library that isn't on the card yet: downloaded (and the runtime fetched, the first time) in
+    # a terminal that shows it happen, then started
+    wl --keep-bottom -- foot -F -e sh -c "'$L/pc-games' status | head -n 1 | grep -q ready || '$L/pc-games' setup; '$L/steam' install \"\$1\" || { echo; echo 'Press B or wait...'; sleep 10; }" sh "$F"
+    exe=$(sed -n 's/^[[:space:]]*exe[[:space:]]*=[[:space:]]*//p' "$F" 2>/dev/null | tail -n 1 | tr -d '\r')
+    [ -n "$exe" ] || { "$L/pc-games" umount; exit 1; }
+fi
+case $exe in
+banana:setup)
+    wl --keep-bottom -- foot -F -e sh -c "'$L/pc-games' setup; echo; echo 'Press B or wait...'; sleep 8"
+    rc=$?
+    "$L/pc-games" scan
+    exit $rc ;;
+banana:steam)
+    wl --keep-bottom -- "$L/pc-games" steam ;;
+*)
+    wl --keep-bottom -- "$L/pc-games" run "$F" ;;
+esac
+rc=$?
+"$L/pc-games" umount
+exit $rc

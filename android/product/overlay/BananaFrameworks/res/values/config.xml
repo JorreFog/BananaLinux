@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaOS: framework settings for the Thor (target: android). -->
+<resources>
+    <!-- The bottom panel is a second display that supports a HOME (the device tree's display_settings.xml:
+         isHomeSupported, shouldShowSystemDecors). Its HOME is BananaLauncher's SECONDARY_HOME activity, always,
+         instead of Launcher3's SecondaryDisplayLauncher.
+         TODO: this must be BananaLauncher's package name (android/launcher's AndroidManifest.xml); the value below
+         is a placeholder until that manifest exists. The launcher needs an activity with
+         <category android:name="android.intent.category.SECONDARY_HOME" />, launchMode singleTop or standard
+         (multiple instances allowed). -->
+    <string name="config_secondaryHomePackage" translatable="false">org.bananaos.launcher</string>
+    <bool name="config_useSystemProvidedLauncherForSecondary">true</bool>
+
+    <!-- No screensavers (BasicDreams and PhotoTable are removed): a dream would also keep the SoC awake instead of
+         letting the handheld sleep. -->
+    <bool name="config_dreamsSupported">false</bool>
+    <bool name="config_dreamsEnabledByDefault">false</bool>
+    <bool name="config_dreamsActivatedOnDockByDefault">false</bool>
+    <bool name="config_dreamsActivatedOnSleepByDefault">false</bool>
+</resources>

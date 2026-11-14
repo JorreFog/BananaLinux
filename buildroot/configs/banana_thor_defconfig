@@ -1,0 +1,208 @@
+# Banana for the AYN Thor (Snapdragon 8 Gen 2, SM8550: the Base, Pro and Max; not the Lite, an SM8250).
+# Build: make thor (docs/THOR-PORT.md). Everything past the hardware is the RG DS's build, option for option.
+BR2_aarch64=y
+# (the Thor's cores: one Cortex-X3, two A715, two A710, three A510, all ARMv9.0; external.mk turns SVE off, which the
+# Snapdragon 8 Gen 2 doesn't have)
+BR2_cortex_a710=y
+BR2_OPTIMIZE_2=y
+# a handheld that runs its own games for one person: no stack protector in every function and no eager binding of
+# every symbol at start (emulator cycles and start-up time); FORTIFY level 1 stays, it costs nothing
+BR2_SSP_NONE=y
+BR2_RELRO_PARTIAL=y
+BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_BANANA_PATH)/patches"
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_BOOTLIN=y
+BR2_TOOLCHAIN_EXTERNAL_BOOTLIN_AARCH64_GLIBC_STABLE=y
+BR2_CCACHE=y
+BR2_CCACHE_INITIAL_SETUP="--max-size=3G"
+# BR2_DOWNLOAD_FORCE_CHECK_HASHES is not set
+BR2_TARGET_GENERIC_HOSTNAME="banana"
+BR2_TARGET_GENERIC_ISSUE="Banana"
+BR2_INIT_BUSYBOX=y
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/busybox.fragment"
+# udev (eudev): the Thor's drivers are mostly modules, and PipeWire's ALSA support needs it (the RG DS has devtmpfs alone)
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+# BR2_TARGET_GENERIC_GETTY is not set
+# BR2_TARGET_GENERIC_REMOUNT_ROOTFS_RW is not set
+BR2_ENABLE_LOCALE_PURGE=y
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_BANANA_PATH)/../system/rootfs"
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_BANANA_PATH)/board/thor/post-image.sh"
+BR2_ROOTFS_POST_SCRIPT_ARGS="thor"
+
+# kernel: mainline with ROCKNIX's SM8550 patches (board/thor/ROCKNIX, tools/sync-rocknix-sm8550.sh), the version ROCKNIX
+# builds for SM8550, from kernel.org. An EFI-stub Image: OpenABL (the bootloader, board/thor/openabl-README.txt) starts
+# it as an EFI application, uncompressed
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.tar.xz"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(BR2_EXTERNAL_BANANA_PATH)/board/thor/linux-rocknix.config"
+BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/linux-banana.fragment $(BR2_EXTERNAL_BANANA_PATH)/board/thor/linux-thor.fragment"
+BR2_LINUX_KERNEL_DTS_SUPPORT=y
+BR2_LINUX_KERNEL_INTREE_DTS_NAME="qcom/qcs8550-ayn-thor"
+BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
+BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
+
+# no U-Boot: the Thor's own bootloader, replaced once by OpenABL (package/openabl, flashed from Android or fastboot),
+# reads the card's boot partition
+BR2_PACKAGE_OPENABL=y
+
+# the root filesystem: squashfs, zstd (the RG DS's is LZ4). The Thor's cores unpack zstd faster than a card reads, so
+# the card is the limit, and zstd's image is smaller: 38% under LZ4HC's on a part of the Thor's root (90 MB: glibc,
+# Box64; measured on a PC, docs/THOR-TUNING.md). Less to read at every start, a smaller update to download, more room
+# in the 3 GB slot. mksquashfs's own level (15): 19 saved 1.6% more for three times the build time
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_ZSTD=y
+# BR2_TARGET_ROOTFS_TAR is not set
+BR2_PACKAGE_HOST_GENIMAGE=y
+BR2_PACKAGE_HOST_DOSFSTOOLS=y
+BR2_PACKAGE_HOST_MTOOLS=y
+
+# firmware: the WCN7850's Wi-Fi and Bluetooth (linux-firmware; its Bluetooth files come by external.mk), the Adreno
+# 740's three files (thor-gpu-firmware: linux-firmware's Adreno option has none of them, only other chips'), and the
+# Thor's own: the audio DSP and compute DSP, the speaker amplifiers' tuning, the sound topology
+# (rocknix-extra-firmware, at a later commit than the one ROCKNIX pins: that one has no topology; the package says)
+BR2_PACKAGE_LINUX_FIRMWARE=y
+BR2_PACKAGE_LINUX_FIRMWARE_QUALCOMM_WCN7850=y
+BR2_PACKAGE_ROCKNIX_EXTRA_FIRMWARE=y
+BR2_PACKAGE_THOR_GPU_FIRMWARE=y
+# USB debugging's adb (usr/libexec/banana/usb-debug: the network and the serial console need nothing more)
+BR2_PACKAGE_ANDROID_TOOLS=y
+BR2_PACKAGE_ANDROID_TOOLS_ADBD=y
+BR2_PACKAGE_WIRELESS_REGDB=y
+
+# Banana
+BR2_PACKAGE_BANANA_UI=y
+BR2_PACKAGE_BANANAD=y
+BR2_PACKAGE_SUPERDRASTIC=y
+BR2_PACKAGE_DRASTIC=y
+BR2_PACKAGE_BANANADS=y
+BR2_PACKAGE_BANANAFRONT=y
+# the other systems: RetroArch and its cores (all on by default under it)
+BR2_PACKAGE_RETROARCH=y
+
+# what the menu, sleep and the games need
+BR2_PACKAGE_ALSA_LIB=y
+BR2_PACKAGE_ALSA_UTILS=y
+BR2_PACKAGE_ALSA_UTILS_AMIXER=y
+BR2_PACKAGE_ALSA_UTILS_ALSACTL=y
+# the Thor's sound card (AudioReach on the ADSP) is set up by its UCM profile (ROCKNIX's, patches/alsa-ucm-conf):
+# alsa-lib's UCM, the ucm2 tree and alsaucm (bananad's sound setup for the Thor: docs/THOR-PORT.md, M3)
+BR2_PACKAGE_ALSA_LIB_UCM=y
+BR2_PACKAGE_ALSA_UCM_CONF=y
+BR2_PACKAGE_ALSA_UTILS_ALSAUCM=y
+# the sound server: PipeWire with WirePlumber (its session manager, in Lua), which run the card from that UCM profile,
+# and with SBC and Opus its Bluetooth headphones (usr/libexec/banana/sound-server)
+BR2_PACKAGE_PIPEWIRE=y
+BR2_PACKAGE_WIREPLUMBER=y
+BR2_PACKAGE_LUA=y
+BR2_PACKAGE_LUA_5_4=y
+BR2_PACKAGE_SBC=y
+BR2_PACKAGE_OPUS=y
+BR2_PACKAGE_FREETYPE=y
+BR2_PACKAGE_LIBDRM=y
+# bring-up: modetest (the connectors, their modes and panel orientation; usr/libexec/banana/hw-probe runs it)
+BR2_PACKAGE_LIBDRM_INSTALL_TESTS=y
+# the GPU: Buildroot's Mesa with freedreno for the Adreno 740 (no LLVM): GLES, and Vulkan through Turnip (the option
+# and Mesa 26.2.6 come from buildroot/buildroot-patches, applied by the Makefile, as Banana Pocket has them)
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+BR2_PACKAGE_MESA3D_GBM=y
+BR2_PACKAGE_SDL2=y
+BR2_PACKAGE_SDL2_KMSDRM=y
+BR2_PACKAGE_SDL2_OPENGLES=y
+BR2_PACKAGE_LIBCURL=y
+BR2_PACKAGE_LIBCURL_CURL=y
+BR2_PACKAGE_LIBCURL_OPENSSL=y
+# Files' servers (banana-fetch): SFTP, SMB, and 7z and RAR archives
+BR2_PACKAGE_LIBSSH2=y
+BR2_PACKAGE_LIBSSH2_OPENSSL=y
+BR2_PACKAGE_LIBSMB2=y
+BR2_PACKAGE_SEVENZIP=y
+BR2_PACKAGE_ZLIB=y
+BR2_PACKAGE_EXFATPROGS=y
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_UTIL_LINUX_PARTX=y
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN=y
+BR2_PACKAGE_KSMBD_TOOLS=y
+# Bluetooth (Settings > Network > Bluetooth, usr/libexec/banana/bluetooth): BlueZ's bluetoothd with its input plugins
+# for controllers (classic HID, and HoG for Bluetooth LE pads), bluetoothctl to drive it, and bluez-alsa for
+# headphones and speakers (A2DP, SBC) as an ALSA device, there being no sound server. D-Bus comes with them.
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
+# (no bluez-alsa: Bluetooth headphones are PipeWire's)
+# its codecs past SBC (the bluetooth script picks among them by Settings > Network > Bluetooth audio): aptX and
+# aptX HD (libopenaptx, GPL-3.0+), LDAC (Sony's AOSP encoder, Apache-2.0; package/ldacbt) and FastStream (external.mk).
+# No AAC: fdk-aac's licence grants no patent rights and can't be combined with libopenaptx's GPL-3.0.
+BR2_PACKAGE_DROPBEAR=y
+# BR2_PACKAGE_DROPBEAR_CLIENT is not set
+BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y
+BR2_PACKAGE_CA_CERTIFICATES=y
+# Ports and PortMaster (from the Store): bash for the ports' scripts, Python for PortMaster's own menu, the
+# SDL2 add-ons and sound libraries ports load from the system
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_BASH=y
+BR2_PACKAGE_PYTHON3=y
+BR2_PACKAGE_PYTHON3_PYC_ONLY=y
+BR2_PACKAGE_PYTHON3_PYEXPAT=y
+BR2_PACKAGE_PYTHON3_SSL=y
+BR2_PACKAGE_PYTHON3_SQLITE=y
+BR2_PACKAGE_PYTHON3_UNICODEDATA=y
+BR2_PACKAGE_PYTHON3_ZLIB=y
+BR2_PACKAGE_PYTHON3_BZIP2=y
+BR2_PACKAGE_PYTHON3_XZ=y
+BR2_PACKAGE_SDL2_TTF=y
+BR2_PACKAGE_SDL2_IMAGE=y
+BR2_PACKAGE_SDL2_MIXER=y
+BR2_PACKAGE_LIBPNG=y
+BR2_PACKAGE_JPEG=y
+BR2_PACKAGE_OPENAL=y
+BR2_PACKAGE_LIBVORBIS=y
+BR2_PACKAGE_LIBTHEORA=y
+BR2_PACKAGE_MPG123=y
+
+# ---- the AYN Thor's own additions over the RG DS's build ----
+# A compositor only around a program that needs one (usr/libexec/banana/run-wayland: the standalone emulators with a
+# window of their own, the browser, Wine): sway with no bar or tray (package/sway-lite), libseat's own backend (the
+# menu runs as root: no seat daemon), and it is gone when the program ends. The menu itself and RetroArch draw on the
+# panels with no compositor.
+BR2_PACKAGE_WAYLAND=y
+BR2_PACKAGE_WLROOTS=y
+BR2_PACKAGE_SEATD=y
+BR2_PACKAGE_SEATD_BUILTIN=y
+# BR2_PACKAGE_SEATD_DAEMON is not set
+BR2_PACKAGE_SWAY_LITE=y
+BR2_PACKAGE_SDL2_WAYLAND=y
+# the web browser (usr/libexec/banana/run-browser): WPE WebKit with Cog, its small launcher, on Wayland; an on-screen
+# keyboard for it on the bottom screen (package/wvkbd); fonts for the web
+BR2_PACKAGE_WPEWEBKIT=y
+BR2_PACKAGE_COG=y
+BR2_PACKAGE_COG_PLATFORM_FDO=y
+BR2_PACKAGE_WVKBD=y
+BR2_PACKAGE_FONTCONFIG=y
+BR2_PACKAGE_DEJAVU=y
+BR2_PACKAGE_LIBERATION=y
+# a terminal under run-wayland (the PC games' setup shows its downloads in it)
+BR2_PACKAGE_FOOT=y
+# PC games (usr/libexec/banana/pc-games, run-pc): Box64 runs Wine's x86_64 build, fetched once onto the card with DXVK
+# and VKD3D-Proton (xz and zstd unpack them), in an ext4 image there (e2fsprogs makes and checks it)
+BR2_PACKAGE_BOX64=y
+# (Wine's Wayland driver links libxkbregistry, which Box64 hands over to the system's: an option of libxkbcommon that
+# buildroot/buildroot-patches adds, Buildroot's own package building it without)
+BR2_PACKAGE_LIBXKBCOMMON_XKBREGISTRY=y
+# every system the Thor runs (package/thor-emulators: the cores and the standalone emulators, docs/THOR-EMULATORS.md)
+BR2_PACKAGE_BANANA_THOR_EMULATORS=y
+BR2_PACKAGE_XZ=y
+BR2_PACKAGE_ZSTD=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_E2FSPROGS_FSCK=y

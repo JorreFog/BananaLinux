@@ -1,0 +1,230 @@
+#!/bin/sh
+# The handheld's own extras, where it has them (the AYN Thor's under ROCKNIX: a fan, RGB rings round the sticks, a GPU
+# that can clock higher), for Settings > Handheld. The work is ROCKNIX's tools': fancontrol (its cooling.profile), the
+# Thor's ledcontrol and analog_sticks_ledcontrol, the SM8550's gpu_overclock; its settings are kept the same, so its own
+# menus and its boot agree.
+#   handheld caps                         what this handheld has, a word a line: fan, leds, gpuboost
+#   handheld fan quiet|moderate|aggressive|custom
+#   handheld leds off|battery|system|<colour> [low|medium|high]
+#                                         the stick lights: off, the battery's colour (ROCKNIX's), the colour of the
+#                                         system playing (run-rocknix, at a game's start), or one colour: yellow, red,
+#                                         green, blue, purple, pink, cyan, white
+#   handheld leds-effect none|breathe     the lights breathing (a slow pulse) or steady
+#   handheld leds-system <system>         (run-rocknix) the lights in the system's colour, when "system" is chosen
+#   handheld gpu on|off                   the GPU's top clock raised (1 GHz) or as shipped (680 MHz), where the kernel
+#                                         has the higher clock
+#   handheld boot                         (rcS, BananaOS's own image) the fan, the lights and the GPU as Settings keeps them
+#   handheld sleep                        (sleep.d/30-handheld, BananaOS's own image) the lights off and the fan stopped
+#                                         for a sleep; "boot" puts them back after it
+#   handheld poweroff-after <minutes>     asleep this long, the handheld turns off (ROCKNIX's sleep: its timed shutdown,
+#                                         in a game or not); 0 never
+# (host tests: BANANA_SYS for /sys, BANANA_TOOLS for ROCKNIX's tools, ROCKNIX_SETTINGS for its settings file)
+SYS=${BANANA_SYS:-/sys}
+TOOLS=${BANANA_TOOLS:-/usr/bin}
+DATA=${BANANA_DATA:-/data/banana}
+RUN=${BANANA_RUN:-/run/banana}
+LED=$SYS/devices/platform
+setting() {
+    if [ -n "$ROCKNIX_SETTINGS" ]; then { grep -vF "$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"
+    elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$1" "$2" ) >/dev/null 2>&1; fi
+}
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+has_fan() { ls "$SYS"/class/hwmon/hwmon*/pwm1 >/dev/null 2>&1; }
+has_leds() { [ -d "$LED/multi-ledl1" ] && [ -d "$LED/multi-ledr1" ]; }
+GPUFREQ=$SYS/class/devfreq/3d00000.gpu
+# ROCKNIX's GPU boost: in its platform's quirks (/usr/lib/autostart/quirks/platforms/SM8550/bin, where EmulationStation
+# runs it from: it isn't in /usr/bin), else beside the other tools
+GPU_OC=$TOOLS/gpu_overclock
+if [ ! -x "$GPU_OC" ] && [ -z "$BANANA_TOOLS" ]; then
+    hw=$(sed -n 's/^HW_DEVICE="*\([^"]*\)"*$/\1/p' /etc/os-release 2>/dev/null)
+    [ -n "$hw" ] && [ -x "/usr/lib/autostart/quirks/platforms/$hw/bin/gpu_overclock" ] && GPU_OC=/usr/lib/autostart/quirks/platforms/$hw/bin/gpu_overclock
+fi
+# (max_freq is only a ceiling: a boost is there to offer only if the kernel's table has the 1 GHz clock. Linux 7.2's
+# for the Adreno 740 ends at 680 MHz, so BananaOS's Thor image has none until its device tree adds one)
+has_gpu() { [ -x "$GPU_OC" ] || grep -qw 1000000000 "$GPUFREQ/available_frequencies" 2>/dev/null; }
+# ROCKNIX's tools where the system is ROCKNIX; on BananaOS's own image the same things done here (native: the fan's
+# curve in a loop of this script, the rings' and the GPU's sysfs files written directly)
+rocknix() { [ -x "$TOOLS/analog_sticks_ledcontrol" ] || [ -x "$GPU_OC" ]; }
+rings() {   # rings <brightness> <red> <green> <blue>: both rings, as ROCKNIX's analog_sticks_ledcontrol writes them
+    for s in l r; do for n in 1 2 3 4; do
+        d=$LED/multi-led$s$n/leds/rgb:$s$n
+        echo "$4 $3 $2" > "$d/multi_intensity" 2>/dev/null     # (the LEDs' channels are blue, green, red)
+        echo "$1" > "$d/brightness" 2>/dev/null
+    done; done
+}
+stop_loop() { [ -f "$RUN/$1.pid" ] && kill "$(cat "$RUN/$1.pid")" 2>/dev/null; rm -f "$RUN/$1.pid"; }
+# the battery as the rings' colour: green, amber while charging, red under 20 %; looked at every half minute
+battery_loop() {
+    stop_loop leds-battery
+    lvl=$1
+    (
+        while :; do
+            cap=$(cat "$SYS"/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+            if grep -qx Charging "$SYS"/class/power_supply/*/status 2>/dev/null; then rings "$lvl" 255 140 0
+            elif [ "${cap:-100}" -lt 20 ]; then rings "$lvl" 255 0 0
+            else rings "$lvl" 0 255 0
+            fi
+            sleep 30
+        done
+    ) </dev/null >/dev/null 2>&1 &
+    mkdir -p "$RUN"; echo $! > "$RUN/leds-battery.pid"
+}
+# the fan by the SoC's temperature (the mean of the CPU and GPU thermal zones, cpu* and gpuss*, as ROCKNIX's
+# fancontrol takes it), ROCKNIX's SM8550 curves: a speed (0-255) for each step of temperature, the profile moving the
+# steps. Nothing else drives the fan: the device tree maps no thermal zone to it
+fan_loop() {
+    stop_loop fan
+    pwm=$(ls "$SYS"/class/hwmon/hwmon*/pwm1 2>/dev/null | head -n 1)
+    [ -n "$pwm" ] || return 0
+    case $1 in aggressive) base=50 ;; quiet) base=60 ;; *) base=55 ;; esac
+    # the zones' temperature files, found once; each look reads them with the shell's own read and sums them in its
+    # arithmetic (it used to take a pipeline and three programs per zone every 3 s, some sixty processes on the SM8550's
+    # zones: now none, only the sleep)
+    zones=
+    for z in "$SYS"/class/thermal/thermal_zone*; do
+        read -r ty < "$z/type" 2>/dev/null || continue
+        case $ty in [Cc][Pp][Uu]*|gpuss*) zones="$zones $z/temp" ;; esac
+    done
+    (
+        echo 1 > "${pwm}_enable" 2>/dev/null
+        last=
+        while :; do
+            s=0; n=0
+            for f in $zones; do read -r c < "$f" 2>/dev/null && [ -n "$c" ] && { s=$((s + c)); n=$((n + 1)); }; done
+            t=0; [ "$n" -gt 0 ] && t=$((s / n / 1000))
+            # (quiet's top step is later still, as ROCKNIX's: 95 degrees)
+            top=$((base + 30)); [ "$base" = 60 ] && top=95
+            if [ "$t" -gt "$top" ]; then v=255
+            elif [ "$t" -gt $((base + 25)) ]; then v=204
+            elif [ "$t" -gt $((base + 20)) ]; then v=153
+            elif [ "$t" -gt $((base + 15)) ]; then v=119
+            elif [ "$t" -gt $((base + 10)) ]; then v=102
+            elif [ "$t" -gt $((base + 5)) ]; then v=77
+            elif [ "$t" -gt "$base" ]; then v=51
+            else v=0
+            fi
+            [ "$v" = "$last" ] || { echo "$v" > "$pwm" 2>/dev/null; last=$v; }
+            sleep "${BANANA_FAN_INTERVAL:-3}"
+        done
+    ) </dev/null >/dev/null 2>&1 &
+    mkdir -p "$RUN"; echo $! > "$RUN/fan.pid"
+}
+# a colour's red, green and blue
+rgb() {
+    case $1 in
+    yellow) echo "255 190 0" ;; red) echo "255 0 0" ;; green) echo "0 255 0" ;; blue) echo "0 0 255" ;;
+    purple) echo "160 0 255" ;; pink) echo "255 60 150" ;; cyan) echo "0 220 255" ;; white) echo "255 255 255" ;;
+    *) echo "255 190 0" ;;
+    esac
+}
+level() { case $1 in low) echo 64 ;; high) echo 255 ;; *) echo 140 ;; esac; }
+# each system's colour, the way its maker's machines look (the rest: the banana's yellow)
+system_colour() {
+    case $1 in
+    nds|ndsiware|3ds|n3ds|gb|gbh|gbc|gbch|gba|gbah|snes|sfc|nes|famicom|fds|n64|gamecube|wii|wiiu|switch|virtualboy|pokemini|gameandwatch) echo red ;;
+    megadrive|genesis|mastersystem|gamegear|sega32x|segacd|megacd|saturn|dreamcast|naomi|atomiswave|sg-1000) echo blue ;;
+    psx|ps2|psp|pspminis|psvita|ps3) echo cyan ;;
+    pcengine|tg16|pcenginecd|tg16cd|supergrafx|pcfx) echo purple ;;
+    arcade|mame|fbneo|fbn|cps1|cps2|cps3|neogeo|neocd) echo pink ;;
+    *) echo yellow ;;
+    esac
+}
+paint() {   # paint <colour> <brightness 0-255>: both rings
+    set -- $(rgb "$1") "$2"
+    if rocknix; then
+        "$TOOLS/analog_sticks_ledcontrol" "$4" "$1" "$2" "$3" "$1" "$2" "$3" >/dev/null 2>&1
+        setting analogsticks.led "$4 $1 $2 $3 $1 $2 $3"
+    else
+        rings "$4" "$1" "$2" "$3"
+    fi
+}
+stop_effect() { [ -f "$RUN/leds-effect.pid" ] && kill "$(cat "$RUN/leds-effect.pid")" 2>/dev/null; rm -f "$RUN/leds-effect.pid"; }
+
+case $1 in
+caps)
+    has_fan && echo fan
+    has_leds && echo leds
+    has_gpu && echo gpuboost
+    ;;
+fan)
+    case $2 in quiet|moderate|aggressive|custom) ;; *) echo "handheld fan quiet|moderate|aggressive|custom" >&2; exit 2 ;; esac
+    if rocknix; then
+        setting cooling.profile "$2"
+        ${BANANA_SYSTEMCTL:-systemctl} restart fancontrol >/dev/null 2>&1
+    else
+        has_fan && fan_loop "$2"
+    fi
+    ;;
+leds)
+    has_leds || exit 0
+    lvl=$(level "${3:-$(conf leds_level)}")
+    case $2 in
+    off) stop_effect; stop_loop leds-battery
+        if rocknix; then "$TOOLS/ledcontrol" off >/dev/null 2>&1; setting led.color off; else rings 0 0 0 0; fi ;;
+    battery) stop_effect
+        if rocknix; then "$TOOLS/ledcontrol" battery >/dev/null 2>&1; setting led.color battery; else battery_loop "$lvl"; fi ;;
+    system) stop_loop leds-battery; paint "$(system_colour "$(cat "$RUN/leds-system" 2>/dev/null)")" "$lvl"; setting led.color rgb ;;
+    *) stop_loop leds-battery; paint "$2" "$lvl"; setting led.color rgb ;;
+    esac
+    [ "$2" != off ] && [ "$2" != battery ] && [ "$(conf leds_effect)" = breathe ] && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds-effect breathe
+    ;;
+leds-system)
+    mkdir -p "$RUN"; echo "$2" > "$RUN/leds-system"
+    [ "$(conf leds)" = system ] && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds system
+    ;;
+leds-effect)
+    stop_effect
+    [ "$2" = breathe ] || exit 0
+    has_leds || exit 0
+    # a slow pulse of the rings' brightness, in the background (their colours as set)
+    top=$(level "$(conf leds_level)")
+    (
+        while :; do
+            for b in 8 16 32 48 64 96 128 160 192 224 255 224 192 160 128 96 64 48 32 16; do
+                v=$(( b * top / 255 ))
+                for s in l r; do for n in 1 2 3 4; do echo $v > "$LED/multi-led$s$n/leds/rgb:$s$n/brightness" 2>/dev/null; done; done
+                sleep 0.1
+            done
+        done
+    ) </dev/null >/dev/null 2>&1 &
+    mkdir -p "$RUN"; echo $! > "$RUN/leds-effect.pid"
+    ;;
+gpu)
+    has_gpu || exit 0
+    if [ -x "$GPU_OC" ]; then
+        case $2 in on) "$GPU_OC" enable ;; off) "$GPU_OC" disable ;; *) exit 2 ;; esac >/dev/null 2>&1
+    else
+        # (the Adreno 740's two top clocks: 680 MHz as shipped, 1 GHz)
+        case $2 in on) echo 1000000000 > "$GPUFREQ/max_freq" ;; off) echo 680000000 > "$GPUFREQ/max_freq" ;; *) exit 2 ;; esac 2>/dev/null
+    fi
+    ;;
+boot)
+    # BananaOS's own image, at its start (rcS): what Settings keeps, put in force
+    f=$(conf fan); has_fan && fan_loop "${f:-quiet}"
+    l=$(conf leds); has_leds && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" leds "${l:-system}"
+    [ "$(conf gpu_boost)" = on ] && has_gpu && "${BANANA_LIBEXEC:-/usr/libexec/banana}/handheld" gpu on
+    ;;
+sleep)
+    # ROCKNIX turns the SM8550's stick lights off before a sleep (quirks/platforms/SM8550/sleep.d/pre/001-led: lit, they
+    # keep the handheld from sleeping), and lit they draw from the battery all night. The fan's loop stops too (it
+    # would be frozen at whatever speed it last set) and the fan with it: asleep, the SoC cools by itself. (No thermal
+    # zone is mapped to the fan, so nothing spins it while the loop is gone; the SoC's own passive and critical trips
+    # are what is left.) ROCKNIX's system does this in its own sleep hooks
+    rocknix && exit 0
+    stop_effect; stop_loop leds-battery; stop_loop fan
+    has_leds && rings 0 0 0 0
+    for p in "$SYS"/class/hwmon/hwmon*/pwm1; do [ -e "$p" ] && echo 0 > "$p" 2>/dev/null; done
+    ;;
+poweroff-after)
+    case $2 in ''|*[!0-9]*) exit 2 ;; esac
+    if [ "$2" = 0 ]; then
+        setting system.suspend.enable_timed_shutdown 0
+    else
+        setting system.suspend.enable_timed_shutdown 1
+        setting system.shutdown_delay $(($2 * 60))
+        setting system.shutdown_delay_running_game $(($2 * 60))
+    fi
+    ;;
+*) echo "handheld caps | fan <profile> | leds <mode> [level] | leds-effect none|breathe | leds-system <system> | gpu on|off | boot | sleep | poweroff-after <minutes>" >&2; exit 2 ;;
+esac
+exit 0

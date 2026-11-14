@@ -1,0 +1,9 @@
+config BR2_PACKAGE_SHADERC
+	bool "shaderc"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  GLSL to SPIR-V compiler library, with the glslang and
+	  SPIRV-Tools it is made with (ARMSX2's Vulkan renderer).
+
+	  https://github.com/google/shaderc

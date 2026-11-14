@@ -1,0 +1,194 @@
+BananaDS's SDL frontend on a two-screen handheld under a Wayland compositor (the AYN Thor under ROCKNIX's sway):
+- sdl.windows=2: a full-screen window for each DS screen, the bottom one titled "BananaDS Bottom" (ROCKNIX's sway
+  puts windows named so on its second output); the stylus is a touch on the bottom one
+- pads through SDL's game controllers (ROCKNIX's InputPlumber pad), by place in Nintendo's layout; the left stick as
+  the d-pad; Select + Start or the guide button quits (the game's state kept for the next start)
+
+diff --git a/bananads/src/frontend_sdl.cpp b/bananads/src/frontend_sdl.cpp
+index ed8767a..f715923 100644
+--- a/bananads/src/frontend_sdl.cpp
++++ b/bananads/src/frontend_sdl.cpp
+@@ -90,14 +90,45 @@ static uint32_t key_bit(SDL_Keycode k) {
+     }
+ }
+ 
++// A pad (SDL's game controller: ROCKNIX's InputPlumber pad, any USB or Bluetooth one) as the DS's buttons, by their
++// place: the right face button is the DS's A, the bottom one B, the top one X, the left one Y (Nintendo's layout)
++static uint32_t pad_bit(int b) {
++    switch (b) {
++        case SDL_CONTROLLER_BUTTON_B: return KeyA;
++        case SDL_CONTROLLER_BUTTON_A: return KeyB;
++        case SDL_CONTROLLER_BUTTON_Y: return KeyX;
++        case SDL_CONTROLLER_BUTTON_X: return KeyY;
++        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return KeyL;
++        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return KeyR;
++        case SDL_CONTROLLER_BUTTON_START: return KeyStart;
++        case SDL_CONTROLLER_BUTTON_BACK: return KeySelect;
++        case SDL_CONTROLLER_BUTTON_DPAD_UP: return KeyUp;
++        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return KeyDown;
++        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return KeyLeft;
++        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return KeyRight;
++        default: return 0;
++    }
++}
++
+ int run_sdl(Emu& emu, const Config& cfg) {
+-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
++    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) {
+         Log(LogLevel::Error, "[sdl] %s\n", SDL_GetError());
+         return 1;
+     }
+     int scale = (int)cfg.num("sdl.scale", 2);
++    // sdl.windows=2 (a handheld with two screens under a Wayland compositor: the AYN Thor under ROCKNIX's sway): a window
++    // for each DS screen, full screen, the bottom one titled "BananaDS Bottom" (ROCKNIX's sway puts windows named so
++    // on its second output); the stylus is a touch on the bottom one. 1 (the default): both screens in one window.
++    const bool two = cfg.num("sdl.windows", 1) == 2;
++    const Uint32 wflags = cfg.flag("sdl.fullscreen", two) ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE;
+     SDL_Window* win = SDL_CreateWindow("BananaDS", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 256 * scale,
+-                                       384 * scale, SDL_WINDOW_RESIZABLE);
++                                       (two ? 192 : 384) * scale, wflags);
++    SDL_Window* win2 = two ? SDL_CreateWindow("BananaDS Bottom", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
++                                              256 * scale, 192 * scale, wflags) : nullptr;
++    if (!win || (two && !win2)) {
++        Log(LogLevel::Error, "[sdl] no window: %s\n", SDL_GetError());
++        return 1;
++    }
+     // sdl.present=queue shows a frame per display refresh: by SDL's vsync (sdl.vsync=on), or by a clock at sdl.refresh Hz
+     // (off, the default: under sway on the RG DS Plus SDL's vsync let only ~18 presents a second through, and a
+     // Wayland compositor shows the newest buffer at its own refresh anyway). sdl.present=direct always uses vsync.
+@@ -105,12 +136,18 @@ int run_sdl(Emu& emu, const Config& cfg) {
+     const bool vsync = !queued || cfg.flag("sdl.vsync", false);
+     const double refresh = cfg.num("sdl.refresh", 60);
+     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
++    // (the bottom window's: never vsync, the top one's present paces the loop)
++    SDL_Renderer* ren2 = two ? SDL_CreateRenderer(win2, -1, 0) : nullptr;
+     SDL_RendererInfo ri{};
+     if (SDL_GetRendererInfo(ren, &ri) == 0)
+         Log(LogLevel::Info, "[sdl] renderer %s, video driver %s\n", ri.name, SDL_GetCurrentVideoDriver());
+-    SDL_RenderSetLogicalSize(ren, 256, 384);
++    SDL_RenderSetLogicalSize(ren, 256, two ? 192 : 384);
++    if (ren2) SDL_RenderSetLogicalSize(ren2, 256, 192);
+     const int rs = emu.scale();  // render.scale: the screens' pixels (the logical size stays the DS's, for touch)
+-    SDL_Texture* tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256 * rs, 384 * rs);
++    SDL_Texture* tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256 * rs, (two ? 192 : 384) * rs);
++    SDL_Texture* tex2 = ren2 ? SDL_CreateTexture(ren2, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256 * rs, 192 * rs) : nullptr;
++    const Uint32 bottom_id = win2 ? SDL_GetWindowID(win2) : 0;
++    if (two) SDL_ShowCursor(SDL_DISABLE);
+ 
+     SDL_AudioSpec want{}, have{};
+     want.freq = 48000;
+@@ -136,7 +173,7 @@ int run_sdl(Emu& emu, const Config& cfg) {
+         else Log(LogLevel::Warn, "[sdl] no microphone: %s (F1 still blows)\n", SDL_GetError());
+     }
+ 
+-    uint32_t keys = 0;
++    uint32_t keys = 0, pad = 0, stick = 0;  // the keyboard's, the pads' buttons, the left stick as the d-pad
+     bool touching = false, quit = false;
+     auto next = std::chrono::steady_clock::now();
+     const auto frame = std::chrono::nanoseconds(16715180);  // 1 / 59.8261 Hz
+@@ -182,7 +219,27 @@ int run_sdl(Emu& emu, const Config& cfg) {
+         SDL_Event e;
+         while (SDL_PollEvent(&e)) {
+             if (e.type == SDL_QUIT) quit = true;
+-            else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
++            else if (e.type == SDL_CONTROLLERDEVICEADDED) {
++                if (SDL_GameController* gc = SDL_GameControllerOpen(e.cdevice.which))
++                    Log(LogLevel::Info, "[sdl] pad: %s\n", SDL_GameControllerName(gc));
++            } else if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {
++                const bool down = e.type == SDL_CONTROLLERBUTTONDOWN;
++                const uint32_t b = pad_bit(e.cbutton.button);
++                pad = down ? pad | b : pad & ~b;
++                // Select + Start, or the pad's own guide button: quit (the game's state kept for the next start)
++                if (down && (e.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE ||
++                             (pad & (KeySelect | KeyStart)) == (KeySelect | KeyStart)))
++                    quit = true;
++            } else if (e.type == SDL_CONTROLLERAXISMOTION &&
++                       (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)) {
++                // past half way out: that way (let go under a third: no flicker at the edge)
++                const bool x = e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX;
++                const uint32_t lo = x ? KeyLeft : KeyUp, hi = x ? KeyRight : KeyDown;
++                const int v = e.caxis.value;
++                if (v < -16384) stick = (stick & ~hi) | lo;
++                else if (v > 16384) stick = (stick & ~lo) | hi;
++                else if (v > -10922 && v < 10922) stick &= ~(lo | hi);
++            } else if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
+                 bool down = e.type == SDL_KEYDOWN;
+                 SDL_Keycode k = e.key.keysym.sym;
+                 if (down && !e.key.repeat) {
+@@ -201,8 +258,12 @@ int run_sdl(Emu& emu, const Config& cfg) {
+             } else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEMOTION || e.type == SDL_MOUSEBUTTONUP) {
+                 int wx = e.type == SDL_MOUSEMOTION ? e.motion.x : e.button.x;
+                 int wy = e.type == SDL_MOUSEMOTION ? e.motion.y : e.button.y;
++                const Uint32 wid = e.type == SDL_MOUSEMOTION ? e.motion.windowID : e.button.windowID;
++                // two windows: only the bottom one's touch is the stylus, in its own coordinates (as the lower half's)
++                if (two && wid != bottom_id && !touching) continue;
+                 float lx, ly;
+-                SDL_RenderWindowToLogical(ren, wx, wy, &lx, &ly);
++                SDL_RenderWindowToLogical(two ? ren2 : ren, wx, wy, &lx, &ly);
++                if (two) ly += 192;
+                 if (e.type == SDL_MOUSEBUTTONDOWN && ly >= 192) touching = true;
+                 if (e.type == SDL_MOUSEBUTTONUP) {
+                     touching = false;
+@@ -217,11 +278,19 @@ int run_sdl(Emu& emu, const Config& cfg) {
+             }
+         }
+         const int w = 256 * rs, h = 192 * rs;
++        const uint32_t held = keys | pad | stick;
+         if (queued) {
+-            in_keys = keys;
++            in_keys = held;
+             // (the texture keeps the last frame: a repeat uploads nothing)
+-            if (const std::vector<uint32_t>* f = fq.next())
++            if (const std::vector<uint32_t>* f = fq.next()) {
+                 SDL_UpdateTexture(tex, nullptr, f->data(), w * 4);
++                if (tex2) SDL_UpdateTexture(tex2, nullptr, f->data() + (size_t)w * h, w * 4);
++            }
++            if (ren2) {
++                SDL_RenderClear(ren2);
++                SDL_RenderCopy(ren2, tex2, nullptr, nullptr);
++                SDL_RenderPresent(ren2);
++            }
+             SDL_RenderClear(ren);
+             SDL_RenderCopy(ren, tex, nullptr, nullptr);
+             SDL_RenderPresent(ren);  // (vsync paces this thread, or the clock below)
+@@ -251,15 +320,23 @@ int run_sdl(Emu& emu, const Config& cfg) {
+             }
+             continue;
+         }
+-        emu.set_keys(keys);
++        emu.set_keys(held);
+         emu.run_frame();  // the audio callback reads the SPU meanwhile: melonDS locks its output buffer
+ 
+-        void* px;
+-        int pitch;
+-        SDL_LockTexture(tex, nullptr, &px, &pitch);
+-        for (int y = 0; y < 2 * h; y++)
+-            memcpy((uint8_t*)px + y * pitch, y < h ? emu.top() + y * w : emu.bottom() + (y - h) * w, w * 4);
+-        SDL_UnlockTexture(tex);
++        if (two) {
++            SDL_UpdateTexture(tex, nullptr, emu.top(), w * 4);
++            SDL_UpdateTexture(tex2, nullptr, emu.bottom(), w * 4);
++            SDL_RenderClear(ren2);
++            SDL_RenderCopy(ren2, tex2, nullptr, nullptr);
++            SDL_RenderPresent(ren2);
++        } else {
++            void* px;
++            int pitch;
++            SDL_LockTexture(tex, nullptr, &px, &pitch);
++            for (int y = 0; y < 2 * h; y++)
++                memcpy((uint8_t*)px + y * pitch, y < h ? emu.top() + y * w : emu.bottom() + (y - h) * w, w * 4);
++            SDL_UnlockTexture(tex);
++        }
+         SDL_RenderClear(ren);
+         SDL_RenderCopy(ren, tex, nullptr, nullptr);
+         SDL_RenderPresent(ren);
+@@ -275,6 +352,9 @@ int run_sdl(Emu& emu, const Config& cfg) {
+     if (cfg.flag("resume.on_quit", true)) emu.save_state(0);
+     if (in) SDL_CloseAudioDevice(in);
+     if (out) SDL_CloseAudioDevice(out);
++    if (tex2) SDL_DestroyTexture(tex2);
++    if (ren2) SDL_DestroyRenderer(ren2);
++    if (win2) SDL_DestroyWindow(win2);
+     SDL_DestroyTexture(tex);
+     SDL_DestroyRenderer(ren);
+     SDL_DestroyWindow(win);

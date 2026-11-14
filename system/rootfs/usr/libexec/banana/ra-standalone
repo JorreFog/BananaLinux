@@ -1,0 +1,95 @@
+#!/bin/sh
+# The RetroAchievements login for the emulators that aren't RetroArch: PPSSPP, Dolphin, Flycast and ARMSX2 each have
+# achievements of their own and a login of their own. The account logged in once in BananaOS (the first-time setup, or
+# Settings > Accounts: banana/accounts.conf) is handed to each as its game starts, the way run-retroarch hands it to
+# RetroArch, and its token is taken out of the emulator's files again when the game ends (file sharing shows those
+# files; it hides accounts.conf). With no account in BananaOS nothing is touched: a login made in the emulator's own
+# menu stays as it is.
+#
+# All four log in with the account's name and the site's login token (rcheevos' rc_client_begin_login_with_token),
+# the token RetroArch keeps too. When accounts.conf has only the password (no RetroArch game was started yet), the
+# token is asked from the site once and kept.
+#
+#   ra-standalone token                     the token (nothing, and status 1, without an account or a way to get it)
+#   ra-standalone ppsspp <PSP/SYSTEM>       before the game: the account into the emulator's settings
+#   ra-standalone dolphin <Config>
+#   ra-standalone flycast <emu.cfg>
+#   ra-standalone armsx2 <inis>
+#   ra-standalone scrub <emulator> <path>   after the game: the token out of them
+# (host tests: BANANA_DATA for /data/banana, BANANA_RA_URL for the site)
+A=${BANANA_DATA:-/data/banana}/accounts.conf
+URL=${BANANA_RA_URL:-https://retroachievements.org/dorequest.php}
+acct() { sed -n "/^$1=/{s///p;q}" "$A" 2>/dev/null; }
+# ini_set <file> <section> <key> <value>: "key = value" in [section], which is added when the file has none
+ini_set() {
+    [ -f "$1" ] || : > "$1"
+    awk -v s="[$2]" -v k="$3" -v v="$4" '
+        function put() { if (in_s && !done) { print k " = " v; done = 1 } }
+        { sub(/\r$/, "") }
+        /^\[/ { put(); in_s = ($0 == s); if (in_s) seen = 1 }
+        in_s && !done && $0 ~ ("^[ \t]*" k "[ \t]*=") { print k " = " v; done = 1; next }
+        { print }
+        END { if (!seen) print s; if (!done) print k " = " v }' "$1" > "$1.new" && mv "$1.new" "$1"
+}
+# ini_del <file> <section> <key>
+ini_del() {
+    [ -f "$1" ] || return 0
+    awk -v s="[$2]" -v k="$3" '
+        { l = $0; sub(/\r$/, "", l) }
+        l ~ /^\[/ { in_s = (l == s) }
+        in_s && l ~ ("^[ \t]*" k "[ \t]*=") { next }
+        { print }' "$1" > "$1.new" && mv "$1.new" "$1"
+}
+token() {
+    u=$(acct ra_user); [ -n "$u" ] || return 1
+    t=$(acct ra_retroarch_token)
+    if [ -z "$t" ]; then
+        p=$(acct ra_password); [ -n "$p" ] || return 1
+        # (the site's own login, as rcheevos sends it; a few seconds at most: a game doesn't wait for a dead network)
+        t=$(curl -fsS --max-time 6 -A BananaOS -d r=login2 --data-urlencode "u=$u" --data-urlencode "p=$p" "$URL" 2>/dev/null |
+            sed -n 's/.*"Token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        [ -n "$t" ] || return 1
+        sed -i '/^ra_retroarch_token=/d' "$A" && printf 'ra_retroarch_token=%s\n' "$t" >> "$A"
+    fi
+    printf '%s\n' "$t"
+}
+case $1 in
+token) token ;;
+ppsspp|dolphin|flycast|armsx2)
+    [ -n "$2" ] || exit 2
+    U=$(acct ra_user); [ -n "$U" ] || exit 0
+    T=$(token) || { echo "ra-standalone: no login token for $U (offline, or the password is wrong): $1 keeps what it has"; exit 0; }
+    case $1 in
+    ppsspp)
+        ini_set "$2/ppsspp.ini" Achievements AchievementsEnable True
+        ini_set "$2/ppsspp.ini" Achievements AchievementsUserName "$U"
+        # (PPSSPP keeps the token beside ppsspp.ini, not in it)
+        printf '%s' "$T" > "$2/ppsspp_retroachievements.dat" ;;
+    dolphin)
+        ini_set "$2/RetroAchievements.ini" Achievements Enabled True
+        ini_set "$2/RetroAchievements.ini" Achievements Username "$U"
+        ini_set "$2/RetroAchievements.ini" Achievements ApiToken "$T" ;;
+    flycast)
+        ini_set "$2" achievements Enabled yes
+        ini_set "$2" achievements UserName "$U"
+        ini_set "$2" achievements Token "$T" ;;
+    armsx2)
+        # (its settings file; it moves the token to its secrets file itself as it starts)
+        ini_set "$2/PCSX2.ini" Achievements Enabled true
+        ini_set "$2/PCSX2.ini" Achievements Username "$U"
+        ini_set "$2/PCSX2.ini" Achievements Token "$T" ;;
+    esac
+    echo "ra-standalone: $1 logs in as $U" ;;
+scrub)
+    [ -n "$3" ] || exit 2
+    [ -n "$(acct ra_user)" ] || exit 0
+    case $2 in
+    ppsspp) rm -f "$3/ppsspp_retroachievements.dat" ;;
+    dolphin) ini_del "$3/RetroAchievements.ini" Achievements ApiToken ;;
+    flycast) ini_del "$3" achievements Token ;;
+    armsx2) ini_del "$3/PCSX2.ini" Achievements Token; ini_del "$3/secrets.ini" Achievements Token ;;
+    esac ;;
+*)
+    sed -n '2,/^[^#]/p' "$0" | grep '^#' | cut -c3-
+    exit 2 ;;
+esac

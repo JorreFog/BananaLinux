@@ -9,4 +9,9 @@ mkdir -p $S/data $S/apps $S/tiles
 cd $S
 export DK_DATA=$S/data DK_TOP=${BANANA_TOP:-DSI-2} DK_TOUCH_BOTTOM=${BANANA_TOUCH:-fe5e0000.i2c}
 export RNDS_STORE_CLI=/usr/share/banana/apps/store/rocknixds-store RNDS_STORE_DATA=$S/data RNDS_STORE_PLATFORM=banana
+# under a compositor (ROCKNIX's sway: the menu's own display is SDL there) a full-screen window on each screen
+if [ "$BANANA_DISPLAY" = sdl ]; then
+    export DK_SDL_LAYOUT=windows DK_TITLE=Store SDL_VIDEODRIVER=wayland
+    exec /usr/bin/rocknixds-store-ui --backend sdl
+fi
 exec /usr/bin/rocknixds-store-ui --backend kms

@@ -1,0 +1,62 @@
+#!/bin/sh
+# Settings > System > Time zone for the whole system where the menu isn't the only one keeping time (ROCKNIX: its
+# rocknix-config tz, which sets the system's zone and its tz-data service). The menu keeps the zone as a POSIX TZ rule
+# (settings.cpp's ZONES); this gives the system a zone that follows the same rule. BananaOS needs none of it: its
+# programs take TZ from the menu's settings.
+#   timezone <POSIX TZ rule>
+# (host tests: BANANA_TZ_TOOL for rocknix-config)
+TOOL=${BANANA_TZ_TOOL:-/usr/bin/rocknix-config}
+case $1 in
+    UTC0) z=UTC ;;
+    GMT0) z=Atlantic/Reykjavik ;;
+    GMT0BST,M3.5.0/1,M10.5.0) z=Europe/London ;;
+    WAT-1) z=Africa/Lagos ;;
+    CET-1CEST,M3.5.0,M10.5.0/3) z=Europe/Amsterdam ;;
+    SAST-2) z=Africa/Johannesburg ;;
+    EET-2EEST,M3.5.0/3,M10.5.0/4) z=Europe/Helsinki ;;
+    EET-2EEST,M4.5.5/0,M10.5.4/24) z=Africa/Cairo ;;
+    '<+03>-3') z=Europe/Istanbul ;;
+    MSK-3) z=Europe/Moscow ;;
+    '<+0330>-3:30') z=Asia/Tehran ;;
+    '<+04>-4') z=Asia/Dubai ;;
+    '<+0430>-4:30') z=Asia/Kabul ;;
+    PKT-5) z=Asia/Karachi ;;
+    IST-5:30) z=Asia/Kolkata ;;
+    '<+0545>-5:45') z=Asia/Kathmandu ;;
+    '<+06>-6') z=Asia/Dhaka ;;
+    '<+0630>-6:30') z=Asia/Yangon ;;
+    '<+07>-7') z=Asia/Bangkok ;;
+    CST-8) z=Asia/Shanghai ;;
+    JST-9) z=Asia/Tokyo ;;
+    ACST-9:30) z=Australia/Darwin ;;
+    ACST-9:30ACDT,M10.1.0,M4.1.0/3) z=Australia/Adelaide ;;
+    AEST-10) z=Australia/Brisbane ;;
+    AEST-10AEDT,M10.1.0,M4.1.0/3) z=Australia/Sydney ;;
+    '<+11>-11') z=Pacific/Noumea ;;
+    '<+12>-12') z=Pacific/Fiji ;;
+    NZST-12NZDT,M9.5.0,M4.1.0/3) z=Pacific/Auckland ;;
+    '<+13>-13') z=Pacific/Tongatapu ;;
+    SST11) z=Pacific/Pago_Pago ;;
+    HST10) z=Pacific/Honolulu ;;
+    AKST9AKDT,M3.2.0,M11.1.0) z=America/Anchorage ;;
+    PST8PDT,M3.2.0,M11.1.0) z=America/Los_Angeles ;;
+    MST7) z=America/Phoenix ;;
+    MST7MDT,M3.2.0,M11.1.0) z=America/Denver ;;
+    CST6) z=America/Mexico_City ;;
+    CST6CDT,M3.2.0,M11.1.0) z=America/Chicago ;;
+    '<-05>5') z=America/Bogota ;;
+    CST5CDT,M3.2.0/0,M11.1.0/1) z=America/Havana ;;
+    EST5EDT,M3.2.0,M11.1.0) z=America/New_York ;;
+    '<-04>4') z=America/Caracas ;;
+    AST4) z=America/Puerto_Rico ;;
+    AST4ADT,M3.2.0,M11.1.0) z=America/Halifax ;;
+    '<-04>4<-03>,M9.1.6/24,M4.1.6/24') z=America/Santiago ;;
+    NST3:30NDT,M3.2.0,M11.1.0) z=America/St_Johns ;;
+    '<-03>3') z=America/Sao_Paulo ;;
+    '<-02>2') z=America/Noronha ;;
+    '<-01>1<+00>,M3.5.0/0,M10.5.0/1') z=Atlantic/Azores ;;
+    '<-01>1') z=Atlantic/Cape_Verde ;;
+    *) echo "timezone: no zone for $1" >&2; exit 1 ;;
+esac
+[ -x "$TOOL" ] || exit 0
+exec "$TOOL" tz "$z"

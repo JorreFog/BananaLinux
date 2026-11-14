@@ -18,6 +18,41 @@
       "type": "boolean",
       "description": "true: theme errors are also drawn in red on the top screen, not only logged."
     },
+    "stage": {
+      "enum": ["canvas", "screen"],
+      "description": "What a layout theme lays out on. \"canvas\" (the default): the 640 x 480 canvas on both screens, staged in the middle of a screen of another shape. \"screen\": each screen's own size, its top-left at 0,0 (on the AYN Thor 853 x 480 on the 16:9 top and 640 x 557 on the bottom; on the RG DS 640 x 480 as before), read with W and H."
+    },
+    "panels": {
+      "enum": ["", "flat", "material"],
+      "description": "Settings, the keyboard and the game panel's boxes: \"\" (the default) the Pixel look (banded, thick outlines, hard shadows); \"flat\" flat surfaces with a hairline edge (colors.edge, the accent's on the one that's on), a light line along the top (panelBand) and a darker one along the bottom (panelLow)."
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Settings, the first-time setup, the keyboard, the lists and the game panel in the theme's own way (the engine draws them; these say how). Missing: the Pixel look's, as the RG DS's themes have it.",
+      "properties": {
+        "top": { "enum": ["", "open"], "description": "\"open\": the top screen's text straight on the screen (no card round it)." },
+        "left": { "type": "number", "minimum": 0, "maximum": 400, "description": "The top screen's text column's left edge, in units from the screen's own left edge (on a wider screen than the canvas: the AYN Thor's top). Missing: where the canvas puts it." },
+        "icons": { "enum": ["", "tile", "none"], "description": "The top screen's pixel icons: \"tile\" on a lit tile as the home screen's, \"none\" left out." },
+        "pick": { "enum": ["", "outline"], "description": "\"outline\": the picked row stays the surface, with an edge and a glow in the accent (its text the ink)." },
+        "hints": { "enum": ["", "pill"], "description": "\"pill\": the B / A button hints as pills with a round key, A's edge and label in the accent." },
+        "header": { "enum": ["", "rule"], "description": "\"rule\": a page's title over a hairline instead of in a box." },
+        "bodyFont": { "type": "string", "description": "The help texts' font: \"inter\", \"inter-medium\", \"inter-semibold\" or a .ttf beside the theme. Missing: fonts.regular (Pixelify Sans)." },
+        "layout": { "enum": ["", "screen"], "description": "\"screen\": Settings' pages laid out on each screen's own shape (edge to edge on the bottom screen, a crumb, a large title and the help on the top one) instead of in the 4:3 canvas." },
+        "glyphs": { "type": "string", "description": "A folder beside the theme with line icons (<name>-32.png for rows, <name>-88.png for tiles; white, tinted)." },
+        "plate": {"type": "object", "additionalProperties": false, "properties": {"light": {"type": "number", "minimum": 0, "maximum": 1}, "at": {"type": "number", "minimum": 0, "maximum": 1}, "dark": {"type": "number", "minimum": 0, "maximum": 1}, "lip": {"type": "number", "minimum": 0, "maximum": 24}}, "description": "The material look's plate from the accent: white mixed in at the top (light), where the accent itself sits (at, 0..1 down), black at the bottom (dark), the lower lip's height in px (lip). Default 0.18, 0.38, 0.14, 6."},
+        "state": {"type": "object", "additionalProperties": false, "properties": {"light": {"type": "number", "minimum": 0, "maximum": 1}, "at": {"type": "number", "minimum": 0, "maximum": 1}, "dark": {"type": "number", "minimum": 0, "maximum": 1}, "lip": {"type": "number", "minimum": 0, "maximum": 24}}, "description": "The same for what says \"on\" (a switch, a bar's fill, the main hint's key) when it isn't the plate. Missing: the plate."},
+        "texture": {"type": "string", "description": "An RGBA .png beside the theme, tiled over the material look's cards, rows and tiles in place of the cards' dots."},
+        "help": {"type": "object", "additionalProperties": {"type": "string"}, "description": "The theme's own words for a row's help on the top screen, by the row's key: \"theme\" (what this theme is), \"accent\" (what its accent colours). In English; other rows keep the system's help."}
+      }
+    },
+    "transitions": {
+      "enum": ["", "fade"],
+      "description": "\"fade\": smooth, eased fades between the boot animation and the menu, a game and the menu, the first boot's arrival and the setup, and into the shutdown, instead of the iris and the stepped fades. Screens of another shape than the canvas (the AYN Thor's) always fade."
+    },
+    "extends": {"type": "string", "pattern": "^[^/]+$", "description": "Another theme's file name without .json (beside this one, else on the card, else the image's): this theme's members go over that one's, objects member by member, anything else whole, null takes a member away. Up to four deep. Files are looked for in this theme's folder first, then that one's."},
+    "accents": {"type": "object", "additionalProperties": false, "description": "Settings > Accent colour in this theme: its names, colours and inks for Banana's six, in this order, and the theme's own before them (\"own\": the setting's value \"theme\", set when the theme is chosen; it needs a color).", "properties": {"own": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "yellow": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "blue": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "red": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "green": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "purple": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}, "pink": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "description": "The choice's name in the row."}, "color": {"$ref": "#/$defs/color", "description": "Its colour (the lighter and darker shades are worked out)."}, "ink": {"$ref": "#/$defs/color", "description": "Text on it (accent.ink, the plate's text) while Text on accent is Auto."}}}}},
+    "accentLogo": {"type": "boolean", "description": "false: the boot animation's banana stays yellow whatever the accent. Default true."},
     "base": {
       "enum": ["dark", "light"],
       "description": "The palette the theme starts from (the Settings screen's look). Defaults to \"dark\"."
@@ -85,14 +120,20 @@
       "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/hintItem" } }
     },
     "behavior": { "$ref": "#/$defs/behavior" },
+    "systems": {
+      "type": "object",
+      "description": "The theme's own words for systems, by id: { \"nds\": { \"short\": \"DS\", \"year\": \"2004\" } }. Each key is a hook: sys.short, sys.year, item.short in a list (\"\" for a system the theme doesn't name).",
+      "additionalProperties": { "type": "object", "additionalProperties": { "type": ["string", "number"] } }
+    },
     "screens": {
       "type": "object",
-      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar).",
+      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar). \"settings\" is drawn under Settings' own pages (the setup, the lists, the keyboard, the game panel), over each screen's background: a status bar.",
       "properties": {
         "home": { "$ref": "#/$defs/screen" },
         "library": { "$ref": "#/$defs/screen" },
         "launch": { "$ref": "#/$defs/screen" },
-        "all": { "$ref": "#/$defs/screen" }
+        "all": { "$ref": "#/$defs/screen" },
+        "settings": { "$ref": "#/$defs/screen" }
       },
       "additionalProperties": false
     },
@@ -327,7 +368,7 @@
         "fit": {
           "description": "How the picture fits its box.",
           "anyOf": [
-            { "enum": ["cover", "contain", "fill", "coverTop", "pixel", "pixelContain"] },
+            { "enum": ["cover", "contain", "fill", "coverTop", "pixel", "pixelContain", "tile"] },
             { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
           ]
         },
@@ -340,6 +381,24 @@
         },
         "tint": { "$ref": "#/$defs/color", "description": "A colour multiplied into the picture." },
         "placeholder": { "$ref": "#/$defs/color", "description": "A colour shown while the picture loads or when there is nothing." },
+        "blur": { "$ref": "#/$defs/prop", "description": "An image blurred by this much (units; a Gaussian blur's deviation, as CSS's blur()). The picture is blurred, not what is behind it; its edges repeat." },
+        "saturate": { "$ref": "#/$defs/prop", "description": "An image's colours made stronger (above 1) or greyer (0: grey)." },
+        "mask": {
+          "description": "An image fading out: \"radial\" from its middle to its nearest side, or an object.",
+          "anyOf": [
+            { "enum": ["radial", "linear"] },
+            { "type": "object", "properties": {
+                "shape": { "enum": ["radial", "linear"] },
+                "angle": { "$ref": "#/$defs/prop", "description": "linear: the direction, a CSS angle (90 runs left to right)." },
+                "from": { "$ref": "#/$defs/prop", "description": "Whole up to here (0..1 of the way)." },
+                "to": { "$ref": "#/$defs/prop", "description": "Gone from here on (0..1 of the way)." } },
+              "additionalProperties": false }
+          ]
+        },
+        "rotate": { "$ref": "#/$defs/prop", "description": "An image turned by this many degrees clockwise about its pivot." },
+        "tilt": { "$ref": "#/$defs/prop", "description": "An image swung by this many degrees round the upright line through its pivot, as a door (CSS rotateY), seen from \"perspective\" away." },
+        "perspective": { "$ref": "#/$defs/prop", "description": "How far away a tilted image is seen from (units; default 1000)." },
+        "pivot": { "type": "array", "items": { "$ref": "#/$defs/prop" }, "minItems": 2, "maxItems": 2, "description": "The point an image turns or tilts about, [x, y] in 0..1 of its box (default the middle, [0.5, 0.5])." },
         "source": {
           "description": "A list's data.",
           "anyOf": [

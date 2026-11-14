@@ -1,0 +1,52 @@
+# the home row: the systems, each one's stats on the top screen
+raw home 0
+hold 1.8
+press right 1.0
+press right 1.0
+press right 1.0
+press left 0.9
+press left 1.0
+# the GBA library, a game's page: ROCKNIX's emulators and their options
+press a 1.8
+press right 1.1
+press left 1.1
+press x 1.8
+press down 1.2
+press right 1.4
+press right 1.4
+press right 1.4
+press down 1.0
+press right 1.3
+press up 0.9
+press up 0.9
+press right 1.6
+press b 1.0
+press b 1.4
+# Settings: Display & sound (each screen's brightness, the bottom screen in games)
+press start 1.6
+press right 0.8
+press right 0.9
+press a 1.5
+press down 0.8
+press down 0.8
+press down 0.8
+press down 1.2
+press b 1.0
+# Sleep & power > Fan, lights & speed
+press down 0.8
+press left 0.9
+press a 1.5
+press down 0.8
+press down 1.0
+press a 1.6
+press right 1.2
+press down 0.9
+press right 0.9
+press right 0.9
+press right 1.2
+press down 0.8
+press down 0.8
+press down 1.4
+press b 0.9
+press b 0.9
+press b 1.5

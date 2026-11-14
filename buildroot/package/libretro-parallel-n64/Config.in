@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LIBRETRO_PARALLEL_N64
+	bool "libretro-parallel-n64"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_PACKAGE_HAS_LIBGLES && BR2_PACKAGE_HAS_LIBEGL
+	help
+	  Nintendo 64: ParaLLEl N64 (GLideN64/Glide64 on GLES; no Vulkan
+	  RDP in RetroArch here).
+
+	  https://github.com/libretro/parallel-n64

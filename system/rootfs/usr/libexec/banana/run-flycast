@@ -1,0 +1,54 @@
+#!/bin/sh
+# Dreamcast, Naomi and Atomiswave: Flycast standalone (package/flycast: ROCKNIX's SM8550 build), Vulkan, on a
+# compositor of its own on the top panel (run-wayland). Its folders are fixed in the build (ROCKNIX's patch, written as
+# BananaOS's): settings in /data/flycast (emu.cfg and the pad mappings, from /usr/share/flycast on the first run), its
+# data folder /data/bios/dc: the BIOS files (dc_boot.bin, dc_flash.bin; naomi.zip, awbios.zip for the arcade boards),
+# and also where Flycast keeps the VMU saves and states, as on ROCKNIX. Quit: the menu's quit (SIGTERM, passed on).
+#   run-flycast <game>       (.chd .cdi .gdi .cue .m3u .zip .7z .lst .dat)
+ROM="$1"
+D=/data/flycast
+T=/usr/share/flycast
+LOGS=/data/banana/logs/flycast
+mkdir -p "$D/mappings" "$LOGS" /data/bios/dc /data/screenshots
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-flycast: ${BANANA_SYSTEM:-dreamcast} $ROM"
+
+# emu.cfg: ROCKNIX's when the card's has no [config] section (ROCKNIX's own test); the mappings it doesn't have yet
+grep -q '^\[config\]' "$D/emu.cfg" 2>/dev/null || cp "$T/emu.cfg" "$D/emu.cfg"
+for f in "$T"/mappings/*; do
+    [ -f "$D/mappings/${f##*/}" ] || cp "$f" "$D/mappings/"
+done
+sed -i 's/^backend = .*/backend = alsa/' "$D/emu.cfg"
+# The renderer: Vulkan (pvr.rend = 4), which the image's emu.cfg has now; a card's from before it has OpenGL
+# (pvr.rend = 0), which was that template's line and nobody's choice. Set once ($1/.vulkan-1 says it was): any other
+# value before it is the owner's (only Flycast's own menu writes one), and so is OpenGL picked again after it.
+#   vulkan_once <settings folder>
+vulkan_once() {
+    [ -e "$1/.vulkan-1" ] && return
+    if grep -q '^pvr\.rend = 0$' "$1/emu.cfg"; then
+        sed -i 's/^pvr\.rend = 0$/pvr.rend = 4/' "$1/emu.cfg"
+    elif ! grep -q '^pvr\.rend = ' "$1/emu.cfg"; then
+        # (no line is OpenGL too, the build's default)
+        sed -i 's/^\[config\]$/&\npvr.rend = 4/' "$1/emu.cfg"
+    fi
+    : > "$1/.vulkan-1"
+}
+vulkan_once "$D"
+[ -f /data/bios/dc/dc_boot.bin ] || echo "run-flycast: no dc_boot.bin in /data/bios/dc (Flycast's HLE BIOS is used)"
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+
+# the RetroAchievements account logged in in BananaOS, for this emulator's own achievements (ra-standalone)
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" flycast "$D/emu.cfg"
+/usr/libexec/banana/run-wayland -- /usr/bin/flycast "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" scrub flycast "$D/emu.cfg"
+echo "run-flycast: exit $RC"
+exit $RC

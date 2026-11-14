@@ -1,0 +1,3 @@
+# Empty on purpose: this file hides eudev's own /lib/udev/rules.d/80-net-name-slot.rules, which would rename the AYN
+# Thor's Wi-Fi from wlan0 to wlp1s0 (the WCN7850 is a PCI device). The wifi script, bananad and the menu all ask for
+# wlan0. Only a board on udev reads this.

@@ -125,11 +125,26 @@ namespace banana
 		return trim(s);
 	}
 
+	// a word for sh -c, quoted
+	static std::string shellQuote(const std::string& x)
+	{
+		std::string r = "'";
+		for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; }
+		return r + "'";
+	}
+
 	// the handheld (/etc/banana/board: rgds, rgds-plus); BANANA_BOARD stands in for it in the host tests
 	static std::string board_()
 	{
 		if (const char* b = getenv("BANANA_BOARD")) return b;
 		return readLine("/etc/banana/board");
+	}
+
+	// the RG DS family: rgds, rgds-plus, and the universal card (one image for both)
+	static bool rgdsBoard_()
+	{
+		const std::string b = board_();
+		return b.compare(0, 4, "rgds") == 0 || b == "universal";
 	}
 
 	// a program in the background, not waited for (Wi-Fi coming up takes seconds)
@@ -142,6 +157,37 @@ namespace banana
 			_exit(0);
 		}
 		if (p > 0) waitpid(p, nullptr, 0);
+	}
+
+	// a program waited for, its output back (no shell: the arguments as they are, a game's name with quotes in it too)
+	static std::string capture(const std::vector<std::string>& argv)
+	{
+		int fd[2];
+		if (argv.empty() || pipe(fd) != 0) return "";
+		pid_t p = fork();
+		if (p == 0)
+		{
+			dup2(fd[1], 1); ::close(fd[0]); ::close(fd[1]);
+			int nul = ::open("/dev/null", O_WRONLY); if (nul >= 0) dup2(nul, 2);
+			std::vector<char*> a;
+			for (auto& s : argv) a.push_back(const_cast<char*>(s.c_str()));
+			a.push_back(nullptr);
+			execv(a[0], a.data());
+			_exit(127);
+		}
+		::close(fd[1]);
+		std::string out;
+		char buf[4096];
+		ssize_t n;
+		while (p > 0 && (n = ::read(fd[0], buf, sizeof buf)) > 0) out.append(buf, n);
+		::close(fd[0]);
+		if (p > 0) waitpid(p, nullptr, 0);
+		return out;
+	}
+	static std::string rocknixOptions()
+	{
+		const char* o = getenv("BANANA_ROCKNIX_OPTIONS");	// (a stand-in for the tests)
+		return o && *o ? o : "/usr/libexec/banana/rocknix-options";
 	}
 
 	// bananad re-reads its settings on SIGHUP
@@ -215,6 +261,8 @@ namespace banana
 		: be(b), assets(a), data(d), s(scale), light(variant == "light")
 	{
 		budget = (size_t)(CACHE_1X * (double)s * s);
+		shift.real = b; shift.cw = 640 * s; shift.ch = 480 * s; shift.k = s;
+		be = &shift;
 		R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
 		M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
 		const char* tool = getenv("BANANA_WIFI");	// the test's stand-in
@@ -227,7 +275,33 @@ namespace banana
 		const char* run = getenv("BANANA_RUN");
 		runDir = run ? run : "/run/banana";
 		updatesDir = data + "/updates";
+		// Steam's tool where the image has it (BANANA_STEAM: the tests' stand-in; BANANA_LIBEXEC: another libexec). Not
+		// on the RG DS, which has no PC games shelf: the tool is in the files every image is made from
+		{
+			const char* st = getenv("BANANA_STEAM");
+			const char* lx = getenv("BANANA_LIBEXEC");
+			const bool asked = st && *st;
+			std::string path = asked ? st : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/steam";
+			steamTool = (asked || !rgdsBoard_()) && access(path.c_str(), X_OK) == 0 ? path : "";
+		}
+		// the PC games hub's tool, by the same rule (BANANA_PCGAMES: the tests' stand-in)
+		{
+			const char* pt = getenv("BANANA_PCGAMES");
+			const char* lx = getenv("BANANA_LIBEXEC");
+			const bool asked = pt && *pt;
+			std::string path = asked ? pt : std::string(lx && *lx ? lx : "/usr/libexec/banana") + "/pc-games";
+			pcTool = (asked || !rgdsBoard_()) && access(path.c_str(), X_OK) == 0 ? path : "";
+		}
 		build();
+	}
+
+	// another theme chosen: one with an accent of its own starts in it (Thor White's celadon), and that accent doesn't
+	// go along to a theme without one
+	void Settings::themeAccent(const std::string& theme)
+	{
+		const std::string conf = data + "/settings.conf", own = themeOwnAccent(theme), cur = getConfValue(conf, "accent", "yellow");
+		if (!own.empty() && cur != own) setConfValue(conf, "accent", own);
+		else if (own.empty() && cur == "theme") setConfValue(conf, "accent", "yellow");
 	}
 
 	void Settings::setVariant(const std::string& value)
@@ -244,7 +318,10 @@ namespace banana
 			for (uint32_t c : { a.base, a.light, a.dark, a.band, a.low }) look += "|" + std::to_string(c);
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
-			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + "|" + f.panels +
+				"|" + f.setTop + "|" + std::to_string(f.setLeft) + "|" + f.setIcons + "|" + f.setPick + "|" + f.setHints + "|" + f.setHeader + "|" + f.bodyFont + "|" + f.setLayout + "|" + f.setGlyphs + "|" + f.setTexture + "|" + std::to_string(rnds::accentInk);
+			for (float v : f.plateMix) look += "|" + std::to_string(v);
+			for (float v : f.stateMix) look += "|" + std::to_string(v);
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
@@ -268,6 +345,32 @@ namespace banana
 				M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
 				cleanFonts = false;
 			}
+		}
+		loadBody();
+	}
+
+	void Settings::loadBody()
+	{
+		shift.lay = rnds::themeFiles.setLayout == "screen";
+		// the material look's labels: Inter (the menu's own)
+		if (rnds::themeFiles.panels == "material" && (!IM || !IR))
+		{
+			const std::string dir = fontDir.empty() ? assets + "/../banana/fonts" : fontDir;
+			IM = rnds::Font::load(dir + "/Inter-Medium.ttf");
+			IR = rnds::Font::load(dir + "/Inter-Regular.ttf");
+		}
+		// the help texts' own font (a theme's settings.bodyFont: Inter by name, or a .ttf of the theme's)
+		const std::string& bf = rnds::themeFiles.bodyFont;
+		if (bf != bodyLoaded)
+		{
+			bodyLoaded = bf;
+			B.reset();
+			if (bf.compare(0, 8, "builtin:") == 0)
+			{
+				std::string name = bf.substr(8), file = name == "inter-medium" ? "Inter-Medium.ttf" : name == "inter-semibold" ? "Inter-SemiBold.ttf" : "Inter-Regular.ttf";
+				B = rnds::Font::load((fontDir.empty() ? assets + "/../banana/fonts" : fontDir) + "/" + file);
+			}
+			else if (!bf.empty()) B = rnds::Font::load(bf);
 		}
 	}
 
@@ -373,7 +476,8 @@ namespace banana
 	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
-	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
+	// (listed: a row only where the systems list has the system, started by run-retroarch: the AYN Thor's systems)
+	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; bool listed = false; } RA_SYSTEMS[] = {
 		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
 		{ "gb", "Game Boy", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
@@ -385,10 +489,47 @@ namespace banana
 		{ "zxspectrum", "ZX Spectrum", { { "fuse", "Fuse" } } },
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
+		{ "saturn", "Saturn", { { "yabasanshiro", "YabaSanshiro" }, { "mednafen_saturn", "Beetle Saturn" } }, true },
+		{ "mastersystem", "Master System", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "gamegear", "Game Gear", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "segacd", "Mega-CD", { { "genesis_plus_gx", "Genesis Plus GX" }, { "picodrive", "PicoDrive" } }, true },
+		{ "arcade", "Arcade", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" } }, true },
+		{ "neogeo", "Neo Geo", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" } }, true },
+		{ "amstradcpc", "Amstrad CPC", { { "crocods", "CrocoDS" }, { "cap32", "Caprice32" } }, true },
 	};
+	// the core the systems list starts a system with ("run = .../run-retroarch <core> %ROM%"), "" when it has no such
+	// system: what runs while Settings' own choice (core.<system>) isn't made
+	static std::string g_systemsList;
+	void Settings::useSystemsList(const std::string& path) { g_systemsList = path; }
+	static std::string systemsCore(const std::string& systemsConf, const std::string& id)
+	{
+		std::string out;
+		for (const std::string& path : { systemsConf, g_systemsList, std::string("/run/banana/systems.conf"), std::string("/etc/banana/systems.conf") })
+		{
+			if (path.empty()) continue;
+			std::ifstream f(path);
+			if (!f) continue;
+			std::string ln;
+			bool in = false;
+			while (std::getline(f, ln))
+			{
+				size_t a = ln.find_first_not_of(" \t");
+				if (a == std::string::npos || ln[a] == '#') continue;
+				if (ln[a] == '[') { in = ln.compare(a, id.size() + 2, "[" + id + "]") == 0; continue; }
+				size_t r = ln.find("run-retroarch ");
+				if (!in || ln.compare(a, 3, "run") != 0 || r == std::string::npos) continue;
+				std::istringstream is(ln.substr(r + 14));
+				is >> out;
+			}
+			break;	// (the first list there is: the menu's own, else the merged one, else the image's)
+		}
+		return out;
+	}
 	static bool coreInstalled(const std::string& core)
 	{
-		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
+		// (tests: BANANA_LIBRETRO, a folder standing for the image's)
+		const char* t = getenv("BANANA_LIBRETRO");
+		return access(((t ? std::string(t) : std::string("/usr/lib/libretro")) + "/" + core + "_libretro.so").c_str(), F_OK) == 0
 			|| access(("/data/retroarch/cores/" + core + "_libretro.so").c_str(), F_OK) == 0;
 	}
 	static void coreChoices(const RaSystem& sys, std::vector<std::string>& names, std::vector<std::string>& values)
@@ -409,7 +550,14 @@ namespace banana
 		return sig;
 	}
 
-	static const char* BACKLIGHT[2] = { "backlight1", "backlight0" };
+	// the top and bottom panels' backlights: the RG DS's, or the hardware profile's (/etc/banana/hw.conf through rcS:
+	// BANANA_BACKLIGHT_TOP and _BOTTOM)
+	static const char* backlightName(int i)
+	{
+		const char* e = getenv(i == 0 ? "BANANA_BACKLIGHT_TOP" : "BANANA_BACKLIGHT_BOTTOM");
+		return e && *e && !strchr(e, '/') ? e : i == 0 ? "backlight1" : "backlight0";
+	}
+	static const char* const BACKLIGHT[2] = { backlightName(0), backlightName(1) };
 	static int backlightPair(const std::string& path, int i)
 	{
 		int t = 0, b = 0;
@@ -468,6 +616,16 @@ namespace banana
 		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
+		// (as ROCKNIX's frontend, where its games are started by run-rocknix: start_banana.sh says so)
+		if (getenv("BANANA_ROCKNIX"))
+		{
+			add(D, "gamepad", "Confirm button", "Which face button confirms in the menu, the other going back.", menu, "confirm_button",
+				{ "Right", "Bottom" }, { "right", "bottom" });
+			items.back().hints = { "The right button confirms, as on a Nintendo pad (and the RG DS).", "The bottom button confirms, as on an Xbox or PlayStation pad." };
+			add(D, "picture", "Bottom screen in games", "Whether the bottom screen stays lit while a game plays.", menu, "bottom_in_games",
+				{ "Auto", "On", "Off" }, { "auto", "on", "off" });
+			items.back().hints = { "Lit for the two-screen systems (DS, 3DS, Game & Watch), dark for the rest: saves battery.", "Always lit.", "Always dark while a game plays." };
+		}
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
@@ -490,17 +648,69 @@ namespace banana
 			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
 		}
 		const char* P = "Sleep & power";
+		// (as ROCKNIX's frontend its own sleep is the handheld's: the power button and the lid put it to sleep, there is no
+		// idle sleep or dim, and it wakes its own way; asleep long enough it turns off, which the row below sets there)
+		const bool rxSleep = getenv("BANANA_ROCKNIX") != nullptr;
+		if (!rxSleep)
+		{
 		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
 		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
 		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
 		items.back().hints = { "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." };
+		}
+		if (rxSleep)
+			add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the handheld turns itself off, so the battery keeps for weeks. The power button and the lid put it to sleep.",
+				power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
+		else
 		add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.",
 			power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
+		if (!rxSleep)
+		{
 		add(P, "moon", "Waking up", "How the handheld wakes from sleep.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		items.back().hints = { "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." };
+		}
+		// the handheld's own extras where it has them (usr/libexec/banana/handheld caps: the AYN Thor's fan, stick lights and
+		// GPU under ROCKNIX), on a page of their own
+		{
+			std::string caps;
+			const char* hh = getenv("BANANA_HANDHELD");	// (a stand-in for the tests)
+			if (FILE* f = popen((std::string(hh && *hh ? hh : "/usr/libexec/banana/handheld") + " caps 2>/dev/null").c_str(), "r"))
+			{
+				char buf[64];
+				while (fgets(buf, sizeof buf, f)) caps += buf;
+				pclose(f);
+			}
+			hhCaps = caps;
+			if (!caps.empty())
+			{
+				add(P, "gear", "Fan, lights & speed", "The fan, the lights round the sticks and the GPU's top speed.", "", "handheld", {}, {}, Item::PAGE);
+				const char* HH = "Fan, lights & speed";
+				if (caps.find("fan") != std::string::npos)
+				{
+					add(HH, "gear", "Fan", "How soon and how hard the fan spins as the handheld warms up.", menu, "fan",
+						{ "Quiet", "Balanced", "Strong" }, { "quiet", "moderate", "aggressive" });
+					items.back().hints = { "Spins up late: the quietest, the handheld runs warmer.", "In between.", "Spins up early and fast: the coolest, and the loudest." };
+				}
+				if (caps.find("leds") != std::string::npos)
+				{
+					add(HH, "gear", "Stick lights", "The lights round the two sticks.", menu, "leds",
+						{ "Off", "Battery", "By system", "Yellow", "Red", "Green", "Blue", "Purple", "Pink", "Cyan", "White" },
+						{ "off", "battery", "system", "yellow", "red", "green", "blue", "purple", "pink", "cyan", "white" });
+					items.back().hints = { "No light.", "The battery's colour: green, red when low, amber while charging.", "The colour of the system that's playing (Nintendo red, Sega blue, PlayStation cyan...).",
+						"Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour.", "Always this colour." };
+					add(HH, "gear", "Light brightness", "How bright the stick lights are.", menu, "leds_level", { "Low", "Medium", "High" }, { "low", "medium", "high" });
+					add(HH, "gear", "Light effect", "Whether the stick lights glow steadily or breathe.", menu, "leds_effect", { "Steady", "Breathing" }, { "none", "breathe" });
+				}
+				if (caps.find("gpuboost") != std::string::npos)
+				{
+					add(HH, "gear", "GPU boost", "The graphics chip's top speed, for the heaviest games.", menu, "gpu_boost", { "Off", "On" }, { "off", "on" });
+					items.back().hints = { "As shipped: cooler and longer on the battery.", "Higher (1 GHz): smoother in the heaviest 3D games, warmer, more battery." };
+				}
+			}
+		}
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
@@ -520,8 +730,15 @@ namespace banana
 		// L2, R2, L3 and R3's jobs, the same in both emulators (the DS buttons page below; nds-buttons)
 		add(N, "nds", "Buttons", "What L2, R2, L3 and R3 do in DS games, the same in both emulators.", "", "ds_buttons", {}, {}, Item::PAGE);
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
-		add(N, "nds", "DS name", "The name the DS itself is set to: what games call you. 10 characters at most.",
-			"", "ds_name", {}, {}, Item::PAGE);
+		if (deviceName() == "DS")
+			add(N, "nds", "DS name", "The name the DS itself is set to: what games call you. 10 characters at most.",
+				"", "ds_name", {}, {}, Item::PAGE);
+		else
+		{
+			const std::string nameLabel = deviceName() + " name";
+			add(N, "nds", nameLabel.c_str(), ("Your name on the " + deviceName() + ", as the DS games know it: what they call you. 10 characters at most.").c_str(),
+				"", "ds_name", {}, {}, Item::PAGE);
+		}
 		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: picture, speed, sound and its hotkeys.", "", "nds_superdrastic", {}, {}, Item::PAGE);
 		add(N, "nds", "BananaDS", "BananaDS's own settings: picture, speed, sound and its hotkeys.", "", "nds_bananads", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
@@ -671,6 +888,7 @@ namespace banana
 				std::vector<std::string> names, values;
 				coreChoices(sys, names, values);
 				if (names.size() < 2) continue;
+				if (sys.listed && systemsCore(systemsConf, sys.id).empty()) continue;
 				const char* help = std::string(sys.id) == "gba"
 					? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
 					: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
@@ -767,6 +985,22 @@ namespace banana
 		add(S, "gear", "Second SD card", "Games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		items.back().hints = { "Its games show with the others while it's in. exFAT or FAT32.", "Its games stay hidden." };
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
+		// the accounts the handheld logs in with: RetroAchievements, Steam and SteamGridDB's key (accounts.conf), on a handheld
+		// with PC games (Steam's tool there)
+		if (!steamTool.empty())
+		{
+		add(S, "gamepad", "Accounts", "The accounts the handheld logs in with: RetroAchievements, and Steam and SteamGridDB for the PC games.",
+			"", "accounts", {}, {}, Item::PAGE);
+		{
+			const char* AC = "Accounts";
+			add(AC, "gamepad", "RetroAchievements", "Your retroachievements.org account: the emulators unlock achievements with it. A logs in (the login is checked with the site).",
+				"", "ra_account", {}, {}, Item::PAGE);
+			add(AC, "gamepad", "Steam", "Your Steam account: its library on the PC games shelf, and its games downloaded straight to the card. The password isn't kept: Steam gives the handheld a login token. Logged in, A twice logs out.",
+					"", "steam", {}, {}, Item::PAGE);
+			add(AC, "picture", "SteamGridDB key", "Optional: better box art for PC games that aren't from Steam. An API key from steamgriddb.com (Preferences > API), kept in banana/accounts.conf.",
+				"", "sgdb_key", {}, {}, Item::PAGE);
+		}
+		}
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
@@ -919,12 +1153,12 @@ namespace banana
 		// the order it was added in, after what it does name
 		static const std::vector<std::pair<std::string, std::vector<std::string>>> ORDER = {
 			{ "", { "Nintendo DS", "Other systems", "Display & sound", "Network", "Sleep & power", "System" } },	// the tiles
-			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name" } },
+			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name", "Thor name" } },
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
 			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "System", { "Updates", "Language", "Time zone", "Box art", "Accounts", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
@@ -975,11 +1209,12 @@ namespace banana
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
 			// changes: the Theme row loads it again)
-			static const std::vector<std::string> NAMES = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" },
-				VALUES = { "yellow", "blue", "red", "green", "purple", "pink" };
-			bool own = themeSetsAccent(getConfValue(data + "/settings.conf", "theme", "dark"));
-			it.names = own ? std::vector<std::string>{ "From the theme" } : NAMES;
-			it.values = own ? std::vector<std::string>{ getConfValue(it.file, "accent", "yellow") } : VALUES;
+			const std::string theme = getConfValue(data + "/settings.conf", "theme", "dark");
+			bool own = themeSetsAccent(theme);
+			accentChoices = themeAccents(theme);
+			it.names.clear(); it.values.clear();
+			for (auto& a : accentChoices) { it.names.push_back(a.name); it.values.push_back(a.value); }
+			if (own) { it.names = { "From the theme" }; it.values = { getConfValue(it.file, "accent", "yellow") }; }
 			it.help = own ? "This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here."
 				: "The colour of the selection, the logo and the boot animation's banana.";
 		}
@@ -1010,6 +1245,13 @@ namespace banana
 		if (it.kind != Item::CHOICE) return;
 		// the schema's default (settings_defaults.cpp), else the row's first choice
 		std::string def = settingDefault(it.key);
+		// a system's core with no default of the schema's: the one the systems list starts it with, which is what runs
+		// while no choice is made (the AYN Thor's SwanStation for the PlayStation; this table's first is another)
+		if (def.empty() && it.key.rfind("core.", 0) == 0)
+		{
+			const std::string c = systemsCore(systemsConf, it.key.substr(5));
+			if (std::find(it.values.begin(), it.values.end(), c) != it.values.end()) def = c;
+		}
 		if (def.empty()) def = it.values[0];
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
@@ -1192,6 +1434,9 @@ namespace banana
 			// file away at the next boot, both panels back at the kernel's 50%)
 			if (other <= 0 || other > 1000) other = pm;
 			std::ofstream(data + "/backlight") << (i == 0 ? pm : other) << " " << (i == 0 ? other : pm) << "\n";
+			// (where the system's services keep their own per-screen levels, ROCKNIX's: made the same, in the background)
+			if (access("/usr/libexec/banana/backlight", X_OK) == 0)
+				if (system("/usr/libexec/banana/backlight sync >/dev/null 2>&1 &") != 0) {}
 			return;
 		}
 		if (it.kind == Item::VOLUME)
@@ -1227,7 +1472,12 @@ namespace banana
 			setConfValue(it.file, it.key, v);
 		}
 		if (it.file == data + "/bananad.conf") poke("bananad");
-		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
+		if (it.key == "timezone")
+		{
+			setenv("TZ", v.c_str(), 1); tzset(); poke("bananad");	// bananad's logs too
+			// (as ROCKNIX's frontend: the system's zone too, for its emulators and services: usr/libexec/banana/timezone)
+			if (getenv("BANANA_ROCKNIX")) spawn("/usr/libexec/banana/timezone", v.c_str());
+		}
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
 		if (it.key == "bluetooth")
 		{
@@ -1237,6 +1487,16 @@ namespace banana
 		}
 		if (it.key == "bt_audio") spawn(btTool.c_str(), "audio");	// (nothing while Bluetooth is off: read at its next up)
 		if (it.key == "ssh") spawn("/usr/libexec/banana/ssh", v == "on" ? "up" : "down");
+		if (it.key == "fan") spawn("/usr/libexec/banana/handheld", "fan", v.c_str());
+		if (it.key == "leds" || it.key == "leds_level" || it.key == "leds_effect")
+		{
+			const std::string leds = getConfValue(data + "/settings.conf", "leds", "system");
+			if (it.key == "leds_effect" && v == "none") spawn("/usr/libexec/banana/handheld", "leds-effect", "none");
+			spawn("/usr/libexec/banana/handheld", "leds", leds.c_str());
+		}
+		if (it.key == "gpu_boost") spawn("/usr/libexec/banana/handheld", "gpu", v.c_str());
+		if (it.key == "poweroff_after_sleep_minutes" && getenv("BANANA_ROCKNIX")) spawn("/usr/libexec/banana/handheld", "poweroff-after", v.c_str());
+		if (it.key == "confirm_button") setenv("BANANA_CONFIRM", v == "bottom" ? "south" : "east", 1);	// (input.cpp reads it at every press)
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
 		if (it.key == "sd2_roms") spawn("/usr/libexec/banana/sd2", "scan");
@@ -1265,9 +1525,11 @@ namespace banana
 				{ "sys_updates", "Updates" },
 				{ "sys_boxart", "Box art" },
 				{ "menu_look", "Menu look" },
+				{ "handheld", "Fan, lights & speed" },
 				{ "ds_buttons", "DS buttons" },
 				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },
+				{ "accounts", "Accounts" },
 				{ "hs_systems", "Home server systems" },
 				{ "developer", "Developer options" },	// (PR #94: System's last row, once unlocked)
 			};
@@ -1312,9 +1574,36 @@ namespace banana
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "speaker_eq_page") { openEq(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
-			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
+			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The " + deviceName() + "'s name", "10 characters at most", LIST, dsName()); return MOVED; }
+			if (it.key == "ra_account") { raKind = 0; raLine.clear(); startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", LIST, account("ra_user")); return MOVED; }
+			if (it.key == "sgdb_key") { startEntry(ENTRY_SGDB_KEY, "SteamGridDB", "API key", LIST, account("sgdb_key")); return MOVED; }
+			if (it.key == "steam")
+			{
+				if (steamPid > 0 && steamQr)
+				{
+					// the app's code up: A takes the name and password's way instead
+					steamCancel();
+					startEntry(ENTRY_STEAM_USER, "Steam", "Account name", LIST, steamAcct);
+					return MOVED;
+				}
+				if (steamPid > 0) return NONE;	// (a login under way: its state on the top panel)
+				if (!steamUser.empty())
+				{
+					// logged in: A twice logs out
+					if (armed != sel) { armed = sel; return MOVED; }
+					armed = -1;
+					steamRun("logout");
+					steamUser.clear(); steamKind = 0; steamGames.clear();
+					message = "Logged out of Steam. Its games on the card stay.";
+					return CHANGED;
+				}
+				// logged out: the sign-in with the Steam app first (its code on the top screen)
+				steamKind = 0; steamLine.clear(); message.clear();
+				startSteamQr();
+				return MOVED;
+			}
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
-			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
+			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); if (it.key == "accounts") steamStatus(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
@@ -1331,7 +1620,7 @@ namespace banana
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
 				for (size_t i = 0; i < items.size(); i++) if (items[i].key == "about") sel = (int)i;
-				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+				top = std::max(groupStart(groupOf(sel)), sel - listRows() + 1);
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
 			}
@@ -1431,6 +1720,7 @@ namespace banana
 		if (it.key.compare(0, 6, "shelf.") == 0) return SHELVES;	// (the home row read again)
 		if (it.key == "theme")
 		{
+			themeAccent(it.values[at]);
 			setVariant(it.values[at]);
 			for (auto& x : items) if (x.key == "accent") load(x);	// "From the theme", or the colours again
 			return THEME;
@@ -1488,7 +1778,7 @@ namespace banana
 		const std::string action = emulator ? "reset_emulator" : "reset_system";
 		sel = 0;
 		for (size_t i = 0; i < items.size(); i++) if (items[i].key == action) { sel = (int)i; break; }
-		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - ROWS)));
+		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - listRows())));
 		armed = -1;
 
 		toast(emulator ? "Emulator settings reset" : "System settings reset",
@@ -1505,6 +1795,8 @@ namespace banana
 
 	Settings::Result Settings::press(Key k)
 	{
+		// (Accounts: the Steam app's code up, B stops that sign-in before it leaves the page)
+		if (k == Key::B && page == LIST && !inGroups && steamQrShown()) { steamCancel(); return MOVED; }
 		if (hotAsk) return pressHotAsk(k);
 		if (langPick >= 0) return pressLangPick(k);
 		if (page == NETWORKS) return pressNetworks(k);
@@ -1516,6 +1808,8 @@ namespace banana
 		if (page == SPEAKEREQ) return pressEq(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (page == QUICK) return pressQuick(k);
+		if (page == PCGAMES) return pressPc(k);
 		if (page == THEMES) return pressThemes(k);
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
@@ -1534,7 +1828,7 @@ namespace banana
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
 			if (sel < top) top = sel;
-			if (sel >= top + ROWS) top = sel - ROWS + 1;
+			if (sel >= top + listRows()) top = sel - listRows() + 1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
@@ -1542,12 +1836,12 @@ namespace banana
 		{
 			// a page of the group's list at a time (the rows in view), stopping at its first and last rows (the groups
 			// are B's grid; L/R went to the next group's list, one more thing the list didn't say)
-			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? ROWS : -ROWS)));
+			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? listRows() : -listRows())));
 			if (to == sel) return NONE;
 			sel = to;
 			armed = -1;
 			if (sel < top) top = sel;
-			if (sel >= top + ROWS) top = sel - ROWS + 1;
+			if (sel >= top + listRows()) top = sel - listRows() + 1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
@@ -1561,7 +1855,7 @@ namespace banana
 			{
 				message.clear();
 				for (size_t i = 0; i < items.size(); i++) if (items[i].key == s->key) sel = (int)i;
-				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+				top = std::max(groupStart(groupOf(sel)), sel - listRows() + 1);
 				armed = -1;
 				return MOVED;
 			}
@@ -1673,6 +1967,7 @@ namespace banana
 
 	Settings::Result Settings::touch(float x, float y, bool down)
 	{
+		shift.untouch(x, y);
 		float cx = x / s, cy = y / s;
 		if (down) { downX = cx; downY = cy; downOnRow = true; return NONE; }
 		if (!downOnRow) return NONE;
@@ -1696,6 +1991,7 @@ namespace banana
 			}
 			return NONE;
 		}
+		if (page == QUICK) return touchQuick(cx, cy);
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
@@ -1748,10 +2044,11 @@ namespace banana
 		if (inGroups)
 		{
 			if (downY >= 418 && downY <= 466) return pressGroups(downX < 220 ? Key::B : downX < 420 ? Key::Y : Key::A);
+			const Measures m = measures();
 			for (int g = 0; g < gridCount(); g++)
 			{
-				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
-				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
+				float x = 18 + (g % 3) * m.gridPX, y = m.gridY + (g / 3) * m.gridPY;
+				if (downX < x || downX > x + m.gridW || downY < y || downY > y + m.gridH) continue;
 				if (g != gsel) { gsel = g; return MOVED; }
 				return pressGroups(Key::A);
 			}
@@ -1764,10 +2061,11 @@ namespace banana
 			if (downX < 320) return press(Key::B);
 			return change(1);
 		}
-		for (int r = 0; r < ROWS && top + r < gEnd; r++)
+		const Measures lm = measures();
+		for (int r = 0; r < listRows() && top + r < gEnd; r++)
 		{
-			float ry = 82 + r * 64;
-			if (downY < ry || downY > ry + 56) continue;
+			float ry = lm.rowY + r * lm.rowPitch;
+			if (downY < ry || downY > ry + lm.rowH) continue;
 			int i = top + r;
 			if (i != sel) { sel = i; armed = -1; return MOVED; }
 			// the selected row: its value's left half steps back, the rest forward
@@ -1777,8 +2075,8 @@ namespace banana
 		if (std::fabs(cy - downY) > 40)
 		{
 			int gb = groupStart(groupOf(sel));
-			top = std::max(gb, std::min(std::max(gb, gEnd - ROWS), top + (cy < downY ? ROWS : -ROWS)));
-			sel = std::max(top, std::min(sel, top + ROWS - 1));
+			top = std::max(gb, std::min(std::max(gb, gEnd - listRows()), top + (cy < downY ? listRows() : -listRows())));
+			sel = std::max(top, std::min(sel, top + listRows() - 1));
 			return MOVED;
 		}
 		return NONE;
@@ -1824,6 +2122,25 @@ namespace banana
 
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
+		const rnds::ThemeFiles& tf = rnds::themeFiles;
+		// a theme's own Settings (settings.top "open": the top screen's card left out; settings.header "rule": a page's
+		// title over a hairline instead of in a box)
+		if (tf.setTop == "open" && kind == "hero" && x == 18 && y == 20 && w == 604 && h == 436 && shift.screen == 0) return;
+		if (tf.setHeader == "rule" && kind == "bubble" && x == 18 && w == 604 && h == 54)
+		{
+			SPal p = pal(light);
+			float hair = std::max(1.0f, std::round(s));
+			be->fill(std::round(X(x + 2)), std::round(X(y + h - 6)), std::round(X(w - 4)), hair, p.line);
+			return;
+		}
+		// a screen's background over the whole canvas: over the whole screen when it is another shape (rnds::screenArea)
+		const bool wholeScreen = kind == "screen" && x == 0 && y == 0 && w == 640 && h == 480;
+		if (wholeScreen) rnds::screenArea(be, s, x, y, w, h);
+		if (material() && mbox(kind, on, x, y, w, h))
+		{
+			if (wholeScreen && chrome && shift.screen >= 0) chrome(shift.screen);
+			return;
+		}
 		SPal p = pal(light);
 		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		std::string key = "box:" + kind + (on ? "1" : "0") + ":" + std::to_string(dw) + "x" + std::to_string(dh);
@@ -1889,6 +2206,59 @@ namespace banana
 				}
 				st = c;
 			}
+			else if (rnds::themeFiles.panels == "flat" && kind != "osd")
+			{
+				// a theme's flat panels: the surface's colour, a hairline edge (the accent's on the one that's on), a
+				// thin light along the top edge and a darker one along the bottom, no bands, dither or hard shadow;
+				// the picked one in the accent, lit along its top. Corners by size: a tile's round (34 px of a 1080-line
+				// screen), a row's tighter (22)
+				rnds::BoxStyle c;
+				float hair = std::max(1.0f, std::round(s));
+				float corner = X(h >= 60 ? 16 : 11);
+				if (kind == "screen") { c.bg = p.screenBg; c.dither = rnds::themeFiles.dither; c.ditherScale = s; c.ditherA = p.ditherA; c.ditherB = p.ditherB; }
+				else if (kind == "kbd") { c.radius = X(6); c.bg = p.kbdBg; }
+				else if (kind == "pick" && tf.setPick == "outline")
+				{
+					// (settings.pick "outline") the surface a little lighter, an accent edge, the accent's glow round it
+					c.radius = corner; c.bg = p.bubbleBand;
+					c.border = std::max(1.0f, std::round(1.5f * s)); c.borderColor = p.pick;
+					Color g = p.pick;
+					auto glow = [&](float spread, float a) { return rnds::Shadow{ 0, 0, spread, Color(g.r, g.g, g.b, a), false }; };
+					c.shadows = { inset(0, hair, 0, Color(1, 1, 1, 0.10f)), glow(X(2), 0.22f), glow(X(4), 0.12f), glow(X(7), 0.06f) };
+				}
+				else if (kind == "pick")
+				{
+					c.radius = corner; c.bg = p.pick;
+					c.shadows = { inset(0, 2 * hair, 0, Color(1, 1, 1, 0.4f)), inset(0, -X(3), 0, p.pickLow) };
+				}
+				else if (kind == "pill" || kind == "pillA")
+				{
+					// (settings.hints "pill") a button hint: a pill with a hairline, A's in the accent
+					c.radius = X(h / 2); c.bg = p.bubbleBody; c.border = hair;
+					c.borderColor = kind == "pillA" ? p.pick : p.line;
+					c.shadows = { inset(0, hair, 0, p.bubbleBand) };
+				}
+				else if (kind == "pillkey" || kind == "pillkeyA") { c.radius = X(h / 2); c.bg = kind == "pillkeyA" ? p.pick : p.ink; }
+				else if (kind == "qrcard") { c.radius = X(10); c.bg = Color::hex(0xffffff); }	// (pure white: the code's light modules)
+				else if (kind == "tile")
+				{
+					// (settings.icons "tile") an icon's lit tile, as the home screen's
+					c.radius = X(18); c.bg = p.panelBody; c.border = hair; c.borderColor = p.line;
+					c.bands = { rnds::Band{ 0, X(h * 0.45f), p.panelBand }, rnds::Band{ X(h * 0.45f), -1, p.panelBody } };
+					c.shadows = { inset(0, hair, 0, Color(1, 1, 1, 0.12f)) };
+				}
+				else
+				{
+					bool bubble = kind == "bubble";
+					c.radius = kind == "face" ? X(10) : corner;
+					c.bg = bubble ? p.bubbleBody : p.panelBody;
+					c.border = hair;
+					c.borderColor = on ? p.pick : bubble ? p.line : p.edge;
+					c.shadows = { inset(0, hair, 0, bubble ? p.bubbleBand : p.panelBand), inset(0, -hair, 0, bubble ? p.bubbleLow : p.panelLow) };
+				}
+				st = c;
+			}
+			if (kind == "qrcard") { st = rnds::BoxStyle(); st.radius = X(10); st.bg = Color::hex(0xffffff); }	// (any theme's: pure white)
 			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
 			Cached c;
 			c.tex = be->upload(pb.bmp, true);
@@ -1897,15 +2267,89 @@ namespace banana
 		}
 		const Cached& c = keep(it);
 		be->draw(c.tex, std::round(X(x)) - c.ox, std::round(X(y)) - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+		// a layout theme's layer over the screen's background (its status bar, a glow)
+		if (wholeScreen && chrome && shift.screen >= 0) chrome(shift.screen);
+	}
+
+	void Settings::iconTile(float x, float y, float w, float h) { box("tile", false, x, y, w, h); }
+
+	// the Steam app's sign-in code on the top screen: dark modules on a pure white card with round corners, a whole number
+	// of device px a module (crisp), as large as the room allows up to 560 px: right of the text column where the screen
+	// is wider than the canvas (the AYN Thor's top), else under the heading with the steps beside it
+	void Settings::drawSteamQr(float textX, float textY)
+	{
+		SPal p = pal(light);
+		const int N = (int)steamQrRows.size();
+		if (N == 0) return;
+		float ax, ay, aw, ah;
+		rnds::screenArea(be, s, ax, ay, aw, ah);
+		const float colRight = HELP_X + HELP_W, top = 50, bottom = ay + ah - 14;
+		const float roomW = ax + aw - 12 - (colRight + 8), roomH = bottom - top;
+		const bool right = roomW >= 180;
+		const float roomU = right ? std::min(roomW, roomH) : std::min(260.0f, bottom - textY);
+		const int pad = material() ? std::max(4, (int)std::lround(X(px(24)))) : std::max(4, (int)std::lround(X(6)));	// (the quiet zone)
+		const int target = std::min(560, (int)std::floor(X(roomU)));
+		const int k = std::max(1, (target - 2 * pad) / N);
+		steamQrK = k;
+		const int cardPx = k * N + 2 * pad;
+		const float cardU = cardPx / s;
+		const float cx = right ? colRight + 8 + (roomW - cardU) / 2 : textX, cy = right ? top + (roomH - cardU) / 2 : textY;
+		// (a screen layout moves what is under the header down: the card and its modules stay where they were worked out)
+		const float bodyDy = shift.bodyDy;
+		shift.bodyDy = 0;
+		box("qrcard", false, cx, cy, cardU, cardU);
+		const float ox = std::round(X(cx)) + pad, oy = std::round(X(cy)) + pad;
+		const Color dark = Color::hex(0x000000);
+		for (int r = 0; r < N; r++)
+		{
+			const std::string& row = steamQrRows[r];
+			for (int c = 0; c < N;)
+			{
+				if (row[c] != '1') { c++; continue; }
+				int e = c;
+				while (e < N && row[e] == '1') e++;
+				be->fill(ox + c * k, oy + r * k, (float)((e - c) * k), (float)k, dark);
+				c = e;
+			}
+		}
+		shift.bodyDy = bodyDy;
+		// the steps
+		const float sx = right ? textX : textX + cardU + 20, sw = right ? HELP_W : HELP_X + HELP_W - sx;
+		const char* steps[] = { "1. Open the Steam app on your phone", "2. Tap the shield (Steam Guard)", "3. Scan this code and approve" };
+		for (int i = 0; i < 3; i++) text(fit(steps[i], false, 20, sw), false, 20, sx, textY + i * 34, p.ink);
+		wrapped("The code changes by itself every half minute. B stops.", 18, sx, textY + 3 * 34 + 10, sw, 2, p.muted);
 	}
 
 	float Settings::text(const std::string& t, bool medium, float size, float x, float top, const Color& c, bool upper, float ls, bool measureOnly)
 	{
 		if (t.empty()) return 0;
+		const bool body = bodyNow && !medium && B;
+		std::shared_ptr<rnds::Font> font = medium ? M : body ? B : R;
+		const char* tag = medium ? "|m" : body ? "|b" : "|r";
+		if (material())
+		{
+			// (the top screen's header, drawn at x 170 beside the icon: a crumb, the title large, the value after the crumb)
+			if (lay() && shift.screen == 0 && x == 170 && !measureOnly) return headText(t, size, c);
+			// (the bottom screen's header line: the title flush with the rows' left edge, what is at the right with their
+			// right one, both where the design has them: 7 px lower)
+			if (lay() && shift.screen == 1 && !shift.chips && !measureOnly && top > 0 && top < 60) { x += x < 300 ? -20 : 20; top += 7 * shift.u1; }
+			const float was = size;
+			role(medium, size, font, upper, ls);
+			if (font == IM) tag = "|im"; else if (font == IR) tag = "|ir";
+			if (size < was && !measureOnly) top += (was - size) * 0.5f;	// (a smaller face in the old one's line)
+		}
+		return textWith(t, font, tag, size, x, top, c, upper, ls, measureOnly);
+	}
+
+	float Settings::textWith(const std::string& t, const std::shared_ptr<rnds::Font>& font, const char* tag, float size, float x, float top, const Color& c, bool upper, float ls, bool measureOnly)
+	{
+		if (t.empty()) return 0;
 		rnds::TextStyle st;
-		st.font = medium ? M : R; st.size = size; st.letterSpacing = ls; st.upper = upper;
+		st.font = font; st.size = size; st.letterSpacing = ls; st.upper = upper;
 		if (!st.font) return 0;
-		std::string key = "txt:" + t + (medium ? "|m" : "|r") + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls) + (rawText ? "|raw" : "");
+		const float rk = shift.rk();	// (a staged screen laid out the theme's way: the line made for its own pixels)
+		std::string key = "txt:" + t + tag + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls) + (rawText ? "|raw" : "");
+		if (rk != 1) key += "@" + std::to_string(rk);
 		auto it = cache.find(key);
 		bool fresh = it == cache.end();
 		if (fresh) it = put(key, Cached(), rnds::Bitmap());
@@ -1922,7 +2366,7 @@ namespace banana
 			if (!measureOnly)
 			{
 				float asc = st.font->ascent(size), desc = st.font->descent(size), lh = asc + desc;
-				rnds::TextBitmap tb = rnds::renderLine(l, st, s, asc + std::floor((lh - (asc + desc)) / 2));
+				rnds::TextBitmap tb = rnds::renderLine(l, st, rk != 1 ? s * rk : s, asc + std::floor((lh - (asc + desc)) / 2));
 				if (!tb.bmp.empty()) cc.tex = be->upload(tb.bmp, true);
 				cc.ox = tb.padX; cc.oy = tb.padY;
 				cc.drawn = true;
@@ -1931,8 +2375,41 @@ namespace banana
 			}
 		}
 		if (!measureOnly && cc.tex)
-			be->draw(cc.tex, std::floor(X(x)) - cc.ox, std::floor(X(top)) - cc.oy, (float)cc.tex->w, (float)cc.tex->h, c);
+		{
+			if (rk != 1) be->draw(cc.tex, X(x) - cc.ox / rk, X(top) - cc.oy / rk, cc.tex->w / rk, cc.tex->h / rk, c);
+			else be->draw(cc.tex, std::floor(X(x)) - cc.ox, std::floor(X(top)) - cc.oy, (float)cc.tex->w, (float)cc.tex->h, c);
+		}
 		return cc.w;
+	}
+
+	// the material look's top screen: what a page draws as its header (a section in small capitals, the name, a value
+	// in the accent, beside an icon) is a crumb, the name as a large title under it, and the value after the crumb
+	float Settings::headText(const std::string& t, float size, const Color& c)
+	{
+		SPal p = pal(light);
+		const float crumbY = px(200), crumbSize = px(32);
+		if (size < 18)
+		{
+			float w = textWith(t, IR, "|ir", crumbSize, HELP_X, crumbY, mcol("ink2"));
+			crumbEnd = HELP_X + w;
+			return w;
+		}
+		if (size >= 29)
+		{
+			// as large as fits the screen's width (96 px, down to 56)
+			float ax, ay, aw, ah;
+			rnds::screenArea(be, s, ax, ay, aw, ah);
+			const float room = aw + 2 * ax - 2 * HELP_X;	// (the same margin at the right as at the left)
+			float z = px(96), w = 0;
+			for (; z >= px(56); z -= px(8)) if ((w = textWith(t, M, "|m", z, 0, 0, c, false, 0, true)) <= room) break;
+			return textWith(t, M, "|m", std::max(z, px(56)), HELP_X, px(250), c);
+		}
+		const Color vc = (c.r == p.accent.r && c.g == p.accent.g && c.b == p.accent.b) ? p.ink : c;
+		float x = crumbEnd;
+		{ AsNamed raw(*this); x += textWith(" \xc2\xb7 ", IR, "|ir", crumbSize, x, crumbY, mcol("ink2")); }
+		float w = textWith(t, IR, "|ir", crumbSize, x, crumbY, vc);
+		crumbEnd = x + w;
+		return w;
 	}
 
 	// UTF-32 back to UTF-8 (a laid out line, a cut: for the cache's keys and text())
@@ -1952,11 +2429,21 @@ namespace banana
 	void Settings::wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const Color& c)
 	{
 		rnds::TextStyle st;
-		st.font = R; st.size = size;
-		if (!R) return;
-		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
+		st.font = B ? B : R; st.size = size;
+		if (!st.font) return;
 		float lh = std::round(size * 1.4f);
+		if (material())
+		{
+			// (Inter at the look's size, lines one and a half high)
+			bool up = false; float ls = 0;
+			role(false, st.size, st.font, up, ls);
+			lh = lay() ? st.size * 1.5f : std::round(st.size * 1.5f);
+		}
+		std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
+		bodyNow = true;	// (in the theme's body font, when it has one)
 		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
+		bodyNow = false;
+		wrapEnd = top + lines.size() * lh;
 	}
 
 	// an icon centred on cx (its own width: the icons aren't all the same size)
@@ -1966,12 +2453,25 @@ namespace banana
 		auto it = cache.find("icon:" + name);
 		if (it == cache.end() || !it->second.tex) return;
 		int k = std::max(1, (int)std::lround(scale * s));
+		if (const float rk = shift.rk(); rk != 1 || iconPx > 0)
+		{
+			const int ks = iconPx > 0 ? iconPx : std::max(1, (int)std::lround(scale * s * rk));
+			const float w = it->second.tex->w * ks / rk;
+			be->draw(it->second.tex, X(cx) - w / 2, X(y), w, it->second.tex->h * ks / rk, Color(1, 1, 1, 1));
+			return;
+		}
 		float w = (float)it->second.tex->w * k;	// device px
 		be->draw(it->second.tex, std::round(X(cx) - w / 2), std::round(X(y)), w, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
 	}
 
 	void Settings::icon(const std::string& name, float x, float y, int scale)
 	{
+		// a theme's top screen: its pixel icons on a lit tile, or none (settings.icons)
+		if (shift.screen == 0 && x > -1000 && !rnds::themeFiles.setIcons.empty())
+		{
+			if (rnds::themeFiles.setIcons == "none") return;
+			if (scale >= 3) iconTile(x - 10, y - 10, 32.0f * scale + 20, 32.0f * scale + 20);
+		}
 		std::string key = "icon:" + name;
 		auto it = cache.find(key);
 		if (it == cache.end())
@@ -1982,6 +2482,12 @@ namespace banana
 			it = put(key, c, b);
 		}
 		if (!keep(it).tex) return;
+		if (const float rk = shift.rk(); rk != 1)
+		{
+			const int ks = std::max(1, (int)std::lround(scale * s * rk));	// (whole pixels of the screen)
+			be->draw(it->second.tex, X(x), X(y), it->second.tex->w * ks / rk, it->second.tex->h * ks / rk, Color(1, 1, 1, 1));
+			return;
+		}
 		int k = std::max(1, (int)std::lround(scale * s));	// whole device px per icon pixel
 		be->draw(it->second.tex, std::round(X(x)), std::round(X(y)), (float)it->second.tex->w * k, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
 	}
@@ -1989,6 +2495,12 @@ namespace banana
 	// the engine's ◀ ▶: a stepped triangle on the look's pixel grid
 	void Settings::arrow(bool right, float x, float y, const Color& c)
 	{
+		if (material() && hasGlyph(right ? "next" : "prev", 32))
+		{
+			// (a 32 px chevron in the accent, its middle where the triangle's was)
+			glyph(right ? "next" : "prev", 32, x + 3.5f - px(16), y + 6.5f - px(16), mcol("ring"));
+			return;
+		}
 		int u = std::max(1, (int)std::lround(s));
 		int rows = std::max(3, (int)std::lround(13 * s / u)) | 1;
 		std::string key = std::string("arrow:") + (right ? "r" : "l") + std::to_string(rows) + ":" + std::to_string(u);
@@ -2015,19 +2527,46 @@ namespace banana
 
 	float Settings::faceWidth(const std::string& key, const std::string& label, float most)
 	{
+		if (material()) return std::min(most, px(12) + keycapWidth(key) + px(12) + text(label, true, px(30) / 0.92f, 0, 0, Color(), false, 0, true) + px(28));
 		// at most FACE_MAX wide (three fit in the bar; most: a bar with fewer): a longer label (a translation) scrolls in it (face)
 		return std::min(most, 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18);
 	}
 
 	// the menu's B / A chips (RndsUI's drawFace)
-	void Settings::face(const std::string& key, const std::string& label, float x, float w)
+	void Settings::face(const std::string& key, const std::string& label, float x, float w, float y)
 	{
 		SPal p = pal(light);
-		box("face", false, x, 422, w, 40);
+		if (material())
+		{
+			// a pill of the material 72 px high, the key shaped like its button (the main action's on the plate), the
+			// label in the ink; at the page's foot it goes to the screen's (the stage's chips)
+			const bool was = shift.chips;
+			if (y >= 416) shift.chips = true;
+			const float h = px(72), kw = keycapWidth(key), ty = y >= 416 ? y : y + 2;
+			mpaint("pill", x, ty, w, h);
+			keycap(key, x + px(12), ty + px(12), key == "A" ? 1 : 0);
+			const float z = px(30) / 0.92f;
+			textFit(label, true, z, x + px(12) + kw + px(12), ty + (h - z * 1.18f) / 2, w - (px(12) + kw + px(12)) - px(24), p.ink, true);
+			shift.chips = was;
+			return;
+		}
+		if (rnds::themeFiles.setHints == "pill")
+		{
+			// (settings.hints "pill") a pill with a hairline, the key a round chip in it; A's in the accent
+			const bool a = key == "A";
+			box(a ? "pillA" : "pill", false, x, y + 2, w, 36);
+			float kw = std::max(24.0f, 12 + text(key, true, 15, 0, 0, p.ink, false, 0, true));
+			box(a ? "pillkeyA" : "pillkey", false, x + 7, y + 8, kw, 24);
+			float tw = text(key, true, 15, 0, 0, p.ink, false, 0, true);
+			text(key, true, 15, x + 7 + (kw - tw) / 2, y + 10.5f, Color::hex(0x111111));
+			textFit(label, true, 18, x + 7 + kw + 8, y + 9.5f, w - (7 + kw + 8) - 14, a ? p.pick : p.ink, true);
+			return;
+		}
+		box("face", false, x, y, w, 40);
 		float kw = 12 + text(key, true, 16, 0, 0, p.ink, false, 0, true);
-		box("kbd", false, x + 15, 430.5f, kw, 23);
-		text(key, true, 16, x + 21, 432.5f, p.kbdInk);
-		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
+		box("kbd", false, x + 15, y + 8.5f, kw, 23);
+		text(key, true, 16, x + 21, y + 10.5f, p.kbdInk);
+		textFit(label, true, 19, x + 15 + kw + 8, y + 9, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
 	// where each chip goes: the left ones from 18 on, 8 apart; the right ones from 622 back
@@ -2039,8 +2578,9 @@ namespace banana
 		for (size_t i = 0; i < cs.size(); i++)
 		{
 			ws[i] = faceWidth(cs[i].face, cs[i].label);
-			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= 8; }
-			else { xs[i] = left; left += ws[i] + 8; }
+			const float gap = material() ? px(24) : 8;
+			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= gap; }
+			else { xs[i] = left; left += ws[i] + gap; }
 		}
 		return xs;
 	}
@@ -2178,6 +2718,7 @@ namespace banana
 	// that runs from when it was first drawn picked. Returns the width drawn (the box's or less)
 	float Settings::textFit(const std::string& t, bool medium, float size, float x, float top, float width, const Color& c, bool picked, bool right)
 	{
+		if (material() && lay() && shift.screen == 0 && x == 170 && !right) return text(fit(t, medium, size, width), medium, size, x, top, c);	// (the header: headText)
 		float w = text(t, medium, size, 0, 0, c, false, 0, true);
 		if (w <= width) { text(t, medium, size, right ? x + width - w : x, top, c); return w; }
 		if (!picked) { std::string f = fit(t, medium, size, width); float fw = text(f, medium, size, 0, 0, c, false, 0, true); text(f, medium, size, right ? x + width - fw : x, top, c); return fw; }
@@ -2203,6 +2744,7 @@ namespace banana
 	bool Settings::animating() const
 	{
 		if (mOpen && mqMoving) return true;	// a marquee scrolling
+		if (mOpen && page == SETUP && now - wAnimT0 < 430) return true;	// a slide of the setup arriving
 		if (!mOpen || page != LIST) return false;
 		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
 		return aPick != sel || aTop != top;
@@ -2239,10 +2781,10 @@ namespace banana
 		text(groups[g0], true, 30, 170, 88, p.ink);
 		char n[32];
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
-		text(n, true, 22, 170, 130, p.accent);
+		text(n, true, 22, 170, 130, material() ? p.muted : p.accent);
 		std::string all;
 		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		wrapped(all + ".", 20, 50, material() && lay() ? HELP_TOP : 196, 540, 7, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -2254,9 +2796,36 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
-		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
-		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		if (material())
+		{
+			// the pause grid's tiles: the material, the picked one the accent's plate with its text in the plate's ink;
+			// the group's pixel icon, its name in the pixel face, what is in it under that
+			const Measures m = measures();
+			const Color sub = mcol("dim"), onInk = mcol("plateInk");
+			for (int g = 0; g < (int)groups.size() && g < 6; g++) box("tileM", false, 18 + (g % 3) * m.gridPX, m.gridY + (g / 3) * m.gridPY, m.gridW, m.gridH);
+			box("plate", true, 18 + aCol * m.gridPX, m.gridY + aRow * m.gridPY, m.gridW, m.gridH);
+			for (int g = 0; g < (int)groups.size() && g < 6; g++)
+			{
+				const bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
+				const float x = 18 + (g % 3) * m.gridPX, y = m.gridY + (g / 3) * m.gridPY, cx = x + m.gridW / 2;
+				iconPx = std::max(1, (int)std::lround(3 * shift.px()));
+				iconCentred(groupIcon[items[groupStart(g)].section], cx, y + px(52), 2);
+				iconPx = 0;
+				auto centred = [&](const std::string& t, bool med, float size, float top, float w, const Color& c)
+				{
+					float tw = text(t, med, size, 0, 0, c, false, 0, true);
+					if (tw <= w) text(t, med, size, cx - tw / 2, top, c);
+					else textFit(t, med, size, cx - w / 2, top, w, c, on);
+				};
+				centred(groups[g], true, std::max(21.6f, px(40)), y + px(168), m.gridW - px(32), on ? onInk : p.ink);
+				std::string hint = groupHint(g);
+				if (text(hint, false, px(28), 0, 0, sub, false, 0, true) > m.gridW - px(40)) hint = groupHint(g, 1);
+				centred(hint, false, px(28), y + px(228), m.gridW - px(40), on ? mcol("plateSub") : sub);
+			}
+		}
+		else for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		if (!material()) box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
+		for (int g = 0; g < (int)groups.size() && g < 6 && !material(); g++)
 		{
 			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
@@ -2292,6 +2861,8 @@ namespace banana
 	{
 		const Item& cur = items[i];
 		std::string help = cur.help;
+		// (a theme's own words for the row: its Theme row says what the theme is)
+		if (auto th = rnds::themeFiles.setHelp.find(cur.key); th != rnds::themeFiles.setHelp.end() && !cur.key.empty()) help = th->second;
 		if (cur.kind == Item::INFO && cur.key != "hk") help = about;	// (Hotkeys' rows have their own)
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
@@ -2319,7 +2890,7 @@ namespace banana
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
 		}
 		if ((cur.key == "hs_server" || cur.key == "hs_forget") && !message.empty()) help = message;
-		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
+		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key == "steam" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "colors")
 		{
 			ScreenColors c = ScreenColors::load(data + "/screen-colors.conf");
@@ -2355,13 +2926,13 @@ namespace banana
 	{
 		static const float SIZES[] = { 20, 18, 16 };
 		rnds::TextStyle st;
-		st.font = R;
+		st.font = B ? B : R;	// (as wrapped() draws it)
 		lines = 0;
 		for (float z : SIZES)
 		{
 			st.size = z;
 			size = z;
-			lines = R ? (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)HELP_W, 0).size() : 0;
+			lines = st.font ? (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)(helpWide > 0 ? helpWide : HELP_W), 0).size() : 0;
 			if ((lines - 1) * std::round(z * 1.4f) + z * 1.3f <= bottom - top) return true;
 		}
 		return false;
@@ -2371,7 +2942,7 @@ namespace banana
 		float z; int n;
 		bool ok = helpFit(t, top, bottom, z, n);
 		int maxLines = ok ? n : std::max(1, (int)((bottom - top - z * 1.3f) / std::round(z * 1.4f)) + 1);
-		wrapped(t, z, HELP_X, top, HELP_W, maxLines, c);
+		wrapped(t, z, HELP_X, top, helpWide > 0 ? helpWide : HELP_W, maxLines, c);
 	}
 
 	int Settings::helpCheck(const std::function<void(const std::string&)>& log)
@@ -2417,7 +2988,10 @@ namespace banana
 	void Settings::render()
 	{
 		frame++;
+		loadBody();
+		shift.left = rnds::themeFiles.setLeft;	// (the pages only: the game panel and the cards keep the canvas's)
 		renderPage();
+		shift.left = -1;
 		evict();
 	}
 
@@ -2435,6 +3009,8 @@ namespace banana
 		if (page == SPEAKEREQ) { renderEq(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (page == QUICK) { renderQuick(); return; }
+		if (page == PCGAMES) { renderPc(); return; }
 		if (page == THEMES) { renderThemes(); return; }
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
@@ -2454,10 +3030,12 @@ namespace banana
 		// the header (icon, section, name, value) kept tight so the help under it has ten lines (user feedback 2026-10-25: the
 		// Shader row's was cut at seven)
 		icon(cur.icon, 50, HEAD_ICON_Y, 3);
-		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
+		const bool crumbs = material() && lay();	// (the crumb "Settings · <section>"; the value is on the row)
+		if (crumbs) { text("Settings", true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f); text(cur.section, true, 22, 170, HEAD_VALUE_Y, p.muted); }
+		else text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		textFit(cur.label, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
 		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
-		if (!value.empty()) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
+		if (!value.empty() && !crumbs) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
 		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
 		{
@@ -2475,7 +3053,21 @@ namespace banana
 			helpText(help, HELP_TOP, HINT_TOP - 12, p.muted);
 			helpText(cur.hints[cur.at], HINT_TOP, HELP_BOTTOM, p.ink);
 		}
-		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
+		else if (cur.key == "steam" && steamQrShown())
+		{
+			if (steamQrRows.empty()) wrapped("Asking Steam for a code...", 20, HELP_X, HELP_TOP, HELP_W, 2, p.muted);
+			else drawSteamQr(HELP_X, HELP_TOP);
+		}
+		else
+		{
+			// (the Theme and Accent colour rows' page is split: the help in a narrower column, a small picture of the
+			// menu in the theme beside it)
+			const bool split = crumbs && (cur.key == "theme" || cur.key == "accent");
+			if (split) helpWide = px(772);	// (the design's 760 px, and the room its narrower letters leave)
+			helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
+			helpWide = 0;
+			if (split) listExtras(cur);
+		}
 		be->endScreen();
 
 		// ---- bottom: the list ----
@@ -2484,7 +3076,19 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		// the count only when the group has more rows than the five in view (it is the only sign of the others)
 		float titleW = 564;
-		if (ge - gb > ROWS)
+		const bool headM = material() && lay();	// (the design's header: "Settings", the page's name at the right)
+		if (headM)
+		{
+			std::vector<std::string> path = sectionPath(cur.section);
+			std::string where;
+			for (auto& s : path) where += (where.empty() ? "" : " > ") + (lang::active() ? lang::tr(s) : s);
+			if (ge - gb > listRows()) where += " \xc2\xb7 " + std::to_string(sel - gb + 1) + " / " + std::to_string(ge - gb);
+			const float tw = text("Settings", true, 22, 38, 28, p.ink);
+			rawText = true;
+			textFit(where, false, px(30) / 0.85f, 38 + tw + 24, 30, 602 - (38 + tw + 24), mcol("ink2"), false, true);
+			rawText = false;
+		}
+		else if (ge - gb > listRows())
 		{
 			char count[32];
 			snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
@@ -2494,6 +3098,7 @@ namespace banana
 		}
 		// the title: a subpage's place, the sections above it muted (Nintendo DS > SuperDrastic > ...), each translated on
 		// its own; the outer ones left out ("...") when the whole doesn't fit beside the count
+		if (!headM)
 		{
 			std::vector<std::string> path = sectionPath(cur.section);
 			for (auto& s : path) s = lang::active() ? lang::tr(s) : s;
@@ -2513,15 +3118,16 @@ namespace banana
 		// the rows, the highlight and the scroll where their easing has them; rows clipped to the list's band, so one
 		// scrolling in slides from under the header or the buttons
 		advance();
-		be->pushClip(0, X(76), X(640), X(ROWS * 64 + 4));
-		int r0 = std::max(gb, (int)std::floor(aTop)), r1 = std::min(ge, (int)std::ceil(aTop) + ROWS);
-		for (int i = r0; i < r1; i++) box("slot", false, 18, 82 + (i - aTop) * 64, 604, 56);
-		box("pick", true, 18, 82 + (aPick - aTop) * 64, 604, 56);
+		const Measures lm = measures();
+		be->pushClip(0, X(lm.rowY - 6), X(640), X(listRows() * lm.rowPitch + 4));
+		int r0 = std::max(gb, (int)std::floor(aTop)), r1 = std::min(ge, (int)std::ceil(aTop) + listRows());
+		for (int i = r0; i < r1; i++) box("slot", false, 18, lm.rowY + (i - aTop) * lm.rowPitch, 604, lm.rowH);
+		box("pick", true, 18, lm.rowY + (aPick - aTop) * lm.rowPitch, 604, lm.rowH);
 		for (int i = r0; i < r1; i++)
 		{
 			const Item& it = items[i];
 			bool on = std::fabs(i - aPick) < 0.5f;
-			float y = 82 + (i - aTop) * 64;
+			float y = lm.rowY + (i - aTop) * lm.rowPitch;
 			std::string v;
 			bool nameValue = false;	// (the value is a network's or the DS's name: as it is)
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
@@ -2545,6 +3151,9 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
+			else if (it.kind == Item::PAGE && it.key == "steam") { v = armed == i ? "Press A again" : steamQrShown() ? "Scan the code" : steamPid > 0 ? "Logging in" : steamUser.empty() ? "Not logged in" : fit(steamUser, true, 19, 300); nameValue = armed != i && steamPid <= 0 && !steamUser.empty(); }
+			else if (it.kind == Item::PAGE && it.key == "ra_account") { v = account("ra_user").empty() ? "Not logged in" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
+			else if (it.kind == Item::PAGE && it.key == "sgdb_key") v = account("sgdb_key").empty() ? "Not set" : "Set";
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
 			{
 				if (const Item* r = itemByKey(s->summary); r && r->kind == Item::CHOICE && r->at < (int)r->names.size()) v = r->names[r->at];
@@ -2553,6 +3162,7 @@ namespace banana
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
 			// (no arrows on Language: A opens its list, nothing steps left or right)
 			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO) && it.key != "language";
+			if (material()) { AsNamed named(*this, nameValue); listRow(it, y, lm.rowH, on, v, arrows, armed == i); continue; }
 			const float vmax = 260, vright = arrows ? 566 : 586;
 			float vw;
 			{ AsNamed named(*this, nameValue); vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true)); }
@@ -2568,7 +3178,7 @@ namespace banana
 		be->popClip();
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.kind == Item::PAGE ? "Open" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.key == "steam" ? (steamQrShown() ? "Use a password" : steamPid > 0 ? "" : steamUser.empty() ? "Log in" : armed == sel ? "Confirm" : "Log out") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			// (only B beside it: as wide as the bar leaves, so an action's name - "Reset RetroArch" - fits whole instead
@@ -2633,7 +3243,10 @@ namespace banana
 		if (!mOpen) return false;
 		bool scrapeChanged = pollScrape(t);
 		scrapeChanged |= pollSync(t);
+		scrapeChanged |= pollSteam();
 		scrapeChanged |= pollPickGames();
+		scrapeChanged |= quickPoll(t);
+		scrapeChanged |= pollPc(t);
 		bool changed0 = false;
 		if (raCheck)
 		{
@@ -2795,6 +3408,8 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
+if (page == PCGAMES) return std::max(0, (int)(pcPollAt - t) + 1);	// (a download's progress)
+				if (page == QUICK && qBoard) return std::max(0, (int)(qStatAt + 1000 - t) + 1);	// (the meters, once a second)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -2802,6 +3417,7 @@ namespace banana
 		if (testing) return 300;	// (the setup's Wi-Fi test: its lines as they come)
 		if (page == SETUP && wizard && (!joining.empty() || testAfterJoin)) return std::max(0, (int)(nextStatus - t));
 		if (page == SETUP && wizard && raCheck) return 250;	// (the dots going round)
+		if (steamPid > 0 || steamLibPid > 0) return 250;	// (Steam's login, its code, the library: the state file looked at, the dots)
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
 		return std::max(0, (int)(due - t));
@@ -2950,6 +3566,8 @@ namespace banana
 		case Key::A: return keyboardKey(krow, kcol);
 		case Key::B:
 			if (pw.empty() && entry == ENTRY_SEARCH) { close(); return CLOSED; }
+			if (pw.empty() && entry == ENTRY_STEAM_CODE) { steamRun("cancel"); steamCodeOpen = false; }	// (no code: the login stopped)
+			if (pw.empty() && entry == ENTRY_HS_CODE) hsStep = 0;	// (no code: not pairing any more, Pair is offered again)
 			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
 			popChar(pw);
 			return MOVED;
@@ -3015,6 +3633,7 @@ namespace banana
 		// alone: measured with text() a character at a time, each cut was a texture in the cache, dozens for a long name
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
+		if (material()) role(medium, st.size, st.font, st.upper, st.letterSpacing);
 		if (!st.font) return "...";
 		rnds::Verbatim vb(rawText);
 		std::u32string u = rnds::utf8to32(lang::active() && !rawText ? lang::tr(t) : t);
@@ -3037,6 +3656,7 @@ namespace banana
 		rnds::Verbatim vb(rawText);
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.upper = upper; st.letterSpacing = ls;
+		if (material()) role(medium, st.size, st.font, st.upper, st.letterSpacing);
 		std::u32string u = rnds::utf8to32(t);
 		if (!st.font || u.size() < 2) return t;
 		size_t fits = 1, over = u.size();	// (the last fits characters fit, or the one; the last over don't)
@@ -3357,8 +3977,17 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME || entry == ENTRY_SERVER ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
+		if (material() && lay())
+		{
+			// (what is being typed as the title, its note as the crumb over it)
+			text(entrySub.empty() ? "Keyboard" : entrySub, true, 17, 170, 62, p.muted, true, 1.4f);
+			text(fit(entryTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		}
+		else
+		{
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
+		}
 		box("slot", true, 50, 150, 540, 56);
 		// the end of the password when it is longer than the field
 		float w = 0;
@@ -3383,6 +4012,9 @@ namespace banana
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: entry == ENTRY_HS_ADDR ? "The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
 			: entry == ENTRY_BETA_PASS ? "The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only."
+			: entry == ENTRY_STEAM_USER || entry == ENTRY_STEAM_PASS ? "The name and password you sign in to Steam with. The password goes to Steam and isn't kept: the handheld keeps the login token Steam gives it. A types the key, B deletes, X capitals, L symbols, START when it is typed."
+			: entry == ENTRY_STEAM_CODE ? "Steam Guard's code: the Steam app's (Steam Guard) or the one mailed to you. START sends it; B with nothing typed stops the login."
+			: entry == ENTRY_SGDB_KEY ? "Optional: better box art for PC games that aren't from Steam. The API key from steamgriddb.com, Preferences > API. START when it is typed; empty takes it away."
 			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed."
 			: entry == ENTRY_DS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf)."
 			: entry == ENTRY_GAME_NAME || entry == ENTRY_GAME_SORT ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card."
@@ -3425,8 +4057,17 @@ namespace banana
 			{
 				float x = KX + c * KPITCH, y = KY + r * KROW;
 				bool on = r == krow && c == kcol;
-				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
 				std::string k(1, KEYS[layer][r][c]);
+				if (material())
+				{
+					// a key: a tile of the material, the one picked the plate; its letter in Inter
+					box(on ? "kbkeyOn" : "kbkey", on, x, y, KPITCH - 6, KH);
+					const float z = 21.4f;
+					float tw = text(k, true, z, 0, 0, p.ink, false, 0, true);
+					text(k, true, z, x + (KPITCH - 6 - tw) / 2, y + (KH - z * 1.25f) / 2, on ? mcol("plateInk") : p.ink);
+					continue;
+				}
+				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
 				float tw = text(k, true, 28, 0, 0, p.ink, false, 0, true);
 				text(k, true, 28, x + std::round((KPITCH - 6 - tw) / 2), y + 13, on ? p.onPick : p.ink);
 			}
@@ -3435,10 +4076,19 @@ namespace banana
 		{
 			float x = KX + FKEYS[i].c0 * KPITCH, y = KY + 4 * KROW, kw = FKEYS[i].span * KPITCH - 6;
 			bool on = i == fsel;
-			box(on ? "pick" : "slot", on, x, y, kw, KH);
 			std::string k = i == 1 && layer == 2 ? "abc" : i == 0 && layer == 1 ? "SHIFT" : FKEYS[i].name;
 			if (i == 4) k = entry == ENTRY_WIFI ? "Join" : "Done";
 			bool lit = (i == 0 && layer == 1) || (i == 1 && layer == 2);
+			if (material())
+			{
+				// (the wide keys a step lighter; one that is on says so in the accent)
+				box(on ? "kbkeyOn" : "raised", on, x, y, kw, KH);
+				const float z = 20;
+				float tw = text(k, true, z, 0, 0, p.ink, false, 0, true);
+				text(k, true, z, x + (kw - tw) / 2, y + (KH - z * 1.2f) / 2, on ? mcol("plateInk") : lit ? mcol("ring") : p.ink);
+				continue;
+			}
+			box(on ? "pick" : "slot", on, x, y, kw, KH);
 			float tw = text(k, true, 21, 0, 0, p.ink, false, 0, true);
 			text(k, true, 21, x + std::round((kw - tw) / 2), y + 17, on ? p.onPick : lit ? p.accent : p.ink);
 		}
@@ -4915,7 +5565,9 @@ namespace banana
 			if (access(top.c_str(), F_OK) == 0 && access(bot.c_str(), F_OK) == 0) continue;
 			bool ownTop = top.compare(0, dir.size() + 1, dir + "/") != 0;	// the theme's own picture: never written over
 			std::string id = bot.substr(dir.size() + 1, bot.size() - dir.size() - 1 - 17);	// (less "-<8 hex>-bot.png")
-			cmd += "mkdir -p \"$D/x\" && printf 'theme = %s\\n' " + q(v) + " > \"$D/x/settings.conf\" && timeout 40 " + q(exe) +
+			// (a theme with an accent of its own is shown in it)
+			const std::string ownAccent = themeOwnAccent(v);
+			cmd += "mkdir -p \"$D/x\" && printf 'theme = %s\\n" + (ownAccent.empty() ? std::string() : "accent = " + ownAccent + "\\n") + "' " + q(v) + " > \"$D/x/settings.conf\" && timeout 40 " + q(exe) +
 				" --headless \"$D/x/\" --size 640x480 " + thumbArgs + " --data \"$D/x\" --script 'home 0; wait 1500; shot s' >/dev/null 2>&1 && " +
 				"mkdir -p " + q(dir) + " && rm -f " + q(dir + "/" + id) + "-????????-???.png; " +
 				(ownTop ? std::string() : "mv \"$D/x/s-top.png\" " + q(top) + "; ") + "mv \"$D/x/s-bot.png\" " + q(bot) + "; rm -rf \"$D/x\"; ";
@@ -4951,6 +5603,7 @@ namespace banana
 					if (it.at == thSel) return NONE;
 					it.at = thSel;
 					save(it);
+					themeAccent(it.values[thSel]);
 					setVariant(it.values[thSel]);
 					for (auto& x : items) if (x.key == "accent") load(x);
 					return THEME;
@@ -5198,15 +5851,22 @@ namespace banana
 		};
 		const std::string Q = "Change the menu's language?", N = "No, keep it", Y = "Yes, change it";
 
+		// (the material look: a card in the middle of the screen, whatever the pages' column)
+		const bool mat = material();
+		const float left0 = shift.left;
+		if (mat) shift.left = -1;
 		be->beginScreen(0);
+		shift.bodyDy = 0;
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
+		if (mat) box("card", false, 70, 84, 500, 332);
 		centred(here(Q), true, 26, 120, p.ink);
 		centred(there(Q), true, 26, 168, p.ink);
-		centred(fromName + "  >  " + toName, true, 24, 250, p.accent);
+		centred(fromName + "  >  " + toName, true, 24, 250, mat ? p.ink : p.accent);
 		centred(here("The menu starts again in the new language."), false, 18, 330, p.muted);
 		centred(there("The menu starts again in the new language."), false, 18, 360, p.muted);
 		be->endScreen();
+		shift.left = left0;
 
 		askButtons(toName, here(N), there(N), here(Y), there(Y), langYes);
 	}
@@ -5229,10 +5889,12 @@ namespace banana
 		{
 			bool on = yes == (b == 1);
 			float y = 150 + b * 96;
-			box(on ? "pick" : "slot", on, 60, y, 520, 80);
+			if (material()) box(on ? "plate" : "tileM", on, 60, y, 520, 80);	// (the one picked on the plate)
+			else box(on ? "pick" : "slot", on, 60, y, 520, 80);
 			const std::string& t1 = b ? yes1 : no1;
 			const std::string& t2 = b ? yes2 : no2;
 			Color c = on ? p.onPick : p.ink;
+			if (material() && on) c = mcol("plateInk");
 			if (t2.empty()) centred(t1, true, 22, y + 28, c);
 			else { centred(t1, true, 22, y + 12, c); centred(t2, true, 22, y + 44, c); }
 		}
@@ -5420,6 +6082,9 @@ namespace banana
 	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast", "Fast, DSi CPU" };
 	// a DS game's own BananaDS DS CPU speed (core.arm9_mhz; nds-per-game-cpu.conf, run-bananads): over Settings' and its timing's
 	static const char* const GAME_CPU_VALUES[] = { "", "67", "133", "266", "533", "1066", "2133" };
+	// a game's performance mode (banana-perf's profiles), over its system's (systems.conf's perf)
+	static const char* const GAME_PERF_VALUES[] = { "", "powersave", "balanced", "steady", "performance" };
+	static const char* const GAME_PERF_NAMES[] = { "", "Battery saver", "Balanced", "Steady", "Performance" };
 	static const char* const GAME_CPU_NAMES[] = { "", "67 MHz (DS)", "133 MHz (DSi)", "266 MHz", "533 MHz", "1066 MHz", "2133 MHz" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
@@ -5525,14 +6190,16 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped, const std::string& rocknixSystem)
 	{
 		open();
+		pgRxSystem = rocknixSystem; pgRxWhole = false; pgRx.clear();
 		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
 		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
+		if (!rocknixSystem.empty()) loadRx();	// (its rows: the For row, the emulator, its options)
 		pg3d = pgMic = pgRes = pgTiming = pgCpu = 0;
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
@@ -5543,6 +6210,13 @@ namespace banana
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
+		}
+		// every game: its performance mode
+		pgRows.push_back(PG_PERF);
+		pgPerf = 0;
+		{
+			const std::string pf = perGame("per-game-perf.conf", romName);
+			for (int i = 1; i < 5; i++) if (pf == GAME_PERF_VALUES[i]) pgPerf = i;
 		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
@@ -5570,9 +6244,45 @@ namespace banana
 		page = GAME;
 	}
 
+	// a ROCKNIX game's rows from rocknix-options (key, label, help, current, what "" means, then name and value pairs), in
+	// place of those listed before, after the For row; the row the cursor is on stays where it was
+	void Settings::loadRx()
+	{
+		pgRows.erase(std::remove_if(pgRows.begin(), pgRows.end(), [](PgRow r) { return r == PG_SCOPE || r >= PG_RX; }), pgRows.end());
+		pgRx.clear();
+		std::string out = capture({ rocknixOptions(), "rows", pgRxSystem, pgRxWhole ? "-" : pgRom });
+		std::istringstream in(out);
+		std::string ln;
+		while (std::getline(in, ln) && pgRx.size() < PG_RX_END - PG_RX)
+		{
+			std::vector<std::string> c;
+			size_t at = 0;
+			for (;;) { size_t t = ln.find('\t', at); c.push_back(ln.substr(at, t == std::string::npos ? t : t - at)); if (t == std::string::npos) break; at = t + 1; }
+			if (c.size() < 7) continue;
+			RxRow r;
+			r.key = c[0]; r.label = c[1]; r.help = c[2];
+			r.names.push_back(c[4]); r.values.push_back("");
+			for (size_t i = 5; i + 1 < c.size(); i += 2) { r.names.push_back(c[i]); r.values.push_back(c[i + 1]); }
+			for (size_t i = 1; i < r.values.size(); i++) if (r.values[i] == c[3] && !c[3].empty()) r.at = (int)i;
+			pgRx.push_back(r);
+		}
+		std::vector<PgRow> rx = { PG_SCOPE };
+		for (size_t i = 0; i < pgRx.size(); i++) rx.push_back((PgRow)(PG_RX + i));
+		pgRows.insert(pgRows.begin(), rx.begin(), rx.end());
+	}
+
+	void Settings::setRx(const RxRow& r)
+	{
+		std::vector<std::string> a = { rocknixOptions(), "set", pgRxSystem, pgRxWhole ? "-" : pgRom, r.key };
+		if (r.at > 0) a.push_back(r.values[r.at]);
+		capture(a);
+		pgChanged = true;
+	}
+
 	// the DS rows' values into their per-game files (only a row that changed is written: setPerGame keeps the rest)
 	void Settings::saveGameRows()
 	{
+		if (perGame("per-game-perf.conf", pgRom) != GAME_PERF_VALUES[pgPerf]) { setPerGame("per-game-perf.conf", pgRom, GAME_PERF_VALUES[pgPerf]); pgChanged = true; }
 		if (!pgNds) return;
 		pgChanged = true;
 		if (gameEmulator(pgRom) != GAME_EMUS[pgEmu]) setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
@@ -5601,6 +6311,22 @@ namespace banana
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
+			if (row == PG_SCOPE || row >= PG_RX)
+			{
+				if (row == PG_SCOPE) pgRxWhole = !pgRxWhole;
+				else
+				{
+					RxRow& r = pgRx[row - PG_RX];
+					int nv = (int)r.values.size();
+					r.at = (r.at + d + nv) % nv;
+					setRx(r);
+					if (r.key != "emulator") return MOVED;
+				}
+				// another emulator, or the other level: its rows (another emulator has other options)
+				loadRx();
+				pgRow = std::min(pgRow, (int)pgRows.size() - 1);
+				return MOVED;
+			}
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
 			else if (row == PG_RES)
@@ -5620,6 +6346,7 @@ namespace banana
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 4) % 4;
 			else if (row == PG_CPU) pgCpu = (pgCpu + d + 7) % 7;
+			else if (row == PG_PERF) pgPerf = (pgPerf + d + 5) % 5;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
@@ -5685,6 +6412,10 @@ namespace banana
 	std::string Settings::gameHelpOf(int row)
 	{
 		const bool plus = board_() == "rgds-plus";
+		if (row == PG_SCOPE)
+			return "Whether the rows below are this game's own, or every game's of its system (a game's own wins over its "
+				   "system's). Kept in ROCKNIX's settings, as EmulationStation keeps them.";
+		if (row >= PG_RX && row - PG_RX < (int)pgRx.size()) return !message.empty() ? message : pgRx[row - PG_RX].help;
 		return row == PG_EMU
 				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
@@ -5697,6 +6428,9 @@ namespace banana
 				  "The others follow each emulator's 3D resolution (Settings > Nintendo DS > BananaDS or SuperDrastic)."
 				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
+				: row == PG_PERF ? "How hard the handheld works for this game: Battery saver caps the clocks, Balanced lets them follow the "
+				  "load, Steady keeps them up between frames (an emulator that waits on every frame), Performance runs them flat out "
+				  "and the GPU too. The others follow their system's."
 				: row == PG_CPU ? "BananaDS only. How fast the DS's own CPU runs for this game, over Settings' and its Timing's. Faster stops a game's own slowdown in busy places (Origin HeartGold's towns). Above 67 MHz isn't a DS's speed: if this game hangs or goes wrong, set it back."
 				: row == PG_TIMING ? "BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in "
 				  "HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn "
@@ -5747,15 +6481,17 @@ namespace banana
 		const std::string gslice = getConfValue("/data/bananads/bananads.conf", "core.slice", "64");
 		const std::string gcpu = getConfValue("/data/bananads/bananads.conf", "core.arm9_mhz", "67");
 		const std::string vcpu = pgCpu ? std::string(GAME_CPU_NAMES[pgCpu]) : "As in Settings (" + gcpu + " MHz)";
+		const std::string vperf = pgPerf ? std::string(GAME_PERF_NAMES[pgPerf]) : "As its system's";
 		const std::string vtiming = pgTiming ? std::string(GAME_TIMING_NAMES[pgTiming]) : "As in Settings (" + std::string(gslice == "64" ? "Accurate" : "Fast") + ")";
 
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
+		auto label = [&](PgRow r) { return r == PG_SCOPE ? "For" : r >= PG_RX ? pgRx[r - PG_RX].label.c_str() : r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
+			: r == PG_PERF ? "Performance" : r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
+		auto value = [&](PgRow r) { return r == PG_SCOPE ? std::string(pgRxWhole ? "Every game of its system" : "This game")
+			: r >= PG_RX ? pgRx[r - PG_RX].names[pgRx[r - PG_RX].at] : r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
+			: r == PG_PERF ? vperf : r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
@@ -5763,7 +6499,14 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		std::string rxHead;
+		if (row >= PG_RX)
+		{
+			rxHead = pgRx[row - PG_RX].label;
+			for (auto& ch : rxHead) ch = (char)tolower((unsigned char)ch);
+			rxHead = (pgRxWhole ? "Its system's " : "This game's ") + rxHead;
+		}
+		text(row >= PG_RX ? rxHead.c_str() : row == PG_SCOPE ? "Where these choices go" : row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_PERF ? "This game's performance" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5897,6 +6640,37 @@ namespace banana
 		case ENTRY_RA_PASS:
 			setConfValue(data + "/accounts.conf", "ra_password", pw, "=");
 			startRaCheck(account("ra_user"), pw);	// says at once whether the login works
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			return CHANGED;
+		case ENTRY_STEAM_USER:
+			if (pw.empty()) { message = "The account's name, as you sign in to Steam with (not the profile's name)."; return MOVED; }
+			steamAcct = trim(pw);
+			startEntry(ENTRY_STEAM_PASS, "Steam password for", steamAcct, entryBack);
+			return MOVED;
+		case ENTRY_STEAM_PASS:
+		{
+			std::string pass = pw;
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			if (pass.empty()) return MOVED;
+			startSteamLogin(steamAcct, pass);	// (the password goes to the tool's stdin, never to a file)
+			return CHANGED;
+		}
+		case ENTRY_STEAM_CODE:
+		{
+			std::string code = trim(pw);
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			if (code.empty()) return MOVED;
+			steamRun("code " + shellQuote(code));	// (the entry stays down until the tool's state changes again)
+			return CHANGED;
+		}
+		case ENTRY_SGDB_KEY:
+			setConfValue(data + "/accounts.conf", "sgdb_key", trim(pw), "=");
 			pw.clear();
 			page = entryBack;
 			message.clear();
@@ -6145,8 +6919,40 @@ namespace banana
 	// it; setup-done is written at the end, as before.
 	const char* Settings::slideKey(Slide sl)
 	{
-		static const char* k[] = { "language", "wifi", "timezone", "name", "retroachievements", "boxart", "done" };
+		static const char* k[] = { "language", "wifi", "timezone", "name", "retroachievements", "boxart", "done", "homeserver", "steam", "controls" };
 		return k[sl];
+	}
+
+	std::string Settings::deviceName() const
+	{
+		// the one place the handheld's short name comes from (the DS's name rows, the setup): the AYN Thor's is its own
+		return board_() == "thor" ? "Thor" : "DS";
+	}
+
+	std::vector<std::string> Settings::controlKeys() const
+	{
+		std::vector<std::string> r;
+		for (const char* k : { "fan", "leds", "leds_level", "confirm_button" })
+			if (itemByKey(k)) r.push_back(k);
+		return r;
+	}
+
+	std::vector<Settings::Slide> Settings::setupSlides()
+	{
+		std::vector<Slide> r;
+		for (auto& it : items) if (it.key == "language") { r.push_back(SL_LANG); break; }
+		r.push_back(SL_WIFI);
+		r.push_back(SL_TZ);
+		// the handheld's own controls: where the handheld tool has a fan or stick lights (the AYN Thor)
+		if (itemByKey("fan") || itemByKey("leds")) r.push_back(SL_CONTROLS);
+		r.push_back(SL_NAME);
+		// the home server: banana-sync on a handheld other than the RG DS (whose setup stays its six steps)
+		if (!rgdsBoard_() && !board_().empty() && access(syncTool().c_str(), X_OK) == 0) r.push_back(SL_HOME);
+		r.push_back(SL_RA);
+		if (!steamTool.empty()) r.push_back(SL_STEAM);
+		r.push_back(SL_ART);
+		r.push_back(SL_DONE);
+		return r;
 	}
 
 	// banana/setup-done says which setup the card went through: "setup 2" this one (0.5.0's slides). An older card's
@@ -6179,14 +6985,14 @@ namespace banana
 		armed = -1;
 		message.clear();
 		page = SETUP;
-		slides.clear();
-		for (auto& it : items) if (it.key == "language") { slides.push_back(SL_LANG); langAt = it.at; }
-		for (Slide sl : { SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE }) slides.push_back(sl);
+		for (auto& it : items) if (it.key == "language") langAt = it.at;
+		slides = setupSlides();
 		wskipped.assign(slides.size(), false);
 		tLink = tNet = tTime = -1;
 		testing = testAfterJoin = autoTested = raAuto = false;
 		statusKnown = !wifiOn();	// (off: nothing to wait for)
 		raKind = 0; raLine.clear();
+		steamKind = 0; steamLine.clear();
 		int start = 0;
 		for (int i = 0; i < (int)slides.size(); i++) if (at == slideKey(slides[i])) start = i;
 		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);
@@ -6201,6 +7007,7 @@ namespace banana
 		// (the boot's setup only, and each slide as it is reached: a restart finds the setup again there)
 		if (wizardBoot || slides[wsel] == SL_LANG)
 			std::ofstream(data + "/setup-step") << slideKey(slides[wsel]) << " " << (wizardBoot ? "boot" : "settings") << "\n";
+		if (slides[wsel] == SL_STEAM && steamPid <= 0) steamStatus();	// (the account logged in already, the library's size)
 		// Wi-Fi already connected (a saved network, or the setup again): tested at once
 		if (slides[wsel] == SL_WIFI && wstat.connected && tLink < 0 && !testing) { autoTested = true; startTest(); }
 		// an account from before: its login checked with the site straight away (the password is never shown)
@@ -6233,7 +7040,7 @@ namespace banana
 		if (wizardBoot) { mOpen = false; setupEnded = true; return; }
 		// from Settings: back on its row in System's list
 		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == "setup") { sel = i; inGroups = false; }
-		top = std::max(0, sel - ROWS + 1);
+		top = std::max(0, sel - listRows() + 1);
 		top = std::max(groupStart(groupOf(sel)), top);
 	}
 
@@ -6362,6 +7169,40 @@ namespace banana
 			r.push_back({ scrapeLine.compare(0, 5, "error") == 0 ? "Try again" : "Start fetching box art", "", SA_ART });
 			r.push_back({ "Skip for now", "", SA_SKIP });
 			break;
+		case SL_HOME:
+		{
+			const std::string hs = homeServer();
+			if (!hs.empty()) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Pair with another server", hs, SA_HOME }); break; }
+			if (hsStep) { r.push_back({ "Pairing", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			r.push_back({ "Pair", "", SA_HOME });
+			r.push_back({ "Skip for now", "", SA_SKIP });
+			break;
+		}
+		case SL_STEAM:
+			// as RetroAchievements': the login under way, then Next or Try again
+			// the sign-in with the app (its code on the top screen) first, the name and password the other way
+			if (steamPid > 0 && steamQr)
+			{
+				r.push_back({ steamQrRows.empty() ? "Asking Steam for a code" : "Waiting for the scan", "", SA_WAIT });
+				r.push_back({ "Type the name and password instead", "", SA_STEAM });
+				r.push_back({ "Skip for now", "", SA_SKIP });
+				break;
+			}
+			if (steamPid > 0) { r.push_back({ steamState == "confirm" ? "Waiting for the approval" : "Logging in", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (steamKind == 1 || (steamKind == 0 && !steamUser.empty())) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_STEAMQR }); break; }
+			if (steamKind == 2 && steamQr) { r.push_back({ "Try again", "", SA_STEAMQR }); r.push_back({ "Type the name and password", "", SA_STEAM }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (steamKind == 2) { r.push_back({ "Try again", "", SA_STEAM }); r.push_back({ "Sign in with the Steam app", "", SA_STEAMQR }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			r.push_back({ "Sign in with the Steam app", "", SA_STEAMQR });
+			r.push_back({ "Type the name and password", "", SA_STEAM });
+			r.push_back({ "Skip for now", "", SA_SKIP });
+			break;
+		case SL_CONTROLS:
+			// the rows themselves, left and right changing each (saved and applied at once, as in Settings)
+			r.push_back({ "Next", "", SA_NEXT });
+			for (const std::string& k : controlKeys())
+				if (const Item* it = itemByKey(k); it && it->at < (int)it->names.size())
+					r.push_back({ it->label, it->names[it->at], SA_ITEM, k });
+			break;
 		case SL_DONE:
 			r.push_back({ "Finish", "", SA_FINISH });
 			break;
@@ -6376,6 +7217,14 @@ namespace banana
 		auto ch = setupChoices();
 		for (size_t i = 0; i < ch.size(); i++) r += (i ? "|" : "") + ch[i].label;
 		r += " link=" + std::to_string(tLink) + " net=" + std::to_string(tNet) + " time=" + std::to_string(tTime) + " ra=" + std::to_string(raKind);
+		if (!steamTool.empty()) r += " steam=" + std::to_string(steamPid > 0 ? 3 : steamKind) + " steamuser=" + steamUser + " steamstate=" + steamState;
+		if (steamQrShown())
+		{
+			int dark = 0;
+			for (auto& row : steamQrRows) dark += (int)std::count(row.begin(), row.end(), '1');
+			r += " qr=" + std::to_string(steamQrRows.size()) + "x" + std::to_string(steamQrK) + " qrn=" + std::to_string(steamQrN) + " qrdark=" + std::to_string(dark);
+		}
+		r += " steps=" + std::to_string(slides.size());
 		return r;
 	}
 
@@ -6388,6 +7237,7 @@ namespace banana
 		{
 		case SA_WAIT: return NONE;
 		case SA_SKIP: case SA_NEXT:
+			if (sl == SL_STEAM) steamCancel();	// (a sign-in still waiting stops)
 			if (sl == SL_LANG && lg && langAt != lg->at)
 			{
 				// the language picked: saved, and the menu starts again in it on the next slide
@@ -6419,7 +7269,7 @@ namespace banana
 			openNetworks();
 			return MOVED;
 		case SA_TEST: startTest(); return MOVED;
-		case SA_NAME: startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", SETUP, dsName()); return MOVED;
+		case SA_NAME: startEntry(ENTRY_DS_NAME, "The " + deviceName() + "'s name", "10 characters at most", SETUP, dsName()); return MOVED;
 		case SA_RA:
 			raKind = 0; raLine.clear();
 			startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user"));
@@ -6430,11 +7280,39 @@ namespace banana
 			if (!raCheck) { raKind = 4; raLine = "Saved (not checked here)"; }	// (the test's BANANA_RA_CHECK=0)
 			return MOVED;
 		case SA_ART: startScrape(); return MOVED;
+		case SA_HOME: message.clear(); startPairing(); return MOVED;
+		case SA_STEAM:
+			steamCancel();	// (the app's sign-in, if it is waiting: the password's way instead)
+			steamKind = 0; steamLine.clear();
+			startEntry(ENTRY_STEAM_USER, "Steam", "Account name", SETUP, steamUser.empty() ? steamAcct : "");	// (another account: typed afresh)
+			return MOVED;
+		case SA_STEAMQR: startSteamQr(); wpick = 0; return MOVED;
+		case SA_ITEM: return pressSetup(Key::RIGHT);	// (A steps it on, as right does)
 		}
 		return NONE;
 	}
 
+	// a slide arriving, in a theme with fades: what is on it comes in from the side it was gone to, the top screen
+	// first and the bottom one a moment after (the screens' grounds stay: only what is on them moves)
+	static constexpr double SETUP_IN_MS = 340, SETUP_IN_LAG = 70;
+	void Settings::setupArrive(int screen)
+	{
+		const float t = (float)((now - wAnimT0 - screen * SETUP_IN_LAG) / SETUP_IN_MS);
+		if (t >= 1) return;
+		const float u = std::max(0.0f, t), e = 1 - (1 - u) * (1 - u) * (1 - u);
+		shift.fa = e;
+		shift.fo = std::round((1 - e) * wAnimDir * 44 * shift.k * (shift.on() ? shift.g : 1.0f));
+	}
+
 	Settings::Result Settings::pressSetup(Key k)
+	{
+		const int was = wsel;
+		const Result r = pressSetupKey(k);
+		if (wizard && page == SETUP && wsel != was && rnds::themeFiles.transitions == "fade") { wAnimT0 = now; wAnimDir = wsel > was ? 1 : -1; }
+		return r;
+	}
+
+	Settings::Result Settings::pressSetupKey(Key k)
 	{
 		auto ch = setupChoices();
 		int n = (int)ch.size();
@@ -6451,7 +7329,21 @@ namespace banana
 		{
 			// the value rows: the time zone and the language, either way
 			int d = k == Key::LEFT || k == Key::L ? -1 : 1;
-			for (int i = 0; i < n; i++) if (ch[i].act == SA_TZ || ch[i].act == SA_LANG) wpick = i;	// (onto the value's row)
+			if (!(n && ch[wpick].act == SA_ITEM))
+				for (int i = 0; i < n; i++) if (ch[i].act == SA_TZ || ch[i].act == SA_LANG) wpick = i;	// (onto the value's row)
+			if (n && ch[wpick].act == SA_ITEM)
+			{
+				// one of the Controls slide's rows: the setting itself, saved and applied (the fan, the lights)
+				for (auto& it : items)
+					if (it.key == ch[wpick].key && !it.values.empty())
+					{
+						int m = (int)it.values.size();
+						it.at = (it.at + d + m) % m;
+						save(it);
+						return CHANGED;
+					}
+				return NONE;
+			}
 			if (n && ch[wpick].act == SA_TZ && tz)
 			{
 				int m = (int)tz->values.size();
@@ -6474,6 +7366,7 @@ namespace banana
 			for (auto& c : ch) if (c.act == SA_NEXT || c.act == SA_SKIP) return setupAct(c.act);
 			return setupAct(SA_SKIP);
 		case Key::B:
+			if (slides[wsel] == SL_STEAM && steamPid > 0) { steamCancel(); return MOVED; }	// (the sign-in stops: the slide's choices again)
 			if (wsel > 0) { setupGo(wsel - 1); return MOVED; }
 			if (!wizardBoot) { wizard = false; page = LIST; unlink((data + "/setup-step").c_str()); return MOVED; }	// out, back to Settings
 			return NONE;
@@ -6518,8 +7411,9 @@ namespace banana
 			text(fit(t, false, 20, 500), false, 20, 80, y, state == 0 ? p.ink : state == 1 ? p.ink : p.muted);
 		};
 
-		static const char* icons[] = { "book", "phone", "recent", "nds", "gamepad", "picture", "fav" };
-		static const char* titles[] = { "Language", "Wi-Fi", "Time zone", "DS name", "RetroAchievements", "Box art", "All set" };
+		static const char* icons[] = { "book", "phone", "recent", "nds", "gamepad", "picture", "fav", "phone", "gamepad", "gear" };
+		const std::string nameTitle = deviceName() + " name";
+		const char* titles[] = { "Language", "Wi-Fi", "Time zone", nameTitle.c_str(), "RetroAchievements", "Box art", "All set", "Home server", "Steam", "Controls" };
 		std::string status, help;
 		switch (sl)
 		{
@@ -6539,7 +7433,21 @@ namespace banana
 			break;
 		case SL_NAME:
 			status = dsName().empty() ? "Not set" : dsName();
-			help = "Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.";
+			help = deviceName() == "DS" ? "Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own."
+				: "Your name on the " + deviceName() + ": the DS games ask for it as a real DS does (Mario Kart's records, Pictochat, a game's save). 10 characters at most. Leave it and the emulators use their own.";
+			break;
+		case SL_HOME:
+			status = !homeServer().empty() ? "Paired with " + homeServer() : hsStep ? "Pairing..." : "Not paired";
+			help = "Your RomM or Romhost server at home: its games, box art and saves come to the card, your saves go back. A finds it on the network and asks for its code. No server? Skip this: Network > Home server pairs one later.";
+			break;
+		case SL_STEAM:
+			status = steamQrShown() ? (steamQrRows.empty() ? "Asking for a code..." : "Scan the code with the Steam app") :
+				steamPid > 0 ? (steamState == "confirm" ? "Approve it on your phone" : "Logging in as " + steamAcct + "...") :
+				steamKind == 1 || (steamKind == 0 && !steamUser.empty()) ? "Logged in as " + steamUser : steamKind == 2 ? "Not logged in" : "Not logged in";
+			help = "Your Steam library on the PC games shelf, its games downloaded straight to the card. The password isn't kept, only a login token. The first PC game fetches their runtime (about 100 MB).";
+			break;
+		case SL_CONTROLS:
+			help = "The fan and the lights round the sticks: left and right change a row, and it takes effect at once. All of it is in Settings > Sleep & power > Fan, lights & speed too.";
 			break;
 		case SL_RA:
 			status = raCheck ? "Checking " + ra + "..." : raKind == 1 ? "Logged in as " + ra : raKind == 2 ? "Not logged in" : raKind == 3 ? "No answer" : ra.empty() ? "Not logged in" : ra;
@@ -6563,6 +7471,7 @@ namespace banana
 		// ---- top panel: the step, its title and state, what it is for, the result ----
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
+		setupArrive(0);
 		box("hero", false, 18, 20, 604, 436);
 		icon(icons[sl], 50, 52, 3);
 		std::string stepLine = lang::tr("First-time setup") + "  \xc2\xb7  " + lang::tr("Step {n} of {m}");
@@ -6573,33 +7482,52 @@ namespace banana
 		rawText = false;
 		text(titles[sl], true, 30, 170, 84, p.ink);
 		if (!status.empty()) text(fit(status, true, 22, 420), true, 22, 170, 126, p.accent);
-		float y = 186;
+		float y = material() && lay() ? HELP_TOP : 186;
 		if (sl == SL_DONE)
 		{
-			// the summary: each step's outcome
+			// the summary: each step's outcome (closer together when the handheld has more steps than the RG DS's)
+			int nRows = 0;
+			for (Slide x : slides) if (x != SL_LANG && x != SL_DONE) nRows++;
+			const float pitch = nRows > 5 ? 28 : 34;
 			auto row = [&](const std::string& label, const std::string& value, int st)
 			{
 				sign(st == 1 ? 1 : st == 0 ? 2 : 0, 50, y + 3, st == 1 ? good : st == 0 ? bad : p.muted);
 				float lw = text(label, true, 19, 80, y, p.ink);
 				text(fit(value, false, 19, 540 - lw - 16), false, 19, 80 + lw + 14, y, p.muted);
-				y += 34;
+				y += pitch;
 			};
 			auto skipped = [&](Slide x) { for (int i = 0; i < nSteps; i++) if (slides[i] == x) return (bool)wskipped[i]; return false; };
 			row("Wi-Fi", wstat.connected ? wstat.ssid + (tNet == 0 ? " (no internet)" : "") : skipped(SL_WIFI) ? "Skipped" : "Not connected", wstat.connected && tNet != 0 ? 1 : -1);
 			row("Time zone", tz ? tz->names[tz->at] : "", 1);
-			row("DS name", dsName().empty() ? "Not set" : dsName(), dsName().empty() ? -1 : 1);
+			auto has = [&](Slide x) { for (Slide y : slides) if (y == x) return true; return false; };
+			if (has(SL_CONTROLS))
+			{
+				std::string v;
+				for (const std::string& k : controlKeys())
+					if (const Item* it = itemByKey(k); it && it->at < (int)it->names.size() && k != "leds_level") v += (v.empty() ? "" : ", ") + it->label + " " + it->names[it->at];
+				row("Controls", v, 1);
+			}
+			row(nameTitle, dsName().empty() ? "Not set" : dsName(), dsName().empty() ? -1 : 1);
+			if (has(SL_HOME))
+				row("Home server", !homeServer().empty() ? homeServer() : skipped(SL_HOME) ? "Skipped" : "Not paired", homeServer().empty() ? -1 : 1);
 			row("RetroAchievements", raKind == 1 ? ra : raKind == 2 ? "Login failed" : !ra.empty() ? ra : skipped(SL_RA) ? "Skipped" : "Not logged in",
 				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
+			if (has(SL_STEAM))
+				row("Steam", !steamUser.empty() ? steamUser + (steamGames.empty() ? "" : " (" + steamGames + " games)") : steamKind == 2 ? "Login failed" : skipped(SL_STEAM) ? "Skipped" : "Not logged in",
+					!steamUser.empty() ? 1 : steamKind == 2 ? 0 : -1);
 			auto art = artCount ? artCount() : std::pair<int, int>(0, 0);
 			bool artBefore = scrapeLine.empty() && art.first > 0;	// (fetched before: an update, the setup again)
 			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
 				artBefore ? std::to_string(art.first) + " of " + std::to_string(art.second) + " games have art" : skipped(SL_ART) ? "Skipped" : "Not fetched",
 				scraping() || scrapeLine.compare(0, 4, "done") == 0 || artBefore ? 1 : -1);
-			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
+			if (y + 10 + 44 <= 456) wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
 		}
 		else
 		{
-			wrapped(message.empty() ? help : message, 20, 50, y, 540, 4, p.muted);
+			// (Home server paired: the pairing's own words are done with)
+			const bool msg = !message.empty() && !(sl == SL_HOME && !homeServer().empty());
+			if (sl == SL_STEAM && steamQrShown() && !steamQrRows.empty()) drawSteamQr(50, y);	// (the app's code and the steps instead)
+			else wrapped(msg ? message : help, 20, 50, y, 540, 4, p.muted);
 			y = 312;
 			if (sl == SL_WIFI && (testing || tLink >= 0))
 			{
@@ -6613,6 +7541,27 @@ namespace banana
 				check(raCheck ? -1 : raKind == 1 ? 1 : raKind == 4 ? -2 : 0, raCheck ? "Asking retroachievements.org..." : raLine, y);
 			else if (sl == SL_ART && scraping())
 				scrapeBar(50, y + 6, 540);
+			else if (sl == SL_STEAM && steamQrShown())
+			{
+				if (steamQrRows.empty()) check(-1, "Asking Steam for a code...", y);
+			}
+			else if (sl == SL_STEAM && (steamPid > 0 || steamKind))
+			{
+				// the login's state as the tool writes it, then the library being read
+				const std::string& st = steamState;
+				if (steamPid > 0)
+					check(st == "confirm" ? -2 : -1, st == "confirm" ? "Approve the sign-in in the Steam app on your phone" :
+						st.compare(0, 4, "code") == 0 ? "Waiting for the Steam Guard code" : st == "wrong-code" ? "Wrong code: type it again" : "Signing in to Steam...", y);
+				else if (steamKind == 1)
+				{
+					check(1, "Logged in as " + steamUser, y);
+					check(steamLibPid > 0 ? -1 : steamGames.empty() ? -2 : 1, steamLibPid > 0 ? "Reading your library for the PC games shelf..." :
+						steamGames.empty() ? "The library comes in the background" : steamGames + (steamGames == "1" ? " game on the PC games shelf" : " games on the PC games shelf"), y + 36);
+				}
+				else check(0, steamLine.empty() ? "The login didn't work" : steamLine, y);
+			}
+			else if (sl == SL_HOME && hsStep && homeServer().empty())
+				check(-1, hsStep == 1 ? "Looking on the network..." : hsStep == 2 ? "Asking the server..." : "Pairing...", y);
 			else if (sl == SL_LANG)
 			{
 				// who translated each language (the translators' credit, as on the Language row)
@@ -6634,13 +7583,21 @@ namespace banana
 		// ---- bottom panel: the step's progress, the choices, B and A ----
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
+		setupArrive(1);
 		box("bubble", false, 18, 14, 604, 54);
 		text(titles[sl], true, 22, 38, 28, p.ink);
 		// the progress: a square a step, the one now wider, in the accent; done ones light, the rest dim
 		{
 			float dw = 12, gap = 8, wide = 28, w = (nSteps - 1) * (dw + gap) + wide;
 			float x = 602 - w;
-			for (int i = 0; i < nSteps; i++)
+			if (material())
+			{
+				// (a scrub bar: the track, the step now as its thumb, flat in the accent)
+				const float tw = px(360), th = px(8), ty = 28 + (22 * 1.2f - th) / 2;
+				mpaint("scrub", 622 - tw, ty, tw, th);
+				mpaint("thumb", 622 - tw + tw * wsel / std::max(1, nSteps), ty, tw / std::max(1, nSteps), th);
+			}
+			else for (int i = 0; i < nSteps; i++)
 			{
 				float ww = i == wsel ? wide : dw;
 				be->fill(std::round(X(x)), std::round(X(35)), std::round(X(ww)), std::round(X(12)), i == wsel ? p.accent : i < wsel ? p.ink : p.line);
@@ -6655,7 +7612,7 @@ namespace banana
 			float ry = SETUP_Y + r * SETUP_PITCH;
 			box(on ? "pick" : "slot", on, 18, ry, 604, SETUP_H);
 			Color c = ch[r].act == SA_WAIT ? (on ? p.onPick : p.muted) : on ? p.onPick : p.ink;
-			bool valueRow = ch[r].act == SA_TZ;	// (the arrows: the language opens a list instead)
+			bool valueRow = ch[r].act == SA_TZ || ch[r].act == SA_ITEM;	// (the arrows: the language opens a list instead)
 			float lw = text(ch[r].label, true, 20, 40, ry + 17, c);
 			if (ch[r].value.empty()) continue;
 			float room = 560 - lw - 30 - (valueRow ? 44 : 0);
@@ -6773,6 +7730,232 @@ namespace banana
 	}
 
 	// ---- home server sync: banana-sync ------------------------------------------------------------------------------
+	// ---- Steam: usr/libexec/banana/steam ------------------------------------------------------------------------
+	// (a child's stdout and stderr, and stdin unless it has its own, on /dev/null: nothing of the menu's held open)
+	static void quietFds(bool in)
+	{
+		int n = ::open("/dev/null", O_RDWR);
+		if (n < 0) return;
+		if (in) dup2(n, 0);
+		dup2(n, 1); dup2(n, 2);
+		if (n > 2) ::close(n);
+	}
+
+	void Settings::steamStatus()
+	{
+		if (steamTool.empty()) return;
+		// ready=yes|no, user=<account> ("" logged out), games=<n> ("" not known)
+		if (FILE* f = popen((shellQuote(steamTool) + " status 2>/dev/null").c_str(), "r"))
+		{
+			char buf[256];
+			std::string user;
+			bool sawUser = false;
+			while (fgets(buf, sizeof buf, f))
+			{
+				std::string ln = trim(buf);
+				if (ln.compare(0, 6, "ready=") == 0) steamReady = ln.substr(6) == "yes";
+				else if (ln.compare(0, 5, "user=") == 0) { user = ln.substr(5); sawUser = true; }
+				else if (ln.compare(0, 6, "games=") == 0 && ln.size() > 6) steamGames = ln.substr(6);
+			}
+			pclose(f);
+			if (sawUser) steamUser = user;
+		}
+	}
+
+	void Settings::steamRun(const std::string& args)
+	{
+		if (steamTool.empty()) return;
+		std::string cmd = shellQuote(steamTool) + " " + args;
+		pid_t p = fork();
+		if (p == 0)
+		{
+			if (fork() == 0) { quietFds(true); setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+			_exit(0);
+		}
+		if (p > 0) waitpid(p, nullptr, 0);
+	}
+
+	void Settings::startSteamQr()
+	{
+		if (steamTool.empty() || steamPid > 0) return;
+		unlink((runDir + "/steam.state").c_str());
+		steamState = "starting";
+		steamCodeOpen = false; steamCancelled = false;
+		steamQr = true; steamQrN = -1; steamQrRows.clear();
+		steamKind = 0; steamLine.clear();
+		std::string cmd = shellQuote(steamTool) + " login-qr";
+		pid_t p = fork();
+		if (p == 0) { quietFds(true); setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+		if (p < 0) { steamKind = 2; steamLine = "The sign-in couldn't be started"; return; }
+		steamPid = p;
+		steamPoll = 0;
+	}
+
+	void Settings::steamCancel()
+	{
+		if (steamPid <= 0) return;
+		steamCancelled = true;
+		steamRun("cancel");
+		// the tool's cancel stops the downloader it started (steam.pid), and the sign-in tidies up after it. Before that,
+		// while the downloader itself is still being fetched (the first sign-in, a slow or dead network), there is
+		// nothing for it to stop: the sign-in's own shell and its curl then, a session of their own
+		if (access((runDir + "/steam.pid").c_str(), F_OK) != 0) kill(-steamPid, SIGTERM);
+	}
+
+	void Settings::startSteamLogin(const std::string& user, const std::string& pass)
+	{
+		if (steamPid > 0 && steamCancelled)
+		{
+			// the app's sign-in stopped for this one: given up to 3 s to go
+			for (int i = 0; i < 300 && steamPid > 0; i++)
+			{
+				pid_t r = waitpid(steamPid, nullptr, WNOHANG);
+				if (r == steamPid || (r < 0 && errno == ECHILD)) steamPid = -1; else usleep(10000);
+			}
+			if (steamPid > 0) { kill(-steamPid, SIGTERM); waitpid(steamPid, nullptr, 0); steamPid = -1; }
+			steamCancelled = false; steamQrRows.clear(); steamQrN = -1;
+		}
+		if (steamTool.empty() || steamPid > 0) return;
+		unlink((runDir + "/steam.state").c_str());
+		steamState = "starting";
+		steamCodeOpen = false; steamCancelled = false;
+		steamQr = false;
+		steamKind = 0; steamLine.clear();
+		steamAcct = user;
+		int fd[2];
+		if (pipe(fd) != 0) { steamKind = 2; steamLine = "The login couldn't be started"; return; }
+		std::string cmd = shellQuote(steamTool) + " login " + shellQuote(user);
+		pid_t p = fork();
+		if (p == 0)
+		{
+			dup2(fd[0], 0);
+			::close(fd[0]); ::close(fd[1]);
+			quietFds(false);
+			setsid();
+			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
+			_exit(127);
+		}
+		::close(fd[0]);
+		if (p < 0) { ::close(fd[1]); steamKind = 2; steamLine = "The login couldn't be started"; return; }
+		// the password on its stdin, one line (SIGPIPE ignored meanwhile: a tool that is gone already)
+		struct sigaction ign = {}, old = {};
+		ign.sa_handler = SIG_IGN;
+		sigaction(SIGPIPE, &ign, &old);
+		std::string line = pass + "\n";
+		if (write(fd[1], line.data(), line.size()) < 0) {}
+		sigaction(SIGPIPE, &old, nullptr);
+		::close(fd[1]);
+		std::fill(line.begin(), line.end(), '\0');
+		steamPid = p;
+		steamPoll = 0;
+	}
+
+	bool Settings::pollSteam()
+	{
+		if (steamTool.empty() || (steamPid <= 0 && steamLibPid <= 0) || now < steamPoll) return false;
+		steamPoll = now + 300;
+		bool changed = false;
+		if (steamPid > 0)
+		{
+			std::string ln = readLine(runDir + "/steam.state");
+			if (!ln.empty() && ln != steamState)
+			{
+				steamState = ln;
+				steamCodeOpen = false;
+				changed = true;
+				if (!wizard && !steamQr)	// (Settings > Accounts: its state on the top panel; the setup's slide shows its own lines)
+					message = steamState == "confirm" ? "Approve the sign-in in the Steam app on your phone." : "Logging in to Steam as " + steamAcct + "...";
+			}
+			// the app's code: read again when Steam has made a new one ("qr <n>" counting up)
+			if (steamQr && steamState.compare(0, 3, "qr ") == 0)
+			{
+				int n = atoi(steamState.c_str() + 3);
+				if (n != steamQrN)
+				{
+					std::ifstream f(runDir + "/steam.qr");
+					std::vector<std::string> rows;
+					for (std::string ln; std::getline(f, ln);)
+					{
+						ln = trim(ln);
+						if (!ln.empty() && ln.find_first_not_of("01") == std::string::npos) rows.push_back(ln);
+					}
+					// (a square of whole rows, or nothing: a half-written one is never shown)
+					bool ok = rows.size() >= 11 && rows.size() <= 200;
+					for (auto& r : rows) if (r.size() != rows.size()) ok = false;
+					if (ok) { steamQrRows = rows; steamQrN = n; }
+					changed = true;
+				}
+			}
+			const bool askCode = steamState.compare(0, 5, "code ") == 0 || steamState == "wrong-code";
+			if (askCode && !steamCodeOpen && page != KEYBOARD)
+			{
+				// Steam Guard: its code typed here and handed to the login (steam code)
+				steamCodeOpen = true;
+				const bool mail = steamState.compare(0, 11, "code email ") == 0;
+				startEntry(ENTRY_STEAM_CODE, steamState == "wrong-code" ? "Wrong code. Steam Guard code" : "Steam Guard code",
+					mail ? "Mailed to " + steamState.substr(11) : "From the Steam app", wizard ? SETUP : LIST);
+				changed = true;
+			}
+			int st = 0;
+			pid_t r = waitpid(steamPid, &st, WNOHANG);
+			if (r == steamPid || (r < 0 && errno == ECHILD))
+			{
+				steamPid = -1;
+				std::string last = readLine(runDir + "/steam.state");
+				if (!last.empty()) steamState = last;
+				steamQrRows.clear(); steamQrN = -1;
+				if (steamCancelled && steamState.compare(0, 3, "ok ") != 0)
+				{
+					// stopped by B or another choice: back to the choices as they were, no failure said
+					steamCancelled = false;
+					steamKind = 0; steamLine.clear();
+					if (!wizard) message.clear();
+					if (page == KEYBOARD && entry == ENTRY_STEAM_CODE) { pw.clear(); page = entryBack; }
+					return true;
+				}
+				if (steamState.compare(0, 3, "ok ") == 0 || (r == steamPid && WIFEXITED(st) && WEXITSTATUS(st) == 0 && steamState.compare(0, 6, "failed") != 0))
+				{
+					steamKind = 1;
+					steamUser = steamState.compare(0, 3, "ok ") == 0 ? trim(steamState.substr(3)) : steamAcct;
+					message.clear();
+					// the account's games and their box art for the PC games shelf, in the background (it takes a while)
+					if (steamLibPid <= 0)
+					{
+						std::string cmd = shellQuote(steamTool) + " library > " + shellQuote(runDir + "/steam-library.out") + " 2>/dev/null";
+						pid_t p = fork();
+						if (p == 0) { quietFds(true); setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+						if (p > 0) { steamLibPid = p; steamGames.clear(); }
+					}
+				}
+				else
+				{
+					steamKind = 2;
+					steamLine = steamState.compare(0, 7, "failed ") == 0 ? "Login failed: " + trim(steamState.substr(7)) : steamState == "failed" ? "Login failed" : "The login stopped";
+				}
+				if (page == KEYBOARD && entry == ENTRY_STEAM_CODE) { pw.clear(); page = entryBack; }	// (no code wanted any more)
+				if (wizard && page == SETUP) wpick = 0;
+				if (!wizard && page != SETUP) message = steamKind == 1 ? "Logged in to Steam as " + steamUser + ". Its games come to the PC games shelf." : steamLine + ".";
+				changed = true;
+			}
+		}
+		if (steamLibPid > 0)
+		{
+			int st = 0;
+			pid_t r = waitpid(steamLibPid, &st, WNOHANG);
+			if (r == steamLibPid || (r < 0 && errno == ECHILD))
+			{
+				steamLibPid = -1;
+				// its last line: "games <n>"
+				std::ifstream f(runDir + "/steam-library.out");
+				for (std::string ln; std::getline(f, ln);)
+					if (ln.compare(0, 6, "games ") == 0) steamGames = trim(ln.substr(6));
+				libChanged = true;	// (the PC games shelf has the library now)
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
 	std::string Settings::syncTool() const
 	{
 		const char* prog = getenv("BANANA_SYNC");	// (another build of it, or the tests' stand-in)
@@ -6840,13 +8023,13 @@ namespace banana
 				{
 					hsKind = "romhost";
 					message.clear();
-					startEntry(ENTRY_HS_CODE, "Pairing code for", hsName, LIST);
+					startEntry(ENTRY_HS_CODE, "Pairing code for", hsName, wizard ? SETUP : LIST);
 				}
 				else
 				{
 					hsStep = 0;
 					message.clear();
-					startEntry(ENTRY_HS_ADDR, "No Romhost answered. Server address", "Romhost or RomM", LIST);
+					startEntry(ENTRY_HS_ADDR, "No Romhost answered. Server address", "Romhost or RomM", wizard ? SETUP : LIST);
 				}
 			}
 			else if (hsStep == 2)
@@ -6857,7 +8040,7 @@ namespace banana
 				in >> kind >> url;
 				std::getline(in, name);
 				name = trim(name);
-				if (kind == "romhost") { hsKind = kind; hsUrl = url; hsName = name; message.clear(); startEntry(ENTRY_HS_CODE, "Pairing code for", name, LIST); }
+				if (kind == "romhost") { hsKind = kind; hsUrl = url; hsName = name; message.clear(); startEntry(ENTRY_HS_CODE, "Pairing code for", name, wizard ? SETUP : LIST); }
 				else if (kind == "romm")
 				{
 					// RomM's device pairing: banana-sync shows its code in the status file and waits for the approval

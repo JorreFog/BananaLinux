@@ -1,0 +1,3 @@
+# banana-hwd's domain, public so that a device's vendor policy can grant it the vendor-labelled sysfs nodes it needs
+# (see private/banana_hwd.te and the README here).
+type banana_hwd, domain;

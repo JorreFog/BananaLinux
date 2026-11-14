@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_OPERA
+	bool "libretro-opera"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  3DO: Opera (panafz10.bin or another 3DO BIOS in /data/bios).
+
+	  https://github.com/libretro/opera-libretro

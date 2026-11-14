@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_FBNEO
+	bool "libretro-fbneo"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Arcade and Neo Geo: FinalBurn Neo (romsets of its own version;
+	  neogeo.zip beside the games or in /data/bios).
+
+	  https://github.com/libretro/FBNeo

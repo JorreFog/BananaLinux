@@ -1,0 +1,14 @@
+config BR2_PACKAGE_WVKBD
+	bool "wvkbd"
+	depends on BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_CAIRO
+	select BR2_PACKAGE_PANGO
+	select BR2_PACKAGE_LIBXKBCOMMON
+	select BR2_PACKAGE_WAYLAND_PROTOCOLS
+	help
+	  An on-screen keyboard for wlroots compositors
+	  (wvkbd-mobintl). BananaOS's web browser has it on the AYN
+	  Thor's bottom screen (usr/libexec/banana/run-wayland
+	  --keyboard); the menu's own pages have the menu's keyboard.
+
+	  https://github.com/jjsullivan5196/wvkbd

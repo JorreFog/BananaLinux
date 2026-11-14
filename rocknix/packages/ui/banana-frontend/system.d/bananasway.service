@@ -1,0 +1,21 @@
+[Unit]
+Description=BananaOS menu on both screens (with Sway)
+# in EmulationStation's place (essway's own unit, with banana-ui), started by ROCKNIX's autostart as UI_SERVICE; essway
+# runs the menu too (its drop-in), for ROCKNIX's scripts that start it by name
+Requires=sway.service
+After=sway.service
+Conflicts=essway.service
+
+[Service]
+Type=simple
+Environment=HOME=/storage
+EnvironmentFile=/etc/profile
+ExecStart=/usr/bin/start_banana.sh
+WorkingDirectory=/storage
+Restart=always
+RestartSec=2
+# (the menu's game control group under the unit's own, for the Thor button's freeze: ui/src/main.cpp gameCgroup)
+Delegate=yes
+
+[Install]
+WantedBy=rocknix.target

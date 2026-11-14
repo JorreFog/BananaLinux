@@ -8,6 +8,10 @@ on:
         description: "Also build the SD card images (an hour or more)"
         type: boolean
         default: false
+      thor_image:
+        description: "Also build the AYN Thor's image: ROCKNIX's SM8550 build with BananaOS as its frontend (hours)"
+        type: boolean
+        default: false
 
 jobs:
   checks:
@@ -41,6 +45,8 @@ jobs:
         run: make test
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui
+      - name: banana-ui with SDL (the screens as a compositor's windows, ROCKNIX's frontend)
+        run: sudo apt-get install -y libsdl2-dev && make -C ui clean && make -C ui SDL=1
       - name: bananad (native and aarch64)
         run: |
           make -C system/bananad CFLAGS="-O2 -Werror"
@@ -50,12 +56,17 @@ jobs:
         run: sudo system/bananad/tests/sleep-test.sh
       - name: DS launchers (run-drastic's drastic.cfg changes, nds-saves, against a made-up card)
         run: sh system/tests/launchers-test.sh
+      - name: Kernel tunables (tune against a made-up /sys and /proc; the RG DS's profile touches nothing)
+        run: sh system/tests/tune-test.sh
+      - name: The AYN Thor's launchers (PC games' setup and runs and the Steam login, library and box art against stand-ins; the compositor wrapper, where sway is)
+        run: sh system/tests/pc-games-test.sh && sh system/tests/steam-test.sh && sh system/tests/data-link-test.sh && sh system/tests/usb-debug-test.sh && sh system/tests/ra-standalone-test.sh && sh system/tests/run-wayland-test.sh && sh system/tests/post-build-test.sh && sh system/tests/sysstat-test.sh
       - name: Shell scripts parse
-        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
+        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh buildroot/board/thor/*.sh tools/*.sh system/rootfs/usr/libexec/banana/hw-env; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
-          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig; do
+          make BUILDROOT_DIR=/tmp/br buildroot-patched   # (Turnip, Mesa 26.2.6, libxkbcommon's xkbregistry: buildroot/buildroot-patches)
+          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig banana_thor_defconfig; do
             make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
             grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do
               grep -qxF "$l" /tmp/out-$d/.config || { echo "$d drops: $l"; exit 1; }
@@ -116,6 +127,49 @@ jobs:
           path: |
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}-*.update.tar
+
+  # the AYN Thor's image (docs/THOR-ROCKNIX.md): ROCKNIX at the pin rocknix/ROCKNIX names, BananaOS put into
+  # it by tools/rocknix-banana.sh (the frontend, Banana's emulators and apps, the RetroArch patches, the lists), then
+  # ROCKNIX's own build in its build container. Only when asked for: it takes hours and much of the runner's disk.
+  rocknix-thor:
+    if: github.event_name == 'workflow_dispatch' && inputs.thor_image
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space (ROCKNIX's toolchain, the kernel, Mesa, the emulators)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost
+          df -h /
+      - name: ROCKNIX at the pin
+        run: |
+          c=$(sed -n 's/^commit=//p' rocknix/ROCKNIX)
+          git clone --filter=blob:none https://github.com/ROCKNIX/distribution rocknix
+          git -C rocknix checkout "$c"
+      - name: BananaOS into it
+        run: sh tools/rocknix-banana.sh rocknix SM8550
+      - name: Restore ROCKNIX's downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: rocknix/sources
+          key: rocknix-sources-${{ hashFiles('rocknix/ROCKNIX', 'rocknix/packages/**') }}
+          restore-keys: rocknix-sources-
+      - name: Build (ROCKNIX's make docker-SM8550)
+        run: cd rocknix && make docker-SM8550
+      - name: Save ROCKNIX's downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: rocknix/sources
+          key: rocknix-sources-${{ hashFiles('rocknix/ROCKNIX', 'rocknix/packages/**') }}-${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: banana-thor-rocknix
+          path: |
+            rocknix/release/*.img.gz
+            rocknix/release/*.tar
+          if-no-files-found: error
 
   # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up on both panels, a
   # game is started from the library and the menu comes back, a shutdown from the settings powers the VM off; the

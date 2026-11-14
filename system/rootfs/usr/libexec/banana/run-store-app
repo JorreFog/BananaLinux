@@ -6,6 +6,8 @@
 export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
 mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
 export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+# under a compositor (ROCKNIX's sway: the menu's own display is SDL there) an app's SDL draws a Wayland window
+[ "$BANANA_DISPLAY" = sdl ] && export SDL_VIDEODRIVER=wayland
 cd "$(dirname "$1")"
 # the app in its own session (its process group = $C): a quit from the menu, and the app's end, reach everything it
 # started (as run-port)

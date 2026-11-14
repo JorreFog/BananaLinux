@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_CAP32
+	bool "libretro-cap32"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Amstrad CPC: Caprice32.
+
+	  https://github.com/libretro/libretro-cap32

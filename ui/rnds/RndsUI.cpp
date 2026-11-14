@@ -10,6 +10,7 @@
 namespace rnds
 {
 	std::string brandNote;
+	std::string pausedGame;
 	Accent accent = { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 };
 	static const struct { const char* name; Accent a; } ACCENTS[] = {
 		{ "yellow", { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 } },
@@ -22,6 +23,12 @@ namespace rnds
 	std::map<std::string, uint32_t> themeColors;
 	ThemeFiles themeFiles;
 	void setAccent(const Accent& a) { accent = a; }
+	uint32_t accentInk = 0;
+	bool accentNamed(const std::string& name, Accent& a)
+	{
+		for (auto& e : ACCENTS) if (name == e.name) { a = e.a; return true; }
+		return false;
+	}
 	int accentTextMode = 0;
 	static float relLum(uint32_t c)
 	{
@@ -593,6 +600,19 @@ namespace rnds
 		void drawBox(const BoxCss& css, float x, float y, float w, float h, const Xf* xf = nullptr)
 		{
 			drawSprite(box(css, w, h), x, y, xf);
+		}
+
+		// a screen's wallpaper over the whole screen: as drawn on the canvas, or on a screen of another shape (the AYN
+		// Thor's: Backend::stageArea) scaled to cover it, centred, its picture's proportions kept
+		void drawWall(const Sprite& sp)
+		{
+			float ax, ay, aw, ah;
+			if (!sp.valid() || !be->stageArea(ax, ay, aw, ah)) { drawSprite(sp, 0, 0); return; }
+			const float tw = (float)std::max(1, sp.tex->w), th = (float)std::max(1, sp.tex->h);
+			const float c = std::max(aw / tw, ah / th);
+			be->pushClip(ax, ay, aw, ah);
+			be->draw(sp.tex, ax + (aw - tw * c) / 2, ay + (ah - th * c) / 2, tw * c, th * c, Color(1, 1, 1, 1));
+			be->popClip();
 		}
 
 		// ---- text ----
@@ -1376,7 +1396,11 @@ namespace rnds
 		}
 		void drawSheet(const Color& accent, float x, float y)
 		{
-			Sprite m = mask(18, 604, 406), o = box(sheetOverlay(), 604, 406);
+			// a screen wider than the canvas (the AYN Thor's 16:9 top): the sheet across it, its margins kept
+			float sw = 604, ax, ay, aw, ah;
+			screenArea(be, s, ax, ay, aw, ah);
+			if (aw > 640) { x += ax; sw = aw - 36; }
+			Sprite m = mask(18, sw, 406), o = box(sheetOverlay(), sw, 406);
 			if (!m.valid() || !o.valid()) return;
 			drawSprite(m, x, y, nullptr, mix(accent, P.sheetMix, P.sheetBase));
 			drawSprite(o, x, y);
@@ -1526,9 +1550,17 @@ namespace rnds
 		// ---- drawing: top screen ----
 		void drawStatus(float ry)
 		{
+			// a screen wider than the canvas: the left group at the screen's left edge and the clock at its right (L, R:
+			// how far they move; 0 on the canvas)
+			float L = 0, R = 0;
+			{
+				float ax, ay, aw, ah;
+				screenArea(be, s, ax, ay, aw, ah);
+				if (aw > 640) { L = ax; R = ax + aw - 640; }
+			}
 			// wifi, battery, brand
 			if (!wifi.empty())
-				drawSprite(still("wifi", wifi, false), 18, 24 + ry, nullptr, Color(INK.r, INK.g, INK.b, src->online() ? 1.0f : 0.35f));
+				drawSprite(still("wifi", wifi, false), L + 18, 24 + ry, nullptr, Color(INK.r, INK.g, INK.b, src->online() ? 1.0f : 0.35f));
 			std::string bmode = src->batteryMode();
 			float lvl = src->battery();
 			bool pctText = bmode == "text" && lvl >= 0;
@@ -1559,20 +1591,20 @@ namespace rnds
 			// on the left after the Wi-Fi: "icon only" the battery icon; "icon and text" the percentage and then the icon
 			// ("78% [battery]"), the percentage right-aligned in room for "100%" so nothing moves as it changes, and
 			// the brand moved right after them (1.5.5)
-			float brandX = 78;
+			float brandX = L + 78;
 			if (pctText)
 			{
 				TStyle tp = ts(false, 20);
 				std::string pct = std::to_string((int)std::round(std::min(1.0f, lvl) * 100)) + "%";
 				float slot = line("100%", tp).width, pw = line(pct, tp).width;
-				drawText(pct, tp, 44 + slot - pw, 20 + ry, INK);
-				float bx = 44 + slot + 6;
+				drawText(pct, tp, L + 44 + slot - pw, 20 + ry, INK);
+				float bx = L + 44 + slot + 6;
 				if (!batt.empty())
 					battery(bx);
 				brandX = std::round(bx + (batt.empty() ? 0 : 26) + 10);
 			}
 			else if (!batt.empty() && !bmode.empty())
-				battery(44);
+				battery(L + 44);
 			drawBox(brandBox(), brandX, 19 + ry, 148.23f, 26);
 			if (!brandNote.empty())
 			{
@@ -1600,8 +1632,8 @@ namespace rnds
 
 			std::string clock = src->clockText(), date = src->dateText();
 			float cw = line(clock, ts(true, 20)).width, dw = line(date, ts(false, 20)).width;
-			drawText(clock, ts(true, 20), 622 - cw, 20 + ry, INK);
-			drawText(date, ts(false, 20), 622 - cw - 8 - dw, 20 + ry, INK);
+			drawText(clock, ts(true, 20), R + 622 - cw, 20 + ry, INK);
+			drawText(date, ts(false, 20), R + 622 - cw - 8 - dw, 20 + ry, INK);
 		}
 
 		// the game list's top screen, left: the box cover in a pixel frame, bobbing like the home screen's icon, its
@@ -1784,8 +1816,10 @@ namespace rnds
 		void drawTop()
 		{
 			be->beginScreen(0);
-			if (!wallTop.empty()) drawSprite(still("wall-top", wallTop, true), 0, 0);
-			drawBox(screenBox(!wallTop.empty()), 0, 0, 640, 480);
+			if (!wallTop.empty()) drawWall(still("wall-top", wallTop, true));
+			float bx, by, bw, bh;
+			screenArea(be, s, bx, by, bw, bh);	// (the whole screen: the canvas, or a wider or narrower screen's all)
+			drawBox(screenBox(!wallTop.empty()), bx, by, bw, bh);
 			float ry = rise(topAt);
 			drawStatus(ry);
 			const SysInfo& sy = sys(ui->mSys);
@@ -1980,8 +2014,12 @@ namespace rnds
 		void drawBottom()
 		{
 			be->beginScreen(1);
-			if (!wallBottom.empty()) drawSprite(still("wall-bottom", wallBottom, true), 0, 0);
-			drawBox(screenBox(!wallBottom.empty()), 0, 0, 640, 480);
+			if (!wallBottom.empty()) drawWall(still("wall-bottom", wallBottom, true));
+			{
+				float bx, by, bw, bh;
+				screenArea(be, s, bx, by, bw, bh);
+				drawBox(screenBox(!wallBottom.empty()), bx, by, bw, bh);
+			}
 			float rb = rise(shellAt);
 			Geo g = geometry();
 			View v = ui->mView;

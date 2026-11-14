@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp
+SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/panelfit.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp src/settings_quick.cpp src/settings_pc.cpp src/settings_v3.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/panel.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
@@ -20,6 +20,14 @@ UI_FLAGS = -Isrc
 ifeq ($(ALSA),1)
 PKGS += alsa
 UI_FLAGS += -DBANANA_ALSA
+endif
+# SDL=1: the screens may also be a compositor's windows (Wayland under sway, as on ROCKNIX: src/kms_sdl.cpp), chosen at
+# run time; without it, the panels through KMS only
+SDL ?= 0
+SRC += src/kms_sdl.cpp
+ifeq ($(SDL),1)
+PKGS += sdl2
+UI_FLAGS += -DBANANA_SDL
 endif
 # (banana-ui's own: asked for when it is built, so its helpers need none of its libraries)
 UI_FLAGS += $(shell $(PKG_CONFIG) --cflags $(PKGS))
@@ -84,8 +92,15 @@ tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/lang-raw-test.cpp src/lang.cpp -lpthread
 
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
+tests/sheet-test: tests/sheet-test.cpp src/sheet.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/sheet-test.cpp
+
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
+
+# the canvas fitted to panels of another size or way round: the AYN Thor's, every rotation (tests/run.sh runs it)
+tests/panelfit-test: tests/panelfit-test.cpp src/panelfit.cpp src/panelfit.h src/damage.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/panelfit-test.cpp src/panelfit.cpp
 
 # the speaker EQ's arithmetic: the profile parser, the filters against reference curves, headroom, stability (tests/run.sh runs it)
 tests/eq-test: tests/eq-test.c src/eq/eq.h
@@ -127,7 +142,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/sheet-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
 
 .PHONY: host install clean
 
@@ -180,7 +195,7 @@ GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp s
 tests/gba-pages-test: $(GBA_PAGES_SRC) src/nds/pages.h src/nds/model.h src/gba/gen3rom.h src/gba/gen3live.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(GBA_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 
-NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp src/json.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 

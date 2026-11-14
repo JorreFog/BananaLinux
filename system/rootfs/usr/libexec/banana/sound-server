@@ -1,0 +1,63 @@
+#!/bin/sh
+# The sound server, on a board whose sound is one (hw.conf's HW_SOUND=pipewire: the AYN Thor). PipeWire and
+# WirePlumber own the card: WirePlumber's ALSA monitor (ACP) finds it through udev and brings it up from its UCM profile
+# (/usr/share/alsa/ucm2: the Thor's is ROCKNIX's), routes the speakers and the headphone jack, and keeps the levels.
+# Everything else opens ALSA's "default", which bananad points at the server ({ type pipewire }), and the volume keys go
+# through wpctl (the volume script). Bluetooth headphones are PipeWire's too (its BlueZ plugin, over D-Bus's system bus).
+# The RG DS has no server: bananad drives its cards itself.
+# From Banana Pocket's sound-server (the Retroid Pocket Classic, the same AudioReach DSP), simpler here: with udev
+# the card's "add" event and its SOUND_INITIALIZED come as on any Linux, so a probe that ran early is followed by
+# another, and no retry loop is needed.
+#
+#   sound-server up       start pipewire, then wireplumber (idempotent; doesn't wait for the card)
+#   sound-server down     stop both (the sleep hook: the DSP graph off for the sleep)
+#   sound-server wait [s] wait until there is a sink to play to (up to s seconds, default 10)
+#   sound-server status   what runs and what the server sees
+RUNDIR=${PIPEWIRE_RUNTIME_DIR:-/run/banana/pipewire}
+# WirePlumber's state (the levels and the default sink, per device) on the card, kept across boots
+STATE=/data/banana/sound-state
+LOG=/data/banana/logs/sound-server.log
+export PIPEWIRE_RUNTIME_DIR=$RUNDIR XDG_RUNTIME_DIR=$RUNDIR XDG_STATE_HOME=$STATE
+
+say() { mkdir -p "${LOG%/*}" 2>/dev/null; echo "$(date '+%H:%M:%S') sound-server: $*" >> "$LOG" 2>/dev/null; }
+sink() { wpctl inspect @DEFAULT_AUDIO_SINK@ >/dev/null 2>&1; }
+
+case $1 in
+up)
+    [ -x /usr/bin/pipewire ] || { say "no pipewire in this image"; exit 0; }
+    mkdir -p "$RUNDIR" "$STATE" 2>/dev/null; chmod 700 "$RUNDIR" 2>/dev/null
+    if ! pidof pipewire >/dev/null 2>&1; then
+        setsid pipewire </dev/null >/dev/null 2>&1 &
+        say "pipewire started"
+    fi
+    i=0; while [ ! -S "$RUNDIR/pipewire-0" ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+    [ -S "$RUNDIR/pipewire-0" ] || say "no pipewire socket after 5 s"
+    if [ -x /usr/bin/wireplumber ] && ! pidof wireplumber >/dev/null 2>&1; then
+        setsid wireplumber </dev/null >/dev/null 2>&1 &
+        say "wireplumber started"
+    fi
+    # never the OOM killer's choice (ROCKNIX gives both -500 in their units): a game short of memory is ended, the
+    # sound goes on
+    for p in $(pidof pipewire wireplumber); do echo -900 > /proc/$p/oom_score_adj; done 2>/dev/null
+    ;;
+down)
+    pkill -x wireplumber 2>/dev/null
+    pkill -x pipewire 2>/dev/null
+    # pipewire tears the DSP graph down on its way out (~1 s on the Pocket): bounded
+    i=0; while pidof pipewire >/dev/null 2>&1 && [ $i -lt 20 ]; do sleep 0.1; i=$((i + 1)); done
+    say "down"
+    ;;
+wait)
+    n=$(( ${2:-10} * 10 )); i=0
+    while ! sink && [ $i -lt $n ]; do sleep 0.1; i=$((i + 1)); done
+    sink && { say "a sink after $((i / 10)).$((i % 10)) s"; exit 0; }
+    say "no sink after ${2:-10} s"; exit 1
+    ;;
+status)
+    echo "pipewire:    $(pidof pipewire 2>/dev/null || echo not running)"
+    echo "wireplumber: $(pidof wireplumber 2>/dev/null || echo not running)"
+    wpctl status 2>/dev/null | sed -n '/^Audio/,/^Video/p'
+    ;;
+*) echo "usage: sound-server up|down|wait [s]|status" >&2; exit 2 ;;
+esac
+exit 0

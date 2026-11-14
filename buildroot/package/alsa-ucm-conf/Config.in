@@ -1,0 +1,8 @@
+config BR2_PACKAGE_ALSA_UCM_CONF
+	bool "alsa-ucm-conf"
+	help
+	  ALSA Use Case Manager configuration (and topologies): the ucm2 tree, which an opener that speaks UCM
+	  (alsaucm, PipeWire's ACP) reads to set a card's routing and levels. The AYN Thor's AudioReach card
+	  needs it: its profile is ROCKNIX's (patches/alsa-ucm-conf). From Banana Pocket (the Retroid Pocket
+	  Classic's BananaOS), which uses it the same way.
+	  https://www.alsa-project.org/

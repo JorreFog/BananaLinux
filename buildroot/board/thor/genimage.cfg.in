@@ -1,0 +1,41 @@
+# Banana's SD card for the AYN Thor: no bootloader on the card (OpenABL, flashed once to the Thor's abl partitions,
+# reads the card's first FAT partition), then the same layout as the RG DS's so rcS, firstboot and the update work
+# unchanged: the boot partition (the kernel and device tree of each slot in a/ and b/, extlinux.conf naming the one to
+# boot; OpenABL's own files beside them), two root slots (the squashfs system in a; b empty until the first update)
+# and the data partition (exFAT, the rest of the card), made on the first boot.
+image boot.vfat {
+	vfat {
+		label = "BANANA-BOOT"
+		file a/Image { image = "Image" }
+@DTBFILES@
+		file extlinux/extlinux.conf { image = "extlinux.conf" }
+		file loader/entries/banana.conf { image = "banana.conf" }
+		file openabl/abl_signed-SM8550.elf { image = "openabl/abl_signed-SM8550.elf" }
+		file openabl/README.txt { image = "openabl-README.txt" }
+	}
+	# the kernel is an uncompressed EFI-stub Image (~45 MB), twice after an update
+	size = 192M
+}
+
+image banana-@BOARD@.img {
+	hdimage {
+		partition-table-type = "gpt"
+	}
+	partition boot {
+		partition-type-uuid = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+		bootable = true
+		image = "boot.vfat"
+		offset = 16M
+	}
+	# (the Thor's system is far bigger than the RG DS's 512 MB slots: Qt and the standalone emulators, WebKit, Mesa
+	# with Turnip; 3 GB a slot leaves room to grow)
+	partition banana-root-a {
+		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+		image = "rootfs.squashfs"
+		size = 3072M
+	}
+	partition banana-root-b {
+		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+		size = 3072M
+	}
+}

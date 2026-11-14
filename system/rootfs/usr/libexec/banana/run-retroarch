@@ -369,6 +369,20 @@ if [ "$BANANA_SYSTEM" = gba ]; then
     SVD=$(sed -n '/^savefile_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
     SVS=$(sed -n '/^sort_savefiles_enable = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
 fi
+# The PPSSPP core reads PPSSPP's own files (compat.ini, the flash0 fonts, its dialogs' atlas) from
+# <system_directory>/PPSSPP and says "Core system files missing, expect bugs" without them. The image has them with the
+# standalone PPSSPP (package/ppsspp: /usr/share/ppsspp/assets): shown there for as long as the game runs (data-link: a
+# link, or a bind mount on the card's exFAT, undone below). A folder of the owner's own there is used as it is.
+#   core_assets <core> <the image's assets> <system directory>
+core_assets() {
+    [ "$1" = ppsspp ] && [ -f "$2/compat.ini" ] || return 0
+    case $3 in /*) ;; *) return 0 ;; esac
+    . "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
+    link_dir "$2" "$3/PPSSPP" || echo "run-retroarch: PPSSPP's assets couldn't be shown in $3/PPSSPP" >&2
+}
+# (the name from CORE: c is the button block's by now)
+CN=${CORE##*/}
+core_assets "${CN%_libretro.so}" /usr/share/ppsspp/assets "$(sed -n '/^system_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)"
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
@@ -409,6 +423,7 @@ trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
 /usr/libexec/banana/ra-secrets scrub; rm -f $RA
+[ -n "$BANANA_BOUND" ] && unlink_dirs    # (the PPSSPP core's assets)
 # the lines put back after the game, all in one rewrite of retroarch.cfg (RetroArch has just rewritten it on its exit
 # anyway): each set_cfg was a read and a rewrite of the ~110 KB file, ~10 ms each, while the menu waited
 fix_d=; fix_l=

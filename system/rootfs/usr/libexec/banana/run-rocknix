@@ -1,0 +1,88 @@
+#!/bin/sh
+# A game on ROCKNIX, where the menu is its frontend: through ROCKNIX's own runemu.sh, as EmulationStation starts it
+# (es-systems-to-banana.py writes each system's "run" as this), with what the menu adds around it:
+# - the performance mode the menu set (banana-perf, before this: the game's or its system's) told to runemu.sh, which
+#   sets its own governor and GPU level for the game from ROCKNIX's settings: the game's are made the menu's
+# - the bottom screen dark while a game that doesn't use it runs (settings.conf's bottom_in_games: auto, the default,
+#   for every system but the two-screen ones; on; off), and lit again after
+# - the game panel's commands to RetroArch over its network command port (ra-netcmd), when the menu kept its
+#   bottom window for the panel
+# - the emulator and core the game page chose (rocknix-options: the game's own, else its system's, both kept in
+#   ROCKNIX's settings as EmulationStation keeps them) in place of es_systems.cfg's default the run line names
+#   run-rocknix <system> <rom> [runemu.sh's options: --core=... --emulator=... --controllers=...]
+SYSTEM=$1; ROM=$2; shift 2
+DATA=${BANANA_DATA:-/data/banana}
+RUN=${BANANA_RUN:-/run/banana}
+LIB=${BANANA_LIBEXEC:-/usr/libexec/banana}
+RUNEMU=${BANANA_RUNEMU:-/usr/bin/runemu.sh}
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.conf" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+
+# the emulator and core
+emu=; core=; e=
+for a in "$@"; do case $a in --emulator=*) emu=${a#--emulator=} ;; --core=*) core=${a#--core=} ;; esac; done
+e=$emu
+if [ -n "$emu" ] && pick=$("$LIB/rocknix-options" resolve "$SYSTEM" "${ROM##*/}" "$emu" "$core" 2>/dev/null) && [ -n "$pick" ]; then
+    e=${pick%% *}; c=${pick#* }
+    # (BananaFront's start script loads the libretro core this names: bananafront-<core>)
+    export BANANA_CORE="$c"
+    for a in "$@"; do
+        shift
+        case $a in --emulator=*) a="--emulator=$e" ;; --core=*) a="--core=$c" ;; esac
+        set -- "$@" "$a"
+    done
+fi
+
+# ROCKNIX's settings written through rocknix-options (its settings file under ROCKNIX's lock): ROCKNIX's own
+# set_setting can't replace a game's key (its sed takes the ["<rom>"] for a bracket expression, so the old line stays
+# and get_setting keeps reading it)
+#   rocknix_setting <system|global> <rom file|-> <key> <value>
+rocknix_setting() { "$LIB/rocknix-options" set "$@" >/dev/null 2>&1; }
+
+# the performance mode: ROCKNIX's per-game settings the same as what banana-perf just set (/run/banana/perf:
+# "<governor> <gpu level>")
+if [ -r "$RUN/perf" ] && read -r gov gpu < "$RUN/perf" && [ -n "$gov" ]; then
+    rocknix_setting "$SYSTEM" "${ROM##*/}" cpugovernor "$gov"
+    rocknix_setting "$SYSTEM" "${ROM##*/}" gpuperf "$gpu"
+fi
+
+# the RetroAchievements account the menu's setup took (banana/accounts.conf) as ROCKNIX's, whose RetroArch and
+# emulators log in with it
+acct() { sed -n "/^$1=/{s///p;q}" "$DATA/accounts.conf" 2>/dev/null; }
+rocknix_get() {
+    if [ -n "$ROCKNIX_SETTINGS" ]; then sed -n "s/^$1=//p" "$ROCKNIX_SETTINGS" 2>/dev/null | tail -n 1
+    elif [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; get_setting "$1" ) 2>/dev/null; fi
+}
+ru=$(acct ra_user); rp=$(acct ra_password)
+if [ -n "$ru" ] && [ -n "$rp" ] && [ "$(rocknix_get global.retroachievements.username)" != "$ru" ]; then
+    rocknix_setting global - retroachievements.username "$ru"
+    rocknix_setting global - retroachievements.password "$rp"
+    rocknix_setting global - retroachievements 1
+fi
+
+# the stick lights in the system's colour (when Settings > Handheld > Stick lights is "By system")
+"$LIB/handheld" leds-system "$SYSTEM" >/dev/null 2>&1
+
+# the bottom screen
+bottom=$(conf bottom_in_games); [ -n "$bottom" ] || bottom=auto
+case $SYSTEM in nds|ndsiware|3ds|n3ds|gameandwatch|wiiu|dsi) two=1 ;; *) two= ;; esac
+dark=
+case $bottom in off) dark=1 ;; auto) [ -z "$two" ] && dark=1 ;; esac
+[ -n "$BANANA_RA_CMD" ] && dark=	# (the game panel is on it)
+[ -n "$dark" ] && "$LIB/backlight" off 1 >/dev/null 2>&1
+
+# the game panel (the menu's bottom window kept while the game plays on the top: BANANA_RA_CMD, its command pipe): to
+# RetroArch through its network commands (ra-netcmd); BananaFront reads the pipe itself (start_bananafront.sh)
+bridge=
+# (the game's window on the top screen, where new windows open: the menu's bottom one has the focus otherwise)
+[ -n "$BANANA_RA_CMD" ] && [ -n "$BANANA_TOP" ] && swaymsg focus output "$BANANA_TOP" >/dev/null 2>&1
+if [ -n "$BANANA_RA_CMD" ] && [ "$e" = retroarch ]; then
+    "$LIB/ra-netcmd" "$BANANA_RA_CMD" "$BANANA_RA_OUT" &
+    bridge=$!
+fi
+
+"$RUNEMU" "$ROM" -P"$SYSTEM" "$@"
+rc=$?
+[ -n "$bridge" ] && kill "$bridge" 2>/dev/null
+
+[ -n "$dark" ] && "$LIB/backlight" on 1 >/dev/null 2>&1
+exit $rc

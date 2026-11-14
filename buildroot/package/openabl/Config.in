@@ -1,0 +1,10 @@
+config BR2_PACKAGE_OPENABL
+	bool "openabl"
+	depends on BR2_aarch64
+	help
+	  OpenABL, an open replacement for the Qualcomm Android bootloader (ABL) of the AYN Thor and other SM8550
+	  handhelds: it starts a Linux kernel's EFI stub from the SD card. The build only copies the release's
+	  signed image for SM8550 to the boot partition's openabl/ folder; it is flashed once, by hand, from Android
+	  or fastboot (board/thor/openabl-README.txt). The release ROCKNIX pins.
+
+	  https://github.com/OpenHandheldCollective/OpenABL

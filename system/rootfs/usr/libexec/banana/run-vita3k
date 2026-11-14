@@ -1,0 +1,72 @@
+#!/bin/sh
+# PS Vita: Vita3K (package/vita3k: ROCKNIX's SM8550 build), Vulkan, on a compositor of its own on the top panel
+# (run-wayland). Its folders are fixed in the build (ROCKNIX's patch, written as BananaOS's): settings in /data/Vita3K
+# (config.yml from /usr/share/vita3k on the first run), the Vita's storage (its firmware, installed games, saves) in
+# /data/roms/psvita/vita3k. The Vita's firmware (PSVUPDAT.PUP, PSP2UPDAT.PUP) is the user's: install it once from
+# Vita3K's own menu. The games, as ROCKNIX's start script takes them:
+#   <title>.psvita   a text file with an installed game's title ID (ABCD12345): runs it
+#   <game>.zip/.vpk  installed, then run; the file is renamed <game>.installed and a <game>.psvita is written for next time
+#   <game>.pkg       installed with the zRIF key in <game>.txt beside it, then the same
+# Quit: Vita3K ends with the game (--exit-on-close, ROCKNIX's patch), or the menu's quit (SIGTERM, passed on).
+#   run-vita3k <game>
+ROM="$1"
+D=/data/Vita3K
+T=/usr/share/vita3k
+V=/data/roms/psvita/vita3k
+LOGS=/data/banana/logs/vita3k
+mkdir -p "$D" "$V/ux0/app" "$LOGS"
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-vita3k: $ROM"
+
+[ -f "$D/config.yml" ] || cp "$T/config.yml" "$D/config.yml"
+# (the card's exFAT has no symbolic links: data-link's link_dir binds the image's folders where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
+for d in shaders-builtin data lang; do
+    link_dir "$T/$d" "$D/$d"
+done
+[ -d "$V/vs0" ] || echo "run-vita3k: no firmware installed yet (Vita3K's menu: install PSVUPDAT.PUP)"
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+# (XDG_CONFIG_HOME: Vita3K reads config.yml from $XDG_CONFIG_HOME/Vita3K, and from $HOME/.config/Vita3K without it)
+export HOME=$D XDG_CONFIG_HOME=/data XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+BEFORE=$(ls "$V/ux0/app" 2>/dev/null)
+
+# run <Vita3K arguments>: Vita3K on its compositor; the launcher waits, and passes a quit on
+run() {
+    /usr/libexec/banana/run-wayland -- /usr/bin/vita3k-sa -F -E "$@" &
+    PID=$!
+    trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+    wait $PID
+    RC=$?
+    while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
+    trap - TERM INT HUP
+    return $RC
+}
+# the game installed by this run, written as a .psvita beside its file, which is set aside
+installed() {
+    NEW=$(ls "$V/ux0/app" 2>/dev/null | grep -vxF "$BEFORE" | head -n 1)
+    [ -n "$NEW" ] || return 0
+    echo "run-vita3k: installed $NEW"
+    printf '%s\n' "$NEW" > "${ROM%.*}.psvita"
+    mv "$ROM" "${ROM%.*}.installed"
+    [ -f "${ROM%.*}.txt" ] && mv "${ROM%.*}.txt" "${ROM%.*}.txt.installed"
+}
+RC=0
+case $ROM in
+*.psvita|*.PSVITA)
+    run -r "$(head -n 1 "$ROM" | tr -d ' \r\n')"; RC=$? ;;
+*.zip|*.ZIP|*.vpk|*.VPK)
+    cd "$(dirname "$ROM")" && run "$ROM"; RC=$?; installed ;;
+*.pkg|*.PKG)
+    if [ ! -f "${ROM%.*}.txt" ]; then
+        echo "run-vita3k: ${ROM##*/} needs its zRIF key in ${ROM%.*}.txt"; exit 1
+    fi
+    run --pkg "$ROM" --zrif "$(head -n 1 "${ROM%.*}.txt" | tr -d ' \r\n')"; RC=$?; installed ;;
+*)
+    echo "run-vita3k: not a Vita game: $ROM"; exit 1 ;;
+esac
+echo "run-vita3k: exit $RC"
+exit $RC

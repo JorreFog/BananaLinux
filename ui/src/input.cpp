@@ -25,8 +25,37 @@ namespace banana
 		return (bits[n / (8 * sizeof(long))] >> (n % (8 * sizeof(long)))) & 1;
 	}
 
+	// the face buttons by where they sit: A is the right one (the RG DS's, Nintendo's), unless BANANA_CONFIRM=south (a
+	// pad labelled the other way: Settings > Other systems' Confirm button, or the handheld's start script), where A is
+	// the bottom one and X and Y swap with it. Read at every press: a change in Settings counts at once
+	static bool southConfirm()
+	{
+		const char* e = getenv("BANANA_CONFIRM");
+		return e && !strcmp(e, "south");
+	}
+
+	// the Home button's codes (inputHomeCode): a key the menu has no other use for still read, as OTHER
+	static int homeExtra[4] = { 0, 0, 0, 0 };
+	void inputHomeCode(int code)
+	{
+		for (int& h : homeExtra)
+		{
+			if (h == code) return;
+			if (!h) { h = code; return; }
+		}
+	}
+
 	static Key mapKey(int code)
 	{
+		if (southConfirm())
+			switch (code)
+			{
+			case BTN_SOUTH: return Key::A;
+			case BTN_EAST: return Key::B;
+			case BTN_WEST: return Key::X;
+			case BTN_NORTH: return Key::Y;
+			default: break;
+			}
 		switch (code)
 		{
 		case BTN_DPAD_LEFT: case KEY_LEFT: return Key::LEFT;
@@ -43,9 +72,14 @@ namespace banana
 		case BTN_SELECT: case KEY_TAB: return Key::SELECT;
 		case BTN_MODE: case KEY_F1: return Key::MENU;
 		case BTN_Z: case BTN_THUMBL: case BTN_THUMBR: return Key::OTHER;
-		default: return Key::NONE;
+		case BTN_BACK: return Key::OTHER;	// (the AYN Thor's pad's spare key: the Home button if hw.conf's HW_HOME_KEY says so)
+		default:
+			for (int h : homeExtra) if (h && h == code) return Key::OTHER;
+			return Key::NONE;
 		}
 	}
+
+	Key inputKey(int code) { return mapKey(code); }
 
 	// the device's path in sysfs (to tell the bottom panel's touchscreen from the top one)
 	static std::string sysPath(const char* node)
@@ -62,6 +96,13 @@ namespace banana
 		pw = panelW; ph = panelH;
 		watch = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 		if (watch >= 0) inotify_add_watch(watch, "/dev/input", IN_CREATE | IN_DELETE | IN_ATTRIB);
+		// (tests only: BANANA_INPUT_FIFO, a named pipe of struct input_event as an evdev device sends them, read as one
+		// more device with buttons; where there is no /dev/uinput to make a real one. Never grabbed)
+		if (const char* fifo = getenv("BANANA_INPUT_FIFO"))
+		{
+			const int fd = ::open(fifo, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+			if (fd >= 0) { Dev dv; dv.fd = fd; dv.node = fifo; dv.shared = true; devs.push_back(dv); }
+		}
 		DIR* d = opendir("/dev/input");
 		if (!d) return;
 		while (dirent* e = readdir(d))
@@ -70,11 +111,38 @@ namespace banana
 			std::string path = std::string("/dev/input/") + e->d_name;
 			int fd = ::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 			if (fd < 0) continue;
+			// devices another program merges into one of its own (ROCKNIX's InputPlumber: the AYN Thor's RSInput pad and
+			// AYN key as a virtual DualSense): BANANA_INPUT_IGNORE's comma-separated parts of their names or phys paths,
+			// so a press isn't read twice
+			if (const char* ign = getenv("BANANA_INPUT_IGNORE"))
+			{
+				char nm[256] = "", ph[256] = "";
+				ioctl(fd, EVIOCGNAME(sizeof nm - 1), nm);
+				ioctl(fd, EVIOCGPHYS(sizeof ph - 1), ph);
+				bool skip = false;
+				std::string list = ign;
+				for (size_t a = 0; a <= list.size() && !skip; )
+				{
+					size_t b = list.find(',', a);
+					if (b == std::string::npos) b = list.size();
+					std::string part = list.substr(a, b - a);
+					if (!part.empty() && (strstr(nm, part.c_str()) || strstr(ph, part.c_str()))) skip = true;
+					a = b + 1;
+				}
+				if (skip) { ::close(fd); continue; }
+			}
 			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = {}, abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
 			ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys);
 			ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
 			Dev dv;
 			dv.fd = fd;
+			dv.node = path;
+			{
+				unsigned long sw[SW_MAX / (8 * sizeof(long)) + 1] = {};
+				ioctl(fd, EVIOCGBIT(EV_SW, sizeof sw), sw);
+				for (unsigned long w : sw) if (w) dv.shared = true;
+				if (testBit(keys, KEY_POWER) || testBit(keys, KEY_VOLUMEUP) || testBit(keys, KEY_VOLUMEDOWN)) dv.shared = true;
+			}
 			// a touchscreen (multitouch, or single-touch with BTN_TOUCH), or an absolute pointer (QEMU's tablet, a
 			// graphics tablet: BTN_LEFT on ABS_X/Y, and not a pad's stick)
 			bool mt = testBit(abs, ABS_MT_POSITION_X) && testBit(abs, ABS_MT_POSITION_Y);
@@ -94,7 +162,11 @@ namespace banana
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y) && ioctl(fd, EVIOCGABS(ABS_X), &px) == 0 && ioctl(fd, EVIOCGABS(ABS_Y), &py) == 0)
 				{ dv.x = px.value; dv.y = py.value; }
 				else { dv.x = ax.value; dv.y = ay.value; }
-				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
+				// the bottom panel's: bottomTouch is part of its sysfs path ("fe5e0000.i2c", the RG DS's) or of its name
+				// (the AYN Thor's are named by their device tree labels, "top_touchscreen" and "bottom_touchscreen")
+				char tn[256] = "";
+				ioctl(fd, EVIOCGNAME(sizeof tn - 1), tn);
+				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos || (!bottomTouch.empty() && strstr(tn, bottomTouch.c_str())) ? 1 : 0;
 			}
 			else
 			{
@@ -128,6 +200,56 @@ namespace banana
 			devs.push_back(dv);
 		}
 		closedir(d);
+		if (grabbed) grab(true);
+	}
+
+	bool absPushed(int axis, bool rightStick, int lo, int hi, int value)
+	{
+		if (hi <= lo) return false;
+		// (a trigger rests at its lowest value, a stick and the d-pad in the middle; pushed: over half way out)
+		const bool trigger = (axis == ABS_Z || axis == ABS_RZ) && rightStick && lo >= 0;
+		const long range = (long)hi - lo;
+		const long out = trigger ? 2 * ((long)value - lo) : labs(2L * value - lo - hi);
+		return 2 * out > range;
+	}
+
+	// nothing held on a device: no key down (a finger on a touchscreen is BTN_TOUCH), no stick, trigger or d-pad pushed.
+	// Asked on an open of its own: EVIOCGKEY drops the key events still queued for the descriptor it is asked on (the
+	// kernel's evdev_handle_get_val), and on the one the menu reads those are presses not handled yet
+	static bool atRest(const std::string& node, bool touch)
+	{
+		int fd = ::open(node.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) return true;	// (gone: the grab fails, and the rescan drops it)
+		bool rest = true;
+		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = {};
+		if (ioctl(fd, EVIOCGKEY(sizeof keys), keys) >= 0)
+		{
+			for (unsigned long w : keys) if (w) rest = false;
+			unsigned long abs[ABS_MAX / (8 * sizeof(long)) + 1] = {};
+			if (rest && !touch) ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
+			const bool rightStick = testBit(abs, ABS_RX) && testBit(abs, ABS_RY);
+			static const int axes[] = { ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ, ABS_HAT0X, ABS_HAT0Y };
+			for (int a : axes)
+			{
+				input_absinfo ai = {};
+				if (!rest || !testBit(abs, a) || ioctl(fd, EVIOCGABS(a), &ai) != 0) continue;
+				if (absPushed(a, rightStick, ai.minimum, ai.maximum, ai.value)) rest = false;
+			}
+		}
+		::close(fd);
+		return rest;
+	}
+
+	void Input::grab(bool on)
+	{
+		grabbed = on;
+		for (auto& d : devs)
+		{
+			if (d.shared || d.ours == on) continue;
+			// (a device another program has grabbed already says EBUSY: left, it sends the menu nothing either)
+			if (!on) { ioctl(d.fd, EVIOCGRAB, 0); d.ours = false; }
+			else if (atRest(d.node, d.touch)) d.ours = ioctl(d.fd, EVIOCGRAB, 1) == 0;
+		}
 	}
 
 	void Input::close()
@@ -191,6 +313,28 @@ namespace banana
 						float sx = dv->maxX > dv->minX ? (float)pw / (dv->maxX - dv->minX + 1) : 1;
 						float sy = dv->maxY > dv->minY ? (float)ph / (dv->maxY - dv->minY + 1) : 1;
 						o.x = (dv->x - dv->minX) * sx; o.y = (dv->y - dv->minY) * sy;
+						if (touchToCanvas && dv->screen >= 0 && dv->screen < 2)
+						{
+							// the touchscreen spans the panel; the panel shows the canvas fitted (panelfit.h)
+							bool wide = dv->maxX - dv->minX > dv->maxY - dv->minY;
+							bool in = touchToCanvas(dv->screen, o.x / pw, o.y / ph, wide, o.x, o.y);
+							if (dv->down && !dv->wasDown) dv->outside = !in;
+							if (dv->outside)
+							{
+								// a touch that began in the bars round the picture: none of it is the menu's
+								if (!dv->down) dv->outside = false;
+								dv->wasDown = dv->down;
+								dv->moved = false;
+								continue;
+							}
+							if (in) { dv->lastX = o.x; dv->lastY = o.y; }
+							else
+							{
+								// dragged out into the bars: it stays at its last place inside, and is let go there
+								o.x = dv->lastX; o.y = dv->lastY;
+								if (dv->down) { dv->moved = false; continue; }
+							}
+						}
 						if (dv->down && !dv->wasDown) { o.type = InputEvent::TOUCH_DOWN; sink1(o, e); }
 						else if (dv->down && dv->moved) { o.type = InputEvent::TOUCH_MOVE; sink1(o, e); }
 						else if (!dv->down && dv->wasDown) { o.type = InputEvent::TOUCH_UP; sink1(o, e); }
@@ -230,5 +374,7 @@ namespace banana
 				}
 			}
 		}
+		// (a grab that waited for this device to be let go)
+		if (grabbed) grab(true);
 	}
 }

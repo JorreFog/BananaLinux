@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaLauncher's privileged permissions (/system_ext/etc/permissions): the ones a privileged app must be allowed
+     by name. Its signature permissions come with the platform key it is signed with (Android.bp). -->
+<permissions>
+    <privapp-permissions package="org.bananaos.launcher">
+        <!-- the running game's task, to bring it back to the front (the Home button) -->
+        <permission name="android.permission.REAL_GET_TASKS" />
+        <!-- the menu forward over a game from the background (the Home button, through banana-hwd) -->
+        <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND" />
+        <!-- both screens' brightness without banana-hwd (DisplayManager per display) -->
+        <permission name="android.permission.CONTROL_DISPLAY_BRIGHTNESS" />
+        <!-- Settings > Network: joining the network picked in the menu -->
+        <permission name="android.permission.NETWORK_SETTINGS" />
+        <!-- Settings > Network > Bluetooth: on and off -->
+        <permission name="android.permission.BLUETOOTH_PRIVILEGED" />
+        <!-- Settings > System > Time zone -->
+        <permission name="android.permission.SET_TIME_ZONE" />
+    </privapp-permissions>
+</permissions>

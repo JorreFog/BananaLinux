@@ -52,18 +52,47 @@ namespace banana
 	{
 	public:
 		SoftBackend(int w, int h);
-		int width() const { return W; }
-		int height() const { return H; }
-		// the composed screen, 0xXXRRGGBB rows of W words
-		const uint32_t* pixels(int screen) const { return scr[screen].data(); }
+		// the canvas the menu draws in (device px; 4:3), the same for both screens
+		int width() const { return DW; }
+		int height() const { return DH; }
+		// each screen its own size (the AYN Thor's 1920x1080 top and 1240x1080 bottom): the canvas is staged in it,
+		// as large as fits and centred, and the menu's backgrounds fill the rest (stageArea). The screens' contents go
+		// (all of it is drawn again). Equal to the canvas: as before
+		void setScreens(int w0, int h0, int w1, int h1);
+		int screenWidth(int s) const { return SW[s]; }
+		int screenHeight(int s) const { return SH[s]; }
+		bool staged(int s) const { return !ident[s]; }
+		bool stageArea(float& x, float& y, float& w, float& h) const override;
+		float stageScale() const override { return ident[cur] ? 1.0f : sk[cur]; }
+		// a point of screen s (its px) in the canvas; false outside the stage
+		bool screenToCanvas(int s, float px, float py, float& x, float& y) const;
+		// the composed screen, 0xXXRRGGBB rows of screenWidth(screen) words
+		const uint32_t* pixels(int screen) const { flushCanvas(screen); return scr[screen].data(); }
 		// the part touched since the last call (empty: none); clears the mark
-		Damage takeDamage(int screen) { Damage d = dmg[screen]; dmg[screen] = Damage(); return d; }
+		Damage takeDamage(int screen) { flushCanvas(screen); Damage d = dmg[screen]; dmg[screen] = Damage(); return d; }
 		// everything again (new scanout buffers): the next frame is drawn in full
 		// (the background copy goes too: it is another screen's draws now - a game's panel, 2026-11-03)
-		void invalidate() { for (int s = 0; s < 2; s++) { dmg[s] = { 0, 0, W, H }; last[s].clear(); full[s] = true; dropBase(s); } }
+		void invalidate() { for (int s = 0; s < 2; s++) { dmg[s] = { 0, 0, SW[s], SH[s] }; last[s].clear(); full[s] = true; dropBase(s); } }
 		// a screen's pixels to draw on directly (the boot animation): all of it counts as changed, and the engine's
 		// next frame is drawn over all of it
-		uint32_t* canvas(int screen) { dmg[screen] = { 0, 0, W, H }; last[screen].clear(); full[screen] = true; dropBase(screen); return scr[screen].data(); }
+		// (a staged screen: a canvas-sized buffer, fitted onto the screen when the frame is taken)
+		uint32_t* canvas(int screen)
+		{
+			dmg[screen] = { 0, 0, SW[screen], SH[screen] }; last[screen].clear(); full[screen] = true; dropBase(screen);
+			if (ident[screen]) return scr[screen].data();
+			cbuf[screen].assign((size_t)DW * DH, 0xff000000u);
+			cdirty[screen] = true;
+			return cbuf[screen].data();
+		}
+
+		// a screen's own pixels at its own size to draw on directly (a fade over what was drawn there): all of it counts
+		// as changed, and the engine's next frame is drawn over all of it
+		uint32_t* screenPixels(int screen)
+		{
+			flushCanvas(screen);
+			dmg[screen] = { 0, 0, SW[screen], SH[screen] }; last[screen].clear(); full[screen] = true; dropBase(screen);
+			return scr[screen].data();
+		}
 
 		// (touches nothing of the backend's but the new texture: callable from the picture workers)
 		rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override;
@@ -134,9 +163,15 @@ namespace banana
 		void blitRuns(const SoftTex* t, int bx0, int by0, int x0, int y0, int x1, int y1, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta, uint32_t tintWord);
 		void doDraw(SoftTex* t, float x, float y, float w, float h, const rnds::Color& tint, const Clip& cl);
 		void doFill(float x, float y, float w, float h, const rnds::Color& c, const Clip& cl);
-		int W, H, cur = 0;
-		std::vector<uint32_t> scr[2];
-		Damage dmg[2];
+		int W, H, cur = 0;	// (W, H: the current screen's size, while it is drawn)
+		int DW, DH, SW[2], SH[2];
+		bool ident[2] = { true, true };
+		float sk[2] = { 1, 1 }, sx[2] = { 0, 0 }, sy[2] = { 0, 0 };	// the stage: screen = canvas * sk + (sx, sy)
+		std::vector<uint32_t> cbuf[2];
+		mutable bool cdirty[2] = { false, false };
+		void flushCanvas(int s) const;	// (the screen's pixels and damage are its cache: mutable)
+		mutable std::vector<uint32_t> scr[2];
+		mutable Damage dmg[2];
 		std::vector<Clip> clips;
 		std::vector<int> colA, colB;	// a scaled draw's source columns (and their blend) for each pixel of a row
 		std::vector<uint32_t> colF;

@@ -4,8 +4,12 @@
 # "sd2 scan" at boot and on every MMC block device's uevent; it looks at what's there now, so the order of events
 # doesn't matter. The card the system runs from (the one /data is on) is never the second card.
 #   sd2 scan     mount or unmount to match the slot, and update /run/banana/sd2
+# a system that mounts its cards itself (hw.conf's HW_SERVICES=systemd: ROCKNIX, whose games on a second card are its
+# own, /storage/games-external): no second slot for the menu to manage
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+if [ "$HW_SERVICES" = systemd ]; then mkdir -p "${BANANA_RUN:-/run/banana}/sd2"; rm -f "${BANANA_RUN:-/run/banana}/sd2/slot"; exit 0; fi
 M=/run/sd2
-S=/run/banana/sd2
+S=${BANANA_RUN:-/run/banana}/sd2
 mkdir -p $M $S
 data_disk=$(sed -n 's|^/dev/\(mmcblk[0-9]*\)p[0-9]* /data .*|\1|p' /proc/mounts | head -n 1)
 # is there a second slot at all (the RG DS has one, the Plus two): a card reader with card detection (cd-gpios) that

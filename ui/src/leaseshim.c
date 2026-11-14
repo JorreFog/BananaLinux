@@ -1,7 +1,8 @@
 // banana-leaseshim.so, preloaded into a game that draws on one panel while the menu keeps the other (RetroArch in the
 // game panel's mode, see run-retroarch): opening /dev/dri/card0 gives a copy of the DRM lease banana-ui made for it
 // (its fd in BANANA_DRM_LEASE_FD), which holds only that panel's connector, CRTC and plane. Everything else opens as
-// it would.
+// it would. A game that takes both panels on a handheld with a Home button gets them the same way (one lease of both,
+// BANANA_HOME_LEASE set): the menu keeps the display device and can come back over the game.
 #define _GNU_SOURCE
 #undef _FILE_OFFSET_BITS	/* open and open64 both defined here: not one renamed to the other */
 #include <dlfcn.h>
@@ -15,7 +16,9 @@
 static int lease(const char* path, int flags)
 {
 	const char* e = getenv("BANANA_DRM_LEASE_FD");
-	if (!e || !path || strcmp(path, "/dev/dri/card0")) return -1;
+	if (!e || !path) return -1;
+	/* (a game that has both panels through one lease, BANANA_HOME_LEASE: whichever card node the display is) */
+	if (getenv("BANANA_HOME_LEASE") ? strncmp(path, "/dev/dri/card", 13) : strcmp(path, "/dev/dri/card0")) return -1;
 	return fcntl(atoi(e), (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
 }
 static mode_t mode_of(int flags, va_list a) { return (flags & O_CREAT) ? (mode_t)va_arg(a, int) : 0; }

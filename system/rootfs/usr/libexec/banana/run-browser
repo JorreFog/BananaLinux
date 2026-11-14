@@ -1,0 +1,16 @@
+#!/bin/sh
+# The web browser from the shelf, on the AYN Thor: Cog (WPE WebKit's small launcher: one full-screen page, no desktop
+# toolkit under it) inside run-wayland, the page on the top screen, an on-screen keyboard on the bottom one. Touch on
+# either screen; the keyboard's own layers have the arrows and Alt (Alt+Left: back). Its data (cookies, the cache) on
+# the card in /data/browser, the cache capped. Started on the menu's start page (bookmarks, an address box) or on the
+# address given.
+#   run-browser [address]
+L=${BANANA_LIBEXEC:-/usr/libexec/banana}
+D=/data/browser
+mkdir -p $D/cache $D/data
+URL=${1:-file:///usr/share/banana/browser/start.html}
+case $URL in *.app) URL=file:///usr/share/banana/browser/start.html ;; esac
+export XDG_CACHE_HOME=$D/cache XDG_DATA_HOME=$D/data HOME=$D
+# (full screen by Cog's own switch too: the compositor's rule covers a window that asks late)
+export COG_PLATFORM_WL_VIEW_FULLSCREEN=1
+exec "$L/run-wayland" --keyboard -- cog --platform=wl --enable-spatial-navigation=true "$URL"

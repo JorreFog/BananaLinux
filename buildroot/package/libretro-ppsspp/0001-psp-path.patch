@@ -1,0 +1,20 @@
+Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/libretro/ppsspp-lr/patches/002-psp-path.patch at 6cf94dba (GPL-2.0).
+The memory stick is always <dir>/PSP
+
+diff --git a/Core/Util/PathUtil.cpp b/Core/Util/PathUtil.cpp
+--- a/Core/Util/PathUtil.cpp
++++ b/Core/Util/PathUtil.cpp
+@@ -45,12 +45,7 @@
+ Path GetSysDirectory(PSPDirectories directoryType) {
+ 	const Path &memStickDirectory = g_Config.memStickDirectory;
+ 	Path pspDirectory;
+-	if (!strcasecmp(memStickDirectory.GetFilename().c_str(), "PSP")) {
+-		// Let's strip this off, to easily allow choosing a root directory named "PSP" on Android.
+-		pspDirectory = memStickDirectory;
+-	} else {
+-		pspDirectory = memStickDirectory / "PSP";
+-	}
++	pspDirectory = memStickDirectory / "PSP";
+
+ 	switch (directoryType) {
+ 	case DIRECTORY_PSP:

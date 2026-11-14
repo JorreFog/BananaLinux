@@ -66,5 +66,17 @@ run switch apply "$P" || bad "switch: the apply after the cut-off one failed"
 run switch switch a || bad "switch: back to slot a refused (it holds a system)"
 [ "$(dflt switch)" = a ] || bad "switch: back to a didn't happen"
 
+# 5. the AYN Thor's card: a Boot Loader Specification entry beside extlinux.conf (OpenABL may read either), switched
+# with it: kernel, device tree and root all the new slot's, and back
+card bls; mkdir -p "$OUT/bls/boot/loader/entries"
+sed -e 's/@DTB@/qcs8550-ayn-thor/g' -e 's/@VERSION@/0.5.2.2/' "$HERE/../buildroot/board/thor/banana.conf.in" > "$OUT/bls/boot/loader/entries/banana.conf"
+bls() { grep -c "$1" "$OUT/bls/boot/loader/entries/banana.conf"; }
+run bls switch b || bad "bls: switch to b refused"
+[ "$(dflt bls)" = b ] || bad "bls: extlinux's default is $(dflt bls), not b"
+[ "$(bls '^linux *\/b\/Image$')$(bls '^devicetree *\/b\/qcs8550-ayn-thor.dtb$')$(bls 'root=PARTLABEL=banana-root-b ')" = 111 ] ||
+    bad "bls: the entry isn't slot b's: $(tr '\n' '|' < "$OUT/bls/boot/loader/entries/banana.conf" | cut -c1-160)"
+run bls switch a || bad "bls: back to a refused"
+[ "$(bls '^linux *\/a\/Image$')$(bls 'root=PARTLABEL=banana-root-a ')" = 11 ] || bad "bls: the entry didn't come back to slot a"
+
 [ $fails = 0 ] && echo "update-apply: all passed ($SH)"
 exit $((fails > 0))

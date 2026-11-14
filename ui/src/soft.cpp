@@ -167,13 +167,60 @@ namespace banana
 	static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "the alpha byte is read from the words' memory");
 	static void encodeRuns(SoftTex& t) { encodeRuns(t, (const uint8_t*)t.px.data() + 3, 4, (size_t)t.w * 4); }
 
-	SoftBackend::SoftBackend(int w, int h) : W(w), H(h)
+	SoftBackend::SoftBackend(int w, int h) : W(w), H(h), DW(w), DH(h)
 	{
 		for (int s = 0; s < 2; s++)
 		{
+			SW[s] = w; SH[s] = h;
 			scr[s].assign((size_t)W * H, 0xff000000u);
 			dmg[s] = { 0, 0, W, H };
 		}
+	}
+
+	void SoftBackend::setScreens(int w0, int h0, int w1, int h1)
+	{
+		const int ws[2] = { w0, w1 }, hs[2] = { h0, h1 };
+		for (int s = 0; s < 2; s++)
+		{
+			SW[s] = ws[s] > 0 ? ws[s] : DW; SH[s] = hs[s] > 0 ? hs[s] : DH;
+			ident[s] = SW[s] == DW && SH[s] == DH;
+			sk[s] = std::min((float)SW[s] / DW, (float)SH[s] / DH);
+			sx[s] = std::round((SW[s] - DW * sk[s]) / 2); sy[s] = std::round((SH[s] - DH * sk[s]) / 2);
+			if (ident[s]) { sk[s] = 1; sx[s] = sy[s] = 0; }
+			scr[s].assign((size_t)SW[s] * SH[s], 0xff000000u);
+			cbuf[s].clear(); cdirty[s] = false;
+		}
+		W = SW[cur]; H = SH[cur];
+		invalidate();
+	}
+
+	bool SoftBackend::stageArea(float& x, float& y, float& w, float& h) const
+	{
+		if (ident[cur]) return false;
+		x = -sx[cur] / sk[cur]; y = -sy[cur] / sk[cur]; w = SW[cur] / sk[cur]; h = SH[cur] / sk[cur];
+		return true;
+	}
+
+	bool SoftBackend::screenToCanvas(int s, float px, float py, float& x, float& y) const
+	{
+		x = (px - sx[s]) / sk[s]; y = (py - sy[s]) / sk[s];
+		return x >= 0 && y >= 0 && x < DW && y < DH;
+	}
+
+	// what the boot animation drew in a staged screen's canvas buffer, fitted onto the screen (nearest neighbour)
+	void SoftBackend::flushCanvas(int s) const
+	{
+		if (!cdirty[s]) return;
+		cdirty[s] = false;
+		std::fill(scr[s].begin(), scr[s].end(), 0xff000000u);
+		int x0 = (int)sx[s], y0 = (int)sy[s], w = (int)std::lround(DW * sk[s]), h = (int)std::lround(DH * sk[s]);
+		for (int y = 0; y < h && y0 + y < SH[s]; y++)
+		{
+			const uint32_t* src = &cbuf[s][(size_t)std::min(DH - 1, (int)((y + 0.5f) / sk[s])) * DW];
+			uint32_t* d = &scr[s][(size_t)(y0 + y) * SW[s] + x0];
+			for (int x = 0; x < w && x0 + x < SW[s]; x++) d[x] = src[std::min(DW - 1, (int)((x + 0.5f) / sk[s]))];
+		}
+		dmg[s] = { 0, 0, SW[s], SH[s] };
 	}
 
 	rnds::TexPtr SoftBackend::upload(const rnds::Bitmap& b, bool smooth)
@@ -206,6 +253,7 @@ namespace banana
 	void SoftBackend::beginScreen(int screen)
 	{
 		cur = screen;
+		W = SW[cur]; H = SH[cur];
 		rec[cur].clear();
 	}
 
@@ -418,18 +466,32 @@ namespace banana
 		std::swap(items, old);
 	}
 
+	// a staged screen (setScreens): the canvas's coordinates onto the screen's. A solid fill over the whole canvas is a
+	// background: it fills the whole screen
 	void SoftBackend::draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint)
 	{
+		if (!ident[cur]) { const float k = sk[cur]; x = sx[cur] + x * k; y = sy[cur] + y * k; w *= k; h *= k; }
 		rec[cur].push_back({ Cmd::DRAW, t, x, y, w, h, { tint.r, tint.g, tint.b, tint.a } });
 	}
 
 	void SoftBackend::fill(float x, float y, float w, float h, const rnds::Color& c)
 	{
+		if (!ident[cur])
+		{
+			if (x <= 0 && y <= 0 && x + w >= DW && y + h >= DH) { x = 0; y = 0; w = (float)SW[cur]; h = (float)SH[cur]; }
+			else { const float k = sk[cur]; x = sx[cur] + x * k; y = sy[cur] + y * k; w *= k; h *= k; }
+		}
 		rec[cur].push_back({ Cmd::FILL, nullptr, x, y, w, h, { c.r, c.g, c.b, c.a } });
 	}
 
 	void SoftBackend::pushClip(float x, float y, float w, float h)
 	{
+		if (!ident[cur])
+		{
+			// (a clip over the whole canvas: the whole screen, so a background drawn in it fills the screen too)
+			if (x <= 0 && y <= 0 && x + w >= DW && y + h >= DH) { x = 0; y = 0; w = (float)SW[cur]; h = (float)SH[cur]; }
+			else { const float k = sk[cur]; x = sx[cur] + x * k; y = sy[cur] + y * k; w *= k; h *= k; }
+		}
 		rec[cur].push_back({ Cmd::PUSH, nullptr, x, y, w, h, { 0, 0, 0, 0 } });
 	}
 

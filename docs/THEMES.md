@@ -32,17 +32,24 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "name": "My theme",
   "base": "dark", "accent": "#7c9cff", "colors": { ... }, "fonts": { ... },   // as a colour theme: the Settings screen
   "font": "inter",              // the default font of text elements
+  "stage": "screen",            // lay out on each screen's own size (below); default "canvas"
+  "panels": "flat",             // Settings' boxes flat with a hairline edge (below); default the Pixel look
+  "settings": { "top": "open", "left": 58, "icons": "tile", "pick": "outline", "hints": "pill", "header": "rule",
+                "bodyFont": "inter" },   // Settings' own pages laid out the theme's way (below)
+  "transitions": "fade",        // eased fades between the boot, the menu, a game and the shutdown (below)
   "vars": { "bg": "#10131c", "hi": "=accent" },          // names for values, usable in any expression
   "components": { "chip": { ...an element... } },        // reusable elements ("use": "chip")
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
   "hints": { "home": [["A", "Open"], ["Y", "Favorite"]] }, // the "hints" list's buttons per view
+  "systems": { "nds": { "short": "DS", "year": "2004" } }, // the theme's own words for systems: sys.short, sys.year
   "behavior": { "launchMs": 900, "scrollMs": 70, "settleMs": 600, "fps": 30, "wrap": false,
                 "extraHints": true, "cues": { "insert": 560 } },
   "screens": {
     "home":    { "top": [ ...elements... ], "bottom": [ ... ] },
     "library": { "top": [ ... ], "bottom": [ ... ] },
     "launch":  { "top": [ ... ], "bottom": [ ... ] },   // optional: the library's screens are used if it is missing
-    "all":     { "top": [ ... ] }                       // drawn over every view (a status bar)
+    "all":     { "top": [ ... ] },                      // drawn over every view (a status bar)
+    "settings": { "top": [ ... ], "bottom": [ ... ] }   // drawn under Settings' own pages (below)
   }
 }
 ```
@@ -51,6 +58,127 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
 
 Each screen is 480 units high and 640 wide on both handhelds. The RG DS Plus's 1024 x 768 panels scale it by 1.6,
 and text and shapes are drawn sharp at that size.
+
+### A theme on another ("extends")
+
+A theme can be another one with a few things changed: `"extends": "<that theme's file name without .json>"` (looked
+for beside the theme, then in `banana/themes` on the card, then among the image's). Its members go over the other
+theme's: objects member by member, so one colour in `colors`, one value in `vars`, one of `accents`, one component or
+one screen can be replaced and the rest stays; anything else (a string, a number, a list such as `children` or a
+gradient's `stops`) is replaced whole; `null` takes a member away. A theme can extend one that extends another, four
+deep. Files a theme names (pictures, fonts, sounds, `settings.glyphs`) are looked for in its own folder first, then in
+the folder of the theme it extends. An instance's `with` and its component's own `with` are joined the same way: the
+instance's values first, then those of the component's that the instance didn't give, so a component can work values
+out from what it is given (Thor OLED's `key` works its colours out from `k` and `mode`), and a theme on top can
+replace how.
+
+So a base theme written with `vars` for its colours and measures gives variants that are a page long. The image's
+`thor-white.json`, `thor-purple.json` and `thor-rainbow.json` are `thor-oled.json` for the Thor's other shells: each
+has its own `name`, its `accents.own`, the palette in `colors` and `vars`, and its pictures (the shelf, the bubble's
+pointer, Clear Purple's grain) in a folder of its own; Thor Rainbow also replaces the `with` of the `key` component,
+so A B X Y are the buttons' four colours.
+
+### The accent's choices ("accents")
+
+Settings > Display & sound > Accent colour offers Banana's six (`yellow`, `blue`, `red`, `green`, `purple`, `pink`:
+the values of `accent` in `settings.conf`). A theme can give any of them its own name, colour and the ink for text on
+it, and add one of its own before them:
+
+```jsonc
+"accents": {
+  "own":   { "name": "Celadon", "color": "#8fceb6", "ink": "#0a1a14" },   // the setting's value "theme"
+  "green": { "name": "Lime", "color": "#9be15d", "ink": "#0d1606" }
+}
+```
+
+The row lists the theme's own first, then the six in the order the theme names them, then the rest. Choosing a theme
+with an accent of its own (in Settings or the theme gallery) sets the accent to it (`accent = theme`), and leaving
+for a theme without one sets it back to yellow; after that the row changes it as always. `ink` is what `accent.ink`
+gives (and the plate's text in Settings) while Settings > Text on accent is Auto. A theme with `"accent"` (one fixed
+colour) has no choices, as before. `"accentLogo": false` keeps the boot animation's banana yellow whatever the accent.
+
+### Screens of another shape (the AYN Thor)
+
+The AYN Thor's top screen is 16:9 (1920 x 1080) and its bottom one nearly square (1240 x 1080). By default a theme still
+lays out on the 640 x 480 canvas, and the canvas is placed in the middle of each screen, as large as it fits: the top
+has 107 units more on each side, the bottom 39 more above and below. Nothing is cut off there: an element can go past
+the canvas's edges into the rest of the screen. `screenX`, `screenY`, `screenW` and `screenH` are the whole screen in
+the canvas's units (on the Thor's top `-106.7, 0, 853.3, 480`), so `{ "type": "rect", "x": "=screenX", "y": "=screenY",
+"w": "=screenW", "h": "=screenH", "fill": "#000" }` fills it. On the RG DS they are the canvas, `0, 0, 640, 480`.
+
+With `"stage": "screen"` the theme lays out on each screen's own size instead: `W` and `H` are the screen's (853.3 x 480
+on the Thor's top, 640 x 557.4 on its bottom; 640 x 480 on the RG DS), and 0,0 is its top-left corner. A theme
+written with `W` and `H` (`"x": "=W / 2"`, `"y": "=H * 0.5"`, `"w": "100%"`) fills every shape. `vars` are worked out
+for each screen, so a var can read `W` and `H`. `thor-oled.json` is one: the AYN Thor starts in it (the board's default
+for `theme` in `settings.conf`, `user:thor-oled`; the RG DS keeps Dark). Its measures are the design's, in the
+panels' pixels: its vars `u` and `v` are the units a pixel of the bottom and of the top screen (`"x": "=160 * v"`), so
+it shrinks to fit the RG DS's 4:3 panels.
+
+The Thor's bottom screen is narrower than the canvas, so the canvas is drawn smaller on it (1 unit is 1.9375 px
+there, 2.25 on the top). A layout theme's boxes, text and pictures are made for each screen's own pixels: nothing is
+drawn at one size and scaled to another, and pixel art stays whole multiples of its pixels on both.
+
+## Settings, the setup and the moments between screens
+
+Settings, the first-time setup, the lists (networks, languages), the keyboard, the dialogs, the game panel and the quick
+menu are drawn by the engine, not from `screens`. A theme still decides how they look:
+
+| `settings.` | |
+|---|---|
+| `top` | `"open"`: the top screen's text straight on the screen, no card round it |
+| `left` | the top screen's text column's left edge, in units from the screen's own left edge (on the Thor's 16:9 top, where the 4:3 canvas would leave it in the middle) |
+| `icons` | the top screen's pixel icons: `"tile"` on a lit tile as the home screen's system, `"none"` left out |
+| `pick` | `"outline"`: the picked row stays the surface with an edge and a glow in the accent, its text the ink (default: filled with the accent) |
+| `hints` | `"pill"`: the B / A hints as pills with a round key, A's edge and label in the accent |
+| `header` | `"rule"`: a page's title over a hairline instead of in a box |
+| `bodyFont` | the help texts' font: `inter`, `inter-medium`, `inter-semibold` or a `.ttf` beside the theme (default: `fonts.regular`) |
+
+| `layout` | `"screen"`: the pages laid out on each screen's own shape instead of in the 4:3 canvas (the AYN Thor's screens). Bottom screen: the page from edge to edge with 64 px margins (of a 1080-line screen), its title at the top, the button hints at the foot, seven rows of 96 px in a Settings list (a row that steps through choices keeps room for its chevrons, picked or not), the groups as a grid. A list's title line is "Settings" with the page's name at the right (and the row's number when the list is longer than the screen). The game panel is the design's grid of six tiles of 320 px (Save, Load, Save states, Menu, Fast or Keys, Quit, each with what it does in words), the latest achievement in one row under them, and at the foot what the Home button does as two pills where the handheld has one; a touch anywhere on the screen counts. Top screen: a crumb, the title large (96 px, smaller when it is long) and the help under it, from `left`; on the Theme and Accent colour rows the help keeps to a 760 px column, the palette's swatches or the accents' caps follow its last line, and a small picture of the menu in the theme (two tiles, the plate, a scrub line) stands at the right |
+| `glyphs` | a folder beside the theme with line icons, `<name>-32.png` for a row and `<name>-88.png` for a tile (white on transparent; they are tinted): `save load menu fast quit keys states trophy` for the game panel, `sun speaker palette drop motion clock globe wifi info user trophy cloud text toggle sliders open bolt power` for rows, `next prev` for the chevrons |
+| `plate` | `{ "light": 0.18, "at": 0.38, "dark": 0.14, "lip": 6 }`: the material look's plate from the accent: how much white is mixed in at its top, how far down (0..1) the accent itself sits, how much black at the bottom (mixed in OKLab), and the height of its lower lip in px |
+| `state` | the same four for what says "on" (a switch, a bar's fill, the main hint's key) when that isn't the plate: Thor White's plate is its white shell (`colors.plateTop` ...), its state a glaze of the accent |
+| `texture` | a picture (RGBA .png beside the theme) tiled over the material look's cards, rows and tiles in place of the cards' dots, a texel a design pixel: Thor Clear Purple's grain |
+| `help` | `{ "theme": "...", "accent": "..." }`: the theme's own words for a row's help on the top screen, by the row's key (the Theme row says what this theme is, the Accent colour row what its accent colours). The other rows keep the system's help; the text is shown as written, in no other language |
+
+`"panels": "material"` is Thor OLED's look for all of these pages: every surface one dark gradient with a 2 px lit line
+along its top edge and a hairline inside it (cards also carry a dot texture), a picked row a lighter surface in a 4 px
+ring of the accent with its icon on the accent's plate, a picked tile or dialog button the plate itself, the button
+hints 72 px pills whose keys are shaped like the buttons (round for A B X Y with a 5 x 7 pixel letter, a shoulder for
+L R, a box with the word for Start and Select; the main action's key on the plate), switches for on/off rows, a
+five-bar meter for levels, a 12 px bar for the quick menu's sliders, the keyboard's keys as tiles. Names, titles and
+numbers stay in the theme's pixel face; labels, values and hints are Inter in sentence case. Its colours are `colors`
+entries (all optional; Thor OLED's are the defaults):
+
+| `colors.` | |
+|---|---|
+| `matTop` `matMid` `matLow` | the surface's gradient (top, 70 %, bottom); `selTop` `selLow` a picked row's |
+| `lit` `litLow` | the line along a surface's top edge, and one along its bottom (none by default) |
+| `hair` `hair2` `tileEdge` | the hairline inside rows and cards, the stronger one (switch, swatch), a tile's |
+| `ink2` `dim` | secondary and tertiary text |
+| `surface` `raised` `raised2` | flat steps: a switch's track, a meter's dark bars, the wide keys, a scrub's track |
+| `iconTop` `iconLow` `iconInk` | a row's icon tile and its icon (default `raised2`, `ink2`) |
+| `plateTop` `plateMid` `plateLow` `plateInk` `plateLit` `plateLip` | the plate: by default the accent mixed in OKLab with white (18 %) and black (14 %), its text the accent at 12 %; a theme with a fixed plate (a white key cap) gives them |
+| `stateTop` `stateMid` `stateLow` `stateInk` | what says "on" (a switch, a bar's fill, the main hint's key): the plate unless given |
+| `ring` | the focus ring, chevrons, scrub thumb and accent dot (default: the accent) |
+| `keyTop` `keyLow` `keyInk` `keyLip` `keyLit` | a hint's key: gradient, letter, the lip inside its bottom, a line along its top |
+| `keyA` `keyB` `keyX` `keyY` (+ `keyAInk` ...) | a face button's own colour (it wins over the main action's plate); with them the Theme row's page shows a key to the four beside its swatches |
+| `danger` `dangerTop` `dangerLow` `dangerText` `dangerInk` | Quit: its text, and its tile when pressed |
+| `fav` `favTop` `ok` `dots` `track` `knobTop` `qrGround` | the pink, the green, the cards' dots, a bar's track, a switch's dark knob, the ground of the Steam sign-in code |
+| `plateSub` | the second line and the icon on the plate (default `plateInk`) |
+| `keyMid` | a key's gradient through a third colour, 55 % down |
+| `iconLit` `iconEdge` `iconOnLit` `iconOnLip` | a row's icon tile: a line along its top and a hairline inside it; the picked row's: its top line and lower lip |
+| `knobLow` `knobOffTop` `knobOffLow` | a switch's knob when on (with `knobTop`) and when off |
+| `cardRim` | a 3 px rim along a card's top edge (none by default) |
+
+`screens.settings` (a layout theme's) is drawn over each screen's background under those pages: `thor-oled.json`
+puts its status bar there, so Settings and the setup have the same header as the shelf.
+
+`"transitions": "fade"` replaces the iris and the stepped fades with eased cross-fades of the whole screens: the boot
+animation into the menu (260 ms), a game ending (the menu out of black, 220 ms), the first boot's arrival ("Welcome
+to" rising over the boot animation's last frame, then black), the setup in and the Welcome card into the menu, and the
+menu into the shutdown (200 ms). On screens of another shape than the canvas (the AYN Thor's) they are used whatever
+the theme, since the iris works on the canvas. A game starts after `behavior.launchMs` (Thor OLED: 290 ms: the plate under the game is
+pressed, then the menu rises away and fades).
 
 ## Values: literals, expressions, templates
 
@@ -78,11 +206,14 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | name | |
 |---|---|
 | `view` | `"home"`, `"library"` or `"launch"` |
-| `W`, `H`, `screen` | the screen's size in units (640 x 480), 0 for the top screen and 1 for the bottom one |
+| `W`, `H`, `screen` | the screen's size in units (640 x 480; with `"stage": "screen"` its own), 0 for the top screen and 1 for the bottom one |
+| `screenX`, `screenY`, `screenW`, `screenH` | the whole screen in the layout's units: past the canvas on a screen of another shape (above) |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
-| `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
+| `clock`, `date`, `day` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"`, `"Thu"` |
+| `monthDay`, `month` | the date's parts, for a theme that writes it its own way: `12`, `"Nov"` (`"{day} {monthDay} {month}"`) |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
+| `paused` | the title of the game stopped behind the menu (a handheld with a Home button, pressed in a game), `""` when there is none |
 | `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's) |
 | `palette.<name>` | a colour of the palette (`palette.ink`, ...) |
 | `cursor`, `count`, `scroll` | the selection's index and the count in the current list (systems at home, games in a library); `scroll` is the selection's eased position, a fraction while it moves |
@@ -90,10 +221,16 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `launch.progress`, `launch.t` | 0..1 and ms through the launch view |
 | `empty`, `empty.title`, `empty.hint` | a library with no games, and what to say about it |
 | `systems.count`, `games.count` | |
-| `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index` |
+| `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeWhen resumeArt resumeBox resumeCart resumeLabel recent1Art recent2Art index`, and the theme's own `systems` words (`sys.short`) |
 | `game.*` | the selected game (library and launch): `title sub plays last time art box cart label icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
 | `item.*`, `i`, `n`, `sel`, `rel`, `pos`, `first`, `last`, `ix`, `iy` | inside a list item: its own system's or game's fields (as above; `key label` for hints), its index, the count, whether it is selected, its distance from the selection (`rel` whole, `pos` eased), and where the list put it |
 | your `vars`, a component's `with` | |
+
+`sys.resumeWhen` is when the last game was played (`"Today"`, `"Yesterday"`, `"Last week"`..., `""` never);
+`sys.recent1Art` and `sys.recent2Art` are the covers of the two games played before it (else the shelf's first ones
+with a cover), for a theme that shows more than one. The theme's `"systems": { "<id>": { "<key>": "..." } }` adds its
+own hooks by system: `sys.<key>` and, in a list, `item.<key>` (`""` for a system it doesn't name; Thor OLED's short
+names for its tab strip and the years beside the makers).
 
 Pictures from hooks (`sys.icon`, `game.art`...) are full paths. A theme's own files are relative to its JSON file.
 `game.romIcon` is a DS game's own icon from its ROM.
@@ -138,9 +275,22 @@ Fonts are named in the theme's `fonts` (`"title": "mine/Title.ttf"`) or are buil
 ### image
 
 `src`, `fallback` (another source when `src` is empty or doesn't load), `fit` (`cover`, `contain`, `fill`, `coverTop`,
-`pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels), `radius`, `tint` (multiplied),
+`pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels, `tile` repeated at its own pixel
+size: a texture), `radius`, `tint` (multiplied),
 `crop` (`cardLabel`: a real DS card scan's artwork, `noStrip`: a DS box without its white strip), `placeholder` (a
 colour shown while it loads or when there is nothing). Pictures are decoded and fitted off the main thread.
+
+What can be done to the fitted picture (once, when it is made; an animated value makes it again each frame):
+
+| | |
+|---|---|
+| `blur` | blurred by this much (units; the deviation of a Gaussian blur, as CSS's `blur()`). With a low `opacity` and a `mask`, a cover becomes a soft light of its own colours |
+| `saturate` | its colours stronger (above 1) or greyer (0 is grey) |
+| `mask` | it fades out: `"radial"` from its middle to its nearest side, or `{ "shape": "linear", "angle": 90, "from": 0.2, "to": 0.9 }`: whole up to `from`, gone at `to` (0..1 of the way; a radial one takes `from` and `to` too) |
+| `rotate`, `pivot` | turned by degrees, clockwise, about `pivot` (`[0.5, 1]`: the middle of its bottom edge; default its middle) |
+| `tilt`, `perspective`, `pivot` | swung by degrees round the upright line through `pivot`, as a door (CSS's `rotateY`), seen from `perspective` units away (default 1000): `"tilt": 9, "pivot": [0, 0.5]` is a game's case seen a little from the side |
+
+Only the picture turns: an image's children and the boxes round it stay upright.
 
 ### group
 
@@ -186,10 +336,17 @@ text and fitted pictures are made once and kept, and the screens' unchanged part
 
 ## What it can't do (yet)
 
-- Rotation and skew: elements stay upright rectangles.
-- Blur of what's behind an element, and blend modes other than normal.
+- Rotation and skew of anything but a picture (an image's `rotate` and `tilt`): boxes, text and groups stay upright
+  rectangles.
+- Blur of what's behind an element (an image's `blur` blurs the picture itself), and blend modes other than normal.
 - Masks other than rounded corners.
 - Dragging a list with a finger (a tap selects).
 - Lists of other things than systems, games and hints (achievements, the settings).
-- Settings and the keyboard keep their own look (the theme's `colors`, `accent` and `fonts` still apply to them).
+- Settings and the keyboard keep their own layout (the theme's `colors`, `accent`, `fonts` and `settings` above apply to them, and
+  `"panels": "flat"` makes their boxes flat: the surface's colour `panelBody` (`bubbleBody` for the bubbles), a
+  hairline edge in `edge` (`line` for the bubbles, the accent's on the one that's on), a light line along the top in
+  `panelBand` and a darker one along the bottom in `panelLow`; the picked row in the accent, `onPick` on it; the
+  screens `screenBg` with the dots only when `background.dither` isn't false).
+- Glow is a box's `shadow` with no fill (a blur round its shape, in the shadow's colour): pictures and text don't
+  glow, and nothing behind an element is blurred.
 - 3D: the Carts theme's rendered cartridges aren't available as an element.

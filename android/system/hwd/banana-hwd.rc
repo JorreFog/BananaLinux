@@ -1,0 +1,22 @@
+# banana-hwd: BananaOS's hardware daemon (android/system/hwd/PROTOCOL.md). Installed with the binary (Android.bp's
+# init_rc), on /system_ext.
+#
+# It runs as root with one capability: the thermal trips it moves are root's (0644) and the panels' backlights are
+# system's after the device's init.qcom.rc chowns them (0644), so neither a plain system uid nor a capability-less
+# root can write both. Its SELinux domain (sepolicy/private/banana_hwd.te) limits it to the nodes listed there.
+# The socket is 0666 so the launcher's uid needs no group; SELinux decides who may connect (platform_app, priv_app,
+# system_app, shell).
+# Its messages (stderr) go to the kernel log: adb shell dmesg | grep banana-hwd
+
+on post-fs-data
+    mkdir /data/misc/banana 0770 root system
+
+service banana-hwd /system_ext/bin/banana-hwd
+    class main
+    user root
+    group system input
+    capabilities DAC_OVERRIDE
+    socket banana-hwd stream 0666 system system
+    # the Home button's events are latency-sensitive; everything else is a few file writes
+    priority -4
+    stdio_to_kmsg

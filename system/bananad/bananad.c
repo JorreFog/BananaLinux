@@ -352,6 +352,21 @@ static void drain_inputs(void)
  * and the menu go on first, then the post-sleep hooks in the background. Woken with the lid still shut (the power
  * button pressed in a bag, the battery check): straight back to sleep, without running anything again. */
 static void shutdown_now(const char *why);
+
+/* the game in game.pid is the one the Home menu holds: game.held carries its pid. One left behind (the menu died with
+ * its Home menu up) names an older game, and no later game is held by it */
+static int held_game(void)
+{
+	int held = 0, game = 0;
+	FILE *f = fopen("/run/banana/game.held", "r");
+	if (!f) return 0;
+	if (fscanf(f, "%d", &held) != 1) held = 0;
+	fclose(f);
+	if (held <= 0 || !(f = fopen("/run/banana/game.pid", "r"))) return 0;
+	if (fscanf(f, "%d", &game) != 1) game = 0;
+	fclose(f);
+	return held == game;
+}
 static int battery_discharging_pct(void);
 /* shutting down (#46): shutdown_now started, or rcK runs (a shutdown from the menu or over SSH writes
  * /run/banana/powering-off first). No sleep from then on: the lid still shut while the game saves and the card is
@@ -796,6 +811,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			char *mute[] = { "/usr/libexec/banana/volume", "set", "0", NULL };
 			run(mute);
 		}
+		/* (one the Home menu holds is frozen in its control group too, banana-ui's gameFreeze: SIGCONT doesn't thaw
+		 * it, and the signal that asks for the save would wait. Thawed first, as shutdown_now does) */
+		if (held_game()) write_file("/sys/fs/cgroup/banana-game/cgroup.freeze", "0");
 		char rom[1024];
 		game_rom(game, rom, sizeof rom);
 		const char *emu = NULL;
@@ -1023,9 +1041,11 @@ static void suspend_now(const char *why)
 	 * power-button sleep (the lid-open event that would light them is drained below) */
 	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
 	if (dark || !lid_closed) backlights_power(!lid_closed);
-	if (pg > 0) kill(-pg, SIGCONT);
+	/* (a game the menu itself holds stopped, the Home button's menu over it: left so, the menu lets it go on) */
+	int held = held_game();
+	if (pg > 0 && !held) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
-	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
+	if (ui && (!game || held)) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
 	undim();
 	hooks("post", 1);
@@ -1054,7 +1074,12 @@ static void shutdown_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
+		/* (one the Home menu holds: frozen in its control group, banana-ui's gameFreeze, and stopped by a sleep before
+		 * this, it would get the signal only once the menu let it go; thawed and continued for its saves) */
+		int held = held_game();
+		if (held) write_file("/sys/fs/cgroup/banana-game/cgroup.freeze", "0");
 		kill(pg > 0 ? -pg : game, SIGTERM);	/* let the emulator write its saves */
+		if (held) kill(pg > 0 ? -pg : game, SIGCONT);
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
 	}
 	sync();
@@ -1066,6 +1091,15 @@ static double save_volume_at, save_backlight_at;	/* debounced: written a moment 
 
 /* ---- sound: which card plays ----------------------------------------------------------------------------------- */
 static int card_codec = -1, card_speaker = -1, card_play = 0;	/* rk817; aw88166 (RG DS Plus only); the one playing */
+/* a board whose sound is a server (BANANA_SOUND=pipewire, from its hardware profile through rcS: the AYN Thor):
+ * PipeWire owns the card (its routing, the jack, the levels, Bluetooth headphones), so "default" is the server and the
+ * volume is its default sink's (the volume script's wpctl); none of the cards' own setup below runs */
+static int sound_server(void)
+{
+	static int v = -1;
+	if (v < 0) { const char *e = getenv("BANANA_SOUND"); v = e && !strcmp(e, "pipewire"); }
+	return v;
+}
 #define BT_AUDIO_DIR "/run/banana/bt"
 static char bt_mac[18], bt_pcm[160];	/* Bluetooth headphones playing now ("" none): their address, bluez-alsa's PCM */
 
@@ -1149,6 +1183,16 @@ static void audio_route(void)
 	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) The plugin is named by its
 	 * path in the config, so a program with its own libasound (a port's, whose plugin folder may be elsewhere) finds
 	 * it too instead of failing to open the speakers. */
+	if (sound_server()) {
+		static const char conf[] = "# bananad: sound plays through the server (PipeWire)\n"
+			"pcm.!default { type pipewire }\nctl.!default { type pipewire }\n";
+		FILE *f = fopen("/run/banana/asound.conf.new", "w");
+		if (f) { fputs(conf, f); fclose(f); rename("/run/banana/asound.conf.new", "/run/banana/asound.conf"); }
+		f = fopen("/run/banana/mixer.new", "w");
+		if (f) { fputs("pipewire @DEFAULT_AUDIO_SINK@\n", f); fclose(f); rename("/run/banana/mixer.new", "/run/banana/mixer"); }
+		say("sound: playback and recording through the sound server (PipeWire)");
+		return;
+	}
 	static const char eq_lib[] = "/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so";
 	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
 	const int eq = speakers && access(eq_lib, R_OK) == 0;
@@ -1212,7 +1256,7 @@ static void audio_route(void)
 static void audio_setup(void)
 {
 	audio_find_cards();
-	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
+	if (card_codec < 0 || sound_server()) { audio_route(); return; }	/* no sound card at all (QEMU), or the server's */
 	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
 	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
@@ -1255,7 +1299,7 @@ static void boot_mark(const char *what)
  * (off if headphones were in then), and the route sets it from the jack as it is now */
 static void sound_setup(void)
 {
-	if (access("/data/banana/asound.state", R_OK) == 0) {
+	if (!sound_server() && access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);
 	}
@@ -1336,6 +1380,14 @@ static void brightness(int dir)
  * bottom one (dsi0, DSI-1), as the device trees of both handhelds have it. The level kept in /data/banana/backlight is
  * "<top> <bottom>" in thousandths of the maximum; a file with one number (before 0.4.2) is both. */
 static const char *BL[2] = { "backlight1", "backlight0" };	/* top, bottom */
+/* another handheld's names, from its hardware profile (/etc/banana/hw.conf through rcS: BANANA_BACKLIGHT_TOP and
+ * _BOTTOM; the AYN Thor's AMOLED panels are their own backlights) */
+static void backlight_names(void)
+{
+	const char *t = getenv("BANANA_BACKLIGHT_TOP"), *b = getenv("BANANA_BACKLIGHT_BOTTOM");
+	if (t && *t && !strchr(t, '/')) BL[0] = t;
+	if (b && *b && !strchr(b, '/')) BL[1] = b;
+}
 static void backlight_set_one(int i, int pm)
 {
 	char p[96], v[32];
@@ -1755,6 +1807,26 @@ static int quiet_pushed(const struct quiet *q, int code, int value)
 	return 0;
 }
 
+/* The Home button's menu over a stopped game (banana-ui writes game.held, and takes it away as the game goes on): for
+ * the idle timers that is the menu, not a game. The menu holds the buttons and touchscreens for itself then (the
+ * stopped game would read every press later), so none of them is heard here: banana-ui sets the file's time at a
+ * press or a touch instead, and a time that moved is the last input */
+static int game_held(void)
+{
+	static struct timespec seen;
+	struct stat st;
+	if (stat("/run/banana/game.held", &st) != 0 || !held_game()) return 0;
+	if (st.st_mtim.tv_sec != seen.tv_sec || st.st_mtim.tv_nsec != seen.tv_nsec) {
+		struct timespec rt;
+		seen = st.st_mtim;
+		clock_gettime(CLOCK_REALTIME, &rt);
+		double age = (rt.tv_sec - st.st_mtim.tv_sec) + (rt.tv_nsec - st.st_mtim.tv_nsec) / 1e9;
+		double t = mono() - (age > 0 ? age : 0);	/* (the clock set back meanwhile: now) */
+		if (t > last_input) { last_input = t; undim(); }
+	}
+	return 1;
+}
+
 /* 1 when it moved last_input on */
 static int quiet_scan(void)
 {
@@ -2033,6 +2105,7 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	backlight_names();
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
@@ -2094,7 +2167,8 @@ int main(int argc, char **argv)
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
-		int game = pid_of("/run/banana/game.pid") != 0;
+		int held = game_held();
+		int game = pid_of("/run/banana/game.pid") != 0 && !held;	/* (held behind the Home menu: the menu's timers) */
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
@@ -2111,6 +2185,7 @@ int main(int argc, char **argv)
 		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
 		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
 		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
+		if (dimmed && held && wait > 0.2) wait = 0.2;	/* (the menu's presses over a held game: game.held's time) */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
@@ -2175,8 +2250,8 @@ int main(int argc, char **argv)
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
-		game = pid_of("/run/banana/game.pid") != 0;
+		/* idle in the menu (no game running, or one held behind the Home menu): the panels dim, then it sleeps */
+		game = pid_of("/run/banana/game.pid") != 0 && !game_held();
 		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
 		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
 		 * changed what it recorded); quiet_scan records them only while the recorder is on */

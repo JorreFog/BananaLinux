@@ -1,0 +1,10 @@
+config BR2_PACKAGE_LIBRETRO_NEOCD
+	bool "libretro-neocd"
+	depends on BR2_INSTALL_LIBSTDCPP
+	select BR2_PACKAGE_FLAC
+	select BR2_PACKAGE_LIBOGG
+	select BR2_PACKAGE_LIBVORBIS
+	help
+	  Neo Geo CD: NeoCD (neocd/ BIOS files in /data/bios).
+
+	  https://github.com/libretro/neocd_libretro

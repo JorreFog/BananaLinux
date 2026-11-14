@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BananaOS</title>
+<!-- The browser's start page: an address or search box and the bookmarks (kept in this page's local storage on the
+     card). Plain HTML, no network needed to show it. -->
+<style>
+  html, body { height: 100%; margin: 0; background: #000; color: #f1ede2; font: 28px/1.4 system-ui, sans-serif; }
+  main { max-width: 1200px; margin: 0 auto; padding: 90px 40px; }
+  h1 { font-size: 34px; letter-spacing: .2em; color: #f0b429; font-weight: 600; margin: 0 0 40px; }
+  form { display: flex; gap: 16px; }
+  input { flex: 1; font: inherit; padding: 22px 28px; border-radius: 22px; border: 2px solid rgba(255,255,255,.15); background: #111115; color: inherit; outline: none; }
+  input:focus { border-color: #f0b429; }
+  button, a.b { font: inherit; padding: 22px 32px; border-radius: 22px; border: 2px solid rgba(255,255,255,.08); background: #1b1b21; color: inherit; text-decoration: none; }
+  button:focus, a.b:focus { background: #f0b429; color: #17120a; outline: none; }
+  #marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 48px; }
+  a.b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  small { color: #8f897c; display: block; font-size: 20px; }
+  p { color: #8f897c; font-size: 22px; margin-top: 48px; }
+</style>
+<main>
+  <h1>BANANA OS</h1>
+  <form id="go"><input id="q" placeholder="Search or type an address" autofocus autocomplete="off" autocapitalize="off"><button>Go</button></form>
+  <div id="marks"></div>
+  <p>Tap a field to type on the bottom screen. On its keyboard, Alt + Left goes back. Type an address and press "+" to keep it here: <button id="add" type="button">+</button></p>
+</main>
+<script>
+  const DEF = [["Wikipedia", "https://en.wikipedia.org/"], ["DuckDuckGo", "https://duckduckgo.com/"], ["RetroAchievements", "https://retroachievements.org/"], ["PortMaster", "https://portmaster.games/"]];
+  let marks; try { marks = JSON.parse(localStorage.marks); } catch (e) {} if (!Array.isArray(marks)) marks = DEF;
+  const url = t => /^[a-z]+:\/\//i.test(t) ? t : /^[^\s]+\.[^\s]+$/.test(t) ? "https://" + t : "https://duckduckgo.com/?q=" + encodeURIComponent(t);
+  function draw() {
+    const m = document.getElementById("marks"); m.textContent = "";
+    for (const [n, u] of marks) { const a = document.createElement("a"); a.className = "b"; a.href = u; a.textContent = n; const s = document.createElement("small"); s.textContent = u.replace(/^https?:\/\//, ""); a.appendChild(s); m.appendChild(a); }
+  }
+  document.getElementById("go").onsubmit = e => { e.preventDefault(); const t = document.getElementById("q").value.trim(); if (t) location.href = url(t); };
+  document.getElementById("add").onclick = () => { const t = document.getElementById("q").value.trim(); if (!t) return; const u = url(t); marks.push([u.replace(/^https?:\/\//, "").replace(/\/.*$/, ""), u]); localStorage.marks = JSON.stringify(marks); draw(); };
+  draw();
+</script>
+</html>

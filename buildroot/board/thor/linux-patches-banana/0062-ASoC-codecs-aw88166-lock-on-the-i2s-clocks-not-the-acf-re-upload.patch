@@ -1,0 +1,132 @@
+From: Banana <banana@localhost>
+Date: Thu, 29 Oct 2026 02:00:00 +0000
+Subject: [PATCH] ASoC: codecs: aw88166: lock on the I2S clocks, not the ACF re-upload
+
+aw88166_start_pa() runs from DAPM's PRE_PMU, which on the SM4450 is before
+the backend DAI starts the I2S bit/word clocks. aw88166_dev_start()'s SYSST
+check wants CLKS_STABLE | PLLS_LOCKED, so that first attempt always fails
+with -EPERM after 10 x 2 ms -- and the code then spent AW88166_START_RETRIES
+(5) retries re-uploading the whole 85 KB ACF over I2C (~2 s each) before
+giving up: ~12 s of blocking I2C, and the amp still stayed off until some
+later stream open happened to line up with a running clock. On the RPC that
+is the ~10-20 s before the menu has any sound at all.
+
+The probe already applied the ACF (aw88166_codec_probe() ->
+aw88166_dev_fw_update(DSP_FW_UPDATE_ON)), so retry the light start sequence
+on a short timer instead: the amp then locks a few attempts after the first
+write starts BCLK. Only a non-clock failure still reloads the ACF, once, and
+the final error line now carries the SYSST register so a stuck clock is
+visible in dmesg without CONFIG_DYNAMIC_DEBUG.
+
+Signed-off-by: Banana <banana@localhost>
+---
+--- a/sound/soc/codecs/aw88166.c
++++ b/sound/soc/codecs/aw88166.c
+@@ -11,6 +11,7 @@
+ #include <linux/firmware.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
++#include <linux/jiffies.h>
+ #include <linux/minmax.h>
+ #include <linux/regmap.h>
+ #include <sound/soc.h>
+@@ -24,6 +25,7 @@
+ 	struct mutex lock;
+ 	struct gpio_desc *reset_gpio;
+ 	struct delayed_work start_work;
++	unsigned int start_tries;	/* the I2S-clock-wait retries of aw88166_start_pa() */
+ 	struct regmap *regmap;
+ 	struct aw_container *aw_cfg;
+ 
+@@ -1080,28 +1082,52 @@
+ 
+ static void aw88166_start_pa(struct aw88166 *aw88166)
+ {
+-	int ret, i;
++	int ret;
+ 
+-	for (i = 0; i < AW88166_START_RETRIES; i++) {
+-		ret = aw88166_dev_start(aw88166);
+-		if (ret) {
+-			int fw_ret;
++	ret = aw88166_dev_start(aw88166);
++	if (ret == 0) {
++		if (aw88166->start_tries)
++			dev_info(aw88166->aw_pa->dev,
++				 "start: the amp locked after %u I2S-clock waits\n",
++				 aw88166->start_tries);
++		aw88166->start_tries = 0;
++		return;
++	}
+ 
+-			dev_dbg(aw88166->aw_pa->dev,
+-				"aw88166_dev_start failed, cnt:%d, ret:%d\n", i, ret);
+-			fw_ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_ON, true);
+-			if (fw_ret) {
+-				dev_dbg(aw88166->aw_pa->dev,
+-					"aw88166_dev_fw_update failed, cnt:%d, ret:%d\n", i, fw_ret);
+-				continue;
+-			}
+-		} else {
+-			dev_dbg(aw88166->aw_pa->dev, "start success\n");
+-			break;
+-		}
++	/*
++	 * aw88166_dev_start()'s SYSST check wants CLKS_STABLE | PLLS_LOCKED -- the I2S bit and word
++	 * clocks and the PLL. This runs from DAPM's PRE_PMU, which on the SM4450 is before the backend
++	 * DAI starts toggling those clocks, so the first attempt always fails with -EPERM after
++	 * 10 x 2 ms. The old code then spent 5 retries re-uploading the whole 85 KB ACF over I2C (~2 s
++	 * each: ~12 s of blocking I2C) and still left the amp off until a later stream open happened to
++	 * line up with a running clock. The ACF is already applied by the probe, so retry the light
++	 * start sequence on a short timer instead: the amp then locks a few attempts after the first
++	 * write starts BCLK.
++	 */
++	if (ret == -EPERM && ++aw88166->start_tries < AW88166_START_CLKW_TRIES) {
++		queue_delayed_work(system_dfl_wq, &aw88166->start_work,
++				   msecs_to_jiffies(AW88166_START_CLKW_RETRY_MS));
++		return;
++	}
++
++	if (ret != -EPERM) {
++		/* Not the clocks: the amp may have lost its configuration -- reload the ACF once, as before. */
++		int fw_ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_ON, true);
++
++		if (!fw_ret)
++			ret = aw88166_dev_start(aw88166);
++	}
++
++	if (ret) {
++		unsigned int sysst = 0;
++
++		regmap_read(aw88166->aw_pa->regmap, AW88166_SYSST_REG, &sysst);
++		dev_err(aw88166->aw_pa->dev,
++			"start failure (%d) after %u clock waits, SYSST=0x%04x\n",
++			ret, aw88166->start_tries, sysst);
++	} else {
++		aw88166->start_tries = 0;
+ 	}
+-	if (ret != 0)
+-		dev_err(aw88166->aw_pa->dev, "start failure (%d)\n", ret);
+ }
+ 
+ static void aw88166_startup_work(struct work_struct *work)
+@@ -1121,6 +1147,7 @@
+ 	if (aw88166->aw_pa->fw_status != AW88166_DEV_FW_OK)
+ 		return;
+ 
++	aw88166->start_tries = 0;
+ 	if (aw88166->aw_pa->status == AW88166_DEV_PW_ON)
+ 		return;
+ 
+--- a/sound/soc/codecs/aw88166.h
++++ b/sound/soc/codecs/aw88166.h
+@@ -557,6 +557,9 @@
+ #define AW88166_DEV_SYSST_CHECK_MAX		(10)
+ #define AW88166_START_RETRIES			(5)
+ #define AW88166_START_WORK_DELAY_MS		(0)
++/* the I2S-clock-wait retries of aw88166_start_pa(): light start attempts, without an ACF re-upload */
++#define AW88166_START_CLKW_TRIES		(100)
++#define AW88166_START_CLKW_RETRY_MS		(10)
+ #define AW88166_CHIP_ID			(0x2066)
+ #define AW88166_I2C_NAME			"aw88166"
+ #define AW88166_ACF_FILE			"aw88166_acf.bin"

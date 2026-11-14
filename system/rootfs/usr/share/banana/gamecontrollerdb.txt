@@ -1,0 +1,11 @@
+# SDL's pad database for BananaOS's handhelds: the standalone emulators' launchers hand it to SDL
+# (SDL_GAMECONTROLLERCONFIG_FILE). A file of the card's own, banana/gamecontrollerdb.txt, is read instead when it is
+# there (a pad SDL doesn't know: its line from https://github.com/mdqinc/SDL_GameControllerDB).
+#
+# The AYN Thor's own pad (the kernel's rsinput driver; its name and ids are the device tree's: "AYN Odin2 Gamepad",
+# USB 2020:3001). SDL numbers a pad's buttons in the kernel's key-code order, which for this driver's keys is South,
+# East, North, West, L1, R1, Select, Start, Home, L3, R3, the four directions, then Back (the button under the right
+# stick); its axes are the left stick, L2, the right stick, R2. SDL's names are by place (a is the bottom button).
+# The first line is the id SDL 2.26 and later and SDL 3 give it (the name's checksum in it), the second an older SDL's.
+0300b605202000000130000001000000,AYN Odin2 Gamepad,a:b0,b:b1,x:b3,y:b2,back:b6,start:b7,guide:b8,leftshoulder:b4,rightshoulder:b5,leftstick:b9,rightstick:b10,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,misc1:b15,platform:Linux,
+03000000202000000130000001000000,AYN Odin2 Gamepad,a:b0,b:b1,x:b3,y:b2,back:b6,start:b7,guide:b8,leftshoulder:b4,rightshoulder:b5,leftstick:b9,rightstick:b10,dpup:b11,dpdown:b12,dpleft:b13,dpright:b14,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,misc1:b15,platform:Linux,

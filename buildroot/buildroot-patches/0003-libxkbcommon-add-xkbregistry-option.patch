@@ -1,0 +1,37 @@
+diff --git a/package/libxkbcommon/Config.in b/package/libxkbcommon/Config.in
+--- a/package/libxkbcommon/Config.in
++++ b/package/libxkbcommon/Config.in
+@@ -10,6 +10,13 @@ config BR2_PACKAGE_LIBXKBCOMMON
+ 
+ if BR2_PACKAGE_LIBXKBCOMMON
+ 
++config BR2_PACKAGE_LIBXKBCOMMON_XKBREGISTRY
++	bool "xkbregistry"
++	select BR2_PACKAGE_LIBXML2
++	help
++	  libxkbregistry, the list of keyboard models, layouts and
++	  options (Wine's Wayland driver links it).
++
+ config BR2_PACKAGE_LIBXKBCOMMON_TOOLS
+ 	bool "tools"
+ 	select BR2_PACKAGE_WAYLAND_PROTOCOLS if BR2_PACKAGE_WAYLAND
+diff --git a/package/libxkbcommon/libxkbcommon.mk b/package/libxkbcommon/libxkbcommon.mk
+--- a/package/libxkbcommon/libxkbcommon.mk
++++ b/package/libxkbcommon/libxkbcommon.mk
+@@ -12,8 +12,14 @@ LIBXKBCOMMON_CPE_ID_VENDOR = xkbcommon
+ LIBXKBCOMMON_INSTALL_STAGING = YES
+ LIBXKBCOMMON_DEPENDENCIES = host-bison host-flex
+ LIBXKBCOMMON_CONF_OPTS = \
+-	-Denable-docs=false \
+-	-Denable-xkbregistry=false
++	-Denable-docs=false
++
++ifeq ($(BR2_PACKAGE_LIBXKBCOMMON_XKBREGISTRY),y)
++LIBXKBCOMMON_CONF_OPTS += -Denable-xkbregistry=true
++LIBXKBCOMMON_DEPENDENCIES += libxml2
++else
++LIBXKBCOMMON_CONF_OPTS += -Denable-xkbregistry=false
++endif
+ 
+ ifeq ($(BR2_PACKAGE_XORG7),y)
+ LIBXKBCOMMON_CONF_OPTS += -Denable-x11=true

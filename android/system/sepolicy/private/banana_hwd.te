@@ -1,0 +1,62 @@
+# banana-hwd: BananaOS's hardware daemon (android/system/hwd), on /system_ext, started by init (banana-hwd.rc).
+typeattribute banana_hwd coredomain;
+
+type banana_hwd_exec, system_file_type, exec_type, file_type;
+type banana_hwd_socket, file_type, coredomain_socket, mlstrustedobject;
+type banana_hwd_data_file, file_type, data_file_type, core_data_file_type;
+
+init_daemon_domain(banana_hwd)
+
+# root with DAC_OVERRIDE only (banana-hwd.rc): the backlights are system's 0644 after init.qcom.rc's chown
+typeattribute banana_hwd dac_override_allowed;
+allow banana_hwd self:global_capability_class_set dac_override;
+
+# its socket, created by init; the clients that may use it: the launcher (a privileged app, or platform-signed),
+# system apps, and adb shell (banana-hwc)
+allow banana_hwd banana_hwd_socket:sock_file rw_file_perms;
+allow banana_hwd self:unix_stream_socket { accept listen getopt setopt read write };
+unix_socket_connect(platform_app, banana_hwd, banana_hwd)
+unix_socket_connect(priv_app, banana_hwd, banana_hwd)
+unix_socket_connect(system_app, banana_hwd, banana_hwd)
+unix_socket_connect(shell, banana_hwd, banana_hwd)
+
+# its settings (/data/misc/banana, made by banana-hwd.rc)
+allow banana_hwd banana_hwd_data_file:dir create_dir_perms;
+allow banana_hwd banana_hwd_data_file:file create_file_perms;
+
+# the Home button: the input devices, watched for new ones
+allow banana_hwd input_device:dir r_dir_perms;
+allow banana_hwd input_device:chr_file r_file_perms;
+
+# CPU clusters (scaling_min/max_freq, scaling_governor) and their statistics
+allow banana_hwd sysfs_devices_system_cpu:dir r_dir_perms;
+allow banana_hwd sysfs_devices_system_cpu:file rw_file_perms;
+
+# thermal zones (temperatures) and the trips bound to the fan (written), cooling devices (read)
+allow banana_hwd sysfs_thermal:dir r_dir_perms;
+allow banana_hwd sysfs_thermal:file rw_file_perms;
+allow banana_hwd sysfs_thermal:lnk_file read;
+
+# the stick lights: LineageOS's hardware/ayn labels their nodes vendor_sysfs_ayn_leds and exports the attribute
+# vendor_sysfs_ayn_leds_type to system_ext policy for its own AynParts (hardware/ayn sepolicy/qti/public/attributes,
+# private/aynparts_app.te), the same two rules here. /sys/class/leds itself, and the backlights where the device's
+# policy labels them as AOSP does, are sysfs_leds
+allow banana_hwd sysfs_leds:dir r_dir_perms;
+allow banana_hwd sysfs_leds:file rw_file_perms;
+allow banana_hwd sysfs_leds:lnk_file read;
+rw_dir_file(banana_hwd, vendor_sysfs_ayn_leds_type)
+
+# the battery (power_supply) where it is labelled as AOSP does; Qualcomm's policy labels it
+# vendor_sysfs_battery_supply, granted in ../vendor/banana_hwd.te
+allow banana_hwd sysfs_batteryinfo:dir r_dir_perms;
+allow banana_hwd sysfs_batteryinfo:file r_file_perms;
+
+# unlabelled sysfs (hwmon's pwm1, class/ links), read only
+allow banana_hwd sysfs:dir r_dir_perms;
+allow banana_hwd sysfs:file r_file_perms;
+allow banana_hwd sysfs:lnk_file read;
+
+# /proc/stat, /proc/meminfo, and the boot id (the trips' boot values are recorded once per boot)
+allow banana_hwd proc_stat:file r_file_perms;
+allow banana_hwd proc_meminfo:file r_file_perms;
+allow banana_hwd proc_random:file r_file_perms;

@@ -1,0 +1,18 @@
+#!/bin/sh
+# A stand-in for NetworkManager's nmcli in rocknix/tests: two networks around, the device wlan0, "connected" once a
+# connect or connection up was asked for (its log: $FAKE_NM_LOG)
+echo "nmcli $*" >> "${FAKE_NM_LOG:-/dev/null}"
+case "$*" in
+*"-f DEVICE,TYPE device"*) printf 'wlan0:wifi\nlo:loopback\n' ;;
+*"-f BSSID,FREQ,SIGNAL,SECURITY,SSID device wifi list"*)
+    printf '02\\:00\\:00\\:00\\:00\\:01:2437 MHz:76:WPA2:Banana Home\n'
+    printf '02\\:00\\:00\\:00\\:00\\:02:5180 MHz:40:WPA2 WPA3:Neighbour\\: 5G\n'
+    printf '02\\:00\\:00\\:00\\:00\\:03:2412 MHz:30::Cafe Free\n' ;;
+*"GENERAL.STATE device show"*) [ -f "$FAKE_NM_UP" ] && echo "GENERAL.STATE:100 (connected)" || echo "GENERAL.STATE:30 (disconnected)" ;;
+*"GENERAL.CONNECTION device show"*) echo "GENERAL.CONNECTION:Banana Home" ;;
+*"IP4.ADDRESS device show"*) echo "IP4.ADDRESS[1]:192.168.1.23/24" ;;
+*"ACTIVE,BSSID device wifi list"*) printf 'yes:02\\:00\\:00\\:00\\:00\\:01\nno:02\\:00\\:00\\:00\\:00\\:02\n' ;;
+*"connection up"*) exit 10 ;;
+*"device wifi connect"*) touch "$FAKE_NM_UP" ;;
+esac
+exit 0

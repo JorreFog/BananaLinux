@@ -1,0 +1,12 @@
+raw home 0
+hold 0.3
+raw gamepanel 1 {FX}/roms/gba/Orchard Tactics.gba
+hold 2.5
+raw gtouch 72 400
+hold 2.0
+raw gtouch 190 400
+hold 2.0
+raw gtouch 428 400
+hold 2.0
+raw gtouch 428 400
+hold 2.5

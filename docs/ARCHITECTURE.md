@@ -116,7 +116,9 @@ START) leaves a step. `banana/setup-step` keeps the slide reached: a restart (a 
 back to it without the arrival. The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`); run-drastic
 hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and run-retroarch writes it into RetroArch's
 `cheevos_*`. The end writes `setup 2` into setup-done, shows "Welcome" and opens the menu through the iris; Settings >
-System > First-time setup runs the same slides (no arrival) and ends back in Settings.
+System > First-time setup runs the same slides (no arrival) and ends back in Settings. Two more slides exist on
+other boards only: Home server (not on `rgds`, `rgds-plus` or `universal`) and Steam (the same boards left out, though
+the tool is in every image's files; Settings > System > Accounts' Steam rows follow it).
 
 **Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
 strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a
@@ -351,6 +353,8 @@ nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, o
 the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
+   A game held behind the Home button's menu (the AYN Thor, `/run/banana/game.held`) stays stopped after the wake,
+   until the menu lets it go on.
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
    suspend otherwise; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules unloaded, the sound
    held quiet so a woken game isn't loud on the speakers until the headphones are called back).

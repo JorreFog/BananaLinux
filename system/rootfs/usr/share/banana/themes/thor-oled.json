@@ -1,0 +1,511 @@
+{
+  // Thor OLED: the Dark look rebuilt for the AYN Thor's two AMOLED panels. True black; every surface one warm
+  // "material" (a dark gradient with a lit top line and a hairline); colour only from the accent's plate under the
+  // selection, the systems' tinted tiles and the games' own art; nothing glows and nothing loops. Pixelify Sans for
+  // names, titles and numbers, Inter for everything else; button hints shaped like the Thor's own buttons.
+  // It lays out on each screen's own size ("stage": "screen": 853 x 480 units on the 16:9 top, 640 x 557 on the
+  // bottom). Its measures are the design's, in the panels' pixels: "=160 * v" is 160 px of the 1920 x 1080 top screen,
+  // "=64 * u" 64 px of the 1240 x 1080 bottom one (vars u, v: units a pixel), so on the RG DS's 4:3 panels it shrinks
+  // to fit. The accent is Settings' (Display & sound > Accent colour): Banana's yellow is the theme's own.
+  // docs/THEMES.md describes the format.
+  "name": "Thor OLED",
+  "author": "BananaOS",
+  "stage": "screen",
+  "font": "pixel",
+
+  // Settings, the setup, the lists, the keyboard, the quick menu and the game panel in the same language: the
+  // "material" look (every surface the dark gradient with a lit top line and a hairline, the selection on the accent's
+  // plate or in an accent ring, hints as pills with keys shaped like the Thor's buttons, labels in Inter)...
+  "base": "dark",
+  "panels": "material",
+  // ...laid out on each screen's own shape ("layout": "screen"): on the top screen a crumb, the title large and the
+  // help under it, straight on the black, 160 px (71 units) from the left edge, no icon; on the bottom one the page
+  // from edge to edge with 64 px margins, its title at the top and the hints at the foot. "glyphs": the line icons of
+  // rows and tiles. screens.settings below draws the status bar over them
+  "settings": { "top": "open", "left": 71.1, "icons": "none", "pick": "outline", "hints": "pill", "bodyFont": "inter",
+                "layout": "screen", "glyphs": "thor-oled/ui",
+                // the theme's own words on its Theme and Accent colour rows' page
+                "help": { "theme": "Thor OLED keeps Dark's layout and banana accent on true black, so the pixels around the cards stay off on both AMOLED panels. Depth comes from surface steps and thin hairlines.",
+                          "accent": "The selection, the Start plate and the progress bars follow the accent. Banana is the stock one." } },
+  // Settings > Display & sound > Accent colour in this theme: the design's names, colours and inks for Banana's six
+  // (pink stays as it is). The variants (thor-white.json, thor-purple.json, thor-rainbow.json) add their own first
+  "accents": {
+    "yellow": { "name": "Banana", "ink": "#17120a" }, "green": { "name": "Lime", "color": "#9be15d", "ink": "#0d1606" },
+    "blue": { "name": "Sky", "color": "#4cb8ff", "ink": "#04121e" }, "red": { "name": "Coral", "color": "#ff6f61", "ink": "#1e0604" },
+    "purple": { "name": "Violet", "color": "#a98bff", "ink": "#0e0a1f" }
+  },
+  // the boot animation's banana stays yellow whatever the accent (the line under it is the accent's)
+  "accentLogo": false,
+  // smooth fades between the boot, the menu, a game and the shutdown, in place of the iris
+  "transitions": "fade",
+  "background": { "dither": false },
+  // the palette: the engine's names, then the material look's own (docs/THEMES.md lists them; the plate's are the
+  // accent's unless given here)
+  "colors": {
+    "screenBg": "#000000", "screenFrame": "#000000", "screenBand": "#000000",
+    "ditherA": "#00000000", "ditherB": "#00000000",
+    "ink": "#efe9de", "muted": "#aaa398", "line": "#2a2824", "edge": "#23211e", "navy": "#ffffff", "red": "#f0767c",
+    "panelBand": "#1f1e1b", "panelBody": "#141311", "panelLow": "#100f0e",
+    "chipBand": "#1f1e1b", "chipBody": "#141311",
+    "bubbleBand": "#1f1e1b", "bubbleBody": "#141311", "bubbleLow": "#100f0e",
+    "frameBorder": "#23211e", "frameBg": "#0f0e0d",
+    "meterBg": "#23211e", "brandBg": "#0f0e0d", "rule": "#23211e",
+    "trackBg": "#0a0a09", "trackHi": "#23211e", "railBg": "#0f0e0d", "faceMuted": "#23211e",
+    "favBorder": "#f27fb2", "favBand": "#3a1828", "favBody": "#1e0c15", "favInk": "#f27fb2",
+    "blackish": "#000000", "shade35": "#00000059", "shade40": "#00000066", "shade45": "#00000073",
+    "slotDark": "#000000", "slotLip": "#23211e",
+    "kbdBg": "#efe9de", "kbdInk": "#141312",
+    "matTop": "#1f1e1b", "matMid": "#141311", "matLow": "#100f0e", "selTop": "#2a2824", "selLow": "#1d1c19",
+    "lit": "#fffaf012", "hair": "#efe9de14", "hair2": "#efe9de24", "tileEdge": "#efe9de1a",
+    "ink2": "#aaa398", "dim": "#8a847a", "surface": "#0f0e0d", "raised": "#181715", "raised2": "#23211e",
+    "danger": "#c93338", "dangerText": "#f0767c", "fav": "#f27fb2", "ok": "#4cc38a",
+    "keyTop": "#fffaf0", "keyInk": "#141312", "dots": "#fffaf00b"
+  },
+
+  // the theme's own words for the systems: the short name on the tab strip and in the bubble (else the id in
+  // capitals), and the year beside the maker (sys.short, sys.year; item.short in a list)
+  "systems": {
+    "favorites": { "short": "★ Fav" }, "recently-played": { "short": "Recent" },
+    "nds": { "short": "DS", "year": "2004" }, "3ds": { "short": "3DS", "year": "2011" },
+    "gb": { "short": "GB", "year": "1989" }, "gbc": { "short": "GBC", "year": "1998" }, "gba": { "short": "GBA", "year": "2001" },
+    "nes": { "short": "NES", "year": "1985" }, "snes": { "short": "SNES", "year": "1990" }, "n64": { "short": "N64", "year": "1996" },
+    "gc": { "short": "GC", "year": "2001" }, "wii": { "short": "WII", "year": "2006" }, "wiiu": { "short": "WIIU", "year": "2012" },
+    "switch": { "short": "SWITCH", "year": "2017" }, "vb": { "short": "VB", "year": "1995" }, "pmini": { "short": "MINI", "year": "2001" },
+    "gw": { "short": "G&W", "year": "1980" }, "gameandwatch": { "short": "G&W", "year": "1980" },
+    "psx": { "short": "PS1", "year": "1994" }, "ps2": { "short": "PS2", "year": "2000" }, "ps3": { "short": "PS3", "year": "2006" },
+    "psp": { "short": "PSP", "year": "2004" }, "vita": { "short": "VITA", "year": "2011" },
+    "xbox": { "short": "XBOX", "year": "2001" }, "x360": { "short": "X360", "year": "2005" },
+    "sms": { "short": "SMS", "year": "1986" }, "md": { "short": "MD", "year": "1988" }, "megadrive": { "short": "MD", "year": "1988" },
+    "segacd": { "short": "SCD", "year": "1991" }, "32x": { "short": "32X", "year": "1994" }, "saturn": { "short": "SATURN", "year": "1994" },
+    "dc": { "short": "DC", "year": "1998" }, "gg": { "short": "GG", "year": "1990" },
+    "a2600": { "short": "2600", "year": "1977" }, "a5200": { "short": "5200", "year": "1982" }, "a7800": { "short": "7800", "year": "1986" },
+    "lynx": { "short": "LYNX", "year": "1989" }, "jaguar": { "short": "JAGUAR", "year": "1993" },
+    "pce": { "short": "PCE", "year": "1987" }, "pcecd": { "short": "PCECD", "year": "1991" }, "pcfx": { "short": "PCFX", "year": "1994" },
+    "neogeo": { "short": "NEO", "year": "1990" }, "neocd": { "short": "NEOCD", "year": "1994" }, "ngpc": { "short": "NGPC", "year": "1999" },
+    "wsc": { "short": "WSC", "year": "2000" }, "3do": { "short": "3DO", "year": "1993" }, "arcade": { "short": "ARCADE", "year": "1978" },
+    "coleco": { "short": "COLECO", "year": "1982" }, "intv": { "short": "INTV", "year": "1979" }, "vectrex": { "short": "VECTREX", "year": "1982" },
+    "o2": { "short": "O2", "year": "1978" }, "cdi": { "short": "CDI", "year": "1991" }, "msx": { "short": "MSX", "year": "1983" },
+    "c64": { "short": "C64", "year": "1982" }, "amiga": { "short": "AMIGA", "year": "1987" },
+    "zx": { "short": "ZX", "year": "1982" }, "zxspectrum": { "short": "ZX", "year": "1982" }, "cpc": { "short": "CPC", "year": "1984" },
+    "x68k": { "short": "X68K", "year": "1987" }, "dos": { "short": "DOS", "year": "1981" },
+    "pico8": { "short": "PICO-8", "year": "2015" }, "pico-8": { "short": "PICO-8", "year": "2015" },
+    "scummvm": { "short": "SCUMM", "year": "2001" }, "pc": { "short": "PC" }, "ports": { "short": "PORTS" },
+    "files": { "short": "FILES" }, "bshare": { "short": "BSHARE" }, "activity": { "short": "STATS" }, "storeapps": { "short": "APPS" },
+    "dodakvarter": { "short": "DODA" }, "rocknixdsstore": { "short": "STORE" }
+  },
+
+  "vars": {
+    // units a pixel of the design: of the bottom screen (1240 x 1080) and of the top one (1920 x 1080), and the
+    // screens' widths in those pixels
+    "u": "=min(H / 1080, W / 1240)", "v": "=min(H / 1080, W / 1920)",
+    "PW": "=W / min(H / 1080, W / 1240)", "TW": "=W / min(H / 1080, W / 1920)",
+    // the design's tokens
+    "ink": "#efe9de", "ink2": "#aaa398", "muted": "#8a847a",
+    "surface": "#0f0e0d", "raised": "#181715", "raised2": "#23211e",
+    "hair": "#efe9de14", "hair2": "#efe9de24", "fav": "#f27fb2", "ok": "#4cc38a",
+    // the material every card, tile and pill is made of: three stops, and its lit top line
+    "mat0": "#1f1e1b", "mat1": "#141311", "mat2": "#100f0e", "matLit": "#2f2e2a", "litPx": 2,
+    // a card's own: what is tiled over the material (the LCD's dots), and the lit line along its top
+    "cardTex": "thor-oled/dots.png", "cardLit": "#2f2e2a", "cardLitPx": 2,
+    // the accent and its plate (the selected thing): lighter at the top, the accent itself pAt % down, darker at the
+    // bottom, a lit lip along the top (pLitPx) and a low one along the bottom (pLowPx); the text on it
+    "a": "=accent", "aInk": "=accent.ink",
+    "pTop": "=mix(accent, '#ffffff', 0.18)", "pMid": "=accent", "pBot": "=mix(accent, '#000000', 0.18)", "pAt": 38,
+    "pLit": "=mix(mix(accent, '#ffffff', 0.18), '#ffffff', 0.4)", "pLow": "=mix(mix(accent, '#000000', 0.18), '#000000', 0.16)",
+    "pLitPx": 3, "pLowPx": 6, "pInk": "=accent.ink",
+    // what says "on" or "this much" (the main hint's key, a bar's fill): the plate here; a variant can have another
+    "sTop": "=mix(accent, '#ffffff', 0.18)", "sMid": "=accent", "sBot": "=mix(accent, '#000000', 0.18)", "sAt": 38, "sInk": "=accent.ink",
+    // a key cap: cream, its glyph dark; its lower lip darker by kLip, a lit line along its top (kLitPx: none here)
+    "kTop": "#fffaf0", "kMid": "=mix('#fffaf0', '#efe9de', 0.38)", "kAt": 38, "kBot": "#efe9de", "kInk": "#141312", "kLip": 0.22,
+    "kLit": "#fffaf0", "kLitPx": 0, "wTop": "#f79ac1",
+    // the selected tile's window: the light line under it, a rim round it (none here), and the tiles' own darks
+    "winLight": "#ffffff59", "winRim": "#00000000", "winRimPx": 0, "tileHi": "#1d1b18", "tileLo": "#0e0d0c",
+    // the last game's little cover: a bezel round it (bz px; none here)
+    "bz": 0, "bzTop": "#ffffff", "bzBot": "#e4e5e0",
+    // the shelf and the bubble's pointer (pictures: one set a look)
+    "shelfImg": "thor-oled/shelf.png", "tailImg": "thor-oled/tail.png",
+    // a view arriving (it rises 12 px and fades in over 300 ms), the top screen changing as the selection moves (a
+    // 150 ms fade), and the menu leaving for a game (after the plate's press: up 12 px and out in 150 ms)
+    "in": "=easeOut(progress(view == 'launch' ? 9999 : entered, 300))",
+    "xf": "=easeOut(progress(moved, 150))",
+    "press": "=view == 'launch' ? easeOut(progress(launch.t, 120)) : 0",
+    "leave": "=view == 'launch' ? easeOut(progress(launch.t - 140, 150)) : 0"
+  },
+
+  // the shelf glides in about 200 ms; A on a game presses the plate, the menu leaves and the game starts (290 ms)
+  "behavior": { "scrollMs": 60, "settleMs": 700, "launchMs": 290, "cues": { "insert": 140 } },
+  "hints": { "home": [["Y", "Favourite"]], "library": [["B", "Back"], ["X", "Options"], ["Y", "Favourite"]] },
+
+  "components": {
+    // a surface of the material hp px high: the gradient, the lit line along its top, a hairline round it
+    "mat": {
+      "type": "rect", "border": "=2 * u", "borderColor": "=hair",
+      "gradient": { "angle": 180, "stops": [ "=matLit", "=matLit + ' ' + (litPx * 100 / hp) + '%'", "=mat0 + ' ' + (litPx * 100 / hp) + '%'", "=mat1 + ' 70%'", "=mat2" ] }
+    },
+    // a card: the material under the LCD's dots (a dot every 8 px)
+    "card": { "type": "group", "children": [
+      { "use": "mat", "radius": "=32 * u", "with": { "matLit": "=cardLit", "litPx": "=cardLitPx" } },
+      { "type": "image", "src": "=cardTex", "fit": "tile", "w": "100%", "h": "100%", "radius": "=32 * u" }
+    ] },
+    // the accent's plate hp px high: its gradient, the lit lip along the top (3 px) and the darker one at the bottom (6)
+    "plate": {
+      "type": "rect",
+      "gradient": { "angle": 180, "stops": [ "=pLit", "=pLit + ' ' + (pLitPx * 100 / hp) + '%'", "=pTop + ' ' + (pLitPx * 100 / hp) + '%'", "=pMid + ' ' + pAt + '%'",
+                                             "=pBot + ' ' + (100 - pLowPx * 100 / hp) + '%'", "=pLow + ' ' + (100 - pLowPx * 100 / hp) + '%'", "=pLow" ] }
+    },
+    // a button's key, shaped like the Thor's own: A B X Y round, L R shoulders, Start Select Home a rounded box with
+    // the word. mode 0: cream; 1: the plate (the main action); 2: pink (take away from the favourites)
+    // (its colours are worked out here from k and mode: c0 c1 c2 the cap's gradient, c1 cAt % down, ci the glyph, cl
+    // the lit line, cLip the lower lip; a variant gives others, the Rainbow's a colour a button)
+    "key": {
+      "type": "group", "layout": "row", "align": "center", "h": "=48 * u",
+      "with": { "c0": "=pick(mode, kTop, sTop, wTop)", "c1": "=pick(mode, kMid, sMid, mix(wTop, fav, 0.38))", "cAt": "=pick(mode, kAt, sAt, 38)",
+                "c2": "=pick(mode, kBot, sBot, fav)", "ci": "=pick(mode, kInk, sInk, kInk)", "cl": "=pick(mode, kLit, sTop, wTop)", "cLip": "=kLip" },
+      "children": [
+        { "type": "group", "visible": "=len(k) == 1 && k != 'L' && k != 'R'", "w": "=48 * u", "h": "=48 * u", "radius": "=24 * u",
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 48) + '%'", "=c0 + ' ' + (kLitPx * 100 / 48) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.8%'", "=darken(c2, cLip) + ' 93.9%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "image", "src": "thor-oled/key-{k}.png", "fit": "pixel", "x": "=16.5 * u", "y": "=13.5 * u", "w": "=15 * u", "h": "=21 * u",
+                          "tint": "=ci" } ] },
+        { "type": "group", "visible": "=k == 'L' || k == 'R'", "w": "=64 * u", "h": "=44 * u", "radius": [ "=20 * u", "=20 * u", "=8 * u", "=8 * u" ],
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 44) + '%'", "=c0 + ' ' + (kLitPx * 100 / 44) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.2%'", "=darken(c2, cLip) + ' 93.3%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "image", "src": "thor-oled/key-{k}.png", "fit": "pixel", "x": "=24.5 * u", "y": "=11.5 * u", "w": "=15 * u", "h": "=21 * u",
+                          "tint": "=ci" } ] },
+        { "type": "group", "visible": "=len(k) > 1", "layout": "row", "align": "center", "padding": "=12 * u", "h": "=44 * u", "radius": "=12 * u",
+          "shadow": { "y": "=2 * u", "blur": 0, "color": "#000000b3" },
+          "gradient": { "angle": 180, "stops": [ "=cl", "=cl + ' ' + (kLitPx * 100 / 44) + '%'", "=c0 + ' ' + (kLitPx * 100 / 44) + '%'", "=c1 + ' ' + cAt + '%'",
+            "=c2 + ' 93.2%'", "=darken(c2, cLip) + ' 93.3%'", "=darken(c2, cLip)" ] },
+          "children": [ { "type": "text", "text": "{k}", "font": "inter-medium", "size": "=24 * u", "color": "=ci" } ] }
+      ]
+    },
+    // a button hint straight on the screen: the key and what it does
+    "chip": {
+      "type": "group", "layout": "row", "align": "center", "gap": "=12 * u", "h": "=48 * u",
+      "children": [
+        { "use": "key" },
+        { "type": "text", "text": "{label}", "font": "inter-medium", "size": "=fs * u", "color": "=mode == 1 ? ink : mode == 2 ? fav : ink2" }
+      ]
+    },
+    // ...and on the bottom screen, where it is a button to touch: in a pill of the material
+    "pill": {
+      "type": "group", "h": "=72 * u", "layout": "row", "align": "center", "gap": "=12 * u", "radius": "=36 * u",
+      "border": "=2 * u", "borderColor": "=hair",
+      "gradient": { "angle": 180, "stops": [ "=matLit", "=matLit + ' ' + (litPx * 100 / 72) + '%'", "=mat0 + ' ' + (litPx * 100 / 72) + '%'", "=mat1 + ' 70%'", "=mat2" ] },
+      "children": [
+        { "type": "rect", "w": 0, "h": 1 },
+        { "use": "key" },
+        { "type": "text", "text": "{label}", "font": "inter-medium", "size": "=30 * u", "color": "=ink" },
+        { "type": "rect", "w": "=16 * u", "h": 1 }
+      ]
+    },
+    // a stat: its number over its label
+    "stat": {
+      "type": "group", "layout": "column", "gap": "=12 * v",
+      "children": [
+        { "type": "text", "text": "{n}", "size": "=big * v", "h": "=big * v", "valign": "middle", "color": "=ink" },
+        { "type": "text", "text": "{l}", "font": "inter", "size": "=30 * v", "h": "=36 * v", "valign": "middle", "color": "=ink2" }
+      ]
+    },
+    // the speech bubble over the shelf, its pointer under it, and two lines in it
+    "bubble": {
+      "type": "group", "x": "=96 * u", "y": "=128 * u", "w": "=(PW - 192) * u", "h": "=192 * u",
+      "children": [
+        { "use": "card", "with": { "hp": 192 } },
+        { "type": "image", "src": "=tailImg", "fit": "fill", "x": "50%", "ax": 0.5, "y": "=192 * u", "w": "=48 * u", "h": "=24 * u" },
+        { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=39 * u", "h": "=63 * u", "align": "center", "valign": "middle", "text": "{t}",
+          "size": "=52 * u", "color": "=ink" },
+        { "type": "text", "x": "=44 * u", "w": "=(PW - 280) * u", "y": "=114 * u", "h": "=39 * u", "align": "center", "valign": "middle", "text": "{s}",
+          "font": "inter", "size": "=32 * u", "color": "=ink2" }
+      ]
+    },
+    // the shelf the tiles stand on, and the arrows at its ends
+    "shelf": { "type": "group", "children": [
+      { "type": "image", "src": "=shelfImg", "fit": "fill", "x": "=16 * u", "y": "=660 * u", "w": "=(PW - 32) * u", "h": "=56 * u" },
+      { "type": "image", "src": "thor-oled/chevL-48.png", "fit": "fill", "x": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
+        "visible": "=view == 'home' ? count > 1 : cursor > 0", "onTap": "left" },
+      { "type": "image", "src": "thor-oled/chevR-48.png", "fit": "fill", "right": "=8 * u", "y": "=552 * u", "w": "=48 * u", "h": "=48 * u", "tint": "=muted",
+        "visible": "=view == 'home' ? count > 1 : cursor < count - 1", "onTap": "right" }
+    ] },
+    // a tile on the shelf: where it stands by its eased distance from the selection (pos), and how selected it is (d,
+    // 0..1 in tenths: the boxes for its sizes are made once). 200 px square, standing 12 px into the shelf; the selected
+    // one's face slides 36 px up into the accent's plate (264 x 336), black behind it, Start under it
+    "tile": {
+      "type": "group",
+      "with": { "d": "=round(clamp(1 - abs(pos), 0, 1), 1)" },
+      "x": "=(PW / 2 - 132 + clamp(pos, -4, 4) * 248 + clamp(pos, -1, 1) * 32) * u", "y": "=(404 + 6 * press * sel) * u", "w": "=264 * u", "h": "=336 * u",
+      "opacity": "=abs(pos) <= 1 ? 1 : abs(pos) <= 2 ? 1 - 0.4 * (abs(pos) - 1) : abs(pos) <= 3 ? 0.6 - 0.35 * (abs(pos) - 2) : max(0, 0.25 - 0.25 * (abs(pos) - 3))",
+      "children": [
+        // a system's tile: tinted in its colour, a lit line along its top
+        { "type": "rect", "x": "=32 * u", "y": "=68 * u", "w": "=200 * u", "h": "=200 * u", "radius": "=32 * u", "opacity": "=1 - d",
+          "visible": "=view == 'home' && d < 0.95", "border": "=2 * u", "borderColor": "=alpha(item.color, 0.22)",
+          "gradient": { "angle": 180, "stops": [ "=mix(mix(tileHi, item.color, 0.3), '#ffffff', 0.14)", "=mix(mix(tileHi, item.color, 0.3), '#ffffff', 0.14) + ' 1%'",
+                                                 "=mix(tileHi, item.color, 0.3) + ' 1%'", "=mix(tileLo, item.color, 0.14)" ] } },
+        // the plate
+        { "use": "plate", "radius": "=48 * u", "opacity": "=d", "visible": "=d > 0.05", "with": { "hp": 336 } },
+        // the selected one's face: a black window in the plate, a light line under it
+        { "type": "rect", "x": "=(32 - winRimPx) * u", "y": "=(34 + 36 * (1 - d)) * u", "w": "=(200 + 2 * winRimPx) * u", "h": "=(200 + winRimPx) * u",
+          "radius": "=(16 + winRimPx) * u", "fill": "=winLight", "opacity": "=d", "visible": "=d > 0.05" },
+        { "type": "rect", "x": "=(32 - winRimPx) * u", "y": "=(32 - winRimPx + 36 * (1 - d)) * u", "w": "=(200 + 2 * winRimPx) * u", "h": "=(200 + 2 * winRimPx) * u",
+          "radius": "=(16 + winRimPx) * u", "fill": "=winRim", "opacity": "=d", "visible": "=d > 0.05 && winRimPx > 0" },
+        { "type": "rect", "x": "=32 * u", "y": "=(32 + 36 * (1 - d)) * u", "w": "=200 * u", "h": "=200 * u", "radius": "=16 * u", "fill": "#000000",
+          "opacity": "=d", "visible": "=d > 0.05" },
+        // what's on it (the item's picture)
+        { "type": "group", "x": "=32 * u", "y": "=(32 + 36 * (1 - d) - 24 * press * sel) * u", "w": "=200 * u", "h": "=200 * u",
+          "children": [ { "use": "sysface", "visible": "=view == 'home'" }, { "use": "gameface", "visible": "=view != 'home'" } ] },
+        // Start
+        { "type": "group", "layout": "row", "align": "center", "gap": "=12 * u", "x": "=132 * u", "ax": 0.5, "y": "=263 * u", "h": "=41 * u",
+          "opacity": "=d", "visible": "=d > 0.05",
+          "children": [
+            { "type": "image", "src": "thor-oled/play-28.png", "fit": "fill", "w": "=28 * u", "h": "=28 * u", "tint": "=pInk" },
+            { "type": "text", "text": "Start", "size": "=34 * u", "color": "=pInk" }
+          ] },
+        { "type": "image", "src": "thor-oled/heart-40.png", "fit": "fill", "x": "=(200 - 8 * d) * u", "y": "=(48 - 24 * d) * u", "w": "=40 * u", "h": "=40 * u",
+          "tint": "=fav", "visible": "=item.fav" }
+      ]
+    },
+    // the system's picture on its tile: its 32 px icon four times as large, darker far from the selection
+    "sysface": { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=128.5 * u", "h": "=128.5 * u", "anchor": "center",
+                 "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" },
+    // a game's: its cover filling the tile (else the system's picture on the material)
+    "gameface": { "type": "group", "children": [
+      { "type": "image", "src": "{item.art}", "fit": "cover", "w": "100%", "h": "100%", "radius": "=(32 - 16 * d) * u", "visible": "=item.art != ''",
+        "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" },
+      { "use": "mat", "radius": "=32 * u", "opacity": "=1 - d", "visible": "=item.art == '' && d < 0.95", "with": { "hp": 200 } },
+      { "type": "image", "src": "=either(item.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=128.5 * u", "h": "=128.5 * u",
+        "anchor": "center", "visible": "=item.art == ''", "tint": "=abs(rel) >= 2 ? '#b3b3b3' : '#ffffff'" }
+    ] },
+    // the progress line under the shelf: a thin track, the accent's thumb as wide as one item's share, n / total
+    "scrub": {
+      "type": "group", "x": "=96 * u", "y": "=864 * u", "w": "=(PW - 192) * u", "h": "=36 * u",
+      "with": { "cw": "=len(str(cursor + 1) + ' / ' + str(count)) * 15", "tw": "=PW - 192 - 32 - len(str(cursor + 1) + ' / ' + str(count)) * 15" },
+      "children": [
+        { "type": "rect", "x": 0, "w": "=tw * u", "y": "=14 * u", "h": "=8 * u", "radius": "=4 * u", "fill": "=raised2" },
+        { "type": "rect", "x": "=tw * scroll / max(1, count) * u", "w": "=max(8, tw / max(1, count)) * u", "y": "=14 * u", "h": "=8 * u", "radius": "=4 * u", "fill": "=a" },
+        { "type": "text", "right": 0, "w": "=(cw + 20) * u", "h": "=36 * u", "align": "right", "valign": "middle", "font": "inter", "size": "=30 * u", "color": "=muted",
+          "text": "{cursor + 1} / {count}" }
+      ]
+    },
+    // the status bar: the banana, BananaOS and the version (or the game stopped behind the menu); the date, the clock,
+    // Wi-Fi and the battery
+    "statusbar": { "type": "group", "opacity": "=1 - leave", "children": [
+        { "type": "group", "layout": "row", "align": "center", "gap": "=24 * v", "x": "=64 * v", "y": 0, "h": "=96 * v",
+          "children": [
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v",
+              "children": [
+                { "type": "image", "src": "thor-oled/banana.png", "fit": "pixel", "w": "=40 * v", "h": "=40 * v" },
+                { "type": "text", "text": "BananaOS", "size": "=34 * v", "color": "=ink" }
+              ] },
+            { "type": "text", "text": "=brand != '' ? brand + ' for Thor' : ''", "font": "inter", "size": "=28 * v", "color": "=muted", "visible": "=paused == ''" },
+            // a game stopped behind the menu (the Home button): its name, and how to go back
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=paused != ''",
+              "children": [
+                { "type": "image", "src": "thor-oled/pause-32.png", "fit": "fill", "w": "=32 * v", "h": "=32 * v", "tint": "=ink2" },
+                { "type": "text", "text": "{paused}", "font": "inter-medium", "size": "=28 * v", "color": "=ink2" },
+                { "type": "text", "text": "· Home to return", "font": "inter", "size": "=28 * v", "color": "=muted" }
+              ] }
+          ] },
+        { "type": "group", "layout": "row", "align": "center", "gap": "=24 * v", "right": "=64 * v", "y": 0, "h": "=96 * v",
+          "children": [
+            { "type": "text", "text": "{day} {monthDay} {month}", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+            { "type": "text", "text": "{clock}", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+            { "type": "rect", "w": "=2 * v", "h": "=32 * v", "fill": "=hair2" },
+            { "type": "image", "src": "thor-oled/wifi-40.png", "fit": "fill", "w": "=40 * v", "h": "=40 * v", "tint": "=online ? ink : muted",
+              "opacity": "=online ? 1 : 0.5" },
+            { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=battery >= 0",
+              "children": [
+                { "type": "text", "text": "{battery}%", "font": "inter-medium", "size": "=32 * v", "color": "=ink" },
+                { "type": "group", "w": "=52 * v", "h": "=28 * v", "children": [
+                  { "type": "rect", "w": "=52 * v", "h": "=28 * v", "radius": "=8 * v", "border": "=3 * v", "borderColor": "=battery < 20 && !charging ? '#f0767c' : ink2" },
+                  { "type": "rect", "x": "=6 * v", "y": "=6 * v", "w": "=max(2, 40 * battery / 100) * v", "h": "=16 * v", "radius": "=3 * v",
+                    "fill": "=battery < 20 && !charging ? '#f0767c' : charging ? ok : ink" },
+                  { "type": "rect", "x": "=53 * v", "y": "=10 * v", "w": "=4 * v", "h": "=8 * v", "radius": [ 0, "=2 * v", "=2 * v", 0 ], "fill": "=ink2" }
+                ] }
+              ] }
+          ] }
+    ] }
+  },
+
+  "screens": {
+    // the status bar over every view
+    "all": { "top": [ { "use": "statusbar" } ] },
+
+    // under Settings, the setup, the keyboard and the lists (the engine's own pages): the status bar
+    "settings": { "top": [ { "use": "statusbar" } ] },
+
+    "home": {
+      // the system: its maker and year, its name, three stats and the last game played down the left; the last games'
+      // covers fanned out on the right, the last one's colours as a soft light behind them
+      "top": [
+        { "type": "rect", "fill": "#000000" },
+        { "type": "group", "opacity": "=in * (0.15 + 0.85 * xf)", "y": "=12 * (1 - in) * v", "children": [
+          { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=760 * v", "y": "=-120 * v", "w": "=1300 * v", "h": "=1300 * v",
+            "opacity": 0.34, "blur": "=110 * v", "saturate": 1.25, "mask": { "shape": "radial", "from": 0.3, "to": 1 },
+            "visible": "=sys.hasResume && sys.resumeArt != ''" },
+          { "type": "text", "x": "=160 * v", "y": "=256 * v", "w": "=880 * v", "h": "=41 * v", "valign": "middle", "font": "inter", "size": "=34 * v", "color": "=ink2",
+            "text": "=sys.year != '' ? sys.maker + ' · ' + sys.year : sys.maker" },
+          // (a long name in smaller letters, 4 px at a time down to 56)
+          { "type": "text", "x": "=160 * v", "y": "=313 * v", "w": "=880 * v", "h": "=124 * v", "valign": "bottom", "text": "{sys.name}", "color": "=ink",
+            "size": "=max(56, min(112, floor(880 / (max(1, len(sys.name)) * 0.56) / 4) * 4)) * v",
+            "lineHeight": "=max(56, min(112, floor(880 / (max(1, len(sys.name)) * 0.56) / 4) * 4)) * 1.1 * v" },
+          { "type": "group", "layout": "row", "gap": "=64 * v", "x": "=160 * v", "y": "=501 * v",
+            "children": [
+              { "use": "stat", "with": { "n": "=round(sys.games * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=sys.games == 1 ? 'Game' : 'Games'", "big": 64 } },
+              { "use": "stat", "with": { "n": "=round(sys.played * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "Played", "big": 64 } },
+              { "use": "stat", "with": { "n": "=either(sys.time, '0m')", "l": "Play time", "big": 64 } }
+            ] },
+          // the last game played: X takes you back to it
+          { "type": "group", "x": "=160 * v", "y": "=685 * v", "w": "=880 * v", "h": "=168 * v", "visible": "=sys.hasResume", "onTap": "x",
+            "children": [
+              { "use": "card", "with": { "hp": 168, "u": "=v" } },
+              { "type": "rect", "x": "=24 * v", "y": "=24 * v", "w": "=120 * v", "h": "=120 * v", "radius": "=14 * v", "visible": "=bz > 0",
+                "gradient": { "angle": 180, "stops": [ "=bzTop", "=bzBot" ] } },
+              { "type": "rect", "x": "=(24 + bz) * v", "y": "=(24 + bz) * v", "w": "=(120 - 2 * bz) * v", "h": "=(120 - 2 * bz) * v", "radius": "=8 * v", "fill": "=raised2", "visible": "=sys.resumeArt == ''" },
+              { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=(24 + bz) * v", "y": "=(24 + bz) * v", "w": "=(120 - 2 * bz) * v", "h": "=(120 - 2 * bz) * v", "radius": "=8 * v",
+                "visible": "=sys.resumeArt != ''" },
+              { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=84 * v", "y": "=84 * v", "w": "=96.5 * v", "h": "=96.5 * v", "anchor": "center",
+                "visible": "=sys.resumeArt == ''" },
+              { "type": "text", "x": "=176 * v", "y": "=40 * v", "w": "=460 * v", "h": "=34 * v", "valign": "middle", "font": "inter", "size": "=28 * v", "color": "=ink2",
+                "text": "=sys.resumeWhen != '' ? 'Last played · ' + lower(sys.resumeWhen) : either(sys.resumeEyebrow, 'Last played')" },
+              { "type": "text", "x": "=176 * v", "y": "=83 * v", "w": "=460 * v", "h": "=44 * v", "valign": "middle", "font": "inter-medium", "size": "=36 * v", "color": "=ink",
+                "text": "{sys.resumeTitle}" },
+              { "use": "chip", "right": "=32 * v", "y": "=60 * v", "with": { "k": "X", "label": "Continue", "mode": 0, "fs": 30, "u": "=v" } }
+            ] },
+          // the fan: the game played before the last one, the last one over them, the one before that
+          { "type": "group", "x": "=1088 * v", "y": "=(236 + 24 * (1 - easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 500)))) * v", "w": "=704 * v", "h": "=640 * v",
+            "opacity": "=easeOut(progress((view == 'launch' ? 9999 : entered) - 100, 300))", "visible": "=sys.hasResume && sys.resumeArt != ''",
+            "children": [
+              { "type": "image", "src": "{sys.recent1Art}", "fit": "cover", "x": "=40 * v", "y": "=48 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "rotate": -9, "pivot": [ 0.5, 1 ], "visible": "=sys.recent1Art != ''" },
+              { "type": "image", "src": "{sys.recent2Art}", "fit": "cover", "x": "=312 * v", "y": "=48 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "rotate": 9, "pivot": [ 0.5, 1 ], "visible": "=sys.recent2Art != ''" },
+              { "type": "rect", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v",
+                "shadow": { "y": "=40 * v", "blur": "=80 * v", "color": "#000000bf" } },
+              { "type": "image", "src": "{sys.resumeArt}", "fit": "cover", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v" },
+              { "type": "rect", "x": "=176 * v", "y": "=16 * v", "w": "=352 * v", "h": "=386 * v", "radius": "=24 * v", "border": "=1 * v", "borderColor": "#ffffff1a" }
+            ] },
+          // a system with no cover to show (no games yet, an app): its own picture there
+          { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": "=1440 * v", "y": "=540 * v", "w": "=384.5 * v", "h": "=384.5 * v", "anchor": "center",
+            "opacity": 0.9, "visible": "=!(sys.hasResume && sys.resumeArt != '')" }
+        ] }
+      ],
+      // L and R's systems as a strip of seven, the bubble, the shelf, the progress line, the hints
+      "bottom": [
+        { "type": "rect", "fill": "#000000" },
+        { "type": "group", "opacity": "=in", "y": "=12 * (1 - in) * u", "children": [
+          { "use": "key", "x": "=64 * u", "y": "=44 * u", "onTap": "l", "with": { "k": "L", "mode": 0 } },
+          { "use": "key", "right": "=64 * u", "y": "=44 * u", "onTap": "r", "with": { "k": "R", "mode": 0 } },
+          { "type": "list", "source": "systems", "direction": "free", "range": 3, "loop": true, "selectedOnTop": false,
+            "item": { "type": "group", "x": "=(144 + (rel + 3) * ((PW - 288 + 8) / 7)) * u", "y": "=49 * u", "w": "=((PW - 288 + 8) / 7 - 8) * u", "h": "=39 * u", "clip": true,
+              "children": [
+                { "type": "rect", "radius": "=19.5 * u", "visible": "=sel",
+                  "gradient": { "angle": 180, "stops": [ "=pLit", "=pLit + ' 5.2%'", "=pTop + ' 5.2%'", "=pMid + ' ' + pAt + '%'", "=pBot" ] } },
+                { "type": "text", "w": "100%", "h": "100%", "align": "center", "valign": "middle", "ellipsis": false, "size": "=26 * u",
+                  "text": "=either(item.short, upper(item.id))", "color": "=sel ? aInk : muted" }
+              ] } },
+          { "use": "bubble", "with": { "t": "=sys.name", "s": "=either(sys.short, upper(sys.id)) + ' · ' + sys.maker + (sys.year != '' ? ' · ' + sys.year : '')" } },
+          { "use": "shelf" },
+          { "type": "list", "source": "systems", "direction": "free", "range": 4, "loop": true,
+            "item": { "use": "tile" } },
+          { "use": "scrub" },
+          { "use": "pill", "x": "=64 * u", "y": "=968 * u", "with": { "k": "Select", "label": "Search", "mode": 0 } },
+          { "use": "pill", "right": "=64 * u", "y": "=968 * u", "with": { "k": "Start", "label": "Settings", "mode": 0 } }
+        ] }
+      ]
+    },
+
+    "library": {
+      // the game: its cover as a case seen a little from the side, its own colours as a light behind it; its system
+      // and whether it's a favourite, its name, what it is, its stats and achievements
+      "top": [
+        { "type": "rect", "fill": "#000000" },
+        { "type": "group", "opacity": "=in * (1 - leave) * (0.15 + 0.85 * xf)", "y": "=(12 * (1 - in) - 12 * leave) * v", "children": [
+          { "type": "image", "src": "{game.art}", "fit": "cover", "x": "=-160 * v", "y": "=-160 * v", "w": "=1400 * v", "h": "=1400 * v",
+            "opacity": 0.42, "blur": "=96 * v", "saturate": 1.3, "mask": { "shape": "linear", "angle": 90, "from": 0.2, "to": 0.9 },
+            "visible": "=game.art != ''" },
+          // the case: its shadow, the cover swung 9 degrees about its left edge, the spine along that edge
+          { "type": "rect", "x": "=160 * v", "y": "=184 * v", "w": "=534 * v", "h": "=600 * v", "radius": "=24 * v", "visible": "=game.art != ''",
+            "shadow": { "x": "=-24 * v", "y": "=48 * v", "blur": "=96 * v", "color": "#000000bf" } },
+          { "type": "image", "src": "{game.art}", "fit": "cover", "x": "=160 * v", "y": "=176 * v", "w": "=560 * v", "h": "=616 * v", "radius": "=24 * v",
+            "tilt": 9, "perspective": "=2400 * v", "pivot": [ 0, 0.5 ], "visible": "=game.art != ''" },
+          { "type": "rect", "x": "=160 * v", "y": "=176 * v", "w": "=20 * v", "h": "=616 * v", "radius": [ "=24 * v", 0, 0, "=24 * v" ], "visible": "=game.art != ''",
+            "gradient": { "angle": 90, "stops": [ "#00000073", "#ffffff14 60%", "#ffffff00" ] } },
+          // (a game with no cover: its system's picture on the material)
+          { "type": "group", "x": "=160 * v", "y": "=176 * v", "w": "=534 * v", "h": "=616 * v", "visible": "=game.art == '' && !empty",
+            "children": [
+              { "use": "mat", "radius": "=24 * v", "with": { "hp": 616, "u": "=v" } },
+              { "type": "image", "src": "=either(game.icon, sys.icon)", "fit": "pixelContain", "x": "50%", "y": "50%", "w": "=256.5 * v", "h": "=256.5 * v", "anchor": "center" }
+            ] },
+          { "type": "group", "x": "=816 * v", "right": "=160 * v", "y": "=184 * v", "h": "=700 * v", "visible": "=!empty",
+            "children": [
+              { "type": "group", "layout": "row", "align": "center", "gap": "=32 * v", "y": 0, "h": "=36 * v", "children": [
+                { "type": "text", "text": "{game.systemName}", "font": "inter", "size": "=30 * v", "color": "=ink2" },
+                { "type": "group", "layout": "row", "align": "center", "gap": "=12 * v", "visible": "=game.fav",
+                  "children": [ { "type": "image", "src": "thor-oled/heart-32.png", "fit": "fill", "w": "=32 * v", "h": "=32 * v", "tint": "=fav" },
+                                { "type": "text", "text": "Favourite", "font": "inter", "size": "=30 * v", "color": "=fav" } ] }
+              ] },
+              // (two lines; a long name in smaller letters, 4 px at a time down to 48)
+              { "type": "text", "x": 0, "w": "100%", "y": "=68 * v", "text": "{game.title}", "color": "=ink", "wrap": true, "maxLines": 2,
+                "size": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * v",
+                "lineHeight": "=max(48, min(88, floor(88 * 30 / max(1, len(game.title)) / 4) * 4)) * 1.1 * v" },
+              { "type": "text", "x": 0, "w": "100%", "y": "=278 * v", "h": "=44 * v", "valign": "middle", "text": "{game.sub}", "font": "inter", "size": "=36 * v", "color": "=ink2",
+                "visible": "=game.sub != game.systemName" },
+              { "type": "group", "layout": "row", "gap": "=64 * v", "y": "=378 * v",
+                "children": [
+                  { "use": "stat", "with": { "n": "=round(num(either(game.plays, '0')) * easeOut(progress(view == 'launch' ? 9999 : entered, 600)))", "l": "=game.plays == '1' ? 'Play' : 'Plays'", "big": 56 } },
+                  { "use": "stat", "with": { "n": "=either(game.last, 'Never')", "l": "Last played", "big": 56 } },
+                  { "use": "stat", "with": { "n": "=either(game.time, '0m')", "l": "Play time", "big": 56 } }
+                ] },
+              // achievements: how many of how many, and a bar of them in the plate's colours
+              { "type": "group", "x": 0, "right": 0, "y": "=538 * v", "h": "=64 * v", "visible": "=game.achB > 0",
+                "children": [
+                  { "type": "text", "x": 0, "y": 0, "h": "=36 * v", "valign": "middle", "text": "Achievements", "font": "inter", "size": "=30 * v", "color": "=ink2" },
+                  { "type": "group", "layout": "row", "align": "center", "right": 0, "y": 0, "h": "=36 * v", "children": [
+                    { "type": "text", "text": "{game.achA} of {game.achB}", "font": "inter-medium", "size": "=30 * v", "color": "=ink" },
+                    { "type": "text", "text": " · {round(game.achProgress * 100)}%", "font": "inter", "size": "=30 * v", "color": "=ink2" } ] },
+                  { "type": "rect", "x": 0, "right": 0, "y": "=52 * v", "h": "=12 * v", "radius": "=6 * v", "fill": "#0a0a09" },
+                  { "type": "rect", "x": 0, "y": "=52 * v", "w": "=max(0.013, game.achProgress * easeOut(progress((view == 'launch' ? 9999 : entered) - 120, 600))) * 100 + '%'", "h": "=12 * v", "radius": "=6 * v",
+                    "gradient": { "angle": 180, "stops": [ "=sTop", "=sMid + ' ' + sAt + '%'", "=sBot" ] } }
+                ] },
+              { "type": "text", "x": 0, "w": "100%", "y": "=538 * v", "h": "=36 * v", "valign": "middle", "text": "{game.achLabel}", "font": "inter", "size": "=30 * v", "color": "=ink2",
+                "visible": "=game.achB <= 0 && game.achLabel != ''" }
+            ] },
+          // a shelf with nothing on it
+          { "type": "text", "x": "=160 * v", "y": "=313 * v", "w": "=(TW - 320) * v", "text": "{empty.title}", "size": "=96 * v", "color": "=ink", "visible": "=empty" },
+          { "type": "text", "x": "=160 * v", "y": "=460 * v", "w": "=1240 * v", "wrap": true, "text": "{empty.hint}", "font": "inter", "size": "=38 * v", "lineHeight": "=57 * v",
+            "color": "=ink2", "visible": "=empty" }
+        ] }
+      ],
+      "bottom": [
+        { "type": "rect", "fill": "#000000" },
+        { "type": "group", "opacity": "=in * (1 - leave)", "y": "=(12 * (1 - in) - 12 * leave) * u", "children": [
+          // L and R: the game before (the system's name on the first one) and the game after
+          { "type": "group", "layout": "row", "align": "center", "gap": "=16 * u", "x": "=64 * u", "y": "=40 * u", "h": "=56 * u", "onTap": "left",
+            "children": [ { "use": "key", "with": { "k": "L", "mode": 0 } },
+                          { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=392 * u", "h": "=40 * u", "visible": "=cursor > 0",
+                            "item": { "type": "text", "text": "{item.title}", "font": "inter", "size": "=30 * u", "color": "=ink2", "w": "=392 * u", "h": "=40 * u",
+                                      "valign": "middle", "visible": "=rel == -1" } },
+                          { "type": "text", "text": "{sys.name}", "font": "inter", "size": "=30 * u", "color": "=ink2", "visible": "=cursor == 0" } ] },
+          { "type": "group", "layout": "row", "align": "center", "gap": "=16 * u", "right": "=64 * u", "y": "=40 * u", "h": "=56 * u", "onTap": "right",
+            "children": [ { "type": "list", "source": "games", "direction": "free", "range": 1, "w": "=392 * u", "h": "=40 * u", "visible": "=cursor < count - 1",
+                            "item": { "type": "text", "text": "{item.title}", "font": "inter", "size": "=30 * u", "color": "=ink2", "w": "=392 * u", "h": "=40 * u",
+                                      "align": "right", "valign": "middle", "visible": "=rel == 1" } },
+                          { "use": "key", "with": { "k": "R", "mode": 0 } } ] },
+          { "use": "bubble", "with": { "t": "=empty ? empty.title : game.title", "s": "=empty ? empty.hint : game.sub" } },
+          { "use": "shelf" },
+          { "type": "list", "source": "games", "direction": "free", "range": 4,
+            "item": { "use": "tile" } },
+          { "use": "scrub", "visible": "=!empty" },
+          { "type": "group", "layout": "row", "gap": "=24 * u", "x": "=64 * u", "y": "=968 * u", "children": [
+            { "use": "pill", "onTap": "b", "with": { "k": "B", "label": "Back", "mode": 0 } },
+            { "use": "pill", "onTap": "x", "visible": "=!empty", "with": { "k": "X", "label": "Options", "mode": 0 } }
+          ] },
+          { "use": "pill", "right": "=64 * u", "y": "=968 * u", "onTap": "y", "visible": "=!empty",
+            "with": { "k": "Y", "label": "=game.fav ? 'Remove from favourites' : 'Add to favourites'", "mode": "=game.fav ? 2 : 0" } }
+        ] }
+      ]
+    }
+  }
+}

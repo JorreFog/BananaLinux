@@ -37,7 +37,9 @@ endef
 BANANADS_POST_PATCH_HOOKS += BANANADS_MELONDS_PATCH
 
 # The handhelds' build (BananaDS's docs/BANANALINUX.md, B1): melonDS's JIT, no SDL window, ALSA, the KMS frontend,
-# no LAN play (libenet), tuned for the Cortex-A55 with link-time optimization
+# no LAN play (libenet), tuned for the Cortex-A55 with link-time optimization (the AYN Thor: for its own cores, the
+# compiler's -mcpu with SVE off, external.mk)
+BANANADS_CPU = $(if $(filter thor,$(BANANA_BOARD)),$(GCC_TARGET_CPU),cortex-a55)
 BANANADS_CONF_OPTS = \
 	-DBANANADS_MELONDS_DIR=$(@D)/melonds \
 	-DBANANADS_MELONDS_PATCHES=OFF \
@@ -46,7 +48,7 @@ BANANADS_CONF_OPTS = \
 	-DBANANADS_ALSA=ON \
 	-DBANANADS_KMS=ON \
 	-DBANANADS_LAN=OFF \
-	-DBANANADS_CPU=cortex-a55 \
+	-DBANANADS_CPU=$(BANANADS_CPU) \
 	-DBANANADS_LTO=ON
 
 # link-time optimization needs an archiver that indexes LTO objects: the external toolchain's own gcc-ar and

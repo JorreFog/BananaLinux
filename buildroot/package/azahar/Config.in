@@ -1,0 +1,27 @@
+config BR2_PACKAGE_AZAHAR
+	bool "azahar"
+	depends on BR2_aarch64 || BR2_x86_64
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_13 # C++20
+	depends on BR2_PACKAGE_QT6
+	depends on BR2_PACKAGE_HAS_LIBEGL && BR2_PACKAGE_HAS_LIBGLES
+	select BR2_PACKAGE_QT6BASE_GUI
+	select BR2_PACKAGE_QT6BASE_WIDGETS
+	select BR2_PACKAGE_QT6BASE_OPENGL
+	select BR2_PACKAGE_QT6BASE_CONCURRENT
+	select BR2_PACKAGE_QT6BASE_DBUS
+	select BR2_PACKAGE_QT6BASE_NETWORK
+	select BR2_PACKAGE_QT6MULTIMEDIA
+	select BR2_PACKAGE_QT6WAYLAND
+	select BR2_PACKAGE_VULKAN_HEADERS
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_LIBUSB
+	select BR2_PACKAGE_ZSTD
+	select BR2_PACKAGE_FFMPEG
+	help
+	  Azahar, the Nintendo 3DS emulator (Qt 6 on Wayland, Vulkan),
+	  the two screens on the two panels. Launcher:
+	  /usr/libexec/banana/run-azahar.
+
+	  https://azahar-emu.org

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_CROCODS
+	bool "libretro-crocods"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Amstrad CPC: CrocoDS.
+
+	  https://github.com/libretro/libretro-crocods

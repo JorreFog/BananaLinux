@@ -24,6 +24,15 @@ namespace banana
 	// Pressed past half way out, let go back under a third (a deadzone, and no flicker at the edge); flicked straight
 	// to the other side, the other direction
 	int stickStep(int dir, int v, int half);
+	// an axis pushed over half way out, of a device at rest otherwise (before the menu takes it for itself). ABS_Z and
+	// ABS_RZ are triggers, resting at their lowest value, only on a pad whose right stick is on ABS_RX/RY (rightStick);
+	// without those they are the right stick itself (many pads: 0..255, at rest 128), resting in the middle as the others
+	bool absPushed(int axis, bool rightStick, int lo, int hi, int value);
+	// a button's evdev code as the menu's key (the face buttons by BANANA_CONFIRM, as a press is read)
+	Key inputKey(int code);
+	// a key code that is the Home button (hw.conf HW_HOME_KEY): read as Key::OTHER when it is no button of the menu's,
+	// so its device is opened and its presses reach the Home button's timing (the AYN key's KEY_F24, gpio-keys)
+	void inputHomeCode(int code);
 
 	class Input
 	{
@@ -39,16 +48,31 @@ namespace banana
 		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink
 		void read(int fd, const std::function<void(const InputEvent&)>& sink);
+		// panels of another size than the canvas or turned (the AYN Thor, panelfit.h): a touch on screen s, as a
+		// fraction of its touchscreen's range and whether that range is wider than tall, to the canvas; false in the
+		// bars around the picture. Unset: the touchscreen spans the canvas (the RG DS)
+		void mapTouch(std::function<bool(int, float, float, bool, float&, float&)> toCanvas) { touchToCanvas = std::move(toCanvas); }
+		// the buttons and touchscreens the menu's alone (EVIOCGRAB) while it is up over a stopped game: the game has the
+		// same devices open, and what is pressed in the menu would wait there for it. Not a device with the power or a
+		// volume key or a switch (the lid): bananad reads those too, and a grab would take them from it. A device with
+		// something held (the Home button itself, a stick pushed) is taken once it is let go: the game must get that
+		// release, or the button stays down in it. Kept over a rescan (open() again)
+		void grab(bool on);
 
 	private:
 		struct Dev
 		{
 			int fd = -1;
+			std::string node;		// its /dev/input path (grab's look at what is held opens it again)
+			bool shared = false;	// (bananad's too: never grabbed)
+			bool ours = false;		// grabbed now
 			bool touch = false, pointer = false;	// pointer: an absolute pointer whose button is BTN_LEFT
 			int screen = 1;
 			int minX = 0, maxX = 0, minY = 0, maxY = 0;
 			int x = 0, y = 0;
 			bool down = false, wasDown = false, moved = false;
+			bool outside = false;	// this touch began in the bars round a fitted picture: none of it is the menu's
+			float lastX = 0, lastY = 0;	// (a fitted picture: the touch's last place inside it, in canvas px)
 			int hatX = 0, hatY = 0;
 			// the left stick as a d-pad (ABS_X/ABS_Y of a pad: the RG DS's retrogame_joypad, -1800..1800 at rest 0):
 			// its centre and half range, and which way each axis is held now (-1, 0, 1)
@@ -57,7 +81,8 @@ namespace banana
 		};
 		std::vector<Dev> devs;
 		int pw = 640, ph = 480;
+		std::function<bool(int, float, float, bool, float&, float&)> touchToCanvas;
 		int watch = -1;
-		bool rescan = false;
+		bool rescan = false, grabbed = false;
 	};
 }

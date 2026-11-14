@@ -1,0 +1,33 @@
+//
+// BananaOS on LineageOS: static resource overlays (installed on /product, so they take precedence over the
+// device's and hardware/ayn's overlays on /vendor for the few values both set).
+//
+
+runtime_resource_overlay {
+    name: "BananaFrameworksOverlay",
+    product_specific: true,
+    resource_dirs: ["BananaFrameworks/res"],
+    manifest: "BananaFrameworks/AndroidManifest.xml",
+}
+
+// Only with BANANA_STRIP_AGGRESSIVE=true (banana.mk).
+runtime_resource_overlay {
+    name: "BananaFrameworksOverlayAggressive",
+    product_specific: true,
+    resource_dirs: ["BananaFrameworksAggressive/res"],
+    manifest: "BananaFrameworksAggressive/AndroidManifest.xml",
+}
+
+runtime_resource_overlay {
+    name: "BananaSettingsProviderOverlay",
+    product_specific: true,
+    resource_dirs: ["BananaSettingsProvider/res"],
+    manifest: "BananaSettingsProvider/AndroidManifest.xml",
+}
+
+runtime_resource_overlay {
+    name: "BananaSystemUIOverlay",
+    product_specific: true,
+    resource_dirs: ["BananaSystemUI/res"],
+    manifest: "BananaSystemUI/AndroidManifest.xml",
+}

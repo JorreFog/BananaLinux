@@ -462,6 +462,8 @@ namespace banana::nds
 
 		void box(const std::string& kind, float x, float y, float w, float h, uint32_t tint = 0)
 		{
+			// a screen's background over the whole canvas: over the whole screen when it is another shape
+			if (kind == "screen" && x == 0 && y == 0 && w == 640 && h == 480) rnds::screenArea(be, s, x, y, w, h);
 			if (!visible(y - 6, h + 12)) return;
 			int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 			std::string key = "box:" + kind + ":" + std::to_string(tint) + ":" + std::to_string(dw) + "x" + std::to_string(dh);

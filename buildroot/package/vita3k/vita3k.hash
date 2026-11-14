@@ -1,0 +1,3 @@
+# computed locally: Vita3K's ffmpeg-core, the libraries built for the commit Vita3K pins (external/ffmpeg at ccce45ff)
+sha256  eafb4a5161e0aa92255efb76893d94df978e963b698e9f3fa766d07828f6547c  ffmpeg-linux-arm64.zip
+sha256  0689622813fa13cdcf0b9047313f06c68c7bd27a26c1f0a3b6f480be2547eeeb  ffmpeg-linux-x64.zip

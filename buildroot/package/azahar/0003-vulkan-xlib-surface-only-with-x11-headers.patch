@@ -1,0 +1,53 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] vulkan: Xlib surfaces only where X11's headers are
+
+On Linux vk_platform.cpp turns on VK_USE_PLATFORM_XLIB_KHR next to
+Wayland, and vulkan.h then includes <X11/Xlib.h>: a Wayland-only system
+without X11's headers can't compile it ("X11/Xlib.h: No such file or
+directory"). Define it only when the header exists, and keep the X11
+surface and its instance extension under it. Wayland is unchanged.
+
+--- a/src/video_core/renderer_vulkan/vk_platform.cpp
++++ b/src/video_core/renderer_vulkan/vk_platform.cpp
+@@ -11,8 +11,10 @@
+ #define VK_USE_PLATFORM_METAL_EXT
+ #else
+ #define VK_USE_PLATFORM_WAYLAND_KHR
++#if __has_include(<X11/Xlib.h>)
+ #define VK_USE_PLATFORM_XLIB_KHR
+ #endif
++#endif
+ 
+ #include <memory>
+ #include <vector>
+@@ -145,6 +147,7 @@
+         }
+     }
+ #elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_WAYLAND_KHR)
++#ifdef VK_USE_PLATFORM_XLIB_KHR
+     if (window_info.type == Frontend::WindowSystemType::X11) {
+         const vk::XlibSurfaceCreateInfoKHR xlib_ci = {
+             .dpy = static_cast<Display*>(window_info.display_connection),
+@@ -156,7 +159,9 @@
+             LOG_ERROR(Render_Vulkan, "Failed to initialize Xlib surface: {}", vk::to_string(res));
+             UNREACHABLE();
+         }
+-    } else if (window_info.type == Frontend::WindowSystemType::Wayland) {
++    } else
++#endif
++    if (window_info.type == Frontend::WindowSystemType::Wayland) {
+         const vk::WaylandSurfaceCreateInfoKHR wayland_ci = {
+             .display = static_cast<wl_display*>(window_info.display_connection),
+             .surface = static_cast<wl_surface*>(window_info.render_surface),
+@@ -231,9 +236,11 @@
+         extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+         break;
+ #elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_WAYLAND_KHR)
++#ifdef VK_USE_PLATFORM_XLIB_KHR
+     case Frontend::WindowSystemType::X11:
+         extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+         break;
++#endif
+     case Frontend::WindowSystemType::Wayland:
+         extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+         break;

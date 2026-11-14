@@ -28,6 +28,32 @@ if [ "$CARD" = bluealsa ]; then
     esac
     exit 0
 fi
+# a board whose sound is a server (bananad writes "pipewire <node>": the AYN Thor): the default sink's volume, through
+# wpctl (WirePlumber keeps it per device, across boots); its percent is the cubic one the desktop's sliders use
+if [ "$CARD" = pipewire ]; then
+    # (the server's socket: BananaOS's own in /run/banana/pipewire; ROCKNIX's system units' in /run/pipewire)
+    if [ -z "$PIPEWIRE_RUNTIME_DIR" ]; then
+        PIPEWIRE_RUNTIME_DIR=/run/banana/pipewire
+        [ ! -S "$PIPEWIRE_RUNTIME_DIR/pipewire-0" ] && [ -S /run/pipewire/pipewire-0 ] && PIPEWIRE_RUNTIME_DIR=/run/pipewire
+    fi
+    export PIPEWIRE_RUNTIME_DIR
+    pget() { v=$(wpctl get-volume "$CONTROL" 2>/dev/null | sed -n 's/^Volume: \([0-9.]*\).*/\1/p'); [ -n "$v" ] || exit 1
+        awk -v v="$v" 'BEGIN { p = int(v * 100 + 0.5); if (p > 100) p = 100; print p }'; }
+    pset() { p=$1; case "$p" in ''|*[!0-9-]*) echo "volume: not a level: $p" >&2; exit 2 ;; esac
+        [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100; wpctl set-volume "$CONTROL" $p% >/dev/null 2>&1 || exit 1
+        # (ROCKNIX's own setting too, where the menu is its frontend: the level it restores at boot)
+        [ -r /etc/profile.d/001-functions ] && ( . /etc/profile.d/001-functions; set_setting audio.volume $p ) >/dev/null 2>&1; :; }
+    case $1 in
+    get) pget ;;
+    set) pset "${2:-0}" ;;
+    up|down)
+        p=$(pget); n=${2:-5}; [ $1 = down ] && n=-$n
+        pset $((p + n)); pget
+        ;;
+    *) echo "volume get | set <0-100> | up <n> | down <n>" >&2; exit 2 ;;
+    esac
+    exit 0
+fi
 AW=
 if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
     AW="$CONTROL"

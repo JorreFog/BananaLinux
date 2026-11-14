@@ -1,26 +1,15 @@
 #pragma once
+#include <vector>
 // banana-ui: both panels through KMS, with no compositor and no GPU. Each panel gets two dumb scanout buffers;
 // present() copies the part that changed into the hidden one and flips to it on the next vblank.
 #include <cstdint>
 #include <string>
 #include "colors.h"
+#include "damage.h"
+#include "panelfit.h"
 
 namespace banana
 {
-	// a rectangle of a screen that changed: [x0, x1) x [y0, y1)
-	struct Damage
-	{
-		int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-		bool empty() const { return x0 >= x1 || y0 >= y1; }
-		void add(const Damage& o)
-		{
-			if (o.empty()) return;
-			if (empty()) { *this = o; return; }
-			x0 = x0 < o.x0 ? x0 : o.x0; y0 = y0 < o.y0 ? y0 : o.y0;
-			x1 = x1 > o.x1 ? x1 : o.x1; y1 = y1 > o.y1 ? y1 : o.y1;
-		}
-	};
-
 	class Display
 	{
 	public:
@@ -34,8 +23,28 @@ namespace banana
 		bool handOver = false;
 		void close();
 		bool isOpen() const { return fd >= 0; }
+		// the canvas both screens are drawn on: the panels' size on the RG DS; on panels that differ (the AYN Thor) a 4:3
+		// canvas each panel shows fitted (panelfit.h)
 		int width() const { return W; }
 		int height() const { return H; }
+		// a touch at (px, py) of screen s's panel, in the canvas's px; false in the black bars around it
+		bool panelToCanvas(int s, float px, float py, float& x, float& y) const { return p[s].fit.toCanvas(px, py, x, y); }
+		// a touch as a fraction of its touchscreen's range (panelfit.h's touchToCanvas)
+		bool touchToCanvas(int s, float nx, float ny, bool wide, float& x, float& y) const { return p[s].fit.touchToCanvas(nx, ny, wide, x, y); }
+		bool fitted() const { return !p[0].fit.identity() || !p[1].fit.identity(); }
+		// each screen's own canvas (the composed rows present() takes): the panel upright when its shape isn't the menu's
+		// (the AYN Thor's 1920x1080 and 1240x1080; the menu's 4:3 is staged in it, soft.h's setScreens), else
+		// width() x height(). BANANA_STAGE=fit: the 4:3 canvas on every screen, fitted with black bars instead
+		int screenWidth(int s) const { return CW[s] ? CW[s] : W; }
+		int screenHeight(int s) const { return CH[s] ? CH[s] : H; }
+		// the screens are a compositor's windows (SDL2: Wayland under sway, on ROCKNIX; kms_sdl.cpp), not the panels
+		bool compositor() const { return sdl; }
+		// a window was uncovered or resized (SDL): the menu draws everything again; true once per event
+		bool takeExposed() { bool e = exposed; exposed = false; return e; }
+		// SDL rather than KMS for this run (BANANA_DISPLAY, WAYLAND_DISPLAY; false without SDL=1)
+		static bool wantSdl();
+		int panelWidth(int s) const { return p[s].fit.panelW() ? p[s].fit.panelW() : W; }
+		int panelHeight(int s) const { return p[s].fit.panelH() ? p[s].fit.panelH() : H; }
 		int pollFd() const { return fd; }
 		bool flipPending() const { return pending > 0; }
 		bool masterAtOpen = false;	// the master was had at open() (else another program still held it after the wait)
@@ -54,6 +63,29 @@ namespace banana
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
 		int lease(int s);
 		int leasedScreen() const { return leased; }
+		// both panels leased to one program (a game that takes both, on a handheld with a Home button: the menu keeps
+		// the display device, so it can come back over the game without the game ending). The lease's fd, or -1.
+		int leaseBoth();
+		// the menu over a leased program that is stopped (SIGSTOP): the screens in mask (bit 0 the top, bit 1 the
+		// bottom) drawn by present() again, what the program had on them remembered; giveBack() puts that back, for
+		// the program to go on from. Nothing but a page flip either way: no mode is set, no process starts.
+		bool borrow(int mask);
+		// the bottom screen's sheet: the menu on a plane of its own over the bottom panel, while the program that has
+		// both panels goes on drawing under it (the Thor button's quick menu over a running game: nothing stops, the
+		// top screen is never touched). leaseBoth() keeps one overlay plane out of the lease for it. sheetOpen(): false
+		// when there is no such plane (the caller stops the game and borrows the panel instead). While it is open,
+		// present() draws screen 1 on the sheet; sheetAt() slides it: shown 0 below the panel, 1 fully up, past 1 a
+		// little above its place (a bounce's overshoot: the sheet's top rows off the panel's top edge).
+		bool sheetOpen();
+		void sheetAt(float shown);
+		void sheetClose();
+		bool sheetUp() const { return sheetOn; }
+		// (a compositor's windows, kms_sdl.cpp: the sheet is a window of the menu's over the game's bottom one, raised
+		// over it, and the menu composes the slide itself. What the game had on that output is put under it: false when
+		// there is no picture of it (no grim), and under is left as it was)
+		bool sheetUnder(std::vector<uint32_t>& under);
+		void giveBack();
+		int borrowed() const { return borrowMask; }
 		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
 		// second, seen after RetroArch's leased panel was given back): measured over 200 ms, and when it storms both
 		// CRTCs are switched off and on again, the one thing that ends it. The rate after, or -1 when it was calm.
@@ -66,11 +98,55 @@ namespace banana
 
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
-		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
-		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
+		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; PanelFit fit; };
+		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;	// (leased: 0 or 1 that screen, 2 both)
+		int borrowMask = 0;			// the leased screens the menu draws on for now (borrow)
+		uint32_t theirFb[2] = { 0, 0 };	// what the lease's program showed there
+		bool theirOff[2] = { false, false };	// (it had the panel off: a PC game's bottom screen)
+		// (and the planes it had lit over its picture, an overlay or a cursor: off while the menu is over it, back after)
+		struct TheirPlane { uint32_t plane, crtc, fb; int32_t x, y; uint32_t w, h, sx, sy, sw, sh; };
+		std::vector<TheirPlane> theirPlanes;
+		bool theirs(int s) const { return (leased == 2 || leased == s) && !(borrowMask & (1 << s)); }
+		uint32_t sheetPlane = 0;	// (the overlay plane kept out of leaseBoth's lease)
+		bool sheetOn = false, sheetDrawn = false;
+		float sheetShown = 0;
+		Buf sheetBuf[2];
+		int sheetFront = 0;
+		bool sheetPlace();
 		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
-		bool makeBuf(Buf& b);
+		bool makeBuf(Buf& b, int w, int h);
+		bool sdl = false, exposed = false;
+		int CW[2] = { 0, 0 }, CH[2] = { 0, 0 };
+		// the screens' canvases for panels (or windows) of upright size uw x uh each (screenWidth)
+		void screensFor(const int uw[2], const int uh[2]);
+		void* sdlWin[2] = { nullptr, nullptr };
+		int sdlTimer = -1;
+		bool openSdl(const std::string& top, std::string& err);
+		void closeSdl();
+		bool presentSdl(const uint32_t* const screens[2], const Damage dmg[2]);
+		void handleSdl();
+		void blankSdl();
+		int leaseSdl(int s);
+		// the Thor button under a compositor (kms_sdl.cpp): leaseBoth() closes both windows and the game is a client on
+		// both outputs; borrow() opens the menu's windows again over the game's (sway: fullscreen and focused, the game's
+		// window that was fullscreen there remembered), giveBack() closes them and makes the game's fullscreen and focused
+		// again; sheetOpen() opens the bottom window alone over a running game's
+		int sdlIdx[2] = { 0, 1 };
+		std::string sdlOut[2];
+		int sdlRect[2][2] = { { 0, 0 }, { 0, 0 } };	// (each output's place in the compositor's layout)
+		long theirCon[2] = { 0, 0 }, theirFocus = 0;	// (sway's container ids: the game's windows, and the focused one)
+		bool theirFs[2] = { false, false };
+		bool sdlSheet = false;
+		bool sdlWindow(int s, std::string& err);
+		void sdlRaise(int s);
+		void sdlRemember(int s);
+		void sdlRestore(int mask);
+		int leaseBothSdl();
+		bool borrowSdl(int mask);
+		void giveBackSdl();
+		bool sheetOpenSdl();
+		void sheetCloseSdl();
 		bool lightBoth();
 		void freeBuf(Buf& b);
 	};

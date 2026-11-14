@@ -1,0 +1,421 @@
+#!/bin/sh
+# Steam on the AYN Thor's PC games shelf: the owner's Steam account, their library on the shelf with Steam's own box
+# art, and a game downloaded straight to the card when it is picked. What GameNative does on Android.
+#
+# The login and the downloads are DepotDownloader's (SteamRE's, a native ARM64 program: no Wine under it), fetched
+# once with its checksum checked. It keeps a login token on the card (pc/steam/home), never the password. The library
+# is asked from Steam's web API with that token. A game's files are its Windows build, in roms/pc/<Game>, run like any
+# other PC game (pc-games). A game that needs Steam itself running (its DRM, its multiplayer) starts from the shelf's
+# Steam entry instead: Steam's own client in Wine.
+#
+#   steam status              ready=yes|no (the downloader is on the card), user=<account>, games=<in the library>
+#   steam login-qr            sign in by scanning a code with the Steam app on a phone (nothing to type). Runs until
+#                             the login ends, its state in /run/banana/steam.state: starting | qr <n> | ok <account>
+#                             | failed <why>. While it says "qr <n>" the code is in /run/banana/steam.qr, a row a
+#                             line, 1 a dark square and 0 a light one, the light border included; Steam changes the
+#                             code every half minute, and <n> counts up each time the file is written again.
+#   steam login <account>     the password on stdin (one line); runs until the login ends, its state in
+#                             /run/banana/steam.state: starting | code app | code email <address> | confirm |
+#                             wrong-code | ok <account> | failed <why>
+#   steam code <code>         the Steam Guard code the login waits for
+#   steam cancel              stop a login, and tidy up what one that was killed left behind
+#   steam logout              forget the token
+#   steam library             the account's games as <Game>.pc entries on the shelf, then their box art
+#   steam install <file.pc>   download that game (its "steam = <app id>" line), then guess its program; how far it
+#                             is in /run/banana/steam.progress: <app id> <percent> downloading | done | failed <why>
+#                             | stopped. A download that didn't end well leaves the entry as it was: picking the
+#                             game again goes on from what is on the card
+#   steam stop <app id>       stop that download (what is on the card stays; install goes on from it)
+#   steam art                 box art for the shelf's games that have none: Steam's by app id; a game copied by hand
+#                             by its name from Steam's store search, then SteamGridDB when the owner has a key
+#                             (accounts.conf: sgdb_key)
+#
+# (host tests: BANANA_PC, BANANA_PC_ROMS, BANANA_RUN, BANANA_DATA as pc-games; BANANA_STEAM_DD for the downloader,
+# BANANA_STEAM_API / BANANA_STEAM_STORE / BANANA_STEAM_CDN / BANANA_SGDB for the four sites)
+PC=${BANANA_PC:-/data/pc}
+ROMS=${BANANA_PC_ROMS:-/data/roms/pc}
+RUN=${BANANA_RUN:-/run/banana}
+ACC=${BANANA_DATA:-/data/banana}/accounts.conf
+LOG=${BANANA_DATA:-/data/banana}/logs/steam.log
+L=${BANANA_LIBEXEC:-/usr/libexec/banana}
+ST=$PC/steam
+DD=${BANANA_STEAM_DD:-$ST/DepotDownloader}
+DD_VER=3.4.0
+DD_URL=https://github.com/SteamRE/DepotDownloader/releases/download/DepotDownloader_$DD_VER/DepotDownloader-linux-arm64.zip
+DD_SUM=d9fb612ccebc1db8eeea3b4045d2221ec70431381393ce908fb72f01d4f9c812
+API=${BANANA_STEAM_API:-https://api.steampowered.com}
+STORE=${BANANA_STEAM_STORE:-https://store.steampowered.com}
+CDN=${BANANA_STEAM_CDN:-https://shared.steamstatic.com/store_item_assets/steam/apps}
+SGDB=${BANANA_SGDB:-https://www.steamgriddb.com/api/v2}
+STATE=$RUN/steam.state
+IN=$RUN/steam.in
+OUT=$RUN/steam.out
+# the downloader's own files (its token store) under the card's folder; no ICU in the image
+export HOME=$ST/home DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 DOTNET_BUNDLE_EXTRACT_BASE_DIR=$ST/home/.net
+export BANANA_STEAM_API="$API"
+
+say() { mkdir -p "${LOG%/*}" 2>/dev/null; echo "$(date '+%H:%M:%S') steam: $*" >> "$LOG" 2>/dev/null; echo "$*"; }
+die() { say "$*"; exit 1; }
+acc() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$ACC" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+acc_set() {	# acc_set <key> [value]: the line replaced, or gone with no value
+    mkdir -p "${ACC%/*}"; touch "$ACC"; chmod 600 "$ACC" 2>/dev/null
+    grep -v "^[[:space:]]*$1[[:space:]]*=" "$ACC" > "$ACC.new"
+    [ -n "$2" ] && echo "$1=$2" >> "$ACC.new"	# ("key=value", as the other tools read the file)
+    mv "$ACC.new" "$ACC"
+}
+val() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$2" 2>/dev/null | tail -n 1 | tr -d '\r'; }
+mkdir -p "${LOG%/*}" 2>/dev/null
+state() { echo "$*" > "$STATE.new" && mv "$STATE.new" "$STATE"; }
+
+# the downloader, fetched once (32 MB down, 86 MB on the card). A network that doesn't answer is given up on after
+# 15 s a try. Unpacked in a folder beside its place and moved there whole: an unzip cut short (the login cancelled, the
+# power gone) leaves no half of a program that looks ready
+need() {
+    [ -x "$DD" ] && return 0
+    mkdir -p "$ST/home" || return 1
+    say "fetching DepotDownloader $DD_VER"
+    rm -rf "$ST/dd.tmp"
+    curl -fL --retry 3 --connect-timeout 15 -o "$ST/dd.zip" "$DD_URL" || { rm -f "$ST/dd.zip"; return 1; }
+    [ "$(sha256sum "$ST/dd.zip" | cut -d' ' -f1)" = "$DD_SUM" ] || { say "the download's checksum is wrong"; rm -f "$ST/dd.zip"; return 1; }
+    mkdir -p "$ST/dd.tmp" && unzip -o -q "$ST/dd.zip" DepotDownloader -d "$ST/dd.tmp" &&
+        chmod +x "$ST/dd.tmp/DepotDownloader" && mv -f "$ST/dd.tmp/DepotDownloader" "$DD"
+    rm -rf "$ST/dd.zip" "$ST/dd.tmp"
+    [ -x "$DD" ]
+}
+
+# the downloader's token store: "<account><tab><token>" lines. The file is a raw-deflated protocol-buffers message
+# whose field 4 is the accounts' tokens (DepotDownloader's AccountSettingsStore.LoginTokens: an entry per account,
+# its name in field 1 and its token in field 2); a store that doesn't read that way gives its longest token alone.
+tokens() {
+    python3 - "$HOME" <<'EOF' 2>/dev/null
+import sys, os, re, zlib
+def varint(b, i):
+    v = s = 0
+    while True:
+        c = b[i]; i += 1; v |= (c & 0x7f) << s; s += 7
+        if not c & 0x80: return v, i
+def fields(b):
+    i = 0
+    while i < len(b):
+        k, i = varint(b, i); f, w = k >> 3, k & 7
+        if w == 0: v, i = varint(b, i)
+        elif w == 2: n, i = varint(b, i); v = b[i:i + n]; i += n
+        elif w == 1: v = b[i:i + 8]; i += 8
+        elif w == 5: v = b[i:i + 4]; i += 4
+        else: raise ValueError(w)
+        yield f, w, v
+out = {}; best = b''
+for d, _, fs in os.walk(sys.argv[1]):
+    if 'account.config' not in fs: continue
+    try: raw = zlib.decompress(open(os.path.join(d, 'account.config'), 'rb').read(), -15)
+    except Exception: continue
+    try:
+        for f, w, v in fields(raw):
+            if f == 4 and w == 2:
+                e = {ff: vv for ff, ww, vv in fields(v) if ww == 2}
+                if e.get(1) and e.get(2): out[e[1].decode()] = e[2].decode()
+    except Exception: pass
+    for m in re.findall(rb'ey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}', raw):
+        if len(m) > len(best): best = m
+if out:
+    for k, v in out.items(): print(k + '\t' + v)
+elif best: print('\t' + best.decode())
+EOF
+}
+# the token for the web API: the logged-in account's (names compared as Steam does, without case)
+token() {
+    tokens | awk -F '\t' -v u="$(acc steam_user)" 'tolower($1) == tolower(u) { t = $2 } { last = $2 } END { print t != "" ? t : last }'
+}
+
+# a file name the card takes: Steam's name without what exFAT refuses, the trademark signs or a dot at the end.
+# busybox's sed and cut work on bytes: the signs are taken out one whole sign at a time (in a bracket their bytes
+# would go from other letters too), and a long name is cut by letters in python (half a letter at the end is a name
+# the card refuses): 120 of them, and 200 bytes (with ".pc" or the cover's ending, under the 255 a name can have)
+fname() {
+    n=$(printf '%s' "$1" | tr -d '\r\n' | sed 's/™//g; s/®//g; s/©//g; s/[\\/:*?"<>|]/ /g; s/  */ /g; s/^ //; s/[ .]*$//')
+    [ ${#n} -gt 120 ] && n=$(printf '%s' "$n" |
+        python3 -c 'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read()[:200].decode("utf-8", "ignore")[:120].encode())' | sed 's/[ .]*$//')
+    printf '%s' "$n"
+}
+# the block character the downloader draws a QR code with, as sed reads it (busybox's sed knows no \xHH)
+BLOCK=$(printf '\342\226\210')
+
+case $1 in
+status)
+    [ -x "$DD" ] && echo ready=yes || echo ready=no
+    echo "user=$(acc steam_user)"
+    echo "games=$([ -f "$ST/library.tsv" ] && wc -l < "$ST/library.tsv" | tr -d ' ')"
+    ;;
+login)
+    U=$2
+    [ -n "$U" ] || die "usage: steam login <account>"
+    IFS= read -r PASS
+    [ -n "$PASS" ] || { state "failed no password"; exit 1; }
+    mkdir -p "$RUN"
+    state starting
+    need || { state "failed the downloader couldn't be fetched (no internet?)"; exit 1; }
+    rm -f "$IN" "$OUT" "$RUN/steam.codes"
+    mkfifo -m 600 "$IN" || { state "failed no pipe"; exit 1; }
+    : > "$OUT"
+    # (a login needs something to do: the manifest of Spacewar, the 2 MB test app every account has)
+    "$DD" -username "$U" -remember-password -app 480 -manifest-only -dir "$RUN/steam-480" < "$IN" > "$OUT" 2>&1 &
+    pid=$!
+    echo $pid > "$RUN/steam.pid"
+    exec 3> "$IN"	# (held open: the downloader never sees its input end)
+    printf '%s\n' "$PASS" >&3
+    PASS=
+    rc=1; n=0
+    while :; do
+        # (alive asked first: what it wrote as it ended is read below)
+        kill -0 $pid 2>/dev/null && alive=1 || alive=0
+        t=$(tr '\r' '\n' < "$OUT")
+        wrong=$(printf '%s\n' "$t" | grep -c 'is incorrect')
+        fed=$(cat "$RUN/steam.codes" 2>/dev/null || echo 0)
+        s=$(printf '%s\n' "$t" | awk '
+            /code from your authenticator app/ { s = "code app" }
+            /auth code sent to the email at/ { a = $0; sub(/.*the email at /, "", a); sub(/: *$/, "", a); s = "code email " a }
+            /authentication code sent to your email/ { s = "code email" }
+            /Use the Steam Mobile App to confirm/ { s = "confirm" }
+            /Failed to authenticate with Steam: / { a = $0; sub(/.*Failed to authenticate with Steam: /, "", a); s = "failed " a }
+            /Unable to login to Steam3: / { a = $0; sub(/.*Unable to login to Steam3: /, "", a); s = "failed " a }
+            /Could not connect to Steam/ { s = "failed no connection to Steam" }
+            /Got [0-9]+ licenses for account/ { s = "ok" }
+            END { print s }')
+        case $s in
+        ok) acc_set steam_user "$U"; state "ok $U"; rc=0; break ;;
+        failed*)
+            # (plain words for Steam's usual two)
+            case $s in *InvalidPassword*) s="failed wrong account name or password" ;; *RateLimitExceeded*) s="failed too many tries: wait a while" ;; esac
+            state "$s"; break ;;
+        code*) if [ "$wrong" -gt "$fed" ]; then state wrong-code; else state "$s"; fi ;;
+        confirm) state confirm ;;
+        esac
+        [ $alive = 1 ] || { state "failed the login ended early"; break; }
+        n=$((n + 1)); [ $n -gt 1200 ] && { state "failed no answer in five minutes"; break; }
+        sleep 0.25
+    done
+    kill $pid 2>/dev/null
+    exec 3>&-
+    grep -v -i 'password' "$OUT" >> "$LOG" 2>/dev/null
+    rm -f "$IN" "$OUT" "$RUN/steam.pid" "$RUN/steam.codes"
+    rm -rf "${RUN:?}/steam-480"
+    exit $rc
+    ;;
+login-qr)
+    mkdir -p "$RUN"
+    state starting
+    need || { state "failed the downloader couldn't be fetched (no internet?)"; exit 1; }
+    rm -f "$OUT" "$RUN/steam.qr"
+    before=$(tokens)
+    : > "$OUT"
+    # (as "login": something for the downloader to do once it is in)
+    "$DD" -qr -remember-password -app 480 -manifest-only -dir "$RUN/steam-480" < /dev/null > "$OUT" 2>&1 &
+    pid=$!
+    echo $pid > "$RUN/steam.pid"
+    rc=1; n=0; shown=0
+    while :; do
+        kill -0 $pid 2>/dev/null && alive=1 || alive=0
+        t=$(tr '\r' '\n' < "$OUT")
+        # the code: the downloader draws it for a terminal, two block characters a dark square and two spaces a light
+        # one, a line a row, after the same sentence each time (the first code, and each one Steam changes it to)
+        codes=$(printf '%s\n' "$t" | grep -c 'sign in with this QR code')
+        if [ "$codes" -gt "$shown" ]; then
+            printf '%s\n' "$t" | LC_ALL=C sed "s/$BLOCK$BLOCK/1/g; s/  /0/g" | awk '
+                /sign in with this QR code/ { rows = 0; on = 1; next }
+                on && /^[01]+$/ { r[rows++] = $0; next }
+                { on = 0 }
+                END { if (rows > 20 && length(r[0]) == rows) for (i = 0; i < rows; i++) print r[i] }' > "$RUN/steam.qr.new"
+            # (whole and square, or it is still being written: looked at again in a moment)
+            if [ -s "$RUN/steam.qr.new" ]; then mv "$RUN/steam.qr.new" "$RUN/steam.qr"; shown=$codes; state "qr $shown"; fi
+        fi
+        s=$(printf '%s\n' "$t" | awk '
+            /Failed to authenticate with Steam: / { a = $0; sub(/.*Failed to authenticate with Steam: /, "", a); s = "failed " a }
+            /Unable to login to Steam3: / { a = $0; sub(/.*Unable to login to Steam3: /, "", a); s = "failed " a }
+            /Could not connect to Steam/ { s = "failed no connection to Steam" }
+            /Got [0-9]+ licenses for account/ { s = "ok" }
+            END { print s }')
+        case $s in
+        ok)
+            # who it was: the account whose token is new in the store (the downloader names it only sometimes)
+            U=$(tokens | while IFS="$(printf '\t')" read -r name tok; do
+                    [ -n "$name" ] || continue
+                    printf '%s\n' "$before" | grep -qxF "$name$(printf '\t')$tok" || { echo "$name"; break; }
+                done)
+            [ -n "$U" ] || U=$(printf '%s\n' "$t" | sed -n 's/.*login with -username \([^ ]*\) -remember-password.*/\1/p' | tail -n 1)
+            [ -n "$U" ] || U=$(tokens | cut -f1 | grep . | tail -n 1)
+            if [ -n "$U" ]; then acc_set steam_user "$U"; state "ok $U"; rc=0
+            else state "failed signed in, but Steam didn't say as whom: log in with the name and password"; fi
+            break ;;
+        failed*) state "$s"; break ;;
+        esac
+        [ $alive = 1 ] || { state "failed the login ended early"; break; }
+        n=$((n + 1)); [ $n -gt 1200 ] && { state "failed no scan in five minutes"; break; }
+        sleep 0.25
+    done
+    kill $pid 2>/dev/null
+    LC_ALL=C sed "/$BLOCK/d; /^ *\$/d" "$OUT" >> "$LOG" 2>/dev/null
+    rm -f "$OUT" "$RUN/steam.pid" "$RUN/steam.qr" "$RUN/steam.qr.new"
+    rm -rf "${RUN:?}/steam-480"
+    exit $rc
+    ;;
+code)
+    [ -p "$IN" ] || die "no login is waiting for a code"
+    # (how many "incorrect" lines there were before this code: one more of them is this code's own)
+    tr '\r' '\n' < "$OUT" | grep -c 'is incorrect' > "$RUN/steam.codes"
+    printf '%s\n' "$2" | tr -d ' ' > "$IN"
+    ;;
+cancel)
+    [ -f "$RUN/steam.pid" ] && kill "$(cat "$RUN/steam.pid")" 2>/dev/null
+    # a login tidies up after itself when its downloader ends; one that was killed (the menu ends a login that is
+    # still fetching the downloader, with its curl or unzip) can't: its files here and the half-fetched downloader
+    rm -f "$RUN/steam.pid" "$RUN/steam.qr" "$RUN/steam.qr.new" "$IN" "$ST/dd.zip"
+    rm -rf "${RUN:?}/steam-480" "${ST:?}/dd.tmp"
+    mkdir -p "$RUN"
+    state "failed cancelled"
+    ;;
+logout)
+    rm -rf "${ST:?}/home"
+    rm -f "$ST/library.tsv" "$STATE"
+    acc_set steam_user
+    echo "logged out"
+    ;;
+library)
+    U=$(acc steam_user)
+    [ -n "$U" ] || die "not logged in"
+    mkdir -p "$ST" "$ROMS"
+    T=$(token)
+    if [ -n "$T" ]; then
+        printf '%s' "$T" | python3 -c '
+import sys, os, json, base64, urllib.request, urllib.parse
+api = os.environ["BANANA_STEAM_API"]
+tok = sys.stdin.read().strip()
+p = tok.split(".")[1]
+sid = json.loads(base64.urlsafe_b64decode(p + "=" * (-len(p) % 4)))["sub"]
+def call(path, data=None, **q):
+    url = api + path + ("?" + urllib.parse.urlencode(q) if q else "")
+    body = urllib.parse.urlencode(data).encode() if data else None
+    return json.load(urllib.request.urlopen(urllib.request.Request(url, body), timeout=30)).get("response", {})
+try: access = call("/IAuthenticationService/GenerateAccessTokenForApp/v1/", {"refresh_token": tok, "steamid": sid}).get("access_token") or tok
+except Exception as e: sys.stderr.write("steam: no access token: %s\n" % e); access = tok
+r = call("/IPlayerService/GetOwnedGames/v1/", access_token=access, steamid=sid, include_appinfo=1, include_played_free_games=1)
+for g in sorted(r.get("games", []), key=lambda g: g.get("name", "").lower()):
+    if g.get("name"): print("%d\t%s" % (g["appid"], g["name"].replace("\t", " ")))
+' > "$ST/library.new" 2>> "$LOG"
+    fi
+    if [ -s "$ST/library.new" ]; then mv "$ST/library.new" "$ST/library.tsv"
+    else
+        rm -f "$ST/library.new"
+        # (no list from Steam: the owner's own, "<app id><tab><name>" lines written on a computer, still works)
+        [ -s "$ST/library.tsv" ] || die "Steam gave no list of games (the log has why); pc/steam/library.tsv can be written by hand: <app id><tab><name>"
+        say "Steam gave no list of games: the last one kept"
+    fi
+    # an entry for each game that has none (by its app id: a renamed entry is still that game's)
+    have=" $(cat "$ROMS"/*.pc 2>/dev/null | sed -n 's/^[[:space:]]*steam[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' | tr '\n' ' ')"
+    n=0
+    while IFS="$(printf '\t')" read -r id name; do
+        n=$((n + 1))
+        case $have in *" $id "*) continue ;; esac
+        f=$(fname "$name"); [ -n "$f" ] || f="Steam $id"
+        [ -e "$ROMS/$f.pc" ] && f="$f ($id)"
+        printf 'steam = %s\n' "$id" > "$ROMS/$f.pc"
+    done < "$ST/library.tsv"
+    "$0" art >/dev/null 2>&1
+    echo "games $n"
+    ;;
+install)
+    F=$2
+    id=$(val steam "$F")
+    [ -n "$id" ] || die "not a Steam game's entry: $F"
+    U=$(acc steam_user)
+    [ -n "$U" ] || die "not logged in to Steam (Settings has the login)"
+    need || die "the downloader couldn't be fetched (no internet?)"
+    stem=$(basename "$F" .pc)
+    dir=$ROMS/$stem
+    mkdir -p "$dir" || die "the card can't be written"
+    say "downloading $stem (app $id) to $dir"
+    # (four files at once: the card's writing is the limit, not the network)
+    # how far it is, for the menu's PC games page: "<app id> <percent> <downloading | done | failed ... | stopped>"
+    PROG=$RUN/steam.progress
+    mkdir -p "$RUN"; prog() { echo "$id $*" > "$PROG.new" && mv "$PROG.new" "$PROG"; }
+    # how it ended: the downloader's exit status and its last line (the loop below is the pipe's other end, and
+    # knows neither afterwards), and "stop"'s flag (not the progress file: a line still in the pipe writes over it)
+    END=$RUN/steam.end.$id
+    STOP=$RUN/steam.stop.$id
+    rm -f "$END.rc" "$END.all" "$STOP"
+    prog 0 downloading
+    { "$DD" -app "$id" -os windows -osarch 64 -username "$U" -remember-password -dir "$dir" -max-downloads 4 < /dev/null 2>&1
+      echo $? > "$END.rc"; } |
+        while IFS= read -r line; do
+            printf '%s\n' "$line" >> "$LOG"
+            case $line in
+            *[0-9].[0-9][0-9]%\ *) p=${line%%.*}; p=${p##* }; prog "${p:-0}" downloading ;;	# (" 42.17% <file>")
+            Total\ downloaded:*) : > "$END.all" ;;
+            esac
+            case $line in Got\ *|Using\ *|Pre-allocating\ *|Validating\ *) ;; *) printf '%s\n' "$line" ;; esac
+        done
+    rc=$(cat "$END.rc" 2>/dev/null); [ -f "$END.all" ] && all=1 || all=0
+    p=$(cut -d' ' -f2 "$PROG" 2>/dev/null)
+    rm -f "$END.rc" "$END.all"
+    if [ -e "$STOP" ]; then
+        rm -f "$STOP"; prog 0 stopped
+        die "the download of $stem was stopped (what is on the card stays: picking it again goes on from there)"
+    fi
+    if [ -z "$(find "$dir" -type f -iname '*.exe' 2>/dev/null | head -n 1)" ]; then
+        prog 0 failed nothing was downloaded
+        die "nothing was downloaded for $stem: no Windows build, or the login ran out (log in again in Settings)"
+    fi
+    # the downloader makes every file at its full size before it fetches any of them: a program on the card says
+    # nothing. Only its own word does (it ends well and counts what it downloaded); else the entry stays without
+    # its "exe" line, and picking the game again goes on (the downloader checks what is there)
+    if [ "$rc" != 0 ] || [ $all = 0 ]; then
+        prog "${p:-0}" failed the download did not finish
+        die "the download of $stem did not finish (no internet, or the card is full?): picking it again goes on from there"
+    fi
+    exe=$("$L/pc-games" guess "$dir")
+    [ -n "$exe" ] || { prog 100 failed its program was not found; die "$stem is on the card, but its program wasn't found: write \"exe = ...\" in $stem.pc"; }
+    # (the entry's other lines, the owner's settings for this game, are kept)
+    { grep -v '^[[:space:]]*\(steam\|exe\)[[:space:]]*=' "$F" 2>/dev/null; printf 'steam = %s\nexe = %s\n' "$id" "$exe"; } > "$F.new" && mv "$F.new" "$F"
+    prog 100 done
+    say "$stem is ready: $exe"
+    ;;
+stop)
+    # stop <app id>: a download under way (the files it has stay; "install" goes on from them)
+    [ -n "$2" ] || die "usage: steam stop <app id>"
+    # (the flag is what "install" believes: the progress file can be written over by a line it still had to read)
+    mkdir -p "$RUN"; : > "$RUN/steam.stop.$2"
+    echo "$2 0 stopped" > "$RUN/steam.progress"
+    pkill -f -- "-app $2 -os windows" 2>/dev/null
+    ;;
+art)
+    mkdir -p "$ROMS/media/box" 2>/dev/null || exit 0
+    KEY=$(acc sgdb_key)
+    get() { curl -fsL --retry 2 --max-time 40 -o "$2.part" "$1" 2>/dev/null && [ -s "$2.part" ] && mv "$2.part" "$2" || { rm -f "$2.part"; return 1; }; }
+    for f in "$ROMS"/*.pc; do
+        [ -f "$f" ] || continue
+        stem=$(basename "$f" .pc)
+        box=$ROMS/media/box/$stem.jpg
+        { [ -f "$box" ] || [ -f "$ROMS/media/box/$stem.png" ] || [ -f "$box.none" ]; } && continue
+        case $(val exe "$f") in banana:*) continue ;; esac
+        id=$(val steam "$f")
+        if [ -z "$id" ]; then
+            # a game copied by hand: Steam's store search by its name (the first app found)
+            id=$(curl -fsL --max-time 20 -G "$STORE/api/storesearch/" --data-urlencode "term=$stem" -d cc=us -d l=en 2>/dev/null |
+                sed -n 's/.*"items":\[{"type":"app","name":"[^"]*","id":\([0-9]*\).*/\1/p' | head -n 1)
+        fi
+        # Steam's library cover (the upright one), else its wide header
+        if [ -n "$id" ] && { get "$CDN/$id/library_600x900.jpg" "$box" || get "$CDN/$id/header.jpg" "$box"; }; then continue; fi
+        if [ -n "$KEY" ]; then
+            g=$(curl -fsL --max-time 20 -H "Authorization: Bearer $KEY" "$SGDB/search/autocomplete/$(printf '%s' "$stem" | sed 's/ /%20/g; s/[^A-Za-z0-9%._-]//g')" 2>/dev/null |
+                sed -n 's/.*"data":\[{[^}]*"id":\([0-9]*\).*/\1/p' | head -n 1)
+            u=$([ -n "$g" ] && curl -fsL --max-time 20 -H "Authorization: Bearer $KEY" "$SGDB/grids/game/$g?dimensions=600x900&types=static" 2>/dev/null |
+                sed -n 's/.*"url":"\([^"]*\)".*/\1/p' | head -n 1 | sed 's/\\//g')
+            case $u in *.jpg|*.jpeg) get "$u" "$box" && continue ;; *.png) get "$u" "${box%.jpg}.png" && continue ;; esac
+        fi
+        # (none found: not asked again at every start; delete media/box/<Game>.jpg.none to try again)
+        : > "$box.none"
+    done
+    ;;
+*)
+    sed -n '2,/^[^#]/p' "$0" | grep '^#' | cut -c3-
+    exit 2 ;;
+esac

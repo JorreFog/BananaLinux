@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaOS, only with BANANA_STRIP_AGGRESSIVE=true (target: android). -->
+<resources>
+    <!-- No wallpaper service: SystemUI's ImageWallpaper keeps a bitmap per display (two panels here) and the
+         launcher draws its own background. Risk: apps that call WallpaperManager get null/defaults; Settings'
+         wallpaper entry does nothing. -->
+    <bool name="config_enableWallpaperService">false</bool>
+</resources>

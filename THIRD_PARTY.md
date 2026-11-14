@@ -17,6 +17,9 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | stb_image, stb_image_write | ui/third_party | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
 | Kernel patches, RG DS and RG DS Plus device trees, kernel config, U-Boot patches | buildroot/board/rgds | [ROCKNIX](https://github.com/ROCKNIX/distribution), pinned in board/rgds/ROCKNIX | GPL-2.0 |
 | Generic DSI panel driver | buildroot/board/rgds/kernel/panel-generic-dsi.c | ROCKNIX (stolen/overlay_server) | GPL-2.0 |
+| Kernel patches, AYN Thor device tree, kernel config | buildroot/board/thor | [ROCKNIX](https://github.com/ROCKNIX/distribution), pinned in board/thor/ROCKNIX | GPL-2.0 |
+| AYN Thor's ALSA UCM profile | buildroot/patches/alsa-ucm-conf | ROCKNIX (alsa-ucm-conf/patches/SM8550/0005_Add-AYN-Thor.patch, by Luke Johnson) | BSD-3-Clause (alsa-ucm-conf) |
+| The AYN Thor's kernel patches beyond ROCKNIX's, Mesa's Turnip for Buildroot, the alsa-ucm-conf package, the AudioReach module order (usr/libexec/banana/qcom-audio) | buildroot/board/thor/linux-patches-banana, buildroot/buildroot-patches, buildroot/package/alsa-ucm-conf | [Banana Pocket](https://github.com/jesussaves-dev/Banana-Pocket) at 2f4da8bf | kernel patches GPL-2.0; the rest MIT |
 | ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |
 | RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
 | Nintendo DS cheat files (Action Replay codes, for BananaDS) | buildroot/package/libretro-cheats-nds (tarball) | [libretro/libretro-database](https://github.com/libretro/libretro-database) cht/Nintendo - Nintendo DS at 12c21cf | CC BY-SA 4.0 |

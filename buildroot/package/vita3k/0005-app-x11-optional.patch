@@ -1,0 +1,21 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] app: link X11 only when it is there
+
+The app's CMake requires X11 on Linux, but no source calls an X11 function:
+SDL3 opens X11 itself at run time where there is one. A Wayland-only
+system without X11 stopped at configure ("Could NOT find X11"). Find it
+optionally and link it when found.
+
+--- a/vita3k/app/CMakeLists.txt
++++ b/vita3k/app/CMakeLists.txt
+@@ -21,6 +21,8 @@
+ endif()
+ 
+ if (LINUX)
+-    find_package(X11 REQUIRED)
+-    target_link_libraries(app PRIVATE ${X11_LIBRARIES})
++    find_package(X11)
++    if (X11_FOUND)
++        target_link_libraries(app PRIVATE ${X11_LIBRARIES})
++    endif()
+ endif()

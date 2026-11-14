@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_VIRTUALJAGUAR
+	bool "libretro-virtualjaguar"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Atari Jaguar: Virtual Jaguar (incomplete: many games have
+	  faults).
+
+	  https://github.com/libretro/virtualjaguar-libretro

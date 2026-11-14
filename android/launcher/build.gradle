@@ -1,0 +1,85 @@
+// BananaLauncher: banana-ui (ui/) as Android's HOME app. The menu's C++ core is built by CMake (native/CMakeLists.txt)
+// into libbanana.so; the Java side (src/main/java) is the shell around it. Its files (fonts, pictures, languages,
+// themes, the Thor's systems list, the launch table) are the APK's assets under root/, which the app unpacks to
+// <files>/root at its first start after an install or update (Core.java). See README.md.
+plugins {
+    id 'com.android.application' version '8.13.0'
+}
+
+def repo = file('../..')
+def bananaVersion = new File(repo, 'VERSION').text.trim()
+
+android {
+    namespace 'org.bananaos.launcher'
+    compileSdk 35
+    ndkVersion '28.2.13676358'
+
+    defaultConfig {
+        applicationId 'org.bananaos.launcher'
+        minSdk 31
+        targetSdk 35
+        versionCode 1
+        versionName bananaVersion
+        ndk { abiFilters 'arm64-v8a' }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static', "-DBANANA_REPO=${repo.absolutePath}"
+                // (an offline build: -PfreetypeDir=<freetype's unpacked source>, else CMake downloads it)
+                if (project.hasProperty('freetypeDir')) arguments "-DBANANA_FREETYPE_DIR=${project.property('freetypeDir')}"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'native/CMakeLists.txt'
+            version '3.31.6'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // (the libraries stay in the APK uncompressed: the core needs none of them unpacked)
+    packaging { jniLibs { useLegacyPackaging false } }
+
+    sourceSets {
+        main { assets.srcDirs += layout.buildDirectory.dir('generated/banana-assets') }
+    }
+}
+
+// the menu's files as BananaOS's image installs them (ui/Makefile's install, buildroot's rootfs), under root/: what the
+// core reads at /usr/share/banana and /etc/banana is mapped there (ui/src/android_tools.cpp)
+def bananaAssets = tasks.register('bananaAssets', Sync) {
+    into layout.buildDirectory.dir('generated/banana-assets/root')
+    from(new File(repo, 'ui/assets/rnds')) { into 'share/banana/rnds' }
+    from(new File(repo, 'ui/assets/splash')) { into 'share/banana/splash' }
+    from(new File(repo, 'ui/assets/banana')) { into 'share/banana/banana' }
+    from(new File(repo, 'ui/assets/lang')) { into 'share/banana/lang' }
+    from(new File(repo, 'ui/assets/speaker-eq')) { into 'share/banana/speaker-eq' }
+    from(new File(repo, 'system/rootfs/usr/share/banana/themes')) { into 'share/banana/themes' }
+    from(new File(repo, 'system/rootfs/etc/banana')) {
+        include 'settings.conf', 'bananad.conf', 'credits.txt', 'stage', 'README.txt'
+        into 'etc/banana'
+    }
+    // the AYN Thor's systems, and how each one's games start on Android (android/system/launch.conf, the ROM's
+    // config: the same file goes to /system_ext/etc/banana, which wins over this copy when it is there)
+    from(new File(repo, 'buildroot/board/thor/systems.conf')) { into 'etc/banana' }
+    from(new File(repo, 'android/system')) { include 'launch.conf'; into 'etc/banana' }
+    from('root')
+    // (the Files tile: one of the menu's own pages, its one entry)
+    from('src/tiles') { into 'share/banana/apps' }
+    doLast {
+        def etc = layout.buildDirectory.dir('generated/banana-assets/root/etc/banana').get().asFile
+        new File(etc, 'version').text = bananaVersion + '\n'
+    }
+}
+tasks.named('preBuild') { dependsOn bananaAssets }

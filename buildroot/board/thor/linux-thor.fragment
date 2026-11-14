@@ -1,0 +1,79 @@
+# The AYN Thor's changes over ROCKNIX's SM8550 kernel config (linux-rocknix.config) and Banana's own fragment
+# (board/rgds/linux-banana.fragment: the read-only squashfs root, no fbdev or VTs, the trimmed network and debugging,
+# all of which stay). Applied after it: what the RG DS's fragment turns off that the Thor needs, and the Thor's menu
+# hardware built in, as the RG DS's is (no module loading before the menu's first frame).
+
+# the RG DS's fragment turns the VTs off, which needs EXPERT (ROCKNIX's RK3566 config has it, its SM8550 one not)
+CONFIG_EXPERT=y
+# OpenABL starts the kernel as an EFI application (the EFI stub), with the device tree it was given
+CONFIG_EFI=y
+CONFIG_EFI_STUB=y
+# (the plain Image is what boots, as on ROCKNIX, whose build makes that one target. Buildroot makes the kernel's default
+# targets first, and with the compressed EFI image on, that default is vmlinuz.efi, whose rule needs hexdump on the
+# build machine: the build stopped there on one without it)
+# CONFIG_EFI_ZBOOT is not set
+# the display: the msm DRM driver (DPU, both DSI hosts) and the two AMOLED panels built in: the menu draws on them
+# straight from rcS (ROCKNIX's 0057 patches add the panel drivers)
+CONFIG_DRM_MSM=y
+CONFIG_DRM_MSM_DSI=y
+CONFIG_DRM_PANEL_CHIPONE_ICNA35XX=y
+CONFIG_DRM_PANEL_DDIC_CH13726A=y
+# the gamepad: an MCU on uart15 (serdev), ROCKNIX's RSInput driver (0031, 1003: rumble)
+CONFIG_SERIAL_DEV_BUS=y
+CONFIG_INPUT_JOYSTICK=y
+CONFIG_JOYSTICK_RSINPUT=y
+# both touchscreens: FocalTech FT5426 (top) and FT5452 (bottom) on the edt-ft5x06 driver (0015, 0053)
+CONFIG_TOUCHSCREEN_EDT_FT5X06=y
+# the lid's Hall sensor and the AYN key: gpio-keys
+CONFIG_KEYBOARD_GPIO=y
+# the audio DSP, the compute DSP and their name service in the kernel (no userspace pd-mapper, qrtr-ns, rmtfs or
+# tqftpserv: the Thor has no modem)
+CONFIG_QCOM_PD_MAPPER=y
+CONFIG_QRTR=y
+CONFIG_QRTR_SMD=y
+# Wi-Fi: the WCN7850 on PCIe, ath12k (the RG DS's fragment turns Atheros off): a module rcS loads after the menu is up
+CONFIG_WLAN_VENDOR_ATH=y
+CONFIG_ATH12K=m
+# Bluetooth: the WCN7850's, hci_uart's QCA protocol on uart14 (the RG DS's is Realtek's H5); modules, loaded only when
+# Bluetooth is switched on (usr/libexec/banana/bluetooth)
+CONFIG_BT_HCIUART_QCA=y
+# the Adreno 740 needs no Panfrost
+# CONFIG_DRM_PANFROST is not set
+# the RG DS's touchscreen and joypad polling aren't here
+# CONFIG_TOUCHSCREEN_GOODIX is not set
+# the fan (pwm-fan on the PMIC's PWM) and the stick LEDs (two HTR3212, ROCKNIX's 0033) built in: the fan must run
+# from the first second, the LEDs show the boot
+CONFIG_SENSORS_PWM_FAN=y
+CONFIG_LEDS_HTR3212=y
+CONFIG_LEDS_GROUP_MULTICOLOR=y
+
+# compressed swap in memory (rcS, hw.conf's HW_ZRAM): the RG DS's fragment turns swap and zram off
+CONFIG_SWAP=y
+CONFIG_ZSMALLOC=y
+CONFIG_ZRAM=y
+CONFIG_ZRAM_BACKEND_LZ4=y
+CONFIG_ZRAM_DEF_COMP_LZ4=y
+# PC games (usr/libexec/banana/pc-games): x86_64 programs handed to Box64 by the kernel, Wine's prefix in an ext4
+# image on the card, and Wine's own synchronisation driver
+CONFIG_BINFMT_MISC=y
+CONFIG_BLK_DEV_LOOP=y
+CONFIG_EXT4_FS=y
+CONFIG_NTSYNC=y
+# pads and keyboards made in software (the menu's on-screen keyboard for a computer's game, Steam Input's)
+CONFIG_INPUT_UINPUT=y
+# the root's squashfs in zstd (banana_thor_defconfig), and zram's second algorithm (zstd, for the pages that stay idle:
+# usr/libexec/banana/tune recompresses them)
+CONFIG_SQUASHFS_ZSTD=y
+CONFIG_ZRAM_BACKEND_ZSTD=y
+CONFIG_ZRAM_MULTI_COMP=y
+
+# USB debugging (usr/libexec/banana/usb-debug): the Thor's USB-C port as a device a computer sees, made in configfs
+# with a network card (NCM), a serial port (ACM) and FunctionFS for adb. The RG DS's fragment, read before this one,
+# turns the gadget side off; ROCKNIX's configuration has it on.
+CONFIG_USB_GADGET=y
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_NCM=y
+CONFIG_USB_CONFIGFS_ACM=y
+CONFIG_USB_CONFIGFS_F_FS=y
+# (the controller both ways: a host for pads and drives, a device for the computer)
+CONFIG_USB_DWC3_DUAL_ROLE=y

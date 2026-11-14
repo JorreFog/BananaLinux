@@ -250,7 +250,32 @@ namespace
 		{ "gb", "Nintendo - Game Boy" }, { "nes", "Nintendo - Nintendo Entertainment System" },
 		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
 		{ "c64", "Commodore - 64" }, { "zxspectrum", "Sinclair - ZX Spectrum" },
-		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
+		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" },
+		// ROCKNIX's systems (as its frontend: es-systems-to-banana.py keeps its ids), the ones libretro has art for
+		{ "genesis", "Sega - Mega Drive - Genesis" }, { "mastersystem", "Sega - Master System - Mark III" },
+		{ "gamegear", "Sega - Game Gear" }, { "segacd", "Sega - Mega-CD - Sega CD" }, { "sega32x", "Sega - 32X" },
+		{ "saturn", "Sega - Saturn" }, { "dreamcast", "Sega - Dreamcast" }, { "sg-1000", "Sega - SG-1000" },
+		{ "naomi", "Sega - Naomi" }, { "atomiswave", "Atomiswave" },
+		{ "virtualboy", "Nintendo - Virtual Boy" }, { "pokemini", "Nintendo - Pokemon Mini" },
+		{ "gamecube", "Nintendo - GameCube" }, { "wii", "Nintendo - Wii" }, { "3ds", "Nintendo - Nintendo 3DS" },
+		{ "fds", "Nintendo - Family Computer Disk System" }, { "sfc", "Nintendo - Super Nintendo Entertainment System" },
+		{ "famicom", "Nintendo - Nintendo Entertainment System" }, { "n64dd", "Nintendo - Nintendo 64DD" },
+		{ "satellaview", "Nintendo - Satellaview" }, { "sufami", "Nintendo - Sufami Turbo" },
+		{ "psp", "Sony - PlayStation Portable" }, { "ps2", "Sony - PlayStation 2" }, { "psvita", "Sony - PlayStation Vita" },
+		{ "pcengine", "NEC - PC Engine - TurboGrafx 16" }, { "tg16", "NEC - PC Engine - TurboGrafx 16" },
+		{ "pcenginecd", "NEC - PC Engine CD - TurboGrafx-CD" }, { "tg16cd", "NEC - PC Engine CD - TurboGrafx-CD" },
+		{ "supergrafx", "NEC - PC Engine SuperGrafx" }, { "pcfx", "NEC - PC-FX" },
+		{ "neogeo", "SNK - Neo Geo" }, { "neocd", "SNK - Neo Geo CD" }, { "ngp", "SNK - Neo Geo Pocket" },
+		{ "ngpc", "SNK - Neo Geo Pocket Color" }, { "wonderswan", "Bandai - WonderSwan" },
+		{ "wonderswancolor", "Bandai - WonderSwan Color" }, { "atari2600", "Atari - 2600" }, { "atari5200", "Atari - 5200" },
+		{ "atari7800", "Atari - 7800" }, { "atarilynx", "Atari - Lynx" }, { "atarijaguar", "Atari - Jaguar" },
+		{ "atarist", "Atari - ST" }, { "colecovision", "Coleco - ColecoVision" }, { "intellivision", "Mattel - Intellivision" },
+		{ "vectrex", "GCE - Vectrex" }, { "odyssey", "Magnavox - Odyssey2" }, { "msx", "Microsoft - MSX" },
+		{ "msx2", "Microsoft - MSX2" }, { "amstradcpc", "Amstrad - CPC" }, { "amiga", "Commodore - Amiga" },
+		{ "3do", "The 3DO Company - 3DO" }, { "gameandwatch", "Handheld Electronic Game" },
+		{ "arcade", "MAME" }, { "mame", "MAME" }, { "fbneo", "FBNeo - Arcade Games" }, { "cps1", "FBNeo - Arcade Games" },
+		{ "cps2", "FBNeo - Arcade Games" }, { "cps3", "FBNeo - Arcade Games" }, { "x68000", "Sharp - X68000" },
+		{ "pc98", "NEC - PC-98" }, { "scummvm", "ScummVM" }, { "pico-8", "PICO-8" }, { "dos", "DOS" } };
 	std::vector<System> systems(const std::string& conf)
 	{
 		std::vector<System> out;

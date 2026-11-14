@@ -1,0 +1,23 @@
+# BananaOS on LineageOS: USB debugging on by default, as on the Linux image (usr/libexec/banana/usb-debug, where a
+# computer on the USB-C port had a root shell with no password). For the product makefile:
+#   TARGET_SYSTEM_PROP += vendor/banana/android/system/props/banana.prop
+# or the same lines as PRODUCT_SYSTEM_PROPERTIES (android/product/banana.mk already sets the first one).
+#
+# The trade-off. With ro.adb.secure=0 anyone holding the Thor and a cable gets a shell (root on a userdebug build:
+# "adb root") with no prompt on the screen: everything on it, the owner's accounts and tokens included, can be read
+# and changed. That is what the Linux image did, and it is right for bringing the Thor up (a broken screen or launcher
+# still lets a computer in). For a build given to other people, keep authorization on: ro.adb.secure=1 (LineageOS's
+# default) shows the computer's key on the Thor to accept once; or ship the developers' keys in the image
+# (PRODUCT_ADB_KEYS := <path to an adb_keys file>, installed as /product/etc/security/adb_keys) so their computers
+# need no prompt and nobody else's gets in.
+#
+# ro.adb.secure is set by the build itself (to 1 on user and userdebug builds; LineageOS's WITH_ADB_INSECURE=true
+# sets 0), and a ro. property defined twice can fail the build: so it is not set here. For the Linux image's
+# behaviour, build with WITH_ADB_INSECURE=true in the environment (docs/THOR-LINEAGE-PARITY.md, "USB debugging").
+
+# adb, with MTP beside it so a computer also sees the storage; adb starts at boot with no setting to change (the
+# framework reads "adb" in this property as USB debugging on: Settings.Global.ADB_ENABLED follows it at boot)
+persist.sys.usb.config=mtp,adb
+# adb over the network too, on port 5555 (the Linux image's network card over USB had ssh): off; uncomment for
+# bring-up over Wi-Fi ("adb connect <thor>:5555"), same trade-off as above but for anyone on the network
+#service.adb.tcp.port=5555

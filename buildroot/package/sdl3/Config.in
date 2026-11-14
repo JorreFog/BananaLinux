@@ -1,0 +1,16 @@
+config BR2_PACKAGE_SDL3
+	bool "sdl3"
+	depends on !BR2_STATIC_LIBS
+	depends on BR2_PACKAGE_HAS_LIBGBM && BR2_PACKAGE_HAS_LIBEGL && BR2_PACKAGE_HAS_LIBGLES
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_WAYLAND_PROTOCOLS
+	select BR2_PACKAGE_LIBXKBCOMMON
+	select BR2_PACKAGE_VULKAN_HEADERS
+	help
+	  Simple DirectMedia Layer 3: KMS/DRM, Wayland, GLES, Vulkan and
+	  ALSA, for the emulators that need SDL 3 (ARMSX2).
+
+	  https://www.libsdl.org

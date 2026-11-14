@@ -1,0 +1,49 @@
+#!/bin/sh
+# PSP: PPSSPP (package/ppsspp: ROCKNIX's SM8550 build, its SDL 2 front end), Vulkan, on a compositor of its own on the
+# top panel (run-wayland). Its folders are fixed in the build (ROCKNIX's patch, written as BananaOS's): settings in
+# /data/ppsspp/PSP/SYSTEM (from ROCKNIX's SM8550 ppsspp.ini in /usr/share/ppsspp on the first run), the memory stick's
+# saves in saves/psp, states in states/psp, screenshots in /data/screenshots; no BIOS. Quit: PPSSPP's own menu, or the
+# menu's quit (SIGTERM, passed on).
+#   run-ppsspp <game>        (.iso .cso .chd .pbp .elf .prx .zip)
+ROM="$1"
+D=/data/ppsspp
+T=/usr/share/ppsspp
+LOGS=/data/banana/logs/ppsspp
+mkdir -p "$D/PSP/SYSTEM" "$LOGS" /data/saves/psp /data/states/psp /data/screenshots /data/roms/psp
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-ppsspp: $ROM"
+
+for f in ppsspp.ini controls.ini; do
+    [ -f "$D/PSP/SYSTEM/$f" ] || cp "$T/PSP/SYSTEM/$f" "$D/PSP/SYSTEM/$f"
+done
+# (the card's exFAT has no symbolic links: data-link's link_dir binds a folder where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
+# PPSSPP's fonts, shaders and translations, read from /data/ppsspp/assets (the build's folder)
+link_dir "$T/assets" "$D/assets"
+# the memory stick's saves in BananaOS's saves folder (a folder PPSSPP made before is moved there once). The memory
+# stick is /data/roms/psp in this build, so a game writes ms0:/PSP/SAVEDATA there, not under /data/ppsspp
+link_dir /data/saves/psp /data/roms/psp/PSP/SAVEDATA
+# the pad mapping PPSSPP's build reads (/data/SDL-GameControllerDB/gamecontrollerdb.txt), when the image or the card
+# has one for the Thor's pad
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    if [ -f "$f" ]; then
+        mkdir -p /data/SDL-GameControllerDB && cp -f "$f" /data/SDL-GameControllerDB/gamecontrollerdb.txt
+        export SDL_GAMECONTROLLERCONFIG_FILE="$f"
+        break
+    fi
+done
+export HOME=$D XDG_CACHE_HOME=$D/cache SDL_AUDIODRIVER=alsa
+
+# the RetroAchievements account logged in in BananaOS, for this emulator's own achievements (ra-standalone)
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" ppsspp "$D/PSP/SYSTEM"
+/usr/libexec/banana/run-wayland -- /usr/bin/ppsspp --fullscreen "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
+"${BANANA_LIBEXEC:-/usr/libexec/banana}/ra-standalone" scrub ppsspp "$D/PSP/SYSTEM"
+echo "run-ppsspp: exit $RC"
+exit $RC

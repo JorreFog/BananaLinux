@@ -74,6 +74,7 @@ static void localTime(time_t t, struct tm *out)
 
 /* ---- DRM/KMS + evdev, the same minimal shim the other standalone apps use ---- */
 #ifndef _WIN32
+#include <dlfcn.h>
 #define DRM_IOCTL_BASE 'd'
 #define DRM_IO(nr) _IO(DRM_IOCTL_BASE, nr)
 #define DRM_IOWR(nr, type) _IOWR(DRM_IOCTL_BASE, nr, type)
@@ -192,6 +193,7 @@ class Display {
 public:
 	~Display()
 	{
+		if (use_sdl) { sdl.Quit(); return; }
 		if (drm_fd < 0) return;
 		for (int p = 0; p < 2; ++p) {
 			if (!panels[p].connected) continue;
@@ -213,8 +215,98 @@ public:
 		close(drm_fd);
 	}
 
+	// ---- under a Wayland compositor (ROCKNIX's sway on the AYN Thor: the menu's display is SDL there,
+	// BANANA_DISPLAY=sdl): a full-screen SDL window for each screen, the bottom one titled "Activity Bottom" (ROCKNIX's
+	// sway puts it on its second output), the 640x480 screens fitted in them. SDL2 is opened at run time: the
+	// handhelds' build needs none.
+	struct SdlRect { int x, y, w, h; };
+	struct {
+		void *lib = nullptr, *win[2] = {}, *ren[2] = {}, *tex[2] = {};
+		int (*Init)(uint32_t);
+		void *(*CreateWindow)(const char *, int, int, int, int, uint32_t);
+		void *(*CreateRenderer)(void *, int, uint32_t);
+		void *(*CreateTexture)(void *, uint32_t, int, int, int);
+		int (*UpdateTexture)(void *, const void *, const void *, int);
+		int (*RenderClear)(void *);
+		int (*RenderCopy)(void *, void *, const void *, const SdlRect *);
+		void (*RenderPresent)(void *);
+		int (*GetRendererOutputSize)(void *, int *, int *);
+		int (*PollEvent)(void *);
+		int (*SetRenderDrawColor)(void *, uint8_t, uint8_t, uint8_t, uint8_t);
+		int (*ShowCursor)(int);
+		void (*Quit)(void);
+	} sdl;
+	bool use_sdl = false;
+
+	bool open_sdl(std::string &error)
+	{
+		const char *names[] = { "libSDL2-2.0.so.0", "libSDL2.so" };
+		for (const char *n : names) if (!sdl.lib) sdl.lib = dlopen(n, RTLD_NOW);
+		if (!sdl.lib) { error = "no SDL2"; return false; }
+#define SDLFN(n) if (!(*(void **)&sdl.n = dlsym(sdl.lib, "SDL_" #n))) { error = "SDL2 has no SDL_" #n; return false; }
+		SDLFN(Init) SDLFN(CreateWindow) SDLFN(CreateRenderer) SDLFN(CreateTexture) SDLFN(UpdateTexture) SDLFN(RenderClear)
+		SDLFN(RenderCopy) SDLFN(RenderPresent) SDLFN(GetRendererOutputSize) SDLFN(PollEvent) SDLFN(SetRenderDrawColor)
+		SDLFN(ShowCursor) SDLFN(Quit)
+#undef SDLFN
+		if (sdl.Init(0x20 /* SDL_INIT_VIDEO */) != 0) { error = "SDL_Init failed"; return false; }
+		const char *titles[2] = { "Activity", "Activity Bottom" };
+		// the bottom window first: the compositor moves it to its output before the top one asks for full screen on
+		// the first (two full-screen windows on one output: the first loses it)
+		for (int i = 1; i >= 0; --i) {
+			// (SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE: the size the compositor gives it, the whole output for a
+			// window alone on it or full screen by the frontend's rule; SDL_PIXELFORMAT_XRGB8888, streaming)
+			sdl.win[i] = sdl.CreateWindow(titles[i], 0x2FFF0000, 0x2FFF0000, 640, 480, 0x20);
+			if (!sdl.win[i]) { error = "no SDL window"; return false; }
+			sdl.ren[i] = sdl.CreateRenderer(sdl.win[i], -1, 0);
+			if (!sdl.ren[i]) { error = "no SDL renderer"; return false; }
+			sdl.tex[i] = sdl.CreateTexture(sdl.ren[i], 0x16161804, 1, 640, 480);
+			panels[i].w = 640; panels[i].h = 480; panels[i].connected = true;
+			if (i == 1) for (int k = 0; k < 10; ++k) { pump(); usleep(10000); }
+		}
+		sdl.ShowCursor(0);
+		use_sdl = true;
+		for (int k = 0; k < 10; ++k) { pump(); usleep(10000); }	// (the compositor's first configure)
+		return true;
+	}
+
+	void present_sdl(const uint32_t *screens[2])
+	{
+		pump();
+		for (int i = 0; i < 2; ++i) {
+			if (!screens[i] || !sdl.tex[i]) continue;
+			sdl.UpdateTexture(sdl.tex[i], nullptr, screens[i], 640 * 4);
+			int ow = 640, oh = 480;
+			sdl.GetRendererOutputSize(sdl.ren[i], &ow, &oh);
+			const double f = std::min(ow / 640.0, oh / 480.0);
+			SdlRect r = { 0, 0, (int)(640 * f), (int)(480 * f) };
+			r.x = (ow - r.w) / 2; r.y = (oh - r.h) / 2;
+			sdl.SetRenderDrawColor(sdl.ren[i], 0, 0, 0, 255);
+			sdl.RenderClear(sdl.ren[i]);
+			sdl.RenderCopy(sdl.ren[i], sdl.tex[i], nullptr, &r);
+			sdl.RenderPresent(sdl.ren[i]);
+		}
+	}
+
+public:
+	// the compositor's events (its pings: a window that never reads them is "not responding"); true when a window
+	// changed (a new size from the compositor: drawn again)
+	bool pump()
+	{
+		if (!use_sdl) return false;
+		alignas(8) unsigned char ev[128];
+		bool changed = false;
+		while (sdl.PollEvent(ev)) {
+			uint32_t type;
+			memcpy(&type, ev, 4);
+			if (type == 0x200 /* SDL_WINDOWEVENT */) changed = true;
+		}
+		return changed;
+	}
+
 	bool open(const std::string &want_top, std::string &error)
 	{
+		const char *dm = getenv("BANANA_DISPLAY");
+		if (dm && !strcmp(dm, "sdl")) return open_sdl(error);
 		drm_fd = ::open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
 		if (drm_fd < 0) {
 			error = "Cannot open /dev/dri/card0";
@@ -305,6 +397,7 @@ public:
 
 	void present(const uint32_t *screens[2])
 	{
+		if (use_sdl) { present_sdl(screens); return; }
 		for (int i = 0; i < 2; ++i) {
 			Panel &p = panels[i];
 			if (!p.connected || !screens[i]) continue;
@@ -3106,6 +3199,7 @@ int main(int argc, char **argv)
 			p.revents = 0;
 			pfds.push_back(p);
 		}
+		if (disp.pump()) dirty = true;
 		long long wait = app.repeatWait();
 		int timeout = wait > 800 ? 800 : (wait < 0 ? 0 : (int)wait);
 		int rc = poll(pfds.data(), pfds.size(), timeout);

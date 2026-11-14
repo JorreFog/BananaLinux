@@ -15,6 +15,7 @@
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include <linux/input.h>
+#include "sheet.h"
 #include "kms.h"
 #include "library.h"
 #include "soft.h"
@@ -41,6 +42,9 @@
 #include "carts.h"
 #include "layout.h"
 #include "nas.h"
+#ifdef __ANDROID__
+#include "android_host.h"	// (the launcher app around the core: android/launcher)
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -183,6 +187,37 @@ static std::string shellQuote(const std::string& s)
 	return r + "'";
 }
 
+// a system whose games ROCKNIX runs (as its frontend: its run line through run-rocknix), by its id, for the game page's
+// emulator and options rows; "" for the rest
+static std::string rocknixSystem(const banana::SystemDef& sys)
+{
+	return getenv("BANANA_ROCKNIX") && sys.run.find("run-rocknix") != std::string::npos ? sys.id : "";
+}
+
+// the emulator a ROCKNIX game runs in (its run line's --emulator=/--core=, as the game page's choice turns them:
+// rocknix-options resolve), "" for the rest
+static std::string rocknixEmulator(const banana::SystemDef& sys, const std::string& rom)
+{
+	if (rocknixSystem(sys).empty()) return "";
+	auto arg = [&](const char* k) {
+		size_t a = sys.run.find(k);
+		if (a == std::string::npos) return std::string();
+		a += strlen(k);
+		return sys.run.substr(a, sys.run.find(' ', a) - a);
+	};
+	std::string emu = arg("--emulator="), core = arg("--core=");
+	const char* o = getenv("BANANA_ROCKNIX_OPTIONS");
+	const std::string tool = o && *o ? o : "/usr/libexec/banana/rocknix-options";
+	if (FILE* f = popen((shellQuote(tool) + " resolve " + shellQuote(sys.id) + " " + shellQuote(rom.substr(rom.rfind('/') + 1)) + " " +
+		shellQuote(emu) + " " + shellQuote(core) + " 2>/dev/null").c_str(), "r"))
+	{
+		char buf[256] = "";
+		if (fgets(buf, sizeof buf, f) && buf[0] && buf[0] != ' ') emu = std::string(buf, strcspn(buf, " \n"));
+		pclose(f);
+	}
+	return emu;
+}
+
 static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
 {
 	for (size_t at = 0; (at = s.find(from, at)) != std::string::npos; at += to.size()) s.replace(at, from.size(), to);
@@ -287,6 +322,7 @@ struct Options
 	std::string headless, script;
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
+	int sw[2] = { 0, 0 }, sh[2] = { 0, 0 };	// --screens: each screen's own size (headless)
 };
 
 static std::string envOr(const char* name, const std::string& def)
@@ -352,13 +388,18 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 // a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [files]), not a program: A or X
 // on it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts and
 // layout themes' own start of an app) does the same. The page's name, or "" for a program
-static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0 ? sd.run.substr(7) : ""; }
+// (the PC games shelf opens its hub where the image has one: openPage says no where it hasn't, and the shelf opens)
+static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0 ? sd.run.substr(7) : sd.id == "pc" ? "pcgames" : ""; }
 
 // opens that page on the settings screen; false for a name no page has
 static bool openPage(Settings& st, const std::string& page)
 {
 	if (page == "files") { st.openFiles(); return true; }
 	if (page == "bshare") { st.openBshare(); return true; }
+	// the quick menu (the Home button held while a game runs): the screens' brightness, the volume, the game's
+	// performance mode, the fan and the stick lights (settings_quick.cpp), on the bottom screen
+	if (page == "quick") { st.openQuick(); return true; }
+	if (page == "pcgames") { if (!st.pcHub()) return false; st.openPcGames(); return true; }
 	return false;
 }
 
@@ -675,6 +716,22 @@ static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* 
 	else logf("resume after power-off: no game at %s", rom.c_str());
 }
 
+// a game found again by the shelf it was started from and its file, and that shelf made the current one: its place
+// there, or -1 when it is gone. A running game is known by these and not by its index: the Home button's menu over it
+// opens other shelves and reads the card again (a collection that went meanwhile, a search: its own system's shelf)
+static int findGame(Host& lib, const std::string& shelfId, const std::string& path)
+{
+	for (int pass = 0; pass < 2; pass++)
+		for (int i = 0; i < lib.systemCount(); i++)
+		{
+			const auto& sh = lib.shelf(i);
+			if (pass == 0 ? sh.def.id != shelfId : sh.favorites) continue;
+			for (size_t g = 0; g < sh.games.size(); g++)
+				if (sh.games[g].path == path) { lib.openLibrary(i); return (int)g; }
+		}
+	return -1;
+}
+
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
 // a game deleted on its page (Settings::DELETED): the card read again, back in the same system's list on the game
 // after it (the home row when that list is now empty), and what went in the log
@@ -846,9 +903,255 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	return 0;
 }
 
+// ---- the theme's transitions ("transitions": "fade"; and any screen of another shape than the canvas, where the
+// iris's circle would be drawn on the canvas, not the screens): smooth eased fades between whole screens, at their
+// own sizes. The frames are worked out here (the headless "trans" op draws them too); the loops are by the iris's
+// the Home button's game's control group (the cgroup v2 freezer, homeMenu's gameFreeze): banana-game beside the menu in
+// its own group. On BananaOS that is the hierarchy's root (rcS mounts it on /sys/fs/cgroup, and the menu is in no group of
+// its own): /sys/fs/cgroup/banana-game. Under systemd (ROCKNIX: bananasway.service, Delegate=yes) it is the unit's
+// group's child, e.g. /sys/fs/cgroup/system.slice/bananasway.service/banana-game, which systemd leaves to the unit; and
+// where the v2 hierarchy is mounted elsewhere (systemd's hybrid layout, /sys/fs/cgroup/unified) it is under that mount.
+// BANANA_GAME_CG names it outright. No v2 hierarchy: the old path, which fails, and the game is stopped by signals
+static std::string gameCgroup()
+{
+	if (const char* e = getenv("BANANA_GAME_CG")) if (*e) return e;
+	std::string mnt;
+	{
+		std::ifstream m("/proc/self/mounts");
+		std::string dev, at, type, rest;
+		while (m >> dev >> at >> type && std::getline(m, rest))
+			if (type == "cgroup2" && (mnt.empty() || at == "/sys/fs/cgroup")) mnt = at;
+	}
+	std::string own;
+	{
+		std::ifstream c("/proc/self/cgroup");
+		for (std::string l; std::getline(c, l);)
+			if (l.compare(0, 3, "0::") == 0) own = l.substr(3);
+	}
+	if (mnt.empty()) return "/sys/fs/cgroup/banana-game";
+	if (own.empty() || own == "/") return mnt + "/banana-game";
+	return mnt + own + "/banana-game";
+}
+
+// the Home button's key codes (hw.conf HW_HOME_KEY, comma-separated; the pad's BTN_MODE when it names none)
+static std::vector<int> homeKeyCodes()
+{
+	std::vector<int> v;
+	const std::string hk = getConfValue("/etc/banana/hw.conf", "HW_HOME_KEY", "316");
+	for (size_t a = 0; a <= hk.size(); )
+	{
+		size_t b = hk.find(',', a);
+		if (b == std::string::npos) b = hk.size();
+		const int c = atoi(hk.substr(a, b - a).c_str());
+		if (c > 0) v.push_back(c);
+		a = b + 1;
+	}
+	if (v.empty()) v.push_back(1);
+	return v;
+}
+
+static bool fadeTransitions(SoftBackend& be) { return be.staged(0) || be.staged(1) || rnds::themeFiles.transitions == "fade"; }
+
+static void grabScreens(SoftBackend& be, std::vector<uint32_t>* pic)
+{
+	for (int sc = 0; sc < 2; sc++) pic[sc].assign(be.pixels(sc), be.pixels(sc) + (size_t)be.screenWidth(sc) * be.screenHeight(sc));
+}
+
+static inline uint32_t lerpPx(uint32_t a, uint32_t b, uint32_t k)	// k 0..256 of b
+{
+	uint32_t rb = ((a & 0xff00ffu) * (256 - k) + (b & 0xff00ffu) * k) >> 8;
+	uint32_t g = ((a & 0x00ff00u) * (256 - k) + (b & 0x00ff00u) * k) >> 8;
+	return 0xff000000u | (rb & 0xff00ffu) | (g & 0x00ff00u);
+}
+
+static inline float easeInOutF(float t) { t = std::min(1.0f, std::max(0.0f, t)); return t < 0.5f ? 4 * t * t * t : 1 - std::pow(-2 * t + 2, 3.0f) / 2; }
+
+// both screens t (0..1) of the way from a to b (null: black)
+static void mixScreens(SoftBackend& be, const std::vector<uint32_t>* a, const std::vector<uint32_t>* b, float t)
+{
+	const uint32_t k = (uint32_t)std::lround(std::min(1.0f, std::max(0.0f, t)) * 256);
+	for (int sc = 0; sc < 2; sc++)
+	{
+		const size_t n = (size_t)be.screenWidth(sc) * be.screenHeight(sc);
+		uint32_t* d = be.screenPixels(sc);
+		const uint32_t* pa = a && a[sc].size() == n ? a[sc].data() : nullptr;
+		const uint32_t* pb = b && b[sc].size() == n ? b[sc].data() : nullptr;
+		for (size_t i = 0; i < n; i++) d[i] = lerpPx(pa ? pa[i] : 0xff000000u, pb ? pb[i] : 0xff000000u, k);
+	}
+}
+
+// the first boot's arrival in the fades' look, the setup's opening: the boot animation's last frame goes dark, a ring
+// of the accent opens from the middle of the top screen and the banana springs out of it, "BananaOS" is written in
+// under it from left to right, a line of the accent grows under the name, and on the bottom screen the words that say
+// what comes next rise in. It holds, lifts and fades, and the setup comes in after it. Everything is worked out from
+// the time alone (the headless "trans arrival" draws the same frames); nothing in it loops.
+static constexpr double ARRIVAL_DARK = 260, ARRIVAL_LOGO = 220, ARRIVAL_WORD = 820, ARRIVAL_LINE = 1300, ARRIVAL_TAG = 1500,
+	ARRIVAL_STILL = 2100, ARRIVAL_HOLD = 3300, ARRIVAL_END = 3800;
+struct IntroSprite { int w = 0, h = 0; std::vector<uint32_t> px; };	// (ARGB, straight alpha)
+struct Intro
+{
+	IntroSprite logo, word, tag, sub;
+	uint32_t accent = 0xf2b632;
+	bool loaded = false;
+};
+// what a card drew on the top screen, cut to its lit box: light on black, its brightness its alpha
+static IntroSprite introCut(const std::vector<uint32_t>& pic, int W, int H, int y0, int y1)
+{
+	IntroSprite sp;
+	int x0 = W, x1 = -1, top = H, bot = -1;
+	y0 = std::max(0, y0); y1 = std::min(H, y1);
+	for (int y = y0; y < y1; y++)
+		for (int x = 0; x < W; x++)
+			if (pic[(size_t)y * W + x] & 0xf0f0f0u) { x0 = std::min(x0, x); x1 = std::max(x1, x); top = std::min(top, y); bot = std::max(bot, y); }
+	if (x1 < x0) return sp;
+	sp.w = x1 - x0 + 1; sp.h = bot - top + 1;
+	sp.px.resize((size_t)sp.w * sp.h);
+	for (int y = 0; y < sp.h; y++)
+		for (int x = 0; x < sp.w; x++)
+		{
+			const uint32_t c = pic[(size_t)(top + y) * W + x0 + x];
+			const uint32_t m = std::max((c >> 16) & 255, std::max((c >> 8) & 255, c & 255));
+			// (the colour at full strength, the brightness as the alpha: it mixes over anything)
+			auto full = [&](uint32_t v) { return m ? std::min(255u, v * 255 / m) : 0u; };
+			sp.px[(size_t)y * sp.w + x] = (m << 24) | (full((c >> 16) & 255) << 16) | (full((c >> 8) & 255) << 8) | full(c & 255);
+		}
+	return sp;
+}
+static void introLoad(Intro& in, SoftBackend& be, Settings& sv, const std::string& logoPng)
+{
+	if (in.loaded) return;
+	in.loaded = true;
+	in.accent = rnds::accent.base & 0xffffff;
+	const int W = be.screenWidth(0), H = be.screenHeight(0);
+	std::vector<uint32_t> pic[2];
+	sv.renderCard("BananaOS", "", 200, 46);
+	grabScreens(be, pic);
+	in.word = introCut(pic[0], W, H, 0, H);
+	sv.renderCard("Welcome", "Let's get you set up", 190, 30);
+	grabScreens(be, pic);
+	// (the card's two lines: the gap between them found by its dark rows)
+	{
+		std::vector<bool> lit(H, false);
+		for (int y = 0; y < H; y++) for (int x = 0; x < W && !lit[y]; x++) if (pic[0][(size_t)y * W + x] & 0xf0f0f0u) lit[y] = true;
+		int first = 0; while (first < H && !lit[first]) first++;
+		int gap = first; while (gap < H && lit[gap]) gap++;
+		in.tag = introCut(pic[0], W, H, first, gap);
+		in.sub = introCut(pic[0], W, H, gap, H);
+	}
+	const rnds::Bitmap b = rnds::decodeFile(logoPng);
+	if (!b.empty() && !b.alpha)
+	{
+		in.logo.w = b.w; in.logo.h = b.h; in.logo.px.resize((size_t)b.w * b.h);
+		for (size_t i = 0; i < in.logo.px.size(); i++)
+			in.logo.px[i] = ((uint32_t)b.px[i * 4 + 3] << 24) | ((uint32_t)b.px[i * 4] << 16) | ((uint32_t)b.px[i * 4 + 1] << 8) | b.px[i * 4 + 2];
+	}
+	be.invalidate();
+}
+// a sprite onto a screen: its middle at (cx, cy), scaled (nearest: the banana is pixel art), at strength k (0..1), and
+// only what is left of wipeX (a soft edge of `soft` px: the name written in)
+static void introDraw(uint32_t* d, int W, int H, const IntroSprite& sp, float cx, float cy, float scale, float k, float wipeX = 1e9f, float soft = 1)
+{
+	if (sp.px.empty() || k <= 0 || scale <= 0) return;
+	const float w = sp.w * scale, h = sp.h * scale, x0 = cx - w / 2, y0 = cy - h / 2;
+	const int ax = std::max(0, (int)std::floor(x0)), bx = std::min(W, (int)std::ceil(x0 + w)), ay = std::max(0, (int)std::floor(y0)), by = std::min(H, (int)std::ceil(y0 + h));
+	for (int y = ay; y < by; y++)
+	{
+		const int sy = std::min(sp.h - 1, std::max(0, (int)((y + 0.5f - y0) / scale)));
+		for (int x = ax; x < bx; x++)
+		{
+			float kk = k;
+			if (x > wipeX - soft) { kk *= std::max(0.0f, (wipeX - x) / soft); if (kk <= 0) break; }
+			const int sx = std::min(sp.w - 1, std::max(0, (int)((x + 0.5f - x0) / scale)));
+			const uint32_t c = sp.px[(size_t)sy * sp.w + sx];
+			const uint32_t a = (uint32_t)((c >> 24) * kk * 256 / 255);
+			if (a) { uint32_t& o = d[(size_t)y * W + x]; o = lerpPx(o, c, std::min(256u, a)); }
+		}
+	}
+}
+static inline float easeOutF(float t) { t = std::min(1.0f, std::max(0.0f, t)); return 1 - (1 - t) * (1 - t) * (1 - t); }
+static void arrivalFrame(SoftBackend& be, const std::vector<uint32_t>* boot, const Intro& in, double t)
+{
+	// the way out: everything lifts a little and goes dark
+	const float out = t <= ARRIVAL_HOLD ? 0 : easeInOutF((float)((t - ARRIVAL_HOLD) / (ARRIVAL_END - ARRIVAL_HOLD)));
+	for (int sc = 0; sc < 2; sc++)
+	{
+		const int W = be.screenWidth(sc), H = be.screenHeight(sc);
+		const size_t n = (size_t)W * H;
+		uint32_t* d = be.screenPixels(sc);
+		// the boot animation's last frame, going dark
+		const uint32_t kb = (uint32_t)std::lround((1 - easeInOutF((float)(t / ARRIVAL_DARK))) * 256);
+		if (kb && boot[sc].size() == n) for (size_t i = 0; i < n; i++) d[i] = lerpPx(0xff000000u, boot[sc][i], kb);
+		else std::fill(d, d + n, 0xff000000u);
+		const float lift = -out * H * 0.035f, vis = 1 - out;
+		if (sc == 0)
+		{
+			const float cx = W / 2.0f, cy = H * 0.40f + lift;
+			const float big = std::max(1.0f, std::round(H * 0.28f / std::max(1, in.logo.h)));	// (whole pixels of the banana's)
+			// the ring: opens from the middle and thins out as it goes
+			const float rt = (float)((t - ARRIVAL_LOGO + 60) / 760);
+			if (rt > 0 && rt < 1)
+			{
+				const float r = easeOutF(rt) * H * 0.46f, th = std::max(2.0f, H * 0.012f * (1 - rt)), ka = (1 - rt) * (1 - rt) * 0.85f * vis;
+				const int y0 = std::max(0, (int)(cy - r - th - 2)), y1 = std::min(H, (int)(cy + r + th + 2));
+				const uint32_t ac = 0xff000000u | in.accent;
+				for (int y = y0; y < y1; y++)
+				{
+					const float dy = y + 0.5f - cy, span2 = (r + th + 1) * (r + th + 1) - dy * dy;
+					if (span2 <= 0) continue;
+					const float span = std::sqrt(span2);
+					const int xa = std::max(0, (int)(cx - span)), xb = std::min(W, (int)(cx + span) + 1);
+					for (int x = xa; x < xb; x++)
+					{
+						const float dd = std::fabs(std::hypot(x + 0.5f - cx, dy) - r);
+						if (dd >= th) continue;
+						const float c = std::min(1.0f, th - dd) * ka;
+						uint32_t& o = d[(size_t)y * W + x];
+						o = lerpPx(o, ac, (uint32_t)(c * 256));
+					}
+				}
+			}
+			// the banana: springs out past its size and settles, then floats a hair
+			const float lt = (float)((t - ARRIVAL_LOGO) / 620);
+			if (lt > 0)
+			{
+				const float a = 8.5f * std::min(1.0f, lt);
+				const float spring = lt >= 1 ? 1 : 1 - std::exp(-a) * std::cos(a * 1.25f);
+				const float bob = t > ARRIVAL_STILL ? 0 : std::sin((float)(t - ARRIVAL_LOGO) / 420.0f) * H * 0.004f * (float)std::min(1.0, (ARRIVAL_STILL - t) / 400);
+				introDraw(d, W, H, in.logo, cx, cy + bob, big * (0.35f + 0.65f * spring), std::min(1.0f, lt * 4) * vis);
+			}
+			// the name, written in from the left as it rises
+			const float wt = (float)((t - ARRIVAL_WORD) / 560);
+			const float wy = H * 0.40f + big * in.logo.h / 2 + H * 0.09f + lift;
+			if (wt > 0)
+			{
+				const float e = easeOutF(wt), left = cx - in.word.w, soft = in.word.w * 0.36f;
+				introDraw(d, W, H, in.word, cx, wy + (1 - e) * H * 0.02f, 2, vis, wt >= 1 ? 1e9f : left + (in.word.w * 2 + soft) * e, soft);
+			}
+			// the line under it, from its middle outwards
+			const float gt = (float)((t - ARRIVAL_LINE) / 520);
+			if (gt > 0)
+			{
+				const float half = easeOutF(gt) * in.word.w, ly = wy + in.word.h + H * 0.03f, lh = std::max(2.0f, std::round(H * 0.004f));
+				const uint32_t ac = 0xff000000u | in.accent, ka = (uint32_t)(vis * 256);
+				for (int y = std::max(0, (int)ly); y < std::min(H, (int)(ly + lh)); y++)
+					for (int x = std::max(0, (int)(cx - half)); x < std::min(W, (int)(cx + half)); x++) { uint32_t& o = d[(size_t)y * W + x]; o = lerpPx(o, ac, ka); }
+			}
+		}
+		else
+		{
+			// the bottom screen: what comes next, one line after the other
+			const float cx = W / 2.0f, cy = H * 0.46f + lift;
+			const float a = easeOutF((float)((t - ARRIVAL_TAG) / 520)), b = easeOutF((float)((t - ARRIVAL_TAG - 180) / 520));
+			if (a > 0) introDraw(d, W, H, in.tag, cx, cy + (1 - a) * H * 0.03f, 2, a * vis);
+			if (b > 0) introDraw(d, W, H, in.sub, cx, cy + in.tag.h + H * 0.06f + (1 - b) * H * 0.03f, 2, b * vis);
+		}
+	}
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
+	if (o.sw[0] > 0) be.setScreens(o.sw[0], o.sh[0], o.sw[1], o.sh[1]);	// (--screens: the AYN Thor's shapes)
 	std::string layout = themePath(theme);
 	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", o.h / 480.0f)
 		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, o.h / 480.0f, o.assets + "/fonts", o.banana + "/fonts")
@@ -857,16 +1160,20 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	double now = 100000;
 	std::stringstream ss(o.script);
 	std::string cmd;
+	std::string markShelf, markPath;	// (the script's mark)
 	auto settle = [&] { ui.update(now); ui.finishWork(); ui.update(now); };
 	auto save = [&](int s, const std::string& path)
 	{
-		std::vector<uint8_t> rgb((size_t)o.w * o.h * 3);
+		const int w = be.screenWidth(s), h = be.screenHeight(s);
+		std::vector<uint8_t> rgb((size_t)w * h * 3);
 		const uint32_t* p = be.pixels(s);
-		for (size_t i = 0; i < (size_t)o.w * o.h; i++) { rgb[i * 3] = (p[i] >> 16) & 255; rgb[i * 3 + 1] = (p[i] >> 8) & 255; rgb[i * 3 + 2] = p[i] & 255; }
-		return stbi_write_png(path.c_str(), o.w, o.h, 3, rgb.data(), o.w * 3) != 0;
+		for (size_t i = 0; i < (size_t)w * h; i++) { rgb[i * 3] = (p[i] >> 16) & 255; rgb[i * 3 + 1] = (p[i] >> 8) & 255; rgb[i * 3 + 2] = p[i] & 255; }
+		return stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3) != 0;
 	};
 	ui.setHome(0);
+	Settings::useSystemsList(o.systems);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.chrome = [&ui](int sc) { if (auto* lm = dynamic_cast<LayoutMenu*>(&ui)) lm->renderChrome("settings", sc); };
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -906,6 +1213,24 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		// mark: the game the menu is on as one running (its shelf and its file, what a launch keeps); findgame: found
+		// again as the Home menu does, the menu put on it; rescan: the card read again meanwhile
+		else if (op == "mark")
+		{
+			const auto& sh = lib.shelf(ui.systemIndex());
+			markShelf = sh.def.id;
+			markPath = ui.gameIndex() >= 0 && ui.gameIndex() < (int)sh.games.size() ? sh.games[ui.gameIndex()].path : "";
+			logf("mark: shelf %s, %s", markShelf.c_str(), markPath.c_str());
+		}
+		else if (op == "findgame")
+		{
+			const int at = findGame(lib, markShelf, markPath);
+			if (at >= 0) ui.setLibrary(lib.currentShelf(), at);
+			else ui.setHome(0);
+			if (at < 0) logf("findgame: gone");
+			else logf("findgame: shelf %s, game %d, %s", lib.shelf(lib.currentShelf()).def.id.c_str(), at, lib.shelf(lib.currentShelf()).games[at].path.c_str());
+		}
+		else if (op == "rescan") { lib.scan(); ui.dataChanged(); logf("rescan: %d shelves", lib.systemCount()); }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
@@ -917,6 +1242,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
 		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
+		else if (op == "online") { cs >> lib.testOnline; be.invalidate(); }	// online <0|1>: Wi-Fi connected or not, from now on
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -941,7 +1267,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				const std::string rx = rocknixSystem(lib.systemOf(ui.gameIndex()));
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds" && rx.empty(), key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped, rx);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -988,6 +1315,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
 		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
+		else if (op == "quick") { std::string rom; std::getline(cs >> std::ws, rom); if (!rom.empty()) settings.gameRom(rom); openPage(settings, "quick"); logf("quick open"); }	// quick [rom]: the quick menu
+		else if (op == "pcgames") { const bool ok = openPage(settings, "pcgames"); logf("pcgames %s", ok ? "open" : "no hub"); }	// the PC games hub
+		else if (op == "pcstate") logf("pcstate: %s", settings.pcState().c_str());
+		else if (op == "quickstate") logf("quickstate: %s", settings.quickState().c_str());
+		else if (op == "paused") { std::getline(cs >> std::ws, rnds::pausedGame); be.invalidate(); }	// paused [title]: a game behind the menu
+		else if (op == "section") { std::string sec; std::getline(cs >> std::ws, sec); if (!settings.isOpen()) settings.open(); settings.openSection(sec); logf("section %s open", sec.c_str()); }	// section <name>: a settings page
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
 		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
@@ -1008,7 +1341,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!loaded)
 			{
 				Splash sp;
-				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h) || !ar.load(o.splash, o.w, o.h)) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf") || !ar.load(o.splash, o.w, o.h)) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
 				ar.setStart(be.pixels(0), be.pixels(1));
 				settings.renderCard("Welcome to", "", 174, 26);
@@ -1133,6 +1466,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
+			settings.gameHome = getenv("BANANA_HOME_KEY") != nullptr;
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
 			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
@@ -1318,6 +1652,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			const bool changed = settings.gameButton(code, now);
 			logf("gbutton %s: %s view %s", b.c_str(), changed ? "switched" : "nothing", settings.gamePanelView().c_str());
 		}
+		else if (op == "settle") settings.settle();	// settle: the rows' and tiles' glide at rest (a still picture of the picked row)
+		else if (op == "gdown")
+		{
+			// gdown <x> <y>: a finger put down on the game panel and held (px of a 640x480 panel): the pressed tile's look
+			float x = 0, y = 0;
+			cs >> x >> y;
+			settings.gameTouch(x * o.h / 480.0f, y * o.h / 480.0f, true);
+		}
 		else if (op == "gtouch")
 		{
 			// gtouch <x> <y>: a tap on the game panel, in px of a 640x480 panel
@@ -1389,10 +1731,33 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> name >> t >> ready;
 			static Splash sp;
 			static bool loaded = false;
-			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf"))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 			sp.draw(be.canvas(0), be.canvas(1), t, ready != 0);
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
+		}
+		else if (op == "trans")
+		{
+			// trans <kind> <name> <ms>: a frame of the theme's fades (fadeTransitions): game (black to the menu, a game
+			// ended), boot (the boot animation's end to the menu), arrival (the first boot's), outro (the menu to black)
+			std::string kind, name; double t = 0;
+			cs >> kind >> name >> t;
+			std::vector<uint32_t> menu[2], other[2], caption[2];
+			settle(); be.invalidate(); ui.render(); grabScreens(be, menu);
+			if (kind == "boot" || kind == "arrival")
+			{
+				Splash sp;
+				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf")) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
+				grabScreens(be, other);
+			}
+			if (kind == "arrival") { static Intro intro; introLoad(intro, be, settings, o.banana + "/banana-48.png"); arrivalFrame(be, other, intro, t); }
+			else if (kind == "game") mixScreens(be, nullptr, menu, easeInOutF((float)(t / 220)));
+			else if (kind == "boot") mixScreens(be, other, menu, easeInOutF((float)(t / 260)));
+			else if (kind == "outro") mixScreens(be, menu, nullptr, easeInOutF((float)(t / 200)));
+			else { logf("trans: no %s", kind.c_str()); return 2; }
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("trans %s %s at %.0f ms (fades %d)", kind.c_str(), name.c_str(), t, fadeTransitions(be) ? 1 : 0);
 		}
 		else if (op == "outro")
 		{
@@ -1401,7 +1766,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> name >> t;
 			static Splash sp;
 			static bool loaded = false;
-			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h, o.assets + "/fonts/PixelifySans-Regular.ttf"))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
 			sp.onCue = [](const std::string& n) { logf("outro cue %s", n.c_str()); };
 			sp.drawOutro(be.canvas(0), be.canvas(1), t);
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
@@ -1540,7 +1905,7 @@ static Splash gSplash;
 static void playSplash(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, bool on,
 	std::atomic<bool>& ready, Sound& sound, int sig)
 {
-	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height()))
+	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height(), o.assets + "/fonts/PixelifySans-Regular.ttf"))
 	{
 		while (!ready) usleep(2000);
 		return;
@@ -1649,12 +2014,54 @@ struct Iris
 	}
 };
 
+static void fadeSteps(Display& disp, SoftBackend& be, const std::vector<uint32_t>* pic, int from, int to, double ms);
+
+// the theme's fade (fadeTransitions): both screens from a to b (null: black) over ms, eased, a frame each refresh; b is
+// left on the screens and the next frame is drawn in full
+static void crossFade(Display& disp, SoftBackend& be, const std::vector<uint32_t>* a, const std::vector<uint32_t>* b, double ms)
+{
+	const double t0 = nowMs();
+	for (;;)
+	{
+		double p = (nowMs() - t0) / ms;
+		if (p >= 1) break;
+		mixScreens(be, a, b, easeInOutF((float)p));
+		showFrame(disp, be, -1);
+	}
+	mixScreens(be, a, b, 1);
+	showFrame(disp, be, -1);
+	be.invalidate();
+}
+
+// the menu's first frame as it will be in a moment, drawn now and taken (the screens put back as they were)
+static void menuFrame(SoftBackend& be, Menu& ui, std::vector<uint32_t>* pic)
+{
+	std::vector<uint32_t> was[2];
+	grabScreens(be, was);
+	ui.update(nowMs() + 100);
+	ui.finishWork();
+	be.invalidate();
+	ui.render();
+	grabScreens(be, pic);
+	for (int sc = 0; sc < 2; sc++) std::copy(was[sc].begin(), was[sc].end(), be.screenPixels(sc));
+}
+
 // the splash hands over to the menu through the iris: closing over the splash's last frame to black, holding, then
 // opening on the menu
 static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 {
 	if (!gSplash.played()) return;
 	Iris iris(disp, be);
+	if (fadeTransitions(be))
+	{
+		// the theme's fades (and screens of another shape than the canvas, the AYN Thor's, where the iris would be the
+		// canvas's): the boot animation's frame as it is cross-fades into the menu's first
+		std::vector<uint32_t> was[2], menu[2];
+		grabScreens(be, was);
+		menuFrame(be, ui, menu);
+		crossFade(disp, be, was, menu, 260);
+		return;
+	}
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 	// the menu's first frame drawn now, before the circle closes (its first draw takes ~130 ms: the glyphs and boxes
 	// made; with the splash's last frame still and on screen that wait doesn't show), the splash's put back
@@ -1717,9 +2124,57 @@ static void grab(SoftBackend& be, std::vector<uint32_t>* pic)
 
 // The first boot's arrival (arrival.h), from the boot animation's last frame to black. A or START skips to the setup;
 // a signal (a shutdown, a wake from sleep) ends it too. Its frame times go to the log.
+// the arrival in the theme's fades (arrivalFrame): no pictures needed, any screen shape. A or START skips it (to black);
+// a shutdown ends it; the other signals go back in the pipe for the menu's loop
+static void playArrivalFade(Display& disp, SoftBackend& be, Input& input, Sound& sound, Settings& sv, int sig, const std::function<void()>& frameTick, const std::string& logoPng)
+{
+	std::vector<uint32_t> boot[2];
+	grabScreens(be, boot);
+	Intro intro;
+	introLoad(intro, be, sv, logoPng);
+	sound.play("ready");
+	const double t0 = nowMs();
+	bool skip = false, interrupted = false;
+	std::string held;
+	int frames = 0;
+	while (!skip && !interrupted)
+	{
+		double t = nowMs() - t0;
+		if (t >= ARRIVAL_END) break;
+		pollfd fds[40];
+		int in[32], ni = input.fds(in, 32), nf = 0;
+		fds[nf++] = { sig, POLLIN, 0 };
+		for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+		if (poll(fds, nf, 0) > 0)
+		{
+			char c;
+			if (fds[0].revents & POLLIN)
+				while (read(sig, &c, 1) == 1) { held.push_back(c); if (c == SIGTERM || c == SIGINT) interrupted = true; }
+			for (int i = 1; i < nf; i++)
+				if (fds[i].revents & POLLIN)
+					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
+		}
+		if (t > ARRIVAL_STILL && t < ARRIVAL_HOLD) { usleep(4000); continue; }	// (still: nothing to draw)
+		frameTick();
+		arrivalFrame(be, boot, intro, t);
+		showFrame(disp, be, -1);
+		frames++;
+	}
+	if (!held.empty() && write(sigPipe[1], held.data(), held.size()) < 0) {}
+	logf("arrival (fades): %s after %.0f ms, %d frames", skip ? "skipped" : interrupted ? "interrupted" : "played", nowMs() - t0, frames);
+	if (skip || interrupted)
+	{
+		std::vector<uint32_t> pic[2];
+		grabScreens(be, pic);
+		crossFade(disp, be, pic, nullptr, 200);
+	}
+	be.invalidate();
+}
+
 static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input& input, Sound& sound, Settings& sv, int sig,
 	const std::function<void()>& frameTick)
 {
+	if (fadeTransitions(be)) { playArrivalFade(disp, be, input, sound, sv, sig, frameTick, o.banana + "/banana-48.png"); return; }
 	Arrival a;
 	if (!a.load(o.splash, be.width(), be.height())) { logf("arrival: no pictures in %s", o.splash.c_str()); return; }
 	a.setStart(be.pixels(0), be.pixels(1));
@@ -1798,6 +2253,13 @@ static void fadeInSettings(Display& disp, SoftBackend& be, Settings& sv)
 	be.invalidate();
 	sv.update(nowMs());
 	sv.render();
+	if (fadeTransitions(be))
+	{
+		std::vector<uint32_t> pic[2];
+		grabScreens(be, pic);
+		crossFade(disp, be, nullptr, pic, 260);
+		return;
+	}
 	std::vector<uint32_t> pic[2];
 	grab(be, pic);
 	fadeSteps(disp, be, pic, 0, 4, 400);
@@ -1809,6 +2271,22 @@ static void fadeInSettings(Display& disp, SoftBackend& be, Settings& sv)
 static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv, Sound& sound)
 {
 	std::vector<uint32_t> pic[2], card[2];
+	if (fadeTransitions(be))
+	{
+		// the theme's fades: the setup out, the Welcome card in, held, and the menu in over it
+		grabScreens(be, pic);
+		crossFade(disp, be, pic, nullptr, 220);
+		sv.renderCard("Welcome", sv.ownerName(), 196, 30);
+		grabScreens(be, card);
+		sound.play("ready");
+		crossFade(disp, be, nullptr, card, 300);
+		const double hold = nowMs() + 1200;
+		std::vector<uint32_t> menu[2];
+		menuFrame(be, ui, menu);
+		while (nowMs() < hold) usleep(5000);
+		crossFade(disp, be, card, menu, 300);
+		return;
+	}
 	grab(be, pic);
 	fadeSteps(disp, be, pic, 4, 0, 320);
 	usleep(250000);
@@ -1834,14 +2312,28 @@ static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv
 static void playOutro(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, Sound& sound)
 {
 	Splash sp;
-	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
+	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height(), o.assets + "/fonts/PixelifySans-Regular.ttf")) return;
 	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
 	Iris iris(disp, be);
-	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
-	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
-	sp.drawOutro(first[0].data(), first[1].data(), 0);
-	iris.close(was, 280);
-	iris.open(first, nowMs() + Iris::HOLD, 300);
+	if (fadeTransitions(be))
+	{
+		// the theme's fades: the menu cross-fades into the shutdown's first frame (the OLED boot's: black)
+		std::vector<uint32_t> was[2], first[2];
+		grabScreens(be, was);
+		sp.drawOutro(be.canvas(0), be.canvas(1), 0);
+		grabScreens(be, first);
+		crossFade(disp, be, was, first, 200);
+	}
+	// (screens of another shape than the canvas (the AYN Thor's): their pixels aren't the canvas's, so no iris over
+	// them; the OLED boot's shutdown starts from black)
+	else if (!be.staged(0) && !be.staged(1))
+	{
+		std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
+		std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
+		sp.drawOutro(first[0].data(), first[1].data(), 0);
+		iris.close(was, 280);
+		iris.open(first, nowMs() + Iris::HOLD, 300);
+	}
 	const double t0 = nowMs();
 	for (;;)
 	{
@@ -1857,6 +2349,17 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 // does after the boot animation
 static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 {
+	if (fadeTransitions(be))
+	{
+		// the theme's fades (and the AYN Thor's screens, where the iris was drawn on the canvas, not the screens): the
+		// menu comes up out of black in 220 ms
+		std::vector<uint32_t> menu[2];
+		for (int sc = 0; sc < 2; sc++) std::fill(be.screenPixels(sc), be.screenPixels(sc) + (size_t)be.screenWidth(sc) * be.screenHeight(sc), 0xff000000u);
+		showFrame(disp, be, -1);
+		menuFrame(be, ui, menu);
+		crossFade(disp, be, nullptr, menu, 220);
+		return;
+	}
 	Iris iris(disp, be);
 	for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + iris.n, 0xff000000u);
 	be.invalidate();
@@ -2030,6 +2533,29 @@ struct FrameStats
 	}
 };
 
+// the buttons and touchscreens; on panels the canvas is fitted to (the AYN Thor, panelfit.h) a touch goes through the
+// panel's fit to the canvas
+static void openInput(Input& input, const Display& disp, const SoftBackend& be, const std::string& touch)
+{
+#ifndef __ANDROID__
+	// (the Home button read from its device even when it is a key the menu has no use for otherwise: the AYN key's
+	// KEY_F24 on its own gpio-keys device)
+	if (getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY"))
+		for (int c : homeKeyCodes()) inputHomeCode(c);
+#endif
+	input.open(touch, disp.width(), disp.height());
+	if (disp.fitted() || be.staged(0) || be.staged(1))
+		input.mapTouch([&disp, &be](int s, float nx, float ny, bool wide, float& x, float& y)
+		{
+			// the panel's point on the screen's canvas, then (a staged screen) on the menu's
+			float cx, cy;
+			if (!disp.touchToCanvas(s, nx, ny, wide, cx, cy)) return false;
+			if (!be.staged(s)) { x = cx; y = cy; return true; }
+			// (a theme that lays its pages out on the whole screen: a touch outside the canvas counts too)
+			return be.screenToCanvas(s, cx, cy, x, y) || rnds::themeFiles.setLayout == "screen";
+		});
+}
+
 int main(int argc, char** argv)
 {
 	Options o;
@@ -2063,6 +2589,8 @@ int main(int argc, char** argv)
 		else if (a == "--script") o.script = next();
 		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
+		// --screens 1920x1080,1240x1080: each screen its own shape, the --size canvas staged in it (headless)
+		else if (a == "--screens") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d,%dx%d", &o.sw[0], &o.sh[0], &o.sw[1], &o.sh[1]) != 4) { logf("bad screens"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
 
@@ -2106,7 +2634,8 @@ int main(int argc, char** argv)
 	// another stage)
 	{
 		std::string v, stage = "Alpha";
-		std::ifstream("/etc/banana/version") >> v;
+		if (const char* tv = getenv("BANANA_VERSION")) v = tv;	// (the tests: as Settings' own)
+		else std::ifstream("/etc/banana/version") >> v;
 		std::ifstream sf("/etc/banana/stage"); std::string st; if (std::getline(sf, st) && !st.empty()) stage = st;
 		if (!v.empty()) rnds::brandNote = stage + " " + v.substr(0, v.find('-'));
 	}
@@ -2144,6 +2673,11 @@ int main(int argc, char** argv)
 		usleep(50000);
 	}
 	SoftBackend be(disp.width(), disp.height());
+	// each screen its own shape (the AYN Thor's): the menu's canvas staged in it, its backgrounds over all of it
+	be.setScreens(disp.screenWidth(0), disp.screenHeight(0), disp.screenWidth(1), disp.screenHeight(1));
+	if (be.staged(0) || be.staged(1))
+		logf("screens %dx%d and %dx%d: the %dx%d menu staged in each", be.screenWidth(0), be.screenHeight(0),
+			be.screenWidth(1), be.screenHeight(1), be.width(), be.height());
 	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
 	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
@@ -2227,18 +2761,22 @@ int main(int argc, char** argv)
 	const bool setupNow = firstSetup || !setupAt.empty();
 
 	Input input;
-	input.open(o.touch, disp.width(), disp.height());
+	openInput(input, disp, be, o.touch);
 	float scale = disp.height() / 480.0f;
+	Settings::useSystemsList(o.systems);
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)
 	settingsView.setSystems(shelfSystems(lib));
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
+	// a layout theme's own layer under the settings' pages (its screens.settings: the status bar, a glow)
+	settingsView.chrome = [&ui](int sc) { if (auto* lm = dynamic_cast<LayoutMenu*>(ui)) lm->renderChrome("settings", sc); };
 	settingsView.setLibraryPaths(o.systems, o.roms);
 	settingsView.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
 	unlink("/run/banana/files.pid");	// (a job of a menu that went away mid-way holds no sleep)
+	unlink("/run/banana/game.held");	// (a menu that went away with its Home menu up: bananad holds no later game for it)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
@@ -2255,6 +2793,7 @@ int main(int argc, char** argv)
 			iris.close(was, Iris::CLOSE);
 		}
 		settingsView.setup(firstSetup || stepBoot, setupAt);
+		if (firstSetup && rnds::themeFiles.transitions == "fade") settingsView.setupComeIn(nowMs());
 		fadeInSettings(disp, be, settingsView);
 		logf("first-time setup (%s%s)", firstSetup ? "first boot" : "again", setupAt.empty() ? "" : (", back on " + setupAt).c_str());
 	}
@@ -2289,6 +2828,8 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	std::string gameRomPath;	// the running game's file (the game panel's save states)
+	// (and the shelf it was started from, its title and its system's mode: what findGame and the Home menu go by)
+	struct { std::string shelf, title, perf; } playing;
 	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
 	nds::Overlay ndsOverlay;	// the DS companion's picture for BananaDS's bottom screen (nds/overlay.h)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
@@ -2423,9 +2964,27 @@ int main(int argc, char** argv)
 	};
 
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
+	// (the Home button over a game: its state, used by the menu's own key handling too; the rest is further down)
+	const bool homeKey = getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY");
+	// (which button it is: hw.conf's HW_HOME_KEY, the kernel's key code; the pad's "mode" button, 316, when it names none.
+	// Several, comma-separated, where the button reaches the menu one of several ways: ROCKNIX's InputPlumber gives it
+	// as its virtual pad's button while it runs, the AYN key's own KEY_F24 (194) without it)
+	const std::vector<int> homeCodes = homeKeyCodes();
+	auto isHome = [&](int code) { return std::find(homeCodes.begin(), homeCodes.end(), code) != homeCodes.end(); };
+	struct { bool on = false, quick = false, resume = false, end = false; pid_t pid = 0; std::string rom, next; double told = 0; } home;
+	std::function<void(const bool&)> mainLoop;	// (the menu's own loop, below: run here until the game is gone back to)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
+		// the Home button over a stopped game: back into it
+		if (home.on && isHome(ev.code)) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
+		// (and bananad's idle timers: it doesn't see the buttons the menu holds for itself over the game, Input::grab,
+		// so game.held's time is the last press or touch, at most once a second)
+		if (home.on && ev.type != InputEvent::RELEASE && ev.type != InputEvent::TOUCH_UP && nowMs() - home.told >= 1000)
+		{
+			home.told = nowMs();
+			utimensat(AT_FDCWD, "/run/banana/game.held", nullptr, 0);
+		}
 		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
@@ -2467,7 +3026,8 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				const std::string rx = rocknixSystem(lib.systemOf(g));
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds" && rx.empty(), key, t.name, t.sort, path, lib.gameAt(g).scraped, rx);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -2549,8 +3109,261 @@ int main(int argc, char** argv)
 	// starts so the emulator sees it as a keyboard plugged in, gone when the game ends (vkbd.h)
 	VirtualKeyboard vkbd;
 	bool keysOn = false;
+	// The Home button (hw.conf HW_HOME=yes: the AYN Thor's, under the bottom screen). A press while a game runs
+	// stops the game where it is (SIGSTOP: nothing is saved, nothing ends) and shows the menu on both screens; a
+	// press again, or the same game picked, goes back into it. Held for three seconds it opens the quick menu on
+	// the bottom screen instead (brightness, speed, the fan, the lights), the game's picture kept on the top one.
+	// Both are a page flip: the menu never gave the display device away (the game draws through a DRM lease), so no
+	// mode is set and no program starts. Another game picked from the menu ends the stopped one first.
+	// The game stopped and let go again. Its launcher's process group alone isn't all of it: a program started inside
+	// the compositor (run-wayland) is in a session of its own and would play on. So the game runs in a control group of
+	// its own (rcS mounts the hierarchy; the child joins /sys/fs/cgroup/banana-game before it starts anything; under
+	// systemd, the menu's unit's group's banana-game: gameCgroup) and the kernel freezes every process in it at once.
+	// Without the hierarchy: SIGSTOP to the launcher's group, as before.
+	// Where the system moves a game's processes into a group of its own (ROCKNIX: runemu.sh starts the emulator in a
+	// scope of games.slice), that group is frozen too: hw.conf's HW_GAME_CGROUP (BANANA_GAME_CGROUP for a test). It is
+	// neither made nor joined here, only frozen and thawed with the menu's own.
+	const std::string GAME_CG = homeKey ? gameCgroup() : "/sys/fs/cgroup/banana-game";
+	const std::string GAME_PROCS = GAME_CG + "/cgroup.procs";
+	const std::string GAME_CG_SYS = !homeKey ? "" : getenv("BANANA_GAME_CGROUP") ? getenv("BANANA_GAME_CGROUP") :
+		getConfValue("/etc/banana/hw.conf", "HW_GAME_CGROUP", "");
+	auto cgWriteIn = [&](const std::string& dir, const char* file, const char* value)
+	{
+		const int f = ::open((dir + "/" + file).c_str(), O_WRONLY | O_CLOEXEC);
+		if (f < 0) return false;
+		const bool ok = ::write(f, value, strlen(value)) == (ssize_t)strlen(value);
+		::close(f);
+		return ok;
+	};
+	auto cgWrite = [&](const char* file, const char* value)
+	{
+		const bool own = cgWriteIn(GAME_CG, file, value);
+		if (!GAME_CG_SYS.empty()) cgWriteIn(GAME_CG_SYS, file, value);
+		return own;
+	};
+	auto gameFreeze = [&](pid_t pid, bool on)
+	{
+		const bool own = cgWriteIn(GAME_CG, "cgroup.freeze", on ? "1" : "0");
+		const bool sys = !GAME_CG_SYS.empty() && cgWriteIn(GAME_CG_SYS, "cgroup.freeze", on ? "1" : "0");
+		// (frozen before the menu draws over it: the kernel says so in cgroup.events, within a few ms)
+		for (const std::string* dir : { &GAME_CG, &GAME_CG_SYS })
+			for (int i = 0; on && (dir == &GAME_CG ? own : sys) && i < 100; i++)
+			{
+				std::ifstream ev(*dir + "/cgroup.events");
+				std::string k; int v = 0; bool frozen = false;
+				while (ev >> k >> v) if (k == "frozen") frozen = v == 1;
+				if (frozen) break;
+				usleep(1000);
+			}
+		if (own)
+		{
+			// (thawed, its launcher's group may still be stopped: bananad stops it for a sleep and leaves a game the
+			// menu holds that way, bananad.c suspend_now)
+			if (!on) kill(-pid, SIGCONT);
+			return;
+		}
+		// (no group of the menu's own: the launcher's process group stopped as well, the system's group or not)
+		kill(-pid, on ? SIGSTOP : SIGCONT);
+	};
+	auto homeMenu = [&](pid_t pid, bool quick)
+	{
+		const double t0 = nowMs();
+		// the quick menu is a sheet on the bottom screen and nothing else: the game goes on, and its top screen is
+		// never touched. On a plane of its own over a game that draws on both panels (1); on the menu's own bottom
+		// screen, over the game panel (2); and only where neither is to be had, the old way: the game stopped and its
+		// bottom panel borrowed (3). The menu proper (0) is over both screens, the game stopped behind it. Under a
+		// compositor (SDL: sway on ROCKNIX) over a game on both outputs, the sheet is a window of the menu's raised over the
+		// game's bottom one (4), the slide composed here as for 2, over a screenshot of what the game had there.
+		const int sw = disp.screenWidth(1), sh = disp.screenHeight(1);
+		std::vector<uint32_t> under;	// (what the sheet slides over, where the menu composes it itself)
+		bool underShot = false;
+#ifndef __ANDROID__
+		// (taken before the sheet's window covers it)
+		if (quick && disp.compositor() && disp.leasedScreen() == 2) underShot = disp.sheetUnder(under);
+#endif
+		const int sheet = !quick ? 0 : disp.sheetOpen() ? (disp.compositor() ? 4 : 1) : disp.leasedScreen() == 0 ? 2 : 3;
+		const bool held = sheet == 0 || sheet == 3;
+		if (sheet >= 2)
+		{
+			if (sheet == 2) under.assign(be.pixels(1), be.pixels(1) + (size_t)sw * sh);
+			else if (sheet == 3 || !underShot) under.assign((size_t)sw * sh, 0xff000000);
+		}
+		if (held) gameFreeze(pid, true);
+		// (what is pressed and touched in the menu is not the game's: it would read it all when it goes on)
+		input.grab(true);
+		// (bananad: a sleep's end leaves this game stopped)
+		if (held) { std::ofstream f("/run/banana/game.held"); f << pid << "\n"; }
+		const int wasBorrowed = disp.borrowed();
+		if (held) disp.borrow(quick ? 2 : 3);
+		// the sheet's way up and down (sheet.h): the plane moved, or the frames composed here
+		auto slide = [&](bool up)
+		{
+			if (!sheet || !disp.isOpen()) return;
+			std::vector<uint32_t> menu, frame;
+			if (sheet >= 2) { menu.assign(be.pixels(1), be.pixels(1) + (size_t)sw * sh); frame.resize((size_t)sw * sh); }
+			const double dur = up ? SHEET_UP_MS : SHEET_DOWN_MS, s0 = nowMs();
+			for (;;)
+			{
+				const double t = std::min(1.0, (nowMs() - s0) / dur);
+				const float shown = up ? sheetUpAt(t) : sheetDownAt(t);
+				if (sheet == 1) { disp.sheetAt(shown); usleep(6000); }
+				else
+				{
+					for (int i = 0; i < 20 && disp.flipPending(); i++) { pollfd pf = { disp.pollFd(), POLLIN, 0 }; if (poll(&pf, 1, 10) > 0) disp.handleEvents(); }
+					sheetFrame(under.data(), menu.data(), sw, sh, shown, frame.data());
+					const uint32_t* scr[2] = { be.pixels(0), frame.data() };
+					Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+					if (!disp.present(scr, dmg)) usleep(4000);
+				}
+				if (t >= 1) break;
+			}
+			be.invalidate();
+		};
+		home.on = true; home.quick = quick; home.resume = home.end = false; home.pid = pid; home.rom = gameRomPath; home.next.clear();
+		home.told = nowMs();
+		// (a layout theme's "paused": the Thor's status bar says which game waits behind the menu)
+		rnds::pausedGame = quick ? "" : playing.title;
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (quick)
+			{
+				settingsView.setVariant(settings["theme"]);
+				openPage(settingsView, "quick");
+			}
+			else
+			{
+				// (on the game, wherever the menu was left the last time it was up over it)
+				ui->dataChanged();
+				const int at = findGame(lib, playing.shelf, gameRomPath);
+				if (at >= 0) ui->setLibrary(lib.currentShelf(), at);
+				else ui->setHome(0);
+			}
+		}
+		rep.key = Key::NONE;
+		be.invalidate();
+		dirty = true; drawn = false;
+		if (held && system("banana-perf ui &") != 0) {}	// (not waited for: the menu is up first)
+		if (sheet)
+		{
+			// (the sheet's picture first, then its way up)
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.render();
+			}
+			if (sheet == 1)
+			{
+				const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+				Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+				disp.present(scr, dmg);
+			}
+			slide(true);
+			dirty = true; drawn = false;
+		}
+		if (sheet == 4) logf("home: the sheet over the game's bottom output, %s", underShot ? "over its picture" : "over black (no picture of it)");
+		logf("home: %s, the %s up in %.0f ms", held ? "the game stopped" : "the game goes on", quick ? "quick menu" : "menu", nowMs() - t0);
+		recordEvent("game", quick ? "quick menu" : "home");
+		if (mainLoop) mainLoop(home.resume);
+		const double t1 = nowMs();
+		if (sheet && !quit && !home.end)
+		{
+			// (down again, as it was last seen: the page drawn once more if it closed itself)
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				if (!settingsView.isOpen()) openPage(settingsView, "quick");
+				settingsView.render();
+			}
+			if (sheet == 1)
+			{
+				const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+				Damage dmg[2] = { Damage(), Damage{ 0, 0, sw, sh } };
+				disp.present(scr, dmg);
+			}
+			slide(false);
+		}
+		disp.sheetClose();
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (settingsView.isOpen()) settingsView.close();
+		}
+		home.on = false;
+		rnds::pausedGame.clear();
+		input.grab(false);
+		if (held && !wasBorrowed) disp.giveBack();
+		if (held) unlink("/run/banana/game.held");
+		rep.key = Key::NONE;
+		if (home.end || quit)
+		{
+			// another game picked, or the menu is going (a shutdown): this one ends, writing its saves
+#ifdef __ANDROID__
+			if (pid > 0)	// (Android: the quick sheet over another app's game, no process of ours to end)
+#endif
+			kill(-pid, SIGTERM);
+			if (held) gameFreeze(pid, false);
+			logf("home: the stopped game ended (%s)", quit ? "the menu is closing" : "another game was picked");
+			return;
+		}
+		{
+			// (the mode the game ran in: its own, else its system's)
+			const std::string gp = settingsView.gamePerf(gameRomPath.substr(gameRomPath.rfind('/') + 1));
+			if (system(("banana-perf " + shellQuote(!gp.empty() ? gp : playing.perf.empty() ? "balanced" : playing.perf) + " &").c_str()) != 0) {}
+		}
+		if (held) gameFreeze(pid, false);
+		be.invalidate();
+		logf("home: back in the game in %.0f ms", nowMs() - t1);
+	};
+	// the Home button while a game runs: its press and release timed (a tap: the menu; three seconds: the quick menu)
+	struct HomeTap
+	{
+		const std::vector<int>* codes = nullptr;	// (the Home button's key codes)
+		double down = 0;
+		int ask = 0;	// 1 the menu, 2 the quick menu
+		void event(const InputEvent& ev)
+		{
+			if (!codes || std::find(codes->begin(), codes->end(), ev.code) == codes->end()) return;
+			if (ev.type == InputEvent::PRESS) down = nowMs();
+			else if (ev.type == InputEvent::RELEASE && down > 0) { down = 0; ask = 1; }
+		}
+		void tick(double now) { if (down > 0 && now - down >= 3000) { down = 0; ask = 2; } }
+		int take() { int a = ask; ask = 0; return a; }
+	};
+	// a game that has both panels (through leaseBoth) and no game panel: only the Home button is the menu's
+	auto homeWait = [&](pid_t pid, int& status)
+	{
+		// (the quick menu's Performance row and its header are this game's: no game panel names it to Settings)
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			settingsView.gameRom(gameRomPath);
+		}
+		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
+		HomeTap tap;
+		tap.codes = &homeCodes;
+		for (;;)
+		{
+			pid_t w = waitpid(pid, &status, WNOHANG);
+			if (w == pid || (w < 0 && errno != EINTR)) break;
+			tap.tick(nowMs());
+			if (int a = tap.take())
+			{
+				homeMenu(pid, a == 2);
+				// (the presses made in the menu aren't the game's Home presses)
+				tap = HomeTap();
+				tap.codes = &homeCodes;
+				continue;
+			}
+			pollfd fds[40];
+			int in[32], ni = input.fds(in, 32), nf = 0;
+			for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+			if (pidFd >= 0) fds[nf++] = { pidFd, POLLIN, 0 };
+			if (poll(fds, nf, tap.down > 0 ? 50 : 1000) <= 0) continue;
+			for (int i = 0; i < ni; i++)
+				if (fds[i].revents & POLLIN) input.read(fds[i].fd, [&](const InputEvent& ev) { tap.event(ev); });
+		}
+		if (pidFd >= 0) ::close(pidFd);
+	};
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
+		HomeTap homeTap;
+		homeTap.codes = &homeCodes;
 		const int panelScreen = 1 - gameScreen;
 		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
@@ -2568,6 +3381,7 @@ int main(int argc, char** argv)
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
+			settingsView.gameHome = homeKey;
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
 		}
@@ -2582,6 +3396,17 @@ int main(int argc, char** argv)
 			pid_t w = waitpid(pid, &status, WNOHANG);
 			if (w == pid || (w < 0 && errno != EINTR)) break;
 			double t = nowMs();
+			homeTap.tick(t);
+			if (int a = homeKey ? homeTap.take() : 0)
+			{
+				// (the quick menu wants the bottom screen: the menu's own already when the panel is there)
+				homeMenu(pid, a == 2);
+				homeTap = HomeTap();
+				homeTap.codes = &homeCodes;
+				bottomIdle.activity(nowMs());
+				want = true;
+				continue;
+			}
 			bottomIdle.tick(t);	// the bottom game panel dims on its own idle timer too (the game is on the other)
 			if (outFd >= 0)
 			{
@@ -2654,7 +3479,7 @@ int main(int argc, char** argv)
 			for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
 			if (outFd >= 0) { outAt = nf; fds[nf++] = { outFd, POLLIN, 0 }; }
 			if (pidFd >= 0) { pidAt = nf; fds[nf++] = { pidFd, POLLIN, 0 }; }
-			if (poll(fds, nf, compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
+			if (poll(fds, nf, compLink.waiting() ? 10 : homeTap.down > 0 ? 50 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
 			if (pidAt >= 0 && (fds[pidAt].revents & POLLIN)) continue;	// it ended: waitpid above
 			if (fds[0].revents & POLLIN) disp.handleEvents();
 			if (outAt >= 0 && (fds[outAt].revents & POLLIN))
@@ -2678,6 +3503,7 @@ int main(int argc, char** argv)
 					{
 						// the buttons are the game's; F and a Companion button (the back button's job by default) also
 						// switch the panel between its menu and the companion
+						if (homeKey && isHome(ev.code)) { homeTap.event(ev); return; }	// (the Home button: the menu's)
 						if (ev.type == InputEvent::PRESS)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2728,9 +3554,51 @@ int main(int argc, char** argv)
 
 	auto runGame = [&](int game)
 	{
-		const SystemDef& sd = lib.systemOf(game);
+		// (a copy: the Home menu over the game can read the card again, and the library's own is gone then)
+		const SystemDef sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
+		if (home.on)
+		{
+			// picked from the menu over a stopped game: that game itself is gone back to; another ends it and starts
+			// once it has ended (through the launch file, as a launch asked for from outside)
+			if (rom != home.rom) { home.end = true; home.next = rom; }
+			home.resume = true;
+			return;
+		}
+#ifdef __ANDROID__
+		// Android: the game is another app, started through an intent from the launch table (android_launch.h). The menu
+		// stays as it is behind it; the Home button brings it back over the game, and the game back (android/launcher)
+		{
+			const std::string gp = settingsView.gamePerf(rom.substr(rom.rfind('/') + 1));
+			std::string page;
+			if (!android::runGame(sd, rom, settings["core." + sd.id], !gp.empty() ? gp : sd.perf, page)) { dirty = true; return; }
+			if (!page.empty())
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.setVariant(settings["theme"]);
+				if (!openPage(settingsView, page)) logf("launch: no page %s", page.c_str());
+				dirty = true;
+				return;
+			}
+			gameRomPath = rom;
+			playing.shelf = lib.shelf(lib.currentShelf()).def.id;
+			playing.title = lib.gameAt(game).title;
+			playing.perf = sd.perf;
+			std::ofstream(o.data + "/last-system") << ui->systemIndex() << "\n";
+			recordEvent("game", "start: %s (%s, by its intent)", playing.title.c_str(), sd.id.c_str());
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.gameRom(gameRomPath);	// (the quick menu's Performance row: this game's)
+			}
+			rep.key = Key::NONE;
+			dirty = true;
+			return;
+		}
+#endif
 		gameRomPath = rom;
+		playing.shelf = lib.shelf(lib.currentShelf()).def.id;
+		playing.title = lib.gameAt(game).title;
+		playing.perf = sd.perf;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
@@ -2760,8 +3628,11 @@ int main(int argc, char** argv)
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
 		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
+		// ROCKNIX's games (run-rocknix) in RetroArch or BananaFront too: the game's window on the top output, the menu's
+		// bottom one kept for the panel, the commands through run-rocknix (ra-netcmd: RetroArch's network commands)
+		const std::string rxEmu = rocknixEmulator(sd, rom);
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
-			sd.run.find("run-bananafront") != std::string::npos ||
+			sd.run.find("run-bananafront") != std::string::npos || rxEmu == "retroarch" || rxEmu == "bananafront" ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
@@ -2908,14 +3779,29 @@ int main(int argc, char** argv)
 				if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			}
 		}
-		if (!panel)
+		// a game that takes both panels, on a handheld with a Home button: it gets them through a lease too (both), so the
+		// menu still has the display device and the buttons when Home is pressed (Settings: home_switch = off for the
+		// way it was, the game opening the display device itself)
+		bool homeLease = false;
+		if (!panel && !ndsPage && homeKey && disp.isOpen() && settings["home_switch"] != "off")
+		{
+			leaseFd = disp.leaseBoth();
+			homeLease = leaseFd >= 0;
+			if (!homeLease) logf("home: no lease of both panels (%s): the game takes the display itself, the Home button is off", strerror(errno));
+		}
+		if (!panel && !homeLease)
 		{
 			input.close();
 			disp.close();
 		}
 		drawn = false;	// the menu is drawn afresh when the panels come back
 		rep.key = Key::NONE;
-		if (system(("banana-perf " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
+		{
+			// the game's own mode (its options' Performance row) over its system's
+			const std::string gp = settingsView.gamePerf(rom.substr(rom.rfind('/') + 1));
+			const std::string perf = !gp.empty() ? gp : sd.perf.empty() ? "balanced" : sd.perf;
+			if (system(("banana-perf " + shellQuote(perf)).c_str()) != 0) {}
+		}
 		// a job of Files' (a download, an unpacking) stops while the game runs (the network, the card and the CPU are the
 		// game's), and goes on after it: banana-fetch's runner and its 7zz, stopped as a group
 		const fetch::Paths fetchPaths = fetch::Paths::fromEnv(o.data);
@@ -2923,6 +3809,12 @@ int main(int argc, char** argv)
 		const char* PROGRESS = "/run/banana/ra-progress";	// "<unlocked> <total>", from the emulator (docs/EMULATORS.md)
 		unlink(PROGRESS);
 		double start = nowMs();
+		if (homeKey)
+		{
+			// the game's control group (gameFreeze): made here, thawed in case the last game ended frozen
+			if (mkdir(GAME_CG.c_str(), 0755) != 0 && errno != EEXIST) logf("home: no control group for the game (%s: %s): stopped by signals", GAME_CG.c_str(), strerror(errno));
+			cgWrite("cgroup.freeze", "0");
+		}
 		pid_t pid = fork();
 		// The parent lets go of its copy of the lease right away, whether the fork worked or not: the child has its own
 		// through the fd table it inherited, and a fork that failed (pid < 0) would otherwise leak the lease fd, which
@@ -2933,6 +3825,12 @@ int main(int argc, char** argv)
 		if (pid == 0)
 		{
 			setsid();
+			if (homeKey)
+			{
+				// (into the game's control group before anything is started: every process of the game is born in it)
+				const int cg = ::open(GAME_PROCS.c_str(), O_WRONLY);
+				if (cg >= 0) { if (::write(cg, "0", 1) != 1) {} ::close(cg); }
+			}
 			signal(SIGPIPE, SIG_DFL);
 			sigset_t none;
 			sigemptyset(&none);
@@ -2940,6 +3838,13 @@ int main(int argc, char** argv)
 			setenv("BANANA_ROM", rom.c_str(), 1);
 			setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
 			setenv("BANANA_RA_PROGRESS", PROGRESS, 1);
+			if (homeLease && !disp.compositor())	// (a compositor's windows: the game is its client, nothing to hand over)
+			{
+				// (the shim hands the lease to whatever opens the display device: RetroArch, a compositor, an emulator)
+				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
+				setenv("BANANA_HOME_LEASE", "1", 1);
+				if (access("/usr/lib/banana/banana-leaseshim.so", R_OK) == 0) setenv("LD_PRELOAD", "/usr/lib/banana/banana-leaseshim.so", 1);
+			}
 			if (panel)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
@@ -2958,14 +3863,16 @@ int main(int argc, char** argv)
 		int status = 0;
 		if (pid > 0)
 		{
+			unlink("/run/banana/game.held");	// (an older game's, left behind: this one is not held)
 			std::ofstream f("/run/banana/game.pid");	// bananad: the game to pause before a sleep
 			f << pid;
 			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
 			f << "\n";
 			if (panel)
 			{
-				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
+				gamePanel(pid, status, gameScreen, cmdFd, outFd, playing.title, sd.name);
 			}
+			else if (homeLease) homeWait(pid, status);
 			else if (ndsPage)
 			{
 				// the ROM's data and the guide once read (ndsLoad), then the game's memory: the Session polls it over
@@ -3044,6 +3951,20 @@ int main(int argc, char** argv)
 			input.close();
 			disp.close();
 		}
+		if (homeLease)
+		{
+			input.close();
+			disp.close();
+		}
+		if (!home.next.empty())
+		{
+			// the game picked over the stopped one: started at the loop's next turn
+			std::ofstream f("/run/banana/launch.new");
+			f << home.next << "\n";
+			f.close();
+			rename("/run/banana/launch.new", "/run/banana/launch");
+			home.next.clear();
+		}
 		long secs = (long)((nowMs() - start) / 1000);
 		logf("game ended after %ld s (status %d)", secs, status);
 		recordEvent("game", "ended after %ld s (status %d)", secs, status);
@@ -3063,16 +3984,20 @@ int main(int argc, char** argv)
 		if (settingsView.colorsOpen()) disp.setColors(ScreenColors());
 		else applyColors("after the game");
 		be.invalidate();
-		input.open(o.touch, disp.width(), disp.height());
+		openInput(input, disp, be, o.touch);
 		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
 		std::lock_guard<std::mutex> l(worker.uiLock);
+		// (found again: the Home menu over the game may have left the library on another shelf, or read the card again)
+		const int at = findGame(lib, playing.shelf, rom);
+		if (at >= 0)
 		{
 			int achA = -1, achB = 0;
 			std::ifstream(PROGRESS) >> achA >> achB;
-			lib.recordPlay(game, secs, achA, achB);	// (a start that failed straight away isn't a play)
+			lib.recordPlay(at, secs, achA, achB);	// (a start that failed straight away isn't a play)
 		}
 		ui->dataChanged();
-		ui->setLibrary(lib.currentShelf(), game);
+		if (at >= 0) ui->setLibrary(lib.currentShelf(), at);
+		else ui->setHome(0);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
 		if (!forceStorm && stormIrqs >= 0 && disp.isOpen())
 		{
@@ -3141,8 +4066,31 @@ int main(int argc, char** argv)
 	std::string launchLater;	// a launch file's game not in the library yet (the rescan after a copy), tried again until launchLaterUntil
 	double launchLaterUntil = 0;
 	bool wasTyping = false;
-	while (!quit)
+	mainLoop = [&](const bool& stop)
 	{
+	while (!quit && !stop)
+	{
+		// the quick menu over a stopped game is its page and nothing else: closed (B), the game goes on
+		if (home.on && home.quick && !settingsView.isOpen()) { home.resume = true; continue; }
+#ifdef __ANDROID__
+		// Android: the Home button held over a game (the app times it): the quick menu on an overlay of the bottom
+		// screen, the game going on under it; and the launcher back over a game it started: that game's play time
+		if (int a = android::takeHomeAsk())
+		{
+			if (a == 2 && !home.on && disp.isOpen() && disp.sheetOpen()) homeMenu(0, true);
+			continue;
+		}
+		{
+			std::string backRom;
+			long backSecs = 0;
+			if (android::takeGameBack(backRom, backSecs))
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				const int at = findGame(lib, playing.shelf, backRom);
+				if (at >= 0) { lib.recordPlay(at, backSecs); ui->dataChanged(); dirty = true; }
+			}
+		}
+#endif
 		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
 		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
 		if (settingsView.typing() != wasTyping)
@@ -3179,7 +4127,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (rearrange(lib, *ui)) dirty = true;
 		}
-		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
+		if (input.rescanDue()) openInput(input, disp, be, o.touch);	// a pad came or went
 		{
 			// the display controller's interrupt storm, looked at every 10 s without waiting: over 20000 a second on
 			// average since the last look, the full check (it measures again and switches the panels off and on)
@@ -3198,6 +4146,16 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
+		}
+		// Play on the PC games hub: the game started as from its shelf
+		{
+			std::string pcFile;
+			bool got;
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				got = settingsView.takePcLaunch(pcFile);
+			}
+			if (got && !launchPath(lib, pcFile)) logf("pc games: %s is not on the shelf", pcFile.c_str());
 		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
 		if (access("/run/banana/launch", F_OK) == 0)
@@ -3496,11 +4454,18 @@ int main(int argc, char** argv)
 			else if (disp.isOpen() && p.fd == disp.pollFd())
 			{
 				disp.handleEvents();
-				if (!disp.flipPending()) fstat.flipped(nowMs());
+				// (a compositor's windows: this is the 50 ms pump, not a flip; an uncovered window is drawn whole again)
+				if (disp.compositor()) { if (disp.takeExposed()) { be.invalidate(); dirty = true; } }
+				else if (!disp.flipPending()) fstat.flipped(nowMs());
 			}
 			else
 				input.read(p.fd, handle);
 		}
+	}
+	};
+	{
+		const bool never = false;
+		mainLoop(never);
 	}
 	{
 		std::ofstream f(o.data + "/last-system");

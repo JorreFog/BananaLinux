@@ -12,6 +12,9 @@
 #                                "link fail"), "internet ok|fail", "time ok|fail" (the clock set over the network)
 # An address is asked for (udhcpc) only once wpa_supplicant is connected: wpa_cli runs this script as its action
 # script, "wifi wlan0 CONNECTED|DISCONNECTED", so nothing wakes the handheld while there is no network.
+# a system whose services own the network (hw.conf's HW_SERVICES=systemd: ROCKNIX): NetworkManager, through wifi-nm
+[ -r "${BANANA_HW_CONF:-/etc/banana/hw.conf}" ] && . "${BANANA_HW_CONF:-/etc/banana/hw.conf}"
+[ "$HW_SERVICES" = systemd ] && exec "${BANANA_LIBEXEC:-/usr/libexec/banana}/wifi-nm" "$@"
 CONF=/data/banana/wifi.conf
 CTRL=/run/wpa_supplicant
 W="wpa_cli -p $CTRL -i wlan0"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="org.bananaos.overlay.settingsprovider">
+    <overlay android:targetPackage="com.android.providers.settings"
+             android:isStatic="true"
+             android:priority="900" />
+</manifest>

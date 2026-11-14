@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_WSWAN
+	bool "libretro-beetle-wswan"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  WonderSwan (Color): Beetle Cygne.
+
+	  https://github.com/libretro/beetle-wswan-libretro

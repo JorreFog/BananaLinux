@@ -1,0 +1,3 @@
+/system_ext/bin/banana-hwd          u:object_r:banana_hwd_exec:s0
+/dev/socket/banana-hwd              u:object_r:banana_hwd_socket:s0
+/data/misc/banana(/.*)?             u:object_r:banana_hwd_data_file:s0

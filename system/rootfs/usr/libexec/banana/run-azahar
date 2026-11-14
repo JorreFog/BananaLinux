@@ -1,0 +1,52 @@
+#!/bin/sh
+# Nintendo 3DS: Azahar (package/azahar: ROCKNIX's SM8550 build, its Qt 6 front end), Vulkan, on a compositor of its own
+# over both panels (run-wayland --two-screens): the 3DS's top screen on the top panel, its bottom (touch) screen in
+# Azahar's second window ("... Secondary ..."), which the compositor puts full screen on the bottom panel.
+# Settings in /data/azahar (qt-config.ini, from ROCKNIX's in /usr/share/azahar on the first run); the 3DS's SD card and
+# NAND (installed titles, saves, the system files a user dumped from their own 3DS) in saves/3ds/sdmc and
+# saves/3ds/nand, states in states/3ds, the log in /data/banana/logs/azahar. Quit: the menu's quit (SIGTERM, passed on).
+#   run-azahar <game>        (.3ds .3dsx .cci .cxi .app .elf .axf .zcci .zcxi .z3dsx)
+ROM="$1"
+D=/data/azahar
+T=/usr/share/azahar
+LOGS=/data/banana/logs/azahar
+mkdir -p "$D" "$LOGS" /data/saves/3ds/sdmc /data/saves/3ds/nand /data/states/3ds /data/screenshots
+[ -f "$LOGS/last.log" ] && mv -f "$LOGS/last.log" "$LOGS/last.log.1"
+exec >"$LOGS/last.log" 2>&1
+echo "run-azahar: $ROM"
+
+C=$D/qt-config.ini
+[ -f "$C" ] || cp "$T/qt-config.ini" "$C"
+# (the card's exFAT has no symbolic links: data-link's link_dir binds the folder where a link can't be made)
+. "${BANANA_LIBEXEC:-/usr/libexec/banana}/data-link"
+link() { link_dir "$2" "$D/$1"; }
+link sdmc /data/saves/3ds/sdmc
+link nand /data/saves/3ds/nand
+link states /data/states/3ds
+# ini <key> <value>: a key of qt-config.ini, marked as not Azahar's default (so it keeps it)
+ini() {
+    sed -i -e "s|^$1=.*|$1=$2|" -e "s|^$1\\\\default=.*|$1\\\\default=false|" "$C"
+    grep -q "^$1=" "$C" || echo "run-azahar: $1 not in $C"
+}
+# the two screens in two windows, each full screen on its panel (ROCKNIX's dual-screen choice, layout_option 4),
+# full screen, Vulkan, the shader JIT off (ROCKNIX: forced off), the screenshots in BananaOS's folder
+ini layout_option 4
+ini swap_screen false
+ini fullscreen true
+ini graphics_api 2
+ini use_shader_jit false
+ini 'Paths\\screenshotPath' /data/screenshots/
+for f in /data/banana/gamecontrollerdb.txt /usr/share/banana/gamecontrollerdb.txt; do
+    [ -f "$f" ] && { export SDL_GAMECONTROLLERCONFIG_FILE="$f"; break; }
+done
+export XDG_CONFIG_HOME=/data XDG_DATA_HOME=/data XDG_CACHE_HOME=$D/cache HOME=$D
+
+/usr/libexec/banana/run-wayland --two-screens -- /usr/bin/azahar "$ROM" &
+PID=$!
+trap 'kill -TERM $PID 2>/dev/null' TERM INT HUP
+wait $PID
+RC=$?
+while kill -0 $PID 2>/dev/null; do wait $PID; RC=$?; done
+unlink_dirs
+echo "run-azahar: exit $RC"
+exit $RC

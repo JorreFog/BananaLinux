@@ -1,0 +1,15 @@
+Origin: ROCKNIX, projects/ROCKNIX/packages/emulators/libretro/same_cdi-lr/patches/001-gcc13-fix.patch at 6cf94dba (GPL-2.0).
+A missing <cstdint>
+
+diff --git a/src/osd/modules/lib/osdlib.h b/src/osd/modules/lib/osdlib.h
+index e0d1d35..8887a2e 100644
+--- a/src/osd/modules/lib/osdlib.h
++++ b/src/osd/modules/lib/osdlib.h
+@@ -19,6 +19,7 @@
+ #include <cstdint>
+ #include <initializer_list>
+ #include <string>
++#include <cstdint>
+ #include <type_traits>
+ #include <vector>
+ #include <memory>

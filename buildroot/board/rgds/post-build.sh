@@ -1,6 +1,6 @@
 #!/bin/sh
 # Buildroot post-build: what the root filesystem doesn't need on a handheld that boots to one program.
-#   post-build.sh <target dir> <board: rgds | rgds-plus>
+#   post-build.sh <target dir> <board: rgds | rgds-plus | universal | thor>
 set -e
 T=$1
 # init's own scripts replace Buildroot's (rcS here starts everything)
@@ -10,6 +10,42 @@ mkdir -p "$T/data" "$T/run" "$T/boot"
 # the version the settings screen's About shows, and the board (an update package must be for the same one)
 cp "$(dirname "$0")/../../../VERSION" "$T/etc/banana/version"
 echo "${2:-rgds}" > "$T/etc/banana/board"
+# the board's hardware profile (etc/banana/hw/<board>.conf: the panels' connectors, the touchscreen, the backlights,
+# the modules) as /etc/banana/hw.conf, the one rcS reads; the other boards' go
+if [ -f "$T/etc/banana/hw/${2:-rgds}.conf" ]; then
+    cp "$T/etc/banana/hw/${2:-rgds}.conf" "$T/etc/banana/hw.conf"
+else
+    echo "post-build: no hardware profile etc/banana/hw/${2:-rgds}.conf" >&2; exit 1
+fi
+rm -rf "$T/etc/banana/hw"
+# the serial console's login is the RG DS's UART (ttyS2). The AYN Thor has no port there (its kernel's 8250 driver
+# still makes /dev/ttyS2, with nothing behind it): getty would fail to open it, and busybox init starts a respawn entry
+# again every second, for good, with a line in the log each time. Its shell is SSH
+[ "${2:-rgds}" = thor ] && sed -i '/^ttyS2::respawn:/d' "$T/etc/inittab"
+# a board with its own systems list (board/<board>/systems.conf: the AYN Thor's, with every system its chip runs)
+# has it as /etc/banana/systems.conf; the others keep the overlay's (the RG DS's)
+if [ -f "$(dirname "$0")/../${2:-rgds}/systems.conf" ]; then
+    cp "$(dirname "$0")/../${2:-rgds}/systems.conf" "$T/etc/banana/systems.conf"
+    # (its history of old defaults is the RG DS's list's: not this one's)
+    rm -f "$T/etc/banana/systems.history"
+fi
+# the settings template is every board's, and its core.gba (gpSP, the RG DS's choice) would win over the Thor's list,
+# whose Game Boy Advance core is BananaGBA: the launchers and the menu both read the template for the default
+if [ "${2:-rgds}" = thor ]; then
+    sed -i 's/^core\.gba = .*/core.gba = bananagba/' "$T/etc/banana/settings.conf"
+    grep -qx 'core.gba = bananagba' "$T/etc/banana/settings.conf" || {
+        echo "post-build: no core.gba line in etc/banana/settings.conf" >&2; exit 1; }
+fi
+# The overlay is every board's, and so are the launchers of what only the AYN Thor's image has: the compositor and
+# what runs in it (the standalone emulators, the browser, PC games and Steam), the standalone emulators' achievements
+# login, USB debugging. Nothing on the other boards starts them (no system in their list, no profile key, and the menu
+# shows Steam only where its tool is), and their programs aren't there: out of those images
+if [ "${2:-rgds}" != thor ]; then
+    for f in run-wayland run-armsx2 run-azahar run-dolphin run-flycast run-ppsspp run-scummvm run-vita3k run-xemu \
+            ra-standalone run-browser run-pc pc-games steam usb-debug; do
+        rm -f "$T/usr/libexec/banana/$f"
+    done
+fi
 # who we are, for programs that ask (PortMaster names the firmware from it)
 V=$(cat "$(dirname "$0")/../../../VERSION")
 printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \

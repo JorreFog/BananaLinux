@@ -1,4 +1,5 @@
 #include "kms.h"
+#include "panelfit.h"
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
@@ -104,14 +105,65 @@ namespace banana
 		return plane;
 	}
 
-	bool Display::makeBuf(Buf& b)
+	void Display::screensFor(const int uw[2], const int uh[2])
+	{
+		const char* st = getenv("BANANA_STAGE");
+		bool fit = st && !strcmp(st, "fit");
+		for (int s = 0; s < 2; s++)
+		{
+			bool same = uw[s] == W && uh[s] == H;
+			CW[s] = fit || same ? W : uw[s];
+			CH[s] = fit || same ? H : uh[s];
+		}
+	}
+
+#ifndef BANANA_SDL
+	// (built without SDL: the panels through KMS only, and the SDL calls are never reached)
+	bool Display::wantSdl() { return false; }
+	bool Display::openSdl(const std::string&, std::string& err) { err = "built without SDL"; return false; }
+	void Display::closeSdl() {}
+	int Display::leaseSdl(int) { return -1; }
+	bool Display::presentSdl(const uint32_t* const*, const Damage*) { return false; }
+	void Display::handleSdl() {}
+	void Display::blankSdl() {}
+	int Display::leaseBothSdl() { return -1; }
+	bool Display::borrowSdl(int) { return false; }
+	void Display::giveBackSdl() {}
+	bool Display::sheetOpenSdl() { return false; }
+	void Display::sheetCloseSdl() {}
+	bool Display::sheetUnder(std::vector<uint32_t>&) { return false; }
+#endif
+
+	// a connector's "panel orientation" as the clockwise turn the picture needs (drm_connector.c: the device tree's
+	// rotation = <90> is "Right Side Up", the way Weston and KDE turn it by 90)
+	static int panelOrientation(int fd, uint32_t conn)
+	{
+		int rot = 0;
+		drmModeObjectProperties* props = drmModeObjectGetProperties(fd, conn, DRM_MODE_OBJECT_CONNECTOR);
+		for (uint32_t i = 0; props && i < props->count_props; i++)
+		{
+			drmModePropertyRes* pr = drmModeGetProperty(fd, props->props[i]);
+			if (pr && !strcmp(pr->name, "panel orientation"))
+				for (int e = 0; e < pr->count_enums; e++)
+					if (pr->enums[e].value == props->prop_values[i])
+					{
+						const char* n = pr->enums[e].name;
+						rot = !strcmp(n, "Upside Down") ? 180 : !strcmp(n, "Right Side Up") ? 90 : !strcmp(n, "Left Side Up") ? 270 : 0;
+					}
+			drmModeFreeProperty(pr);
+		}
+		drmModeFreeObjectProperties(props);
+		return rot;
+	}
+
+	bool Display::makeBuf(Buf& b, int w, int h)
 	{
 		drm_mode_create_dumb c = {};
-		c.width = W; c.height = H; c.bpp = 32;
+		c.width = w; c.height = h; c.bpp = 32;
 		if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &c)) return false;
 		b.handle = c.handle; b.pitch = c.pitch; b.size = c.size;
 		uint32_t handles[4] = { b.handle }, pitches[4] = { b.pitch }, offsets[4] = { 0 };
-		if (drmModeAddFB2(fd, W, H, 0x34325258 /* XR24 */, handles, pitches, offsets, &b.fb, 0)) return false;
+		if (drmModeAddFB2(fd, w, h, 0x34325258 /* XR24 */, handles, pitches, offsets, &b.fb, 0)) return false;
 		drm_mode_map_dumb m = {};
 		m.handle = b.handle;
 		if (drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &m)) return false;
@@ -132,6 +184,7 @@ namespace banana
 
 	bool Display::open(const std::string& top, std::string& err)
 	{
+		if (wantSdl()) { close(); return handOver ? false : openSdl(top, err); }	// (kms_sdl.cpp; --panels-on: no panels to light)
 		close();
 		std::vector<std::string> cards;
 		if (DIR* d = opendir("/dev/dri"))
@@ -198,24 +251,40 @@ namespace banana
 			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
 				for (auto& m : found[1].modes)
 					if (m.hdisplay == found[0].mode.hdisplay && m.vdisplay == found[0].mode.vdisplay) { found[1].mode = m; break; }
-			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
-			{
-				err = "the two panels have different modes";
-				::close(f);
-				continue;
-			}
+			// and when it hasn't (the AYN Thor's 16:9 top and near-square bottom), or a panel is mounted turned: the menu
+			// draws one canvas size for both and each panel shows it fitted (panelfit.h). How each panel is mounted:
+			// BANANA_PANEL_ROTATE (the board's profile) when set, else the kernel's "panel orientation" (the device
+			// tree's rotation: the Thor's two natively portrait panels are both <90>)
+			int rot[2];
+			if (getenv("BANANA_PANEL_ROTATE")) panelRotations(rot[0], rot[1]);
+			else for (int s = 0; s < 2; s++) rot[s] = panelOrientation(f, found[s].conn);
+			canvasFor(found[0].mode.hdisplay, found[0].mode.vdisplay, rot[0], found[1].mode.hdisplay, found[1].mode.vdisplay, rot[1], W, H);
 			fd = f;
 			// the master: the boot's early light-up (--panels-on) may still hold it for a moment; it gives it up as soon
 			// as its modesets are queued (a second at most)
 			masterAtOpen = handOver;
 			for (int t = 0; !handOver && t < 100; t++) { if (drmSetMaster(fd) == 0) { masterAtOpen = true; break; } usleep(10000); }
-			W = found[0].mode.hdisplay; H = found[0].mode.vdisplay;
+			{
+				int uw[2], uh[2];
+				for (int s = 0; s < 2; s++)
+				{
+					bool side = rot[s] == 90 || rot[s] == 270;
+					uw[s] = side ? found[s].mode.vdisplay : found[s].mode.hdisplay;
+					uh[s] = side ? found[s].mode.hdisplay : found[s].mode.vdisplay;
+				}
+				screensFor(uw, uh);
+			}
 			for (int s = 0; s < 2; s++)
 			{
 				p[s] = Panel();
 				p[s].conn = found[s].conn; p[s].crtc = found[s].crtc;
 				memcpy(p[s].mode, &found[s].mode, sizeof p[s].mode);
-				if (!makeBuf(p[s].buf[0]) || !makeBuf(p[s].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
+				p[s].fit.set(screenWidth(s), screenHeight(s), found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s]);
+				if (!p[s].fit.identity())
+					fprintf(stderr, "banana-ui: display: screen %d's panel is %dx%d (turned %d): the %dx%d canvas fitted at %dx%d+%d+%d\n",
+						s, found[s].mode.hdisplay, found[s].mode.vdisplay, rot[s], W, H, p[s].fit.dw, p[s].fit.dh, p[s].fit.ox, p[s].fit.oy);
+				int bw = found[s].mode.hdisplay, bh = found[s].mode.vdisplay;
+				if (!makeBuf(p[s].buf[0], bw, bh) || !makeBuf(p[s].buf[1], bw, bh)) { err = "can't make scanout buffers"; close(); return false; }
 			}
 			// panels still dark (the boot): both lit at once; else (lit, or the driver won't) as always
 			if (!lightBoth() && !handOver) restore();
@@ -245,7 +314,8 @@ namespace banana
 			uint32_t active = propId(fd, p[s].crtc, DRM_MODE_OBJECT_CRTC, "ACTIVE");
 			uint32_t connCrtc = propId(fd, p[s].conn, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID");
 			const char* names[] = { "FB_ID", "CRTC_ID", "SRC_X", "SRC_Y", "SRC_W", "SRC_H", "CRTC_X", "CRTC_Y", "CRTC_W", "CRTC_H" };
-			const uint64_t values[] = { p[s].buf[p[s].front].fb, p[s].crtc, 0, 0, (uint64_t)W << 16, (uint64_t)H << 16, 0, 0, (uint64_t)W, (uint64_t)H };
+			const uint64_t pw = (uint64_t)p[s].fit.panelW(), ph = (uint64_t)p[s].fit.panelH();
+			const uint64_t values[] = { p[s].buf[p[s].front].fb, p[s].crtc, 0, 0, pw << 16, ph << 16, 0, 0, pw, ph };
 			ok = plane && modeId && active && connCrtc && !drmModeCreatePropertyBlob(fd, p[s].mode, sizeof p[s].mode, &blob[s]);
 			req[s] = drmModeAtomicAlloc();
 			ok = ok && req[s] && drmModeAtomicAddProperty(req[s], p[s].crtc, modeId, blob[s]) >= 0 &&
@@ -315,11 +385,12 @@ namespace banana
 
 	void Display::restore()
 	{
+		if (sdl) { blankSdl(); exposed = true; return; }
 		if (fd < 0) return;
 		drmSetMaster(fd);
 		if (leased < 0) planesUpright(fd);
 		for (int s = 0; s < 2; s++)
-			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			if (!theirs(s)) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
 	}
 
@@ -327,10 +398,11 @@ namespace banana
 	// bookkeeping reset so the menu's next present() writes a full frame into the hidden buffer and flips to it
 	void Display::blank()
 	{
+		if (sdl) { blankSdl(); return; }
 		if (fd < 0) return;
 		for (int s = 0; s < 2; s++)
 		{
-			if (s == leased) continue;
+			if (theirs(s)) continue;
 			Panel& pn = p[s];
 			for (int b = 0; b < 2; b++)
 				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
@@ -361,6 +433,7 @@ namespace banana
 	std::string Display::setColors(const ScreenColors& c)
 	{
 		if (fd < 0) return "no display";
+		if (sdl) return c.neutral() ? "" : "the compositor's outputs: no colour table";
 		int target = c.neutral() ? -1 : c.screen;
 		// the other screen's table off first: the kernel refuses a second one
 		for (int s = 0; s < 2; s++)
@@ -406,21 +479,40 @@ namespace banana
 
 	void Display::close()
 	{
+		if (sdl) { closeSdl(); return; }
 		if (fd < 0) return;
 		for (auto& pn : p) { freeBuf(pn.buf[0]); freeBuf(pn.buf[1]); }
+		freeBuf(sheetBuf[0]); freeBuf(sheetBuf[1]);
+		sheetPlane = 0; sheetOn = sheetDrawn = false;
 		::close(fd);	// (a lease ends with its lessor's master)
 		fd = -1;
 		pending = 0;
 		leased = -1;
+		borrowMask = 0;
+		theirPlanes.clear();
 	}
 
 	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
 	{
+		if (sdl) return presentSdl(screens, dmg);
 		if (fd < 0 || pending) return false;
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
-			if (s == leased) continue;	// a game draws there
+			if (theirs(s))	// a game draws there
+			{
+				// (but for the sheet over it: the whole screen into the buffer that isn't shown, then that one placed)
+				if (s == 1 && sheetOn && (!dmg[s].empty() || !sheetDrawn))
+				{
+					Buf& sb = sheetBuf[sheetFront ^ 1];
+					const Damage all = { 0, 0, screenWidth(s), screenHeight(s) };
+					p[s].fit.blit(screens[s], sb.map, sb.pitch, all);
+					sheetFront ^= 1;
+					sheetDrawn = true;
+					sheetPlace();
+				}
+				continue;
+			}
 			Panel& pn = p[s];
 			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
@@ -428,13 +520,12 @@ namespace banana
 			d.add(pn.missed[back]);
 			pn.missed[back] = Damage();
 			d.x0 = std::max(d.x0, 0); d.y0 = std::max(d.y0, 0);
-			d.x1 = std::min(d.x1, W); d.y1 = std::min(d.y1, H);
+			d.x1 = std::min(d.x1, screenWidth(s)); d.y1 = std::min(d.y1, screenHeight(s));
 			if (d.empty()) continue;
 			Buf& bf = pn.buf[back];
-			// only the columns that changed: the scanout buffer is uncached, every byte written costs
-			size_t n = (size_t)(d.x1 - d.x0) * 4;
-			for (int y = d.y0; y < d.y1; y++)
-				memcpy(bf.map + (size_t)y * bf.pitch + (size_t)d.x0 * 4, screens[s] + (size_t)y * W + d.x0, n);
+			// only the columns that changed: the scanout buffer is uncached, every byte written costs (a panel of another
+			// size or way round: the canvas's rectangle scaled and turned onto it, panelfit.h)
+			pn.fit.blit(screens[s], bf.map, bf.pitch, d);
 			pn.missed[pn.front] = dmg[s];	// the buffer going hidden misses this frame
 			if (drmModePageFlip(fd, pn.crtc, bf.fb, DRM_MODE_PAGE_FLIP_EVENT, &pending) == 0)
 			{
@@ -459,6 +550,7 @@ namespace banana
 
 	void Display::handleEvents()
 	{
+		if (sdl) { handleSdl(); return; }
 		if (fd < 0) return;
 		drmEventContext ev = {};
 		ev.version = 2;
@@ -490,7 +582,7 @@ namespace banana
 
 	long Display::stormCheck()
 	{
-		if (fd < 0 || leased >= 0) return -1;
+		if (sdl || fd < 0 || leased >= 0) return -1;
 		long long a = vopIrqs();
 		if (a < 0) return -1;
 		usleep(200000);
@@ -509,6 +601,7 @@ namespace banana
 
 	int Display::lease(int s)
 	{
+		if (sdl) return leaseSdl(s);	// (a compositor's windows: the game's screen's window closed, the game its own client there)
 		if (fd < 0 || s < 0 || s > 1) return -1;
 		uint32_t plane = primaryPlane(fd, p[s].crtc);
 		if (!plane) return -1;
@@ -519,5 +612,207 @@ namespace banana
 		if (l < 0 && over) l = drmModeCreateLease(fd, objs, 3, 0, &lessee);
 		if (l >= 0) leased = s;
 		return l;
+	}
+
+	int Display::leaseBoth()
+	{
+		if (sdl) return leaseBothSdl();	// (a compositor's windows: both closed, the game a client on both outputs)
+		if (fd < 0 || leased >= 0) return -1;
+		uint32_t objs[8], lessee = 0;
+		int n = 0;
+		for (int s = 0; s < 2; s++)
+		{
+			uint32_t plane = primaryPlane(fd, p[s].crtc);
+			if (!plane) return -1;
+			objs[n++] = p[s].conn; objs[n++] = p[s].crtc; objs[n++] = plane;
+		}
+		// every other plane the two panels can use as well (overlays, cursors): the game finds what it would with the
+		// device to itself. A driver that refuses that set gets the panels and their primary planes alone.
+		std::vector<uint32_t> all(objs, objs + n);
+		// (but one free overlay of the bottom panel's: the menu's sheet, sheetOpen)
+		sheetPlane = getenv("BANANA_NO_SHEET") ? 0 : overlayPlane(fd, p[1].crtc);
+		{
+			drmModeRes* res = drmModeGetResources(fd);
+			drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
+			uint32_t bits = 0;
+			for (int i = 0; res && i < res->count_crtcs; i++)
+				if (res->crtcs[i] == p[0].crtc || res->crtcs[i] == p[1].crtc) bits |= 1u << i;
+			for (uint32_t j = 0; pr && j < pr->count_planes; j++)
+				if (drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]))
+				{
+					if ((pl->possible_crtcs & bits) && pl->plane_id != sheetPlane && std::find(all.begin(), all.end(), pl->plane_id) == all.end()) all.push_back(pl->plane_id);
+					drmModeFreePlane(pl);
+				}
+			if (pr) drmModeFreePlaneResources(pr);
+			if (res) drmModeFreeResources(res);
+		}
+		int l = drmModeCreateLease(fd, all.data(), (int)all.size(), 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
+		if (l < 0 && (int)all.size() > n) l = drmModeCreateLease(fd, objs, n, 0, &lessee);
+		if (l >= 0) leased = 2;
+		else sheetPlane = 0;
+		return l;
+	}
+
+	// a plane's property set by name; false when it has none of that name or the kernel refused
+	static bool setPlaneProp(int fd, uint32_t plane, const char* name, bool top)
+	{
+		bool ok = false;
+		if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, plane, DRM_MODE_OBJECT_PLANE))
+		{
+			for (uint32_t k = 0; k < pp->count_props; k++)
+				if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+				{
+					// (a range the driver lets us set: its highest value, over every other plane)
+					if (!strcmp(q->name, name) && !(q->flags & DRM_MODE_PROP_IMMUTABLE) && (q->flags & DRM_MODE_PROP_RANGE) && q->count_values >= 2)
+						ok = drmModeObjectSetProperty(fd, plane, DRM_MODE_OBJECT_PLANE, q->prop_id, top ? q->values[1] : q->values[0]) == 0;
+					drmModeFreeProperty(q);
+				}
+			drmModeFreeObjectProperties(pp);
+		}
+		return ok;
+	}
+
+	bool Display::sheetOpen()
+	{
+		if (sdl) return sheetOpenSdl();	// (a window of the menu's over the game's bottom one)
+		if (fd < 0 || leased != 2 || !sheetPlane || (borrowMask & 2)) return false;
+		if (sheetOn) return true;
+		const int pw = panelWidth(1), ph = panelHeight(1);
+		for (int b = 0; b < 2; b++)
+			if (!sheetBuf[b].map && !makeBuf(sheetBuf[b], pw, ph))
+			{
+				fprintf(stderr, "banana-ui: no buffer for the bottom screen's sheet (%s)\n", strerror(errno));
+				for (int k = 0; k < 2; k++) freeBuf(sheetBuf[k]);
+				sheetPlane = 0;
+				return false;
+			}
+		sheetOn = true; sheetDrawn = false; sheetShown = 0; sheetFront = 0;
+		return true;
+	}
+
+	bool Display::sheetPlace()
+	{
+		if (!sheetOn || !sheetDrawn) return false;
+		const int cw = screenWidth(1), ch = screenHeight(1);
+		// the sheet's rows that are on the panel, and where: off rows down from its place (below 0: its top rows cut)
+		int off = (int)((1.f - sheetShown) * ch + (sheetShown < 1 ? .5f : -.5f));
+		if (off >= ch) return drmModeSetPlane(fd, sheetPlane, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) == 0;
+		const Damage from = off >= 0 ? Damage{ 0, 0, cw, ch - off } : Damage{ 0, -off, cw, ch };
+		const Damage to = off >= 0 ? Damage{ 0, off, cw, ch } : Damage{ 0, 0, cw, ch + off };
+		const Damage sr = p[1].fit.toPanel(from), dr = p[1].fit.toPanel(to);
+		if (sr.empty() || dr.empty()) return false;
+		const uint32_t w = std::min(sr.x1 - sr.x0, dr.x1 - dr.x0), h = std::min(sr.y1 - sr.y0, dr.y1 - dr.y0);
+		int r = -1;
+		// (the program's own flip on this panel may be on its way: the kernel says busy for that one frame)
+		for (int i = 0; i < 6 && r != 0; i++)
+		{
+			r = drmModeSetPlane(fd, sheetPlane, p[1].crtc, sheetBuf[sheetFront].fb, 0, dr.x0, dr.y0, w, h, (uint32_t)sr.x0 << 16, (uint32_t)sr.y0 << 16, w << 16, h << 16);
+			if (r != 0 && errno != EBUSY) break;
+			if (r != 0) usleep(2000);
+		}
+		static bool told = false, raised = false;
+		if (r == 0 && !raised) { raised = true; setPlaneProp(fd, sheetPlane, "zpos", true); }
+		if (r != 0 && !told) { told = true; fprintf(stderr, "banana-ui: the bottom screen's sheet: the plane was refused (%s)\n", strerror(errno)); }
+		return r == 0;
+	}
+
+	void Display::sheetAt(float shown)
+	{
+		if (!sheetOn) return;
+		sheetShown = shown < 0 ? 0 : shown;
+		sheetPlace();
+	}
+
+	void Display::sheetClose()
+	{
+		if (sdl) { sheetCloseSdl(); return; }
+		if (!sheetOn) return;
+		drmModeSetPlane(fd, sheetPlane, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		sheetOn = sheetDrawn = false;
+		sheetShown = 0;
+	}
+
+	// a plane's property by name (the kernel's plane state: where it is on the screen and what part of its picture)
+	static uint64_t planeProp(int fd, uint32_t plane, const char* name)
+	{
+		uint64_t v = 0;
+		if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, plane, DRM_MODE_OBJECT_PLANE))
+		{
+			for (uint32_t k = 0; k < pp->count_props; k++)
+				if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+				{
+					if (!strcmp(q->name, name)) v = pp->prop_values[k];
+					drmModeFreeProperty(q);
+				}
+			drmModeFreeObjectProperties(pp);
+		}
+		return v;
+	}
+
+	bool Display::borrow(int mask)
+	{
+		if (sdl) return borrowSdl(mask);	// (the menu's windows opened again over the game's)
+		if (fd < 0 || leased < 0) return false;
+		bool any = false;
+		for (int s = 0; s < 2; s++)
+		{
+			if (!(mask & (1 << s)) || !theirs(s)) continue;
+			drmModeCrtc* c = drmModeGetCrtc(fd, p[s].crtc);
+			theirFb[s] = c ? c->buffer_id : 0;
+			theirOff[s] = c && !c->mode_valid;
+			if (c) drmModeFreeCrtc(c);
+			borrowMask |= 1 << s;
+			Panel& pn = p[s];
+			// (black first: the menu's buffers there are from before the game)
+			for (int b = 0; b < 2; b++)
+				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
+			pn.missed[0] = pn.missed[1] = Damage();	// (the caller draws everything afresh: its backend invalidated)
+			if (drmModeSetCrtc(fd, pn.crtc, pn.buf[pn.front].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode) == 0) any = true;
+			else { borrowMask &= ~(1 << s); theirFb[s] = 0; theirOff[s] = false; continue; }
+			// what the program has lit over its picture on this panel (an overlay, a cursor) would stay over the menu's:
+			// off, and remembered for giveBack
+			const uint32_t primary = primaryPlane(fd, pn.crtc);
+			if (drmModePlaneRes* pr = drmModeGetPlaneResources(fd))
+			{
+				for (uint32_t j = 0; j < pr->count_planes; j++)
+					if (drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]))
+					{
+						if (pl->crtc_id == pn.crtc && pl->fb_id && pl->plane_id != primary)
+						{
+							const uint32_t id = pl->plane_id;
+							TheirPlane t = { id, pl->crtc_id, pl->fb_id, (int32_t)planeProp(fd, id, "CRTC_X"), (int32_t)planeProp(fd, id, "CRTC_Y"),
+								(uint32_t)planeProp(fd, id, "CRTC_W"), (uint32_t)planeProp(fd, id, "CRTC_H"), (uint32_t)planeProp(fd, id, "SRC_X"),
+								(uint32_t)planeProp(fd, id, "SRC_Y"), (uint32_t)planeProp(fd, id, "SRC_W"), (uint32_t)planeProp(fd, id, "SRC_H") };
+							if (drmModeSetPlane(fd, id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) == 0) theirPlanes.push_back(t);
+						}
+						drmModeFreePlane(pl);
+					}
+				drmModeFreePlaneResources(pr);
+			}
+		}
+		return any;
+	}
+
+	void Display::giveBack()
+	{
+		if (sdl) { giveBackSdl(); return; }
+		if (fd < 0) return;
+		// (a flip of ours still on its way lands first: the program's picture must be the last thing set)
+		for (int i = 0; i < 20 && pending; i++) { pollfd pf = { fd, POLLIN, 0 }; if (poll(&pf, 1, 10) > 0) handleEvents(); }
+		pending = 0;
+		for (int s = 0; s < 2; s++)
+		{
+			if (!(borrowMask & (1 << s))) continue;
+			if (theirFb[s]) drmModeSetCrtc(fd, p[s].crtc, theirFb[s], 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			// a panel the program had switched off (run-wayland's "power off" for a PC game's bottom screen) goes off
+			// again: its compositor draws nothing there, and the menu's last picture would stay lit for the whole game
+			else if (theirOff[s]) drmModeSetCrtc(fd, p[s].crtc, 0, 0, 0, nullptr, 0, nullptr);
+			theirFb[s] = 0;
+			theirOff[s] = false;
+		}
+		for (const TheirPlane& t : theirPlanes)
+			drmModeSetPlane(fd, t.plane, t.crtc, t.fb, 0, t.x, t.y, t.w, t.h, t.sx, t.sy, t.sw, t.sh);
+		theirPlanes.clear();
+		borrowMask = 0;
 	}
 }

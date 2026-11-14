@@ -46,7 +46,156 @@ make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-tes
 make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-test" 2> "$OUT/soft-base-test.log" || { echo "FAIL the software backend's background copy: $(grep FAIL "$OUT/soft-base-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
+make -s -C "$HERE" tests/sheet-test >/dev/null && "$HERE/tests/sheet-test" > /dev/null 2> "$OUT/sheet-test.log" || { echo "FAIL the quick menu's sheet: $(head -3 "$OUT/sheet-test.log")"; fail=1; }
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the canvas on panels of another size or way round (the AYN Thor's two portrait panels)
+make -s -C "$HERE" tests/panelfit-test >/dev/null && "$HERE/tests/panelfit-test" 2> "$OUT/panelfit-test.log" || { echo "FAIL the panels' fit: $(grep FAIL "$OUT/panelfit-test.log" | head -3)"; fail=1; }
+# the AYN Thor's two screens (1920x1080 top, 1240x1080 bottom): the 4:3 menu staged in each, the backgrounds filling
+# them (no black bars), the PNGs at the screens' own sizes ($OUT/thor-*.png, for a look)
+TD=$OUT/thor-data; rm -rf "$TD"; cp -r "$FX/data" "$TD"; echo "setup 2" > "$TD/setup-done"
+"$HERE/banana-ui" --headless "$OUT/thor-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+    --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$FX/roms" --data "$TD" --script "home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings" \
+    2> "$OUT/thor.log" || { echo "FAIL thor: banana-ui exited $?"; fail=1; }
+if command -v identify >/dev/null; then
+    for v in home lib settings; do
+        [ "$(identify -format '%wx%h' "$OUT/thor-$v-top.png" 2>/dev/null)" = 1920x1080 ] || { echo "FAIL thor: $v's top isn't 1920x1080"; fail=1; }
+        [ "$(identify -format '%wx%h' "$OUT/thor-$v-bot.png" 2>/dev/null)" = 1240x1080 ] || { echo "FAIL thor: $v's bottom isn't 1240x1080"; fail=1; }
+        for c in "top 4 540" "top 1915 540" "bot 620 4" "bot 620 1075"; do
+            set -- $c
+            [ "$(convert "$OUT/thor-$v-$1.png" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null)" != "srgb(0,0,0)" ] ||
+                { echo "FAIL thor: $v's $1 is black at $2,$3 (not filled)"; fail=1; }
+        done
+    done
+fi
+# the Thor OLED theme, the AYN Thor's default (BANANA_BOARD=thor and no theme chosen: settings.conf without its line),
+# laid out on the screens' own sizes ("stage": "screen"): it loads (no theme errors, not Dark instead: its black corner),
+# both screens drawn (the accent's plate under the selected system), Settings and the game panel black, and the OLED
+# boot animation drawn at these shapes (no pictures for them). The PNGs are $OUT/thor-oled-*.png
+TO=$OUT/thor-oled-data; rm -rf "$TO"; cp -r "$FX/data" "$TO"; echo "setup 2" > "$TO/setup-done"
+[ ! -f "$TO/settings.conf" ] || sed -i '/^theme *=/d' "$TO/settings.conf"
+BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+"$HERE/banana-ui" --headless "$OUT/thor-oled-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+    --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$FX/roms" --data "$TO" --script "splash boot 1390 1; home 0; wait 2400; shot home; press a; wait 2400; shot lib; press b; press start; shot settings; press b; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot panel; gdown 340 280; gshot panel-quit; section Display & sound; press down; press down; press down; press down; settle; shot split" \
+    2> "$OUT/thor-oled.log" || { echo "FAIL thor-oled: banana-ui exited $?"; fail=1; }
+grep -qx 'theme = user:thor-oled' "$TO/settings.conf" || { echo "FAIL thor-oled: the Thor's settings.conf has $(grep '^theme' "$TO/settings.conf")"; fail=1; }
+grep -q 'theme' "$OUT/thor-oled.log" && { echo "FAIL thor-oled: $(grep -m2 theme "$OUT/thor-oled.log")"; fail=1; }
+grep -q 'splash boot at 1390 ms' "$OUT/thor-oled.log" || { echo "FAIL thor-oled: no boot animation at the Thor's shapes ($(grep -m1 splash "$OUT/thor-oled.log"))"; fail=1; }
+if command -v identify >/dev/null; then
+    for v in home lib settings panel boot; do
+        [ "$(identify -format '%wx%h' "$OUT/thor-oled-$v-top.png" 2>/dev/null)" = 1920x1080 ] || { echo "FAIL thor-oled: $v's top isn't 1920x1080"; fail=1; }
+        [ "$(identify -format '%wx%h' "$OUT/thor-oled-$v-bot.png" 2>/dev/null)" = 1240x1080 ] || { echo "FAIL thor-oled: $v's bottom isn't 1240x1080"; fail=1; }
+    done
+    for c in "home-top 4 1075" "home-bot 4 4" "lib-top 1915 1075" "settings-bot 4 540" "panel-bot 4 540" "boot-top 4 4"; do
+        set -- $c
+        [ "$(convert "$OUT/thor-oled-$1.png" -format "%[pixel:p{$2,$3}]" info: 2>/dev/null)" = "srgb(0,0,0)" ] ||
+            { echo "FAIL thor-oled: $1 isn't true black at $2,$3"; fail=1; }
+    done
+    for v in home-top home-bot lib-top lib-bot; do
+        awk "BEGIN { exit !($(convert "$OUT/thor-oled-$v.png" -fill white +opaque black -format '%[fx:mean]' info: 2>/dev/null || echo 0) > 0.01) }" ||
+            { echo "FAIL thor-oled: $v is (nearly) all black: not drawn"; fail=1; }
+    done
+    # the boot is the bunch (144 px, in the middle), BananaOS under it and the accent's line, on black
+    [ "$(convert "$OUT/thor-oled-boot-top.png" -crop 144x144+888+382 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor-oled: no bunch in the boot"; fail=1; }
+    [ "$(convert "$OUT/thor-oled-boot-top.png" -crop 400x60+760+580 -format '%[fx:maxima>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL thor-oled: no BananaOS in the boot"; fail=1; }
+    convert "$OUT/thor-oled-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
+        awk '{ exit !($1 > 150 && $2 > 100 && $3 < 80) }' || { echo "FAIL thor-oled: no accent plate under the selected system"; fail=1; }
+    # the game panel is the design's grid (six tiles of 320 px in two rows, black between them), Quit under a finger the
+    # danger's red; the Theme row's page has the small preview (its plate in the accent) right of the help
+    rgb() { convert "$OUT/thor-oled-$1.png" -format "%[fx:int(255*p{$2,$3}.r)] %[fx:int(255*p{$2,$3}.g)] %[fx:int(255*p{$2,$3}.b)]" info: 2>/dev/null; }
+    for at in "240 300" "620 300" "1000 300" "240 640" "620 640" "1000 640"; do
+        rgb panel-bot $at | awk '{ exit !($1 + $2 + $3 > 30) }' || { echo "FAIL thor-oled: no game panel tile at $at"; fail=1; }
+    done
+    rgb panel-bot 620 460 | awk '{ exit !($1 + $2 + $3 == 0) }' || { echo "FAIL thor-oled: the game panel's rows of tiles aren't apart"; fail=1; }
+    rgb panel-quit-bot 1000 560 | awk '{ exit !($1 > 150 && $2 < 110 && $3 < 110) }' || { echo "FAIL thor-oled: Quit pressed isn't the danger's red ($(rgb panel-quit-bot 1000 560))"; fail=1; }
+    rgb split-top 1410 322 | awk '{ exit !($1 > 150 && $2 > 100 && $3 < 130) }' || { echo "FAIL thor-oled: no preview with its plate on the Theme row's page ($(rgb split-top 1410 322))"; fail=1; }
+fi
+# Thor OLED's three variants (thor-white, thor-purple, thor-rainbow: "extends": "thor-oled"): each loads without a
+# theme error under its own name, in its own accent ("accent = theme"), with its plate under the selected system (the
+# white shell, Board's mint, the alabaster); the Theme row sets a theme's own accent when it is chosen and yellow again
+# for a theme without one; a theme extending one that isn't there says so
+thorVariant() {	# <stem> <name> <awk test on the plate's r g b>
+    TV=$OUT/$1-data; rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"
+    [ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d; /^accent *=/d' "$TV/settings.conf"
+    printf 'theme = user:%s\naccent = theme\n' "$1" >> "$TV/settings.conf"
+    BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+    "$HERE/banana-ui" --headless "$OUT/$1-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$TV" --script "home 0; wait 2400; shot home; press start; shot settings" \
+        2> "$OUT/$1.log" || { echo "FAIL $1: banana-ui exited $?"; fail=1; }
+    grep -q 'theme' "$OUT/$1.log" && { echo "FAIL $1: $(grep -m2 theme "$OUT/$1.log")"; fail=1; }
+    grep -q "\"name\": \"$2\"" "$HERE/../system/rootfs/usr/share/banana/themes/$1.json" || { echo "FAIL $1: its name isn't $2"; fail=1; }
+    if command -v convert >/dev/null 2>&1; then
+        [ "$(convert "$OUT/$1-home-top.png" -format "%[pixel:p{4,1076}]" info: 2>/dev/null)" = "srgb(0,0,0)" ] || { echo "FAIL $1: the home's corner isn't true black"; fail=1; }
+        convert "$OUT/$1-home-bot.png" -format '%[fx:int(255*p{620,690}.r)] %[fx:int(255*p{620,690}.g)] %[fx:int(255*p{620,690}.b)]' info: 2>/dev/null |
+            awk "{ exit !($3) }" || { echo "FAIL $1: its plate under the selected system is $(convert "$OUT/$1-home-bot.png" -format '%[pixel:p{620,690}]' info: 2>/dev/null)"; fail=1; }
+    fi
+}
+thorVariant thor-white "Thor White" '$1 > 215 && $2 > 215 && $3 > 210'
+thorVariant thor-purple "Thor Clear Purple" '$1 < 170 && $2 > 190 && $3 > 130 && $3 < 220'
+thorVariant thor-rainbow "Thor Rainbow" '$1 > 195 && $2 > 185 && $3 > 150 && $3 < 225 && $1 > $3 + 20'
+TV=$OUT/thor-accent-data; rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"
+[ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d; /^accent *=/d' "$TV/settings.conf"
+printf 'theme = user:thor-rainbow\naccent = blue\n' >> "$TV/settings.conf"
+thorAccent() {	# <script>: the Theme row (Display & sound's fifth) moved
+    BANANA_BOARD=thor BANANA_THEMES="$HERE/../system/rootfs/usr/share/banana/themes" \
+    "$HERE/banana-ui" --headless "$OUT/thor-accent-" --size 1440x1080 --screens 1920x1080,1240x1080 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$TV" --script "home 0; section Display & sound; press down; press down; press down; press down; $1" 2>> "$OUT/thor-accent.log" || { echo "FAIL thor accent: banana-ui exited $?"; fail=1; }
+}
+: > "$OUT/thor-accent.log"
+thorAccent "press right"
+grep -qx 'theme = user:thor-white' "$TV/settings.conf" && grep -qx 'accent = theme' "$TV/settings.conf" ||
+    { echo "FAIL thor accent: Thor White chosen: $(grep -E '^(theme|accent) ' "$TV/settings.conf" | tr '\n' ' ')"; fail=1; }
+thorAccent "press down; press right; shot accent"
+grep -qx 'accent = yellow' "$TV/settings.conf" || { echo "FAIL thor accent: after Celadon comes $(grep '^accent ' "$TV/settings.conf") (Banana: yellow)"; fail=1; }
+thorAccent "press down; press left; press up; press right"
+grep -qx 'theme = user:vinyl-lounge' "$TV/settings.conf" && grep -qx 'accent = yellow' "$TV/settings.conf" ||
+    { echo "FAIL thor accent: a theme without its own accent after Thor White in Celadon: $(grep -E '^(theme|accent) ' "$TV/settings.conf" | tr '\n' ' ')"; fail=1; }
+TX=$OUT/thor-extends; rm -rf "$TX"; mkdir -p "$TX"
+printf '{ "name": "Lost", "extends": "not-there", "colors": { "ink": "#ff0000" } }\n' > "$TX/lost.json"
+printf '{ "name": "Base", "base": "light", "colors": { "ink": "#112233", "muted": "#445566" } }\n' > "$TX/base.json"
+printf '{ "name": "Over", "extends": "base", "colors": { "muted": "#778899" } }\n' > "$TX/over.json"
+for t in lost over; do
+    rm -rf "$TV"; cp -r "$FX/data" "$TV"; echo "setup 2" > "$TV/setup-done"; [ ! -f "$TV/settings.conf" ] || sed -i '/^theme *=/d' "$TV/settings.conf"; echo "theme = user:$t" >> "$TV/settings.conf"
+    BANANA_THEMES="$TX" "$HERE/banana-ui" --headless "$OUT/thor-extends-$t-" --size 640x480 --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$TV" --script "home 0; shot home" 2> "$OUT/thor-extends-$t.log" || { echo "FAIL extends: banana-ui exited $? with $t.json"; fail=1; }
+done
+grep -q "the theme it extends, \"not-there\", isn't there" "$OUT/thor-extends-lost.log" || { echo "FAIL extends: a missing base isn't reported ($(head -2 "$OUT/thor-extends-lost.log"))"; fail=1; }
+grep -q 'theme' "$OUT/thor-extends-over.log" && { echo "FAIL extends: $(grep -m2 theme "$OUT/thor-extends-over.log")"; fail=1; }
+if command -v convert >/dev/null 2>&1; then
+    # (the base's light palette came through: the screen isn't Dark's)
+    cmp -s "$OUT/thor-extends-over-home-top.png" "$OUT/thor-extends-lost-home-top.png" && { echo "FAIL extends: the theme on base.json looks like Dark"; fail=1; }
+fi
+# the AYN Thor's own setup slides (Controls, Home server, Steam), Settings > System > Accounts, the quick menu and the
+# Thor OLED theme's fades
+. "$HERE/tests/setup-thor.sh"
+# a ROCKNIX game's page (BANANA_ROCKNIX, its run line through run-rocknix): the For row, the emulator and the options
+# rocknix-options lists from es_systems.cfg / es_features.cfg; a game's emulator and ratio, then the system's emulator,
+# kept in ROCKNIX's settings as EmulationStation keeps them
+RX=$OUT/rx; rm -rf "$RX"; mkdir -p "$RX/roms/gba" "$RX/data"; : > "$RX/roms/gba/Zelda.gba"; echo "setup 2" > "$RX/data/setup-done"
+printf '[gba]\nname = Game Boy Advance\nfolder = %s\next = gba\nrun = /usr/libexec/banana/run-rocknix gba %%ROM%% --core=mgba --emulator=retroarch --controllers=""\n' \
+    "$RX/roms/gba" > "$RX/systems.conf"
+rxrun() {
+    env BANANA_ROCKNIX=1 BANANA_ROCKNIX_OPTIONS="$HERE/../system/rootfs/usr/libexec/banana/rocknix-options" ROCKNIX_SETTINGS="$RX/system.cfg" \
+        ROCKNIX_LOCK="$RX/lock" ROCKNIX_ES_SYSTEMS="$HERE/../rocknix/tests/es_systems.cfg" ROCKNIX_ES_FEATURES="$HERE/../rocknix/tests/es_features.cfg" \
+        "$HERE/banana-ui" --headless "$OUT/rx-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$RX/systems.conf" \
+        --roms "$RX/roms" --data "$RX/data" --script "$1" 2>> "$OUT/rx.log" || { echo "FAIL rocknix game page: banana-ui exited $?"; fail=1; }
+}
+: > "$OUT/rx.log"
+rxrun "lib 0 0; press x; press down; shot emu; press right; press down; press right; shot ratio; press a"
+grep -qxF 'gba["Zelda.gba"].emulator=retroarch' "$RX/system.cfg" && grep -qxF 'gba["Zelda.gba"].core=gpsp' "$RX/system.cfg" \
+    && grep -qxF 'gba["Zelda.gba"].ratio=core' "$RX/system.cfg" || { echo "FAIL rocknix game page: the game's choices: $(tr '\n' ' ' < "$RX/system.cfg" 2>/dev/null)"; fail=1; }
+rxrun "lib 0 0; press x; press right; press down; press left; shot system; press a"
+grep -qxF 'gba.emulator=retroarch' "$RX/system.cfg" && grep -qxF 'gba.core=mgba' "$RX/system.cfg" \
+    || { echo "FAIL rocknix game page: the system's emulator: $(tr '\n' ' ' < "$RX/system.cfg" 2>/dev/null)"; fail=1; }
+# banana-ui as ROCKNIX's frontend: the systems from its es_systems.cfg, and the menu under sway on the Thor's two
+# outputs (the SDL display; skipped without sway, grim or a banana-ui built with SDL=1)
+sh "$HERE/../rocknix/tests/run.sh" || fail=1
+sh "$HERE/tests/sway-test.sh" || fail=1
+# the Thor button under sway: the menu over the frozen game and back, the quick menu over the bottom while it plays
+sh "$HERE/../rocknix/tests/home-sway.sh" || fail=1
 # the translations: a line's %d takes a number only, not a game's or a file's name
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
@@ -212,7 +361,7 @@ for size in 640x480 1024x768; do
     # touch, START; up to Name, one letter deleted, START: both in game-titles.tsv, and the game first on the shelf
     tlog=$OUT/$size-titles.log; T="$FX/data/game-titles.tsv"; rm -f "$T"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
             press up; press a; press b; press start; wait 300; shot titles-done" 2> "$tlog" || { echo "FAIL $size: banana-ui (titles) exited $?"; fail=1; }
     [ "$(cat "$T" 2>/dev/null)" = "$(printf 'nds/Yellow Planet [!].zip\tYellow Plane\ta')" ] || { echo "FAIL $size: game-titles.tsv: $(cat "$T" 2>/dev/null)"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
@@ -355,10 +504,10 @@ for size in 640x480 1024x768; do
     printf 'nds/Yellow Planet [!].zip\tCafé\t\n' > "$TT"
     run_r() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" || { echo "FAIL $size: banana-ui (review) exited $?"; fail=1; }; }
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
     [ "$(cat "$TT")" = "$(printf 'nds/Yellow Planet [!].zip\tCaf\t')" ] || { echo "FAIL $size: m7 UTF-8 delete: $(od -c "$TT" | head -2 | tr -s ' ')"; fail=1; }
     printf 'nds/Yellow Planet [!].zip\tCustom\t\n' > "$TT"
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
     [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
     rm -f "$TT" "$FX/data/accounts.conf"
     run_r "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; press b; press start; press b"
@@ -1075,6 +1224,22 @@ for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; d
         --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
     grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
 done
+# a running game found again (findGame, what the Home menu's "back to the game" and a game's end go by): by its shelf
+# and its file after another shelf was opened and after the card was read again, and one started from the search's
+# shelf on its own system's once the search is cleared
+"$HERE/banana-ui" --headless "$OUT/findgame-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$SX/roms" --data "$SX/data" --script "lib 0 2; mark; lib 3 0; findgame; rescan; findgame; \
+        search smoothie; press start; mark; findgame; rescan; findgame; search ; press start; findgame; rescan; findgame" 2> "$OUT/findgame.log" || { echo "FAIL: banana-ui (findgame) exited $?"; fail=1; }
+FM1=$(grep -m1 '^banana-ui: mark: ' "$OUT/findgame.log" | sed 's/^banana-ui: mark: shelf \([^,]*\), \(.*\)$/\1|\2/')
+case "$FM1" in search\|*|*\|) echo "FAIL: findgame: the script's first game is not one on a system's shelf ($FM1)"; fail=1 ;; esac
+# (the third game of its shelf: an index that only its own shelf gives)
+[ "$(grep -c "^banana-ui: findgame: shelf ${FM1%%|*}, game 2, ${FM1#*|}\$" "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: not found again on its shelf after another was opened and after a rescan: $(grep -m2 'findgame: ' "$OUT/findgame.log" | tr '\n' '|')"; fail=1; }
+[ "$(grep -c '^banana-ui: findgame: shelf search, game 0, .*/snes/Super Smoothie World\.sfc$' "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: a game of the search's shelf not found there (and after a rescan)"; fail=1; }
+[ "$(grep -c '^banana-ui: findgame: shelf snes, game [0-9]*, .*/snes/Super Smoothie World\.sfc$' "$OUT/findgame.log")" = 2 ] ||
+    { echo "FAIL: findgame: the search cleared, its game not found on its system's shelf: $(grep 'findgame: ' "$OUT/findgame.log" | tail -2 | tr '\n' '|')"; fail=1; }
+if grep -q 'findgame: gone' "$OUT/findgame.log"; then echo "FAIL: findgame: a game that is there counted as gone"; fail=1; fi
 # a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
 # under its name gets its own again
 IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null
@@ -1115,7 +1280,8 @@ printf '#: language = Test\n#: translated-by = nobody\nmenu\t\tPeel %%s\tZZ %%s\
 for l in en xx; do
     "$HERE/tests/fixture.sh" "$VX/fx-$l" >/dev/null
     printf 'language = %s\n' $l >> "$VX/fx-$l/data/settings.conf"
-    vrun() { BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
+    # (one fixed time for both languages' runs: a minute turning between them changed the clock in the status bar)
+    vrun() { BANANA_NOW=1767225600 BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
         "$HERE/banana-ui" --headless "$VX/$l-" --size 640x480 --assets "$VX/assets/rnds" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$VX/fx-$l/roms" --data "$VX/fx-$l/data" "$@" 2>> "$VX/$l.log" ||
         { echo "FAIL: banana-ui (verbatim, $l) exited $?"; fail=1; }; }

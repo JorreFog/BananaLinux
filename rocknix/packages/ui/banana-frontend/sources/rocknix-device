@@ -1,0 +1,26 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# The handheld this ROCKNIX image runs on, as BananaOS's scripts and the menu know it. One ROCKNIX SM8550 image serves
+# the AYN Thor, the Odin 2s, the AYANEO Pockets...; BananaOS's board and hardware profile are per handheld, so they are
+# written here at boot (099-banana-frontend) and at the menu's start (start_banana.sh), and /etc/banana/board and
+# /etc/banana/hw.conf link to them:
+#   /run/banana/board     thor on the AYN Thor (the menu's Thor defaults: the Thor OLED theme, its name, the
+#                         first-time setup's slides), rocknix on the others
+#   /run/banana/hw.conf   the shared profile (hw.conf: ROCKNIX's services mode) and the board's own lines after it
+#                         (hw-<board>.conf), when there are some
+#   rocknix-device [model]   (default: ROCKNIX's QUIRK_DEVICE, else the device tree's model)
+# (host tests: BANANA_RUN, BANANA_ROCKNIX_SHARE for /usr/share/banana/rocknix, BANANA_MODEL)
+RUN=${BANANA_RUN:-/run/banana}
+S=${BANANA_ROCKNIX_SHARE:-/usr/share/banana/rocknix}
+M=${1:-${BANANA_MODEL:-${QUIRK_DEVICE:-$(tr -d '\0' < /sys/firmware/devicetree/base/model 2>/dev/null)}}}
+case $M in
+"AYN Thor") b=thor ;;
+*) b=rocknix ;;
+esac
+mkdir -p "$RUN" || exit 1
+echo "$b" > "$RUN/board.new" && mv -f "$RUN/board.new" "$RUN/board"
+{
+    cat "$S/hw.conf" 2>/dev/null
+    if [ -f "$S/hw-$b.conf" ]; then echo; cat "$S/hw-$b.conf"; fi
+} > "$RUN/hw.conf.new" && mv -f "$RUN/hw.conf.new" "$RUN/hw.conf"
+echo "$b"

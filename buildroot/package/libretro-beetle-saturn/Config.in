@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBRETRO_BEETLE_SATURN
+	bool "libretro-beetle-saturn"
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Sega Saturn: Beetle Saturn (Mednafen), accurate and heavy; the
+	  Saturn BIOS in /data/bios.
+
+	  https://github.com/libretro/beetle-saturn-libretro
