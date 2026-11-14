@@ -26,15 +26,27 @@ mkdir -p "$P/sources/ui" "$P/sources/activity"
     tar -C "$P/sources/ui" -xf -
 cp "$HERE/store/apps/activity/banana-activity.cpp" "$HERE/store/apps/activity/activity-font.h" \
     "$HERE/store/apps/activity/activity-logo.h" "$P/sources/activity/"
-# BananaOS's system scripts the menu runs, in their services mode on ROCKNIX (see the package), and its apps' launchers
-rm -rf "$P/sources/libexec" "$P/sources/sleep.d"
+# BananaOS's system scripts the menu runs, in their services mode on ROCKNIX (see the package), and its apps' launchers;
+# the AYN Thor's own tools: the quick menu's live tiles (sysstat), Steam (steam: the sign-in, the library, downloads),
+# PC games (pc-games, run-pc: Wine through ROCKNIX's Box64, under ROCKNIX's sway), USB debugging over ROCKNIX's
+# usbgadget (usb-debug) and tune's parts ROCKNIX leaves alone (tune). Not here, being ROCKNIX's own: run-wayland (sway
+# is always up), data-link and ra-standalone (ROCKNIX's start scripts and cheevos_*.sh do their part for its
+# standalone emulators), bananad and sleep (ROCKNIX's input_sense and fake suspend)
+rm -rf "$P/sources/libexec" "$P/sources/sleep.d" "$P/sources/themes" "$P/sources/companions"
 mkdir -p "$P/sources/libexec" "$P/sources/sleep.d"
 for f in wifi wifi-nm bluetooth volume update ssh share sd2 sound-server hw-probe backlight run-rocknix rocknix-options handheld \
          ra-reset ra-secrets ra-netcmd timezone nds-saves nds-reset nds-buttons nds-game-option nds-game-shader saves-flat systems-merge kv-env \
-         run-store run-store-app run-dodakvarter run-activity run-bank; do
-    [ -f "$HERE/system/rootfs/usr/libexec/banana/$f" ] && cp "$HERE/system/rootfs/usr/libexec/banana/$f" "$P/sources/libexec/"
+         run-store run-store-app run-dodakvarter run-activity run-bank \
+         sysstat steam pc-games run-pc usb-debug tune; do
+    [ -f "$HERE/system/rootfs/usr/libexec/banana/$f" ] || { echo "no usr/libexec/banana/$f in $HERE"; exit 1; }
+    cp "$HERE/system/rootfs/usr/libexec/banana/$f" "$P/sources/libexec/"
 done
 cp "$HERE/system/rootfs/etc/banana/sleep.d/20-sound" "$P/sources/sleep.d/"
+# the performance modes (banana-perf: the clusters' caps, and the mode told to run-rocknix for runemu.sh)
+rm -rf "$P/sources/bin"; mkdir -p "$P/sources/bin"
+cp "$HERE/system/rootfs/usr/bin/banana-perf" "$P/sources/bin/"
+# the menu's themes (Thor OLED and its White, Clear Purple and Rainbow, and the others) and the GBA/DS companions' data
+cp -r "$HERE/system/rootfs/usr/share/banana/themes" "$HERE/system/rootfs/usr/share/banana/companions" "$P/sources/"
 
 # ---- Banana's emulators and apps ----
 for d in "$HERE"/rocknix/packages/emulators/libretro/* "$HERE"/rocknix/packages/emulators/standalone/*; do
@@ -66,6 +78,11 @@ if [ -d "$RA" ]; then
     cp "$HERE"/rocknix/patches/retroarch/*.patch "$RA/"
     cp "$HERE/buildroot/patches/retroarch/0005-menu-rgui-Ukrainian-with-the-Cyrillic-font.patch" "$RA/1005-banana-rgui-ukrainian.patch"
 fi
+
+# ---- the ROCKNIX commit this was made and checked against (rocknix/ROCKNIX): another one may need the package changed
+pin=$(sed -n 's/^commit=//p' "$HERE/rocknix/ROCKNIX")
+have=$(git -C "$R" rev-parse HEAD 2>/dev/null) || have=
+[ -n "$have" ] && [ "$have" != "$pin" ] && echo "note: $R is at ${have%"${have#????????}"}, BananaOS's pin is ${pin%"${pin#????????}"} (rocknix/ROCKNIX)"
 
 # ---- listed where ROCKNIX's build looks ----
 python3 "$HERE/tools/rocknix-register.py" "$R" "$DEV"

@@ -162,11 +162,12 @@ wrong.
    git checkout claude/pensive-rubin-cy7ro4
    ```
 
-2. ROCKNIX at the commit this work was made against (`buildroot/board/thor/ROCKNIX`'s `commit=`):
+2. ROCKNIX at the commit this route was made and checked against (`rocknix/ROCKNIX`'s `commit=`, `4fc79d7c`; the
+   Buildroot image's kernel has its own pin, `buildroot/board/thor/ROCKNIX`):
 
    ```sh
    git clone https://github.com/ROCKNIX/distribution ../rocknix
-   git -C ../rocknix checkout "$(sed -n 's/^commit=//p' buildroot/board/thor/ROCKNIX)"
+   git -C ../rocknix checkout "$(sed -n 's/^commit=//p' rocknix/ROCKNIX)"
    ```
 
 3. BananaOS into it. This copies the frontend package and Banana's emulator and app packages into the checkout,

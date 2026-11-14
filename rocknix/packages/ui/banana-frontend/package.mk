@@ -38,25 +38,34 @@ makeinstall_target() {
     cp ${PKG_BUILD}/ui/banana-ui ${INSTALL}/usr/bin/
     for b in banana-scrape banana-sync banana-bshare banana-fetch; do cp ${PKG_BUILD}/ui/${b} ${INSTALL}/usr/bin/; done
     cp ${PKG_BUILD}/banana-activity ${INSTALL}/usr/bin/
-    cp ${PKG_DIR}/sources/start_banana.sh ${INSTALL}/usr/bin/
+    cp ${PKG_DIR}/sources/start_banana.sh ${PKG_DIR}/sources/bin/banana-perf ${INSTALL}/usr/bin/
     chmod 0755 ${INSTALL}/usr/bin/banana-* ${INSTALL}/usr/bin/start_banana.sh
   for d in rnds splash banana lang speaker-eq; do
     mkdir -p ${INSTALL}/usr/share/banana/${d}
     cp -a ${PKG_BUILD}/ui/assets/${d}/. ${INSTALL}/usr/share/banana/${d}/
   done
+  # the themes (Thor OLED, the AYN Thor's default, with its White, Clear Purple and Rainbow; the other examples) and the
+  # companions' game data
+  mkdir -p ${INSTALL}/usr/share/banana/themes ${INSTALL}/usr/share/banana/companions
+    cp -a ${PKG_DIR}/sources/themes/. ${INSTALL}/usr/share/banana/themes/
+    cp -a ${PKG_DIR}/sources/companions/. ${INSTALL}/usr/share/banana/companions/
   # the home row's own tiles: Files and Bshare (the menu's own pages), Activity
   mkdir -p ${INSTALL}/usr/share/banana/apps/files ${INSTALL}/usr/share/banana/apps/bshare ${INSTALL}/usr/share/banana/apps/activity
     touch ${INSTALL}/usr/share/banana/apps/files/Files.app ${INSTALL}/usr/share/banana/apps/bshare/Bshare.app \
       ${INSTALL}/usr/share/banana/apps/activity/Activity.app
   mkdir -p ${INSTALL}/usr/share/banana/rocknix
-    cp ${PKG_DIR}/sources/es-systems-to-banana.py ${INSTALL}/usr/share/banana/rocknix/
+    cp ${PKG_DIR}/sources/es-systems-to-banana.py ${PKG_DIR}/sources/hw.conf ${PKG_DIR}/sources/hw-*.conf ${INSTALL}/usr/share/banana/rocknix/
   # BananaOS's system scripts the menu runs (Wi-Fi, Bluetooth, volume, updates, SSH, sharing, the DS's saves...), in
   # their services mode (HW_SERVICES=systemd in this hardware profile: ROCKNIX's units and settings underneath)
   mkdir -p ${INSTALL}/usr/libexec/banana ${INSTALL}/etc/banana/sleep.d
     cp -a ${PKG_DIR}/sources/libexec/. ${INSTALL}/usr/libexec/banana/
+    cp ${PKG_DIR}/sources/rocknix-device ${PKG_DIR}/sources/rocknix-frontend ${INSTALL}/usr/libexec/banana/
+    chmod 0755 ${INSTALL}/usr/libexec/banana/*
     cp -a ${PKG_DIR}/sources/sleep.d/. ${INSTALL}/etc/banana/sleep.d/
-    cp ${PKG_DIR}/sources/hw.conf ${INSTALL}/etc/banana/hw.conf
-    echo rocknix > ${INSTALL}/etc/banana/board
+  # the board and the hardware profile are the handheld's (one SM8550 image serves several): rocknix-device writes them
+  # into /run/banana at boot and at the menu's start (board thor on the AYN Thor: the menu's Thor defaults)
+    ln -sf /run/banana/hw.conf ${INSTALL}/etc/banana/hw.conf
+    ln -sf /run/banana/board ${INSTALL}/etc/banana/board
   # the frontend choice (ROCKNIX's autostart, common scripts) and its default for a fresh /storage
   mkdir -p ${INSTALL}/usr/lib/autostart/common ${INSTALL}/usr/config/profile.d
     cp ${PKG_DIR}/sources/099-banana-frontend ${INSTALL}/usr/lib/autostart/common/

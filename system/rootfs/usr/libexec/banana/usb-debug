@@ -13,7 +13,7 @@
 #
 #   usb-debug up | down | status
 # (host tests: BANANA_CONFIGFS for /sys/kernel/config, BANANA_SYS for /sys, BANANA_RUN, BANANA_DATA, BANANA_HW_CONF;
-# BANANA_USB_DRY=1 makes the gadget's tree and starts nothing)
+# BANANA_USB_DRY=1 makes the gadget's tree and starts nothing; BANANA_USBGADGET, BANANA_SYSTEMCTL for ROCKNIX's)
 CFS=${BANANA_CONFIGFS:-/sys/kernel/config}
 SYS=${BANANA_SYS:-/sys}
 RUN=${BANANA_RUN:-/run/banana}
@@ -35,6 +35,37 @@ down() {
     # (a test's plain folders: what the kernel takes away by itself with the gadget)
     if [ -n "$BANANA_USB_DRY" ]; then rm -f "$G/UDC"; rmdir "$G"/configs/c.1/strings "$G"/configs/c.1 "$G"/configs "$G"/functions "$G"/strings "$G" 2>/dev/null; fi
 }
+
+# On ROCKNIX (hw.conf's HW_SERVICES=systemd) the port's gadget is ROCKNIX's own (usbgadget: its NCM network or MTP, the
+# mode kept across boots, restored by its autostart): USB debugging is its network mode, the handheld on the address
+# usbgadget gives (169.254.170.2 unless changed; the computer gets .1) with ROCKNIX's sshd started on it (its root
+# password). Its kernel has NCM and FunctionFS but no serial function (USB_CONFIGFS_ACM) and the image no adbd, so the
+# serial console and adb are BananaOS's image only. A port the owner put in file transfer mode is left as it is.
+if [ "$HW_SERVICES" = systemd ]; then
+    UG=${BANANA_USBGADGET:-usbgadget}
+    mode() { $UG 2>/dev/null | head -n 1; }
+    case $1 in
+    up)
+        [ "$HW_USB_DEBUG" = yes ] || { echo "USB debugging isn't on for this board (hw.conf: HW_USB_DEBUG)"; exit 0; }
+        [ "$(setting usb_debug)" = off ] && { echo "USB debugging is off (settings.conf: usb_debug)"; exit 0; }
+        case $(mode) in
+        network) echo "already up"; exit 0 ;;
+        file_transfer) echo "the port is in ROCKNIX's file transfer mode: left as it is"; exit 0 ;;
+        esac
+        $UG network >> "$LOG" 2>&1 || { say "ROCKNIX's usbgadget couldn't start its network mode"; exit 1; }
+        ${BANANA_SYSTEMCTL:-systemctl} start sshd >/dev/null 2>&1
+        say "up: network $($UG address 2>/dev/null) (ROCKNIX's usbgadget), ssh"
+        ;;
+    down)
+        [ "$(mode)" = network ] && $UG disabled >> "$LOG" 2>&1
+        echo "down" ;;
+    status)
+        if [ "$(mode)" = network ]; then echo "up: network $($UG address 2>/dev/null)"; else echo "down"; fi ;;
+    *)
+        sed -n '2,/^[^#]/p' "$0" | grep '^#' | cut -c3-; exit 2 ;;
+    esac
+    exit 0
+fi
 
 case $1 in
 up)

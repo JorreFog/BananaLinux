@@ -151,7 +151,9 @@ if [ "$HW_SERVICES" = systemd ]; then
     case $1 in
     check)
         now=$(date +%s)
-        if v=$($RU check 2>/dev/null) && [ -n "$v" ]; then
+        # (hw.conf's HW_UPDATE=local: an image built with BananaOS in it, whose updates are its own builds' update tars
+        # dropped in /storage/.update: ROCKNIX's release would replace it with ROCKNIX's own frontend, so none is offered)
+        if [ "$HW_UPDATE" != local ] && v=$($RU check 2>/dev/null) && [ -n "$v" ]; then
             printf 'state=newer\nchecked=%s\nfetched=%s\nboard=%s\ncurrent=%s\nchannel=rocknix\nlatest=%s\ntag=%s\nprerelease=0\nfile=rocknix-%s\nurl=rocknix\nsize=0\n' \
                 "$now" "$now" "$BOARD" "$CUR" "$v" "$v" "$v"
         else
@@ -168,7 +170,9 @@ if [ "$HW_SERVICES" = systemd ]; then
         status "done $(field latest)"	# (installed by ROCKNIX at the next boot)
         ;;
     list) ;;
-    status) echo "ROCKNIX $CUR: updates install at the next boot" ;;
+    status)
+        if [ "$HW_UPDATE" = local ]; then echo "ROCKNIX $CUR with BananaOS: a new build's update tar in /storage/.update installs at the next boot"
+        else echo "ROCKNIX $CUR: updates install at the next boot"; fi ;;
     *) echo "update check | download | apply | list | status (ROCKNIX's updater)" >&2; exit 2 ;;
     esac
     exit 0

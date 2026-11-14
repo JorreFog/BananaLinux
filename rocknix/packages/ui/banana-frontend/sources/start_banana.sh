@@ -17,6 +17,10 @@ DATA=/data/banana
 RUN=/run/banana
 export BANANA_DATA=$DATA BANANA_RUN=$RUN
 mkdir -p "${DATA}/logs" "${RUN}"
+# the handheld's board and hardware profile (/etc/banana/board and hw.conf link to /run/banana's): board thor on the
+# AYN Thor, which gives the menu the Thor's defaults (the Thor OLED theme, its name, the setup's Controls, Home server
+# and Steam slides) and hw-thor.conf's lines (the Thor button: HW_HOME, HW_HOME_KEY; the fan and lights; USB debugging)
+BOARD=$(/usr/libexec/banana/rocknix-device 2>/dev/null)
 # the volume keys' and Settings' volume: the server's default sink (the volume script's PipeWire branch)
 echo "pipewire @DEFAULT_AUDIO_SINK@" > "$RUN/mixer"
 LOG=${DATA}/logs/banana-ui.log
@@ -60,6 +64,31 @@ export BANANA_ROCKNIX=1
 swaymsg 'for_window [title="^(BananaDS|BananaFront|Activity|Store|Döda Kvarter)( Bottom)?$"] fullscreen enable' >/dev/null 2>&1
 # a RetroArch game on the top screen, while the menu keeps the bottom one for its game panel
 swaymsg "for_window [app_id=\"(?i)retroarch\"] move window to output ${WLR_CON:-DSI-2}" >/dev/null 2>&1
+
+# PC games (pc-games, steam, run-pc): their entries and folders in roms/windows (ROCKNIX's roms/pc is DOS's), Wine's
+# runtime and prefix in /data/pc on /storage's ext4 (pc-games' folder mode: no image to mount)
+export BANANA_PC_ROMS=/storage/roms/windows
+mkdir -p /storage/roms/windows "${D}/pc"
+# a PC game's window (Wine names it after its program) and the terminal the PC games' setup and Steam downloads show
+# in (run-pc), full screen on the top screen
+swaymsg "for_window [app_id=\"(?i)(.*\\.exe|foot)\$\"] move window to output ${WLR_CON:-DSI-2}, fullscreen enable" >/dev/null 2>&1
+
+# the second output: ROCKNIX's sway config for the AYN Thor starts it powered off and its touchscreen ignored, for
+# EmulationStation's bottom app to wake (a window titled "...Bottom..."); the menu is on it from the start
+SECOND=${SDL_VIDEO_DISPLAY_PRIORITY#*,}
+[ "${SECOND}" = "${SDL_VIDEO_DISPLAY_PRIORITY}" ] && SECOND=
+[ -n "${SECOND}" ] || SECOND=$(swaymsg -t get_outputs 2>/dev/null | jq -r ".[] | select(.name != \"${WLR_CON:-DSI-2}\") | .name" 2>/dev/null | head -n 1)
+if [ -n "${SECOND}" ]; then
+  swaymsg "output ${SECOND} power on" >/dev/null 2>&1
+  swaymsg 'input "0:0:bottom_touchscreen" events enabled' >/dev/null 2>&1
+  export BANANA_BOTTOM_OUTPUT="${SECOND}"
+fi
+
+# Hooks for the Thor button over a game (banana-ui): hw.conf's HW_HOME=yes and HW_HOME_KEY (the AYN Thor's lines,
+# hw-thor.conf) turn it on and name the keys; BANANA_HOME_KEY=1 here would force it on for another board. A game's
+# processes are not under this unit: runemu.sh moves each into a scope of ROCKNIX's games.slice (hw.conf's
+# HW_GAME_CGROUP); BANANA_GAME_CG would name the group the menu freezes. BANANA_BOTTOM_OUTPUT names the second output.
+# (${BOARD}: thor or rocknix)
 
 # both screens as windows (src/kms_sdl.cpp): the top one on sway's main output (WLR_CON, the 095-sway profile's),
 # the other on the second

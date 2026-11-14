@@ -15,6 +15,13 @@ want 'folder = /storage/roms/nds'
 want 'run = /usr/libexec/banana/run-rocknix gba %ROM% --core=mgba --emulator=retroarch --controllers=""'
 want 'run = %ROM%'
 want 'run = banana:files'
+# ROCKNIX's "pc" (DOS) as the menu's [dos], still started as ROCKNIX's pc; the menu's [pc] is the PC games hub, in
+# roms/windows
+want '[dos]'
+want 'run = /usr/libexec/banana/run-rocknix pc %ROM% --core=dosbox_pure --emulator=retroarch --controllers=""'
+want 'run = /usr/libexec/banana/run-pc %ROM%'
+want 'folder = /storage/roms/windows'
+[ "$(printf '%s\n' "$out" | grep -c '^\[pc\]$')" = 1 ] || { echo "FAIL rocknix: [pc] isn't the PC games hub alone"; fail=1; }
 bash -n "$HERE/packages/ui/banana-frontend/sources/start_banana.sh" || { echo "FAIL rocknix: start_banana.sh"; fail=1; }
 sh -n "$HERE/../tools/rocknix-banana.sh" || { echo "FAIL rocknix: rocknix-banana.sh"; fail=1; }
 sh "$HERE/tests/services.sh" || fail=1
@@ -23,9 +30,11 @@ sh "$HERE/tests/perf.sh" || fail=1
 sh "$HERE/tests/handheld.sh" || fail=1
 sh "$HERE/tests/options.sh" || fail=1
 sh "$HERE/tests/register.sh" || fail=1
+sh "$HERE/tests/thor.sh" || fail=1
 for f in "$HERE"/packages/emulators/standalone/*/scripts/*.sh; do bash -n "$f" || { echo "FAIL rocknix: $f"; fail=1; }; done
 sh "$HERE/tests/bananads-sway.sh" || fail=1
 sh "$HERE/tests/gamepanel-sway.sh" || fail=1
 bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
+grep -q "^commit=[0-9a-f]\{40\}$" "$HERE/ROCKNIX" || { echo "FAIL rocknix: no ROCKNIX commit in rocknix/ROCKNIX"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

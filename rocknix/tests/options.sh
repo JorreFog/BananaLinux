@@ -34,6 +34,11 @@ grep -qxF 'gba["Zelda.gba"].ratio=16/9' "$T/system.cfg" || bad "the game's ratio
 grep -qF 'Zelda.gba"].ratio' "$T/system.cfg" && bad "an emptied choice stayed"
 grep -qx 'global.rewind=0' "$T/system.cfg" || bad "another setting was lost"
 "$O" set 'gba;x' - ratio 4/3 2>/dev/null && bad "a bad system name was taken"
+# the menu's "dos" shelf is ROCKNIX's "pc" (es-systems-to-banana.py): its choices kept as pc's
+"$O" set dos - emulator retroarch/dosbox_core
+grep -qx 'pc.emulator=retroarch' "$T/system.cfg" && grep -qx 'pc.core=dosbox_core' "$T/system.cfg" || bad "dos isn't kept as ROCKNIX's pc"
+[ "$("$O" resolve dos Doom.exe retroarch dosbox_pure)" = "retroarch dosbox_core" ] || bad "dos resolve: $("$O" resolve dos Doom.exe retroarch dosbox_pure)"
+"$O" rows dos - | cut -f1 | grep -qx emulator || bad "no rows for dos"
 # run-rocknix: the game's emulator and core in place of the run line's default
 mkdir -p "$T/bin" "$T/run" "$T/lib"
 printf '#!/bin/sh\necho "runemu $*" >> "%s/log"\n' "$T" > "$T/bin/runemu.sh"; chmod +x "$T/bin/runemu.sh"

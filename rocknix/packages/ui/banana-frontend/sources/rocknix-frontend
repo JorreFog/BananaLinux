@@ -1,0 +1,11 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# EmulationStation's unit (essway.service) with BananaOS's menu as the frontend: ROCKNIX's own scripts start essway
+# by name when they hand the screens back (start_steam.sh, after Steam's Big Picture, which stops sway), so its drop-in
+# (essway.service.d/banana.conf) runs this in start_es.sh's place: the menu, unless ROCKNIX's setting banana.frontend
+# is 0 (then EmulationStation, as ROCKNIX ships it).
+. /etc/profile.d/001-functions 2>/dev/null
+if [ "$(get_setting banana.frontend 2>/dev/null)" = "0" ]; then
+  exec /usr/bin/start_es.sh "$@"
+fi
+exec /usr/bin/start_banana.sh "$@"

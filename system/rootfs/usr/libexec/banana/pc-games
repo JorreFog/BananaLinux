@@ -37,11 +37,16 @@
 #   hud  = fps | full                   (optional: DXVK's overlay)
 #   d3d  = dxvk | wined3d               (optional: wined3d for a game DXVK draws wrong; default dxvk)
 #
-# (host tests: BANANA_PC for /data/pc, BANANA_PC_MNT for the mount point, BANANA_PC_ROMS, BANANA_PC_NOMOUNT=1 to use
-# the mount point as a plain folder, BANANA_PC_FETCH for the downloader, BANANA_PC_SUMS for three stand-in archives'
+# (host tests: BANANA_HW_CONF, BANANA_PC for /data/pc, BANANA_PC_MNT for the mount point, BANANA_PC_ROMS, BANANA_PC_NOMOUNT=1 to use
+# the mount point as a plain folder, BANANA_PC_NOBINFMT=1 to leave the kernel's binfmt alone, BANANA_PC_FETCH for the downloader, BANANA_PC_SUMS for three stand-in archives'
 # checksums, BANANA_BOX64 for box64)
 PC=${BANANA_PC:-/data/pc}
-MNT=${BANANA_PC_MNT:-/run/banana/pc}
+# On ROCKNIX (hw.conf's HW_SERVICES=systemd) /data is a folder of /storage, which is ext4: links and permissions are
+# there already, so the runtime and the prefix are a plain folder (/data/pc/runtime) and no image is made or mounted.
+# Box64 is ROCKNIX's own (/usr/bin/box64, its box32 and binfmt entries), as here.
+SVC=$(sed -n 's/^[[:space:]]*HW_SERVICES[[:space:]]*=[[:space:]]*//p' "${BANANA_HW_CONF:-/etc/banana/hw.conf}" 2>/dev/null | tail -n 1 | tr -d '"\r')
+FOLDER=; [ "$SVC" = systemd ] && FOLDER=1
+if [ -n "$FOLDER" ]; then MNT=${BANANA_PC_MNT:-$PC/runtime}; else MNT=${BANANA_PC_MNT:-/run/banana/pc}; fi
 ROMS=${BANANA_PC_ROMS:-/data/roms/pc}
 IMG=$PC/pc.ext4
 IMG_MB=${BANANA_PC_IMG_MB:-6144}
@@ -68,7 +73,7 @@ die() { say "$*"; exit 1; }
 val() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$2" 2>/dev/null | tail -n 1 | tr -d '\r'; }
 
 # the ext4 image, made on the first setup and mounted while PC games are in use
-mounted() { [ -n "$BANANA_PC_NOMOUNT" ] || grep -q " $MNT ext4 " /proc/mounts; }
+mounted() { [ -n "$BANANA_PC_NOMOUNT" ] || [ -n "$FOLDER" ] || grep -q " $MNT ext4 " /proc/mounts; }
 mount_img() {
     mkdir -p "$MNT" "$PC"
     mounted && return 0
@@ -77,7 +82,7 @@ mount_img() {
     mount -o loop,noatime "$IMG" "$MNT" || return 1
 }
 make_img() {
-    [ -n "$BANANA_PC_NOMOUNT" ] && { mkdir -p "$MNT"; return 0; }
+    { [ -n "$BANANA_PC_NOMOUNT" ] || [ -n "$FOLDER" ]; } && { mkdir -p "$MNT"; return 0; }
     [ -f "$IMG" ] && return 0
     free=$(df -m "$PC" 2>/dev/null | awk 'NR==2 { print $4 }')
     [ "${free:-0}" -gt $((IMG_MB + 512)) ] || die "not enough room on the card: $IMG_MB MB needed for PC games, ${free:-0} MB free"
@@ -88,7 +93,7 @@ make_img() {
 }
 # x86_64 and 32-bit x86 programs handed to Box64 by the kernel (Wine starts its own server and helpers by path)
 binfmt() {
-    [ -n "$BANANA_PC_NOMOUNT" ] && return 0
+    { [ -n "$BANANA_PC_NOMOUNT" ] || [ -n "$BANANA_PC_NOBINFMT" ]; } && return 0
     [ -d /proc/sys/fs/binfmt_misc ] || return 0
     [ -e /proc/sys/fs/binfmt_misc/register ] || mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null
     [ -e /proc/sys/fs/binfmt_misc/box64 ] ||
@@ -335,6 +340,8 @@ shell)
     ;;
 umount)
     [ -n "$BANANA_PC_NOMOUNT" ] && exit 0
+    # (the folder: nothing to let go of but Wine's server)
+    [ -n "$FOLDER" ] && { [ -x "$WINE/bin/wineserver" ] && "$BOX64" "$WINE/bin/wineserver" -k 2>/dev/null; exit 0; }
     [ -x "$WINE/bin/wineserver" ] && "$BOX64" "$WINE/bin/wineserver" -k 2>/dev/null
     mounted && umount "$MNT" 2>/dev/null
     ;;

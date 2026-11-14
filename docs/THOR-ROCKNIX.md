@@ -46,6 +46,9 @@ In code:
 - **`tools/rocknix-banana.sh <ROCKNIX checkout> [SM8550]`**: copies the package and banana-ui's source into a ROCKNIX
   checkout and adds `banana-frontend` to the device's `ADDITIONAL_PACKAGES`. Then build with ROCKNIX's own
   `make docker-SM8550`.
+- **`rocknix/ROCKNIX`**: the ROCKNIX commit this route is made and checked against, `4fc79d7c` (ROCKNIX's `next` on
+  2026-11-13). The installer says so when a checkout is at another commit. (The Buildroot image's kernel has its own
+  pin, `buildroot/board/thor/ROCKNIX`, moved only with its kernel patches: `.claude/skills/rocknix-sync`.)
 
 Checked without a Thor:
 
@@ -54,9 +57,144 @@ Checked without a Thor:
   one, each fitted with black bars.
 - **`rocknix/tests/run.sh`** checks the converter against a sample in ROCKNIX's `es_systems.cfg` shape. A headless
   banana-ui read the converted list and launched a game from it.
-- **The installer** ran on a ROCKNIX checkout at `6cf94dba` and is idempotent.
+- **The installer** ran on a ROCKNIX checkout at `4fc79d7c` (the pin) and is idempotent; `rocknix/tests/thor.sh` runs
+  it on a made-up checkout as well.
 
 **Not yet:** a ROCKNIX image build with the package, and a run on a Thor.
+
+## What the image has, against BananaOS's own Thor image
+
+`docs/THOR-OS.md` describes BananaOS's own Thor image (Buildroot), the reference for features. Section by section,
+what this ROCKNIX image has of it: **ROCKNIX's** (ROCKNIX already does it, the menu drives it), **added** (in this
+package now), **not on ROCKNIX** (with the reason).
+
+### The board and the hardware profile
+
+One ROCKNIX SM8550 image serves the AYN Thor, the Odin 2s and the AYANEO Pockets, while BananaOS's board and hardware
+profile are per handheld. So they are written at boot and at the menu's start by `rocknix-device`, and
+`/etc/banana/board` and `/etc/banana/hw.conf` are links into `/run/banana`:
+
+- **On a Thor** (device tree model `AYN Thor`) the board is `thor`. The menu then does everything it does for the
+  Thor on BananaOS's own image with no change to the menu: the Thor OLED theme by default, "Thor" as the handheld's
+  name, the first-time setup's Controls, Home server and Steam slides, Steam and the PC games hub. The profile is
+  `hw.conf` (ROCKNIX's services mode, `HW_SERVICES=systemd`, which every BananaOS script follows) with
+  `hw-thor.conf`'s lines after it (the Thor button, the fan and lights, USB debugging, tune's parts).
+- **On another SM8550 handheld** the board is `rocknix` and the profile is `hw.conf` alone, as before.
+
+### Section by section
+
+| THOR-OS.md | Here | How |
+|---|---|---|
+| Boot: OpenABL, the card's boot partition | ROCKNIX's | ROCKNIX's OpenABL route, kernel and squashfs |
+| Init: busybox init, `rcS`, `bananad` | ROCKNIX's | systemd and ROCKNIX's autostart; `099-banana-frontend` (autostart) makes the menu the frontend, writes the board and profile, runs `tune boot` and `usb-debug up`. Keys, lid, sleep and brightness hotkeys are ROCKNIX's (input_sense, fake suspend) |
+| The menu on both panels through KMS | added before | two SDL windows under ROCKNIX's sway (`kms_sdl.cpp`); `start_banana.sh` now powers the second output on and lets its touchscreen through (ROCKNIX's Thor sway config starts both off, for EmulationStation's bottom app) |
+| Default theme Thor OLED; the other themes | added | the themes (`usr/share/banana/themes`: Thor OLED and its White, Clear Purple and Rainbow, and the others) are in the package; board `thor` makes Thor OLED the default |
+| Games on KMS through a DRM lease, the game panel | ROCKNIX's / added before | ROCKNIX's RetroArch under sway, the game panel through RetroArch's network commands (`ra-netcmd`) |
+| `run-wayland` for windowed programs | not needed | sway is always up on ROCKNIX; ROCKNIX's own rule moves second-screen windows to the bottom output |
+| Memory: no compositor, no systemd at idle | not on ROCKNIX | ROCKNIX's systemd, sway and services always run under the menu; that is this route's cost |
+| zram, sysctls, idle state | ROCKNIX's | `rocknix-memory-manager` (zram with LZ4 and zstd recompression, watermarks, overcommit) and its `096-cpuidle` quirk; `tune boot` adds only what ROCKNIX leaves alone: MGLRU's 1 s protection, huge pages never compacted in a fault, the card's scheduler and read-ahead |
+| Emulators (RetroArch's 49 cores, Dolphin, ARMSX2, Azahar, PPSSPP, Vita3K, Flycast, ScummVM) | ROCKNIX's | ROCKNIX's SM8550 set, which is larger (Cemu, RPCS3, xemu, ares, gopher64...), plus Banana's own (BananaDS, BananaFront, mame-gnw, the BananaGBA/NES/SNES cores) |
+| PC games: Box64 + Wine + DXVK + VKD3D-Proton, the hub | added | `pc-games`, `run-pc` and the hub (`[pc]`): ROCKNIX's Box64 (`/usr/bin/box64`, its box32 and binfmt entries); Wine 11.0 WoW64, DXVK 3.1.1 and VKD3D-Proton 3.0.1 fetched by "Set up PC games" as on BananaOS; the runtime and prefix in a plain folder (`/data/pc/runtime`: `/storage` is ext4, so no image file); games run in ROCKNIX's sway (no compositor of their own) and in ROCKNIX's `games.slice`. The games are in `roms/windows` (ROCKNIX's `roms/pc` is DOS's, now the menu's "dos" shelf) |
+| ROCKNIX's own Windows and Steam | ROCKNIX's | its Windows shelf (scripts in `roms/windows` that call its Wine) and its Steam shelf (Steam's ARM64 client in Big Picture, through FEX and gamescope) stay; after Steam, ROCKNIX's script starts `essway`, which now runs the menu (`essway.service.d/banana.conf`) |
+| Your Steam library (QR or password sign-in, the library, downloads) | added | `steam` as on BananaOS: DepotDownloader's linux-arm64 build (glibc, as ROCKNIX), fetched once and checked; python3, curl, unzip are in ROCKNIX's image |
+| The Thor button (a press: the menu over a frozen game; held: the quick menu) | hooks | `hw-thor.conf`: `HW_HOME=yes`, `HW_HOME_KEY=316,102,194` (BTN_MODE through InputPlumber's pad, the AYN key as InputPlumber's KEY_HOME, or its own KEY_F24); both units delegate their control group; `HW_GAME_CGROUP` names ROCKNIX's `games.slice`, where `runemu.sh` puts each game's processes (in their own scope, out of the menu's unit). The menu's behaviour under sway is the menu's own work (`ui/src`, `rocknix/tests/*-sway.sh`) |
+| The quick menu's live tiles | added | `sysstat` (CPU, GPU, temperatures, memory, battery, fan from `/proc` and `/sys`: the same kernel interfaces) |
+| First-time setup: Wi-Fi, time zone, RetroAchievements, home server, Steam, the fan and lights, box art | added / before | the services mode for Wi-Fi and time zone; board `thor` gives the Controls and Steam slides (the home server one shows on any non-RG DS board) |
+| Tuning (`docs/THOR-TUNING.md`) | ROCKNIX's / added | above (zram row) |
+| Sound: PipeWire over AudioReach | ROCKNIX's | its PipeWire, WirePlumber, UCM and Bluetooth codecs |
+| Wi-Fi, Bluetooth | ROCKNIX's | NetworkManager and BlueZ through the scripts' services mode |
+| Web browser (WPE WebKit, Cog, wvkbd) | not on ROCKNIX | ROCKNIX's SM8550 image has no browser (only LibreELEC add-ons for other devices); WPE WebKit and Cog would have to become ROCKNIX packages (BananaOS's Buildroot recipes are the reference), the largest piece of work left |
+| RomM, home server | added before | `banana-sync` |
+| Files' servers (SMB, SFTP, FTP); sharing; SSH | partly | Files without SMB (`banana-fetch SMB=0`: libsmb2 isn't a ROCKNIX package; one would be needed); sharing is ROCKNIX's Samba, SSH its sshd |
+| Store, Activity, Bshare, PortMaster | added before / ROCKNIX's | `banana-apps`, Activity, Bshare; PortMaster is ROCKNIX's |
+| Updates: A/B slots from GitHub releases | changed | ROCKNIX's updater installs ROCKNIX's own releases, which would replace this image with EmulationStation. So `hw.conf`'s `HW_UPDATE=local` makes Settings > Update offer none; a new build goes in by its update tar in `/storage/.update` (ROCKNIX installs it at the next boot) |
+| Fan, stick lights | ROCKNIX's | `handheld` over ROCKNIX's `fancontrol` and `ledcontrol` |
+| Performance modes per system and game | added | `banana-perf` is now in the package (it wasn't: the modes never reached `run-rocknix`); its per-cluster caps, and the mode told to `runemu.sh` as ROCKNIX's per-game governor |
+| The companions (GBA, DS) | added | their game data (`usr/share/banana/companions`) is now in the package; the DS companion still needs BananaDS's overlay in its SDL frontend |
+| USB debugging (network, serial console, adb) | partly | `usb-debug` drives ROCKNIX's own gadget (`usbgadget`): its NCM network (the Thor on 169.254.170.2, the computer .1) with ROCKNIX's sshd and root password, at boot unless the port is in ROCKNIX's file transfer mode or `usb_debug = off`. ROCKNIX's SM8550 kernel has NCM, ECM, RNDIS, mass storage and FunctionFS but not `USB_CONFIGFS_ACM`, and the image has no adbd, so the serial console and adb are BananaOS's image only |
+| `data-link`, `ra-standalone` | ROCKNIX's | they serve BananaOS's own launchers of the standalone emulators; on ROCKNIX its start scripts keep their folders on ext4 and its `cheevos_*.sh` log the standalone emulators in from its settings, which `run-rocknix` fills from the menu's account |
+
+## Building it
+
+On a Linux x86_64 PC with Docker, about 150 GB free and 16 GB of RAM or more. ROCKNIX refuses to build as root.
+
+```sh
+git clone https://github.com/JorreFog/BananaLinux
+cd BananaLinux
+git checkout claude/pensive-rubin-cy7ro4                              # or main once it's merged
+git clone https://github.com/ROCKNIX/distribution ../rocknix
+git -C ../rocknix checkout "$(sed -n 's/^commit=//p' rocknix/ROCKNIX)"   # 4fc79d7c
+sh rocknix/tests/run.sh                                                  # the checks, a minute
+sh tools/rocknix-banana.sh ../rocknix SM8550
+cd ../rocknix
+make docker-SM8550
+```
+
+The image is `release/ROCKNIX-SM8550.aarch64-*.img.gz` (with an update `.tar` beside it). Write it to a microSD
+card (balenaEtcher, Raspberry Pi Imager or `dd`). The Thor needs OpenABL once (ROCKNIX's Thor page,
+https://rocknix.org/devices/ayn/thor-sm8550; back up the stock ABL first). Card in, power on: ROCKNIX's first boot
+makes its storage partition, then the menu comes up on both screens.
+
+One package again after a fix here: `sh tools/rocknix-banana.sh ../rocknix SM8550`, then in ROCKNIX's build
+container (`make docker-shell`): `PROJECT=ROCKNIX DEVICE=SM8550 ARCH=aarch64 ./scripts/clean banana-frontend` and
+`... ./scripts/build banana-frontend`, then `make docker-SM8550` for the image. A new build onto a Thor that already
+runs one: the update `.tar` from `release/` into `/storage/.update` (over SSH or Samba), then a restart.
+
+### What was checked here, and what only the Thor can tell
+
+Checked on a PC, without a Thor and without an image:
+
+- the installer against ROCKNIX at `4fc79d7c`: it runs, it is idempotent, and every package and list lands where
+  ROCKNIX's build looks; the move from `6cf94dba` changed nothing the package uses (in `projects/ROCKNIX` the two
+  commits differ in the mainline kernel's version, an `input_sense` message, a dropped 7.2 clock patch and the new
+  armGBA core; the SM8550 device folder is the same);
+- Banana's RetroArch patches with ROCKNIX's patch rules: ROCKNIX's own patches, then `1001` and `1005`, all apply
+  to ROCKNIX's RetroArch (`f726f095`), with the battery one after them;
+- melonDS: `bananads-sa` unpacks `melonds-sa`'s source, the same commit BananaDS pins (`906e9ebb`);
+- every package the frontend depends on exists in ROCKNIX's tree under that name (SDL2, freetype, libdrm, zlib,
+  alsa-lib, Python3, curl, openssl, libssh2; SDL2_ttf for mame-gnw);
+- `rocknix/tests/run.sh`: the converter (DOS renamed, the PC games hub), the services mode, the backlights, the
+  performance modes, the handheld tool, the game page's options, the register script, and `thor.sh` (the board and
+  profile per handheld, pc-games' folder mode, run-pc under sway, usb-debug over usbgadget, tune with the Thor's
+  profile, the update guard, the installer on a made-up checkout); `system/tests/*-test.sh` for BananaOS's own image;
+- a build of `banana-frontend` with ROCKNIX's toolchain was started in ROCKNIX's build container
+  (`ghcr.io/rocknix/rocknix-build`, `scripts/build banana-frontend` for SM8550) on a 4-core machine with 16 GB free:
+  it downloaded and built ROCKNIX's first host tools (openssl, make, pkg-config) and stopped in `cmake:host`, its
+  compilers killed from outside the build. The rest of the chain before the package (the cross toolchain, glibc,
+  Mesa, systemd, PulseAudio, SDL2, Python3) needs more disk and hours than that machine had, so the package itself
+  has not been compiled with ROCKNIX's toolchain yet.
+
+Only the Thor can tell:
+
+- that `rocknix-device` sees the model as `AYN Thor` (`cat /run/banana/board` says `thor`);
+- the Thor button's key code under InputPlumber (`evtest` on InputPlumber's pad and keyboard, then `HW_HOME_KEY`);
+- that the second output and its touchscreen come on with the menu (ROCKNIX's sway config starts them off on a Thor);
+- the backlights' names and order, the output names (`WLR_CON`) against `BANANA_TOP`, the touchscreens' names;
+- Box64 + Wine + DXVK under ROCKNIX's sway and Mesa (a first game from "Set up PC games"); DepotDownloader's start on
+  ROCKNIX's glibc and OpenSSL (`/usr/libexec/banana/steam status`, then a QR sign-in);
+- USB debugging: the port in device mode with the menu's profile, `ssh root@169.254.170.2` from a computer;
+- the package's build against ROCKNIX's toolchain end to end.
+
+### Hand-off: a prompt for building it on your PC
+
+Paste this to an AI assistant (or follow it yourself) on the PC that builds the image:
+
+> Build the AYN Thor's ROCKNIX image with BananaOS in it, from the BananaLinux repository
+> (https://github.com/JorreFog/BananaLinux, branch `claude/pensive-rubin-cy7ro4`). Read `docs/THOR-ROCKNIX.md` first,
+> then follow its "Building it" section exactly: ROCKNIX at the commit in `rocknix/ROCKNIX`, `sh rocknix/tests/run.sh`,
+> `sh tools/rocknix-banana.sh ../rocknix SM8550`, `make docker-SM8550` in the ROCKNIX checkout, as a normal user
+> (not root). Rules:
+>
+> 1. When a package fails, fix its recipe in the BananaLinux repository (`rocknix/packages/...`,
+>    `tools/rocknix-banana.sh`, `tools/rocknix-register.py`, the scripts in `system/rootfs/usr/libexec/banana`),
+>    never in ROCKNIX's checkout or its `build.*` folder; run `tools/rocknix-banana.sh` again and rebuild that
+>    package (`./scripts/clean <package>` and `./scripts/build <package>` in `make docker-shell`, with
+>    `PROJECT=ROCKNIX DEVICE=SM8550 ARCH=aarch64`).
+> 2. Don't drop a feature to get a green build: no package taken off the lists, no option turned off, no test
+>    skipped. If something can't be made to work, stop and say what and why.
+> 3. Run `sh rocknix/tests/run.sh` and `make test` before each commit; commit each fix on its own with what it fixes.
+> 4. At the end, report: the image's file name and size, each fix you made (file, what was wrong, how you fixed it),
+>    any warning worth a look, and anything left undone.
 
 ## The Thor's screen shapes
 
@@ -181,7 +319,7 @@ in `es_features.cfg`).
 
 | # | What | How | Status |
 |---|---|---|---|
-| 3.1 | Mode per system and per game | `banana-perf`'s mode written as ROCKNIX's per-game `cpugovernor` and `gpuperf` (`run-rocknix`), which `runemu.sh` applies | done |
+| 3.1 | Mode per system and per game | `banana-perf`'s mode written as ROCKNIX's per-game `cpugovernor` and `gpuperf` (`run-rocknix`), which `runemu.sh` applies. `banana-perf` itself is in the package now (it was missing, so no mode reached `run-rocknix`) | done |
 | 3.2 | Modes that fit the Thor | `banana-perf`'s multi-cluster branch: caps per cluster (A510, A715, X3) as shares of each one's top clock, and a GPU level | done; on the Thor |
 | 3.3 | A quick toggle while playing | The game page's Performance row; on the bottom screen while playing, the game panel (8.1) | game page done |
 
@@ -216,7 +354,7 @@ in `es_features.cfg`).
 | 7.3 | Input | InputPlumber's virtual pad read, its sources ignored (`BANANA_INPUT_IGNORE`); the confirm button choice | done; on the Thor |
 | 7.4 | Touch on both screens | Both touchscreens by name (the device tree's labels), mapped through each screen's fit | done; on the Thor |
 | 7.5 | First boot | Banana's setup pages work as they are: Wi-Fi through NetworkManager, the time zone given to ROCKNIX too (`timezone`: each of Banana's zones as an IANA zone, `rocknix-config tz`), the RetroAchievements account given to ROCKNIX's RetroArch at a game's start | done |
-| 7.6 | Image build and updates | CI's `rocknix-thor` job (manual: workflow_dispatch with `thor_image`): ROCKNIX at the pin, `tools/rocknix-banana.sh`, `make docker-SM8550`, the image as an artifact. Updates are ROCKNIX's, with this package in them | defined; not run |
+| 7.6 | Image build and updates | CI's `rocknix-thor` job (manual: workflow_dispatch with `thor_image`): ROCKNIX at the pin, `tools/rocknix-banana.sh`, `make docker-SM8550`, the image as an artifact (ROCKNIX at `rocknix/ROCKNIX`'s commit). Updates: this image's own builds' update tars in `/storage/.update`; ROCKNIX's releases are not offered (`HW_UPDATE=local`: they would bring EmulationStation back) | defined; not run |
 | 7.7 | Upstream | `docs/ROCKNIX-UPSTREAM.md`: the hooks to ask ROCKNIX for, so this needn't be a fork | drafted; not sent |
 
 ### 8. The bottom screen while playing (BananaOS's edge)
@@ -233,4 +371,6 @@ Before an image is worth flashing, these are the open questions (`.claude/skills
 - the backlights' names and order, and the output names (`WLR_CON`) against `BANANA_TOP`;
 - InputPlumber's device names for `BANANA_INPUT_IGNORE`, and both touchscreens' names;
 - that SDL's Wayland windows land on the outputs as they do under headless sway, and the sway rules for fullscreen;
-- the package builds against ROCKNIX's toolchain (dependency names, the cross `pkg-config`).
+- the package builds against ROCKNIX's toolchain (dependency names, the cross `pkg-config`);
+- the Thor's own pieces listed under "Building it" above: the board, the Thor button's codes, the second output
+  coming on, PC games and Steam, USB debugging.

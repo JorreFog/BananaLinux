@@ -4,7 +4,7 @@
 # EmulationStation starts it, through ROCKNIX's /usr/bin/runemu.sh with the system's default emulator and core, so
 # ROCKNIX's emulator setup (its configs, its per-game settings, its Thor quirks) is used as it is. The ids are
 # ROCKNIX's system names, which banana-ui's theme already knows (ui/assets/rnds/systems.cfg). The menu's own pages
-# (the Store, Döda Kvarter, Bshare, Activity, the Store's apps, Files) are added after the systems.
+# (PC games, the Store, Döda Kvarter, Bshare, Activity, the Store's apps, Files) are added after the systems.
 #
 #   es-systems-to-banana.py <es_systems.cfg> [systems.conf to write; default: stdout]
 import sys
@@ -19,7 +19,25 @@ PERF = {'performance': {'psp', 'pspminis', 'ps2', 'gamecube', 'wii', 'wiiware', 
         'steady': {'nds', 'ndsiware'}}
 # systems whose shelf stays even with no games (where a fresh card's games go)
 ALWAYS = {'nds', 'gba', 'gbc', 'gb', 'snes', 'nes', 'psx', 'n64', 'megadrive', 'genesis', 'ports'}
+# ROCKNIX's system ids that mean something else to the menu: its "pc" is MS-DOS (DOSBox), while the menu's [pc] is the
+# PC games hub (Windows games, Steam). Its shelf is "dos" here; its games still start as ROCKNIX's "pc" (run-rocknix
+# pc ...) and rocknix-options takes "dos" for "pc". The hub's games are in roms/windows (ROCKNIX's "pc" folder is
+# DOS's): their <Game>.pc entries and folders beside ROCKNIX's own Windows scripts (.sh, its Windows shelf), the
+# folder start_banana.sh gives pc-games and steam (BANANA_PC_ROMS)
+RENAME = {'pc': 'dos'}
 OWN_PAGES = '''
+[pc]
+name = PC games
+maker = Windows
+folder = /storage/roms/windows
+ext = pc
+flat = yes
+run = /usr/libexec/banana/run-pc %ROM%
+perf = performance
+always = yes
+changed = /usr/libexec/banana/pc-games scan
+covers = own
+
 [rocknixdsstore]
 name = Store
 maker = ROCKNIXDS
@@ -111,7 +129,7 @@ def convert(root):
             e = e.lstrip('.').lower()
             if e and e not in exts:
                 exts.append(e)
-        out.append('[%s]' % sid)
+        out.append('[%s]' % RENAME.get(sid, sid))
         out.append('name = %s' % (text(s, 'fullname') or sid))
         if text(s, 'manufacturer'):
             out.append('maker = %s' % text(s, 'manufacturer'))

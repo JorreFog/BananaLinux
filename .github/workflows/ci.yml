@@ -128,7 +128,7 @@ jobs:
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}-*.update.tar
 
-  # the AYN Thor's image (docs/THOR-ROCKNIX.md): ROCKNIX at the pin buildroot/board/thor/ROCKNIX names, BananaOS put into
+  # the AYN Thor's image (docs/THOR-ROCKNIX.md): ROCKNIX at the pin rocknix/ROCKNIX names, BananaOS put into
   # it by tools/rocknix-banana.sh (the frontend, Banana's emulators and apps, the RetroArch patches, the lists), then
   # ROCKNIX's own build in its build container. Only when asked for: it takes hours and much of the runner's disk.
   rocknix-thor:
@@ -144,7 +144,7 @@ jobs:
           df -h /
       - name: ROCKNIX at the pin
         run: |
-          c=$(sed -n 's/^commit=//p' buildroot/board/thor/ROCKNIX)
+          c=$(sed -n 's/^commit=//p' rocknix/ROCKNIX)
           git clone --filter=blob:none https://github.com/ROCKNIX/distribution rocknix
           git -C rocknix checkout "$c"
       - name: BananaOS into it
@@ -153,7 +153,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: rocknix/sources
-          key: rocknix-sources-${{ hashFiles('buildroot/board/thor/ROCKNIX', 'rocknix/packages/**') }}
+          key: rocknix-sources-${{ hashFiles('rocknix/ROCKNIX', 'rocknix/packages/**') }}
           restore-keys: rocknix-sources-
       - name: Build (ROCKNIX's make docker-SM8550)
         run: cd rocknix && make docker-SM8550
@@ -162,7 +162,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: rocknix/sources
-          key: rocknix-sources-${{ hashFiles('buildroot/board/thor/ROCKNIX', 'rocknix/packages/**') }}-${{ github.run_id }}
+          key: rocknix-sources-${{ hashFiles('rocknix/ROCKNIX', 'rocknix/packages/**') }}-${{ github.run_id }}
       - uses: actions/upload-artifact@v4
         with:
           name: banana-thor-rocknix
