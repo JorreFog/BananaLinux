@@ -9,7 +9,8 @@ PKG_VERSION="local"
 PKG_LICENSE="MIT"
 PKG_SITE="https://github.com/JorreFog/BananaLinux"
 PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain SDL2 freetype libdrm zlib alsa-lib Python3 curl openssl libssh2"
+# (grim: the quick menu slides over a picture of what a two-screen game shows on the bottom output)
+PKG_DEPENDS_TARGET="toolchain SDL2 freetype libdrm zlib alsa-lib Python3 curl openssl libssh2 grim"
 PKG_LONGDESC="BananaOS's dual-screen menu (banana-ui) as the frontend, under sway"
 PKG_TOOLCHAIN="manual"
 

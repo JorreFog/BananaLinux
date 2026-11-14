@@ -34,6 +34,17 @@ namespace banana
 		return e && !strcmp(e, "south");
 	}
 
+	// the Home button's codes (inputHomeCode): a key the menu has no other use for still read, as OTHER
+	static int homeExtra[4] = { 0, 0, 0, 0 };
+	void inputHomeCode(int code)
+	{
+		for (int& h : homeExtra)
+		{
+			if (h == code) return;
+			if (!h) { h = code; return; }
+		}
+	}
+
 	static Key mapKey(int code)
 	{
 		if (southConfirm())
@@ -62,7 +73,9 @@ namespace banana
 		case BTN_MODE: case KEY_F1: return Key::MENU;
 		case BTN_Z: case BTN_THUMBL: case BTN_THUMBR: return Key::OTHER;
 		case BTN_BACK: return Key::OTHER;	// (the AYN Thor's pad's spare key: the Home button if hw.conf's HW_HOME_KEY says so)
-		default: return Key::NONE;
+		default:
+			for (int h : homeExtra) if (h && h == code) return Key::OTHER;
+			return Key::NONE;
 		}
 	}
 
@@ -83,6 +96,13 @@ namespace banana
 		pw = panelW; ph = panelH;
 		watch = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 		if (watch >= 0) inotify_add_watch(watch, "/dev/input", IN_CREATE | IN_DELETE | IN_ATTRIB);
+		// (tests only: BANANA_INPUT_FIFO, a named pipe of struct input_event as an evdev device sends them, read as one
+		// more device with buttons; where there is no /dev/uinput to make a real one. Never grabbed)
+		if (const char* fifo = getenv("BANANA_INPUT_FIFO"))
+		{
+			const int fd = ::open(fifo, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+			if (fd >= 0) { Dev dv; dv.fd = fd; dv.node = fifo; dv.shared = true; devs.push_back(dv); }
+		}
 		DIR* d = opendir("/dev/input");
 		if (!d) return;
 		while (dirent* e = readdir(d))

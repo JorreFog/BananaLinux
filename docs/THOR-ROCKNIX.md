@@ -362,6 +362,7 @@ in `es_features.cfg`).
 | # | What | How | Status |
 |---|---|---|---|
 | 8.1 | Banana's game panel on the bottom while a game plays on the top | The menu closes its top window for the game and keeps the bottom one (`leaseSdl`); RetroArch is kept on the top output; the panel's commands go to RetroArch's network command port (`ra-netcmd`), BananaFront reads them itself. `rocknix/tests/gamepanel-sway.sh` | done; on the Thor |
+| 8.3 | The Thor button over a game | Tap: the game frozen (the menu's own `banana-game` group under its unit, plus ROCKNIX's `games.slice`, where `runemu.sh` puts each game; SIGSTOP as a fallback), the menu's windows reopened over it, fullscreen and focused through sway's IPC; a second tap closes them, gives the game back its fullscreen views and focus, and thaws it. Hold 3 s: the quick menu slides up on the bottom output while the game keeps running (over the game panel, the menu's own bottom window; over a two-screen game, a window raised over it, sliding over a `grim` picture of the game's bottom screen). `rocknix/tests/home-sway.sh` (headless sway at the Thor's sizes, a stand-in game whose frames are counted, the key injected) | done; on the Thor |
 | 8.2 | The menu's views filling the Thor's shapes | Done so far: every screen filled, the status bar and the sheet spanning the top screen. Still to do, view by view: the bottom screen's extra rows (557 grid units high instead of 480: Settings' lists, the shelf), the game list's top screen, Settings' top panel. Each view lays its rows, footer and touch areas out on fixed coordinates, so this is a per-view reflow, done carefully to keep the RG DS pixel-identical | partly |
 
 ### What only the Thor can tell
@@ -372,5 +373,11 @@ Before an image is worth flashing, these are the open questions (`.claude/skills
 - InputPlumber's device names for `BANANA_INPUT_IGNORE`, and both touchscreens' names;
 - that SDL's Wayland windows land on the outputs as they do under headless sway, and the sway rules for fullscreen;
 - the package builds against ROCKNIX's toolchain (dependency names, the cross `pkg-config`);
+- the Thor button under InputPlumber: which of 316, 102, 194 it sends, that the menu's grab keeps the game from
+  seeing presses, and whether the button also opens RetroArch's own menu;
+- that freezing `games.slice` stalls nothing else ROCKNIX puts there, and that sway raises the menu over a frozen
+  game (it waits about 200 ms for the frozen client) and matches the outputs by position on the real panels;
+- whether a two-screen emulator drawing both windows from one thread stalls while the quick menu covers its bottom
+  window;
 - the Thor's own pieces listed under "Building it" above: the board, the Thor button's codes, the second output
   coming on, PC games and Steam, USB debugging.

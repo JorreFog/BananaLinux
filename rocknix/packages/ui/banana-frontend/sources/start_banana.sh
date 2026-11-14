@@ -89,6 +89,9 @@ fi
 # processes are not under this unit: runemu.sh moves each into a scope of ROCKNIX's games.slice (hw.conf's
 # HW_GAME_CGROUP); BANANA_GAME_CG would name the group the menu freezes. BANANA_BOTTOM_OUTPUT names the second output.
 # (${BOARD}: thor or rocknix)
+# banana-ui talks to sway through its IPC socket (the menu raised and fullscreen over a game, the game's views and
+# focus put back after)
+[ -n "$SWAYSOCK" ] || export SWAYSOCK=$(ls /run/user/*/sway-ipc.*.sock /run/sway-ipc.*.sock 2>/dev/null | head -n 1)
 
 # both screens as windows (src/kms_sdl.cpp): the top one on sway's main output (WLR_CON, the 095-sway profile's),
 # the other on the second

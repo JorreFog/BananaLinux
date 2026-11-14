@@ -126,6 +126,12 @@ namespace banana
 	bool Display::presentSdl(const uint32_t* const*, const Damage*) { return false; }
 	void Display::handleSdl() {}
 	void Display::blankSdl() {}
+	int Display::leaseBothSdl() { return -1; }
+	bool Display::borrowSdl(int) { return false; }
+	void Display::giveBackSdl() {}
+	bool Display::sheetOpenSdl() { return false; }
+	void Display::sheetCloseSdl() {}
+	bool Display::sheetUnder(std::vector<uint32_t>&) { return false; }
 #endif
 
 	// a connector's "panel orientation" as the clockwise turn the picture needs (drm_connector.c: the device tree's
@@ -610,7 +616,8 @@ namespace banana
 
 	int Display::leaseBoth()
 	{
-		if (sdl || fd < 0 || leased >= 0) return -1;
+		if (sdl) return leaseBothSdl();	// (a compositor's windows: both closed, the game a client on both outputs)
+		if (fd < 0 || leased >= 0) return -1;
 		uint32_t objs[8], lessee = 0;
 		int n = 0;
 		for (int s = 0; s < 2; s++)
@@ -667,7 +674,8 @@ namespace banana
 
 	bool Display::sheetOpen()
 	{
-		if (sdl || fd < 0 || leased != 2 || !sheetPlane || (borrowMask & 2)) return false;
+		if (sdl) return sheetOpenSdl();	// (a window of the menu's over the game's bottom one)
+		if (fd < 0 || leased != 2 || !sheetPlane || (borrowMask & 2)) return false;
 		if (sheetOn) return true;
 		const int pw = panelWidth(1), ph = panelHeight(1);
 		for (int b = 0; b < 2; b++)
@@ -717,6 +725,7 @@ namespace banana
 
 	void Display::sheetClose()
 	{
+		if (sdl) { sheetCloseSdl(); return; }
 		if (!sheetOn) return;
 		drmModeSetPlane(fd, sheetPlane, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		sheetOn = sheetDrawn = false;
@@ -742,7 +751,8 @@ namespace banana
 
 	bool Display::borrow(int mask)
 	{
-		if (sdl || fd < 0 || leased < 0) return false;
+		if (sdl) return borrowSdl(mask);	// (the menu's windows opened again over the game's)
+		if (fd < 0 || leased < 0) return false;
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
@@ -785,7 +795,8 @@ namespace banana
 
 	void Display::giveBack()
 	{
-		if (sdl || fd < 0) return;
+		if (sdl) { giveBackSdl(); return; }
+		if (fd < 0) return;
 		// (a flip of ours still on its way lands first: the program's picture must be the last thing set)
 		for (int i = 0; i < 20 && pending; i++) { pollfd pf = { fd, POLLIN, 0 }; if (poll(&pf, 1, 10) > 0) handleEvents(); }
 		pending = 0;

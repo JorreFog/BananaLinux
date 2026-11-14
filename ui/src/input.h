@@ -30,6 +30,9 @@ namespace banana
 	bool absPushed(int axis, bool rightStick, int lo, int hi, int value);
 	// a button's evdev code as the menu's key (the face buttons by BANANA_CONFIRM, as a press is read)
 	Key inputKey(int code);
+	// a key code that is the Home button (hw.conf HW_HOME_KEY): read as Key::OTHER when it is no button of the menu's,
+	// so its device is opened and its presses reach the Home button's timing (the AYN key's KEY_F24, gpio-keys)
+	void inputHomeCode(int code);
 
 	class Input
 	{

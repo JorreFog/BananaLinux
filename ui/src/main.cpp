@@ -906,6 +906,50 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 // ---- the theme's transitions ("transitions": "fade"; and any screen of another shape than the canvas, where the
 // iris's circle would be drawn on the canvas, not the screens): smooth eased fades between whole screens, at their
 // own sizes. The frames are worked out here (the headless "trans" op draws them too); the loops are by the iris's
+// the Home button's game's control group (the cgroup v2 freezer, homeMenu's gameFreeze): banana-game beside the menu in
+// its own group. On BananaOS that is the hierarchy's root (rcS mounts it on /sys/fs/cgroup, and the menu is in no group of
+// its own): /sys/fs/cgroup/banana-game. Under systemd (ROCKNIX: bananasway.service, Delegate=yes) it is the unit's
+// group's child, e.g. /sys/fs/cgroup/system.slice/bananasway.service/banana-game, which systemd leaves to the unit; and
+// where the v2 hierarchy is mounted elsewhere (systemd's hybrid layout, /sys/fs/cgroup/unified) it is under that mount.
+// BANANA_GAME_CG names it outright. No v2 hierarchy: the old path, which fails, and the game is stopped by signals
+static std::string gameCgroup()
+{
+	if (const char* e = getenv("BANANA_GAME_CG")) if (*e) return e;
+	std::string mnt;
+	{
+		std::ifstream m("/proc/self/mounts");
+		std::string dev, at, type, rest;
+		while (m >> dev >> at >> type && std::getline(m, rest))
+			if (type == "cgroup2" && (mnt.empty() || at == "/sys/fs/cgroup")) mnt = at;
+	}
+	std::string own;
+	{
+		std::ifstream c("/proc/self/cgroup");
+		for (std::string l; std::getline(c, l);)
+			if (l.compare(0, 3, "0::") == 0) own = l.substr(3);
+	}
+	if (mnt.empty()) return "/sys/fs/cgroup/banana-game";
+	if (own.empty() || own == "/") return mnt + "/banana-game";
+	return mnt + own + "/banana-game";
+}
+
+// the Home button's key codes (hw.conf HW_HOME_KEY, comma-separated; the pad's BTN_MODE when it names none)
+static std::vector<int> homeKeyCodes()
+{
+	std::vector<int> v;
+	const std::string hk = getConfValue("/etc/banana/hw.conf", "HW_HOME_KEY", "316");
+	for (size_t a = 0; a <= hk.size(); )
+	{
+		size_t b = hk.find(',', a);
+		if (b == std::string::npos) b = hk.size();
+		const int c = atoi(hk.substr(a, b - a).c_str());
+		if (c > 0) v.push_back(c);
+		a = b + 1;
+	}
+	if (v.empty()) v.push_back(1);
+	return v;
+}
+
 static bool fadeTransitions(SoftBackend& be) { return be.staged(0) || be.staged(1) || rnds::themeFiles.transitions == "fade"; }
 
 static void grabScreens(SoftBackend& be, std::vector<uint32_t>* pic)
@@ -2493,6 +2537,12 @@ struct FrameStats
 // panel's fit to the canvas
 static void openInput(Input& input, const Display& disp, const SoftBackend& be, const std::string& touch)
 {
+#ifndef __ANDROID__
+	// (the Home button read from its device even when it is a key the menu has no use for otherwise: the AYN key's
+	// KEY_F24 on its own gpio-keys device)
+	if (getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY"))
+		for (int c : homeKeyCodes()) inputHomeCode(c);
+#endif
 	input.open(touch, disp.width(), disp.height());
 	if (disp.fitted() || be.staged(0) || be.staged(1))
 		input.mapTouch([&disp, &be](int s, float nx, float ny, bool wide, float& x, float& y)
@@ -2916,15 +2966,18 @@ int main(int argc, char** argv)
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
 	// (the Home button over a game: its state, used by the menu's own key handling too; the rest is further down)
 	const bool homeKey = getConfValue("/etc/banana/hw.conf", "HW_HOME", "") == "yes" || getenv("BANANA_HOME_KEY");
-	// (which button it is: hw.conf's HW_HOME_KEY, the kernel's key code; the pad's "mode" button, 316, when it names none)
-	const int homeCode = std::max(1, atoi(getConfValue("/etc/banana/hw.conf", "HW_HOME_KEY", "316").c_str()));
+	// (which button it is: hw.conf's HW_HOME_KEY, the kernel's key code; the pad's "mode" button, 316, when it names none.
+	// Several, comma-separated, where the button reaches the menu one of several ways: ROCKNIX's InputPlumber gives it
+	// as its virtual pad's button while it runs, the AYN key's own KEY_F24 (194) without it)
+	const std::vector<int> homeCodes = homeKeyCodes();
+	auto isHome = [&](int code) { return std::find(homeCodes.begin(), homeCodes.end(), code) != homeCodes.end(); };
 	struct { bool on = false, quick = false, resume = false, end = false; pid_t pid = 0; std::string rom, next; double told = 0; } home;
 	std::function<void(const bool&)> mainLoop;	// (the menu's own loop, below: run here until the game is gone back to)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		// the Home button over a stopped game: back into it
-		if (home.on && ev.code == homeCode) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
+		if (home.on && isHome(ev.code)) { if (ev.type == InputEvent::PRESS) home.resume = true; return; }
 		// (and bananad's idle timers: it doesn't see the buttons the menu holds for itself over the game, Input::grab,
 		// so game.held's time is the last press or touch, at most once a second)
 		if (home.on && ev.type != InputEvent::RELEASE && ev.type != InputEvent::TOUCH_UP && nowMs() - home.told >= 1000)
@@ -3064,35 +3117,52 @@ int main(int argc, char** argv)
 	// mode is set and no program starts. Another game picked from the menu ends the stopped one first.
 	// The game stopped and let go again. Its launcher's process group alone isn't all of it: a program started inside
 	// the compositor (run-wayland) is in a session of its own and would play on. So the game runs in a control group of
-	// its own (rcS mounts the hierarchy; the child joins /sys/fs/cgroup/banana-game before it starts anything) and the
-	// kernel freezes every process in it at once. Without the hierarchy: SIGSTOP to the launcher's group, as before.
-	static const char* const GAME_CG = "/sys/fs/cgroup/banana-game";
-	auto cgWrite = [&](const char* file, const char* value)
+	// its own (rcS mounts the hierarchy; the child joins /sys/fs/cgroup/banana-game before it starts anything; under
+	// systemd, the menu's unit's group's banana-game: gameCgroup) and the kernel freezes every process in it at once.
+	// Without the hierarchy: SIGSTOP to the launcher's group, as before.
+	// Where the system moves a game's processes into a group of its own (ROCKNIX: runemu.sh starts the emulator in a
+	// scope of games.slice), that group is frozen too: hw.conf's HW_GAME_CGROUP (BANANA_GAME_CGROUP for a test). It is
+	// neither made nor joined here, only frozen and thawed with the menu's own.
+	const std::string GAME_CG = homeKey ? gameCgroup() : "/sys/fs/cgroup/banana-game";
+	const std::string GAME_PROCS = GAME_CG + "/cgroup.procs";
+	const std::string GAME_CG_SYS = !homeKey ? "" : getenv("BANANA_GAME_CGROUP") ? getenv("BANANA_GAME_CGROUP") :
+		getConfValue("/etc/banana/hw.conf", "HW_GAME_CGROUP", "");
+	auto cgWriteIn = [&](const std::string& dir, const char* file, const char* value)
 	{
-		const int f = ::open((std::string(GAME_CG) + "/" + file).c_str(), O_WRONLY | O_CLOEXEC);
+		const int f = ::open((dir + "/" + file).c_str(), O_WRONLY | O_CLOEXEC);
 		if (f < 0) return false;
 		const bool ok = ::write(f, value, strlen(value)) == (ssize_t)strlen(value);
 		::close(f);
 		return ok;
 	};
+	auto cgWrite = [&](const char* file, const char* value)
+	{
+		const bool own = cgWriteIn(GAME_CG, file, value);
+		if (!GAME_CG_SYS.empty()) cgWriteIn(GAME_CG_SYS, file, value);
+		return own;
+	};
 	auto gameFreeze = [&](pid_t pid, bool on)
 	{
-		if (cgWrite("cgroup.freeze", on ? "1" : "0"))
-		{
-			// (frozen before the menu draws over it: the kernel says so in cgroup.events, within a few ms)
-			for (int i = 0; on && i < 100; i++)
+		const bool own = cgWriteIn(GAME_CG, "cgroup.freeze", on ? "1" : "0");
+		const bool sys = !GAME_CG_SYS.empty() && cgWriteIn(GAME_CG_SYS, "cgroup.freeze", on ? "1" : "0");
+		// (frozen before the menu draws over it: the kernel says so in cgroup.events, within a few ms)
+		for (const std::string* dir : { &GAME_CG, &GAME_CG_SYS })
+			for (int i = 0; on && (dir == &GAME_CG ? own : sys) && i < 100; i++)
 			{
-				std::ifstream ev(std::string(GAME_CG) + "/cgroup.events");
+				std::ifstream ev(*dir + "/cgroup.events");
 				std::string k; int v = 0; bool frozen = false;
 				while (ev >> k >> v) if (k == "frozen") frozen = v == 1;
 				if (frozen) break;
 				usleep(1000);
 			}
+		if (own)
+		{
 			// (thawed, its launcher's group may still be stopped: bananad stops it for a sleep and leaves a game the
 			// menu holds that way, bananad.c suspend_now)
 			if (!on) kill(-pid, SIGCONT);
 			return;
 		}
+		// (no group of the menu's own: the launcher's process group stopped as well, the system's group or not)
 		kill(-pid, on ? SIGSTOP : SIGCONT);
 	};
 	auto homeMenu = [&](pid_t pid, bool quick)
@@ -3101,15 +3171,22 @@ int main(int argc, char** argv)
 		// the quick menu is a sheet on the bottom screen and nothing else: the game goes on, and its top screen is
 		// never touched. On a plane of its own over a game that draws on both panels (1); on the menu's own bottom
 		// screen, over the game panel (2); and only where neither is to be had, the old way: the game stopped and its
-		// bottom panel borrowed (3). The menu proper (0) is over both screens, the game stopped behind it.
-		const int sheet = !quick ? 0 : disp.sheetOpen() ? 1 : disp.leasedScreen() == 0 ? 2 : 3;
-		const bool held = sheet == 0 || sheet == 3;
+		// bottom panel borrowed (3). The menu proper (0) is over both screens, the game stopped behind it. Under a
+		// compositor (SDL: sway on ROCKNIX) over a game on both outputs, the sheet is a window of the menu's raised over the
+		// game's bottom one (4), the slide composed here as for 2, over a screenshot of what the game had there.
 		const int sw = disp.screenWidth(1), sh = disp.screenHeight(1);
 		std::vector<uint32_t> under;	// (what the sheet slides over, where the menu composes it itself)
+		bool underShot = false;
+#ifndef __ANDROID__
+		// (taken before the sheet's window covers it)
+		if (quick && disp.compositor() && disp.leasedScreen() == 2) underShot = disp.sheetUnder(under);
+#endif
+		const int sheet = !quick ? 0 : disp.sheetOpen() ? (disp.compositor() ? 4 : 1) : disp.leasedScreen() == 0 ? 2 : 3;
+		const bool held = sheet == 0 || sheet == 3;
 		if (sheet >= 2)
 		{
 			if (sheet == 2) under.assign(be.pixels(1), be.pixels(1) + (size_t)sw * sh);
-			else under.assign((size_t)sw * sh, 0xff000000);
+			else if (sheet == 3 || !underShot) under.assign((size_t)sw * sh, 0xff000000);
 		}
 		if (held) gameFreeze(pid, true);
 		// (what is pressed and touched in the menu is not the game's: it would read it all when it goes on)
@@ -3182,6 +3259,7 @@ int main(int argc, char** argv)
 			slide(true);
 			dirty = true; drawn = false;
 		}
+		if (sheet == 4) logf("home: the sheet over the game's bottom output, %s", underShot ? "over its picture" : "over black (no picture of it)");
 		logf("home: %s, the %s up in %.0f ms", held ? "the game stopped" : "the game goes on", quick ? "quick menu" : "menu", nowMs() - t0);
 		recordEvent("game", quick ? "quick menu" : "home");
 		if (mainLoop) mainLoop(home.resume);
@@ -3236,12 +3314,12 @@ int main(int argc, char** argv)
 	// the Home button while a game runs: its press and release timed (a tap: the menu; three seconds: the quick menu)
 	struct HomeTap
 	{
-		int code = BTN_MODE;	// (the Home button's key code)
+		const std::vector<int>* codes = nullptr;	// (the Home button's key codes)
 		double down = 0;
 		int ask = 0;	// 1 the menu, 2 the quick menu
 		void event(const InputEvent& ev)
 		{
-			if (ev.code != code) return;
+			if (!codes || std::find(codes->begin(), codes->end(), ev.code) == codes->end()) return;
 			if (ev.type == InputEvent::PRESS) down = nowMs();
 			else if (ev.type == InputEvent::RELEASE && down > 0) { down = 0; ask = 1; }
 		}
@@ -3258,7 +3336,7 @@ int main(int argc, char** argv)
 		}
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		HomeTap tap;
-		tap.code = homeCode;
+		tap.codes = &homeCodes;
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -3269,7 +3347,7 @@ int main(int argc, char** argv)
 				homeMenu(pid, a == 2);
 				// (the presses made in the menu aren't the game's Home presses)
 				tap = HomeTap();
-				tap.code = homeCode;
+				tap.codes = &homeCodes;
 				continue;
 			}
 			pollfd fds[40];
@@ -3285,7 +3363,7 @@ int main(int argc, char** argv)
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		HomeTap homeTap;
-		homeTap.code = homeCode;
+		homeTap.codes = &homeCodes;
 		const int panelScreen = 1 - gameScreen;
 		// the GBA Pokémon companion's pages (gba/panel.h, their data gba/host.h): every game the companion opens
 		std::unique_ptr<gba::Host> gbaHost;
@@ -3324,7 +3402,7 @@ int main(int argc, char** argv)
 				// (the quick menu wants the bottom screen: the menu's own already when the panel is there)
 				homeMenu(pid, a == 2);
 				homeTap = HomeTap();
-				homeTap.code = homeCode;
+				homeTap.codes = &homeCodes;
 				bottomIdle.activity(nowMs());
 				want = true;
 				continue;
@@ -3425,7 +3503,7 @@ int main(int argc, char** argv)
 					{
 						// the buttons are the game's; F and a Companion button (the back button's job by default) also
 						// switch the panel between its menu and the companion
-						if (homeKey && ev.code == homeCode) { homeTap.event(ev); return; }	// (the Home button: the menu's)
+						if (homeKey && isHome(ev.code)) { homeTap.event(ev); return; }	// (the Home button: the menu's)
 						if (ev.type == InputEvent::PRESS)
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
@@ -3734,7 +3812,7 @@ int main(int argc, char** argv)
 		if (homeKey)
 		{
 			// the game's control group (gameFreeze): made here, thawed in case the last game ended frozen
-			mkdir(GAME_CG, 0755);
+			if (mkdir(GAME_CG.c_str(), 0755) != 0 && errno != EEXIST) logf("home: no control group for the game (%s: %s): stopped by signals", GAME_CG.c_str(), strerror(errno));
 			cgWrite("cgroup.freeze", "0");
 		}
 		pid_t pid = fork();
@@ -3750,7 +3828,7 @@ int main(int argc, char** argv)
 			if (homeKey)
 			{
 				// (into the game's control group before anything is started: every process of the game is born in it)
-				const int cg = ::open("/sys/fs/cgroup/banana-game/cgroup.procs", O_WRONLY);
+				const int cg = ::open(GAME_PROCS.c_str(), O_WRONLY);
 				if (cg >= 0) { if (::write(cg, "0", 1) != 1) {} ::close(cg); }
 			}
 			signal(SIGPIPE, SIG_DFL);
@@ -3760,7 +3838,7 @@ int main(int argc, char** argv)
 			setenv("BANANA_ROM", rom.c_str(), 1);
 			setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
 			setenv("BANANA_RA_PROGRESS", PROGRESS, 1);
-			if (homeLease)
+			if (homeLease && !disp.compositor())	// (a compositor's windows: the game is its client, nothing to hand over)
 			{
 				// (the shim hands the lease to whatever opens the display device: RetroArch, a compositor, an emulator)
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);

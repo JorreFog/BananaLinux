@@ -80,6 +80,10 @@ namespace banana
 		void sheetAt(float shown);
 		void sheetClose();
 		bool sheetUp() const { return sheetOn; }
+		// (a compositor's windows, kms_sdl.cpp: the sheet is a window of the menu's over the game's bottom one, raised
+		// over it, and the menu composes the slide itself. What the game had on that output is put under it: false when
+		// there is no picture of it (no grim), and under is left as it was)
+		bool sheetUnder(std::vector<uint32_t>& under);
 		void giveBack();
 		int borrowed() const { return borrowMask; }
 		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
@@ -124,6 +128,25 @@ namespace banana
 		void handleSdl();
 		void blankSdl();
 		int leaseSdl(int s);
+		// the Thor button under a compositor (kms_sdl.cpp): leaseBoth() closes both windows and the game is a client on
+		// both outputs; borrow() opens the menu's windows again over the game's (sway: fullscreen and focused, the game's
+		// window that was fullscreen there remembered), giveBack() closes them and makes the game's fullscreen and focused
+		// again; sheetOpen() opens the bottom window alone over a running game's
+		int sdlIdx[2] = { 0, 1 };
+		std::string sdlOut[2];
+		int sdlRect[2][2] = { { 0, 0 }, { 0, 0 } };	// (each output's place in the compositor's layout)
+		long theirCon[2] = { 0, 0 }, theirFocus = 0;	// (sway's container ids: the game's windows, and the focused one)
+		bool theirFs[2] = { false, false };
+		bool sdlSheet = false;
+		bool sdlWindow(int s, std::string& err);
+		void sdlRaise(int s);
+		void sdlRemember(int s);
+		void sdlRestore(int mask);
+		int leaseBothSdl();
+		bool borrowSdl(int mask);
+		void giveBackSdl();
+		bool sheetOpenSdl();
+		void sheetCloseSdl();
 		bool lightBoth();
 		void freeBuf(Buf& b);
 	};

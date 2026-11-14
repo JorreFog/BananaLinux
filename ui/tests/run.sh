@@ -194,6 +194,8 @@ grep -qxF 'gba.emulator=retroarch' "$RX/system.cfg" && grep -qxF 'gba.core=mgba'
 # outputs (the SDL display; skipped without sway, grim or a banana-ui built with SDL=1)
 sh "$HERE/../rocknix/tests/run.sh" || fail=1
 sh "$HERE/tests/sway-test.sh" || fail=1
+# the Thor button under sway: the menu over the frozen game and back, the quick menu over the bottom while it plays
+sh "$HERE/../rocknix/tests/home-sway.sh" || fail=1
 # the translations: a line's %d takes a number only, not a game's or a file's name
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
