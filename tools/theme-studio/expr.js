@@ -25,6 +25,7 @@
   const cpow = (a, b) => (a === 1 || (a === -1 && (b === Infinity || b === -Infinity)) ? 1 : Math.pow(a, b));
   // a double to int / uint32_t: undefined in C when it doesn't fit; the handhelds (aarch64) saturate, NaN is 0
   const toInt = (x) => (x !== x ? 0 : x >= 2147483647 ? 2147483647 : x <= -2147483648 ? -2147483648 : Math.trunc(x));
+  const clampInt = (d, lo, hi) => (d >= hi ? hi : d > lo ? Math.trunc(d) : lo);	// (NaN: lo)
   const toUint = (x) => (x !== x || x <= 0 ? 0 : x >= 4294967295 ? 4294967295 : Math.trunc(x));
   // a string's length in UTF-8 bytes (what std::string::size() counts)
   function utf8Len(s) {
@@ -203,7 +204,8 @@
   }
   function colorOf(v) {
     if (typeof v === "string") { const p = parseColorText(v); return p === null ? 0xff000000 : p; }
-    return ((0xff000000 | toUint(evNum(v))) >>> 0);
+    const n = evNum(v);
+    return n >= 0 && n <= 0xffffffff ? ((0xff000000 | Math.trunc(n)) >>> 0) : 0xff000000;	// (negative, NaN or too big: black)
   }
   function mixColor(a, b, t) {
     t = cmin(1, cmax(0, t));
@@ -465,7 +467,7 @@
     if (f === "lower") return lowerC(S(0));
     if (f === "len") return Array.from(S(0)).length;
     if (f === "substr") {
-      const s = Array.from(S(0)), from = toInt(N(1)), n = v.length > 2 ? toInt(N(2)) : (1 << 30), to = (from + n) | 0;	// (int: wraps)
+      const lim = 1 << 30, s = Array.from(S(0)), from = clampInt(N(1), -lim, lim), n = v.length > 2 ? clampInt(N(2), -lim, lim) : lim, to = from + n;
       let r = "";
       for (let k = 0; k < s.length; k++) if (k >= from && k < to) r += s[k];
       return r;

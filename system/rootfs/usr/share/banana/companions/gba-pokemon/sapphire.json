@@ -4,11 +4,12 @@
  "game": "sapphire",
  "code": "AXPE",
  "title": "Pokemon Sapphire Version",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "pret/pokeruby decompilation (GitHub): trainer parties (src/data/trainers.h, trainer_parties.h), map scripts, hidden items (map.json bg_events), evolutions, wild encounters, roamer.c",
   "The English ROM itself (AXPE): region map section names and trainer names/levels, read on the PC with ui/src/pokemon.cpp (findTables) - the ground truth for every place name and level cap",
-  "Bulbapedia (bulbapedia.bulbagarden.net): Courtney, Tabitha, Team Magma Hideout pages, read through a web search summary (admin roles per version)"
+  "Bulbapedia (bulbapedia.bulbagarden.net): Courtney, Tabitha, Team Magma Hideout pages, read through a web search summary (admin roles per version)",
+  "pret/pokeemerald and pret/pokefirered src/link.c, pret/pokeruby src/trade.c: a trade with FireRed/LeafGreen/Emerald turns on the National Pokédex"
  ],
  "places": {
   "aqua-hideout": {
@@ -202,6 +203,15 @@
   },
   "southern-island": {
    "name": "Southern Island"
+  },
+  "desert-ruins": {
+   "name": "Desert Ruins"
+  },
+  "island-cave": {
+   "name": "Island Cave"
+  },
+  "ancient-tomb": {
+   "name": "Ancient Tomb"
   }
  },
  "milestones": [
@@ -247,7 +257,15 @@
    ],
    "tips": "A lone grunt with a Level 9 Poochyena tries to rob a Devon researcher. Any Pokémon around Level 10 wins; the researcher gives you a Great Ball.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby (Petalburg Woods grunt)"
+   "source": "ROM AXPE trainer table; pret/pokeruby (Petalburg Woods grunt); pret/pokeruby constants/version.inc",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 9
+   },
+   "trainer_ids": [
+    10
+   ]
   },
   {
    "id": "gym-1-roxanne",
@@ -284,7 +302,15 @@
    ],
    "tips": "The grunt who stole the Devon Goods waits in Rusturf Tunnel east of Rustboro with a Level 11 Poochyena. Mr. Stone then gives you a letter for Steven and the PokéNav.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby (Rusturf Tunnel grunt)"
+   "source": "ROM AXPE trainer table; pret/pokeruby (Rusturf Tunnel grunt); pret/pokeruby constants/version.inc",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 11
+   },
+   "trainer_ids": [
+    16
+   ]
   },
   {
    "id": "gym-2-brawly",
@@ -340,7 +366,16 @@
    ],
    "tips": "Two grunts (Level 14 and 15 Pokémon) corner Captain Stern on the museum's 2nd floor when you bring the Devon Goods. The museum charges a small entry fee.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby (museum grunts)"
+   "source": "ROM AXPE trainer table; pret/pokeruby (museum grunts); pret/pokeruby constants/version.inc",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 15
+   },
+   "trainer_ids": [
+    20,
+    21
+   ]
   },
   {
    "id": "rival-route-110",
@@ -363,6 +398,22 @@
    "tips": "Three Pokémon, the starter at 20. After the fight the rival gives you the Itemfinder. Cycling Road above the route needs a bike (Rydel's shop in Mauville).",
    "quality": "reference-only",
    "source": "ROM AXPE trainer table; pret/pokeruby (*_ROUTE_110_*)"
+  },
+  {
+   "id": "rival-wally-mauville",
+   "name": "Wally in Mauville City",
+   "kind": "rival",
+   "place": "mauville-city",
+   "level_cap": 16,
+   "foe": {
+    "name": "WALLY",
+    "ace_level": 16
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wally wants to prove himself with his Ralts (Level 16) at the gym door. Any of your Pokémon wins; after this Wally moves to Verdanturf.",
+   "quality": "reference-only",
+   "source": "ROM AXPE trainer table; pret/pokeruby MauvilleCity scripts (Wally there from the start)"
   },
   {
    "id": "gym-3-wattson",
@@ -395,21 +446,50 @@
    "source": "ROM AXPE trainer table; pret/pokeruby"
   },
   {
+   "id": "story-winstrates",
+   "name": "The Winstrate family (Route 111)",
+   "kind": "story",
+   "place": "route-111",
+   "level_cap": 18,
+   "foe": [
+    {
+     "name": "Victor",
+     "class": "Winstrate",
+     "ace_level": 16
+    },
+    {
+     "name": "Victoria",
+     "class": "Winstrate",
+     "ace_level": 17
+    },
+    {
+     "name": "Vivi",
+     "class": "Winstrate",
+     "ace_level": 15
+    },
+    {
+     "name": "Vicky",
+     "class": "Winstrate",
+     "ace_level": 18
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Four battles in a row on Route 111: Victor (Taillow, Zigzagoon at 16), Victoria (Roselia 17), Vivi (Marill, Shroomish, Numel at 15) and Vicky (Meditite 18). Leave before beating Vicky and the series starts over. Win all four and the family gives you the Macho Brace.",
+   "quality": "reference-only",
+   "source": "ROM AXPE trainer table; pret/pokeruby Route111 and Route111_WinstrateFamilysHouse scripts"
+  },
+  {
    "id": "team-mt-chimney",
    "name": "Stop Team Aqua at Mt. Chimney",
    "kind": "team",
    "place": "mt-chimney",
-   "level_cap": 25,
-   "foe": [
-    {
-     "name": "MATT",
-     "ace_level": 20
-    },
-    {
-     "name": "ARCHIE",
-     "ace_level": 25
-    }
-   ],
+   "level_cap": 20,
+   "foe": {
+    "name": "Matt",
+    "class": "Aqua Admin",
+    "ace_level": 20
+   },
    "done_when": "later",
    "opens": [
     "mt-chimney",
@@ -417,9 +497,26 @@
     "lavaridge-town",
     "fiery-path"
    ],
-   "tips": "Take the cable car up from Route 112 (the Meteor Falls scene sends you there). An admin (Matt, Level 20) and then the leader (Archie, ace at 25) guard the summit machine. Water and Ground moves cover most of it.",
+   "tips": "Take the cable car up from Route 112 (the Meteor Falls scene sends you there). A grunt and then the admin Matt (Level 20) stand between you and the leader at the summit machine. Water and Ground moves cover most of it.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby (Mt. Chimney admin and leader teams)"
+   "source": "ROM AXPE trainer table; pret/pokeruby constants/version.inc (MT_CHIMNEY_GRUNT_1/2)"
+  },
+  {
+   "id": "team-mt-chimney-archie",
+   "name": "Archie at Mt. Chimney",
+   "kind": "team",
+   "place": "mt-chimney",
+   "level_cap": 25,
+   "foe": {
+    "name": "Archie",
+    "class": "Aqua Leader",
+    "ace_level": 25
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "The leader himself guards the machine: Mightyena and Golbat at 24, Sharpedo at 25. Sharpedo is Water/Dark: Electric, Grass or Fighting moves. Electric, Ice, Psychic or Rock moves for Golbat.",
+   "quality": "reference-only",
+   "source": "ROM AXPE trainer table; pret/pokeruby constants/version.inc (MT_CHIMNEY_GRUNT_3 = ARCHIE_3)"
   },
   {
    "id": "gym-4-flannery",
@@ -466,20 +563,18 @@
    "source": "ROM AXPE trainer table; pret/pokeruby"
   },
   {
-   "id": "rival-wally-mauville",
-   "name": "Wally in Mauville City",
-   "kind": "rival",
-   "place": "mauville-city",
-   "level_cap": 16,
-   "foe": {
-    "name": "WALLY",
-    "ace_level": 16
-   },
-   "done_when": "later",
-   "opens": [],
-   "tips": "Wally wants to prove himself with his Ralts (Level 16) at the gym door. Any of your Pokémon wins; after this Wally moves to Verdanturf.",
+   "id": "story-new-mauville",
+   "name": "New Mauville for Wattson",
+   "kind": "story",
+   "place": "new-mauville",
+   "level_cap": 25,
+   "done_when": "none",
+   "opens": [
+    "new-mauville"
+   ],
+   "tips": "After the Balance Badge, Wattson waits outside Mauville's gym and gives you the Basement Key. New Mauville is reached by water from Route 110. Floor switches raise and lower the barriers; the switch by the generator shuts it down. Voltorb (Level 25) pose as items. Wattson then gives you TM24 Thunderbolt.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby (Wally, Mauville)"
+   "source": "pret/pokeruby MauvilleCity, NewMauville_Inside scripts; PetalburgCity_Gym (Wattson leaves the gym after badge 5)"
   },
   {
    "id": "team-weather-institute",
@@ -583,9 +678,33 @@
    "opens": [
     "mt-pyre"
    ],
-   "tips": "Team Aqua grunts block the path to the summit, and the leader takes one of the two orbs kept by the old couple. Follow the trail to the hideout near Lilycove.",
+   "tips": "Team Aqua grunts block the path to the summit, and the leader takes one of the two orbs kept by the old couple. The trail then leads to Slateport's harbor.",
    "quality": "reference-only",
-   "source": "pret/pokeruby MtPyre_Summit scripts"
+   "source": "pret/pokeruby MtPyre_Summit scripts; pret/pokeruby constants/version.inc",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 31
+   },
+   "trainer_ids": [
+    23,
+    24,
+    25
+   ],
+   "level_cap": 31
+  },
+  {
+   "id": "story-slateport-harbor",
+   "name": "The stolen submarine (Slateport harbor)",
+   "kind": "story",
+   "place": "slateport-city",
+   "done_when": "later",
+   "opens": [
+    "slateport-city"
+   ],
+   "tips": "After Mt. Pyre, go to Slateport's harbor: Team Aqua takes Captain Stern's submarine and Archie boasts that the team's hideout is in Lilycove. The grunts who blocked the hideout's entrance are gone after this.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SlateportCity_Harbor, MtPyre_Summit scripts (VAR_SLATEPORT_HARBOR_STATE)"
   },
   {
    "id": "team-hideout",
@@ -636,17 +755,12 @@
    "name": "Seafloor Cavern",
    "kind": "team",
    "place": "seafloor-cavern",
-   "level_cap": 43,
-   "foe": [
-    {
-     "name": "SHELLY",
-     "ace_level": 38
-    },
-    {
-     "name": "ARCHIE",
-     "ace_level": 43
-    }
-   ],
+   "level_cap": 38,
+   "foe": {
+    "name": "Shelly",
+    "class": "Aqua Admin",
+    "ace_level": 38
+   },
    "done_when": "later",
    "opens": [
     "route-126",
@@ -654,9 +768,26 @@
     "seafloor-cavern",
     "underwater"
    ],
-   "tips": "Dive on Route 128 to find the cavern. Strength and Rock Smash puzzles lead to the admin (Shelly, 38) and then Archie (ace at 43) in the deepest room. A Grass or Electric move and Ground/Psychic for Crobat help.",
+   "tips": "Dive on Route 128 to find the cavern. Strength and Rock Smash puzzles lead past grunts (36-38) to the admin Shelly (Sharpedo and Mightyena at 38); the leader waits in the deepest room.",
    "quality": "reference-only",
-   "source": "ROM AXPE trainer table; pret/pokeruby"
+   "source": "ROM AXPE trainer table; pret/pokeruby constants/version.inc (SEAFLOOR_CAVERN_GRUNT_3)"
+  },
+  {
+   "id": "team-seafloor-cavern-archie",
+   "name": "Archie in the Seafloor Cavern",
+   "kind": "team",
+   "place": "seafloor-cavern",
+   "level_cap": 43,
+   "foe": {
+    "name": "Archie",
+    "class": "Aqua Leader",
+    "ace_level": 43
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mightyena and Crobat at 41, Sharpedo at 43. Electric or Grass moves for Sharpedo. Psychic, Ice, Electric or Rock for Crobat; Fighting or Bug for Mightyena. After this the legend wakes.",
+   "quality": "reference-only",
+   "source": "ROM AXPE trainer table; pret/pokeruby constants/version.inc (SEAFLOOR_CAVERN_GRUNT_5 = ARCHIE_2)"
   },
   {
    "id": "legend-kyogre",
@@ -810,6 +941,23 @@
    "source": "ROM AXPE trainer table; pret/pokeruby"
   },
   {
+   "id": "postgame-wally",
+   "name": "Wally after the Hall of Fame (Victory Road)",
+   "kind": "postgame",
+   "place": "victory-road",
+   "level_cap": 48,
+   "foe": {
+    "name": "Wally",
+    "class": "Pkmn Trainer",
+    "ace_level": 48
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Hall of Fame Wally waits on Victory Road's first floor: Gardevoir 48 with Altaria, Delcatty, Roselia and Magneton. When he wants a rematch later his team grows, up to Gardevoir at 57.",
+   "quality": "reference-only",
+   "source": "ROM AXPE trainer table; pret/pokeruby VictoryRoad_1F, hall_of_fame.inc, src/battle_setup.c (Wally rematches)"
+  },
+  {
    "id": "legend-rayquaza",
    "name": "Rayquaza (Sky Pillar)",
    "kind": "legendary",
@@ -844,6 +992,51 @@
    "tips": "Dive on Route 134 to the Sealed Chamber. With Relicanth first and Wailord last in your party the Braille wall opens, and the caves of Regirock (Desert Ruins), Regice (Island Cave) and Registeel (Ancient Tomb) unlock. Each is Level 40.",
    "quality": "reference-only",
    "source": "pret/pokeruby SealedChamber, DesertRuins, IslandCave, AncientTomb scripts"
+  },
+  {
+   "id": "legend-regirock",
+   "name": "Regirock (Desert Ruins)",
+   "kind": "legendary",
+   "place": "desert-ruins",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [
+    "route-111",
+    "desert-ruins"
+   ],
+   "tips": "After the Sealed Chamber, enter the Desert Ruins in Route 111's sandstorm. The Braille asks for Strength: use it in front of the wall and the inner room opens. Regirock waits at Level 40; save first.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby DesertRuins scripts, src/braille_puzzles.c"
+  },
+  {
+   "id": "legend-regice",
+   "name": "Regice (Island Cave)",
+   "kind": "legendary",
+   "place": "island-cave",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [
+    "route-105",
+    "island-cave"
+   ],
+   "tips": "The Island Cave is on Route 105. Its Braille says to wait: stand still for two minutes without pressing a button and the wall opens. Regice waits at Level 40.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby IslandCave scripts, src/braille_puzzles.c"
+  },
+  {
+   "id": "legend-registeel",
+   "name": "Registeel (Ancient Tomb)",
+   "kind": "legendary",
+   "place": "ancient-tomb",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [
+    "route-120",
+    "ancient-tomb"
+   ],
+   "tips": "The Ancient Tomb is on Route 120. The Braille says to aim for the sky in the middle: use Fly from the field menu in the middle of the room and the wall opens. Registeel waits at Level 40.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby AncientTomb scripts, src/braille_puzzles.c"
   },
   {
    "id": "legend-roamer",
@@ -979,7 +1172,7 @@
   {
    "id": "step-devon-scope",
    "title": "Devon Scope for the Kecleon",
-   "text": "An invisible Kecleon blocks Fortree's path. Steven waits on Route 120's bridge and gives you the Devon Scope; use it on the blocked spot (the Kecleon then battles, Level 30).",
+   "text": "An invisible Pokémon blocks Fortree's gym. Steven waits on Route 120's bridge: he reveals a hidden Kecleon there, which battles you (Level 30), then gives you the Devon Scope. Use it on the blocked spot in Fortree and that Kecleon runs off.",
    "stage": "gym-6-winona",
    "places": [
     "route-120",
@@ -987,7 +1180,7 @@
    ],
    "done_when": "later",
    "quality": "reference-only",
-   "source": "pret/pokeruby Route120 scripts"
+   "source": "pret/pokeruby Route120, FortreeCity scripts"
   },
   {
    "id": "step-dive",
@@ -1030,14 +1223,14 @@
   {
    "id": "step-national-dex",
    "title": "National Pokédex",
-   "text": "After the Hall of Fame, Professor Birch upgrades your Pokédex to the national one once you have seen enough Hoenn Pokémon. Trades with FireRed/LeafGreen (and Colosseum) then fill it.",
+   "text": "Ruby and Sapphire have no in-game upgrade: the National Pokédex switches on after a trade with FireRed, LeafGreen or Emerald (any of them signals it over the link). Those trades are then the way to fill it.",
    "stage": "legend-roamer",
    "places": [
     "littleroot-town"
    ],
    "done_when": "none",
    "quality": "reference-only",
-   "source": "pret/pokeruby ProfessorBirchsLab scripts"
+   "source": "pret/pokeruby src/trade.c; pret/pokefirered, pokeemerald src/link.c"
   },
   {
    "id": "step-contests",
@@ -1123,6 +1316,33 @@
    "done_when": "none",
    "quality": "reference-only",
    "source": "pret/pokeruby SkyPillar scripts"
+  },
+  {
+   "id": "step-abandoned-ship",
+   "title": "The Scanner on the Abandoned Ship",
+   "text": "The Abandoned Ship on Route 108 has a flooded hidden floor you reach with Dive. Keys found on board open its locked rooms, and one holds the Scanner. A sailor in the Captain's Office asks you to take it to Captain Stern at Slateport's harbor, who swaps it for a Deep Sea Tooth or a Deep Sea Scale.",
+   "stage": "gym-7-tate-liza",
+   "places": [
+    "abandoned-ship",
+    "route-108",
+    "slateport-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby AbandonedShip_CaptainsOffice, AbandonedShip_HiddenFloorCorridors, SlateportCity_Harbor scripts"
+  },
+  {
+   "id": "step-relicanth-wailord",
+   "title": "Relicanth and Wailord for the Sealed Chamber",
+   "text": "The Sealed Chamber wants Relicanth first and Wailord last in your party. Relicanth lives underwater (Dive); Wailmer, common on the sea routes, becomes Wailord at Level 40.",
+   "stage": "legend-regis",
+   "places": [
+    "underwater",
+    "sealed-chamber"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/braille_puzzles.c (CheckRelicanthWailord); ROM AXPE wild data and evolutions"
   }
  ],
  "secrets": [

@@ -148,6 +148,8 @@ echo $GAME > /run/banana/game.pid
 stop
 
 echo "2. menu asleep, woken with the lid still shut, then opened"
+# (the menu alone: 1b put the game back in game.pid, and its wake with no game the menu knew of left a SIGUSR1 here)
+rm -f /run/banana/game.pid; : > /run/test/ui-signals
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
@@ -470,6 +472,7 @@ asleep && ok "suspended on the lid with the runner stopped" || bad "a stopped ru
 echo 0 > /run/test/lid; wake
 kill -CONT $DL; kill $DL; wait $DL 2>/dev/null || true
 rm -f /run/banana/transfer.pid
+stop
 
 echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing), a marker (Select held) and the stop, on the card"
 # tev <type> <code> <value>...: events on the stand-in touchscreen, with the monotonic time (as the real one stamps them)

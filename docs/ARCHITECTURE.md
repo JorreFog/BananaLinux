@@ -463,6 +463,17 @@ both directions of `default` to S16 stereo 48 kHz (the rate the DS emulators alr
 resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48 kHz playback the capture's
 `hw_params` was refused, and the microphone never started whatever the gains were.
 
+**Speaker EQ** (Settings > Display & sound > Speaker EQ). On the speakers only, bananad's playback slave is
+`{ type banana_eq slave.pcm "hw:N" }` inside the `plug`: banana_eq is an ALSA extplug (`ui/src/eq/pcm_banana_eq.c`,
+installed as `/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so`) that runs RBJ biquads on the S16 48 kHz stream in
+each program's own audio thread (1.6% of one A55 core for 9 filters). It follows `/run/banana/speaker-eq`, Equalizer
+APO's parametric text, with one stat every 10 ms of sound: no file passes the samples through untouched, and a new
+one is heard at once, in a game already playing and in the menu's beep for the press that changed it. banana-ui writes that file at start and from the page:
+the profile (`tuned`: `/usr/share/banana/speaker-eq/<board>.txt`, measured on the handheld; `none`; or a `.txt` in
+`banana/speaker-eq` on the card, e.g. from AutoEq) parsed and written again with the page's seven octave sliders
+after it (`speaker_eq`, `speaker_eq_profile`, `speaker_eq_bands` in settings.conf). A curve that peaks above 0 dB
+gets that much less preamp, so nothing clips that didn't before. Headphones and Bluetooth keep the plain route.
+
 ## Clocks: banana-perf
 
 | Profile | CPU | GPU | For |

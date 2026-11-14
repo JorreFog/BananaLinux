@@ -26,6 +26,8 @@
  *     Bluetooth headphones or speakers, while connected, come before both: the bluetooth script writes the one
  *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
  *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
+ *     On the speakers (only: never the headphones or Bluetooth) the sound goes through the speaker EQ, banana-ui's
+ *     ALSA plugin banana_eq, which follows the profile Settings writes to /run/banana/speaker-eq (none: untouched).
  *
  * The menu's Sleep: banana-ui writes /run/banana/sleep-now and sends SIGHUP; the power button's sleep follows.
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
@@ -840,7 +842,12 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
 			if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
 			if (ok) ra_command("QUIT\n");
-			else sleep_log("RetroArch's command pipe closed: no resume state saved");
+			else {
+				/* no state asked for (RetroArch gone, or not reading its pipe): nothing of this save to come back to,
+				 * and a resume-boot would load an older automatic state once at the next boot as if it were this one */
+				sleep_log("RetroArch's command pipe closed: no resume state saved");
+				emu = NULL;
+			}
 		} else {
 			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
 			kill(grp, SIGCONT);
@@ -880,6 +887,10 @@ static void suspend_now(const char *why)
 {
 	if (powering_off()) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
 	double t0 = mono();
+	/* the panels dark first: the pre-sleep hooks (Wi-Fi down and its driver unloaded, Bluetooth down) take ~2 s on the
+	 * RG DS Plus, and the panels stayed lit that long with the lid shut. The wake lights them again (below: the lid
+	 * open, or dark while charging) */
+	backlights_power(0);
 	lid_held = 0;
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
@@ -892,6 +903,9 @@ static void suspend_now(const char *why)
 	double asleep = 0, dark_from = 0, led_at = 0;
 	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
 	const char *woke = "?";
+	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
+	 * before each suspend, below */
+	int by_lid = !strncmp(why, "lid", 3);
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
 	for (;;) {
@@ -941,6 +955,18 @@ static void suspend_now(const char *why)
 			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
+		}
+		/* a sleep the lid started: the lid as it is now, just before the suspend. Opened again while the hooks took
+		 * Wi-Fi down (a second or more), its edge has gone by when the SoC suspends, and nothing but the power button
+		 * would wake it, the panels going dark under the user's eyes; its event is drained after the wake, so it is
+		 * read here. Open: awake as from a sleep (the game goes on, the post hooks bring Wi-Fi back) */
+		if (by_lid) {
+			read_lid();
+			if (!lid_closed) {
+				sleep_log("lid opened again before the suspend (%s): awake", why);
+				woke = "lid opened before the suspend";
+				break;
+			}
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
 		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
@@ -1115,11 +1141,23 @@ static void audio_route(void)
 	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
 	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
 	 * rate, ALSA's plug resampling it, and the two streams agree. */
-	char play[192], cap[160];
+	char play[256], cap[160];
+	/* the speakers, through the speaker EQ (banana-ui's ALSA plugin, ui/src/eq): a tiny speaker's peaks and dips
+	 * evened out, in each program's own audio thread, after plug has made the sound S16 stereo 48 kHz. It reads
+	 * /run/banana/speaker-eq, which Settings writes, every 10 ms: a change is heard at once, and no
+	 * file passes the sound through untouched. Never the headphones or Bluetooth: the profile is the speakers'.
+	 * (A build without the plugin, or one missing from the image: the plain route, no EQ.) The plugin is named by its
+	 * path in the config, so a program with its own libasound (a port's, whose plugin folder may be elsewhere) finds
+	 * it too instead of failing to open the speakers. */
+	static const char eq_lib[] = "/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so";
+	const int speakers = !bt && !hold && card_play >= 0 && (card_play == card_speaker || (card_speaker < 0 && !headphones));
+	const int eq = speakers && access(eq_lib, R_OK) == 0;
 	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP), plug converting the rest; the microphone stays the
 	 * rk817's */
 	if (bt)
 		snprintf(play, sizeof play, "{ type plug slave.pcm { type bluealsa device \"%s\" profile \"a2dp\" } }", bt_mac);
+	else if (eq)
+		snprintf(play, sizeof play, "{ type plug slave { pcm { type banana_eq slave.pcm \"hw:%d\" } format S16_LE channels 2 rate 48000 } }", card_play);
 	else if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
@@ -1129,12 +1167,13 @@ static void audio_route(void)
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
 	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
-		: card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
+		: eq ? "speakers, through the speaker EQ" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
+		"%s%s%s"
 		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		where, play, cap);
+		where, eq ? "pcm_type.banana_eq { lib \"" : "", eq ? eq_lib : "", eq ? "\" }\n" : "", play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
@@ -2069,8 +2108,9 @@ int main(int argc, char **argv)
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
 		/* recording: the touchscreen read every 0.2 s, before its buffer of motion can overflow (a touch's own time is
-		 * in its event, so it's recorded when it happened) */
-		if (recst.on && nquiet && wait > 0.2) wait = 0.2;
+		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
+		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
+		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
@@ -2137,7 +2177,10 @@ int main(int argc, char **argv)
 
 		/* idle in the menu (no game running): the panels dim, then it sleeps */
 		game = pid_of("/run/banana/game.pid") != 0;
-		if (recst.on && quiet_scan()) undim();	/* (recording: touches and sticks read, in games too) */
+		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
+		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
+		 * changed what it recorded); quiet_scan records them only while the recorder is on */
+		if (quiet_scan()) undim();
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */

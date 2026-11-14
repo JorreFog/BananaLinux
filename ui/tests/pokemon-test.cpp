@@ -224,11 +224,6 @@ int main(int argc, char** argv)
 		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
 		findLearnsets(t, rom.data(), rom.size());
 		EQ((int)(t.learnsets >= 0), 1);
-		int lv = 0;
-		EQ(t.nextMove(4, 7, lv), 14);	// at Lv 7 (just learned 45): next is move 14 at Lv 15
-		EQ(lv, 15);
-		EQ(t.nextMove(4, 15, lv), 0);	// nothing after Lv 15
-		EQ(t.nextMove(4, 1, lv), 45);
 	}
 	// where a species lives: the wild tables by map, each map's region map section from the ROM's map groups (found
 	// by their shape, checked against every map the wild tables name)
@@ -256,12 +251,6 @@ int main(int argc, char** argv)
 		EQ((int)t.mapsecs.size(), 3);
 		EQ(t.mapsecs.size() > 0 && t.mapsecs[0].size() > 1 ? t.mapsecs[0][1] : -1, 0x11);
 		EQ(t.mapsecs.size() > 2 && !t.mapsecs[2].empty() ? t.mapsecs[2][0] : -1, 0x13);
-		auto w = t.where(25);
-		EQ((int)w.size(), 2);
-		EQ(w.size() > 0 ? w[0].mapsec : -1, 0x11);		// the commonest first
-		EQ(w.size() > 0 ? w[0].percent : -1, 20);
-		EQ(w.size() > 1 ? w[1].minLv : -1, 30);
-		EQ((int)t.where(99).size(), 0);
 	}
 	// the battle advice: the lead's best move (power x type x STAB x accuracy, PP left), and a party member to switch to
 	{
@@ -379,16 +368,11 @@ int main(int argc, char** argv)
 		EQ((int)d.abilitySlot, (int)(m.pid & 1));
 		EQ(d.nature(), (int)(m.pid % 25));
 	}
-	// ---- the natures: five by five, the row raised, the column lowered (Attack, Defense, Speed, Sp. Atk, Sp. Def)
+	// ---- the natures' names
 	{
-		int up, down;
 		EQ(std::string(natureName(3)), std::string("Adamant"));
-		natureStats(3, up, down); EQ(up, 0); EQ(down, 3);		// Adamant: Attack up, Sp. Atk down
 		EQ(std::string(natureName(10)), std::string("Timid"));
-		natureStats(10, up, down); EQ(up, 2); EQ(down, 0);		// Timid: Speed up, Attack down
 		EQ(std::string(natureName(24)), std::string("Quirky"));
-		natureStats(24, up, down); EQ(up, -1); EQ(down, -1);	// Quirky: neither
-		natureStats(12, up, down); EQ(up, -1);					// Serious
 		EQ(std::string(natureName(25)), std::string(""));
 	}
 	{
@@ -911,6 +895,7 @@ int main(int argc, char** argv)
 				else if (a == 0x0203988c) v = bp;
 				else if (a == 0x0203bb20) { v[0] = 13; v[2] = 2; v[4] = 14; v[6] = 1; }	// 2 Potions, an Antidote
 				else if (a == 0x0203c354) { v[0] = 4; v[2] = 5; }					// 5 Poké Balls
+				else if (a == 0x0202552c + 0xee0 + 0x500 / 8 && n >= 108) { v[0] = 0x20; v[300 / 8] = 1 << (300 % 8); }	// trainers 5 and 300 beaten
 				f += reply(a, v);
 			}
 			return f;
@@ -925,6 +910,9 @@ int main(int argc, char** argv)
 		const Snapshot& s2 = c.snapshot();
 		CHECK(s2.ext && s2.dexSeen.size() == 0x7d && s2.dexOwned.size() == 0x7d);
 		CHECK(s2.dexSeen.size() == 0x7d && s2.dexSeen[0] == 0x07 && s2.dexSeen[100] == 0x80 && s2.dexOwned[0] == 0x01);
+		// the trainer flags (SaveBlock1's flags + 0x500 / 8: the guide's milestones done when their foe is beaten)
+		CHECK(r.find("READ_CORE_MEMORY 20264ac 108\n") != std::string::npos);
+		CHECK(s2.trainersBeaten.size() == 108 && s2.trainersBeaten[0] == 0x20 && (s2.trainersBeaten[37] >> 4 & 1) && !(s2.trainersBeaten[37] & 0xef));
 		CHECK(r.find("READ_CORE_MEMORY 202583c 250\n") != std::string::npos && r.find("READ_CORE_MEMORY 2025") != std::string::npos);
 		// the bag: gBagPockets read in the second set, the pockets where it points in the third (not FireRed's own
 		// bag in the save block, where a CFRU hack keeps the Pokédex)
@@ -947,7 +935,7 @@ int main(int argc, char** argv)
 		CHECK(cc.open(up) && std::string(cc.game()->code) == "BPRE");
 		std::shared_ptr<const RomTables> tt;
 		for (int i = 0; i < 3000 && !(tt = cc.tables()); i++) usleep(10000);
-		CHECK(tt && tt->has.modernTypes && tt->has.ownDex && tt->has.leadersFromTrainers && tt->has.plainMons && tt->has.dexRam == 0x0202583c &&
+		CHECK(tt && tt->has.modernTypes && tt->has.ownDex && tt->has.plainMons && tt->has.dexRam == 0x0202583c &&
 			tt->has.dexBytes == 0x7d && tt->has.bagPockets == 0x0203988c && !tt->has.bagUnsure);
 	}
 

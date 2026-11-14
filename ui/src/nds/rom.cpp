@@ -76,6 +76,46 @@ namespace banana::nds
 		bool isB2w2(GameId id) { return id == GameId::BLACK2 || id == GameId::WHITE2; }
 		bool isDp(GameId id) { return id == GameId::DIAMOND || id == GameId::PEARL; }
 
+		// hg-engine builds of HeartGold/SoulSilver (Origin HeartGold, 2026-11-04: the owner's): the species and moves of
+		// all nine generations (the national Pokédex to 1025, the forms after it), moves in a Gen V-like record of their
+		// own (extra/new_move_data.narc), pictures 8 a species (data/pokepic_m.narc, _f the females), personal records of
+		// 52 bytes with three abilities, level-up lists of (level, move) words, 10 evolutions a species, Fairy at type 9.
+		// Text banks are where the base release keeps them (Origin: the Japanese one's, in English): found by what they say
+		bool hgEngine(const nitro::Rom& rom) { return rom.fileId("extra/new_move_data.narc") >= 0 && rom.fileId("data/pokepic_m.narc") >= 0; }
+		// the hg-engine hacks known by name (the header's checksum, 0x15E, and code): the rest are "HeartGold (hg-engine)"
+		struct KnownHack { uint16_t headerCrc; const char* code; const char* key; const char* title; };
+		const KnownHack NDS_HACKS[] = { { 0x177b, "IPKJ", "origin-heartgold", "Origin HeartGold" } };	// v4.0.3 EN rc8
+
+		// the text banks of an hg-engine build, by their contents (first: the species' names, "Bulbasaur" second)
+		bool hgEngineBanks(const nitro::Rom& rom, Files& f)
+		{
+			Bytes buf; Narc text;
+			if (!rom.file(f.text, buf) || !text.parse(buf)) return false;
+			std::vector<std::vector<std::string>> b(text.size());
+			for (size_t i = 0; i < text.size(); i++) b[i] = nitro::gen4Text(text[i].p, text[i].n);
+			auto at = [&](size_t i, size_t k) -> const std::string& { static const std::string none; return k < b[i].size() ? b[i][k] : none; };
+			auto biggest = [&](auto ok) { int best = -1; for (size_t i = 0; i < b.size(); i++) if (ok(i) && (best < 0 || b[i].size() > b[(size_t)best].size())) best = (int)i; return best; };
+			auto has = [&](size_t i, const char* w) { for (auto& x : b[i]) if (x == w) return true; return false; };
+			// (a description bank: as many lines as its names', the nearest to them, texts not names)
+			auto descOf = [&](int names) { int best = -1; for (int d = 1; names >= 0 && d <= 4 && best < 0; d++) for (int i : { names - d, names + d })
+				if (i >= 0 && (size_t)i < b.size() && b[(size_t)i].size() + 1 >= b[(size_t)names].size() && b[(size_t)i].size() <= b[(size_t)names].size() + 1 && at((size_t)i, 1).size() > 20) { best = i; break; } return best; };
+			f.bSpecies = biggest([&](size_t i) { return at(i, 1) == "Bulbasaur" && at(i, 4) == "Charmander"; });
+			f.bMoves = biggest([&](size_t i) { return at(i, 1) == "Pound" && at(i, 2) == "Karate Chop"; });
+			f.bAbilities = biggest([&](size_t i) { return at(i, 1) == "Stench" && at(i, 2) == "Drizzle"; });
+			f.bItems = biggest([&](size_t i) { return at(i, 1) == "Master Ball" && at(i, 2) == "Ultra Ball"; });
+			f.bNatures = biggest([&](size_t i) { return b[i].size() >= 25 && at(i, 0) == "Hardy" && at(i, 1) == "Lonely"; });
+			f.bLocations = biggest([&](size_t i) { return has(i, "New Bark Town") && has(i, "Twinleaf Town"); });
+			f.bTrClasses = biggest([&](size_t i) { return at(i, 2) == "Youngster" && at(i, 3) == "Lass"; });
+			f.bTrNames = f.bTrClasses - 1;	// (the names just before the classes, as in every Gen IV release)
+			f.bCategory = biggest([&](size_t i) { return at(i, 1) == "Seed Pokémon" && at(i, 4) == "Lizard Pokémon"; });
+			f.bDex = biggest([&](size_t i) { return b[i].size() >= 494 && at(i, 1).size() > 40 && at(i, 1).find("seed") != std::string::npos; });
+			f.bMoveDesc = descOf(f.bMoves); f.bAbilityDesc = descOf(f.bAbilities); f.bItemDesc = descOf(f.bItems);
+			for (int x : { f.bSpecies, f.bMoves, f.bAbilities, f.bItems, f.bNatures, f.bLocations, f.bTrClasses, f.bCategory, f.bDex,
+					f.bMoveDesc, f.bAbilityDesc, f.bItemDesc })
+				if (x < 0) return false;
+			return true;
+		}
+
 		// Gen IV's type numbers have the ??? type at 9 (Curse's); model.h's Type has none
 		Type typeOf(uint8_t t, Gen gen)
 		{
@@ -105,7 +145,11 @@ namespace banana::nds
 		mutable std::unique_ptr<nitro::Rom> rom;
 		mutable std::map<uint32_t, std::shared_ptr<const Sprite>> sprites;	// the last few asked for
 		mutable nitro::NarcFile spriteNarc;	// the sprite archive's member table (sprite())
+		mutable nitro::NarcFile spriteNarcF;	// (hgEngine: the females' pictures, data/pokepic_f.narc)
 		mutable int formOrigin = -1;	// Gen V: where the forms' pictures start in the sprite archive (0: not found)
+		bool hgEngine = false;			// an hg-engine build (hgEngine()): its own formats, and hackFiles
+		Files hackFiles{};				// (hgEngine: HeartGold's paths with its own moves, pictures and text banks)
+		const Files* files() const { return hgEngine ? &hackFiles : filesFor(game.id); }
 	};
 
 	uint16_t speciesIndex(const RomData& r, uint16_t species, uint8_t form)
@@ -128,6 +172,8 @@ namespace banana::nds
 			std::string err;
 			Gen gen() const { return out.game.gen; }
 			GameId id() const { return out.game.id; }
+			// a type number (an hg-engine build has Fairy at 9, Gen IV's ???)
+			Type ty(uint8_t t) const { return out.hgEngine && t == 9 ? FAIRY : typeOf(t, gen()); }
 
 			bool narc(const char* path, Bytes& buf, Narc& n)
 			{
@@ -226,8 +272,8 @@ namespace banana::nds
 					Species& s = out.species[i];
 					if (p.n < 0x28) continue;
 					for (int k = 0; k < 6; k++) s.base[k] = p.u8(k);
-					s.types[0] = typeOf(p.u8(6), gen());
-					s.types[1] = typeOf(p.u8(7), gen());
+					s.types[0] = ty(p.u8(6));
+					s.types[1] = ty(p.u8(7));
 					s.catchRate = p.u8(8);
 					uint16_t ev = p.u16(0x0a);
 					for (int k = 0; k < 6; k++) s.evYield[k] = ev >> (2 * k) & 3;
@@ -238,6 +284,8 @@ namespace banana::nds
 						s.genderRatio = p.u8(0x10); s.baseFriendship = p.u8(0x12); s.growth = p.u8(0x13);
 						s.abilities[0] = p.u8(0x16); s.abilities[1] = p.u8(0x17);
 						tmAt = 0x1c;
+						// (hg-engine: 52 bytes, three u16 abilities - the last the hidden one -, no TM bits here)
+						if (out.hgEngine && p.n >= 0x1c) { s.abilities[0] = p.u16(0x16); s.abilities[1] = p.u16(0x18); s.abilities[2] = p.u16(0x1a); }
 					}
 					else
 					{
@@ -259,7 +307,7 @@ namespace banana::nds
 						}
 					}
 					// TM/HM bits: TM01.. then the HMs, in the order model.h numbers them
-					int tmCount = gen() == Gen::IV ? 100 : 101;
+					int tmCount = out.hgEngine ? 0 : gen() == Gen::IV ? 100 : 101;
 					for (int k = 0; k < tmCount; k++) if (p.u8(tmAt + k / 8) >> (k % 8) & 1) s.tms.push_back((uint16_t)(k + 1));
 					if (s.abilities[1] == s.abilities[0]) s.abilities[1] = 0;
 				}
@@ -269,6 +317,7 @@ namespace banana::nds
 					if (rom.file(dd, zb) && zn.parse(zb) && zn.size() >= 2)
 						for (size_t i = 0; i < out.species.size() && i <= (size_t)out.game.dexSize; i++)
 						{
+							if (4 * i + 4 > zn[0].n || 4 * i + 4 > zn[1].n) break;	// (a table shorter than the Pokédex)
 							out.species[i].height = (uint16_t)zn[0].u32(4 * i);
 							out.species[i].weight = (uint16_t)zn[1].u32(4 * i);
 						}
@@ -276,7 +325,22 @@ namespace banana::nds
 				// Gen IV's forms: after the species and the two egg entries, in the order the games' code looks them up
 				// (pret pokeplatinum Pokemon_GetFormNarcIndex): Deoxys' three, Wormadam's two, then Platinum/HGSS's
 				// Giratina, Shaymin and Rotom's five
-				if (gen() == Gen::IV)
+				// (hg-engine: each form a record of its own past the Pokédex, named as its species - "Venusaur" its Mega
+				// Evolution -: a run of them right after the Pokédex's is that species' forms)
+				if (out.hgEngine)
+				{
+					std::map<std::string, uint16_t> byName;
+					for (int i = out.game.dexSize; i >= 1; i--) if ((size_t)i < out.species.size()) byName[out.species[(size_t)i].name] = (uint16_t)i;
+					for (size_t i = (size_t)out.game.dexSize + 1; i < count && i < out.species.size();)
+					{
+						auto b = byName.find(out.species[i].name);
+						size_t j = i;
+						while (j < count && j < out.species.size() && out.species[j].name == out.species[i].name) j++;
+						if (b != byName.end() && !out.forms.count(b->second)) out.forms[b->second] = { (uint16_t)i, (uint8_t)std::min<size_t>(255, j - i + 1) };
+						i = j;
+					}
+				}
+				if (gen() == Gen::IV && !out.hgEngine)
 				{
 					struct { uint16_t species; uint8_t count; } table[] = { { 386, 4 }, { 413, 3 }, { 487, 2 }, { 492, 2 }, { 479, 6 } };
 					uint16_t at = 496;
@@ -312,7 +376,14 @@ namespace banana::nds
 				{
 					Span p = n[i];
 					auto& ls = out.species[i].learnset;
-					if (gen() == Gen::IV)
+					if (out.hgEngine)	// (level, move) words, 0xffff 0xffff at the end
+						for (size_t o = 0; o + 4 <= p.n; o += 4)
+						{
+							uint16_t l = p.u16(o), m = p.u16(o + 2);
+							if (l == 0xffff || m == 0xffff) break;
+							if (m && l <= 100) ls.push_back({ (uint8_t)l, m });
+						}
+					else if (gen() == Gen::IV)
 						for (size_t o = 0; o + 2 <= p.n; o += 2)
 						{
 							uint16_t v = p.u16(o);
@@ -337,7 +408,7 @@ namespace banana::nds
 				for (size_t i = 0; i < n.size() && i < out.species.size(); i++)
 				{
 					Span p = n[i];
-					for (size_t k = 0; k < 7 && k * 6 + 6 <= p.n; k++)
+					for (size_t k = 0; k < (out.hgEngine ? 10u : 7u) && k * 6 + 6 <= p.n; k++)
 					{
 						uint16_t method = p.u16(k * 6), param = p.u16(k * 6 + 2), into = p.u16(k * 6 + 4);
 						if (method == 0 || into == 0) continue;
@@ -357,7 +428,7 @@ namespace banana::nds
 				{
 					Span p = n[i];
 					MoveData& m = out.moves[i];
-					if (gen() == Gen::IV)
+					if (gen() == Gen::IV && !out.hgEngine)
 					{
 						// u16 effect, u8 class, u8 power, u8 type, u8 accuracy (0 never misses), u8 PP, u8 effect
 						// chance, u16 range, s8 priority
@@ -373,7 +444,8 @@ namespace banana::nds
 						if (p.n < 18) continue;
 						// (class: 0 status, 1 physical, 2 special)
 						static const MoveCategory CLS[3] = { MoveCategory::STATUS, MoveCategory::PHYSICAL, MoveCategory::SPECIAL };
-						m.type = typeOf(p.u8(0), gen()); m.cat = CLS[std::min<uint8_t>(p.u8(2), 2)]; m.power = p.u8(3);
+						// (an hg-engine build's 40-byte record is laid out so too)
+						m.type = ty(p.u8(0)); m.cat = CLS[std::min<uint8_t>(p.u8(2), 2)]; m.power = p.u8(3);
 						m.accuracy = p.u8(4) > 100 ? 0 : p.u8(4); m.pp = p.u8(5); m.priority = p.u8(6);
 						m.effectChance = p.u8(10); m.effect = p.u16(16);
 					}
@@ -418,6 +490,8 @@ namespace banana::nds
 					out.tmMoves = t;
 					return true;
 				}
+				// (an hg-engine build keeps its TMs elsewhere: no TM advice for it, the rest stands)
+				if (out.hgEngine) return true;
 				err = "no TM list in the ARM9";
 				return false;
 			}
@@ -739,6 +813,10 @@ namespace banana::nds
 				if (!narc(f.trdata, db, dn) || !narc(f.trpoke, pb, pn)) return false;
 				auto names = bank(f.bTrNames), classes = bank(f.bTrClasses);
 				const bool g5 = gen() == Gen::V, seal = !g5 && !isDp(id());
+				// (an hg-engine build's teams carry fields its flags don't name - Origin HeartGold's: 28 bytes a Pokémon with
+				// moves and an item, EVs among them - and its level doesn't read as hg-engine's macros write it: the teams
+				// aren't read rather than read wrong. The guide's battles need them; the live battle doesn't)
+				if (out.hgEngine) return true;
 				for (size_t i = 1; i < dn.size() && i < pn.size(); i++)
 				{
 					Span d = dn[i], p = pn[i];
@@ -1056,7 +1134,7 @@ namespace banana::nds
 			rom.reset(new nitro::Rom);
 			if (!rom->open(path)) { rom.reset(); return nullptr; }
 		}
-		const Files* f = filesFor(game.id);
+		const Files* f = files();
 		// (the archive's member table kept; only this picture's members read, and let go of after it)
 		if (!f || (!spriteNarc.isOpen() && !spriteNarc.open(*rom, f->sprites))) return nullptr;
 		nitro::NarcFile& n = spriteNarc;
@@ -1067,16 +1145,29 @@ namespace banana::nds
 			// per species 6 members: back (female, male), front (female, male), normal and shiny palette. The front
 			// is 160x80, two 80x80 frames side by side, scrambled with the LC RNG (pret pokemon_sprite.c: Diamond and
 			// Pearl from the last word down, Platinum and HGSS from the first up)
-			size_t at = (size_t)species * 6;
+			// (hgEngine: 8 members a species or form - each its own record -, the front at 0 with the normal palette at 1,
+			// the shiny palette at 5 (2/3 and 6/7 the back's); the females' in their own archive)
+			const size_t at = hgEngine ? (size_t)speciesIndex(*this, species, form) * 8 : (size_t)species * 6;
+			nitro::NarcFile& pn = hgEngine && female && (spriteNarcF.isOpen() || spriteNarcF.open(*rom, "data/pokepic_f.narc")) ? spriteNarcF : n;
+			struct ForgetF { nitro::NarcFile& n; ~ForgetF() { n.forget(); } } forgetF{ pn };
 			// (a female-only species - Nidoran F, Chansey, Jynx, Happiny... - has only the female front: the male
 			// member is empty, so that one is used whatever was asked)
-			Span front = (female && n[at + 2].n) || !n[at + 3].n ? n[at + 2] : n[at + 3], pal = n[at + 4], shinyPal = n[at + 5];
+			Span front = hgEngine ? pn[at] : (female && n[at + 2].n) || !n[at + 3].n ? n[at + 2] : n[at + 3];
+			Span pal = hgEngine ? pn[at + 1] : n[at + 4], shinyPal = hgEngine ? pn[at + 5] : n[at + 5];
+			// (hgEngine: a form whose record holds its species' own picture - Origin's Unown B-?: copies of A - has its
+			// picture where the base release keeps it, the form archive below)
+			bool vanillaForm = !hgEngine;
+			if (hgEngine && form > 0)
+			{
+				Span b = pn[(size_t)species * 8];
+				vanillaForm = front.n == b.n && front.n && !memcmp(front.p, b.p, b.n);
+			}
 			// forms: their own archive, laid out by the games' code (pret pokeplatinum/pokeheartgold/pokediamond
 			// pokemon.c, the sprite template switch): per species the front picture of form 0 and how far each form
 			// moves it, the palette and how far each form moves it, and the shiny palette's distance
 			Bytes ob;
 			Narc on;
-			if (form > 0)
+			if (form > 0 && vanillaForm)
 			{
 				struct OF { uint16_t species; uint8_t forms; uint16_t chr; uint8_t chrStep; uint16_t palDp, palPt; uint8_t palStep, shinyStep; };
 				// (HeartGold/SoulSilver: Platinum's palettes moved up 4 by Pichu's pictures)
@@ -1103,7 +1194,7 @@ namespace banana::nds
 			for (size_t k = 0; k < w.size(); k++) w[k] = c.data.u16(2 * k);
 			const bool fromEnd = isDp(game.id);
 			uint32_t seed = fromEnd ? w.back() : w.front();
-			for (size_t k = 0; k < w.size(); k++)
+			for (size_t k = 0; !hgEngine && k < w.size(); k++)	// (hgEngine's pictures are kept plain)
 			{
 				size_t i = fromEnd ? w.size() - 1 - k : k;
 				w[i] ^= (uint16_t)seed;
@@ -1378,6 +1469,19 @@ namespace banana::nds
 			if (table[i].id == battleId) bi = (int)i;
 			if (table[i].id == fieldId) fi = (int)i;
 		}
+		// (an hg-engine build: its battle overlay grown and, in a Japanese base, numbered otherwise - Origin's is 14 -:
+		// the biggest overlay loaded over the field's)
+		if (r->hgEngine && fi >= 0)
+		{
+			bi = -1;
+			const nitro::Rom::Overlay& fl = table[(size_t)fi];
+			for (size_t i = 0; i < table.size(); i++)
+			{
+				const nitro::Rom::Overlay& o = table[i];
+				if ((int)i == fi || o.ram >= fl.ram + fl.size || o.ram + o.size <= fl.ram) continue;
+				if (bi < 0 || o.size > table[(size_t)bi].size) bi = (int)i;
+			}
+		}
 		Bytes bo, fo;
 		if (bi < 0 || fi < 0 || !r->rom->overlay9(bi, bo) || !r->rom->overlay9(fi, fo)) return h;
 		const nitro::Rom::Overlay& b = table[bi], & f = table[fi];
@@ -1411,7 +1515,27 @@ namespace banana::nds
 		auto r = std::make_shared<RomImpl>();
 		r->path = path;
 		r->game = detectGame(rom->header(), 0x200);
-		const Files* files = filesFor(r->game.id);
+		// an hg-engine build of HeartGold/SoulSilver, in any language of the base release (Origin HeartGold: the Japanese)
+		auto asHgEngine = [&](RomImpl& x) -> bool
+		{
+			const std::string& c = x.game.code;
+			if (x.game.id != GameId::NONE || c.size() != 4 || (c.compare(0, 3, "IPK") && c.compare(0, 3, "IPG")) || !hgEngine(*rom)) return false;
+			x.hgEngine = true;
+			x.game.id = c[2] == 'K' ? GameId::HEARTGOLD : GameId::SOULSILVER;
+			x.game.gen = Gen::IV;
+			x.game.dexSize = 1025;
+			x.game.modern = true;
+			x.game.title = std::string(c[2] == 'K' ? "HeartGold" : "SoulSilver") + " (hg-engine)";
+			x.game.hack = c[2] == 'K' ? "heartgold-hg-engine" : "soulsilver-hg-engine";
+			const uint16_t crc = (uint16_t)(rom->header()[0x15e] | rom->header()[0x15f] << 8);
+			for (auto& k : NDS_HACKS) if (k.headerCrc == crc && c == k.code) { x.game.title = k.title; x.game.hack = k.key; }
+			x.hackFiles = *filesFor(x.game.id);
+			x.hackFiles.moves = "extra/new_move_data.narc";
+			x.hackFiles.sprites = "data/pokepic_m.narc";
+			return hgEngineBanks(*rom, x.hackFiles);
+		};
+		if (r->game.id == GameId::NONE && hgEngine(*rom) && !asHgEngine(*r)) return fail("an hg-engine ROM whose texts weren't found");
+		const Files* files = r->files();
 		if (!files) return fail("not one of the DS Pokémon games the companion knows");
 		// the cache key: the header and the ARM9 (cheap; differs per release and revision)
 		Bytes arm9;
@@ -1437,11 +1561,15 @@ namespace banana::nds
 			if (load(*r, cached)) { r->rom = std::move(rom); done(true, cached.size()); step(1); return r; }
 			// a stale or broken cache: decode again
 			Game g = r->game;
+			const bool he = r->hgEngine;
+			const Files hf = r->hackFiles;
 			r = std::make_shared<RomImpl>();
 			r->path = path;
 			r->game = g;
+			r->hgEngine = he;
+			r->hackFiles = hf;
 		}
-		Decoder d{ *rom, *files, *r, "" };
+		Decoder d{ *rom, *r->files(), *r, "" };
 		step(0.05f);
 		if (!d.texts()) return fail(d.err);
 		step(0.3f);
@@ -1452,6 +1580,11 @@ namespace banana::nds
 		step(0.55f);
 		if (!d.tms(arm9)) return fail(d.err);
 		if (!d.zones(arm9)) return fail(d.err);
+		// (an hg-engine build writes a wild Pokémon's form in its species number's top bits, species | form << 11)
+		if (r->hgEngine)
+			for (auto& z : r->zones)
+				for (auto& e : z.second.encounters)
+					if (e.species > 0x7ff) { e.form = (uint8_t)(e.species >> 11); e.species &= 0x7ff; }
 		if (isB2w2(r->game.id) && !d.grottos(d.zoneWild)) return fail(d.err);
 		{
 			auto t1 = std::chrono::steady_clock::now();

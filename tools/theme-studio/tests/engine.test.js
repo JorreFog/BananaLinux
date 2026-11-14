@@ -100,7 +100,12 @@ function png(w, h, rgb) {
 
   for (const size of ["640x480", "1024x768"]) {
     const [W, H] = size.split("x").map(Number);
-    for (const file of THEMES) {
+    const retried = new Set();
+    for (let t = 0; t < THEMES.length; t++) {
+      const file = THEMES[t];
+      // the themes draw the clock and the two builds run one after the other: a minute turning over between them isn't
+      // a difference, so that theme runs once more (a difference without a new minute always fails)
+      const minute = Math.floor(Date.now() / 60000);
       // a fresh library for each, as each native run reads the fixture anew (Y stars a game)
       api.init(W, H, 0); api.host(-1, 0, 0, 1, 0); B.ccall("bt_online", null, ["number"], [0]);
       const dir = "/theme-" + path.basename(file, ".json");
@@ -144,6 +149,12 @@ function png(w, h, rgb) {
           fs.writeFileSync(stem + "-" + s + "-wasm.ppm", Buffer.concat([Buffer.from("P6 " + W + " " + H + " 255\n"), Buffer.from(B.FS.readFile("/out/" + shot + "-" + s + ".rgb"))]));
           fs.copyFileSync(path.join(nd, "out-" + shot + "-" + s + ".png"), stem + "-" + s + "-native.png");
         }
+      }
+      if (worst && Math.floor(Date.now() / 60000) !== minute && !retried.has(file)) {
+        retried.add(file);
+        console.log("  " + name + ": the minute turned over during the run, once more");
+        t--;
+        continue;
       }
       if (worst) fail(name + ": " + worst + " pixels differ from banana-ui's (" + where + ")");
       else console.log("  " + name + ": " + shots.trim().split("\n").length + " shots, the same as banana-ui's");

@@ -27,6 +27,7 @@ namespace banana::nds
 		// that ROM (tests/nds-rom-test), then list its letter here
 		static const char CHECKED_LANGUAGES[] = {
 			'E',	// USA, and the English European dumps that carry it
+			'S',	// Spain (the Latin American fan translations keep its code)
 			'O',	// Black 2/White 2's international English code
 		};
 		const char lang = g.code.size() == 4 ? g.code[3] : 0;
@@ -39,6 +40,11 @@ namespace banana::nds
 				return g;
 			}
 		return g;
+	}
+
+	bool maybeRomHack(const uint8_t* h, size_t n)
+	{
+		return h && n >= 0x200 && detectGame(h, n).id == GameId::NONE && (!memcmp(h + 0x0c, "IPK", 3) || !memcmp(h + 0x0c, "IPG", 3));
 	}
 
 	// attacker x defender in quarters (4 = normal); only the cells that differ from 4 are listed

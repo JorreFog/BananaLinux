@@ -58,6 +58,9 @@ drastic)
     }
     { print }
     END { print swap > swapfile }' "$C" > "$C.new" || { rm -f "$C.new" "$C.swap"; exit 1; }
+    # (a line out for every line in: busybox awk doesn't tell a failed write, and on a full card drastic.cfg came out
+    # 2 KB long and went over the whole one, at every DS game's start)
+    [ "$(wc -l < "$C.new")" = "$(wc -l < "$C")" ] || { rm -f "$C.new" "$C.swap"; echo "nds-buttons: $C couldn't be written (the card full?)" >&2; exit 1; }
     cat "$C.swap"; rm -f "$C.swap"
     if cmp -s "$C" "$C.new"; then rm -f "$C.new"; else mv -f "$C.new" "$C"; fi
     ;;

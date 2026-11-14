@@ -1,0 +1,179 @@
+The SDL2 renderer (draw13) on the RG DS's two stacked panels (one 1024x1536 window, SDL_BANANA_PANELS=stack):
+- a texture only cropped by the view is copied whole on the plain path and cropped by the GPU, not by the
+  per-pixel cropping copy (half the speed on a Cortex-A55);
+- BANANA_TARGET_HEIGHT: the view drawn into the window's top rows only (a one-screen game on the top panel);
+- SIGUSR2 swaps the window's top and bottom halves (the RG DS's L2, through gw-hotkeys).
+
+diff --git a/src/osd/modules/render/draw13.cpp b/src/osd/modules/render/draw13.cpp
+index 5ed8008b..b050bc50 100644
+--- a/src/osd/modules/render/draw13.cpp
++++ b/src/osd/modules/render/draw13.cpp
+@@ -34,6 +34,8 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <cstdio>
++#include <cstdlib>
++#include <csignal>
+ #include <iterator>
+ #include <list>
+ 
+@@ -103,6 +105,9 @@ private:
+ 
+ 	SDL_Texture *       m_texture_id;
+ 	bool                m_is_rotated;
++	bool                m_is_cropped;         // Banana: the whole texture uploaded, the GPU draws m_src_rect of it
++	SDL_Rect            m_src_rect;
++	int                 m_tex_width, m_tex_height;
+ 
+ 	int                 m_format;             // texture format
+ 	SDL_BlendMode       m_sdl_blendmode;
+@@ -338,7 +343,7 @@ void texture_info::render_quad(const render_primitive &prim, const int x, const
+ 	set_coloralphamode(m_texture_id, &prim.color);
+ 	//printf("%d %d %d %d\n", target_rect.x, target_rect.y, target_rect.w, target_rect.h);
+ 	// Arghhh .. Just another bug. SDL_RenderCopy has severe issues with scaling ...
+-	SDL_RenderCopy(m_renderer->m_sdl_renderer,  m_texture_id, nullptr, &target_rect);
++	SDL_RenderCopy(m_renderer->m_sdl_renderer,  m_texture_id, m_is_cropped ? &m_src_rect : nullptr, &target_rect);
+ 	//SDL_RenderCopyEx(m_renderer->m_sdl_renderer,  m_texture_id, nullptr, &target_rect, 0, nullptr, SDL_FLIP_NONE);
+ 	//SDL_RenderCopyEx(m_renderer->m_sdl_renderer,  m_texture_id, nullptr, nullptr, 0, nullptr, SDL_FLIP_NONE);
+ }
+@@ -519,8 +524,22 @@ void renderer_sdl2::destroy_all_textures()
+ //  sdl_info::draw
+ //============================================================
+ 
++// Banana: SIGUSR2 swaps the window's top and bottom halves (the RG DS's two stacked panels; L2 through gw-hotkeys)
++static volatile std::sig_atomic_t s_banana_swap = 0;
++
++static void banana_swap_signal(int)
++{
++	s_banana_swap = !s_banana_swap;
++}
++
+ int renderer_sdl2::draw(int update)
+ {
++	static bool banana_swap_installed = false;
++	if (!banana_swap_installed)
++	{
++		banana_swap_installed = true;
++		std::signal(SIGUSR2, banana_swap_signal);
++	}
+ 	texture_info *texture=nullptr;
+ 	float vofs, hofs;
+ 	int blit_pixels = 0;
+@@ -574,6 +593,27 @@ int renderer_sdl2::draw(int update)
+ 
+ 	window().m_primlist->acquire_lock();
+ 
++	// swapped: two passes, each clipped to one half and moved to the other (the window cleared first: the passes leave
++	// what lies outside the view undrawn)
++	const bool swap = s_banana_swap != 0;
++	const int half = wdim.height() / 2;
++	const float base_vofs = vofs;
++	if (swap)
++	{
++		SDL_SetRenderDrawBlendMode(m_sdl_renderer, SDL_BLENDMODE_NONE);
++		SDL_SetRenderDrawColor(m_sdl_renderer, 0, 0, 0, 0);
++		SDL_RenderFillRect(m_sdl_renderer, nullptr);
++	}
++	for (int pass = 0; pass < (swap ? 2 : 1); pass++)
++	{
++	if (swap)
++	{
++		// pass 0: the top half drawn on the bottom panel; pass 1: the bottom half on the top panel
++		SDL_Rect clip = { 0, (pass == 0) ? half : 0, wdim.width(), half };
++		SDL_RenderSetClipRect(m_sdl_renderer, &clip);
++		vofs = base_vofs + ((pass == 0) ? half : -half);
++	}
++
+ 	// now draw
+ 	for (render_primitive &prim : *window().m_primlist)
+ 	{
+@@ -604,6 +644,12 @@ int renderer_sdl2::draw(int update)
+ 				throw emu_fatalerror("Unexpected render_primitive type\n");
+ 		}
+ 	}
++	}
++	if (swap)
++	{
++		SDL_RenderSetClipRect(m_sdl_renderer, nullptr);
++		vofs = base_vofs;
++	}
+ 
+ 	window().m_primlist->release_lock();
+ 
+@@ -730,6 +776,25 @@ texture_info::texture_info(renderer_sdl2 *renderer, const render_texinfo &texsou
+ 	else
+ 		m_is_rotated = false;
+ 
++	// Banana: a texture only cropped (part of it off the view, e.g. an artwork view whose screen bounds
++	// reach past its edges), not flipped, rotated or scaled, takes the plain copy of the whole texture, and the GPU
++	// draws the part shown, instead of the per-pixel cropping copy (about half the speed on the RG DS's A55s)
++	m_is_cropped = false;
++	m_tex_width = m_setup.rotwidth;
++	m_tex_height = m_setup.rotheight;
++	if (m_is_rotated && PRIMFLAG_GET_TEXORIENT(flags) == 0 && setup.dudx == 65536 && setup.dvdy == 65536
++			&& setup.dvdx == 0 && setup.dudy == 0 && setup.rotwidth <= int(m_texinfo.width) && setup.rotheight <= int(m_texinfo.height))
++	{
++		m_src_rect.x = std::clamp(setup.startu >> 16, 0, int(m_texinfo.width) - setup.rotwidth);
++		m_src_rect.y = std::clamp(setup.startv >> 16, 0, int(m_texinfo.height) - setup.rotheight);
++		m_src_rect.w = setup.rotwidth;
++		m_src_rect.h = setup.rotheight;
++		m_tex_width = m_texinfo.width;
++		m_tex_height = m_texinfo.height;
++		m_is_cropped = true;
++		m_is_rotated = false;
++	}
++
+ 	//m_sdl_access = SDL_TEXTUREACCESS_STATIC;
+ 	m_sdl_access = SDL_TEXTUREACCESS_STREAMING;
+ 
+@@ -742,10 +807,10 @@ texture_info::texture_info(renderer_sdl2 *renderer, const render_texinfo &texsou
+ 	m_copyinfo = compute_size_type();
+ 
+ 	m_texture_id = SDL_CreateTexture(m_renderer->m_sdl_renderer, m_copyinfo->dst_fmt, m_sdl_access,
+-			m_setup.rotwidth, m_setup.rotheight);
++			m_tex_width, m_tex_height);
+ 
+ 	if (!m_texture_id)
+-		osd_printf_error("Error creating texture: %d x %d, pixelformat %s error: %s\n", m_setup.rotwidth, m_setup.rotheight,
++		osd_printf_error("Error creating texture: %d x %d, pixelformat %s error: %s\n", m_tex_width, m_tex_height,
+ 				m_copyinfo->dstname, SDL_GetError());
+ 
+ 	if (m_sdl_access == SDL_TEXTUREACCESS_STATIC)
+@@ -753,7 +818,7 @@ texture_info::texture_info(renderer_sdl2 *renderer, const render_texinfo &texsou
+ 		if (m_copyinfo->blitter->m_is_passthrough)
+ 			m_pixels = nullptr;
+ 		else
+-			m_pixels = malloc(m_setup.rotwidth * m_setup.rotheight * m_copyinfo->blitter->m_dest_bpp);
++			m_pixels = malloc(m_tex_width * m_tex_height * m_copyinfo->blitter->m_dest_bpp);
+ 	}
+ 	m_last_access = osd_ticks();
+ }
+@@ -781,7 +846,7 @@ void texture_info::set_data(const render_texinfo &texsource, const uint32_t flag
+ 		}
+ 		else
+ 		{
+-			m_pitch = m_setup.rotwidth * m_copyinfo->blitter->m_dest_bpp;
++			m_pitch = m_tex_width * m_copyinfo->blitter->m_dest_bpp;
+ 			m_copyinfo->blitter->texop(this, &texsource);
+ 		}
+ 		SDL_UpdateTexture(m_texture_id, nullptr, m_pixels, m_pitch);
+@@ -950,7 +1015,18 @@ render_primitive_list *renderer_sdl2::get_primitives()
+ 		m_blit_dim = nd;
+ 		notify_changed();
+ 	}
+-	window().target()->set_bounds(m_blit_dim.width(), m_blit_dim.height(), window().pixel_aspect());
++	// Banana: BANANA_TARGET_HEIGHT draws the view into the window's top rows only (a one-screen game on the
++	// top panel of a window that spans both; the rows below stay black)
++	int height = m_blit_dim.height();
++	if (const char *const th = getenv("BANANA_TARGET_HEIGHT"))
++	{
++		const int cap = atoi(th);
++		if (cap > 0 && cap < height)
++		{
++			height = cap;
++		}
++	}
++	window().target()->set_bounds(m_blit_dim.width(), height, window().pixel_aspect());
+ 	return &window().target()->get_primitives();
+ }
+ 

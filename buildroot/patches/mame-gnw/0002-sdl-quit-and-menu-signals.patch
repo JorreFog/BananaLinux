@@ -1,0 +1,86 @@
+The SDL OSD under BananaOS's launcher:
+- quit on SDL_QUIT: SIGTERM and SIGINT (which SDL turns into SDL_QUIT) end the emulation cleanly, NVRAM and
+  settings saved; MAME ignored them, so the quit combo and the shutdown could only kill it;
+- SIGUSR1 opens or closes the menu (a press and release of Tab, its key): the RG DS's F, which MAME doesn't see,
+  through gw-hotkeys.
+
+diff --git a/src/osd/sdl/osdsdl.cpp b/src/osd/sdl/osdsdl.cpp
+index 0072a50d..ad19162d 100644
+--- a/src/osd/sdl/osdsdl.cpp
++++ b/src/osd/sdl/osdsdl.cpp
+@@ -23,6 +23,8 @@
+ #include <cstdio>
+ #include <cstring>
+ 
++#include <csignal>
++
+ 
+ namespace {
+ 
+@@ -471,8 +473,54 @@ void sdl_osd_interface::process_events_buf()
+ }
+ 
+ 
++// Banana: SIGUSR1 opens or closes MAME's menu (the RG DS's F, tapped on its own: gw-hotkeys sends it), as a press
++// and release of Tab, the menu's key, on the keyboard SDL reports
++static volatile std::sig_atomic_t s_banana_menu_request = 0;
++
++static void banana_menu_signal(int)
++{
++	s_banana_menu_request = 1;
++}
++
++static void banana_menu_key()
++{
++	static bool installed = false;
++	static Uint32 release_at = 0;	// SDL ticks; 0: no key held
++	if (!installed)
++	{
++		installed = true;
++		std::signal(SIGUSR1, banana_menu_signal);
++	}
++	SDL_Event key;
++	SDL_zero(key);
++	key.key.keysym.scancode = SDL_SCANCODE_TAB;
++	key.key.keysym.sym = SDLK_TAB;
++	if (s_banana_menu_request)
++	{
++		s_banana_menu_request = 0;
++		key.type = SDL_KEYDOWN;
++		key.key.state = SDL_PRESSED;
++		SDL_PushEvent(&key);
++		// held for 100 ms (several frames: the UI reads the keys once a frame, and this runs more often than that)
++		release_at = SDL_GetTicks() + 100;
++		if (release_at == 0)
++		{
++			release_at = 1;
++		}
++	}
++	else if (release_at != 0 && SDL_TICKS_PASSED(SDL_GetTicks(), release_at))
++	{
++		release_at = 0;
++		key.type = SDL_KEYUP;
++		key.key.state = SDL_RELEASED;
++		SDL_PushEvent(&key);
++	}
++}
++
+ void sdl_osd_interface::process_events()
+ {
++	banana_menu_key();
++
+ 	std::lock_guard<std::mutex> lock(subscription_mutex());
+ 	SDL_Event event;
+ 	while (SDL_PollEvent(&event))
+@@ -480,6 +528,11 @@ void sdl_osd_interface::process_events()
+ 		// handle UI events
+ 		switch (event.type)
+ 		{
++		case SDL_QUIT:
++			// SIGTERM/SIGINT (SDL turns them into SDL_QUIT): a clean exit, NVRAM and settings saved
++			machine().schedule_exit();
++			break;
++
+ 		case SDL_WINDOWEVENT:
+ 			process_window_event(event);
+ 			break;

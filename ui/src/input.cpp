@@ -42,6 +42,7 @@ namespace banana
 		case BTN_START: case KEY_S: return Key::START;
 		case BTN_SELECT: case KEY_TAB: return Key::SELECT;
 		case BTN_MODE: case KEY_F1: return Key::MENU;
+		case BTN_Z: case BTN_THUMBL: case BTN_THUMBR: return Key::OTHER;
 		default: return Key::NONE;
 		}
 	}
@@ -99,7 +100,7 @@ namespace banana
 			{
 				bool any = testBit(abs, ABS_HAT0X);
 				for (int k = KEY_ESC; k < KEY_MAX && !any; k++)
-					if (testBit(keys, k) && mapKey(k) != Key::NONE) any = true;
+					if (testBit(keys, k) && mapKey(k) != Key::NONE) any = true;	// (OTHER too: the back button, BTN_Z, is alone on its own adc-keys device; the menu ignores OTHER)
 				if (!any) { ::close(fd); continue; }
 				// a pad's left stick: moves the cursor as the d-pad does (its range from the driver)
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y))
@@ -205,6 +206,7 @@ namespace banana
 					InputEvent o;
 					o.type = e.value ? InputEvent::PRESS : InputEvent::RELEASE;
 					o.key = k;
+					o.code = e.code;
 					sink1(o, e);
 				}
 				else if (e.type == EV_ABS && dv->stick && (e.code == ABS_X || e.code == ABS_Y))

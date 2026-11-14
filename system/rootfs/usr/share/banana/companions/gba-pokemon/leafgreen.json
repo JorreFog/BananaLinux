@@ -4,7 +4,7 @@
  "game": "leafgreen",
  "code": "BPGE",
  "title": "Pokemon LeafGreen Version",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "pret/pokefirered decompilation (GitHub; builds FireRed and LeafGreen): trainer parties, map scripts, hidden items (map.json bg_events), in-game trades, Game Corner prizes, evolutions, wild encounters, roamer.c",
   "The English ROM itself (BPGE, Rev 1): region map section names and trainer names/levels, read on the PC with ui/src/pokemon.cpp (findTables) - the ground truth for every place name and level cap"
@@ -371,7 +371,12 @@
    ],
    "tips": "Rocket grunts (Pokémon at 11-13) and the Super Nerd Miguel (Grimer, Voltorb, Koffing at 12) guard the fossils on B2F. Pick the Dome Fossil (Kabuto) or Helix Fossil (Omanyte).",
    "quality": "reference-only",
-   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (MtMoon_B2F trainers)"
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (MtMoon_B2F trainers)",
+   "foe": {
+    "name": "Miguel",
+    "class": "Super Nerd",
+    "ace_level": 12
+   }
   },
   {
    "id": "rival-cerulean",
@@ -444,7 +449,15 @@
    ],
    "tips": "A Rocket grunt broke into a house; follow him out of the back and beat him (Machop, Drowzee at 17) to get TM28 Dig back. The way south then opens.",
    "quality": "reference-only",
-   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; CeruleanCity scripts (TM28)"
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; CeruleanCity scripts (TM28); pret/pokefirered CeruleanCity scripts (TRAINER_TEAM_ROCKET_GRUNT_5)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Rocket",
+    "ace_level": 17
+   },
+   "trainer_ids": [
+    355
+   ]
   },
   {
    "id": "rival-ss-anne",
@@ -580,9 +593,19 @@
     "route-12",
     "route-16"
    ],
-   "tips": "With the Silph Scope, the ghost on 6F is Marowak (Level 30; it can't be caught). Three grunts (up to 25) hold Mr. Fuji on 7F; he gives you the Poké Flute, which wakes the Snorlax on Routes 12 and 16.",
+   "tips": "With the Silph Scope, the ghost on 6F is Marowak (Level 30; it can't be caught). Three grunts (up to 26) hold Mr. Fuji on 7F; he gives you the Poké Flute, which wakes the Snorlax on Routes 12 and 16.",
    "quality": "reference-only",
-   "source": "pret/pokefirered PokemonTower_6F (Marowak 30), 7F, MrFujisHouse scripts"
+   "source": "pret/pokefirered PokemonTower_6F (Marowak 30), 7F, MrFujisHouse scripts; ROM BPGE trainer table (PokemonTower_7F grunts)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Rocket",
+    "ace_level": 26
+   },
+   "trainer_ids": [
+    369,
+    370,
+    371
+   ]
   },
   {
    "id": "gym-5-koga",
@@ -648,6 +671,23 @@
    "tips": "Bring the Tea (from an old woman in Celadon) to pass the Saffron guards. Find the Card Key on 5F; Giovanni waits on 11F with Nidorino, Kangaskhan, Rhyhorn and Nidoqueen 41. The president then gives you the Master Ball.",
    "quality": "reference-only",
    "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (BOSS_GIOVANNI_2, SilphCo_11F); SilphCo_11F (Master Ball)"
+  },
+  {
+   "id": "story-fighting-dojo",
+   "name": "Fighting Dojo (Saffron City)",
+   "kind": "story",
+   "place": "saffron-city",
+   "level_cap": 37,
+   "foe": {
+    "name": "Koichi",
+    "class": "Black Belt",
+    "ace_level": 37
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "The dojo next to Saffron's gym: four Black Belts, then the master Koichi with Hitmonlee and Hitmonchan at 37. Psychic and Flying moves win. Afterwards take Hitmonlee or Hitmonchan (Level 25); only one.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered SaffronCity_Dojo scripts"
   },
   {
    "id": "gym-6-sabrina",
@@ -718,7 +758,16 @@
    ],
    "tips": "Bill takes you to One Island. Celio needs a gem for his network machine: go up Kindle Road to Mt. Ember, beat the two Rocket grunts (up to 37), solve the Braille room and take the Ruby. Two and Three Island open on the way.",
    "quality": "reference-only",
-   "source": "pret/pokefirered OneIsland, MtEmber scripts; ROM BPGE (Mt. Ember grunts)"
+   "source": "pret/pokefirered OneIsland, MtEmber scripts; ROM BPGE (Mt. Ember grunts); pret/pokefirered MtEmber_Exterior (TEAM_ROCKET_GRUNT_43/44)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Rocket",
+    "ace_level": 37
+   },
+   "trainer_ids": [
+    537,
+    538
+   ]
   },
   {
    "id": "story-lostelle",
@@ -925,6 +974,28 @@
    "tips": "Celio now needs the Sapphire. Visit Four Island (Lorelei; Icefall Cave), find the Rocket Warehouse on Five Island, then the Dotted Hole on Six Island, where the scientist Gideon steals the Sapphire for the Rockets.",
    "quality": "reference-only",
    "source": "pret/pokefirered FourIsland, FiveIsland, SixIsland scripts"
+  },
+  {
+   "id": "team-icefall-cave",
+   "name": "Team Rocket in Icefall Cave (Four Island)",
+   "kind": "team",
+   "place": "icefall-cave",
+   "level_cap": 38,
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Rocket",
+    "ace_level": 38
+   },
+   "trainer_ids": [
+    539
+   ],
+   "done_when": "none",
+   "opens": [
+    "icefall-cave"
+   ],
+   "tips": "In Icefall Cave's back room Lorelei finds Rockets taking Pokémon. Beat the grunt (two Zubat and a Golbat at 38): Electric, Ice, Psychic or Rock moves. HM07 Waterfall is in the cave.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered FourIsland_IcefallCave_Back (TEAM_ROCKET_GRUNT_45)"
   },
   {
    "id": "team-rocket-warehouse",
@@ -1361,6 +1432,43 @@
    "done_when": "none",
    "quality": "reference-only",
    "source": "pret/pokefirered (Teachy TV)"
+  },
+  {
+   "id": "step-game-corner",
+   "title": "The Game Corner's poster",
+   "text": "A Rocket grunt stands by a poster in Celadon's Game Corner. Beat him and press the switch behind the poster: the stairs to the Rocket Hideout open. On B4F a grunt drops the Lift Key, which runs the lift down to Giovanni.",
+   "stage": "team-rocket-hideout",
+   "places": [
+    "celadon-city",
+    "rocket-hideout"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeladonCity_GameCorner, RocketHideout_B4F scripts"
+  },
+  {
+   "id": "step-card-key",
+   "title": "Card Key in Silph Co.",
+   "text": "Silph Co.'s doors are locked. The Card Key lies on 5F and opens them; Giovanni waits on 11F.",
+   "stage": "team-silph-co",
+   "places": [
+    "silph-co"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (SilphCo_5F Card Key), SilphCo_11F scripts"
+  },
+  {
+   "id": "step-sevii-passes",
+   "title": "Tri-Pass and Rainbow Pass",
+   "text": "On One Island Celio gives you the Tri-Pass for the ferry between One, Two and Three Island. Bring him the Ruby from Mt. Ember and he asks for one more gem and gives the Rainbow Pass, which reaches Four to Seven Island.",
+   "stage": "story-sevii-ruby",
+   "places": [
+    "one-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered OneIsland_PokemonCenter_1F scripts"
   }
  ],
  "secrets": [
@@ -1515,6 +1623,9 @@
    "kind": "hidden-item",
    "text": "A hidden Max Elixir lies here; restores all PP of every move.",
    "place": "power-plant",
+   "x": 29,
+   "y": 16,
+   "grid": "map",
    "quality": "reference-only",
    "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
   },
@@ -1523,6 +1634,9 @@
    "kind": "hidden-item",
    "text": "A hidden Thunder Stone lies here; evolves Pikachu and Eevee.",
    "place": "power-plant",
+   "x": 8,
+   "y": 12,
+   "grid": "map",
    "quality": "reference-only",
    "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
   },
@@ -1844,6 +1958,9 @@
    "kind": "hidden-item",
    "text": "A hidden Nugget lies here; sells for 5,000.",
    "place": "three-isle-path",
+   "x": 21,
+   "y": 3,
+   "grid": "map",
    "quality": "reference-only",
    "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
   },

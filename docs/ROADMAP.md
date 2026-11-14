@@ -63,7 +63,7 @@
 - [x] A string extractor for new languages (`tools/lang-extract.py`)
 - [ ] The rest of the Chinese translation (lines added since it was made)
 - [ ] EmulationStation as an alternative frontend
-- [ ] Charging while switched off on the RG DS Plus (#34)
+- [x] Charging while switched off on the RG DS Plus (#34): it did charge; the gauge missed it until 0.5.0
 - [ ] Golden Sun: Dark Dawn's opening flyover at full speed in BananaDS
 - [ ] Files' servers (banana-fetch): games from a NAS or a computer over SMB 2/3, SFTP and FTP/FTPS, into a folder
       guessed or chosen on either card, archives unpacked (zip, 7z, RAR); built and tested on the host

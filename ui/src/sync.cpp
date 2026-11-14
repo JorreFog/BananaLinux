@@ -50,7 +50,7 @@ using banana::JPtr;
 namespace
 {
 	const char* VERSION = "banana-sync 1.0";
-	std::string ROOT = "/data", ROMS, CONF, SETTINGS, STATUS = "/run/banana/sync.status", RUN = "/run/banana";
+	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana";
 	bool dryRun = false, verbose = false;
 	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
 
@@ -231,6 +231,54 @@ namespace
 			m[trim(ln.substr(0, e))] = v;
 		}
 		return m;
+	}
+
+	// the systems list (systems.conf, as the menu reads it): the folders of the systems that make their own covers
+	// ("covers = own"), whose server covers aren't downloaded
+	std::set<std::string> ownCoversOf(const std::string& path)
+	{
+		std::set<std::string> r;
+		std::ifstream f(path);
+		std::string id, folder, covers;
+		auto done = [&]()
+		{
+			if (!id.empty() && covers == "own")
+			{
+				r.insert(folder.empty() ? id : folder);
+			}
+		};
+		for (std::string ln; std::getline(f, ln);)
+		{
+			ln = trim(ln);
+			if (ln.empty() || ln[0] == '#')
+			{
+				continue;
+			}
+			if (ln[0] == '[' && ln.back() == ']')
+			{
+				done();
+				id = lower(trim(ln.substr(1, ln.size() - 2)));
+				folder.clear();
+				covers.clear();
+				continue;
+			}
+			size_t e = ln.find('=');
+			if (e == std::string::npos)
+			{
+				continue;
+			}
+			std::string k = lower(trim(ln.substr(0, e))), v = trim(ln.substr(e + 1));
+			if (k == "folder")
+			{
+				folder = v;
+			}
+			else if (k == "covers")
+			{
+				covers = lower(v);
+			}
+		}
+		done();
+		return r;
 	}
 
 	// ---- libcurl, dlopen()ed as banana-ui and banana-scrape do it --------------------------------------------------
@@ -589,6 +637,7 @@ namespace
 		Conf& c;
 		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
 		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
+		std::set<std::string> ownCovers;	// system folders that make their own covers (systems.conf: covers = own)
 		explicit Backend(Conf& conf) : c(conf) {}
 		virtual ~Backend() {}
 		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
@@ -777,6 +826,10 @@ namespace
 									mf.size = (long long)f->num("size", -1);
 									mf.sha1 = f->str("sha1");
 									mf.media = f->str("kind") == "media";
+									if (mf.media && ownCovers.count(sys.folder))
+									{
+										continue;	// (a system that makes its own covers)
+									}
 									mf.url = c.server + "/api/v1/files/" + pathEsc(mf.path);
 									if (!safeRel(mf.path) || mf.path.compare(0, sys.folder.size() + 1, sys.folder + "/") != 0) { ok = false; break; }
 									game.files.push_back(mf);
@@ -889,8 +942,9 @@ namespace
 		{ "megadrive", "megadrive" }, { "psx", "psx" }, { "ps", "psx" }, { "n64", "n64" },
 		{ "c64", "c64" }, { "commodore-64", "c64" }, { "commodore64", "c64" },
 		{ "zxs", "zxspectrum" }, { "zx-spectrum", "zxspectrum" }, { "zxspectrum", "zxspectrum" },
+		{ "g-and-w", "gameandwatch" },
 	};
-	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64" };
+	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64", "gameandwatch" };
 	struct RommRom { long long id; std::string folder, stem, fsName; };
 	struct Romm : Backend
 	{
@@ -942,10 +996,35 @@ namespace
 			if (!list(skip, err)) return false;
 			std::map<std::string, MSystem> by;
 			for (auto& f : platforms) by[f.second].folder = f.second;
+			// Game & Watch: the games' MAME artwork zips, in the platform's artwork folder, which RomM lists as one ROM of
+			// several files (its files only on its own page): each zip goes with its game (gameandwatch/artwork/<game>.zip,
+			// run-gw's place for it), so a chosen game brings its artwork and the folder is no game of its own
+			std::map<std::string, MFile> gwArt;
+			for (auto& it : romJson)
+			{
+				if (platforms[(long long)it->num("platform_id")] != "gameandwatch" || it->str("fs_name") != "artwork") continue;
+				Resp d = call("GET", "/api/roms/" + std::to_string((long long)it->num("id")));
+				JPtr dj = d.code == 200 ? d.json() : nullptr;
+				const JVal* files = dj ? dj->get("files") : nullptr;
+				if (!files || !files->isArr()) continue;
+				for (auto& fj : files->arr)
+				{
+					std::string fn = fj->str("file_name");
+					if (fn.empty() || !safeRel(fn) || lower(extOf(fn)) != "zip") continue;
+					MFile f;
+					f.path = "gameandwatch/artwork/" + fn;
+					// checked by size only: RomM's hashes of the files in a folder like this one aren't the files' own (it
+					// hashes what's inside a zip; checked with RomM 5.4.1: every artwork zip "mismatched", sent intact)
+					f.size = (long long)fj->num("file_size_bytes", -1);
+					f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
+					gwArt[stemOf(fn)] = f;
+				}
+			}
 			for (auto& it : romJson)
 			{
 				std::string folder = platforms[(long long)it->num("platform_id")], fsName = it->str("fs_name");
 				long long id = (long long)it->num("id");
+				if (folder == "gameandwatch" && fsName == "artwork") continue;	// (its zips go with their games: above)
 				if (!safeRel(folder + "/" + fsName) || it->flag("missing_from_fs")) { m.skipped++; continue; }
 				MGame g;
 				g.title = it->str("name", fsName);
@@ -993,8 +1072,14 @@ namespace
 				}
 				else { m.skipped++; continue; }	// (a game of several files on a cartridge system: not one the menu can start)
 				std::string stem = stemOf(entry);
-				// the cover, as the menu's library reads it (media/box/<rom name>.png or .jpg)
-				std::string cover = it->str("path_cover_large");
+				if (folder == "gameandwatch")
+				{
+					auto art = gwArt.find(stem);
+					if (art != gwArt.end()) g.files.push_back(art->second);
+				}
+				// the cover, as the menu's library reads it (media/box/<rom name>.png or .jpg), unless the system makes its
+				// own (systems.conf: covers = own; Game & Watch's gw-meta, from the artwork); one already on the card is kept
+				std::string cover = ownCovers.count(folder) ? std::string() : it->str("path_cover_large");
 				std::string cext = extOf(cover.substr(0, cover.find('?')));
 				std::string image;
 				if (!cover.empty() && (cext == "png" || cext == "jpg" || cext == "jpeg"))
@@ -1707,6 +1792,7 @@ namespace
 		auto b = backendFor(c);
 		b->skip = skip;
 		b->chosen = pick ? &chosen : nullptr;
+		b->ownCovers = ownCoversOf(SYSTEMS);
 		Awake awake;
 		if (roms) awake.take();
 		status("running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName));
@@ -1765,6 +1851,7 @@ int main(int argc, char** argv)
 		else if (a == "--roms") ROMS = val();
 		else if (a == "--conf") CONF = val();
 		else if (a == "--settings") SETTINGS = val();
+		else if (a == "--systems") SYSTEMS = val();
 		else if (a == "--status") STATUS = val();
 		else if (a == "--run") RUN = val();
 		else if (a == "--dry-run") dryRun = true;
@@ -1776,6 +1863,13 @@ int main(int argc, char** argv)
 	if (ROMS.empty()) ROMS = ROOT + "/roms";
 	if (CONF.empty()) CONF = ROOT + "/banana/romsync.json";
 	if (SETTINGS.empty()) SETTINGS = ROOT + "/banana/settings.conf";
+	if (SYSTEMS.empty())
+	{
+		// the menu's merged list (the card's banana/systems.conf over the image's), else the image's own
+		const char* e = getenv("BANANA_SYSTEMS");
+		SYSTEMS = e ? e : ROOT == "/data" ? (access("/run/banana/systems.conf", R_OK) == 0 ? "/run/banana/systems.conf" :
+			"/etc/banana/systems.conf") : "";
+	}
 	{
 		auto set = readConf(SETTINGS);
 		auto t = set.find("homesync_tls");

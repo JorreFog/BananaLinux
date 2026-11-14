@@ -609,6 +609,12 @@ namespace banana
 			if (!p) return def;
 			return p->kind == Prop::LITERAL ? p->lit.str() : p->eval(*c.sc).str();
 		}
+		// a theme's number as an int or a float in a range, NaN as lo: the casts of 1e88 and the sums with it are undefined,
+		// and a text 1e6 px high asked for terabytes
+		static int intIn(double v, int lo, int hi) { return v >= hi ? hi : v > lo ? (int)v : lo; }
+		static float floatIn(double v, float lo, float hi) { return v >= hi ? hi : v > lo ? (float)v : lo; }
+		// a size on the screen in device px (at most a screen's area is ever drawn: shape() and drawImage refuse more)
+		static int pxOf(double v) { return intIn(std::round(v), -(1 << 20), 1 << 20); }
 		// a length: a number, or "50%" of the parent's (rel)
 		double num(const Ctx& c, const Key& k, double def, double rel = 0)
 		{
@@ -675,22 +681,28 @@ namespace banana
 			return r;
 		}
 
+		static bool readsTitle(const std::string& n) { return n == "game.title" || n == "item.title" || n == "sys.resumeTitle" || n == "item.resumeTitle"; }
 		// text's own size (layout px): the widest line and the lines' height
 		struct TextLayout { std::vector<rnds::TextLine> lines; float w = 0, h = 0, lineH = 0, asc = 0; rnds::TextStyle st; };
 		TextLayout layoutText(const Ctx& c, float k, float boxW)
 		{
 			TextLayout L;
+			// a text with a game's title in it is drawn as it is (not through the menu's language, whose "Keep %s" turned
+			// the game Keep Calm into Säilytä Calm)
+			const Prop* tp = find(c, K("text"));
+			rnds::Verbatim named(tp && tp->reads(readsTitle));
 			std::string t = str(c, K("text"));
 			L.st.font = font(str(c, K("font"), defaultFont));
 			if (!L.st.font) return L;
-			L.st.size = (float)num(c, K("size"), 16) * k;
-			L.st.letterSpacing = (float)num(c, K("spacing"), 0) * k;
+			L.st.size = floatIn(num(c, K("size"), 16) * k, 0, 1024);
+			L.st.letterSpacing = floatIn(num(c, K("spacing"), 0) * k, -1024, 1024);
 			L.st.upper = flag(c, K("upper"));
 			L.asc = L.st.font->ascent(L.st.size);
-			L.lineH = has(c, K("lineHeight")) ? (float)num(c, K("lineHeight"), 0) * k : L.st.font->normalLineHeight(L.st.size);
+			L.lineH = has(c, K("lineHeight")) ? floatIn(num(c, K("lineHeight"), 0) * k, 0, 4096) : L.st.font->normalLineHeight(L.st.size);
 			if (t.empty()) { L.h = 0; return L; }
 			std::u32string u = rnds::utf8to32(t);
-			int maxLines = (int)num(c, K("maxLines"), flag(c, K("wrap")) ? 0 : 1);
+			int maxLines = intIn(num(c, K("maxLines"), flag(c, K("wrap")) ? 0 : 1), 0, 4096);
+			const int boxPx = intIn(boxW, 0, 1 << 20);
 			// lines the text itself breaks, each wrapped or cut to the box
 			std::vector<std::u32string> paras;
 			std::u32string cur;
@@ -702,9 +714,9 @@ namespace banana
 				if (boxW > 0 && (flag(c, K("wrap")) || maxLines != 1))
 				{
 					int left = maxLines > 0 ? maxLines - (int)L.lines.size() : 0;
-					for (auto& l : rnds::layoutWrap(p, L.st, (int)boxW, left)) L.lines.push_back(l);
+					for (auto& l : rnds::layoutWrap(p, L.st, boxPx, left)) L.lines.push_back(l);
 				}
-				else if (boxW > 0 && flag(c, K("ellipsis"), true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, (int)boxW));
+				else if (boxW > 0 && flag(c, K("ellipsis"), true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, boxPx));
 				else L.lines.push_back(rnds::layoutLine(p, L.st));
 			}
 			for (auto& l : L.lines) L.w = std::max(L.w, l.width);
@@ -751,7 +763,7 @@ namespace banana
 		rnds::TexPtr shape(int w, int h, const float rad[4], uint32_t fill, const std::vector<std::pair<float, uint32_t>>& stops, float angle,
 			float border, uint32_t borderColor, float blur, float spread, uint32_t shadowColor, int& padOut)
 		{
-			int pad = shadowColor >> 24 ? (int)std::ceil(blur + std::max(0.0f, spread)) + 1 : 0;
+			int pad = shadowColor >> 24 ? intIn(std::ceil(blur + std::max(0.0f, spread)), 0, 4096) + 1 : 0;
 			struct Raw { int w, h; float rad[4]; uint32_t fill; float angle, border; uint32_t borderColor; float blur, spread; uint32_t shadowColor; } raw;
 			memset(&raw, 0, sizeof raw);
 			raw.w = w; raw.h = h; memcpy(raw.rad, rad, sizeof raw.rad); raw.fill = fill; raw.angle = angle; raw.border = border;
@@ -958,13 +970,13 @@ namespace banana
 			if (!color(c, K("borderColor"), bc)) color(c, K("border.color"), bc);
 			uint32_t shc = 0;
 			color(c, K("shadow.color"), shc);
-			float blur = (float)num(c, K("shadow.blur"), 0) * k * s, spread = (float)num(c, K("shadow.spread"), 0) * k * s;
+			float blur = floatIn(num(c, K("shadow.blur"), 0) * k * s, 0, 4096), spread = floatIn(num(c, K("shadow.spread"), 0) * k * s, -4096, 4096);
 			float sx = (float)num(c, K("shadow.x"), 0) * k * s, sy = (float)num(c, K("shadow.y"), 0) * k * s;
 			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;
 			float dx = x * s, dy = y * s, dw = w * s, dh = h * s;
 			bool plain = stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
 			if (plain) { m->be->fill(std::round(dx), std::round(dy), std::round(dx + dw) - std::round(dx), std::round(dy + dh) - std::round(dy), colorFrom(fill, f.opacity)); return; }
-			int iw = (int)std::lround(dw), ih = (int)std::lround(dh);
+			int iw = pxOf(dw), ih = pxOf(dh);
 			if (iw <= 0 || ih <= 0) return;
 			rnds::Color tint(1, 1, 1, f.opacity);
 			if (shc >> 24 && (sx != 0 || sy != 0))
@@ -1038,8 +1050,8 @@ namespace banana
 			if ((src.empty() || failed.count(src)) && has(c, K("fallback"))) src = imageSrc(c, K("fallback"));
 			if (src.empty() || failed.count(src)) { drawPlaceholder(c, x, y, w, h, f); return; }
 			std::string fit = str(c, K("fit"), "cover"), crop = str(c, K("crop"));
-			int iw = (int)std::lround(w * s), ih = (int)std::lround(h * s);
-			if (iw <= 0 || ih <= 0) return;
+			int iw = pxOf(w * s), ih = pxOf(h * s);
+			if (iw <= 0 || ih <= 0 || (size_t)iw * ih > 4096u * 4096u) return;	// (a picture bigger than that: as shape() refuses a box)
 			float radius = (float)num(c, K("radius"), 0, std::min(w, h)) * f.k * s;
 			char kb[64];
 			snprintf(kb, sizeof kb, "|%d|%d|%g", iw, ih, radius);
@@ -1264,12 +1276,12 @@ namespace banana
 			if (source == "systems") { n = (int)systems.size(); cur = m->mSys; }
 			else if (source == "games") { n = (int)games.size(); cur = m->mView == rnds::UI::HOME ? -1 : m->mGame; }
 			else if (source == "hints") { hl = hintsNow(); n = (int)hl.size(); }
-			else if (source == "range") n = (int)num(c, K("count"), 0);
+			else if (source == "range") n = intIn(num(c, K("count"), 0), 0, 4096);
 			else { err("list source \"" + source + "\": systems, games, hints or range"); return; }
 			std::string dirn = str(c, K("direction"), "free");
 			float itemW = (float)num(c, K("itemW"), dirn == "column" ? w : 100), itemH = (float)num(c, K("itemH"), dirn == "row" ? h : 40);
 			float gap = (float)num(c, K("gap"), 0);
-			int cols = std::max(1, (int)num(c, K("columns"), 1));
+			int cols = intIn(num(c, K("columns"), 1), 1, 1024);
 			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
 			std::string mode = str(c, K("scrollMode"), "center");
 			bool loop = flag(c, K("loop")) && n > 0;
@@ -1281,7 +1293,7 @@ namespace banana
 			float along = dirn == "row" ? w : h, step = dirn == "row" ? stepX : stepY;
 			int lineOfCur = std::max(0, cur) / (dirn == "grid" ? cols : 1);
 			float posLine = dirn == "grid" ? pos0 / cols : pos0;
-			int visible = std::max(1, (int)std::floor((along + gap) / std::max(1.0f, step)));
+			int visible = intIn(std::floor((along + gap) / std::max(1.0f, step)), 1, 1 << 20);
 			float first = 0;
 			if (mode == "center") first = posLine - (along - (step - gap)) / 2 / std::max(1.0f, step);
 			else if (mode == "edge")
@@ -1301,16 +1313,17 @@ namespace banana
 			int lines = dirn == "grid" ? (n + cols - 1) / cols : n;
 			// the items in view (and one more each side); a free list draws those within "range" of the cursor
 			int lo = 0, hi = n - 1;
-			if (dirn == "free") { int r = (int)num(c, K("range"), 8); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
+			if (dirn == "free") { int r = intIn(num(c, K("range"), 8), 0, 4096); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
 			else
 			{
-				int l0 = (int)std::floor(first) - 1, l1 = (int)std::ceil(first + along / std::max(1.0f, step)) + 1;
+				int l0 = intIn(std::floor(first), -(1 << 20), 1 << 20) - 1, l1 = intIn(std::ceil(first + along / std::max(1.0f, step)), -(1 << 20), 1 << 20) + 1;
 				if (!loop) { l0 = std::max(0, l0); l1 = std::min(lines - 1, l1); }
 				lo = dirn == "grid" ? l0 * cols : l0;
 				hi = dirn == "grid" ? l1 * cols + cols - 1 : l1;
 				if (!loop) hi = std::min(n - 1, hi);
 			}
 			if (n == 0) return;
+			hi = std::min(hi, lo + 8192);	// (a looping list has no end of its own: at most this many are drawn)
 			std::vector<int> order;
 			for (int i = lo; i <= hi; i++) order.push_back(i);
 			// the selected one drawn last (over its neighbours) unless the theme says otherwise

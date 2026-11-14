@@ -117,6 +117,15 @@ case $r in 1|2|3|4) echo "run-bananads: ${1##*/} has its own 3D resolution: ${r}
 # the game's own timing (its page: Accurate, core.slice = 64, or Fast, auto: the two CPUs run up to 512 cycles apart
 # away from IPC, up to ~10% faster in HeartGold), for this run, so a game that takes Fast (Origin HeartGold at 2x on the
 # RG DS Plus) has it while one it breaks (Golden Sun: Dark Dawn) stays Accurate
+# the "dsi" timing's ARM9: the DSi's 133 MHz, unless Settings' DS CPU speed (core.arm9_mhz in the file $1) is at least that
+dsi_arm9() {
+    m=$(sed -n 's/^ *core\.arm9_mhz *= *\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | tail -n 1)
+    [ "${m:-0}" -ge 133 ] || export BANANADS_CORE_ARM9_MHZ=133
+}
+# the game's own DS CPU speed (its page), $1: over Settings' and over its timing's
+own_arm9() {
+    [ -z "$1" ] || export BANANADS_CORE_ARM9_MHZ="$1"
+}
 t=$(/usr/libexec/banana/nds-game-option nds-per-game-timing.conf "$1")
 case $t in
 accurate) echo "run-bananads: ${1##*/} has its own timing: accurate" >&2; export BANANADS_CORE_SLICE=64 ;;
@@ -124,8 +133,10 @@ fast) echo "run-bananads: ${1##*/} has its own timing: fast" >&2; export BANANAD
 # (dsi: Fast, and the ARM9 at the DSi's 133 MHz, BananaDS's core.arm9_mhz: the game's own lost frames on a DS's 67 MHz
 # ARM9 gone, as Origin HeartGold's authors suggest DSi mode for its 60 fps overworld; and the game card's transfers 8x
 # faster, core.card_fast=3: at each area border Origin HeartGold still lost 7-10 of its own frames at 133 MHz, 4-5 so)
-dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_ARM9_MHZ=133 BANANADS_CORE_CARD_FAST=3 ;;
+dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_CARD_FAST=3
+    dsi_arm9 "$C" ;;
 esac
+own_arm9 "$(/usr/libexec/banana/nds-game-option nds-per-game-cpu.conf "$1")"
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")

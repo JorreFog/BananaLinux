@@ -1,0 +1,41 @@
+The menus' text on the RG DS's 3.9" panels: BANANA_FONT_ROWS, fewer lines of text a screen than font_rows allows
+(25 at least; the text was too small), and with BANANA_UI_HEIGHT (patch 0007) the text sized for the rows the UI is
+drawn in. MAME scales its font by whole multiples worked out from the window's height: a two-screen game's window
+(both panels) got larger text than a one-screen game's.
+
+--- a/src/frontend/mame/ui/ui.cpp
++++ b/src/frontend/mame/ui/ui.cpp
+@@ -361,6 +361,16 @@
+ void mame_ui_manager::update_target_font_height()
+ {
+ 	m_target_font_height = 1.0F / options().font_rows();
++	// Banana: BANANA_FONT_ROWS, fewer lines of text than font_rows allows (25 at least): the RG DS's 3.9" panels
++	// needed larger menu text
++	if (const char *const rows = getenv("BANANA_FONT_ROWS"))
++	{
++		const int n = atoi(rows);
++		if (n >= 10 && n <= 40)
++		{
++			m_target_font_height = 1.0F / n;
++		}
++	}
+ }
+ 
+ 
+@@ -1039,6 +1049,16 @@
+ {
+ 	int32_t const raw_font_pixel_height = get_font()->pixel_height();
+ 	float target_pixel_height = target.height();
++	// Banana: the UI drawn in the top BANANA_UI_HEIGHT rows (render.cpp): its text sized for those rows, so a two-screen
++	// game's window (both panels) gets the same text as a one-screen game's
++	if (const char *const uih = getenv("BANANA_UI_HEIGHT"))
++	{
++		const int h = atoi(uih);
++		if (h > 0 && h < target_pixel_height)
++		{
++			target_pixel_height = h;
++		}
++	}
+ 
+ 	// compute the font pixel height at the nominal size
+ 	float const one_to_one_line_height = float(raw_font_pixel_height) / target_pixel_height;

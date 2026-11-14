@@ -4,7 +4,7 @@
  "game": "emerald",
  "code": "BPEE",
  "title": "Pokemon Emerald Version",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "pret/pokeemerald decompilation (GitHub): trainer parties (src/data/trainers.h, trainer_parties.h), map scripts, hidden items (map.json bg_events), evolutions, wild encounters, roamer.c",
   "The English ROM itself (BPEE): region map section names and trainer names/levels, read on the PC with ui/src/pokemon.cpp (findTables) - the ground truth for every place name and level cap",
@@ -283,7 +283,15 @@
    ],
    "tips": "A lone grunt with a Level 9 Poochyena tries to rob a Devon researcher. Any Pokémon around Level 10 wins; the researcher gives you a Great Ball.",
    "quality": "reference-only",
-   "source": "ROM BPEE trainer table; pret/pokeemerald (Petalburg Woods grunt)"
+   "source": "ROM BPEE trainer table; pret/pokeemerald (Petalburg Woods grunt); pret/pokeemerald (TRAINER_GRUNT_PETALBURG_WOODS)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 9
+   },
+   "trainer_ids": [
+    10
+   ]
   },
   {
    "id": "gym-1-roxanne",
@@ -320,7 +328,15 @@
    ],
    "tips": "The grunt who stole the Devon Goods waits in Rusturf Tunnel east of Rustboro with a Level 11 Poochyena. Mr. Stone then gives you a letter for Steven and the PokéNav.",
    "quality": "reference-only",
-   "source": "ROM BPEE trainer table; pret/pokeemerald (Rusturf Tunnel grunt)"
+   "source": "ROM BPEE trainer table; pret/pokeemerald (Rusturf Tunnel grunt); pret/pokeemerald (TRAINER_GRUNT_RUSTURF_TUNNEL)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 11
+   },
+   "trainer_ids": [
+    16
+   ]
   },
   {
    "id": "rival-rustboro",
@@ -398,7 +414,16 @@
    ],
    "tips": "Two grunts (Level 14 and 15 Pokémon) corner Captain Stern on the museum's 2nd floor when you bring the Devon Goods. The museum charges a small entry fee.",
    "quality": "reference-only",
-   "source": "ROM BPEE trainer table; pret/pokeemerald (museum grunts)"
+   "source": "ROM BPEE trainer table; pret/pokeemerald (museum grunts); pret/pokeemerald (TRAINER_GRUNT_MUSEUM_1/2)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 15
+   },
+   "trainer_ids": [
+    20,
+    21
+   ]
   },
   {
    "id": "rival-route-110",
@@ -421,6 +446,22 @@
    "tips": "Three Pokémon, the starter at 20. After the fight the rival gives you the Itemfinder. Cycling Road above the route needs a bike (Rydel's shop in Mauville).",
    "quality": "reference-only",
    "source": "ROM BPEE trainer table; pret/pokeemerald (*_ROUTE_110_*)"
+  },
+  {
+   "id": "rival-wally-mauville",
+   "name": "Wally in Mauville City",
+   "kind": "rival",
+   "place": "mauville-city",
+   "level_cap": 16,
+   "foe": {
+    "name": "WALLY",
+    "ace_level": 16
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wally wants to prove himself with his Ralts (Level 16) at the gym door. Any of your Pokémon wins; after this Wally moves to Verdanturf.",
+   "quality": "reference-only",
+   "source": "ROM BPEE trainer table; pret/pokeemerald MauvilleCity scripts (Wally there from the start)"
   },
   {
    "id": "gym-3-wattson",
@@ -522,22 +563,6 @@
    "tips": "Normal types: Spinda and Vigoroth at 27, Linoone 29, Slaking 31. Slaking only attacks every other turn (Truant): use its rest turns. Fighting moves (Makuhita, Breloom, Combusken) are best.",
    "quality": "reference-only",
    "source": "ROM BPEE trainer table; pret/pokeemerald"
-  },
-  {
-   "id": "rival-wally-mauville",
-   "name": "Wally in Mauville City",
-   "kind": "rival",
-   "place": "mauville-city",
-   "level_cap": 16,
-   "foe": {
-    "name": "WALLY",
-    "ace_level": 16
-   },
-   "done_when": "later",
-   "opens": [],
-   "tips": "Wally wants to prove himself with his Ralts (Level 16) at the gym door. Any of your Pokémon wins; after this Wally moves to Verdanturf.",
-   "quality": "reference-only",
-   "source": "ROM BPEE trainer table; pret/pokeemerald (Wally, Mauville)"
   },
   {
    "id": "team-weather-institute",
@@ -643,7 +668,19 @@
    ],
    "tips": "Grunts of both teams are at the summit; the leader takes one of the two orbs from the old couple. In Emerald the old woman then gives you the Magma Emblem for the hideout.",
    "quality": "reference-only",
-   "source": "pret/pokeemerald MtPyre_Summit scripts"
+   "source": "pret/pokeemerald MtPyre_Summit scripts; pret/pokeemerald (TRAINER_GRUNT_MT_PYRE_1-4)",
+   "foe": {
+    "name": "Grunt",
+    "class": "Team Aqua",
+    "ace_level": 32
+   },
+   "trainer_ids": [
+    23,
+    24,
+    25,
+    569
+   ],
+   "level_cap": 32
   },
   {
    "id": "team-magma-hideout",

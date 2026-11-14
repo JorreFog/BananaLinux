@@ -462,6 +462,10 @@ namespace rnds
 	static std::u32string (*sTranslate)(const std::u32string&) = nullptr;
 	void setTranslator(std::u32string (*translate)(const std::u32string&)) { sTranslate = translate; }
 	Translator translator() { return sTranslate; }
+	// (Banana: what the player named - a game's title, a file's, a network's - laid out on this thread as it is)
+	static thread_local int sVerbatim = 0;
+	Verbatim::Verbatim(bool on) : on(on) { if (on) sVerbatim++; }
+	Verbatim::~Verbatim() { if (on) sVerbatim--; }
 
 	std::shared_ptr<Font> Font::load(const std::string& path)
 	{
@@ -604,7 +608,7 @@ namespace rnds
 	// the text as it is drawn: translated (Banana: the menu's language, setTranslator), then uppercased for the style
 	static std::u32string prepared(const std::u32string& t, const TextStyle& st)
 	{
-		std::u32string x = sTranslate ? sTranslate(t) : t;
+		std::u32string x = sTranslate && !sVerbatim ? sTranslate(t) : t;
 		return st.upper ? upper(x) : x;
 	}
 
@@ -753,8 +757,12 @@ namespace rnds
 		tb.padY = pad;
 		Bitmap& b = tb.bmp;
 		b.alpha = true;
-		b.w = (int)std::ceil(line.width * scale) + 2 * pad;
-		b.h = (int)std::ceil(std::max(baselineCss * scale + desc, asc + desc)) + 2 * pad;
+		// (Banana: a line no screen could show, from a theme's numbers, isn't made: nothing is drawn. Its bitmap asked for
+		// terabytes, and the menu ended on bad_alloc)
+		double bw = std::ceil((double)line.width * scale) + 2.0 * pad, bh = std::ceil(std::max((double)baselineCss * scale + desc, (double)asc + desc)) + 2.0 * pad;
+		if (!(bw > 0 && bh > 0 && bw * bh <= 4096.0 * 4096.0)) return tb;
+		b.w = (int)bw;
+		b.h = (int)bh;
 		b.px.assign((size_t)b.w * b.h, 0);
 
 		float baseline = pad + topFrac + baselineCss * scale;

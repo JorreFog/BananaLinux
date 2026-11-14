@@ -608,6 +608,23 @@ namespace rnds
 		}
 
 		TextLine line(const std::string& text, const TStyle& t) { return layoutLine(utf8to32(text), tstyle(t)); }
+		// Banana: the play plate's word: the "Start" line's translation, in English "START" (the key caps' START is
+		// a button's name and keeps its case in every language: lang.cpp)
+		std::u32string plateStart()
+		{
+			Translator tf = translator();
+			std::u32string t = tf ? tf(U"Start") : U"Start";
+			return t == U"Start" ? U"START" : t;
+		}
+		// a line laid out as it is (not through the translator: text looked up already)
+		TextLine lineAsIs(const std::u32string& text, const TStyle& t)
+		{
+			Translator tf = translator();
+			setTranslator(nullptr);
+			TextLine l = layoutLine(text, tstyle(t));
+			setTranslator(tf);
+			return l;
+		}
 
 		// draws a laid-out line whose line box is at (x, top) CSS px
 		void drawLine(const TextLine& l, const TStyle& t, float x, float top, float lh, const Color& c, const Xf* xf = nullptr)
@@ -1267,6 +1284,7 @@ namespace rnds
 			Geo g;
 			View v = ui->mView;
 			std::string title, sub;
+			bool named = false;	// (a game's title: drawn as it is, not through the menu's language)
 			if (v == HOME)
 			{
 				auto& sy = sys(ui->mSys); title = sy.name; sub = sy.maker;
@@ -1279,9 +1297,13 @@ namespace rnds
 			{
 				auto& gm = game(ui->mGame);
 				title = gm.title;
+				named = true;
 				sub = v == LAUNCH ? "Ready" : gm.sub;
 			}
-			g.titleLines = layoutWrap(utf8to32(title), tstyle(tTitle()), 470, 2);
+			{
+				Verbatim vb(named);
+				g.titleLines = layoutWrap(utf8to32(title), tstyle(tTitle()), 470, 2);
+			}
 			g.subLines.clear();
 			if (!sub.empty()) g.subLines.push_back(layoutEllipsis(utf8to32(sub), tstyle(tSub()), 470));
 			g.sub = utf8to32(sub);	// (drawn with drawFit: a long one scrolls)
@@ -1331,7 +1353,7 @@ namespace rnds
 					g.mids.push_back(f); g.midW.push_back(w);
 				}
 			}
-			g.startW = line("START", ts(true, 20, 2.4f)).width + 16;
+			g.startW = lineAsIs(plateStart(), ts(true, 20, 2.4f)).width + 16;
 			return g;
 		}
 
@@ -1371,8 +1393,12 @@ namespace rnds
 		float chipWidth(const SysInfo& sy)
 		{
 			TStyle te = ts(false, 17, 1.36f, true), tt = ts(true, 20);
-			float tw = std::max(layoutLine(utf8to32(sy.resumeEyebrow), tstyle(te)).width,
-			                    std::min(300.0f, layoutLine(utf8to32(sy.resumeTitle), tstyle(tt)).width));
+			float titleW;
+			{
+				Verbatim vb;	// (the game's title as it is)
+				titleW = layoutLine(utf8to32(sy.resumeTitle), tstyle(tt)).width;
+			}
+			float tw = std::max(layoutLine(utf8to32(sy.resumeEyebrow), tstyle(te)).width, std::min(300.0f, titleW));
 			return 3 + 8 + 54 + 10 + tw + 12 + 3;
 		}
 		BoxCss chipBox()
@@ -1640,11 +1666,13 @@ namespace rnds
 			TStyle tt = ts(true, 26, 0.52f), tsb = ts(false, 20);
 			// the title on as many lines as it needs, up to TITLE_LINES (a long one was cut at two with room to spare)
 			const int TITLE_LINES = 4;
-			std::vector<TextLine> tl = layoutWrap(utf8to32(gm.title), tstyle(tt), (int)W, TITLE_LINES);
+			// (the game's title as it is, not through the menu's language)
+			auto titleWrap = [&](int width, int lines) { Verbatim vb; return layoutWrap(utf8to32(gm.title), tstyle(tt), width, lines); };
+			std::vector<TextLine> tl = titleWrap((int)W, TITLE_LINES);
 			// no word left alone on the second line ("Pokemon Black Version / 2"): narrow the first line until they balance
 			for (int w = (int)W - 16; tl.size() == 2 && tl[1].width < tl[0].width * 0.35f && w > W * 0.55f; w -= 16)
 			{
-				std::vector<TextLine> t2 = layoutWrap(utf8to32(gm.title), tstyle(tt), w, 2);
+				std::vector<TextLine> t2 = titleWrap(w, 2);
 				if (t2.size() != 2 || t2[1].text.size() < tl[1].text.size()) break;
 				bool cut = false;
 				for (auto& l : t2) if (!l.text.empty() && l.text.back() == U'\u2026') cut = true;
@@ -1807,7 +1835,7 @@ namespace rnds
 					drawSprite(c, cx + 11, cy + 9);
 					float tx = cx + 11 + 54 + 10, ty = cy + 13.5f;
 					drawLine(le, te, tx, ty, lineHeight(te), MUTED);
-					drawFit(sy.resumeTitle, tt, tx, ty + 23, lineHeight(tt), ltW, INK, true);
+					{ Verbatim vb; drawFit(sy.resumeTitle, tt, tx, ty + 23, lineHeight(tt), ltW, INK, true); }	// (the game's title as it is)
 				}
 				// the systems either side: their chip's box and cartridge made on the worker now, so stepping to one
 				// draws it at once. Made when first shown, the box (12-15 ms, sized to the title) cost a frame and the
@@ -1970,7 +1998,9 @@ namespace rnds
 				// (Banana: a game list's L/R, and its arrows, go a page: the names are the games they land on)
 				else if (sides) { prev = game(pageTarget(-1)).title; next = game(pageTarget(1)).title; }
 				TStyle tsh = ts(false, 20);
-				TextLine lp = layoutEllipsis(utf8to32(prev), tstyle(tsh), 180), ln = layoutEllipsis(utf8to32(next), tstyle(tsh), 180);
+				// (games' titles as they are; the systems' names in the menu's language)
+				auto side = [&](const std::string& t) { Verbatim vb(sides && v != HOME); return layoutEllipsis(utf8to32(t), tstyle(tsh), 180); };
+				TextLine lp = side(prev), ln = side(next);
 				// a game list's shoulders are its touch arrows too: ◀ and ▶ between the button and the name, a flex item
 				// more (8 px apart), so a name of the full 180 px still ends short of the rule
 				bool arrows = v == LIBRARY && sides;
@@ -2074,7 +2104,11 @@ namespace rnds
 				{
 					TStyle tsr = ts(true, 20, 2.4f);
 					// Banana: on the plate's accent, in its width (a longer translation scrolls)
-					drawFit(std::string("START"), tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
+					Translator tf = translator();
+					std::u32string t = plateStart();
+					setTranslator(nullptr);	// (the line looked up already)
+					drawFit(t, tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
+					setTranslator(tf);
 				}
 			}
 			be->popClip();

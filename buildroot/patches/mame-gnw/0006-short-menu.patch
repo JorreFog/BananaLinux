@@ -1,0 +1,48 @@
+BANANA_SHORT_MENU: the main menu with only what a player of the RG DS's Game & Watch uses (the F button opens it):
+Video Options (the artwork's views), Machine Configuration and DIP Switches (where a game has them), Input
+Settings, Audio Mixer, Close Menu, and MAME's own Quit (left out of its menu upstream).
+
+diff --git a/src/frontend/mame/ui/mainmenu.cpp b/src/frontend/mame/ui/mainmenu.cpp
+index 391a91d3..4198a555 100644
+--- a/src/frontend/mame/ui/mainmenu.cpp
++++ b/src/frontend/mame/ui/mainmenu.cpp
+@@ -43,6 +43,8 @@
+ #include "dipty.h"
+ #include "emuopts.h"
+ 
++#include <cstdlib>
++
+ 
+ namespace ui {
+ 
+@@ -114,6 +116,30 @@ void menu_main::populate()
+ {
+ 	m_phase = machine().phase();
+ 
++	// Banana: BANANA_SHORT_MENU, the RG DS's Game & Watch menu (F): only what a player there uses, and Quit (MAME's,
++	// left out of its own menu: F + Start does the same)
++	if (getenv("BANANA_SHORT_MENU") && machine_phase::INIT != m_phase)
++	{
++		item_append(_("menu-main", "Video Options"), 0, (void *)VIDEO_TARGETS);
++		if (ui().machine_info().has_configs())
++		{
++			item_append(_("menu-main", "Machine Configuration"), 0, (void *)SETTINGS_DRIVER_CONFIG);
++		}
++		if (ui().machine_info().has_dips())
++		{
++			item_append(_("menu-main", "DIP Switches"), 0, (void *)SETTINGS_DIP_SWITCHES);
++		}
++		item_append(_("menu-main", "Input Settings"), 0, (void *)INPUT_OPTIONS);
++		if (!machine().sound().no_sound() && sound_interface_enumerator(machine().root_device()).first() != nullptr)
++		{
++			item_append(_("menu-main", "Audio Mixer"), 0, (void *)AUDIO_MIXER);
++		}
++		item_append(menu_item_type::SEPARATOR);
++		item_append(_("menu-main", "Close Menu"), 0, (void *)DISMISS);
++		item_append(_("menu-main", "Quit"), 0, (void *)QUIT_GAME);
++		return;
++	}
++
+ 	item_append(_("menu-main", "Input Settings"), 0, (void *)INPUT_OPTIONS);
+ 
+ 	if (ui().machine_info().has_dips())

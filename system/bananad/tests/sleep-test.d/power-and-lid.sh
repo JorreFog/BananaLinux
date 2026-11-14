@@ -57,12 +57,10 @@ kill -9 -$GAME 2>/dev/null || true
 POWEROFF=0
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 
-echo "power 5. the lid shut and opened in a flick: one short sleep, then awake for good"
+echo "power 5. the lid shut and opened in a flick: no sleep, it is open again before the suspend (lid-reopen.sh), and awake for good"
 start
 ev $EV_SW $SW_LID 1; ev $EV_SW $SW_LID 0       # (the lid's file says open: it was only a moment)
-asleep && ok "slept on the close" || bad "no sleep on the close"
-wake
-asleep && bad "back to sleep after the flick" || ok "awake after the wake, the open event not taken again"
+if asleep; then bad "suspended with the lid open"; wake; else ok "no suspend, the open event not taken again"; fi
 [ "$(gstate)" != T ] && ok "game running" || bad "game still stopped"
 stop
 

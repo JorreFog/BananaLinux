@@ -1,0 +1,14 @@
+# Speaker EQ, Anbernic RG DS Plus (both speakers, the aw88166 amplifiers on their "Music" profile).
+# Equalizer APO parametric text, read by the banana_eq ALSA plugin (Settings > Display & sound > Speaker EQ).
+# Measured: an AT2035 at 20 cm, four positions (centre twice, 5 cm left and right), exponential sweeps, 20 ms gate.
+# The raw speakers: a +6 dB honk around 1 kHz, a +5 dB shrill bump at 6-8 kHz, little below 500 Hz or above 10 kHz.
+# Then tuned by ear on DS music (brass, strings, flutes, menu sounds): more low-mid body, a gentle 2.7 kHz cut.
+# The filters peak at +2.6 dB (425 Hz), so a -3.0 dB preamp never clips.
+Preamp: -3.0 dB
+Filter 1: ON HPQ Fc 220 Hz Q 0.707
+Filter 2: ON PK Fc 450 Hz Gain 5.0 dB Q 1.20
+Filter 3: ON PK Fc 982 Hz Gain -10.0 dB Q 1.20
+Filter 4: ON PK Fc 2700 Hz Gain -4.5 dB Q 0.90
+Filter 5: ON PK Fc 6300 Hz Gain -4.0 dB Q 2.00
+Filter 6: ON PK Fc 7123 Hz Gain -10.0 dB Q 1.65
+Filter 7: ON PK Fc 14000 Hz Gain 2.0 dB Q 0.80

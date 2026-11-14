@@ -25,6 +25,10 @@ STORE=/data/banana/bluetooth.tar
 LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
 HOLD=$RUN/bt/hold
 WOKE=$RUN/bt-woke	# down sleep: "speakers" when no headphones were playing as the sleep began
+# the same for the next boot, on the card: every plain down (rcK's at a shutdown, Settings turning Bluetooth off)
+# writes "speakers" or "headphones" (playing, or held for them through a sleep), so the boot's call back holds the
+# sound only when headphones were what played. Without it (the first boot, a battery pulled): held, as before
+WOKE_KEPT=/data/banana/bt-woke
 # (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
 CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
@@ -89,11 +93,14 @@ call_back() {
 # for, so it can't take that one's hold away halfway)
 # (after a sleep on the speakers - no headphones playing when it began, down sleep's $WOKE says so - they're called
 # back too, but with the speakers playing meanwhile: a hold there was 20-30 s of silence after every wake, Wi-Fi's
-# reconnect and the 15 s call included, for anyone who had ever paired headphones)
+# reconnect and the 15 s call included, for anyone who had ever paired headphones; and at a boot after a shutdown on
+# the speakers, from $WOKE_KEPT: ~18 s of silence in the menu, or the game Power off after sleeping resumed)
 callback() {
     last=$(cat $LAST 2>/dev/null)
-    quiet=1; [ "$(cat $WOKE 2>/dev/null)" = speakers ] && quiet=0
-    rm -f $WOKE
+    quiet=1
+    [ "$(cat $WOKE 2>/dev/null)" = speakers ] && quiet=0
+    [ "$(cat $WOKE_KEPT 2>/dev/null)" = speakers ] && quiet=0
+    rm -f $WOKE $WOKE_KEPT
     if mac_ok "$last"; then
         mkdir -p $RUN/bt
         if [ $quiet = 1 ]; then touch $HOLD; else rm -f $HOLD; fi
@@ -148,6 +155,11 @@ down() {
     # a sleep with headphones playing: quiet until they are back after the wake (up calls them back); a sleep on the
     # speakers: the speakers again at once (bt-woke for up's call back); otherwise the speakers now
     playing=0; [ -f $RUN/bt/audio ] && playing=1
+    # a plain down: what played, for the next boot's call back (after a sleep with no up since, the sleep's: $HOLD
+    # there = headphones were playing as it began)
+    if [ "$1" != sleep ]; then
+        if [ $playing = 1 ] || [ -f $HOLD ]; then echo headphones; else echo speakers; fi > $WOKE_KEPT 2>/dev/null
+    fi
     rm -f $RUN/bt/audio $WOKE
     if [ "$1" = sleep ] && [ $playing = 1 ] && mac_ok "$(cat $LAST 2>/dev/null)"; then mkdir -p $RUN/bt; touch $HOLD
     else
@@ -213,7 +225,7 @@ devices() {
 why() { sed -n 's/.*\(Failed to [a-z]*\|Device [0-9A-F:]* not available\)\(.*\)/\1\2/p' | tail -n 1 | sed 's/org\.bluez\.Error\.//'; }
 
 case $1 in
-up) up || { rm -f $RUN/bt/audio $HOLD $WOKE; exit 1; } ;;
+up) up || { rm -f $RUN/bt/audio $HOLD $WOKE $WOKE_KEPT; exit 1; } ;;
 down) down "$2" ;;
 restart) down; up || exit 1 ;;
 scan)

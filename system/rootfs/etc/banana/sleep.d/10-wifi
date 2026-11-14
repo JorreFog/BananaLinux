@@ -2,17 +2,23 @@
 # The RG DS's Wi-Fi (RTL8821CS on SDIO) doesn't come back from a suspend by itself: unload it before, load it after
 # and start it again when it was on. "post" runs in the background, after the game and the menu are back.
 [ -d /sys/module/rtw88_8821cs ] || [ -f /run/banana/wifi-unloaded ] || exit 0	# no Wi-Fi: nothing to do, at once
+# one at a time: the lid shut again within a second of a wake ran this pre beside the wake's post (still loading the
+# driver, wpa_supplicant not started yet), so pre found no wpa.pid, left Wi-Fi marked off, and the next wake didn't
+# start it (until Settings did). pre now waits for that post (at most 10 s: a stuck one mustn't keep the handheld
+# awake). (The daemons that wifi up starts don't get the lock: 8>&-)
+exec 8>/run/banana/wifi-hook.lock
+flock -w 10 8 || :
 case $1 in
 pre)
     [ -f /run/banana/wpa.pid ] && touch /run/banana/wifi-was-up
-    /usr/libexec/banana/wifi down
+    /usr/libexec/banana/wifi down 8>&-
     modprobe -r rtw88_8821cs 2>/dev/null
     touch /run/banana/wifi-unloaded
     ;;
 post)
     rm -f /run/banana/wifi-unloaded
     modprobe rtw88_8821cs 2>/dev/null
-    [ -f /run/banana/wifi-was-up ] && { rm -f /run/banana/wifi-was-up; /usr/libexec/banana/wifi up; }
+    [ -f /run/banana/wifi-was-up ] && { rm -f /run/banana/wifi-was-up; /usr/libexec/banana/wifi up 8>&-; }
     ;;
 esac
 exit 0

@@ -16,6 +16,15 @@ ln -sfn /proc/self/fd /dev/fd
 ln -sfn /proc/self/fd/0 /dev/stdin
 ln -sfn /proc/self/fd/1 /dev/stdout
 ln -sfn /proc/self/fd/2 /dev/stderr
+# ...and what it would answer: a firmware the kernel asked for before this root was mounted (cfg80211, built in, asks
+# for regulatory.db at 0.6 s) waits 60 s in /sys/class/firmware for someone to load it, and a sleep begun in that
+# minute stalled until it ran out, the panels lit (up to 52 s with the lid shut, then the sleep failed on the USB
+# controller anyway). Loaded from /lib/firmware, or refused when it isn't there
+for f in /sys/class/firmware/*/loading; do
+    [ -f "$f" ] || continue
+    d=${f%/loading}; n=/lib/firmware/${d##*/}
+    if [ -f "$n" ]; then echo 1 > "$f"; cat "$n" > "$d/data"; echo 0 > "$f"; else echo -1 > "$f"; fi
+done 2>/dev/null
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log

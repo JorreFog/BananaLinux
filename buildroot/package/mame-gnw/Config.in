@@ -1,0 +1,13 @@
+config BR2_PACKAGE_MAME_GNW
+	bool "mame-gnw"
+	default y
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_10
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_SDL2_TTF
+	help
+	  MAME built with only its Sharp SM5xx LCD handheld driver (hh_sm510: every Nintendo Game & Watch, and other
+	  makers' LCD games on the same chips), for the Game & Watch system. The games' ROM zips and artwork zips come
+	  from the user. Patched for the RG DS's two panels (patches/mame-gnw).
+
+	  https://www.mamedev.org

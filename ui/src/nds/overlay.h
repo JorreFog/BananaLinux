@@ -120,6 +120,10 @@ namespace banana::nds
 
 	// the theme's folder (the menu's --assets: the Pixelify fonts in <dir>/fonts) for the icon's badge and the test page
 	void setAssets(const std::string& dir);
+	// the companion's icon (the accent plate with a cream lip, a page glyph, the red badge with the count when badge > 0)
+	// at scale k (CSS px -> device px), for a corner (BOVL_CORNER_*: the badge over the plate's inner corner): straight
+	// RGBA. The DS overlay's, and the GBA game panel's button that opens the companion (settings_gamepanel.cpp)
+	rnds::Bitmap iconPicture(float k, int badge, uint32_t corner = ICON_CORNER);
 	// the overlay's test page (settings.conf nds_companion = test, any DS game): what the loop does and costs, a dot
 	// that follows the finger, a little animation the size of a Dex sprite, Back to game
 	std::unique_ptr<OverlayPage> makeTestPage(Overlay& ov);

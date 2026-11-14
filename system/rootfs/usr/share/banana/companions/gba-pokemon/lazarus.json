@@ -4,11 +4,15 @@
  "game": "lazarus",
  "code": "BPEE",
  "title": "Pokemon Lazarus (v2)",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "The ROM itself (Lazarus v2, pokeemerald-expansion build): region map section names (each place resolves to a section with maps) and trainer names, teams and levels (two teams per leader: Normal and Hard), read on the PC with throwaway tools",
   "mrwalkthroughs.com/pokemon-lazarus: walkthrough parts 1-21, legendaries, evolution items, Wakewater Isle",
-  "retrododo.com and retrohandhelds.gg: the 1.0 release and the 2.0 update's change list; dsogaming.com (release)"
+  "retrododo.com and retrohandhelds.gg: the 1.0 release and the 2.0 update's change list; dsogaming.com (release)",
+  "mrwalkthroughs.com/pokemon-lazarus pages: walkthrough parts 1-21 (story order, gifts, items), all legendaries, all evolution items, all Mega Stones, all TMs & HMs, move tutor, Wakewater Isle",
+  "retrododo.com: 'Pokémon Lazarus ROM Hack Gets Huge 2.0 Update' (change list) and 'All Pokémon Lazarus Cheat Codes'",
+  "retrohandhelds.gg: 'Pokémon Lazarus gets its biggest update since launch' (2.0); gamesradar.com: the 1.0 release announcement",
+  "The ROM's species table (types and evolution items/conditions; plain level-up methods are not read reliably from this build, so the guide gives no level for those)"
  ],
  "places": {
   "bronze-fields": {
@@ -100,28 +104,28 @@
   },
   "kipos-town": {
    "name": "Kipos Town"
+  },
+  "froslass-cavern": {
+   "name": "Froslass Cavern"
+  },
+  "the-nyx-trails": {
+   "name": "The Nyx Trails"
   }
  },
  "milestones": [
   {
    "id": "story-bronze-fields",
-   "name": "Team Chimera in Bronze Fields",
+   "name": "Bronze Fields and your starter",
    "kind": "story",
    "place": "bronze-fields",
    "level_cap": 5,
-   "foe": [
-    {
-     "name": "Grunt",
-     "ace_level": 5
-    }
-   ],
    "done_when": "party",
    "opens": [
     "acrisia-city",
     "bronze-fields",
     "acrisia-mountains"
    ],
-   "tips": "Professor Elia at Acrisia University offers nine starters (Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly), then the Rotom Phone, the Exp. Share and an outfit box. On the parcel errand a Team Chimera thug with a Lv 5 Pancham blocks Bronze Fields.",
+   "tips": "Professor Elia at Acrisia University offers nine starters (Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly), then the Rotom Phone, the Exp. Share and an outfit box.",
    "quality": "reference-only",
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
@@ -135,11 +139,11 @@
    "level_cap": 11,
    "foe": {
     "name": "Polymnia",
+    "class": "Leader",
     "ace_level": 11
    },
    "done_when": "badge:1",
    "opens": [
-    "erinys-path",
     "jusmail-town"
    ],
    "badge_note": "Harvest Badge: Cut. TM09 Bullet Seed. Ability Capsules from Elia afterwards.",
@@ -156,6 +160,7 @@
    "foe": [
     {
      "name": "Rania",
+     "class": "PKMN Trainer",
      "ace_level": 12
     }
    ],
@@ -166,26 +171,19 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
-   "id": "team-wanderers-woods",
-   "name": "Team Chimera admin (Wanderer's Woods)",
-   "kind": "team",
-   "place": "wanderers-woods",
-   "level_cap": 18,
-   "foe": [
-    {
-     "name": "Admin",
-     "ace_level": 18
-    }
-   ],
+   "id": "story-riverwalk",
+   "name": "Riverwalk Trail to Kalami City",
+   "kind": "story",
+   "place": "riverwalk-trail",
+   "level_cap": 16,
    "done_when": "later",
    "opens": [
-    "wanderers-woods",
-    "kalami-city",
-    "riverwalk-trail"
+    "riverwalk-trail",
+    "kalami-city"
    ],
-   "tips": "A Chimera admin: Magnemite, Galarian Zigzagoon, Crabrawler (Lv 17-18). Afterwards Niko or Rania gives a Rare Egg, depending on your answer.",
+   "tips": "Elia sends you to Kalami City, southeast of Acrisia: take the rail tracks east from the Acrisia junction and Cut the two trees into Riverwalk Trail. Hiker Josua and Lass Tina block the path (Lv 14-16).",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 3"
   },
   {
    "id": "gym-2-ourani",
@@ -197,6 +195,7 @@
    "level_cap": 18,
    "foe": {
     "name": "Ourani",
+    "class": "Leader",
     "ace_level": 18
    },
    "done_when": "badge:2",
@@ -209,28 +208,25 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
-   "id": "team-erinys",
-   "name": "Team Chimera admin (Erinys Path)",
+   "id": "team-wanderers-woods",
+   "name": "Team Chimera admin (Wanderer's Woods)",
    "kind": "team",
-   "place": "erinys-path",
-   "level_cap": 20,
+   "place": "wanderers-woods",
+   "level_cap": 18,
    "foe": [
     {
      "name": "Admin",
-     "ace_level": 19
-    },
-    {
-     "name": "Admin",
-     "ace_level": 20
+     "class": "Team Chimera",
+     "ace_level": 18
     }
    ],
    "done_when": "later",
    "opens": [
-    "pythios-town"
+    "wanderers-woods"
    ],
-   "tips": "Another admin on the path: Basculin, Sandile, Alolan Grimer, Cufant (Lv 19) (Hard: Basculin, Wimpod, Tinkatink (Lv 19-20)).",
+   "tips": "After gym 2 Elia gives Rock Smash; the rocks south of Jusmail open Wanderer's Woods. A Chimera admin there: Magnemite, Galarian Zigzagoon, Crabrawler (Lv 17-18; Hard adds Zorua). Afterwards Niko or Rania gives a Rare Egg, depending on your answer.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 5"
   },
   {
    "id": "gym-3-kleio",
@@ -243,10 +239,12 @@
    "foe": [
     {
      "name": "Kleio",
+     "class": "Leader",
      "ace_level": 20
     },
     {
      "name": "Kleio",
+     "class": "Leader",
      "ace_level": 21
     }
    ],
@@ -260,6 +258,71 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
+   "id": "team-pythios-cemetery",
+   "name": "Team Chimera grunts (Pythios Cemetery)",
+   "kind": "team",
+   "place": "pythios-town",
+   "level_cap": 18,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 18
+    }
+   ],
+   "trainer_ids": [
+    51,
+    52,
+    53
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Three grunts in the cemetery southwest of town hold HM05 Flash: Skorupi, Honedge; Dustox, Chatot, Shroodle; Honedge, Crabrawler, Tauros (Lv 17-18). Beat all three and they drop it.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 51-53); mrwalkthroughs.com/pokemon-lazarus walkthrough part 6"
+  },
+  {
+   "id": "team-erinys",
+   "name": "Team Chimera admin (Erinys Path)",
+   "kind": "team",
+   "place": "erinys-path",
+   "level_cap": 20,
+   "foe": [
+    {
+     "name": "Admin",
+     "class": "Team Chimera",
+     "ace_level": 19
+    },
+    {
+     "name": "Admin",
+     "class": "Team Chimera",
+     "ace_level": 20
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "erinys-path"
+   ],
+   "tips": "The Strange Sailor (Piraeus) on the Pythios pier asks you to clear the admin at the start of Erinys Path: Basculin, Sandile, Alolan Grimer, Cufant (Lv 19) (Hard: Basculin, Wimpod, Tinkatink (Lv 19-20)). Afterwards Piraeus sails you between coastal towns.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 7"
+  },
+  {
+   "id": "story-froslass-cavern",
+   "name": "Froslass Cavern",
+   "kind": "story",
+   "place": "froslass-cavern",
+   "level_cap": 22,
+   "done_when": "later",
+   "opens": [
+    "froslass-cavern",
+    "asfal-hills"
+   ],
+   "tips": "Erinys Path East leads north to Froslass Cavern: dark (use Flash) and full of ice-sliding puzzles over three floors. Sailor Sandor and a Cooltrainer pair block the way (Lv 22). A nurse stands at the Asfal Hills exit.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 8"
+  },
+  {
    "id": "rival-niko",
    "name": "Niko (Asfal Hills)",
    "kind": "rival",
@@ -268,6 +331,7 @@
    "foe": [
     {
      "name": "Niko",
+     "class": "PKMN Trainer",
      "ace_level": 23
     }
    ],
@@ -281,6 +345,37 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
+   "id": "team-satyr-lair",
+   "name": "Team Chimera in Satyr's Lair (Key Stone)",
+   "kind": "team",
+   "place": "sofos-city",
+   "level_cap": 25,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 24
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 25
+    }
+   ],
+   "trainer_ids": [
+    90,
+    91,
+    92
+   ],
+   "done_when": "later",
+   "opens": [
+    "sofos-city"
+   ],
+   "tips": "Chimera grunts block the Sofos gym; the Key Stone Niko wants is in Satyr's Lair, the cave in the city's northwest. A grunt guards the entrance; inside, Terpsikore takes the admin and you the grunts: Sandile, Stantler; Mankey, Quagsire; Onix, Meditite (Lv 23-25). She then gives you the Key Stone.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 90-92); mrwalkthroughs.com/pokemon-lazarus walkthrough part 9"
+  },
+  {
    "id": "gym-4-terpsikore",
    "name": "Gym 4: Terpsikore",
    "kind": "gym",
@@ -290,6 +385,7 @@
    "level_cap": 26,
    "foe": {
     "name": "Terpsikore",
+    "class": "Leader",
     "ace_level": 26
    },
    "done_when": "badge:4",
@@ -303,6 +399,21 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
+   "id": "story-kipos",
+   "name": "Kipos Town and Mr. Russel",
+   "kind": "story",
+   "place": "kipos-town",
+   "done_when": "later",
+   "opens": [
+    "kipos-town",
+    "sea-of-asteri",
+    "marmaro-island"
+   ],
+   "tips": "With Surf, Piraeus calls you at the Sofos shore and sails you to Kipos Town: Chimera raided Mr. Russel's Wildlife Conservation Center and he asks you to help repopulate the zoo (10 Ultra Balls). Sail back and surf east via Marmaro Island to Myrrini.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 10"
+  },
+  {
    "id": "rival-rania-2",
    "name": "Rania again",
    "kind": "rival",
@@ -311,12 +422,13 @@
    "foe": [
     {
      "name": "Rania",
+     "class": "PKMN Trainer",
      "ace_level": 29
     }
    ],
    "done_when": "later",
    "opens": [],
-   "tips": "Floatzel, Ninetales, Mawile, Hawlucha (Lv 29).",
+   "tips": "Floatzel, Ninetales, Mawile, Hawlucha (Lv 29). The ROM has this team between her Lv 12 and Lv 36 ones; the sources don't say where the battle happens.",
    "quality": "reference-only",
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus (place: by order)"
   },
@@ -330,18 +442,45 @@
    "level_cap": 30,
    "foe": {
     "name": "Euterpe",
+    "class": "Leader",
     "ace_level": 30
    },
    "done_when": "badge:5",
    "opens": [
-    "marmaro-island",
-    "myrrini-island",
-    "sea-of-vulcai"
+    "myrrini-island"
    ],
    "badge_note": "Festival Badge: Dive. TM21 Acid Spray (2.0).",
-   "tips": "Water and Poison: Hypno, Gyarados, Hisuian Sneasel, Grafaiai (Lv 29-30). Ground and Psychic moves; Electric for Gyarados. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "tips": "Water and Poison: Hypno, Gyarados, Hisuian Sneasel, Grafaiai (Lv 29-30). Ground moves cover most of it, Electric for Gyarados. Hypno is Psychic/Dark in this ROM, so Psychic moves don't touch it. Normal and Hard each have their own team (Hard adds Pokémon).",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table and species types; mrwalkthroughs.com/pokemon-lazarus walkthrough part 12"
+  },
+  {
+   "id": "team-marmaro-grunts",
+   "name": "Team Chimera grunts (Marmaro Mines)",
+   "kind": "team",
+   "place": "marmaro-island",
+   "level_cap": 30,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 29
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 30
+    }
+   ],
+   "trainer_ids": [
+    124,
+    125
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Two grunts guard the mine entrance: Growlithe, Lileep and Tyrunt, Amaura (Lv 29-30). Rock and Water moves for the fossils; Tyrunt is Rock/Dragon, Amaura Rock/Ice.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 124-125); mrwalkthroughs.com/pokemon-lazarus walkthrough part 12"
   },
   {
    "id": "team-marmaro",
@@ -352,14 +491,49 @@
    "foe": [
     {
      "name": "Admin",
+     "class": "Team Chimera",
      "ace_level": 32
     }
    ],
    "done_when": "later",
    "opens": [],
-   "tips": "In the Marmaro mines an admin takes a piece of the Ancient Mechanism: Paldean Tauros, Lycanroc, Passimian, Huntail (Lv 31-32). Kalliope, the eighth leader, turns out to lead Chimera.",
+   "tips": "Back on Marmaro after gym 5: in the mines an admin has already taken the Ancient Mechanism piece: Paldean Tauros, Lycanroc, Passimian, Huntail (Lv 31-32; Hard adds Wyrdeer). At Myrrini you learn Kalliope, the missing eighth leader, leads Chimera. A Triathlete at the mine entrance then gives HM08 Dive.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 12"
+  },
+  {
+   "id": "story-sea-of-vulcai",
+   "name": "Dive through the Sea of Vulcai",
+   "kind": "story",
+   "place": "sea-of-vulcai",
+   "level_cap": 33,
+   "done_when": "later",
+   "opens": [
+    "sea-of-vulcai",
+    "fresco-isles"
+   ],
+   "tips": "Surf west from Marmaro to the deep-water patch and Dive: the sea floor leads south past Diver Mauricius. Surface at the southern wall, head east to the big boulder, then southeast to the passage into the Fresco Isles. Divers and swimmers here are Lv 30-33.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "story-stella",
+   "name": "Cooltrainer Stella (Box of Chocolate)",
+   "kind": "story",
+   "place": "fresco-isles",
+   "level_cap": 33,
+   "foe": {
+    "name": "Stella",
+    "class": "Cooltrainer",
+    "ace_level": 33
+   },
+   "done_when": "later",
+   "opens": [
+    "fresco-isles"
+   ],
+   "tips": "The Fresco gym is shut: the sisters are arguing on the theater stage (northeast, by Surf). Only a Box of Chocolate calms them, and the Mart's last one belongs to Cooltrainer Stella: Comfey, Arctozolt, Dracovish, Vibrava (Lv 33).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (id 149); mrwalkthroughs.com/pokemon-lazarus walkthrough part 14"
   },
   {
    "id": "gym-6-thalia-melpomene",
@@ -371,6 +545,7 @@
    "level_cap": 36,
    "foe": {
     "name": "Thal & Mel",
+    "class": "Leader",
     "ace_level": 36
    },
    "done_when": "badge:6",
@@ -391,6 +566,7 @@
    "foe": [
     {
      "name": "Rania",
+     "class": "PKMN Trainer",
      "ace_level": 36
     }
    ],
@@ -413,6 +589,7 @@
    "level_cap": 39,
    "foe": {
     "name": "Rhadine",
+    "class": "Leader",
     "ace_level": 39
    },
    "done_when": "badge:7",
@@ -423,50 +600,114 @@
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
   },
   {
+   "id": "story-acropolis",
+   "name": "The Acropolis Temple",
+   "kind": "story",
+   "place": "sofos-city",
+   "done_when": "later",
+   "opens": [
+    "sofos-city"
+   ],
+   "tips": "After gym 7 Rania brings news: Chimera holds Niko in the Acropolis Temple in Sofos. There Kalliope uses the Ancient Mechanism on Raikou, Entei and Suicune, making Raging Bolt, Gouging Fire and Walking Wake. Rania points you at Groudon, Kyogre and Rayquaza and gives HM04 Strength.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15"
+  },
+  {
+   "id": "team-admin-groudon",
+   "name": "Chimera admin with Gouging Fire (Satyr's Lair)",
+   "kind": "team",
+   "place": "sofos-city",
+   "level_cap": 43,
+   "foe": [
+    {
+     "name": "Admin",
+     "class": "Team Chimera",
+     "ace_level": 43
+    },
+    {
+     "name": "Admin",
+     "class": "Team Chimera",
+     "ace_level": 42
+    }
+   ],
+   "trainer_ids": [
+    181,
+    182
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Deeper in Satyr's Lair (Strength boulders, Picnicker Malu and PokéFan Ryan at Lv 39-41) an admin calls Groudon: Arcanine, Passimian, Lycanroc, Perrserker, Type: Null, Pyroar (Lv 42-43) (Hard: Cyclizar for Pyroar). Water, Fighting and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 181-182); mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "legend-groudon",
+   "name": "Groudon (Satyr's Lair)",
+   "kind": "legendary",
+   "place": "sofos-city",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Awakened by the Satyr's Lair admin's fight; it heals your party, then you may catch it, beat it or flee (it can be found there again if not caught). No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "story-fly-guy",
+   "name": "Bird Keeper Fly Guy (HM02 Fly)",
+   "kind": "story",
+   "place": "kaptara-island",
+   "level_cap": 35,
+   "foe": {
+    "name": "Fly Guy",
+    "class": "Bird Keeper",
+    "ace_level": 35
+   },
+   "done_when": "later",
+   "opens": [
+    "palati-city",
+    "kaptara-island"
+   ],
+   "tips": "Kaptara Island East is reached from Palati's southeast corner. Take the northeast path and follow it to the man on a bench with his Braviary at the south end: Noctowl, Toucannon, Pelipper, Altaria (Lv 35). He gives HM02 Fly.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (id 164); mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
    "id": "team-admins-beasts",
-   "name": "Chimera admins with the changed beasts",
+   "name": "Chimera admin with Walking Wake (Kaptara Island)",
    "kind": "team",
    "place": "kaptara-island",
    "level_cap": 43,
    "foe": [
     {
      "name": "Admin",
-     "ace_level": 42
-    },
-    {
-     "name": "Admin",
+     "class": "Team Chimera",
      "ace_level": 43
     }
    ],
+   "trainer_ids": [
+    179,
+    180
+   ],
    "done_when": "later",
    "opens": [
-    "kaptara-island",
-    "sofos-city"
+    "kaptara-island"
    ],
-   "tips": "Kalliope's machine turns Entei, Raikou and Suicune into Gouging Fire, Raging Bolt and Walking Wake; admins use them to wake Groudon (Satyr's Lair, north of Sofos) and Kyogre (Kaptara Island West). The ROM's admin teams here top at 42-43.",
+   "tips": "Past Krikri Gorge on Kaptara Island West an admin tries to lure Kyogre out: Mamoswine, Dewgong, Abomasnow, Arctozolt, Persian, Feraligatr (Lv 42-43) (Hard: Wyrdeer and Gyarados instead of Dewgong and Feraligatr). Fire, Fighting and Electric moves.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 179-180); mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
   },
   {
-   "id": "rival-rania-pello",
-   "name": "Rania at Port Pello",
-   "kind": "rival",
-   "place": "port-pello",
-   "level_cap": 44,
-   "foe": [
-    {
-     "name": "Rania",
-     "ace_level": 44
-    }
-   ],
-   "done_when": "later",
-   "opens": [
-    "port-pello",
-    "corrin-crossing"
-   ],
-   "tips": "Floatzel, Ninetales, Espathra, Politoed, Hypno (Lv 44).",
+   "id": "legend-kyogre",
+   "name": "Kyogre (Kaptara Island)",
+   "kind": "legendary",
+   "place": "kaptara-island",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Woken in the Sunken Temple at Krikri Gorge (Kaptara Island West) by the admin's fight; it heals your party first. Catch, beat or flee; it can be met again if not caught. No level in the sources: the cap shown is the story level around it.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16; mrwalkthroughs.com/pokemon-lazarus legendaries"
   },
   {
    "id": "team-kalliope-tower",
@@ -477,17 +718,89 @@
    "foe": [
     {
      "name": "Kalliope",
+     "class": "Team Chimera",
      "ace_level": 44
     }
    ],
    "done_when": "later",
    "opens": [
+    "kipos-town",
     "lastlight-road",
     "tower-of-dioxippus"
    ],
    "tips": "Kalliope at the top of the tower: Hydrapple, Tinkaton, Dracozolt, Tyrantrum, Sneasler, Grimmsnarl (Lv 43-44). Ice, Poison and Steel cover most of it; Hydrapple takes four times from Ice. Rayquaza waits here afterwards.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 17"
+  },
+  {
+   "id": "legend-rayquaza",
+   "name": "Rayquaza (Tower of Dioxippus)",
+   "kind": "legendary",
+   "place": "tower-of-dioxippus",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Optional, on the top floor after Kalliope; it heals your party first. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-pello",
+   "name": "Rania at Port Pello",
+   "kind": "rival",
+   "place": "port-pello",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Rania",
+     "class": "PKMN Trainer",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "corrin-crossing",
+    "port-pello",
+    "the-nyx-trails"
+   ],
+   "tips": "After Rayquaza, Asfal Hills' southwest path is open: Corrin Crossing (Super Rod) to Port Pello, where Rania blocks the south exit: Floatzel, Ninetales, Espathra, Politoed, Hypno (Lv 44) (Hard adds Basculegion).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 18"
+  },
+  {
+   "id": "team-nyx-trails",
+   "name": "Team Chimera grunts (The Nyx Trails)",
+   "kind": "team",
+   "place": "the-nyx-trails",
+   "level_cap": 47,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 46
+    },
+    {
+     "name": "Grunt",
+     "class": "Team Chimera",
+     "ace_level": 47
+    }
+   ],
+   "trainer_ids": [
+    204,
+    205,
+    206,
+    207,
+    208,
+    209
+   ],
+   "done_when": "later",
+   "opens": [
+    "the-nyx-trails",
+    "areios-hideout"
+   ],
+   "tips": "South of Port Pello the Nyx Trails lead to Areios. Grunts block the woods: a double battle with Glalie, Froslass and Copperajah, Skuntank, then Bastiodon, Rampardos and a pair of Persian (Lv 45-47).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 204-209); mrwalkthroughs.com/pokemon-lazarus walkthrough part 18"
   },
   {
    "id": "team-areios",
@@ -498,20 +811,26 @@
    "foe": [
     {
      "name": "Admin",
+     "class": "Team Chimera",
      "ace_level": 47
     },
     {
      "name": "Admin",
+     "class": "Team Chimera",
      "ace_level": 48
     }
+   ],
+   "trainer_ids": [
+    210,
+    211
    ],
    "done_when": "later",
    "opens": [
     "areios-hideout"
    ],
-   "tips": "The gym leaders raid Chimera's hideout in Areios: grunts at 46-47 and two admins (Basculegion, Golisopod, Paldean Tauros, Dewgong, Feraligatr, Krookodile (Lv 47); Cradily, Zebstrika, Passimian, Perrserker, Klawf, Lycanroc (Lv 48)).",
+   "tips": "Areios Town is Chimera's hideout; the grunts there take you for one of them. In the gym in the west of town two admins stand before Kalliope: Basculegion, Golisopod, Paldean Tauros, Dewgong, Feraligatr, Krookodile (Lv 47) and Cradily, Zebstrika, Passimian, Perrserker, Klawf, Lycanroc (Lv 48).",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 210-211); mrwalkthroughs.com/pokemon-lazarus walkthrough part 19"
   },
   {
    "id": "gym-8-kalliope",
@@ -523,11 +842,12 @@
    "level_cap": 50,
    "foe": {
     "name": "Kalliope",
+    "class": "Team Chimera",
     "ace_level": 50
    },
    "done_when": "badge:8",
    "opens": [],
-   "badge_note": "Myth Badge (handed over by Raikou): Waterfall. TM02 Dragon Claw and the Ancient Mechanism.",
+   "badge_note": "Myth Badge (handed over by Raikou): Waterfall. TM02 Dragon Claw and the Ancient Mechanism. Afterwards the four other leaders become the Elite Four.",
    "tips": "Dragon and Fairy: Hydrapple, Tinkaton, Dracozolt, Grimmsnarl, Silvally, Raging bolt (Lv 48-50). Steel and Poison moves hit the Fairy side, Ice and Fairy the Dragons; Raging Bolt is Electric/Dragon (Ground, Dragon, Fairy).",
    "quality": "reference-only",
    "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
@@ -541,14 +861,15 @@
    "foe": [
     {
      "name": "Rania",
+     "class": "PKMN Trainer",
      "ace_level": 52
     }
    ],
    "done_when": "later",
    "opens": [
-    "davosi-straits",
     "pentepetal-city",
-    "pollen-road"
+    "pollen-road",
+    "davosi-straits"
    ],
    "tips": "Her last battle, with a Mega Victreebel: Floatzel, Ninetales, Spiritomb, Rampardos, Bewear (Lv 51-52). She gives HM07 Waterfall.",
    "quality": "reference-only",
@@ -565,6 +886,7 @@
    "foe": [
     {
      "name": "Polymnia",
+     "class": "Leader",
      "ace_level": 52
     }
    ],
@@ -587,6 +909,7 @@
    "foe": [
     {
      "name": "Terpsikore",
+     "class": "Leader",
      "ace_level": 53
     }
    ],
@@ -607,6 +930,7 @@
    "foe": [
     {
      "name": "Euterpe",
+     "class": "Leader",
      "ace_level": 54
     }
    ],
@@ -627,14 +951,19 @@
    "foe": [
     {
      "name": "Rhadine",
+     "class": "Leader",
      "ace_level": 55
     }
+   ],
+   "trainer_ids": [
+    240,
+    241
    ],
    "done_when": "later",
    "opens": [],
    "tips": "The leaders form the Elite Four at the Ruins of Ahiyawa: Oricorio, Toucannon, Simisear, Alolan Marowak, Chatot and 1 more (Lv 54-55). Rock and Electric moves.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 240-241: a Lv 55 Rhadine rematch team also exists); mrwalkthroughs.com/pokemon-lazarus walkthrough part 21"
   },
   {
    "id": "champion-anyalios",
@@ -646,6 +975,7 @@
    "foe": [
     {
      "name": "Anyalios",
+     "class": "Champion",
      "ace_level": 56
     }
    ],
@@ -666,45 +996,165 @@
     "wakewater-isle",
     "the-delphis"
    ],
-   "tips": "Piraeus sails you to Wakewater Isle; its stadium runs a repeatable defense of three random trainers at Lv 62-68 (healed between fights), the gym leaders among them with Lv 55 teams. Prizes: Nuggets, Big Nuggets, Pearls or a Master Ball.",
+   "tips": "After the credits Piraeus sails you to Wakewater Isle. Its stadium runs the Champion's Defense: three random trainers in a row, healed between fights, repeatable. The ROM's teams are Lv 55; the walkthrough reports Lv 62-68 (they adjust to your team). Prizes: Pearl, Nugget, Big Nugget or a Master Ball.",
    "quality": "reference-only",
-   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
   },
   {
-   "id": "legend-rayquaza",
-   "name": "Rayquaza (Tower of Dioxippus)",
-   "kind": "legendary",
-   "place": "tower-of-dioxippus",
-   "level_cap": 50,
+   "id": "post-leaders",
+   "name": "Champion's Defense: the gym leaders",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Polymnia",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Ourani",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Kleio",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Terpsikore",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Euterpe",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Thal & Mel",
+     "class": "Leader",
+     "ace_level": 55
+    },
+    {
+     "name": "Rhadine",
+     "class": "Leader",
+     "ace_level": 55
+    }
+   ],
+   "trainer_ids": [
+    250,
+    251,
+    252,
+    253,
+    254,
+    255,
+    256
+   ],
    "done_when": "none",
    "opens": [],
-   "tips": "Optional, on the top floor after Kalliope; it heals your party first. No level in the sources: the cap shown is the story level around it.",
+   "tips": "The seven Ilios leaders turn up in the Champion's Defense with new six-Pokémon teams (Lv 55 in the ROM): e.g. Kleio with Dragapult and Dusknoir, Ourani with fossils, Euterpe with Gengar and Greninja, Rhadine with Incineroar.",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 250-256); mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
   },
   {
-   "id": "legend-groudon",
-   "name": "Groudon (Satyr's Lair)",
-   "kind": "legendary",
-   "place": "sofos-city",
-   "level_cap": 50,
+   "id": "post-chimera",
+   "name": "Champion's Defense: Kalliope and her admins",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Kalliope",
+     "class": "Team Chimera",
+     "ace_level": 55
+    },
+    {
+     "name": "Admin",
+     "class": "Team Chimera",
+     "ace_level": 55
+    }
+   ],
+   "trainer_ids": [
+    257,
+    258,
+    259
+   ],
    "done_when": "none",
    "opens": [],
-   "tips": "Woken in Satyr's Lair north of Sofos; catch it, beat it or flee (it can be found there again if not caught). No level in the sources: the cap shown is the story level around it.",
+   "tips": "Kalliope (Tinkaton, Dragonite, Yanmega, Goodra, Grimmsnarl, Huntail) and both admins are in the Champion's Defense pool (Lv 55 in the ROM).",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 257-259); mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
   },
   {
-   "id": "legend-kyogre",
-   "name": "Kyogre (Kaptara Island)",
-   "kind": "legendary",
-   "place": "kaptara-island",
-   "level_cap": 50,
+   "id": "post-anyalios-rania",
+   "name": "Champion's Defense: Anyalios and Rania",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Anyalios",
+     "class": "Champion",
+     "ace_level": 55
+    },
+    {
+     "name": "Rania",
+     "class": "PKMN Trainer",
+     "ace_level": 55
+    }
+   ],
+   "trainer_ids": [
+    260,
+    261
+   ],
    "done_when": "none",
    "opens": [],
-   "tips": "In the sunken temple on Kaptara Island West, under the same rules as Groudon. No level in the sources: the cap shown is the story level around it.",
+   "tips": "The old champion Anyalios and Rania can also be drawn (Lv 55 in the ROM): Ceruledge, Spiritomb, Tyrantrum, Golisopod, Scrafty, Obstagoon; Floatzel, Ninetales, Spiritomb, Rampardos, Bewear.",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM Lazarus v2 trainer table (ids 260-261); mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
+  },
+  {
+   "id": "post-piraeus",
+   "name": "Champion's Defense: Sailor Piraeus",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 55,
+   "foe": {
+    "name": "Piraeus",
+    "class": "Sailor",
+    "ace_level": 55
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Piraeus, the sailor who ferried you everywhere, battles too: Gyarados, Dragalge, Relicanth, Dhelmise, Scrafty, Cursola (Lv 55 in the ROM). Electric and Grass moves cover most of it.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (id 246); mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
+  },
+  {
+   "id": "post-special",
+   "name": "The two special challengers (2.0)",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Nemo",
+     "class": "PKMN Trainer",
+     "ace_level": 55
+    },
+    {
+     "name": "MissingNo",
+     "class": "PKMN Trainer",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "2.0 added two special challengers at Wakewater Isle. Nemo (the author: four Oricorio, Goodra, Armaldo) is in the Champion's Defense pool. The ROM's other post-game trainer, MissingNo (Kyogre, Togekiss, Gengar, Incineroar, Ogerpon, Cyclizar), is likely the second; the sources don't say how to meet it.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table (ids 269, 292); retrododo.com: Lazarus 2.0 update; mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
   },
   {
    "id": "legend-beasts",
@@ -714,9 +1164,9 @@
    "level_cap": 50,
    "done_when": "none",
    "opens": [],
-   "tips": "The changed beasts tied to the Acropolis Temple in Sofos (Gouging Fire also in Satyr's Lair); the conditions are not documented. No level in the sources: the cap shown is the story level around it.",
+   "tips": "Raikou, Entei and Suicune stand in the Acropolis Temple in Sofos; the ROM evolves them into Raging Bolt, Gouging Fire and Walking Wake by a special condition (Kalliope does it with the Ancient Mechanism). Gouging Fire also appears in Satyr's Lair's northern part. No level in the sources.",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries; ROM species table"
   },
   {
    "id": "legend-silvally",
@@ -805,16 +1255,310 @@
    "done_when": "later",
    "quality": "reference-only",
    "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "step-parcel",
+   "title": "The Rotom Phone parcel",
+   "text": "Elia has no Pokédex; the Rotom Phone he ordered is stuck with a delivery man in Bronze Fields (south of Acrisia) whom a Chimera thug is bothering. Bring the parcel back for the Rotom Phone (your Pokédex), the Exp. Share and the Outfit Box.",
+   "stage": "story-bronze-fields",
+   "places": [
+    "bronze-fields",
+    "acrisia-city"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 1"
+  },
+  {
+   "id": "step-elia-gym1",
+   "title": "Back to Elia after gym 1",
+   "text": "Rania gives HM01 Cut as you leave Jusmail. Elia then gives an Ability Capsule and sends you to Kalami City.",
+   "stage": "story-riverwalk",
+   "places": [
+    "jusmail-town",
+    "acrisia-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 2; mrwalkthroughs.com/pokemon-lazarus walkthrough part 3"
+  },
+  {
+   "id": "step-rock-smash",
+   "title": "Rock Smash and the DexNav",
+   "text": "After gym 2 Elia gives HM06 Rock Smash and the DexNav. The smashable rocks at Jusmail's south end open the way to Wanderer's Woods and Pythios Town.",
+   "stage": "team-wanderers-woods",
+   "places": [
+    "acrisia-city",
+    "jusmail-town",
+    "wanderers-woods"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 5"
+  },
+  {
+   "id": "step-kleio-east",
+   "title": "Find Kleio first",
+   "text": "The Pythios gym stays shut until you talk to Kleio in the clearing at the town's far east; she then goes back to the gym. The gym is dark: the western path avoids most battles, but a double battle stands before her.",
+   "stage": "gym-3-kleio",
+   "places": [
+    "pythios-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 6"
+  },
+  {
+   "id": "step-move-tutor",
+   "title": "Move tutor and relearner",
+   "text": "An Artist standing in the water by a statue in southeast Pythios Town teaches tutor moves and relearns moves once you have 20 Pokémon.",
+   "stage": "gym-3-kleio",
+   "places": [
+    "pythios-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus move tutor; retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "step-flash",
+   "title": "HM05 Flash in the cemetery",
+   "text": "Before leaving Pythios, take the southwest exit to the cemetery: the grunts there drop HM05 Flash, needed for Froslass Cavern.",
+   "stage": "team-pythios-cemetery",
+   "places": [
+    "pythios-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 6"
+  },
+  {
+   "id": "step-erinys-east",
+   "title": "Erinys Path East",
+   "text": "Take the right-hand staircase at the southeast of Erinys Path West. Twins Iro & Anna block the snowy path; ignore the eastern fork and go north to Froslass Cavern.",
+   "stage": "story-froslass-cavern",
+   "places": [
+    "erinys-path",
+    "froslass-cavern"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 7"
+  },
+  {
+   "id": "step-key-stone",
+   "title": "Niko's request",
+   "text": "In Asfal Hills Niko battles you at the two statues, then asks you to recover a Key Stone Team Chimera took to Sofos City.",
+   "stage": "team-satyr-lair",
+   "places": [
+    "asfal-hills",
+    "sofos-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 8"
+  },
+  {
+   "id": "step-sofos-gauntlet",
+   "title": "The Sofos gym gauntlet",
+   "text": "Terpsikore only fights after you beat all four gym trainers: two Psychic users on the east side, two Fighting users on the west.",
+   "stage": "gym-4-terpsikore",
+   "places": [
+    "sofos-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 9"
+  },
+  {
+   "id": "step-surf",
+   "title": "Surf from Niko",
+   "text": "Take the Key Stone back to Niko in the Asfal Hills statue clearing for HM03 Surf.",
+   "stage": "story-kipos",
+   "places": [
+    "asfal-hills"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 9"
+  },
+  {
+   "id": "step-mega-shop",
+   "title": "Niko's Mega Stone shop",
+   "text": "After gym 4 Niko runs a Mega Stone shop at Acrisia University; its stock grows with your badges (₽20,000-60,000 each).",
+   "stage": "gym-5-euterpe",
+   "places": [
+    "acrisia-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus Mega Stones"
+  },
+  {
+   "id": "step-to-myrrini",
+   "title": "Across the Sea of Asteri",
+   "text": "Surf from the Sofos shore east through the channel, past three islets and along a large island's south side to Marmaro Island; cross its wooden bridge and keep surfing east to Myrrini Island's southern beach.",
+   "stage": "gym-5-euterpe",
+   "places": [
+    "sea-of-asteri",
+    "marmaro-island",
+    "myrrini-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 10; mrwalkthroughs.com/pokemon-lazarus walkthrough part 11"
+  },
+  {
+   "id": "step-myrrini-chimera",
+   "title": "Chimera at Myrrini",
+   "text": "Leaving the Myrrini gym, you and Euterpe find Rania cornered by Chimera; Kalliope appears and sends them to Marmaro Island instead. Ask Piraeus to sail you there.",
+   "stage": "team-marmaro-grunts",
+   "places": [
+    "myrrini-island",
+    "marmaro-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 12"
+  },
+  {
+   "id": "step-palati",
+   "title": "To Palati City",
+   "text": "Back in the Sea of Vulcai, line up south of the central volcanic hill and surf straight south to Piraeus, on Palati City's outskirts. Rania waits at the gym door.",
+   "stage": "rival-rania-palati",
+   "places": [
+    "sea-of-vulcai",
+    "palati-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15"
+  },
+  {
+   "id": "step-palati-torches",
+   "title": "The Palati gym torches",
+   "text": "Collect embers from three torches through tunnels with invisible paths before Rhadine will battle. Her Toucannon Mega Evolves; Rock moves hit nearly all of her team.",
+   "stage": "gym-7-rhadine",
+   "places": [
+    "palati-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15"
+  },
+  {
+   "id": "step-groudon-first",
+   "title": "Groudon first",
+   "text": "Sofos's weather has gone wild. Rania and Niko measured heat in Satyr's Lair, so start there; Strength moves the boulders in the deeper cave.",
+   "stage": "team-admin-groudon",
+   "places": [
+    "sofos-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15; mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "step-kaptara-west",
+   "title": "Kaptara Island West",
+   "text": "From Palati's southwest exit: Cooltrainer Dani at the entrance, then Krikri Gorge with Strength boulder puzzles and four more trainers (Lv 36-41) before the admin.",
+   "stage": "team-admins-beasts",
+   "places": [
+    "palati-city",
+    "kaptara-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "step-tower",
+   "title": "To the Tower of Dioxippus",
+   "text": "Kipos Town's south exit leads down Lastlight Road to the tower town. Climb the tower's ladders to the top, where Kalliope is fighting Rayquaza. TM25 Thunder is on the second floor.",
+   "stage": "team-kalliope-tower",
+   "places": [
+    "kipos-town",
+    "lastlight-road",
+    "tower-of-dioxippus"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 17"
+  },
+  {
+   "id": "step-asfal-southwest",
+   "title": "South to Areios",
+   "text": "Rania and Niko meet you outside the tower and send you to Areios. The guard at Asfal Hills' southwest is gone: Corrin Crossing, then Port Pello, then the Nyx Trails.",
+   "stage": "rival-rania-pello",
+   "places": [
+    "asfal-hills",
+    "corrin-crossing",
+    "port-pello"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 17; mrwalkthroughs.com/pokemon-lazarus walkthrough part 18"
+  },
+  {
+   "id": "step-kalliope-gym",
+   "title": "Kalliope's gym",
+   "text": "Kalliope's team is fixed, not drawn at random. Her Tinkaton Mega Evolves; Ground or Fire for it, Ice, Ground and Fairy for the Dragons. Rayquaza helps here.",
+   "stage": "gym-8-kalliope",
+   "places": [
+    "areios-hideout"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 19"
+  },
+  {
+   "id": "step-davosi",
+   "title": "Péntepetal, Pollen Road, Davosi Straits",
+   "text": "The leaders gather as the Elite Four. Fly or sail to Péntepetal City, leave by its northeast exit to Pollen Road (nurse at the end), then surf the Davosi Straits to Rania.",
+   "stage": "rival-rania-davosi",
+   "places": [
+    "pentepetal-city",
+    "pollen-road",
+    "davosi-straits"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 20"
+  },
+  {
+   "id": "step-ruins",
+   "title": "Up the waterfall",
+   "text": "Rania's HM07 Waterfall climbs the falls off the Davosi Straits to the Ruins of Ahiyawa. A nurse and a shop wait in the entrance hall; a champion follows the four.",
+   "stage": "e4-polymnia",
+   "places": [
+    "davosi-straits",
+    "ruins-of-ahiyawa"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 20; mrwalkthroughs.com/pokemon-lazarus walkthrough part 21"
+  },
+  {
+   "id": "step-wakewater",
+   "title": "Wakewater Isle",
+   "text": "After the Hall of Fame, ask Piraeus (at any of his docks) to sail you to Wakewater Isle; after the first visit you can Fly there. The stadium is in the island's northeast.",
+   "stage": "post-wakewater",
+   "places": [
+    "wakewater-isle"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
   }
  ],
  "secrets": [
   {
    "id": "tip-stones",
    "kind": "tip",
-   "text": "The exchange building in east Sofos City trades Thunder, Fire, Sun, Leaf and Dawn Stones, the Linking Cord and the Metal Coat; a street vendor sells the Tart, Sweet and Syrupy Apples.",
+   "text": "The exchange building behind the Battle Pavilion in east Sofos City trades every evolution stone (Thunder, Fire, Water, Leaf, Moon, Sun, Ice, Shiny, Dusk, Dawn), the Linking Cord and the Metal Coat; a vendor behind the Arcade sells the Tart, Sweet and Syrupy Apples.",
    "place": "sofos-city",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "mrwalkthroughs.com/pokemon-lazarus evolution items"
   },
   {
    "id": "tip-ice-stone",
@@ -859,10 +1603,10 @@
   {
    "id": "tip-armor-fossil",
    "kind": "hidden-item",
-   "text": "An Armor Fossil is hidden on Pollen Road.",
-   "place": "pollen-road",
+   "text": "An Armor Fossil is hidden in the odd bag Team Chimera left at the end of the clearing in western Péntepetal City.",
+   "place": "pentepetal-city",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 20"
   },
   {
    "id": "gift-wishing-stars",
@@ -887,6 +1631,330 @@
    "place": "kalami-city",
    "quality": "reference-only",
    "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "hid-red-nectar",
+   "kind": "hidden-item",
+   "text": "Red Nectar in the pink flower by the wheelbarrow in the northeast of south Bronze Fields.",
+   "place": "bronze-fields",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 2"
+  },
+  {
+   "id": "hid-heart-scale-riverwalk",
+   "kind": "hidden-item",
+   "text": "Heart Scale in the small bush by the water across the fenced area, east of Lass Tina.",
+   "place": "riverwalk-trail",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 3"
+  },
+  {
+   "id": "hid-purple-nectar",
+   "kind": "hidden-item",
+   "text": "Purple Nectar in the purple flower in the cemetery's northwest corner, by Performer Galei.",
+   "place": "pythios-town",
+   "condition": "Pythios Cemetery",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 6"
+  },
+  {
+   "id": "hid-nugget-marmaro",
+   "kind": "hidden-item",
+   "text": "Nugget in the minecart at the west end of the rail tracks, before they bend north.",
+   "place": "marmaro-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 10"
+  },
+  {
+   "id": "hid-vulcai-heart-scale",
+   "kind": "hidden-item",
+   "text": "Heart Scale on the empty tile below the plateau in the central east of the sea floor, south of the Deep Sea Scale.",
+   "place": "sea-of-vulcai",
+   "condition": "underwater (Dive)",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "hid-vulcai-water-stone",
+   "kind": "hidden-item",
+   "text": "Water Stone on the sea floor's southwest side, south of Diver Quintus.",
+   "place": "sea-of-vulcai",
+   "condition": "underwater (Dive)",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "hid-vulcai-eviolite",
+   "kind": "hidden-item",
+   "text": "Eviolite on the empty tile in the sea floor's southeast corner, south of the Deep Sea Tooth.",
+   "place": "sea-of-vulcai",
+   "condition": "underwater (Dive)",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "hid-moon-stone-kaptara",
+   "kind": "hidden-item",
+   "text": "Moon Stone inside the vase by the ruined temple in the northeast of the woods.",
+   "place": "kaptara-island",
+   "condition": "Kaptara Island East",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "gift-rare-egg",
+   "kind": "gift",
+   "text": "After the Wanderer's Woods admin you are asked who shouted, Niko or Rania; the one you name gives you a Rare Egg.",
+   "place": "wanderers-woods",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 5"
+  },
+  {
+   "id": "gift-tm27-return",
+   "kind": "gift",
+   "text": "Elia gives TM27 Return once you have caught 50 Pokémon.",
+   "place": "acrisia-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "gift-tm47",
+   "kind": "gift",
+   "text": "Rania gives TM47 Steel Wing at Acrisia University once you hold the Theatrical Badge.",
+   "place": "acrisia-city",
+   "condition": "after gym 6",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 1; mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "gift-pythios-tms",
+   "kind": "gift",
+   "text": "TM44 Rest from the Black Belt in the southeasternmost house; TM51 Will-O-Wisp from the gentleman in front of the gym.",
+   "place": "pythios-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 6"
+  },
+  {
+   "id": "gift-sofos-tms",
+   "kind": "gift",
+   "text": "TM06 Toxic from the sailor on the Battle Pavilion's west side, TM41 Torment from the man with a Murkrow behind the Arcade; three Battle Pavilion wins give a Hyper Potion.",
+   "place": "sofos-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 9"
+  },
+  {
+   "id": "gift-kipos",
+   "kind": "gift",
+   "text": "Mr. Russel gives 10 Ultra Balls for agreeing to help; the zoo researcher's 'Cross-Species Crossing' quest gives TM01 Wish. TM03 Water Pulse is on the islet in the northeast (Surf).",
+   "place": "kipos-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 10; mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "gift-marmaro-tms",
+   "kind": "gift",
+   "text": "TM31 Brick Break from the man east of the Pokémon Center, TM28 Dig from the worker by the minecart rails west of the quarry; an Exp. Candy M lies in the quarry.",
+   "place": "marmaro-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 10"
+  },
+  {
+   "id": "gift-myrrini-tms",
+   "kind": "gift",
+   "text": "TM43 Poison Fang from the man by the southeast bridge, TM45 Attract at the Battle Pavilion counter; TM05 Psyshock and TM17 Protect lie in item balls.",
+   "place": "myrrini-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 12"
+  },
+  {
+   "id": "gift-dragonite-doll",
+   "kind": "gift",
+   "text": "The diver beside the sealed crate in the sea floor's southeast corner gives a Dragonite Doll.",
+   "place": "sea-of-vulcai",
+   "condition": "underwater (Dive)",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "gift-palati",
+   "kind": "gift",
+   "text": "The man with a Crabrawler next to the Pokémon Center gives a Strange Souvenir; the 'Occult Obsession' quest (woman in the northwesternmost house) gives TM58 Thunder Wave.",
+   "place": "palati-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15"
+  },
+  {
+   "id": "gift-tm38-fung",
+   "kind": "gift",
+   "text": "Old Man Fung, hiding by the trees east of the waterfall, gives TM38 Fire Blast.",
+   "place": "the-nyx-trails",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 18"
+  },
+  {
+   "id": "gift-nectars",
+   "kind": "gift",
+   "text": "In the Sofos outskirts library (east Asfal Hills) a woman gives Yellow Nectar and a man Pink Nectar; a Beauty beside the Myrrini gym hands out nectars too (Oricorio's forms).",
+   "place": "asfal-hills",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 8; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "tip-master-ball",
+   "kind": "tip",
+   "text": "A Master Ball lies next to the ruined temple at the north end of Kaptara Island East.",
+   "place": "kaptara-island",
+   "condition": "needs Strength",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "tip-kings-rock",
+   "kind": "tip",
+   "text": "King's Rock (Politoed in this ROM) in the clearing south of the Pokémon Center past two smashable rocks; another on the Sea of Asteri's northern islet.",
+   "place": "acrisia-city",
+   "condition": "needs Rock Smash",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 1; mrwalkthroughs.com/pokemon-lazarus walkthrough part 10"
+  },
+  {
+   "id": "tip-tm32",
+   "kind": "tip",
+   "text": "TM32 Double Team west of the rail track in mid Bronze Fields, behind a smashable rock.",
+   "place": "bronze-fields",
+   "condition": "needs Rock Smash",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 1"
+  },
+  {
+   "id": "tip-froslass-items",
+   "kind": "tip",
+   "text": "Froslass Cavern: TM13 Ice Beam in the corridor west of the ladder down on 1F, Never-Melt Ice and a Moon Stone on B1F, TM46 Thief on an islet on B2F (Surf).",
+   "place": "froslass-cavern",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 8"
+  },
+  {
+   "id": "tip-water-stone-riverwalk",
+   "kind": "tip",
+   "text": "Water Stone across the lake by the waterfall in Riverwalk Trail South; TM40 Aerial Ace across the lake in the west part.",
+   "place": "riverwalk-trail",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 3"
+  },
+  {
+   "id": "tip-vulcai-items",
+   "kind": "tip",
+   "text": "On the Sea of Vulcai: a Fire Stone at the north end of the volcanic pool and TM48 Skill Swap in its southwest corner; Razor Fang on the northern islet; Deep Sea Tooth on the sea floor's southeast.",
+   "place": "sea-of-vulcai",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 13; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "tip-fresco-items",
+   "kind": "tip",
+   "text": "Razor Claw and TM37 Sandstorm on the small southeast island south of the theater, TM29 Psychic in the abandoned lab, TM11 Sunny Day by the lava on the volcano island.",
+   "place": "fresco-isles",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 14"
+  },
+  {
+   "id": "tip-kaptara-items",
+   "kind": "tip",
+   "text": "Kaptara Island: Auspicious Armor south of the East entrance, TM22 Solar Beam in the southern clearing; Malicious Armor by the rock at the West entrance, TM24 Thunderbolt in the West's southeast corner.",
+   "place": "kaptara-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16"
+  },
+  {
+   "id": "tip-nyx-items",
+   "kind": "tip",
+   "text": "The Nyx Trails: Big Nugget south of the first signpost, a Razor Claw guarded by a grunt in the south, a Leaf Stone south of the waterfall, TM59 Dark Pulse beside the waterfall (needs Waterfall).",
+   "place": "the-nyx-trails",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 18"
+  },
+  {
+   "id": "tip-tm14-areios",
+   "kind": "tip",
+   "text": "TM14 Blizzard among the trees in Areios's southeast corner.",
+   "place": "areios-hideout",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 19"
+  },
+  {
+   "id": "tip-tm56-scald",
+   "kind": "tip",
+   "text": "TM56 Scald is a fishing treasure: reel it in during the fishing minigame with the Good or Super Rod.",
+   "place": "kalami-city",
+   "condition": "Good Rod or Super Rod",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "tip-dex-tm-list",
+   "kind": "tip",
+   "text": "Dex-registration TMs from university students: Kalami TM07, Wanderer's Woods TM50, Erinys Path TM52, Asfal Hills TM34, Sea of Asteri TM18, Myrrini TM20, Fresco TM10, Palati TM57, Kaptara TM26 Earthquake, Corrin Crossing TM54, Pollen Road TM60, Péntepetal TM15.",
+   "place": "kalami-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "tip-cheat-console",
+   "kind": "tip",
+   "text": "The console beside the PC behind Elia's desk takes cheat codes: e.g. JUSTSHOWME shows every Pokémon on the route in the DexNav, PORTABLEPC adds the PC to the bag, BATTLEPASS (2.0) gives battle items. Entering a code again turns it off.",
+   "place": "acrisia-city",
+   "quality": "reference-only",
+   "source": "retrododo.com: Pokémon Lazarus cheat codes; mrwalkthroughs.com/pokemon-lazarus walkthrough part 1"
+  },
+  {
+   "id": "tip-cheat-starters",
+   "kind": "tip",
+   "text": "Cheat codes give more starters: IMISSJOHTO (Chikorita, Cyndaquil, Totodile), ILOVEALOLA, ILOVEKALOS, ILOVPALDEA, IWANTMONKE (the three elemental monkeys).",
+   "place": "acrisia-city",
+   "quality": "reference-only",
+   "source": "retrododo.com: Pokémon Lazarus cheat codes (tested on 1.0)"
+  },
+  {
+   "id": "legend-acropolis",
+   "kind": "legendary",
+   "text": "Raikou, Entei and Suicune can be found inside the Acropolis Temple in northeast Sofos City; Raging Bolt, Gouging Fire and Walking Wake are what they evolve into.",
+   "place": "sofos-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "legend-gouging-fire",
+   "kind": "legendary",
+   "text": "Gouging Fire also waits in Satyr's Lair: enter by the second (northern) entrance and go to the northeast corner.",
+   "place": "sofos-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "legend-rayquaza-4f",
+   "kind": "legendary",
+   "text": "Rayquaza is on the fourth floor (the top) of the Tower of Dioxippus; it heals your party before the battle.",
+   "place": "tower-of-dioxippus",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries; mrwalkthroughs.com/pokemon-lazarus walkthrough part 17"
+  },
+  {
+   "id": "shiny-dexnav",
+   "kind": "shiny",
+   "text": "Since 2.0 every DexNav encounter gets 4 shiny rerolls, +2 per Shiny Charm, +3 for chains over 20, +5 at 50, +10 at 100, and +2 at Search Level 100.",
+   "place": "acrisia-city",
+   "quality": "reference-only",
+   "source": "retrododo.com: Lazarus 2.0 update; retrohandhelds.gg"
+  },
+  {
+   "id": "event-wishing-well",
+   "kind": "event",
+   "text": "The Wishing Well in Jusmail Town takes Wishing Stars (cheat WISHINGSTR gives 99).",
+   "place": "jusmail-town",
+   "quality": "reference-only",
+   "source": "retrododo.com: Pokémon Lazarus cheat codes"
   }
  ],
  "evolutions": [
@@ -900,11 +1968,11 @@
   },
   {
    "id": "evo-trade-cord",
-   "species": 64,
-   "name": "Kadabra",
-   "text": "Kadabra and the other trade evolutions can use the Linking Cord, traded in Sofos City's exchange building (the sources imply it, none states every species).",
+   "species": 93,
+   "name": "Haunter",
+   "text": "The Linking Cord (traded in Sofos City's exchange building) evolves Haunter into Gengar without a trade; the ROM gives Gurdurr and Pumpkaboo the same item route. (Abra and Kadabra are not in this ROM.)",
    "quality": "reference-only",
-   "source": "mrwalkthroughs.com/pokemon-lazarus"
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
   },
   {
    "id": "evo-scyther",
@@ -929,6 +1997,454 @@
    "text": "Tart, Sweet and Syrupy Apples from the Sofos vendor give Flapple, Appletun and Dipplin.",
    "quality": "reference-only",
    "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "The ROM lists two routes to Raichu: a Thunder Stone or a Shiny Stone (the Shiny Stone is in Acrisia Mountains behind Surf; both are traded in Sofos).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "Fire Stone gives Ninetales (Fire/Fairy in Lazarus); Alolan Vulpix uses an Ice Stone (Pythios cemetery quest or the Sofos exchange).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-sandshrew",
+   "species": 27,
+   "name": "Sandshrew",
+   "text": "Alolan Sandshrew evolves with an Ice Stone.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-jigglypuff",
+   "species": 39,
+   "name": "Jigglypuff",
+   "text": "Moon Stone (Froslass Cavern B1F, Kaptara East's vase, or the Sofos exchange).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-growlithe",
+   "species": 58,
+   "name": "Growlithe",
+   "text": "Fire Stone gives Arcanine; Hisuian Growlithe (Fire/Rock here) uses a Fire Stone too.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Water Stone gives Poliwrath; using a King's Rock on it gives Politoed, no trade needed (King's Rock: Acrisia City behind Rock Smash, or the Sea of Asteri).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-weepinbell",
+   "species": 70,
+   "name": "Weepinbell",
+   "text": "Leaf Stone gives Victreebel (Rania's Mega Victreebel shows the Victreebite exists).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus Mega Stones"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "A Thunder Stone gives Magnezone.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-shellder",
+   "species": 90,
+   "name": "Shellder",
+   "text": "Water Stone gives Cloyster.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Use a Metal Coat (Sofos exchange) on it for Steelix; no trade.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-voltorb",
+   "species": 100,
+   "name": "Voltorb",
+   "text": "Hisuian Voltorb (Electric/Grass) evolves with a Leaf Stone.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-cubone",
+   "species": 104,
+   "name": "Cubone",
+   "text": "Level 28; the ROM has one entry by day and one at night (the sources don't say which gives Alolan Marowak).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Every Eeveelution is a stone here: Thunder (Jolteon), Water (Vaporeon), Fire (Flareon), Sun (Espeon), Moon (Umbreon), Leaf (Leafeon), Ice (Glaceon), Shiny (Sylveon). All are traded in Sofos's exchange.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-quilava",
+   "species": 156,
+   "name": "Quilava",
+   "text": "Besides levelling up, a Dusk Stone also evolves Quilava into Typhlosion (the ROM's second entry).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Shiny Stone gives Togekiss.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Level up knowing Double Hit for Ambipom.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Level up knowing Ancient Power for Yanmega (Bug/Dragon in Lazarus).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Dusk Stone gives Honchkrow.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-girafarig",
+   "species": 203,
+   "name": "Girafarig",
+   "text": "Level up knowing Twin Beam for Farigiraf.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Use a Razor Fang on it for Gliscor, no night or held item needed (Razor Fang: Wanderer's Woods across the pond, or the Sea of Vulcai).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Use a Razor Claw: Sneasel becomes Weavile, Hisuian Sneasel becomes Sneasler (Razor Claw: Fresco Isles or the Nyx Trails).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Level up knowing Ancient Power for Mamoswine.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-raikou",
+   "species": 243,
+   "name": "Raikou",
+   "text": "Evolves into Raging Bolt by a special condition in this ROM (the Ancient Mechanism's Mega Evolution in the story).",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 15"
+  },
+  {
+   "id": "evo-entei",
+   "species": 244,
+   "name": "Entei",
+   "text": "Evolves into Gouging Fire by a special condition in this ROM.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "evo-suicune",
+   "species": 245,
+   "name": "Suicune",
+   "text": "Evolves into Walking Wake by a special condition in this ROM.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "A Dawn Stone gives Gallade (the ROM doesn't add a gender rule).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-nincada",
+   "species": 290,
+   "name": "Nincada",
+   "text": "Level 20 gives Ninjask (Bug/Dark here), plus Shedinja if you have a free party slot and a spare Poké Ball.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "A Thunder Stone gives Probopass.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Shiny Stone gives Roserade.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Use the Reaper Cloth (Myrrini's 'Second Battle Pavilion' quest) for Dusknoir; no trade.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "A Dawn Stone gives Froslass.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Use the Deep Sea Tooth for Huntail (Water/Dragon here) or the Deep Sea Scale for Gorebyss (Water/Fairy); no trade. The Tooth is on the Sea of Vulcai floor.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus walkthrough part 13"
+  },
+  {
+   "id": "evo-pansage",
+   "species": 511,
+   "name": "Pansage",
+   "text": "Leaf Stone gives Simisage.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-pansear",
+   "species": 513,
+   "name": "Pansear",
+   "text": "Fire Stone gives Simisear.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-panpour",
+   "species": 515,
+   "name": "Panpour",
+   "text": "Water Stone gives Simipour.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-munna",
+   "species": 517,
+   "name": "Munna",
+   "text": "Moon Stone gives Musharna.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-gurdurr",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "The Linking Cord (Sofos exchange) gives Conkeldurr without a trade.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "evo-lampent",
+   "species": 608,
+   "name": "Lampent",
+   "text": "Dusk Stone gives Chandelure.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-rufflet",
+   "species": 627,
+   "name": "Rufflet",
+   "text": "Level 34, with one entry by day and one at night in the ROM (Braviary or its Hisuian form).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-litleo",
+   "species": 667,
+   "name": "Litleo",
+   "text": "Level 31: males become Pyroar (male), females Pyroar (female).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-floette",
+   "species": 670,
+   "name": "Floette",
+   "text": "Shiny Stone gives Florges, for every flower colour.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-doublade",
+   "species": 680,
+   "name": "Doublade",
+   "text": "Dusk Stone gives Aegislash.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-helioptile",
+   "species": 694,
+   "name": "Helioptile",
+   "text": "A Sun Stone gives Heliolisk.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-tyrunt",
+   "species": 696,
+   "name": "Tyrunt",
+   "text": "Level 34 by day gives Tyrantrum (39 in the official games).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-amaura",
+   "species": 698,
+   "name": "Amaura",
+   "text": "Level 34 at night gives Aurorus (39 in the official games); 2.0 added a Mega Aurorus.",
+   "quality": "reference-only",
+   "source": "ROM species table; retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "evo-goomy",
+   "species": 704,
+   "name": "Goomy",
+   "text": "A Metal Coat also evolves Goomy into Sliggoo; Sliggoo becomes Goodra at level 50 in the rain (the ROM has a Dragon/Steel Sliggoo and Goodra too).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-pumpkaboo",
+   "species": 710,
+   "name": "Pumpkaboo",
+   "text": "The Linking Cord gives Gourgeist without a trade, for every size.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-dartrix",
+   "species": 723,
+   "name": "Dartrix",
+   "text": "Level 34; the ROM keeps a day and a night entry (the ROM also has a Grass/Fighting Decidueye).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-charjabug",
+   "species": 737,
+   "name": "Charjabug",
+   "text": "A Thunder Stone gives Vikavolt; no magnetic field needed.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-crabrawler",
+   "species": 739,
+   "name": "Crabrawler",
+   "text": "An Ice Stone gives Crabominable (2.0 added Mega Crabominable).",
+   "quality": "reference-only",
+   "source": "ROM species table; retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "evo-rockruff",
+   "species": 744,
+   "name": "Rockruff",
+   "text": "Level 25: by day, at night or at dusk, for the three Lycanroc forms.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-fomantis",
+   "species": 753,
+   "name": "Fomantis",
+   "text": "Level 29 by day gives Lurantis (34 in the official games).",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-salandit",
+   "species": 757,
+   "name": "Salandit",
+   "text": "Only females evolve, at level 33, into Salazzle.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-steenee",
+   "species": 762,
+   "name": "Steenee",
+   "text": "Level up knowing Stomp for Tsareena.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-snom",
+   "species": 872,
+   "name": "Snom",
+   "text": "An Ice Stone gives Frosmoth, instead of friendship at night.",
+   "quality": "reference-only",
+   "source": "ROM species table"
+  },
+  {
+   "id": "evo-linoone",
+   "species": 264,
+   "name": "Linoone",
+   "text": "Galarian Linoone evolves into Obstagoon at level 35 at night.",
+   "quality": "reference-only",
+   "source": "ROM species table"
   }
  ],
  "notes": [
@@ -955,6 +2471,278 @@
    "text": "The ROM has a Normal and a Hard team for every gym leader (the Hard one has an extra Pokémon; Kleio's ace is one level higher).",
    "quality": "reference-only",
    "source": "ROM Lazarus v2 trainer table"
+  },
+  {
+   "id": "note-gyms-hms",
+   "kind": "tip",
+   "title": "Badges and HMs",
+   "text": "Harvest (Polymnia): Cut. Gemstone (Ourani): Rock Smash. Grave (Kleio): Flash. Wisdom (Terpsikore): Surf. Festival (Euterpe): Dive. Theatrical (Thalia & Melpomene): Strength. Passion (Rhadine): Fly. Myth (Kalliope): Waterfall.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough parts 2-19"
+  },
+  {
+   "id": "note-hm-sources",
+   "kind": "gift",
+   "title": "Where the HMs come from",
+   "text": "Cut: Rania after gym 1. Rock Smash: Elia after gym 2. Flash: the Pythios cemetery grunts. Surf: Niko for the Key Stone. Dive: a Triathlete at the Marmaro mines. Strength: Rania after the Acropolis Temple. Fly: Bird Keeper Fly Guy on Kaptara East. Waterfall: Rania at the Davosi Straits.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus TMs & HMs"
+  },
+  {
+   "id": "note-hoenn-leftovers",
+   "kind": "version",
+   "title": "Hoenn trainers in the ROM",
+   "text": "After Lazarus's own trainers the ROM still holds Emerald's table: Roxanne to Juan's rematch teams, Wallace, Steven, Maxie, Tabitha, May, Brendan, Wally. The Ilios story never uses them (its gyms are the eight Ilios leaders); the guide's foes are the Ilios trainers.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough"
+  },
+  {
+   "id": "note-walkthrough-teams",
+   "kind": "version",
+   "title": "Teams differ from the walkthrough",
+   "text": "The walkthrough lists random pools for many trainers (e.g. Ourani with Larvitar, Kleio with Mimikyu, Megas for Rhadine and the Elite Four). This v2 ROM's tables give fixed Normal and Hard teams, so the guide's levels and teams are the ROM's; Mega Evolutions held in battle don't show in the table.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus walkthrough"
+  },
+  {
+   "id": "note-types-1",
+   "kind": "version",
+   "title": "Changed types (1)",
+   "text": "Lazarus retypes many Pokémon: Butterfree Bug/Psychic, Ekans and Arbok Poison/Dark, Vulpix and Ninetales Fire/Fairy, Parasect Bug/Ghost, Golduck Water/Psychic, Doduo and Dodrio Ground/Flying, Seel Water/Ice, Hypno Psychic/Dark, Dragonair Dragon/Water.",
+   "species": [
+    12,
+    24,
+    38,
+    47,
+    55,
+    85,
+    86,
+    97,
+    148
+   ],
+   "names": [
+    "Butterfree",
+    "Arbok",
+    "Ninetales",
+    "Parasect",
+    "Golduck",
+    "Dodrio",
+    "Seel",
+    "Hypno",
+    "Dragonair"
+   ],
+   "quality": "reference-only",
+   "source": "ROM species table, compared with the official types (Bulbapedia)"
+  },
+  {
+   "id": "note-types-2",
+   "kind": "version",
+   "title": "Changed types (2)",
+   "text": "Meganium Grass/Fairy, Typhlosion Fire/Ground, Feraligatr Water/Dark, Noctowl Ghost/Flying, Politoed Water/Normal, Octillery Water/Fire, Ninjask Bug/Dark, Swablu Flying/Fairy and Altaria Dragon/Fairy, Shuppet and Banette Ghost/Normal, Chimecho and Chingling Psychic/Steel.",
+   "species": [
+    154,
+    157,
+    160,
+    164,
+    186,
+    224,
+    291,
+    334,
+    354,
+    358
+   ],
+   "names": [
+    "Meganium",
+    "Typhlosion",
+    "Feraligatr",
+    "Noctowl",
+    "Politoed",
+    "Octillery",
+    "Ninjask",
+    "Altaria",
+    "Banette",
+    "Chimecho"
+   ],
+   "quality": "reference-only",
+   "source": "ROM species table, compared with the official types (Bulbapedia)"
+  },
+  {
+   "id": "note-types-3",
+   "kind": "version",
+   "title": "Changed types (3)",
+   "text": "Huntail Water/Dragon, Gorebyss Water/Fairy, Cherrim Grass/Fire, Finneon and Lumineon Water/Fairy, Yanmega Bug/Dragon, Gogoat Grass/Ground, Comfey Fairy/Grass, Falinks Fighting/Bug.",
+   "species": [
+    367,
+    368,
+    421,
+    457,
+    469,
+    673,
+    764,
+    870
+   ],
+   "names": [
+    "Huntail",
+    "Gorebyss",
+    "Cherrim",
+    "Lumineon",
+    "Yanmega",
+    "Gogoat",
+    "Comfey",
+    "Falinks"
+   ],
+   "quality": "reference-only",
+   "source": "ROM species table, compared with the official types (Bulbapedia)"
+  },
+  {
+   "id": "note-regional",
+   "kind": "tip",
+   "title": "Regional forms",
+   "text": "Many Pokémon come in regional forms with their own evolutions: Hisuian Growlithe (Fire/Rock, Fire Stone), Hisuian Voltorb (Electric/Grass, Leaf Stone), Hisuian Sneasel (Razor Claw to Sneasler), Alolan Vulpix and Sandshrew (Ice Stone), Galarian Zigzagoon and Linoone (Obstagoon at night), plus Paldean Tauros and Galarian Ponyta.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus walkthrough"
+  },
+  {
+   "id": "note-no-trades",
+   "kind": "trade",
+   "title": "No trading needed",
+   "text": "Every trade evolution in the ROM is an item you use from the bag: Linking Cord (Haunter, Gurdurr, Pumpkaboo), King's Rock (Poliwhirl), Metal Coat (Onix, Scyther), Reaper Cloth (Dusclops), Deep Sea Tooth and Scale (Clamperl). The Linking Cord and Metal Coat are traded for in Sofos's exchange.",
+   "quality": "reference-only",
+   "source": "ROM species table; mrwalkthroughs.com/pokemon-lazarus evolution items"
+  },
+  {
+   "id": "note-beasts",
+   "kind": "legendary",
+   "title": "The changed beasts",
+   "text": "In the Acropolis Temple Kalliope uses the Ancient Mechanism on Raikou, Entei and Suicune, making Raging Bolt, Gouging Fire and Walking Wake; she keeps Raging Bolt for her own team. After gym 8 they leave her. The ROM evolves the three by a special condition, and the legendaries page lists all six in Sofos.",
+   "species": [
+    243,
+    244,
+    245
+   ],
+   "names": [
+    "Raikou",
+    "Entei",
+    "Suicune"
+   ],
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 15; mrwalkthroughs.com/pokemon-lazarus walkthrough part 19; mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "note-weather-trio",
+   "kind": "legendary",
+   "title": "Groudon, Kyogre, Rayquaza",
+   "text": "Each is woken by the story (Satyr's Lair, Kaptara's Sunken Temple, the Tower of Dioxippus), heals your party, then battles. Catching is optional; the story goes on if you beat it or flee, and Groudon and Kyogre can be met again if not caught.",
+   "species": [
+    383,
+    382,
+    384
+   ],
+   "names": [
+    "Groudon",
+    "Kyogre",
+    "Rayquaza"
+   ],
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 16; mrwalkthroughs.com/pokemon-lazarus walkthrough part 17"
+  },
+  {
+   "id": "note-type-null",
+   "kind": "gift",
+   "title": "Type: Null",
+   "text": "An ex-scientist in the abandoned lab on the Fresco Isles gives Type: Null after his quest; it evolves into Silvally.",
+   "species": [
+    772
+   ],
+   "names": [
+    "Type: Null"
+   ],
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries"
+  },
+  {
+   "id": "note-ogerpon",
+   "kind": "gift",
+   "title": "Ogerpon",
+   "text": "Mr. Russel's zookeeper quest in Kipos Town ends with Ogerpon. The cheat code MASKEDOGRE also gives Ogerpon with its three masks.",
+   "species": [
+    1017
+   ],
+   "names": [
+    "Ogerpon"
+   ],
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus legendaries; retrododo.com: Pokémon Lazarus cheat codes"
+  },
+  {
+   "id": "note-starters",
+   "kind": "gift",
+   "title": "Starters",
+   "text": "Elia offers nine: Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly. Cheat codes give sets of them again (ILOVEALOLA, ILOVEKALOS, ILOVPALDEA) and the Johto three (IMISSJOHTO); Chikorita, Cyndaquil and Totodile are also wild in Wanderer's Woods, Pythios Town and Kalami City.",
+   "species": [
+    722,
+    725,
+    728,
+    650,
+    653,
+    656,
+    906,
+    909,
+    912
+   ],
+   "names": [
+    "Rowlet",
+    "Litten",
+    "Popplio",
+    "Chespin",
+    "Fennekin",
+    "Froakie",
+    "Sprigatito",
+    "Fuecoco",
+    "Quaxly"
+   ],
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus walkthrough part 1; retrododo.com: cheat codes; ROM wild tables"
+  },
+  {
+   "id": "note-mega",
+   "kind": "tip",
+   "title": "Mega Evolution",
+   "text": "Terpsikore gives the Key Stone after Satyr's Lair; Niko's shop at Acrisia University sells over 50 Mega Stones, many for Pokémon with no official Mega (Raichu X/Y, Noctowl, Toucannon, Tinkaton, Cyclizar...). Leaders' aces Mega Evolve from gym 7 on.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus Mega Stones; mrwalkthroughs.com/pokemon-lazarus walkthrough part 9"
+  },
+  {
+   "id": "note-champions-defense",
+   "kind": "tip",
+   "title": "Champion's Defense",
+   "text": "Wakewater Isle's stadium: three random trainers in a row, healed between fights, as often as you like. Each clear gives a Pearl, Nugget, Big Nugget or a Master Ball, so it is the way to farm Master Balls. Opponents' levels adjust to your team.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus Wakewater Isle guide"
+  },
+  {
+   "id": "note-dexnav",
+   "kind": "tip",
+   "title": "DexNav and shinies",
+   "text": "Elia gives the DexNav after gym 2. 2.0 recoded its shiny odds: rerolls from the base, Shiny Charms, chain length and Search Level add up (see the Acrisia secret).",
+   "quality": "reference-only",
+   "source": "retrododo.com: Lazarus 2.0 update; mrwalkthroughs.com/pokemon-lazarus walkthrough part 5"
+  },
+  {
+   "id": "note-cheats",
+   "kind": "tip",
+   "title": "Cheat code console",
+   "text": "Acrisia University has a cheat console by the PC behind Elia. Codes give items (9RARECANDY, GIMMENUGS!), Pokémon, outfits (DRESS UP), a 100% catch rate (JUSTCATCH!) or battle items (BATTLEPASS, 2.0); entering a code again turns it off.",
+   "quality": "reference-only",
+   "source": "retrododo.com: Pokémon Lazarus cheat codes"
+  },
+  {
+   "id": "note-2-0-fixes",
+   "kind": "version",
+   "title": "Other 2.0 changes",
+   "text": "TM21 is Acid Spray (was Frustration). The Black Augurite left the mining minigame: the girl in Marmaro's fossil house gives it. Mega Raichu X became Electric/Fighting, Mega Heliolisk Electric/Fire with Drought; Mega Greninja's Protean works once per battle. Saves from 1.x carry over.",
+   "quality": "reference-only",
+   "source": "retrododo.com: Lazarus 2.0 update; retrohandhelds.gg"
   }
  ]
 }

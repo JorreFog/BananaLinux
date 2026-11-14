@@ -4,12 +4,13 @@
  "game": "heart-and-soul",
  "code": "BPEE",
  "title": "Pokemon Heart & Soul (v2.0.6)",
- "revision": 1,
+ "revision": 2,
  "sources": [
   "The ROM itself (Heart & Soul 2.0.6, pokeemerald-expansion build): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
   "Heart & Soul 2.0 documentation (pokemonhns-development.github.io/pokehns-expansion-documentation): features, gifts and statics, walkthrough, FAQ, encounters",
   "GitHub PokemonHnS-Development/pokehns-expansion (release v2.0.6 notes) and pokemonHnS (1.x README)",
-  "retrododo.com (the 2.0 update) and heldgames.com (H&S guide)"
+  "retrododo.com (the 2.0 update) and heldgames.com (H&S guide)",
+  "pokehns-expansion source at tag Release-v2.0.6 (github.com/PokemonHnS-Development/pokehns-expansion): map scripts (badge flags, trainer placement, Sinjoh/Isles/Teleporter events), map hidden items, species evolutions"
  ],
  "places": {
   "cherrygrove-city": {
@@ -290,6 +291,45 @@
   },
   "faraway-island": {
    "name": "Faraway Island"
+  },
+  "birth-island": {
+   "name": "Birth Island"
+  },
+  "route-49": {
+   "name": "Route 49"
+  },
+  "route-50": {
+   "name": "Route 50"
+  },
+  "snowswept-cavern": {
+   "name": "Snowswept Cavern"
+  },
+  "melemele-isle": {
+   "name": "Melemele Isle"
+  },
+  "akala-isle": {
+   "name": "Akala Isle"
+  },
+  "ulaula-isle": {
+   "name": "Ula’ula Isle"
+  },
+  "poni-isle": {
+   "name": "Poni Isle"
+  },
+  "dark-cave": {
+   "name": "Dark Cave"
+  },
+  "rock-tunnel": {
+   "name": "Rock Tunnel"
+  },
+  "route-47": {
+   "name": "Route 47"
+  },
+  "lavender-town": {
+   "name": "Lavender Town"
+  },
+  "battle-frontier": {
+   "name": "Battle Frontier"
   }
  },
  "milestones": [
@@ -302,6 +342,7 @@
    "foe": [
     {
      "name": "???",
+     "class": "Pkmn Trainer",
      "ace_level": 5
     }
    ],
@@ -313,7 +354,7 @@
     "route-30",
     "route-31"
    ],
-   "tips": "Elm offers Chikorita, Cyndaquil or Totodile; the rival steals the one strong against yours and battles you at Lv 5 in Cherrygrove after the Mr. Pokémon errand.",
+   "tips": "Elm offers Chikorita, Cyndaquil or Totodile; the rival steals the one strong against yours and battles you at Lv 5 in Cherrygrove after the Mr. Pokémon errand. The ROM keeps three Lv 5 teams named \"???\", one per starter.",
    "quality": "reference-only",
    "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
@@ -326,8 +367,9 @@
    "theme": "flying",
    "level_cap": 11,
    "foe": {
-    "name": "FALKNER",
-    "ace_level": 11
+    "name": "Falkner",
+    "ace_level": 11,
+    "class": "Leader"
    },
    "done_when": "badge:1",
    "opens": [
@@ -349,8 +391,9 @@
    "level_cap": 15,
    "foe": [
     {
-     "name": "PROTON",
-     "ace_level": 15
+     "name": "Proton",
+     "ace_level": 15,
+     "class": "Rocket Admin"
     }
    ],
    "done_when": "later",
@@ -365,6 +408,23 @@
    "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
   {
+   "id": "team-eto-well",
+   "name": "Rocket Eto in Slowpoke Well",
+   "kind": "team",
+   "place": "slowpoke-well",
+   "level_cap": 11,
+   "foe": {
+    "name": "Eto",
+    "class": "Rocket",
+    "ace_level": 11
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "A named Rocket on B1F beside Proton: Elekid, Magby, Smoochum (Lv 11). He returns in the Mahogany hideout and under Goldenrod.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (SlowpokeWell_B1F script)",
+   "quality": "reference-only"
+  },
+  {
    "id": "gym-2-bugsy",
    "name": "Gym 2: Bugsy",
    "kind": "gym",
@@ -373,8 +433,9 @@
    "theme": "bug",
    "level_cap": 16,
    "foe": {
-    "name": "BUGSY",
-    "ace_level": 16
+    "name": "Bugsy",
+    "ace_level": 16,
+    "class": "Leader"
    },
    "done_when": "badge:2",
    "opens": [],
@@ -407,8 +468,9 @@
    "theme": "normal",
    "level_cap": 21,
    "foe": {
-    "name": "WHITNEY",
-    "ace_level": 21
+    "name": "Whitney",
+    "ace_level": 21,
+    "class": "Leader"
    },
    "done_when": "badge:3",
    "opens": [
@@ -447,8 +509,9 @@
    "theme": "ghost",
    "level_cap": 25,
    "foe": {
-    "name": "MORTY",
-    "ace_level": 25
+    "name": "Morty",
+    "ace_level": 25,
+    "class": "Leader"
    },
    "done_when": "badge:4",
    "opens": [],
@@ -465,8 +528,9 @@
    "level_cap": 27,
    "foe": [
     {
-     "name": "EUSINE",
-     "ace_level": 27
+     "name": "Eusine",
+     "ace_level": 27,
+     "class": "Mystery Man"
     }
    ],
    "done_when": "none",
@@ -492,16 +556,19 @@
    "level_cap": 31,
    "foe": [
     {
-     "name": "CHUCK",
-     "ace_level": 31
+     "name": "Chuck",
+     "ace_level": 31,
+     "class": "Leader"
     },
     {
-     "name": "CHUCK",
-     "ace_level": 36
+     "name": "Chuck",
+     "ace_level": 36,
+     "class": "Leader"
     },
     {
-     "name": "CHUCK",
-     "ace_level": 38
+     "name": "Chuck",
+     "ace_level": 38,
+     "class": "Leader"
     }
    ],
    "done_when": "badge:5",
@@ -521,12 +588,14 @@
    "level_cap": 36,
    "foe": [
     {
-     "name": "JASMINE",
-     "ace_level": 36
+     "name": "Jasmine",
+     "ace_level": 36,
+     "class": "Leader"
     },
     {
-     "name": "JASMINE",
-     "ace_level": 38
+     "name": "Jasmine",
+     "ace_level": 38,
+     "class": "Leader"
     }
    ],
    "done_when": "badge:6",
@@ -546,12 +615,14 @@
    "level_cap": 31,
    "foe": [
     {
-     "name": "PETREL",
-     "ace_level": 30
+     "name": "Petrel",
+     "ace_level": 30,
+     "class": "Rocket Admin"
     },
     {
-     "name": "ARIANA",
-     "ace_level": 31
+     "name": "Ariana",
+     "ace_level": 31,
+     "class": "Rocket Admin"
     }
    ],
    "done_when": "later",
@@ -568,6 +639,23 @@
    "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
   {
+   "id": "team-eto-hideout",
+   "name": "Rocket Eto in the Mahogany hideout",
+   "kind": "team",
+   "place": "rocket-hideout",
+   "level_cap": 28,
+   "foe": {
+    "name": "Eto",
+    "class": "Rocket",
+    "ace_level": 28
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Jynx, Poliwhirl, Magmar, Electabuzz (Lv 28) on B3F; he guards one of the passwords to the boss room.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (RocketHideout_B3F script); H&S documentation walkthrough (marked outdated)",
+   "quality": "reference-only"
+  },
+  {
    "id": "gym-7-pryce",
    "name": "Gym 7: Pryce",
    "kind": "gym",
@@ -577,16 +665,19 @@
    "level_cap": 38,
    "foe": [
     {
-     "name": "PRYCE",
-     "ace_level": 33
+     "name": "Pryce",
+     "ace_level": 33,
+     "class": "Leader"
     },
     {
-     "name": "PRYCE",
-     "ace_level": 35
+     "name": "Pryce",
+     "ace_level": 35,
+     "class": "Leader"
     },
     {
-     "name": "PRYCE",
-     "ace_level": 38
+     "name": "Pryce",
+     "ace_level": 38,
+     "class": "Leader"
     }
    ],
    "done_when": "badge:7",
@@ -597,6 +688,35 @@
    "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
   {
+   "id": "rival-goldenrod-underground",
+   "name": "Rival: Goldenrod Underground",
+   "kind": "rival",
+   "place": "goldenrod-city",
+   "level_cap": 40,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Pupitar, Golbat, the starter's final stage and two more (Lv 38-40), in the switch room under the Department Store. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (GoldenrodCity_UndergroundSwitches script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "team-eto-underground",
+   "name": "Rocket Eto in the underground storage",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 36,
+   "foe": {
+    "name": "Eto",
+    "class": "Rocket",
+    "ace_level": 36
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Poliwrath, Magmar, Jynx, Electabuzz, Rhydon (Lv 36) in the storage room where the real director is held; the director then hands over the Card Key for the Radio Tower.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (GoldenrodCity_UndergroundStorage script)",
+   "quality": "reference-only"
+  },
+  {
    "id": "team-radio-tower",
    "name": "Team Rocket takes the Radio Tower",
    "kind": "team",
@@ -604,20 +724,24 @@
    "level_cap": 40,
    "foe": [
     {
-     "name": "PETREL",
-     "ace_level": 39
+     "name": "Petrel",
+     "ace_level": 39,
+     "class": "Rocket Admin"
     },
     {
-     "name": "PROTON",
-     "ace_level": 38
+     "name": "Proton",
+     "ace_level": 38,
+     "class": "Rocket Admin"
     },
     {
-     "name": "ARIANA",
-     "ace_level": 40
+     "name": "Ariana",
+     "ace_level": 40,
+     "class": "Rocket Admin"
     },
     {
-     "name": "ARCHER",
-     "ace_level": 40
+     "name": "Archer",
+     "ace_level": 40,
+     "class": "Rocket Admin"
     }
    ],
    "done_when": "later",
@@ -635,8 +759,9 @@
    "theme": "dragon",
    "level_cap": 45,
    "foe": {
-    "name": "CLAIR",
-    "ace_level": 45
+    "name": "Clair",
+    "ace_level": 45,
+    "class": "Leader"
    },
    "done_when": "badge:8",
    "opens": [
@@ -680,8 +805,9 @@
    "level_cap": 50,
    "foe": [
     {
-     "name": "WILL",
-     "ace_level": 50
+     "name": "Will",
+     "ace_level": 50,
+     "class": "Elite Four"
     }
    ],
    "done_when": "later",
@@ -700,8 +826,9 @@
    "level_cap": 52,
    "foe": [
     {
-     "name": "KOGA",
-     "ace_level": 52
+     "name": "Koga",
+     "ace_level": 52,
+     "class": "Elite Four"
     }
    ],
    "done_when": "later",
@@ -720,8 +847,9 @@
    "level_cap": 54,
    "foe": [
     {
-     "name": "BRUNO",
-     "ace_level": 54
+     "name": "Bruno",
+     "ace_level": 54,
+     "class": "Elite Four"
     }
    ],
    "done_when": "later",
@@ -740,8 +868,9 @@
    "level_cap": 55,
    "foe": [
     {
-     "name": "KAREN",
-     "ace_level": 55
+     "name": "Karen",
+     "ace_level": 55,
+     "class": "Elite Four"
     }
    ],
    "done_when": "later",
@@ -759,8 +888,9 @@
    "level_cap": 56,
    "foe": [
     {
-     "name": "LANCE",
-     "ace_level": 56
+     "name": "Lance",
+     "ace_level": 56,
+     "class": "Champion"
     }
    ],
    "done_when": "later",
@@ -793,8 +923,9 @@
    "theme": "electric",
    "level_cap": 60,
    "foe": {
-    "name": "LTSURGE",
-    "ace_level": 60
+    "name": "Ltsurge",
+    "ace_level": 60,
+    "class": "Leader"
    },
    "done_when": "badge:11",
    "opens": [
@@ -806,7 +937,7 @@
    "badge_note": "Thunder Badge.",
    "tips": "Electrode, Magnezone, Lanturn, Manectric, Electivire, Raichu (Lv 57-60). Ground moves.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
    "id": "gym-12-erika",
@@ -817,8 +948,9 @@
    "theme": "grass",
    "level_cap": 62,
    "foe": {
-    "name": "ERIKA",
-    "ace_level": 62
+    "name": "Erika",
+    "ace_level": 62,
+    "class": "Leader"
    },
    "done_when": "badge:12",
    "opens": [
@@ -827,7 +959,7 @@
    "badge_note": "Rainbow Badge.",
    "tips": "Jumpluff, Roserade, Tangrowth, Venusaur, Victreebel, Bellossom (Lv 60-62). Fire, Flying, Ice and Poison moves.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
    "id": "gym-10-misty",
@@ -838,8 +970,9 @@
    "theme": "water",
    "level_cap": 63,
    "foe": {
-    "name": "MISTY",
-    "ace_level": 63
+    "name": "Misty",
+    "ace_level": 63,
+    "class": "Leader"
    },
    "done_when": "badge:10",
    "opens": [
@@ -853,10 +986,10 @@
    "badge_note": "Cascade Badge.",
    "tips": "Golduck, Quagsire, Vaporeon, Milotic, Lapras, Starmie (Lv 61-63). Electric and Grass moves.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
-   "id": "gym-13-janine",
+   "id": "gym-14-janine",
    "name": "Kanto gym: Janine",
    "kind": "gym",
    "place": "fuchsia-city",
@@ -864,10 +997,11 @@
    "theme": "poison",
    "level_cap": 64,
    "foe": {
-    "name": "JANINE",
-    "ace_level": 64
+    "name": "Janine",
+    "ace_level": 64,
+    "class": "Leader"
    },
-   "done_when": "badge:13",
+   "done_when": "badge:14",
    "opens": [
     "fuchsia-city",
     "route-12",
@@ -879,10 +1013,10 @@
    "badge_note": "Soul Badge.",
    "tips": "Weezing, Muk, Swalot, Nidoqueen, Crobat, Venomoth (Lv 61-64). Psychic and Ground moves.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
-   "id": "gym-14-sabrina",
+   "id": "gym-13-sabrina",
    "name": "Kanto gym: Sabrina",
    "kind": "gym",
    "place": "saffron-city",
@@ -890,10 +1024,11 @@
    "theme": "psychic",
    "level_cap": 66,
    "foe": {
-    "name": "SABRINA",
-    "ace_level": 66
+    "name": "Sabrina",
+    "ace_level": 66,
+    "class": "Leader"
    },
-   "done_when": "badge:14",
+   "done_when": "badge:13",
    "opens": [
     "saffron-city",
     "route-5",
@@ -903,7 +1038,7 @@
    "badge_note": "Marsh Badge.",
    "tips": "Mr. Mime, Jynx, Slowbro, Wobbuffet, Espeon, Alakazam (Lv 64-66). Dark, Ghost and Bug moves.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
    "id": "gym-9-brock",
@@ -914,8 +1049,9 @@
    "theme": "rock",
    "level_cap": 66,
    "foe": {
-    "name": "BROCK",
-    "ace_level": 66
+    "name": "Brock",
+    "ace_level": 66,
+    "class": "Leader"
    },
    "done_when": "badge:9",
    "opens": [
@@ -928,7 +1064,7 @@
    "badge_note": "Boulder Badge.",
    "tips": "Golem, Aerodactyl, Kabutops, Omastar, Relicanth, Kleavor (Lv 66). Water and Grass moves (Fighting and Ground for most).",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
    "id": "rival-mt-moon",
@@ -946,13 +1082,14 @@
    "id": "gym-15-blaine",
    "name": "Kanto gym: Blaine",
    "kind": "gym",
-   "place": "cinnabar-island",
+   "place": "seafoam-islands",
    "leader": "Blaine",
    "theme": "fire",
    "level_cap": 67,
    "foe": {
-    "name": "BLAINE",
-    "ace_level": 67
+    "name": "Blaine",
+    "ace_level": 67,
+    "class": "Leader"
    },
    "done_when": "badge:15",
    "opens": [
@@ -963,9 +1100,9 @@
     "route-21"
    ],
    "badge_note": "Volcano Badge.",
-   "tips": "Rapidash, Magmortar, Houndoom, Magcargo, Torkoal, Camerupt (Lv 65-67). Water, Ground and Rock moves; he waits on Cinnabar's island once Seafoam is crossed.",
+   "tips": "Rapidash, Magmortar, Houndoom, Magcargo, Torkoal, Camerupt (Lv 65-67). Water, Ground and Rock moves. As in HGSS his gym is inside the Seafoam Islands, reached from Cinnabar.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
   },
   {
    "id": "gym-16-blue",
@@ -975,8 +1112,9 @@
    "leader": "Blue",
    "level_cap": 69,
    "foe": {
-    "name": "BLUE",
-    "ace_level": 69
+    "name": "Blue",
+    "ace_level": 69,
+    "class": "Leader"
    },
    "done_when": "badge:16",
    "opens": [
@@ -988,7 +1126,114 @@
    "badge_note": "Earth Badge.",
    "tips": "Rhyperior, Pidgeot, Machamp, Exeggutor, Tyranitar, Arcanine (Lv 67-69). A mixed team: bring broad coverage. He opens his gym once you hold 15 badges and have talked to him on Cinnabar.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; badge flag from the gym script (pokehns-expansion Release-v2.0.6 source)"
+  },
+  {
+   "id": "rival-indigo-plateau",
+   "name": "Rival: Indigo Plateau",
+   "kind": "rival",
+   "place": "indigo-plateau",
+   "level_cap": 68,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The last rival fight waits in the Indigo Plateau Pokémon Center: six at Lv 68 with Tyranitar, Ursaluna and Crobat. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (IndigoPlateau_PokemonCenter script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "kanto-e4-will",
+   "name": "Kanto League: Will",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Will",
+   "theme": "psychic",
+   "level_cap": 68,
+   "foe": {
+    "name": "Will",
+    "class": "Elite Four",
+    "ace_level": 68
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "The second League run: Gardevoir, Jynx, Exeggutor, Grumpig, Slowbro, Xatu (Lv 66-68). Dark, Ghost and Bug moves.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (Will's room script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "kanto-e4-koga",
+   "name": "Kanto League: Koga",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Koga",
+   "theme": "poison",
+   "level_cap": 68,
+   "foe": {
+    "name": "Koga",
+    "class": "Elite Four",
+    "ace_level": 68
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Tentacruel, Muk, Swalot, Nidoking, Venomoth, Crobat (Lv 67-68). Ground and Psychic moves.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table",
+   "quality": "reference-only"
+  },
+  {
+   "id": "kanto-e4-bruno",
+   "name": "Kanto League: Bruno",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Bruno",
+   "theme": "fighting",
+   "level_cap": 68,
+   "foe": {
+    "name": "Bruno",
+    "class": "Elite Four",
+    "ace_level": 68
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Steelix, Poliwrath, Heracross, Hariyama, Hitmontop, Machamp (Lv 67-68). Flying, Psychic and Fairy; Fire for Steelix and Heracross.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table",
+   "quality": "reference-only"
+  },
+  {
+   "id": "kanto-e4-karen",
+   "name": "Kanto League: Karen",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Karen",
+   "theme": "dark",
+   "level_cap": 69,
+   "foe": {
+    "name": "Karen",
+    "class": "Elite Four",
+    "ace_level": 69
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Umbreon, Weavile, Persian, Honchkrow, Absol, Houndoom (Lv 67-69). Fighting, Bug and Fairy moves.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-league-rematch",
+   "name": "Kanto League: Champion Lance",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 70,
+   "foe": [
+    {
+     "name": "Lance",
+     "class": "Champion",
+     "ace_level": 70
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Salamence, Dragonite, Gyarados, Charizard, Aerodactyl, Altaria (Lv 68-70). Ice and Fairy moves; Rock for Charizard, Aerodactyl and Gyarados's Flying side. Winning this run makes you Kanto Champion (the Hall of Fame sets it), which the Dojo and Red rematch tiers check.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (Champion's room and Hall of Fame scripts)"
   },
   {
    "id": "post-giovanni",
@@ -998,8 +1243,9 @@
    "level_cap": 62,
    "foe": [
     {
-     "name": "GIOVANNI",
-     "ace_level": 62
+     "name": "Giovanni",
+     "ace_level": 62,
+     "class": "Rocket Admin"
     }
    ],
    "done_when": "none",
@@ -1016,24 +1262,29 @@
    "level_cap": 48,
    "foe": [
     {
-     "name": "NAOKO",
-     "ace_level": 48
+     "name": "Naoko",
+     "ace_level": 48,
+     "class": "Kimono Girl"
     },
     {
-     "name": "SAYO",
-     "ace_level": 48
+     "name": "Sayo",
+     "ace_level": 48,
+     "class": "Kimono Girl"
     },
     {
-     "name": "ZUKI",
-     "ace_level": 48
+     "name": "Zuki",
+     "ace_level": 48,
+     "class": "Kimono Girl"
     },
     {
-     "name": "KUNI",
-     "ace_level": 48
+     "name": "Kuni",
+     "ace_level": 48,
+     "class": "Kimono Girl"
     },
     {
-     "name": "MIKI",
-     "ace_level": 48
+     "name": "Miki",
+     "ace_level": 48,
+     "class": "Kimono Girl"
     }
    ],
    "done_when": "none",
@@ -1041,32 +1292,6 @@
    "tips": "Five back-to-back battles with one Eeveelution each at Lv 48; part of what Ho-Oh or Lugia asks for.",
    "quality": "reference-only",
    "source": "ROM Heart & Soul 2.0.6 trainer table; Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
-  },
-  {
-   "id": "post-league-rematch",
-   "name": "League rematch",
-   "kind": "postgame",
-   "place": "indigo-plateau",
-   "level_cap": 70,
-   "foe": [
-    {
-     "name": "LANCE",
-     "ace_level": 70
-    },
-    {
-     "name": "WILL",
-     "ace_level": 68
-    },
-    {
-     "name": "KAREN",
-     "ace_level": 69
-    }
-   ],
-   "done_when": "none",
-   "opens": [],
-   "tips": "The Elite Four at 68-69 and Lance at 70 (Salamence, Dragonite, Gyarados, Charizard, Aerodactyl, Altaria (Lv 68-70)); the rival waits at the Indigo Plateau at 68.",
-   "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
   {
    "id": "post-red",
@@ -1077,8 +1302,9 @@
    "level_cap": 93,
    "foe": [
     {
-     "name": "RED",
-     "ace_level": 93
+     "name": "Red",
+     "ace_level": 93,
+     "class": "Pkmn Trainer"
     }
    ],
    "done_when": "none",
@@ -1091,6 +1317,253 @@
    "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
   },
   {
+   "id": "post-steven",
+   "name": "Steven in the Sinjoh Ruins",
+   "kind": "postgame",
+   "place": "sinjoh-ruins",
+   "leader": "Steven",
+   "level_cap": 79,
+   "foe": {
+    "name": "Steven",
+    "class": "Pkmn Trainer",
+    "ace_level": 79
+   },
+   "done_when": "none",
+   "opens": [
+    "route-49",
+    "route-50",
+    "snowswept-cavern",
+    "new-sinjoh",
+    "sinjoh-ruins"
+   ],
+   "tips": "The bonus Sinjoh story: Skarmory, Omastar, Claydol, Aggron, Kleavor, Metagross (Lv 77-79). Fire and Ground moves cover most of it; Ground and Fighting for Metagross and Aggron.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (SinjohRuins script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-sinjoh-kimono",
+   "name": "Kimono sisters in New Sinjoh",
+   "kind": "postgame",
+   "place": "new-sinjoh",
+   "level_cap": 70,
+   "foe": [
+    {
+     "name": "Miharu",
+     "class": "Kimono Girl",
+     "ace_level": 70
+    },
+    {
+     "name": "Youko",
+     "class": "Kimono Girl",
+     "ace_level": 70
+    },
+    {
+     "name": "Shizuko",
+     "class": "Kimono Girl",
+     "ace_level": 70
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Three more Kimono Girls, one Eeveelution each at Lv 70: Leafeon, Glaceon, Sylveon. Fire for Leafeon and Glaceon, Steel or Poison for Sylveon.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (NewSinjoh_KimonoHideout script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-finley",
+   "name": "Sage Finley on Route 50",
+   "kind": "postgame",
+   "place": "route-50",
+   "level_cap": 70,
+   "foe": {
+    "name": "Finley",
+    "class": "Sage",
+    "ace_level": 70
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Flygon, Salamence, Kingdra, Alolan Exeggutor (Lv 70): a dragon team, so Ice and Fairy moves.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (Route50 script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-milkman",
+   "name": "The Milkman in New Sinjoh",
+   "kind": "postgame",
+   "place": "new-sinjoh",
+   "level_cap": 80,
+   "foe": {
+    "name": "Milkman",
+    "class": "Officer",
+    "ace_level": 80
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Six Miltank, the last at Lv 80. Fighting moves; mind Miltank's healing.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (NewSinjoh script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-samson-oak",
+   "name": "Samson Oak on Melemele Isle",
+   "kind": "postgame",
+   "place": "melemele-isle",
+   "level_cap": 70,
+   "foe": {
+    "name": "Samson Oak",
+    "class": "Pkmn Prof.",
+    "ace_level": 70
+   },
+   "done_when": "none",
+   "opens": [
+    "melemele-isle",
+    "akala-isle",
+    "ulaula-isle",
+    "poni-isle"
+   ],
+   "tips": "On the Alola Isles: Alolan Raichu, Exeggutor, Ninetales, Golem and Muk with Tropius (Lv 70). Ground moves hit Raichu, Golem and Muk; Steel and Fire for Ninetales.",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (Melemele_PlayerHouse script)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-obc-league",
+   "name": "League and Red after the Sinjoh story",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 95,
+   "foe": [
+    {
+     "name": "Will",
+     "class": "Elite Four",
+     "ace_level": 79
+    },
+    {
+     "name": "Koga",
+     "class": "Elite Four",
+     "ace_level": 79
+    },
+    {
+     "name": "Bruno",
+     "class": "Elite Four",
+     "ace_level": 79
+    },
+    {
+     "name": "Karen",
+     "class": "Elite Four",
+     "ace_level": 79
+    },
+    {
+     "name": "Lance",
+     "class": "Champion",
+     "ace_level": 79
+    },
+    {
+     "name": "Red",
+     "class": "Pkmn Trainer",
+     "ace_level": 95
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Once you are Kanto Champion and the Sinjoh story is over, the Elite Four and Lance bring Lv 74-79 teams with regional forms, and Red on Mt. Silver tops out at Lv 95 (Pikachu).",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (League and Mt. Silver summit scripts)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "post-obc-rematches",
+   "name": "Leader rematches after the Sinjoh story",
+   "kind": "postgame",
+   "place": "saffron-city",
+   "level_cap": 73,
+   "foe": [
+    {
+     "name": "Falkner",
+     "class": "Leader",
+     "ace_level": 69
+    },
+    {
+     "name": "Bugsy",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Whitney",
+     "class": "Leader",
+     "ace_level": 70
+    },
+    {
+     "name": "Morty",
+     "class": "Leader",
+     "ace_level": 72
+    },
+    {
+     "name": "Chuck",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Jasmine",
+     "class": "Leader",
+     "ace_level": 72
+    },
+    {
+     "name": "Pryce",
+     "class": "Leader",
+     "ace_level": 72
+    },
+    {
+     "name": "Clair",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Brock",
+     "class": "Leader",
+     "ace_level": 72
+    },
+    {
+     "name": "Ltsurge",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Misty",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Erika",
+     "class": "Leader",
+     "ace_level": 72
+    },
+    {
+     "name": "Janine",
+     "class": "Leader",
+     "ace_level": 73
+    },
+    {
+     "name": "Sabrina",
+     "class": "Leader",
+     "ace_level": 70
+    },
+    {
+     "name": "Blaine",
+     "class": "Leader",
+     "ace_level": 71
+    },
+    {
+     "name": "Blue",
+     "class": "Leader",
+     "ace_level": 73
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Saffron Dojo's last tier: all sixteen leaders with Lv 69-73 teams, many with regional forms (Weezing-G, Raichu-A, Marowak-A).",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (SaffronCity_FightingDojoVIP script)",
+   "quality": "reference-only"
+  },
+  {
    "id": "post-rematches",
    "name": "Leader rematches",
    "kind": "postgame",
@@ -1098,9 +1571,51 @@
    "level_cap": 73,
    "done_when": "none",
    "opens": [],
-   "tips": "Johto leaders return with Lv 63-72 teams; Kanto leaders rematch at the Saffron Dojo for 10 BP each (Lv 70-73 teams).",
+   "tips": "At the Saffron Dojo every leader you have met can be rematched for 10 BP: the Johto leaders with Lv 63-68 teams, the Kanto leaders with their gym teams. Once you are Kanto Champion and the Sinjoh story is finished they bring Lv 69-73 teams.",
    "quality": "reference-only",
-   "source": "ROM Heart & Soul 2.0.6 trainer table; Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "ROM Heart & Soul 2.0.6 trainer table; pokehns-expansion Release-v2.0.6 source (Saffron Dojo script)",
+   "foe": [
+    {
+     "name": "Falkner",
+     "class": "Leader",
+     "ace_level": 68
+    },
+    {
+     "name": "Bugsy",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Whitney",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Morty",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Chuck",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Jasmine",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Pryce",
+     "class": "Leader",
+     "ace_level": 65
+    },
+    {
+     "name": "Clair",
+     "class": "Leader",
+     "ace_level": 65
+    }
+   ]
   },
   {
    "id": "legend-ho-oh",
@@ -1185,6 +1700,108 @@
    "tips": "Arceus at Lv 80 in the Sinjoh Ruins, with Regirock, Regice, Registeel, Regigigas, Regieleki and Regidrago at Lv 80.",
    "quality": "reference-only",
    "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-zapdos",
+   "name": "Zapdos (Route 10)",
+   "kind": "legendary",
+   "place": "route-10",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lv 50 outside the Power Plant once the Machine Part is back; run and re-enter to meet it again.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-articuno",
+   "name": "Articuno (Seafoam Islands)",
+   "kind": "legendary",
+   "place": "seafoam-islands",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lv 50 on B1F after a bike and ice puzzle; resets if you run.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-moltres",
+   "name": "Moltres (Mt. Silver)",
+   "kind": "legendary",
+   "place": "mt-silver",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lv 50 in its own room on Mt. Silver 1F; resets if you run.",
+   "source": "H&S 2.0 documentation: Gifts & Statics",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-jirachi",
+   "name": "Jirachi (Mt. Moon)",
+   "kind": "legendary",
+   "place": "mt-moon",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lv 50 at Mt. Moon Square at night, by touching the white rock; waiting for the next night brings it back.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-latis",
+   "name": "Latias and Latios",
+   "kind": "legendary",
+   "place": "southern-island",
+   "level_cap": 60,
+   "done_when": "none",
+   "opens": [
+    "southern-island"
+   ],
+   "tips": "Steven's Eon Ticket from the Kanto Safari Zone opens Southern Island: one Lati waits there at Lv 50, the other roams Kanto at Lv 60.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-mew",
+   "name": "Mew (Faraway Island)",
+   "kind": "legendary",
+   "place": "faraway-island",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "faraway-island"
+   ],
+   "tips": "Lv 50; you can't run and it doesn't come back, so save first.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: FAQ",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-deoxys",
+   "name": "Deoxys (Birth Island)",
+   "kind": "legendary",
+   "place": "birth-island",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [
+    "birth-island"
+   ],
+   "tips": "The Auroraticket from south Olivine opens Birth Island: solve the timed triangle puzzle for Deoxys at Lv 70. It doesn't come back, so save first.",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: FAQ",
+   "quality": "reference-only"
+  },
+  {
+   "id": "legend-tapus",
+   "name": "The Tapus (Alola Isles)",
+   "kind": "legendary",
+   "place": "melemele-isle",
+   "level_cap": 60,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Tapu Koko on Melemele, Tapu Lele on Akala, Tapu Bulu in the Ula'ula forest and Tapu Fini on Poni, all Lv 60.",
+   "source": "H&S 2.0 documentation: Gifts & Statics",
+   "quality": "reference-only"
   }
  ],
  "steps": [
@@ -1249,6 +1866,307 @@
    "done_when": "later",
    "quality": "reference-only",
    "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "step-mystery-egg",
+   "title": "Mr. Pokémon's egg",
+   "text": "On Route 30 Mr. Pokémon hands you the Mystery Egg and Oak the Pokédex; back at the lab Elm takes the egg (it hatches later at the Violet Pokémon Center) and gives you Poké Balls.",
+   "stage": "rival-cherrygrove",
+   "places": [
+    "route-30",
+    "new-bark-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-sprout-tower",
+   "title": "Sprout Tower",
+   "text": "Climb Sprout Tower and beat Elder Li's sages for HM05 Flash before the Violet gym.",
+   "stage": "gym-1-falkner",
+   "places": [
+    "sprout-tower"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-kabuto-puzzle",
+   "title": "Ruins of Alph",
+   "text": "Solve the Kabuto puzzle and the lab revives the fossil. The back rooms want a matching Pokémon first in your party.",
+   "stage": "gym-1-falkner",
+   "places": [
+    "ruins-of-alph"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "step-kurt",
+   "title": "Kurt's Berry Balls",
+   "text": "After the Slowpoke Well, Kurt turns berries into special Poké Balls (no Apricorns in this game).",
+   "stage": "gym-2-bugsy",
+   "places": [
+    "azalea-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Features"
+  },
+  {
+   "id": "step-ilex-cut",
+   "title": "Cut in Ilex Forest",
+   "text": "Herd the charcoal maker's Farfetch'd back through Ilex Forest (approach it from behind) for HM01 Cut.",
+   "stage": "rival-azalea",
+   "places": [
+    "ilex-forest"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-goldenrod",
+   "title": "Goldenrod errands",
+   "text": "The bike shop gives a Bicycle, the Radio Tower a radio card, and the underground the Coin Case; the Day Care is on Route 34.",
+   "stage": "gym-3-whitney",
+   "places": [
+    "goldenrod-city",
+    "route-34"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-squirtbottle",
+   "title": "The odd tree on Route 36",
+   "text": "After Whitney, the Flower Shop gives the Squirtbottle: water the tree on Route 36 to fight Sudowoodo (Lv 20), then get HM06 Rock Smash nearby. The shop also sells Nature Mints.",
+   "stage": "rival-burned-tower",
+   "places": [
+    "route-36",
+    "goldenrod-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics; H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "step-surf",
+   "title": "HM03 Surf",
+   "text": "The Ecruteak Dance Theater gives HM03 Surf; Morty's badge lets you use it.",
+   "stage": "gym-4-morty",
+   "places": [
+    "ecruteak-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-baoba",
+   "title": "Baoba's question",
+   "text": "On Route 39 Baoba asks what colour the shadow was: your answer decides which of Ho-Oh and Lugia you meet first at Lv 50 (the other is Lv 70).",
+   "stage": "story-eusine",
+   "places": [
+    "route-39"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "step-medicine",
+   "title": "Medicine for Amphy",
+   "text": "Jasmine waits with the sick Ampharos at the top of the lighthouse: the Cianwood pharmacy's SecretPotion cures it, and then she opens her gym.",
+   "stage": "gym-5-chuck",
+   "places": [
+    "olivine-lighthouse",
+    "cianwood-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-fly",
+   "title": "HM02 Fly",
+   "text": "Chuck's wife gives HM02 Fly after his badge.",
+   "stage": "gym-5-chuck",
+   "places": [
+    "cianwood-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-lake-of-rage",
+   "title": "The red Gyarados",
+   "text": "At the Lake of Rage the shiny Gyarados (Lv 30) leaves a Red Scale; Lance then asks you to the Mahogany shop.",
+   "stage": "team-mahogany",
+   "places": [
+    "lake-of-rage"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "step-whirlpool",
+   "title": "HM08 Whirlpool",
+   "text": "Beat or catch the three Electrode (Lv 30) powering the hideout's signal: Lance gives HM08 Whirlpool.",
+   "stage": "team-mahogany",
+   "places": [
+    "rocket-hideout"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "step-radio-keys",
+   "title": "Radio Tower keys",
+   "text": "The fake director on the tower gives the Basement Key; the real one, held under the Department Store, gives the Card Key for the upper floors.",
+   "stage": "team-radio-tower",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-ice-path",
+   "title": "Ice Path",
+   "text": "HM07 Waterfall lies in the Ice Path on the way to Blackthorn.",
+   "stage": "gym-8-clair",
+   "places": [
+    "ice-path"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-master-ball",
+   "title": "Elm's Master Ball",
+   "text": "After the eighth badge Elm gives a Master Ball and sends you to the Kimono Girls: beating them is the last thing Ho-Oh and Lugia need.",
+   "stage": "rival-victory-road",
+   "places": [
+    "new-bark-town",
+    "ecruteak-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "step-ss-aqua",
+   "title": "S.S. Aqua errand",
+   "text": "Oak upgrades the Pokédex at the Olivine port. On board find the old man's granddaughter for a Metal Coat.",
+   "stage": "story-ss-aqua",
+   "places": [
+    "olivine-city",
+    "s-s-aqua"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-silph",
+   "title": "Steven at Silph Co.",
+   "text": "Steven gives a Hoenn starter at Lv 5 (by the stone you pick) and an Up-Grade.",
+   "stage": "gym-13-sabrina",
+   "places": [
+    "saffron-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "step-snorlax",
+   "title": "Wake Snorlax",
+   "text": "The Lavender Radio Tower's radio upgrade wakes the Vermilion Snorlax (Lv 50) that blocks Diglett's Cave, the way to Pewter.",
+   "stage": "gym-9-brock",
+   "places": [
+    "lavender-town",
+    "vermilion-city",
+    "digletts-cave"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "step-kanto-safari",
+   "title": "Kanto Safari Zone",
+   "text": "Steven runs the Fuchsia Safari Zone. Baoba asks you to catch Hoenn Pokémon there for him; his rewards pay for the Brush, Mountain and Cave areas.",
+   "stage": "gym-14-janine",
+   "places": [
+    "fuchsia-city",
+    "safari-zone-gate"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-bills-grandpa",
+   "title": "Bill's grandpa",
+   "text": "In the Route 25 house, show Bill's grandpa the Pokémon he describes for items. Showing a Slowpoke earns the Galarica Cuff and Wreath and unlocks Bill's Teleporter.",
+   "stage": "gym-10-misty",
+   "places": [
+    "route-25"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); pokehns-expansion Release-v2.0.6 source (Route25_BillsHouse script)"
+  },
+  {
+   "id": "step-azure-flute",
+   "title": "The Azure Flute",
+   "text": "On Mt. Silver 2F you find the Azure Flute. Show it to the researcher in the Mt. Silver Pokémon Center to start the optional Sinjoh content (Snowswept Cavern, Routes 49-50, New Sinjoh, the ruins).",
+   "stage": "post-red",
+   "places": [
+    "mt-silver"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (MtSilver_2F and MtSilver_PokemonCenter scripts)"
+  },
+  {
+   "id": "step-plates",
+   "title": "Plates in Sinjoh",
+   "text": "All 17 plates are in the Sinjoh area: noble Pokémon drop them (Machamp in Snowswept Cavern: Fist Plate), and Skier Skylar on Route 49 battles you for the Sky Plate.",
+   "stage": "post-steven",
+   "places": [
+    "snowswept-cavern",
+    "route-49",
+    "new-sinjoh"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ; pokehns-expansion Release-v2.0.6 source (SnowsweptCavern and Route49 scripts)"
+  },
+  {
+   "id": "step-alola",
+   "title": "To the Alola Isles",
+   "text": "Buy a Strange Souvenir at the Mt. Moon gift shop: the captain on Route 13 then takes you to the Alola Isles, with Alolan forms and the Tapus.",
+   "stage": "post-samson-oak",
+   "places": [
+    "mt-moon",
+    "route-13",
+    "melemele-isle"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (MtMoon_Shop and Route13 scripts); H&S 2.0 documentation: Gifts & Statics"
   }
  ],
  "secrets": [
@@ -1427,6 +2345,354 @@
    "place": "route-1",
    "quality": "reference-only",
    "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "hidden-cherrygrove-city",
+   "kind": "hidden-item",
+   "text": "Two hidden Nuggets in Cherrygrove City. The Itemfinder helps.",
+   "place": "cherrygrove-city",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-32",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 32: a Shell Bell, a Heart Scale and a Great Ball. The Itemfinder helps.",
+   "place": "route-32",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-ruins-of-alph",
+   "kind": "hidden-item",
+   "text": "Hidden outside the Ruins of Alph: a Rare Candy and a Nugget. The Itemfinder helps.",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-dark-cave",
+   "kind": "hidden-item",
+   "text": "Hidden in Dark Cave: a Black Flute and a Max Ether (south side), a Big Mushroom and a Revive (north side). The Itemfinder helps.",
+   "place": "dark-cave",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-34",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy on Route 34. The Itemfinder helps.",
+   "place": "route-34",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-cianwood-city",
+   "kind": "hidden-item",
+   "text": "A hidden Heart Scale in Cianwood City. The Itemfinder helps.",
+   "place": "cianwood-city",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-lake-of-rage",
+   "kind": "hidden-item",
+   "text": "Hidden at the Lake of Rage: Choice Specs, a Rare Candy, a Max Revive and a Max Potion. The Itemfinder helps.",
+   "place": "lake-of-rage",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-42",
+   "kind": "hidden-item",
+   "text": "A hidden Dubious Disc on Route 42 (Porygon2 into Porygon-Z). The Itemfinder helps.",
+   "place": "route-42",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-mt-mortar",
+   "kind": "hidden-item",
+   "text": "Hidden in Mt. Mortar: an Iron Ball and a Nugget (1F), an HP Up and a Full Incense (2F). The Itemfinder helps.",
+   "place": "mt-mortar",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-47",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 47: the Lucky Egg, a Wave Incense, a Lagging Tail and a Pearl. The Itemfinder helps.",
+   "place": "route-47",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-vermilion-city",
+   "kind": "hidden-item",
+   "text": "Hidden in Vermilion City: a Big Pearl, a Pearl String and a Heart Scale. The Itemfinder helps.",
+   "place": "vermilion-city",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-rock-tunnel",
+   "kind": "hidden-item",
+   "text": "Hidden in Rock Tunnel: an Oval Stone (B1F) and an Iron (1F). The Itemfinder helps.",
+   "place": "rock-tunnel",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-9",
+   "kind": "hidden-item",
+   "text": "A hidden Light Clay on Route 9. The Itemfinder helps.",
+   "place": "route-9",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-10",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 10: the Rock Polish TM and an Ultra Ball. The Itemfinder helps.",
+   "place": "route-10",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-8",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 8: the Torment TM. The Itemfinder helps.",
+   "place": "route-8",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-14",
+   "kind": "hidden-item",
+   "text": "A hidden Lucky Punch on Route 14. The Itemfinder helps.",
+   "place": "route-14",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-route-20",
+   "kind": "hidden-item",
+   "text": "Hidden side by side on Route 20: the Deep Sea Tooth and the Deep Sea Scale (Clamperl). The Itemfinder helps.",
+   "place": "route-20",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-seafoam-islands",
+   "kind": "hidden-item",
+   "text": "Hidden in the Seafoam Islands: a Water Stone, a Grip Claw and a Max Revive (B1F), a Rare Candy (1F). The Itemfinder helps.",
+   "place": "seafoam-islands",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-viridian-forest",
+   "kind": "hidden-item",
+   "text": "Hidden in Viridian Forest: a Leaf Stone, a Blue Flute and two Big Mushrooms. The Itemfinder helps.",
+   "place": "viridian-forest",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-pewter-city",
+   "kind": "hidden-item",
+   "text": "Wise Glasses hidden in Pewter City. The Itemfinder helps.",
+   "place": "pewter-city",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-cerulean-cave",
+   "kind": "hidden-item",
+   "text": "Hidden in Cerulean Cave: an Electirizer, a Dusk Stone and a Black Sludge (B2F). The Itemfinder helps.",
+   "place": "cerulean-cave",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)",
+   "condition": "after 16 badges"
+  },
+  {
+   "id": "hidden-mt-silver",
+   "kind": "hidden-item",
+   "text": "Hidden on Mt. Silver: an Expert Belt (waterfall room), a Dawn Stone, a Reaper Cloth and a Full Restore. The Itemfinder helps.",
+   "place": "mt-silver",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "hidden-southern-island",
+   "kind": "hidden-item",
+   "text": "The Soul Dew is hidden inside Southern Island. The Itemfinder helps.",
+   "place": "southern-island",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)",
+   "condition": "Eon Ticket"
+  },
+  {
+   "id": "hidden-route-49",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 49: a King's Rock, an Ice Stone and an Ultra Ball. The Itemfinder helps.",
+   "place": "route-49",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)",
+   "condition": "Sinjoh content"
+  },
+  {
+   "id": "hidden-snowswept-cavern",
+   "kind": "hidden-item",
+   "text": "A hidden Never-Melt Ice in Snowswept Cavern. The Itemfinder helps.",
+   "place": "snowswept-cavern",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (map hidden items)",
+   "condition": "Sinjoh content"
+  },
+  {
+   "id": "gift-spearow",
+   "kind": "gift",
+   "text": "Rudy in the Route 35 gate lends a Lv 20 Spearow, \"Kenya\", holding Retro Mail.",
+   "place": "route-35",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "event-sudowoodo",
+   "kind": "event",
+   "text": "Sudowoodo (Lv 20) on Route 36, woken with the Squirtbottle; resets if you run.",
+   "place": "route-36",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "event-electrode",
+   "kind": "event",
+   "text": "Three Electrode (Lv 30) on the hideout's B2F; run and re-enter to try again.",
+   "place": "rocket-hideout",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "trade-voltorb",
+   "kind": "trade",
+   "text": "Olivine: a Krabby for a Voltorb, \"Billy\".",
+   "place": "olivine-city",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "trade-magneton",
+   "kind": "trade",
+   "text": "Power Plant entrance: a Dugtrio for a Magneton, \"Maggie\", holding a Metal Coat.",
+   "place": "power-plant",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "trade-beldum",
+   "kind": "trade",
+   "text": "Safari Zone entrance: Steven trades a Beldum, \"Iron\", holding a Metal Coat, for a Forretress.",
+   "place": "safari-zone-gate",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "trade-meowth",
+   "kind": "trade",
+   "text": "Battle Frontier lounge: a Skitty for a Meowth.",
+   "place": "battle-frontier",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "trade-tauros",
+   "kind": "trade",
+   "text": "Jessica on Melemele trades a Paldean Tauros once: the breed depends on your starter (Aqua for Cyndaquil, Blaze for Totodile, Combat for Chikorita).",
+   "place": "melemele-isle",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "legend-alolan-statics",
+   "kind": "legendary",
+   "text": "Static Alolan forms at Lv 60 on the Isles: Raichu (Akala Forest), Exeggutor (Poni Isle), Golem (Poni Cave), Dugtrio and Marowak (Akala Cave), Ninetales, Sandslash and Muk (Ula'ula caves).",
+   "place": "akala-isle",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "tip-teleporter",
+   "kind": "tip",
+   "text": "Bill's Teleporter in the Route 25 house turns some Pokémon (Meowth, Ponyta, Slowpoke line, Farfetch'd, Weezing, Mr. Mime, the three birds, Corsola, Zigzagoon, Linoone) into their Galarian forms, permanently.",
+   "place": "route-25",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (Route25_BillsHouse script)"
+  },
+  {
+   "id": "tip-amulet-coin",
+   "kind": "tip",
+   "text": "The Amulet Coin is in the Goldenrod Department Store basement; it works if anyone in the party holds it.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "tip-odd-egg",
+   "kind": "tip",
+   "text": "The Odd Egg hatches shiny 14% of the time; the Day Care bookshelves list what it can hatch.",
+   "place": "route-34",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "tip-larvitar",
+   "kind": "tip",
+   "text": "Larvitar can be caught before Falkner: Dark Cave south side by day, 5%, Lv 2-4.",
+   "place": "dark-cave",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "tip-delibird",
+   "kind": "tip",
+   "text": "In the Ice Path a Delibird gives TM14 Blizzard for an Aspear Berry.",
+   "place": "ice-path",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "tip-leppa",
+   "kind": "tip",
+   "text": "A berry tree on Route 43 gives Leppa Berries.",
+   "place": "route-43",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "tip-chansey-farm",
+   "kind": "tip",
+   "text": "Route 47's grass has Chansey: good EXP before the League.",
+   "place": "route-47",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "tip-ev-berries",
+   "kind": "tip",
+   "text": "IVs can't be changed; EV-lowering berries grow in Kanto.",
+   "place": "route-11",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "tip-ability-capsule",
+   "kind": "tip",
+   "text": "Ability Capsules come from the Saffron Dojo and the Battle Frontier.",
+   "place": "saffron-city",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
   }
  ],
  "evolutions": [
@@ -1434,41 +2700,377 @@
    "id": "evo-kadabra",
    "species": 64,
    "name": "Kadabra",
-   "text": "Trade evolutions also work by levelling up while holding the trade item. Kadabra, Machoke, Graveler and Haunter need no item, and the docs don't say how they evolve without a trade (a real trade still works).",
+   "text": "No trade needed: Kadabra evolves at Lv 42 (Machoke and Graveler at 38, Haunter at 42); a trade still works.",
    "quality": "reference-only",
-   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
   },
   {
    "id": "evo-onix",
    "species": 95,
    "name": "Onix",
-   "text": "Level up holding a Metal Coat for Steelix (trade-item rule); the same Metal Coat works for Scyther to Scizor.",
+   "text": "Use a Metal Coat on it (like a stone) for Steelix, or trade it holding one.",
    "quality": "reference-only",
-   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S documentation walkthrough (marked outdated)"
   },
   {
    "id": "evo-seadra",
    "species": 117,
    "name": "Seadra",
-   "text": "Level up holding a Dragon Scale for Kingdra.",
+   "text": "Use a Dragon Scale on it for Kingdra, or trade it holding one.",
    "quality": "reference-only",
-   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S documentation walkthrough (marked outdated)"
   },
   {
    "id": "evo-slowpoke",
    "species": 79,
    "name": "Slowpoke",
-   "text": "Level up holding a King's Rock for Slowking (Poliwhirl: Politoed).",
+   "text": "Slowbro at Lv 37; use a King's Rock on it for Slowking. Galarian Slowpoke (Bill's Teleporter) takes the Galarica Cuff (Slowbro) or Wreath (Slowking) from Bill's grandpa.",
    "quality": "reference-only",
-   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S documentation walkthrough (marked outdated)"
   },
   {
    "id": "evo-porygon",
    "species": 137,
    "name": "Porygon",
-   "text": "Level up holding the Up-Grade, then the Dubious Disc for Porygon-Z.",
+   "text": "Use the Up-Grade on Porygon (Silph Co. gift) for Porygon2, then the Dubious Disc (hidden on Route 42) for Porygon-Z; trading with them held works too.",
    "quality": "reference-only",
-   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Machamp at Lv 38, no trade needed.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Golem at Lv 38, no trade needed (Alolan Graveler likewise).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Gengar at Lv 42, no trade needed.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Water Stone for Poliwrath; use a King's Rock for Politoed.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Use a Metal Coat for Scizor; a Black Augurite for Kleavor.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Use a Protector for Rhyperior.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Use an Electirizer for Electivire (one is hidden in Cerulean Cave).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Use a Magmarizer for Magmortar.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Use the Dubious Disc for Porygon-Z.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Use a Reaper Cloth for Dusknoir (one is hidden on Mt. Silver).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Use the Deep Sea Tooth for Huntail or the Deep Sea Scale for Gorebyss: both are hidden on Route 20.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Level up with high Beauty, or use a Prism Scale, for Milotic.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Level up on Route 10 or in the Power Plant, or use a Thunder Stone, for Magnezone.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Level up on Route 10 or in the Power Plant, or use a Thunder Stone, for Probopass.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Stones: Thunder, Water, Fire, Shiny (Sylveon), Leaf (Leafeon), Ice (Glaceon). Or level up in Ilex/Viridian Forest for Leafeon, in the Ice Path/Seafoam for Glaceon; high friendship by day for Espeon, at night for Umbreon.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-lickitung",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Level up knowing Rollout for Lickilicky (a Pewter NPC teaches Rollout).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "evo-tangela",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Level up knowing Ancient Power for Tangrowth.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Level up knowing Double Hit for Ambipom.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Level up knowing Ancient Power for Yanmega.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Level up knowing Ancient Power for Mamoswine.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "At night, level up holding (or use) a Razor Fang for Gliscor.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "At night, level up holding (or use) a Razor Claw for Weavile. Hisuian Sneasel does the same by day for Sneasler.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-ursaring",
+   "species": 217,
+   "name": "Ursaring",
+   "text": "Use a Peat Block at night for Ursaluna; at Mt. Moon at night it becomes Bloodmoon Ursaluna.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-stantler",
+   "species": 234,
+   "name": "Stantler",
+   "text": "Use Psyshield Bash 20 times, then level up, for Wyrdeer.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-primeape",
+   "species": 57,
+   "name": "Primeape",
+   "text": "Use Rage Fist 20 times, then level up, for Annihilape.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-girafarig",
+   "species": 203,
+   "name": "Girafarig",
+   "text": "Level up knowing Twin Beam for Farigiraf.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-dunsparce",
+   "species": 206,
+   "name": "Dunsparce",
+   "text": "Level up knowing Hyper Drill for Dudunsparce.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "By day, level up holding (or use) an Oval Stone for Chansey; one is hidden in Rock Tunnel.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "evo-mantyke",
+   "species": 458,
+   "name": "Mantyke",
+   "text": "Level up with a Remoraid in the party for Mantine.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-tyrogue",
+   "species": 236,
+   "name": "Tyrogue",
+   "text": "At Lv 20: Hitmonlee if Attack is higher, Hitmonchan if Defense is, Hitmontop if equal.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Gardevoir at Lv 30; a male takes a Dawn Stone for Gallade.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Glalie at Lv 42; a female takes a Dawn Stone for Froslass.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Shiny Stone for Togekiss.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Shiny Stone for Roserade.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Dusk Stone for Honchkrow (one is hidden in Cerulean Cave).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); pokehns-expansion Release-v2.0.6 source (map hidden items)"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "Dusk Stone for Mismagius.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-bonsly",
+   "species": 438,
+   "name": "Bonsly",
+   "text": "Level up knowing Mimic for Sudowoodo.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-mime-jr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Level up knowing Mimic for Mr. Mime.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-nincada",
+   "species": 290,
+   "name": "Nincada",
+   "text": "Ninjask at Lv 20; with a free party slot and a Poké Ball in the bag, Shedinja appears too.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-qwilfish",
+   "species": 211,
+   "name": "Qwilfish",
+   "text": "Hisuian Qwilfish (Route 49) levels up knowing Barb Barrage for Overqwil.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-farfetchd",
+   "species": 83,
+   "name": "Farfetch’d",
+   "text": "Galarian Farfetch'd (Bill's Teleporter) evolves into Sirfetch'd after landing 3 critical hits in one battle.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
+  },
+  {
+   "id": "evo-linoone",
+   "species": 264,
+   "name": "Linoone",
+   "text": "Galarian Linoone (from a Galarian Zigzagoon, Teleporter) evolves at Lv 35 at night into Obstagoon.",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions)"
   }
  ],
  "notes": [
@@ -1511,6 +3113,182 @@
    ],
    "quality": "reference-only",
    "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "note-trade-evos",
+   "kind": "tip",
+   "title": "Trade evolutions",
+   "text": "A trade still works, but no trade is needed: Kadabra, Machoke, Graveler and Haunter evolve by level (42, 38, 38, 42), and the held-item ones evolve when you use the item on them like a stone (Metal Coat, King's Rock, Dragon Scale, Up-Grade, Dubious Disc, Protector, Electirizer, Magmarizer, Reaper Cloth, Deep Sea items, Prism Scale).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (species_info evolutions); H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "note-level-caps",
+   "kind": "tip",
+   "title": "Level caps",
+   "text": "With the level-cap setting on, the caps follow the gym leaders; after badge 8 they follow Johto Champion Lance's team, then Kanto Champion Lance's.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "note-time",
+   "kind": "tip",
+   "title": "Day and night",
+   "text": "Day is 6:00-18:59, night 19:00-5:59. There are no weekdays: daily events follow the clock, which the Pokémon Center can change (that may lock daily events for 24 hours).",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ; H&S 2.0 documentation: Features"
+  },
+  {
+   "id": "note-kanto-champion",
+   "kind": "tip",
+   "title": "Kanto Champion",
+   "text": "Beating the League again after the 16 badges makes you Kanto Champion. Legendaries and statics come back after each Kanto League win, and the roaming beasts are re-rolled (new shiny chance).",
+   "quality": "reference-only",
+   "source": "pokehns-expansion Release-v2.0.6 source (Hall of Fame script); H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: FAQ"
+  },
+  {
+   "id": "note-sinjoh",
+   "kind": "version",
+   "title": "Bonus content: Sinjoh",
+   "text": "Optional after the Kanto post-game: the Azure Flute from Mt. Silver opens Snowswept Cavern, Routes 49-50, New Sinjoh and the Sinjoh Ruins, with Hisuian forms, noble Pokémon, the 17 plates, Steven, Arceus and six Regis at Lv 80.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Features; H&S 2.0 documentation: Gifts & Statics; pokehns-expansion Release-v2.0.6 source"
+  },
+  {
+   "id": "note-isles",
+   "kind": "version",
+   "title": "Bonus content: the Isles",
+   "text": "With a Strange Souvenir from the Mt. Moon gift shop, the Route 13 boat goes to the Alola Isles: Alolan forms, static Alolan Pokémon and the Tapus at Lv 60, and Samson Oak.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Features; H&S 2.0 documentation: Gifts & Statics; pokehns-expansion Release-v2.0.6 source"
+  },
+  {
+   "id": "note-regional",
+   "kind": "tip",
+   "title": "Regional forms",
+   "text": "The main game has none; the bonus content brings them: Alolan on the Isles, Hisuian around Sinjoh, Galarian through Bill's Teleporter.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ; pokehns-expansion Release-v2.0.6 source"
+  },
+  {
+   "id": "note-hoenn-safari",
+   "kind": "tip",
+   "title": "Hoenn Pokémon",
+   "text": "Hoenn species appear as a 5% slot on each Kanto route (raised by the Hoenn Sound channel) and in the Kanto Safari Zone; Silph Co. gives the Hoenn starters.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Features; H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "note-birds",
+   "kind": "legendary",
+   "title": "Ho-Oh and Lugia",
+   "text": "Both can be caught. Each needs its wing, all eight Johto badges, Elm's Master Ball and the Kimono Girls beaten; the one Baoba's question picked is Lv 50, the other Lv 70.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ; H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "species": [
+    250,
+    249
+   ],
+   "names": [
+    "Ho-Oh",
+    "Lugia"
+   ]
+  },
+  {
+   "id": "note-latis",
+   "kind": "roamer",
+   "title": "Latias and Latios",
+   "text": "One waits on Southern Island at Lv 50, the other roams Kanto at Lv 60; running resets them.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S 2.0 documentation: Features",
+   "species": [
+    380,
+    381
+   ],
+   "names": [
+    "Latias",
+    "Latios"
+   ]
+  },
+  {
+   "id": "note-beast-shiny",
+   "kind": "roamer",
+   "title": "Shiny roamers",
+   "text": "Entei's and Raikou's shininess and IVs are fixed when they are released; save before the Burned Tower to retry, or win the Kanto League to re-roll them.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: FAQ",
+   "species": [
+    244,
+    243
+   ],
+   "names": [
+    "Entei",
+    "Raikou"
+   ]
+  },
+  {
+   "id": "note-hoenn-legends",
+   "kind": "legendary",
+   "title": "Hoenn legendaries",
+   "text": "With 16 badges: Kyogre in a cave off Route 19, Groudon in a hidden Seafoam cave, Rayquaza in the Embedded Tower (Route 47), all Lv 70; Jirachi, Mew, Deoxys and the Latis by ticket or event.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S documentation walkthrough (marked outdated)",
+   "species": [
+    382,
+    383,
+    384
+   ],
+   "names": [
+    "Kyogre",
+    "Groudon",
+    "Rayquaza"
+   ]
+  },
+  {
+   "id": "note-regis",
+   "kind": "legendary",
+   "title": "Arceus and the Regis",
+   "text": "In the Sinjoh Ruins: Arceus and Regirock, Regice, Registeel, Regigigas, Regieleki, Regidrago, all Lv 80.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics",
+   "species": [
+    493,
+    377,
+    378,
+    379,
+    486
+   ],
+   "names": [
+    "Arceus",
+    "Regirock",
+    "Regice",
+    "Registeel",
+    "Regigigas"
+   ]
+  },
+  {
+   "id": "note-trades",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Ten trades plus Jessica's Tauros: Onix (Violet), Machop (Goldenrod), Steelix (Jasmine), Voltorb (Olivine), Mr. Mime (Blackthorn), Haunter and Bonsly (Pewter), Magneton (Power Plant), Beldum (Safari Zone), Meowth (Battle Frontier). Trades and tutors can use Pokémon in the PC.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics; H&S 2.0 documentation: Features"
+  },
+  {
+   "id": "note-gifts",
+   "kind": "gift",
+   "title": "Gift Pokémon",
+   "text": "Eevee (Bill), Shuckle, Spearow and Tentacool loans, Tyrogue (Mt. Mortar), Dratini (Dragon's Den), fossils at the Ruins of Alph lab, the Hoenn starters and Paldean Wooper; the Game Corner sells Abra, Clefairy, Munchlax, Dratini and Porygon.",
+   "quality": "reference-only",
+   "source": "H&S 2.0 documentation: Gifts & Statics"
+  },
+  {
+   "id": "note-frontier",
+   "kind": "tip",
+   "title": "Battle Frontier",
+   "text": "Trainer Hill (via Route 40) opens after the Johto League; the modern-Emerald Battle Frontier and Battle Tents are reached in Kanto. \"Level 50\" sets any Pokémon to 50; \"Open Level\" uses current levels.",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated); H&S 2.0 documentation: Features"
   }
  ]
 }

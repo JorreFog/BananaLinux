@@ -1,0 +1,52 @@
+BANANA: a screenshot on SIGWINCH (the RG DS's F + L2, as in its DS emulators; gw-hotkeys sends it): the view on the
+panels, with its artwork, into -snapshot_directory, and "Screenshot saved" on screen. MAME's own snapshot key (F12,
+which the pad doesn't have) draws the snapview, the layout's first view, not the one picked in the menu.
+
+diff --git a/src/osd/sdl/osdsdl.cpp b/src/osd/sdl/osdsdl.cpp
+--- a/src/osd/sdl/osdsdl.cpp
++++ b/src/osd/sdl/osdsdl.cpp
+@@ -517,9 +517,44 @@
+ 	}
+ }
+ 
++// Banana: SIGWINCH saves a screenshot (the RG DS's F + L2, as in its DS emulators: gw-hotkeys sends it) of the view on
++// the panels, artwork and all, into -snapshot_directory; MAME's own snapshot key would draw its snapshot view
++// ("auto", the layout's first) instead. SIGWINCH: ignored by default, so one that comes before the handler is in
++// place does nothing (SIGUSR1/SIGUSR2 would end MAME)
++static volatile std::sig_atomic_t s_banana_shot_request = 0;
++
++static void banana_shot_signal(int)
++{
++	s_banana_shot_request = 1;
++}
++
++static void banana_shot(running_machine &machine)
++{
++	static bool installed = false;
++	if (!installed)
++	{
++		installed = true;
++		std::signal(SIGWINCH, banana_shot_signal);
++	}
++	if (!s_banana_shot_request)
++	{
++		return;
++	}
++	s_banana_shot_request = 0;
++	render_target *shown = machine.render().target_by_index(0);	// the window's (the snapshot target is hidden)
++	if (shown && !machine.video().snap_native())
++	{
++		render_target &snap = machine.video().snapshot_target();
++		snap.set_view(snap.configured_view(shown->view_name(shown->view()), 0, 1));
++	}
++	machine.video().save_active_screen_snapshots();
++	machine.popmessage("Screenshot saved");
++}
++
+ void sdl_osd_interface::process_events()
+ {
+ 	banana_menu_key();
++	banana_shot(machine());
+ 
+ 	std::lock_guard<std::mutex> lock(subscription_mutex());
+ 	SDL_Event event;

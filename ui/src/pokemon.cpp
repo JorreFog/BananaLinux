@@ -66,6 +66,10 @@ namespace banana::pkmn
 		}
 
 		// the saves' layouts (pokeruby / pokeemerald / pokefirered: SaveBlock1, SaveBlock2)
+		// the trainer flags: TRAINER_FLAGS_START in every Gen III game and the builds on them (pokeruby, pokeemerald,
+		// pokefirered, CFRU and pokeemerald-expansion: 0x500), up to 864 trainers (expansion's MAX_TRAINERS_COUNT;
+		// Emerald has 855)
+		const int TRAINER_FLAGS = 0x500, TRAINER_FLAG_BYTES = 864 / 8;
 		const SaveLayout SAVE_RS = { 0x1220, 0x807, 0x800, 0x490, 0, { 0x560, 0x5b0, 0x600, 0x640, 0x740 }, { 20, 20, 16, 64, 46 } };
 		const SaveLayout SAVE_E = { 0x1270, 0x867, 0x864, 0x490, 0xac, { 0x560, 0x5d8, 0x650, 0x690, 0x790 }, { 30, 30, 16, 64, 46 } };
 		const SaveLayout SAVE_FR = { 0x0ee0, 0x820, 0x82c, 0x290, 0xf20, { 0x310, 0x3b8, 0x430, 0x464, 0x54c }, { 42, 30, 13, 58, 43 } };
@@ -353,13 +357,6 @@ namespace banana::pkmn
 		return n >= 0 && n < 25 ? NATURES[n] : "";
 	}
 
-	void natureStats(int n, int& up, int& down)
-	{
-		// (the natures run five by five: the one raised by the row, the one lowered by the column)
-		up = n / 5; down = n % 5;
-		if (n < 0 || n >= 25 || up == down) up = down = -1;
-	}
-
 	int maxPP(int base, uint8_t bonuses, int slot) { return base + base * ((bonuses >> (2 * slot)) & 3) / 5; }
 
 	std::string RomTables::speciesName(uint16_t i) const
@@ -607,21 +604,13 @@ namespace banana::pkmn
 			o.push_back(0xff);
 			return true;
 		}
-		// a trainer record (40 bytes: party flags, class, music, picture, name[12], items[4], doubles, AI flags, party
-		// size, party pointer) that looks like one
-		bool trainerAt(const uint8_t* rom, size_t n, size_t a)
-		{
-			if (a + 40 > n || rom[a] > 3 || rom[a + 32] < 1 || rom[a + 32] > 6) return false;
-			if (nameAt(rom + a + 4, 12) <= 0) return false;
-			return romPtr(rom, n, a + 36, 8 * rom[a + 32]) >= 0;
-		}
 	}
 
 	namespace
 	{
 		// a CFRU hack, told by its tables (the Fairy type, more than 412 species): what it has beyond FireRed's
 		// (its bag perhaps not the save's: until its own is found, below)
-		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = t.has.bagUnsure = true; t.has.fairyType = FAIRY; }
+		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.bagUnsure = true; t.has.fairyType = FAIRY; }
 
 		void fromHeader(RomTables& t, const uint8_t* rom, size_t n)
 		{
@@ -831,63 +820,6 @@ namespace banana::pkmn
 			t.grids.push_back(g);
 		}
 
-		// trainers: every record with that name, the first of the class asked for (any: -1) from the byte from on
-		long findTrainer(const uint8_t* rom, size_t n, const std::string& name, int cls, size_t from = 0)
-		{
-			std::vector<uint8_t> e;
-			if (!encName(name, e) || from >= n) return -1;
-			for (const uint8_t* p = rom + from; (p = (const uint8_t*)memmem(p, n - (p - rom), e.data(), e.size())); p++)
-			{
-				size_t a = p - rom;
-				if (a < 4 || !trainerAt(rom, n, a - 4)) continue;
-				if (cls < 0 || rom[a - 3] == cls) return (long)(a - 4);
-			}
-			return -1;
-		}
-		std::vector<RomTables::TeamMon> teamAt(const uint8_t* rom, size_t n, long a, int numSpecies)
-		{
-			std::vector<RomTables::TeamMon> out;
-			if (a < 0) return out;
-			int size = rom[a + 32], stride = rom[a] & 1 ? 16 : 8;
-			long p = romPtr(rom, n, a + 36, (size_t)stride * size);
-			for (int i = 0; p >= 0 && i < size; i++)
-			{
-				const uint8_t* m = rom + p + i * stride;
-				uint16_t sp = le16(m + 4);
-				if (sp == 0 || sp >= numSpecies || m[2] == 0 || m[2] > 100) { out.clear(); break; }
-				out.push_back({ sp, m[2] });
-			}
-			return out;
-		}
-	}
-
-	// the gym leaders and the league, in the order they are met (our own words: who, where, the type)
-	const Goal GOALS_RS[] = { { "ROXANNE", "Roxanne", "Rustboro City gym", ROCK }, { "BRAWLY", "Brawly", "Dewford Town gym", FIGHTING },
-		{ "WATTSON", "Wattson", "Mauville City gym", ELECTRIC }, { "FLANNERY", "Flannery", "Lavaridge Town gym", FIRE },
-		{ "NORMAN", "Norman", "Petalburg City gym", NORMAL }, { "WINONA", "Winona", "Fortree City gym", FLYING },
-		{ "TATE&LIZA", "Tate & Liza", "Mossdeep City gym", PSYCHIC }, { "WALLACE", "Wallace", "Sootopolis City gym", WATER },
-		{ "SIDNEY", "Sidney", "the Pokémon League", DARK }, { "PHOEBE", "Phoebe", "the Pokémon League", GHOST },
-		{ "GLACIA", "Glacia", "the Pokémon League", ICE }, { "DRAKE", "Drake", "the Pokémon League", DRAGON },
-		{ "STEVEN", "Steven, the Champion", "the Pokémon League", STEEL } };
-	const Goal GOALS_E[] = { { "ROXANNE", "Roxanne", "Rustboro City gym", ROCK }, { "BRAWLY", "Brawly", "Dewford Town gym", FIGHTING },
-		{ "WATTSON", "Wattson", "Mauville City gym", ELECTRIC }, { "FLANNERY", "Flannery", "Lavaridge Town gym", FIRE },
-		{ "NORMAN", "Norman", "Petalburg City gym", NORMAL }, { "WINONA", "Winona", "Fortree City gym", FLYING },
-		{ "TATE&LIZA", "Tate & Liza", "Mossdeep City gym", PSYCHIC }, { "JUAN", "Juan", "Sootopolis City gym", WATER },
-		{ "SIDNEY", "Sidney", "the Pokémon League", DARK }, { "PHOEBE", "Phoebe", "the Pokémon League", GHOST },
-		{ "GLACIA", "Glacia", "the Pokémon League", ICE }, { "DRAKE", "Drake", "the Pokémon League", DRAGON },
-		{ "WALLACE", "Wallace, the Champion", "the Pokémon League", WATER } };
-	const Goal GOALS_FR[] = { { "BROCK", "Brock", "Pewter City gym", ROCK }, { "MISTY", "Misty", "Cerulean City gym", WATER },
-		{ "LT. SURGE", "Lt. Surge", "Vermilion City gym", ELECTRIC }, { "ERIKA", "Erika", "Celadon City gym", GRASS },
-		{ "KOGA", "Koga", "Fuchsia City gym", POISON }, { "SABRINA", "Sabrina", "Saffron City gym", PSYCHIC },
-		{ "BLAINE", "Blaine", "Cinnabar Island gym", FIRE }, { "GIOVANNI", "Giovanni", "Viridian City gym", GROUND },
-		{ "LORELEI", "Lorelei", "the Pokémon League", ICE }, { "BRUNO", "Bruno", "the Pokémon League", FIGHTING },
-		{ "AGATHA", "Agatha", "the Pokémon League", GHOST }, { "LANCE", "Lance", "the Pokémon League", DRAGON } };
-
-	const Goal* goalsFor(Family gen, int& count)
-	{
-		if (gen == RUBY_SAPPHIRE) { count = (int)(sizeof GOALS_RS / sizeof GOALS_RS[0]); return GOALS_RS; }
-		if (gen == EMERALD) { count = (int)(sizeof GOALS_E / sizeof GOALS_E[0]); return GOALS_E; }
-		count = (int)(sizeof GOALS_FR / sizeof GOALS_FR[0]); return GOALS_FR;
 	}
 
 	long emeraldTable(const uint8_t* rom, size_t n, EmTable which)
@@ -1063,56 +995,10 @@ namespace banana::pkmn
 			if (k > 0) a += (size_t)(k - 1) * 20;
 		}
 		if (best < 20) t.wildHeaders = -1;
-		// each map's region map section (the Dex's "where"): the ROM's map groups, checked against the wild tables
+		// each map's region map section (the pages' wild Pokémon by place): the ROM's map groups, checked against the wild tables
 		findMapGroups(t, rom, n);
 		// the level-up moves (the summary's "learns next")
 		findLearnsets(t, rom, n);
-		// the gym leaders' teams for the guide; a CFRU hack's leaders (class 0x54, FireRed's) in the table's order
-		if (t.has.leadersFromTrainers)
-		{
-			// (every record of that class anywhere: a hack can keep a table for each difficulty)
-			for (size_t p = 0; p + 120 <= n; p += 4)
-			{
-				if (rom[p + 1] != 0x54 || !trainerAt(rom, n, p)) continue;
-				std::string nm = decodeText(rom + p + 4, 12);
-				if (nm.find_first_not_of(' ') == std::string::npos || std::find(t.leaders.begin(), t.leaders.end(), nm) != t.leaders.end()) continue;
-				t.leaders.push_back(nm);
-			}
-			// in the order they are met: by their team's highest level (the gyms get harder)
-			std::vector<std::pair<int, std::string>> by;
-			std::map<std::string, int> lt;
-			for (auto& nm : t.leaders)
-			{
-				// (the lowest of its battles' top levels: a hack keeps one for each difficulty and rematch)
-				int top = 999;
-				std::map<int, int> types;
-				std::vector<uint8_t> e;
-				if (encName(nm, e))
-					for (const uint8_t* q = rom; (q = (const uint8_t*)memmem(q, n - (q - rom), e.data(), e.size())); q++)
-					{
-						size_t a = q - rom;
-						if (a < 4 || rom[a - 3] != 0x54 || !trainerAt(rom, n, a - 4)) continue;
-						int hi = 0;
-						for (auto& m : teamAt(rom, n, (long)a - 4, t.numSpecies))
-						{
-							hi = std::max(hi, (int)m.level);
-							if (m.species < t.speciesTypes.size())
-							{
-								types[t.speciesTypes[m.species][0]] += 2;	// (the first type counts more)
-								if (t.speciesTypes[m.species][1] != t.speciesTypes[m.species][0]) types[t.speciesTypes[m.species][1]]++;
-							}
-						}
-						if (hi) top = std::min(top, hi);
-					}
-				int ty = -1, most = 0;
-				for (auto& x : types) if (x.second > most) { most = x.second; ty = x.first; }
-				by.push_back({ top, nm });
-				lt[nm] = ty;
-			}
-			std::stable_sort(by.begin(), by.end(), [](auto& x, auto& y) { return x.first < y.first; });
-			t.leaders.clear();
-			for (auto& b : by) if (b.first < 999) { t.leaders.push_back(b.second); t.leaderTypes.push_back(lt[b.second]); }
-		}
 	}
 
 	std::string RomTables::itemName(uint16_t i) const
@@ -1132,19 +1018,6 @@ namespace banana::pkmn
 	std::string RomTables::mapName(int mapsec) const
 	{
 		return mapsec >= 0 && mapsec < (int)mapNames.size() ? mapNames[mapsec] : "";
-	}
-
-	bool RomTables::dexEntry(int nat, DexEntry& e) const
-	{
-		if (!rom || dexEntries < 0 || nat <= 0) return false;
-		const uint8_t* r = rom->data();
-		size_t n = rom->size(), a = dexEntries + (size_t)nat * dexStride;
-		if (a + dexStride > n || nameAt(r + a, 12) <= 0) return false;
-		e.category = decodeText(r + a, 12);
-		e.height = le16(r + a + 12);
-		e.weight = le16(r + a + 14);
-		e.text = longText(r, n, romPtr(r, n, a + 16, 2), 400);
-		return true;
 	}
 
 	std::vector<RomTables::Wild> RomTables::wild(int group, int num, int method) const
@@ -1179,38 +1052,6 @@ namespace banana::pkmn
 			return out;
 		}
 		return out;
-	}
-
-	std::vector<RomTables::TeamMon> RomTables::team(const std::string& name, int* cls) const
-	{
-		if (!rom) return {};
-		const uint8_t* r = rom->data();
-		size_t n = rom->size();
-		// every record of that trainer: the battle met first is among those of the lowest levels (rematches are far
-		// higher: Emerald's, a hack's post-game ones at 80 and more); of those, one not in a run of records of the same
-		// name (a hack's difficulty variants of one battle: Pokémon Unbound keeps three in a row, its own elsewhere),
-		// and the one with the most Pokémon (Unbound's Tessy: a story battle of three, her gym's of five)
-		struct Rec { long a; std::vector<TeamMon> team; int top; bool run; };
-		std::vector<Rec> recs;
-		for (long a = 0; (a = findTrainer(r, n, name, cls ? *cls : -1, (size_t)a + 8)) >= 0; )
-		{
-			Rec x{ a, teamAt(r, n, a, numSpecies), 0, false };
-			if (x.team.empty()) continue;
-			for (auto& m : x.team) x.top = std::max(x.top, (int)m.level);
-			for (long b : { a - 40, a + 40 })
-				x.run |= b >= 0 && (size_t)b + 40 <= n && r[b + 1] == r[a + 1] && memcmp(r + b + 4, r + a + 4, 12) == 0 && trainerAt(r, n, b);
-			recs.push_back(std::move(x));
-		}
-		if (recs.empty()) return {};
-		int low = 999;
-		bool single = false;
-		for (auto& x : recs) low = std::min(low, x.top);
-		for (auto& x : recs) single |= x.top <= low + 10 && !x.run;
-		const Rec* best = nullptr;
-		for (auto& x : recs)
-			if (x.top <= low + 10 && (!single || !x.run) && (!best || x.team.size() > best->team.size())) best = &x;
-		if (cls) *cls = r[best->a + 1];
-		return best->team;
 	}
 
 	bool RomTables::layoutSize(uint32_t p, int& w, int& h) const
@@ -1358,10 +1199,10 @@ namespace banana::pkmn
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
 				"%zu growth rates from the ROM (%zu bytes); %s, %zu abilities, %zu items, %zu map names, %zu region maps, %zu dex numbers, "
-				"dex entries %s, wild table %s, %zu CFRU gym leaders, %zu map groups, level-up lists %s\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
+				"dex entries %s, wild table %s, %zu map groups, level-up lists %s\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
 				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), bytes, t->has.modernTypes ? "modern types" : "the games' types",
 				t->abilities.size(), t->items.size(), t->mapNames.size(), t->grids.size(), t->natDex.size(), t->dexEntries >= 0 ? "found" : "none",
-				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size(), t->mapsecs.size(), t->learnsets >= 0 ? "found" : "none");
+				t->wildHeaders >= 0 ? "found" : "none", t->mapsecs.size(), t->learnsets >= 0 ? "found" : "none");
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->profile = profile;
@@ -1417,7 +1258,7 @@ namespace banana::pkmn
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
 		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
 		bagPtrB.clear(); for (auto& b : pocketB) b.clear();
-		sbp.clear(); sb1h.clear(); mh.clear(); bagB.clear(); moneyB.clear(); keyB.clear(); dexB.clear(); flagB.clear(); nameB.clear();
+		sbp.clear(); sb1h.clear(); mh.clear(); bagB.clear(); moneyB.clear(); keyB.clear(); dexB.clear(); flagB.clear(); nameB.clear(); trainB.clear();
 		next = Snapshot();
 		wantBattle = snap.inBattle;
 		wants.clear();
@@ -1456,6 +1297,7 @@ namespace banana::pkmn
 				if (!dexOwn && L.dexSb1) wants.push_back({ s1 + L.dexSb1, 2 * L.dexBytes, &dexB, false });
 				else if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
+				wants.push_back({ s1 + L.flags + TRAINER_FLAGS / 8, TRAINER_FLAG_BYTES, &trainB, false });
 				wants.push_back({ s2, 0x12, &nameB, false });	// (the name, then the trainer id at 0x0A and the play time at 0x0E)
 			}
 			// the game's own Pokédex flags (seen, then caught), at a fixed address (a CFRU hack's)
@@ -1508,7 +1350,7 @@ namespace banana::pkmn
 		// (kept from the last set when this one didn't read them, or read them where the save no longer is)
 		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.tid = snap.tid; s.sid = snap.sid; s.playSeconds = snap.playSeconds; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
-			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
+			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; s.trainersBeaten = snap.trainersBeaten; };
 		if (!wantSave) { keep(); return; }
 		if (!info->fixedSave && sbp.size() >= (size_t)sbPtrs(*info).len)
 		{
@@ -1591,6 +1433,8 @@ namespace banana::pkmn
 			for (int i = 0; i < 8; i++) if (flag(L.badge0 + i)) s.badges |= 1 << i;
 			s.champion = flag(L.clear);
 		}
+		if (trainB.size() >= (size_t)TRAINER_FLAG_BYTES) s.trainersBeaten = trainB;
+		else s.trainersBeaten = snap.trainersBeaten;	// (a read that failed this round: the last ones, not none)
 	}
 
 	void Companion::finish()
@@ -1672,6 +1516,7 @@ namespace banana::pkmn
 				std::to_string(x.y) + "," + std::to_string(x.mapsec) + "," + std::to_string(x.money) + "," + std::to_string(x.badges) + std::to_string(x.champion);
 			for (auto& p : x.pockets) { k += "|"; for (auto& e : p) k += std::to_string(e.item) + "x" + std::to_string(e.count) + ","; }
 			k.append(x.dexOwned.begin(), x.dexOwned.end()); k.append(x.dexSeen.begin(), x.dexSeen.end());
+			k += "/"; k.append(x.trainersBeaten.begin(), x.trainersBeaten.end());
 			return k;
 		};
 		if (key(s) != key(snap)) { changed = true; serialNo++; }	// (the play time alone isn't a change)
@@ -1776,6 +1621,55 @@ namespace banana::pkmn
 		// (a hack's wild tables may name a map or two it took out: Gaia's. Then the table that misses fewest, and no
 		// more than one in 30)
 		const int allowed = (int)maps.size() / 30;
+		// Pokémon Unbound hides its groups: FireRed 1.0's Overworld_GetMapHeaderByGroupAndId (0x55238) jumps to a routine
+		// of its own (ldr r2, =f; bx r2) that reads gMapGroups[group] XORed with a key, then that group's map: ldr r3,
+		// =groups; lsl r0, #2; ldr r2, [r0, r3]; ldr r3, =key; lsl r1, #2; eor r3, r2; ldr r0, [r1, r3]; bx lr
+		if (n > 0x55240 && !memcmp(rom + 0xac, "BPRE", 4) && rom[0xbc] == 0 && le16(rom + 0x55238) == 0x4a00 && le16(rom + 0x5523a) == 0x4710)
+		{
+			static const uint8_t F[16] = { 0x03, 0x4b, 0x80, 0x00, 0xc2, 0x58, 0x03, 0x4b, 0x89, 0x00, 0x53, 0x40, 0xc8, 0x58, 0x70, 0x47 };
+			const uint32_t to = le32(rom + 0x5523c);
+			const size_t f = (size_t)(to & ~1u) - 0x08000000u;
+			const long groups = to >= 0x08000000u && f + 24 <= n && !memcmp(rom + f, F, 16) ? romPtr(rom, n, f + 16, 4) : -1;
+			if (groups >= 0)
+			{
+				const uint32_t key = le32(rom + f + 20);
+				auto groupAt = [&](int g) -> long
+				{
+					if ((size_t)groups + 4 * (size_t)g + 4 > n) return -1;
+					const uint32_t v = le32(rom + groups + 4 * (size_t)g) ^ key;
+					return v >= 0x08000000u && v - 0x08000000u < n ? (long)(v - 0x08000000u) : -1;
+				};
+				auto mapAt = [&](int g, int num) -> long
+				{
+					long grp = groupAt(g);
+					long h = grp < 0 ? -1 : romPtr(rom, n, (size_t)grp + 4 * (size_t)num, 0x1c);
+					return h >= 0 && mapHeaderAt(rom, n, h) ? h : -1;
+				};
+				int missed = 0;
+				for (auto& m : maps) missed += mapAt(m.first, m.second) < 0;
+				if (missed <= allowed)
+				{
+					int run = 0;
+					while (run < 256 && groupAt(run) >= 0) run++;
+					t.mapsecs.assign((size_t)run, {});
+					t.mapHeaders.assign((size_t)run, {});
+					for (int g = 0; g < run; g++)
+					{
+						// (each group's maps: headers until one isn't, or the next group's table starts)
+						const long grp = groupAt(g), next = g + 1 < run ? groupAt(g + 1) : -1;
+						for (int k = 0; k < 256; k++)
+						{
+							if (next > grp && (size_t)grp + 4 * (size_t)k >= (size_t)next) break;
+							long h = mapAt(g, k);
+							if (h < 0) break;
+							t.mapsecs[g].push_back(rom[h + 0x14]);
+							t.mapHeaders[g].push_back(h);
+						}
+					}
+					return;
+				}
+			}
+		}
 		size_t found = 0;
 		int fewest = allowed + 1, foundRun = 0;
 		for (size_t a = 0; a + 4 * (size_t)(maxGroup + 1) <= n; a += 4)
@@ -1818,28 +1712,6 @@ namespace banana::pkmn
 		}
 	}
 
-	std::vector<RomTables::Where> RomTables::where(uint16_t species) const
-	{
-		std::vector<Where> out;
-		if (!rom || wildHeaders < 0 || !species) return out;
-		const uint8_t* r = rom->data();
-		size_t n = rom->size();
-		for (size_t a = (size_t)wildHeaders; a + 20 <= n && r[a] != 0xff; a += 20)
-		{
-			int g = r[a], num = r[a + 1];
-			int sec = g < (int)mapsecs.size() && num < (int)mapsecs[g].size() ? mapsecs[g][num] : -1;
-			for (int m = 0; m < 6; m++)
-				for (auto& w : wild(g, num, m))
-				{
-					if (w.species != species) continue;
-					auto it = std::find_if(out.begin(), out.end(), [&](const Where& x) { return x.mapsec == sec && x.method == m && sec >= 0; });
-					if (it == out.end()) out.push_back({ sec, m, w.minLv, w.maxLv, w.percent });
-					else { it->minLv = std::min(it->minLv, w.minLv); it->maxLv = std::max(it->maxLv, w.maxLv); it->percent = std::max(it->percent, w.percent); }
-				}
-		}
-		std::stable_sort(out.begin(), out.end(), [](const Where& x, const Where& y) { return x.percent > y.percent; });
-		return out;
-	}
 }
 
 namespace banana::pkmn
@@ -1906,20 +1778,4 @@ namespace banana::pkmn
 		}
 	}
 
-	uint16_t RomTables::nextMove(uint16_t species, int level, int& lv) const
-	{
-		lv = 0;
-		if (!rom || learnsets < 0 || species >= (uint16_t)numSpecies) return 0;
-		const uint8_t* r = rom->data();
-		size_t n = rom->size();
-		long l = romPtr(r, n, (size_t)learnsets + 4 * (size_t)species, 4);
-		if (l < 0) return 0;
-		for (int k = 0; k < 64 && (size_t)l + 2 * (size_t)k + 2 <= n; k++)
-		{
-			uint16_t e = le16(r + l + 2 * k);
-			if (e == 0xffff) break;
-			if ((e >> 9) > level && (e >> 9) <= 100 && (e & 0x1ff)) { lv = e >> 9; return e & 0x1ff; }
-		}
-		return 0;
-	}
 }

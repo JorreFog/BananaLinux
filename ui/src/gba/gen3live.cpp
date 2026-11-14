@@ -111,6 +111,7 @@ namespace banana::gba
 		if (s.money >= 0) l->money = (uint32_t)s.money;
 		if (s.playSeconds >= 0) l->playSeconds = (uint32_t)s.playSeconds;
 		if (s.badges >= 0) l->badges = (uint16_t)s.badges;
+		l->trainersBeaten = s.trainersBeaten;
 		l->dexSeen = s.dexSeen;
 		l->dexCaught = s.dexOwned;
 		for (size_t j = 0; j < l->dexSeen.size() && j < l->dexCaught.size(); j++) l->dexSeen[j] |= l->dexCaught[j];	// (caught is seen)

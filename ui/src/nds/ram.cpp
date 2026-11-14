@@ -3,6 +3,7 @@
 #include "nds/ram.h"
 #include "nds/nitro.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -89,12 +90,16 @@ namespace banana::nds
 		return s;
 	}
 
+	// the highest species number a Gen IV Pokémon may have: 493, or a ROM hack's Pokédex (an hg-engine build: 1025;
+	// set by the RamReader of the game running - one at a time)
+	static std::atomic<int> gen4MaxSpecies{ 493 };
+
 	bool parseMon(Gen gen, const uint8_t* d, size_t n, Mon& m)
 	{
 		m = Mon{};
 		m.pid = u32(d);
 		m.species = u16(d + 0x08);
-		if (!m.species || m.species > (gen == Gen::IV ? 493 : 649)) return false;
+		if (!m.species || m.species > (gen == Gen::IV ? gen4MaxSpecies.load() : 649)) return false;
 		m.item = u16(d + 0x0A);
 		m.otId = u16(d + 0x0C);
 		m.otSecret = u16(d + 0x0E);
@@ -183,6 +188,8 @@ namespace banana::nds
 		// absolute "in battle" word. Gen V (from the B2W2 pointer, or BW's save image): the same + the battler table
 		uint32_t bOurs, bFoes, bMon0, bTrainer, inBattle, bTable, bDouble;
 		uint32_t posMap, posX, posZ;	// Gen V save position block (map, x, z: as saved, not live)
+		uint32_t dexSeen = 0x44;		// Gen IV: the seen bits' place in the Pokédex block (caught at +4)
+		uint32_t dexBytes = 0x40;		// Gen IV: the caught and seen arrays' size (an hg-engine hack's: 0x80)
 		uint32_t liveZone, livePos;		// Gen V: the current zone (Ironmon's childMapHeader) and the player's map object
 										// x (+0, z at +4): from the B2W2 pointer / BW's save image
 	};
@@ -195,6 +202,13 @@ namespace banana::nds
 		{ POCKET_BERRIES, 0x5C0, 64 }, { POCKET_BALLS, 0x6C0, 24 }, { POCKET_BATTLE, 0x720, 30 } };
 	static const std::vector<PocketAt> POCKETS_V = { { POCKET_ITEMS, 0, 310 }, { POCKET_KEY, 0x4D8, 83 },
 		{ POCKET_TMS, 0x624, 109 }, { POCKET_MEDICINE, 0x7D8, 48 }, { POCKET_BERRIES, 0x898, 64 } };
+
+	// an hg-engine build of HeartGold/SoulSilver (Origin HeartGold, read from the owner's save 2026-11-04): the TM pocket
+	// 151 long (the pockets after it 0xC8 on), the general block 0xF0 on from the bag's end (the Pokédex's magic
+	// 0xBEEFCAFE at 0x13A8, the position at 0x1324), the Pokédex's caught and seen arrays 1024 bits (seen at +0xCC)
+	static const std::vector<PocketAt> POCKETS_HGSS_HGE = { { POCKET_ITEMS, 0, 165 }, { POCKET_KEY, 0x294, 50 },
+		{ POCKET_TMS, 0x35C, 151 }, { POCKET_MAIL, 0x5B8, 12 }, { POCKET_MEDICINE, 0x5E8, 40 },
+		{ POCKET_BERRIES, 0x688, 64 }, { POCKET_BALLS, 0x788, 24 }, { POCKET_BATTLE, 0x7E8, 30 } };
 
 	static RamReader::Layout gen4(uint32_t ptr, uint32_t head, bool hgss, bool dp)
 	{
@@ -264,6 +278,15 @@ namespace banana::nds
 	static const RamReader::Layout L_DP = gen4(0x02106FC0, 0x214, false, true);
 	static const RamReader::Layout L_PT = gen4(0x02101D40, 0x14, false, false);
 	static const RamReader::Layout L_HGSS = gen4(0x02111880, 0x10, true, false);
+	static const RamReader::Layout L_HGSS_HGE = []
+	{
+		RamReader::Layout l = gen4(0x02111880, 0x10, true, false);
+		l.pockets = POCKETS_HGSS_HGE;
+		l.map += 0xF0; l.dex += 0xF0; l.dexSeen = 0xCC; l.dexBytes = 0x80;
+		l.daycare += 0xF0;	// (a guess: the block's tail moved with the rest; a Pokémon there must pass its checksum)
+		l.nRoamers = 0; l.flagBytes = 0;	// (roamers and the story flags: not found yet in its save - not read)
+		return l;
+	}();
 	static const RamReader::Layout L_B = gen5(false, 0), L_W = gen5(false, 0x20);
 	static const RamReader::Layout L_B2 = gen5(true, 0), L_W2 = gen5(true, 0x40);
 }
@@ -283,14 +306,16 @@ namespace banana::nds
 	// the searches' pace: after one found nothing, the next no sooner than this (ms)
 	static const double SCAN_AGAIN_MS = 60000, SCAN_AGAIN_EMPTY_MS = 300000, BATTLE_SCAN_AGAIN_MS = 30000;
 	static const int BATTLE_BAD_SETS = 40;	// (10 s: a battle's first seconds - its intro - may come before its copies)
+	static const int BATTLE_SCANS = 2;		// searches in one battle (the second: the first may come before its copies)
 
 	RamReader::RamReader(const Game& g) : game(g)
 	{
+		if (g.gen == Gen::IV) gen4MaxSpecies = std::max(493, g.dexSize);
 		switch (g.id)
 		{
 		case GameId::DIAMOND: case GameId::PEARL: layout = &L_DP; break;
 		case GameId::PLATINUM: layout = &L_PT; break;
-		case GameId::HEARTGOLD: case GameId::SOULSILVER: layout = &L_HGSS; break;
+		case GameId::HEARTGOLD: case GameId::SOULSILVER: layout = g.hack.empty() ? &L_HGSS : &L_HGSS_HGE; break;
 		case GameId::BLACK: layout = &L_B; break;
 		case GameId::WHITE: layout = &L_W; break;
 		case GameId::BLACK2: layout = &L_B2; break;
@@ -366,7 +391,7 @@ namespace banana::nds
 	{
 		uint32_t e = l.daycare + 2 * 236 + 8;
 		auto mx = [&](uint32_t v) { if (v > e) e = v; };
-		mx(l.dex + 4 + 4 * 0x40); mx(l.flags + l.flagBytes); mx(l.map + 4); mx(l.party + 6 * 236);
+		mx(l.dex + l.dexSeen + l.dexBytes); mx(l.flags + l.flagBytes); mx(l.map + 16); mx(l.party + 6 * 236);
 		for (auto& p : l.pockets) mx(l.bag + p.offset + 4u * p.slots);
 		return e;
 	}
@@ -477,7 +502,7 @@ namespace banana::nds
 		scanAt = RAM_LO;
 		found.clear();
 		foundMons.clear();
-		if (m == SCAN_BATTLE) lastBattleScan = nowMs;
+		if (m == SCAN_BATTLE) { lastBattleScan = nowMs; battleScanCount++; battleScans++; }
 		else if (m == SCAN_SAVE) lastScan = nowMs;
 	}
 
@@ -708,7 +733,7 @@ namespace banana::nds
 		if (h == lastHash && cur->valid)
 		{
 			// (nothing changed: a battle whose copies didn't match still doesn't)
-			if (battleBad > 0 && ++battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+			if (battleBad > 0 && ++battleBad >= BATTLE_BAD_SETS && checked && battleScans < BATTLE_SCANS && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
 			return false;
 		}
 		Live out;
@@ -722,7 +747,7 @@ namespace banana::nds
 		}
 		else if (++bad >= (verdict == EMPTY ? EMPTY_SETS : BAD_SETS)) nextCand(nowMs);
 		// in a battle whose copies don't match the party: they are elsewhere in this revision - look for them
-		if (battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+		if (battleBad >= BATTLE_BAD_SETS && checked && battleScans < BATTLE_SCANS && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
 		if (!ok) return false;
 		lastHash = h;
 		out.valid = true;
@@ -785,8 +810,9 @@ namespace banana::nds
 			// the save's Location {map, warp id, x, z}: x and z follow every step (seen on HeartGold)
 			o.mapX = (uint16_t)u32(at(l.map + 8));
 			o.mapY = (uint16_t)u32(at(l.map + 12));
-			o.dexCaught = bits(at(l.dex + 4), dexSize);
-			o.dexSeen = bits(at(l.dex + 0x44), dexSize);
+			const int dexN = std::min<int>(std::max(dexSize, game.dexSize), (int)l.dexBytes * 8);
+			o.dexCaught = bits(at(l.dex + 4), dexN);
+			o.dexSeen = bits(at(l.dex + l.dexSeen), dexN);
 			for (size_t j = 0; j < o.dexSeen.size(); j++) o.dexSeen[j] |= o.dexCaught[j];	// (caught is seen)
 			o.flags.assign(at(l.flags), at(l.flags) + l.flagBytes);
 			// the daycare: two boxed Pokémon (136 bytes of each 236-byte slot) and the EXP each gained there
@@ -878,7 +904,7 @@ namespace banana::nds
 	{
 		Mon& m = b.mon;
 		m.species = u16(p);
-		if (!m.species || m.species > 493) return false;
+		if (!m.species || m.species > gen4MaxSpecies.load()) return false;
 		for (int i = 0; i < 5; i++) m.stats[i] = u16(p + 2 + 2 * i);	// Atk, Def, Speed, SpA, SpD
 		const uint32_t iv = u32(p + 0x14);
 		for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)((iv >> (5 * i)) & 31);
@@ -936,7 +962,7 @@ namespace banana::nds
 	void RamReader::battle4(const std::vector<std::vector<uint8_t>>& d, Live& o)
 	{
 		const auto& bm = d[W_BMON];
-		if (!battleOn(d)) { battleBad = 0; return; }
+		if (!battleOn(d)) { battleBad = 0; battleScans = 0; return; }
 		Battle& b = o.battle;
 		Battler slots[4];
 		if (bm.size() == 4 * BMON) for (int i = 0; i < 4; i++) battleMon4(bm.data() + BMON * i, slots[i]);
@@ -1004,7 +1030,7 @@ namespace banana::nds
 		memcpy(battleMons, nextMons, sizeof nextMons);
 		// the battle's copies where this revision keeps them? (the copy of the party starts with its first; our battler
 		// is read in a few sets - the table, its objects, their Pokémon - so it may be missing a little while)
-		if (!on) battleBad = 0;
+		if (!on) { battleBad = 0; battleScans = 0; }
 		else
 		{
 			const std::vector<Mon> ours = partyCopy(Gen::V, d[W_OURS]);

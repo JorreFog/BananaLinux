@@ -33,6 +33,8 @@ namespace banana::nds
 		bool reading = false;
 		float readProgress = 0;
 		std::string readWhat;
+		std::string waitWhy;	// no save yet and why, when the host knows ("" the usual "load your save")
+		bool unsupported = false;	// a ROM hack the companion doesn't support: that message alone, no tabs
 		std::vector<std::string> seenNotices;	// notice ids the player has already seen (no count on the tabs for them)
 	};
 
@@ -60,6 +62,9 @@ namespace banana::nds
 		// the icon's rectangle on the bottom panel (device px): Back to game covers it. Default: the bottom-right
 		// 48x48 CSS px
 		void setCorner(int x, int y, int w, int h);
+		// the corner button's label: "" Back to game (the DS: the game's bottom screen again), else this (the GBA game
+		// panel's "Menu": its tiles)
+		void setBackLabel(const std::string& label) { backLabel = label; }
 
 		// the companion opened: lands on the page an unseen notice is for, else Battle in a battle, else where it was
 		void opened(double nowMs);
@@ -106,6 +111,8 @@ namespace banana::nds
 		uint16_t dexSel = 1;
 		int partyIdx = 0;
 		int pickedSeason = -1;
+		int matchFoe = -1;			// the Battle page: the foe whose type matchups show in place of the moves (-1 the moves)
+		std::string backLabel;		// (setBackLabel)
 		friend struct Impl;
 	};
 

@@ -16,6 +16,11 @@ dsi=0
 case $1 in
 *.dsi|*.DSI|*.cia|*.CIA) dsi=1 ;;
 *.nds|*.NDS) [ "$(od -An -tu1 -j18 -N1 "$1" 2>/dev/null | tr -d ' ')" = 3 ] && dsi=1 ;;
+# a zipped one (run-bananads unpacks it): a .dsi or .cia in the zip, or its first .nds's unit code, read from the zip
+# (BusyBox's unzip: only that .nds's first bytes are unpacked, od stops it there)
+*.zip|*.ZIP)
+    if unzip -l "$1" 2>/dev/null | grep -qiE '\.(dsi|cia)$'; then dsi=1
+    elif [ "$(unzip -p "$1" '*.nds' '*.NDS' 2>/dev/null | od -An -tu1 -j18 -N1 2>/dev/null | tr -d ' ')" = 3 ]; then dsi=1; fi ;;
 esac
 if [ $dsi = 1 ] && [ "$want" != bananads ]; then
     echo "run-nds: ${1##*/} is a DSi game: BananaDS" >&2; want=bananads

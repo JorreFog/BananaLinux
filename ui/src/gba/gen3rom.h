@@ -20,16 +20,19 @@ namespace banana::gba
 {
 	// the game in a GBA ROM (its first 0xC0 bytes are enough for the code; the whole ROM for the hack check and the
 	// hash): one of the five English releases (header 0xAC: AXVE AXPE BPEE BPRE BPGE, any revision at 0xBC), Gen III,
-	// dexSize 386; or one of the ROM hacks gba/hacks.h knows, by the whole ROM's CRC-32 (crc: when known - the
+	// dexSize 386; or one of the ROM hacks gba/hacks.h lists, by the whole ROM's CRC-32 (crc: when known - the
 	// companion's tables carry it, pkmn::RomTables::crc -, else 0 and it is worked out here: ~10 ms a 32 MB ROM on a
 	// PC): GameId::HACK, Game::hack its key, its title, its Pokédex's size, modern when it has the Fairy type. NONE for
-	// anything else, and for another CFRU hack (more species, the Fairy type: it keeps today's pages)
+	// anything else - any other ROM hack is not supported (the panel says so)
 	nds::Game detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
+	// detectGame by the companion's tables (their CRC-32), then readRomData. Null when it isn't one of the games or
+	// can't be read; unsupported then: the ROM has one of the five games' codes (a ROM hack not in the list, or one
+	// patched over its base game's tables). game: what it was read as
+	std::shared_ptr<const nds::RomData> readGame(const pkmn::RomTables& t, nds::Game* game = nullptr, bool* unsupported = nullptr);
 
 	// the whole RomData, from the ROM and today's tables (t.rom holds the whole ROM). Runs on a background thread (tens
 	// of ms on a PC); sprite() is safe from any thread. cacheDir: unused (the reads are fast enough without one).
-	// Null when the ROM is not one of the five or a hack read here (the Glazed releases: Emerald patched; Gaia: CFRU),
-	// or a table isn't found.
+	// Null when g is NONE or a table isn't found.
 	std::shared_ptr<const nds::RomData> readRomData(const pkmn::RomTables& t, const nds::Game& g, const std::string& cacheDir);
 
 	// the game's own numbers in the RomData's (for the running game's state, gen3live): a species index -> its national

@@ -1,0 +1,27 @@
+BANANA_SVG_MAXW: cap the width of a Game & Watch SVG screen's bitmap, keeping its aspect ratio. The SVG is drawn
+into it on the CPU every frame; at the RG DS's panel width instead of ~1650 px the Cortex-A55 keeps full speed.
+
+diff --git a/src/mame/handheld/hh_sm510.cpp b/src/mame/handheld/hh_sm510.cpp
+index 6bcc2184..62b13642 100644
+--- a/src/mame/handheld/hh_sm510.cpp
++++ b/src/mame/handheld/hh_sm510.cpp
+@@ -417,6 +417,19 @@ void hh_sm510_state::mcfg_svg_screen(machine_config &config, u16 width, u16 heig
+ 	if (width == 0 || height == 0)
+ 		return;
+ 
++	// Banana: BANANA_SVG_MAXW caps the screen bitmap's width (the SVG is drawn into it on the CPU, then scaled by the
++	// GPU), keeping its aspect ratio: at the RG DS's panel width rather than the SVG's ~1650 px, the main thread has
++	// time left on its Cortex-A55
++	if (const char *maxw = getenv("BANANA_SVG_MAXW"))
++	{
++		const int cap = atoi(maxw);
++		if (cap > 0 && width > cap)
++		{
++			height = u16(height * cap / width);
++			width = u16(cap);
++		}
++	}
++
+ 	screen_device &screen(SCREEN(config, tag, SCREEN_TYPE_SVG));
+ 	screen.set_refresh_hz(60);
+ 	screen.set_size(width, height);

@@ -62,6 +62,7 @@ namespace banana::nds
 	{
 	public:
 		explicit RamReader(const Game& g);
+		uint32_t battleSearches() const { return battleScanCount; }	// searches for a battle's copies so far
 		void setHints(const RamHints& h) { hints = h; }
 		// where this game + ROM was found to keep things (a few lines of text; the Session keeps it on the card),
 		// tried before the known addresses; changed() once a new place checked out
@@ -112,6 +113,9 @@ namespace banana::nds
 		std::vector<uint32_t> foundMons;				// SCAN_BATTLE: Gen IV battle Pokémon structures
 		int32_t battleShift = 0, monShift = 0;	// where the battle copies / Gen IV's battle Pokémon were found, against the known
 		int battleBad = 0;			// sets in a row in a battle whose copies didn't match the party
+		int battleScans = 0;		// searches for its copies in this battle (2 at most: one that doesn't check out after
+									// them isn't searched again - each is ~4 s of a core, Origin HeartGold 2026-11-04)
+		uint32_t battleScanCount = 0;	// (all, for the tests and the log)
 		bool paramsDone = false;	// (Gen IV: the module params' pointer looked for)
 		uint32_t battlePtrs[4] = {};	// Gen V: the battler objects as last read (0: none)
 		uint32_t battleMons[4] = {};	// ...and their Pokémon

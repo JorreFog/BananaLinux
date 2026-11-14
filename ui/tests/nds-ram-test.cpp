@@ -725,9 +725,104 @@ static void testSnapshotsMoved(const std::string& dir)
 	}
 }
 
+// an hg-engine ROM hack's Pokémon past Arceus (Origin HeartGold: the Pokédex to 1025): kept once its game's reader runs,
+// refused for a retail Gen IV game (2026-11-04: the reader capped Gen IV at 493)
+static void testHackSpecies()
+{
+	uint8_t plain[236], enc[236];
+	makeMon(Gen::IV, plain, 236, 0x12345678u, 700, 30, 1234, 5678, 33);	// Sylveon
+	encryptMon(plain, 236, enc);
+	Mon m;
+	Game retail; retail.id = GameId::HEARTGOLD; retail.gen = Gen::IV; retail.dexSize = 493;
+	{ RamReader r(retail); CHECK(!readMon(Gen::IV, enc, 236, m)); }
+	Game hack = retail; hack.dexSize = 1025; hack.hack = "origin-heartgold";
+	{ RamReader r(hack); CHECK(readMon(Gen::IV, enc, 236, m) && m.species == 700 && m.level == 30); }
+	{ RamReader r(retail); CHECK(!readMon(Gen::IV, enc, 236, m)); }	// (and back for the next retail game)
+}
+
+// an hg-engine HeartGold's save (Origin HeartGold, the layout read from the owner's save 2026-11-04): the TM pocket 151
+// long, the position and the Pokédex 0xF0 on, its arrays 1024 bits (seen at +0xCC); a Pokémon past 493 in the party
+static void testHgEngineSave()
+{
+	Ram ram;
+	const uint32_t S = 0x0227A000, B = S + 0x10;
+	p32(ram.at(0x02111880), S);
+	p32(ram.at(B + 0x90), 6);	// (the party's capacity, then its count)
+	p32(ram.at(B + 0x94), 1);
+	uint8_t plain[236];
+	makeMon(Gen::IV, plain, 236, 0x01020304, 873, 17, 34691, 38453, 33);	// Frosmoth
+	encryptMon(plain, 236, ram.at(B + 0x98));
+	p16(ram.at(B + 0x64), 0x0134); p16(ram.at(B + 0x66), 0xFFFF);
+	p16(ram.at(B + 0x74), 34691); p16(ram.at(B + 0x76), 38453);
+	p32(ram.at(B + 0x78), 10748);
+	p32(ram.at(B + 0x1324), 33); p32(ram.at(B + 0x1324 + 4), 0xFFFFFFFF);	// Route 29, at 1047 / 97
+	p32(ram.at(B + 0x1324 + 8), 1047); p32(ram.at(B + 0x1324 + 12), 97);
+	p32(ram.at(B + 0x13A8), 0xBEEFCAFE);
+	ram.at(B + 0x13A8 + 4 + 872 / 8)[0] = 1 << (872 % 8);					// caught: 873
+	ram.at(B + 0x13A8 + 0xCC + 872 / 8)[0] = 1 << (872 % 8);					// seen: 873
+	ram.at(B + 0x13A8 + 0xCC)[0] = 1;											// seen: 1
+	p16(ram.at(B + 0x644 + 0x788), 4); p16(ram.at(B + 0x644 + 0x78A), 5);	// 5 Poké Balls
+	Game g = game(GameId::HEARTGOLD, Gen::IV);
+	g.dexSize = 1025; g.hack = "origin-heartgold";
+	RamReader rr(g);
+	CHECK(settle(rr, ram));
+	if (!rr.live()->valid) fprintf(stderr, "  hg-engine save: %s\n", rr.lastProblem().c_str());
+	auto l = rr.live();
+	CHECK(l->valid && l->party.size() == 1 && l->party[0].species == 873 && l->party[0].level == 17);
+	CHECK(l->money == 10748 && l->zone == 33 && l->mapX == 1047 && l->mapY == 97);
+	CHECK(l->dexCaught.size() == 128 && (l->dexCaught[872 / 8] >> (872 % 8) & 1) && (l->dexSeen[0] & 1) && (l->dexSeen[872 / 8] >> (872 % 8) & 1));
+	CHECK(l->bag.count(POCKET_BALLS) && l->bag.at(POCKET_BALLS).size() == 1 && l->bag.at(POCKET_BALLS)[0].count == 5);
+	CHECK(l->roamers.empty() && l->flags.empty());
+	// the same RAM in the retail game's layout: not its place (the reason the hack needs its own)
+	RamReader retail(game(GameId::HEARTGOLD, Gen::IV));
+	settle(retail, ram);
+	CHECK(!retail.live()->valid || retail.live()->zone != 33);
+}
+
+// a battle whose battle Pokémon never check out (an hg-engine hack's own BattleMon - Origin HeartGold, 2026-11-04 - or
+// a revision not known): the copies are searched for, but not every 30 s for as long as the battle lasts (each search
+// is ~4 s of a core on the handheld); a new battle may search again
+static void testBattleSearchCap()
+{
+	double now = 0;
+	Ram ram;
+	const uint32_t S = 0x0227E118;
+	ptSave(ram, S, 0x02101D40);
+	RamReader rr(game(GameId::PLATINUM, Gen::IV));
+	RamHints h;
+	h.battleSig = { 0x0223B200, 16 };
+	for (int i = 0; i < 16; i++) h.battleBytes.push_back((uint8_t)(0xA0 + i));
+	rr.setHints(h);
+	CHECK(settleLong(rr, ram, now, 4) && ptRead(rr));
+	auto battle = [&](double seconds)
+	{
+		memcpy(ram.at(0x0223B200), h.battleBytes.data(), 16);	// (in a battle; no copies, no battle Pokémon anywhere)
+		p16(ram.at(0x0224A55A), 0x2100);
+		// (the game's RAM changes every frame in a battle - its animations -: so does the save's money here)
+		uint32_t k = 0;
+		for (double end = now + seconds * 1000; now < end; now += 250)
+		{
+			p32(ram.at(S + 0x7C + 0x14), 1000 + (k++ & 1));
+			rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		}
+		memset(ram.at(0x0223B200), 0, 16);
+		p16(ram.at(0x0224A55A), 0x2800);
+		for (int i = 0; i < 8; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+	};
+	battle(300);	// five minutes
+	const uint32_t first = rr.battleSearches();
+	fprintf(stderr, "a battle that never checks out: %u searches in 5 minutes\n", first);
+	CHECK(first >= 1 && first <= 2);
+	battle(60);		// the next battle searches again
+	CHECK(rr.battleSearches() > first && rr.battleSearches() <= first + 2);
+}
+
 int main(int argc, char** argv)
 {
 	testCrypto();
+	testHackSpecies();
+	testHgEngineSave();
+	testBattleSearchCap();
 	testPlatinum();
 	testBlack2();
 	testDetect();

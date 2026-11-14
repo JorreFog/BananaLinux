@@ -68,6 +68,16 @@ grep -q 'Old Game' "$G" && bad "a gamelist entry for a game that isn't ours"
 bs ra sync > "$OUT/romm-sync2.log" 2>&1
 grep -q "0 to download" "$OUT/romm-sync2.log" || bad "a second sync downloaded again: $(head -2 "$OUT/romm-sync2.log")"
 [ "$(grep -c '<path>./Banana Run' "$G")" = 1 ] || bad "the entry was added twice"
+# a system that makes its own covers (systems.conf: covers = own, as Game & Watch): its game comes, the server's cover
+# and the gamelist's picture for it don't
+card ro
+CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs ro pair "$U" "$CODE" >/dev/null 2>&1 || bad "ro: pairing failed: $(st ro)"
+printf '[gba]\nname = Game Boy Advance\ncovers = own\n' > "$OUT/ro/systems.conf"
+bs ro --systems "$OUT/ro/systems.conf" sync > "$OUT/own-covers.log" 2>&1 || bad "own covers sync: $(tail -3 "$OUT/own-covers.log")"
+has "ro/roms/gba/Banana Run (USA).gba"
+[ -e "$OUT/ro/roms/gba/media/box/Banana Run (USA).png" ] && bad "covers = own: the server's cover was downloaded"
+grep -q '<image>' "$OUT/ro/roms/gba/gamelist.xml" && bad "covers = own: the gamelist names a cover that isn't there"
 # a client token's pairing code (RomM: Profile > Client tokens > Pair) on a second card
 card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')

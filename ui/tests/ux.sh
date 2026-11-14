@@ -117,7 +117,7 @@ ux_run poweroff "home 0; press start; press y; press down; press down; press a; 
 # DS games); the library is read again without it
 mkdir -p "$UXFX/saves/nds" "$UXFX/states/nds" "$UXFX/drastic/backup" "$UXFX/bios"
 for f in "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "saves/nds/Split Racers (USA).sav"; do echo x > "$UXFX/$f"; done
-D7="press down; press down; press down; press down; press down; press down; press down; press down; press down;"  # (9 rows: + 3D resolution, + Timing)
+D7="press down; press down; press down; press down; press down; press down; press down; press down; press down; press down;"  # (10 rows: + 3D resolution, + Timing, + DS CPU speed)
 ux_run delete-keep "lib 0 3; press x; $D7 press a; press b; press b; lib 0 3; press x; $D7 press a; shot ux-delete-ask; press a; wait 300; shot ux-delete-done"
 [ ! -e "$UXFX/roms/nds/Split Racers (USA).nds" ] && [ -e "$UXFX/saves/nds/Split Racers (USA).sav" ] && [ -e "$UXFX/roms/nds/media/box/Split Racers (USA).png" ] \
     || { echo "FAIL $size: Delete game (the game only): $(ls "$UXFX/roms/nds" "$UXFX/saves/nds" | tr '\n' ' ')"; fail=1; }
@@ -149,10 +149,10 @@ ux_check noports-link "press a: used, view 1 sys 5"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice to the last row,
-# Menu look, then up) hides one (Game Boy Advance), then Ports (the row before Files, the last)
+# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R, a page down, then Down:
+# the seventh row, under Speaker EQ) hides one (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home 0; press left; press start; press r; press r; press a; press r; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
+ux_run shelves "home 0; press left; press start; press r; press r; press a; press r; press down; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
@@ -161,12 +161,12 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
-# first language after English (fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
+# languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
 # starts again: settings result 9, LANGUAGE)
-ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langlist; press down; press a; shot ux-langask; press a"
+ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langlist; press down; press down; press a; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
-ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press a; press down; press a"
+ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press down; press a; press down; press a"
 grep -q '^language = fi' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 

@@ -690,7 +690,14 @@ namespace banana::gba
 				empty = !sz && !p;
 				if (empty) return true;
 				if (sz < 1 || sz > 24 || ptrAt(rom, n, a + y.party, 8) < 0) return false;
-				return isText(rom, n, (long)(a + y.name), 11, true);
+				// (or a name the game fills in: a placeholder, 0xFD and its number - the rival the player names -, or
+				// one not given, "???": SoulGold 1.2's 225th and 250th records, where the table seemed to end)
+				const size_t nm = a + (size_t)y.name;
+				if (isText(rom, n, (long)nm, 11, true)) return true;
+				if (nm + 3 <= n && rom[nm] == 0xfd && rom[nm + 2] == 0xff) return true;
+				size_t q = 0;
+				while (q < 10 && nm + q < n && rom[nm + q] == 0xac) q++;
+				return q > 0 && nm + q < n && rom[nm + q] == 0xff;
 			};
 			int best = 0;
 			for (const Lay& y : LAYS)
@@ -1334,7 +1341,6 @@ namespace banana::gba
 		t.numSpecies = L.numSpecies;
 		t.has.modernTypes = true;
 		t.has.ownDex = true;
-		t.has.leadersFromTrainers = false;
 		t.has.plainMons = false;
 		const Dex dex = dexOf(r);
 		t.species.assign((size_t)L.numSpecies, "");
@@ -1378,7 +1384,6 @@ namespace banana::gba
 		t.items.assign((size_t)L.numItems, {});
 		for (int i = 1; i < L.numItems; i++) t.items[i].name = r.itemName(i);
 		t.icons.clear(); t.iconPal.clear();		// (the party icons: not read for these yet)
-		t.leaders.clear(); t.leaderTypes.clear();
 		t.dexEntries = -1; t.wildHeaders = -1; t.trainers = -1; t.learnsets = -1;
 
 		auto p = std::make_shared<OwnProfile>();

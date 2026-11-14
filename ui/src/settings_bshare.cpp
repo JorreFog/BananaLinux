@@ -900,7 +900,7 @@ namespace banana
 				else if (!row.icon.empty()) { ui->icon(row.icon, 34, y + 12, 2); lx = 76; }
 				float vw = row.value.empty() ? 0 : ui->text(row.value, true, 19, 0, 0, vc, false, 0, true);
 				float room = (row.choice ? 556 - vw - 16 : 586 - vw) - lx - 16;
-				ui->text(ui->fit(row.label, true, 20, room), true, 20, lx, y + 16, c);
+				{ Settings::AsNamed named(*ui, row.kind == K_ITEM || row.kind == K_PEER); ui->text(ui->fit(row.label, true, 20, room), true, 20, lx, y + 16, c); }	// (names as they are)
 				if (row.value.empty()) continue;
 				std::string v = ui->fit(row.value, true, 19, row.choice ? 300 : 330);
 				vw = ui->text(v, true, 19, 0, 0, vc, false, 0, true);

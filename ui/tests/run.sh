@@ -36,7 +36,8 @@ make -s -C "$HERE" tests/nds-pages-test >/dev/null && "$HERE/tests/nds-pages-tes
 make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2> "$OUT/nds-ram-test.log" || { echo "FAIL the DS companion's RAM reader: $(grep FAIL "$OUT/nds-ram-test.log" | head -3)"; fail=1; }
 # the GBA Pokémon games' ROM data for the DS companion's pages (src/gba/gen3rom.*): header checks, and on the player's own
 # ROMs when GBA_ROMS names a folder of them (tests/gba-rom-test <roms dir> [png dir] on a PC that has them)
-make -s -C "$HERE" tests/gba-rom-test >/dev/null && "$HERE/tests/gba-rom-test" 2> "$OUT/gba-rom-test.log" || { echo "FAIL the GBA companion's ROM reader: $(grep FAIL "$OUT/gba-rom-test.log" | head -3)"; fail=1; }
+# (and each ROM's guide: every place a zone of it, every milestone's foe one of its trainers)
+make -s -C "$HERE" tests/gba-rom-test >/dev/null && BANANA_GBA_GUIDE="$HERE/../system/rootfs/usr/share/banana/companions/gba-pokemon" "$HERE/tests/gba-rom-test" 2> "$OUT/gba-rom-test.log" || { echo "FAIL the GBA companion's ROM reader: $(grep FAIL "$OUT/gba-rom-test.log" | head -3)"; fail=1; }
 # the pokeemerald-expansion ROM hacks (src/gba/expansion.*): the smol decoder, and the owner's four hacks when GBA_HACKS
 # (default ~/gba-companion/hacks) has them
 make -s -C "$HERE" tests/gba-exp-test >/dev/null && "$HERE/tests/gba-exp-test" 2> "$OUT/gba-exp-test.log" || { echo "FAIL the GBA companion's expansion hacks: $(grep FAIL "$OUT/gba-exp-test.log" | head -3)"; fail=1; }
@@ -46,8 +47,13 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the translations: a line's %d takes a number only, not a game's or a file's name
+make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
+# the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
+make -s -C "$HERE" tests/eq-test >/dev/null && "$HERE/tests/eq-test" > "$OUT/eq-test.log" || { echo "FAIL the speaker EQ: $(grep FAIL "$OUT/eq-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
 awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg" | while read -r ic; do
     [ -f "$HERE/assets/rnds/icons/$ic" ] || { echo "FAIL systems.cfg: no icons/$ic"; exit 1; }
@@ -206,7 +212,7 @@ for size in 640x480 1024x768; do
     # touch, START; up to Name, one letter deleted, START: both in game-titles.tsv, and the game first on the shelf
     tlog=$OUT/$size-titles.log; T="$FX/data/game-titles.tsv"; rm -f "$T"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
             press up; press a; press b; press start; wait 300; shot titles-done" 2> "$tlog" || { echo "FAIL $size: banana-ui (titles) exited $?"; fail=1; }
     [ "$(cat "$T" 2>/dev/null)" = "$(printf 'nds/Yellow Planet [!].zip\tYellow Plane\ta')" ] || { echo "FAIL $size: game-titles.tsv: $(cat "$T" 2>/dev/null)"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
@@ -234,32 +240,58 @@ for size in 640x480 1024x768; do
     grep -q "resume after power-off: /run/sd2/roms/gba/Later.gba is on the second SD card, waiting" "$rlog" || { echo "FAIL $size: second card game: $(tail -n 3 "$rlog")"; fail=1; }
     [ -e "$FX/data/resume-boot" ] && { echo "FAIL $size: resume-boot (second card) not consumed"; fail=1; }
     rm -f "$FX/data/resume-boot"
-    # Screen colours (N3): Display & sound > Screen colours (the eighth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
+    # Screen colours (N3): Display & sound > Screen colours (the ninth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
     # in screen-colors.conf; then X (no correction) and A: "none"
     clog=$OUT/$size-colors.log; CF="$FX/data/screen-colors.conf"; rm -f "$CF"
     L10="press left; press left; press left; press left; press left; press left; press left; press left; press left; press left;"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.90' "$CF" || { echo "FAIL $size: screen-colors.conf: $(tr '\n' ' ' < "$CF" 2>/dev/null)"; fail=1; }
     # X is no correction on the Screen row too: from the bottom kept, X then Right is None -> the bottom again (it
     # stayed "Correct the bottom" and Right went to the top); Red one step (0.99) and A keep that
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours X) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.99' "$CF" || { echo "FAIL $size: X didn't set the Screen row to None: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 2) exited $?"; fail=1; }
     grep -qx 'screen = none' "$CF" && grep -qx 'red = 1.00' "$CF" || { echo "FAIL $size: X then A didn't take the correction away: $(tr '\n' ' ' < "$CF")"; fail=1; }
     # a file edited by hand (review M1/L1): a capital, an empty value, a letter O for a zero, an indented key: the page
     # opens on them read as meant (empty and wrong: the default, not the bottom of the range), and A keeps that
     printf 'screen = Bottom\nred =\ngreen = O.9\n  blue = 0.8\n' > "$CF"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 3) exited $?"; fail=1; }
     [ "$(grep -E '^(screen|red|green|blue) ' "$CF" | tr '\n' ' ')" = "screen = bottom red = 1.00 green = 1.00 blue = 0.80 " ] || { echo "FAIL $size: a hand-edited file: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     rm -f "$CF"
+    # Speaker EQ: Display & sound > Speaker EQ (the second row). The page writes what the speakers' ALSA plugin plays
+    # (BANANA_SPEAKER_EQ stands in for /run/banana/speaker-eq): the RG DS Plus's tuned profile from the start; 8 kHz
+    # down 3 dB and A keeps it in settings.conf and the file; B puts back what was kept; Off and A: no file; a profile of
+    # the player's own in banana/speaker-eq (comments dropped, its preamp kept), picked with Right twice from Tuned
+    elog=$OUT/$size-speaker-eq.log; EQF=$OUT/$size-speaker-eq; S="$FX/data/settings.conf"; rm -f "$EQF"
+    EQ_OPEN="home 0; press start; press r; press r; press a; press down; press a;"
+    eqrun() { BANANA_BOARD=rgds-plus BANANA_SPEAKER_EQ="$EQF" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$elog" \
+        || { echo "FAIL $size: banana-ui (speaker EQ: $2) exited $?"; fail=1; }; }
+    eqrun "$EQ_OPEN shot speaker-eq; press b" "open"
+    [ "$(grep -c '^Filter [0-9]*: ON ' "$EQF" 2>/dev/null)" = 7 ] && grep -q '^Preamp: -3.00 dB' "$EQF" \
+        || { echo "FAIL $size: the tuned profile isn't what the plugin is given: $(tr '\n' ' ' < "$EQF" 2>/dev/null)"; fail=1; }
+    eqrun "$EQ_OPEN press down; press down; press down; press down; press down; press down; press down; press left; press left; press left; shot speaker-eq-8k; press a" "8 kHz"
+    grep -qx 'speaker_eq_bands = 0,0,0,0,0,-3,0' "$S" && grep -q '^Filter 8: ON PK Fc 8000.00 Hz Gain -3.00 dB Q 1.4100' "$EQF" \
+        || { echo "FAIL $size: 8 kHz -3 dB not kept: $(grep '^speaker_eq' "$S" | tr '\n' ' ') / $(tail -n 1 "$EQF" 2>/dev/null)"; fail=1; }
+    eqrun "$EQ_OPEN press right; press b" "cancel"
+    grep -qx 'speaker_eq = on' "$S" && [ "$(grep -c '^Filter' "$EQF" 2>/dev/null)" = 8 ] || { echo "FAIL $size: B didn't put back what was kept"; fail=1; }
+    eqrun "$EQ_OPEN press right; shot speaker-eq-off; press a" "off"
+    grep -qx 'speaker_eq = off' "$S" && [ ! -e "$EQF" ] || { echo "FAIL $size: Off kept a file for the plugin"; fail=1; }
+    mkdir -p "$FX/data/speaker-eq"
+    printf '# from AutoEq\nPreamp: -2 dB\nFilter 1: ON PK Fc 3000 Hz Gain -4 dB Q 2   # the shrill one\nFilter 2: OFF PK Fc 100 Hz Gain 5 dB Q 1\n' > "$FX/data/speaker-eq/Mine.txt"
+    eqrun "$EQ_OPEN press right; press down; press right; press right; press x; shot speaker-eq-mine; press a" "own profile"
+    grep -qx 'speaker_eq_profile = Mine.txt' "$S" && grep -qx 'speaker_eq_bands = 0,0,0,0,0,0,0' "$S" && grep -q '^Preamp: -2.00 dB' "$EQF" \
+        && [ "$(grep -c '^Filter' "$EQF")" = 1 ] && grep -q '^Filter 1: ON PK Fc 3000.00 Hz Gain -4.00 dB Q 2.0000$' "$EQF" \
+        || { echo "FAIL $size: the card's profile: $(grep '^speaker_eq' "$S" | tr '\n' ' ') / $(tr '\n' ' ' < "$EQF" 2>/dev/null)"; fail=1; }
+    rm -rf "$FX/data/speaker-eq" "$EQF"; sed -i '/^speaker_eq/d' "$S"
     # a DS game's own Threaded 3D and microphone (#27): X on the first DS game, down to Threaded 3D, right (On), down to
     # Microphone, right (Low), A: both kept per game; then both back to "As in Settings": no lines (and no files) left
     plog3=$OUT/$size-pergame-opts.log; F3="$FX/data/nds-per-game-3d.conf"; FM="$FX/data/nds-per-game-mic.conf"; rm -f "$F3" "$FM"
@@ -305,6 +337,17 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press left; press left; press a" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (game timing 2) exited $?"; fail=1; }
     [ -e "$FT" ] && { echo "FAIL $size: timing back to As in Settings left $(cat "$FT")"; fail=1; }
+    # a DS game's own DS CPU speed (Origin HeartGold's 1066 MHz while another stays as in Settings): down to the row after
+    # Timing, right to 67 MHz, right to 133: kept at once; left twice back to "As in Settings": no file left
+    FC="$FX/data/nds-per-game-cpu.conf"; rm -f "$FC"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press down; press right; press right; shot pergame-cpu; press b" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game CPU speed) exited $?"; fail=1; }
+    [ "$(cat "$FC" 2>/dev/null)" = "Banana Kart DS.nds = 133" ] || { echo "FAIL $size: game CPU speed: $(cat "$FC" 2>&1)"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press down; press down; press down; press left; press left; press a" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game CPU speed 2) exited $?"; fail=1; }
+    [ -e "$FC" ] && { echo "FAIL $size: CPU speed back to As in Settings left $(cat "$FC")"; fail=1; }
     # review fixes on the game page and the keyboard: m7 a pre-filled "Café" loses its whole é to one B (not half of it);
     # m4 a name of its own deleted, then the scraped one typed again: no name of its own; m6 a sharing name with the
     # password step left by B: nothing written
@@ -312,10 +355,10 @@ for size in 640x480 1024x768; do
     printf 'nds/Yellow Planet [!].zip\tCafé\t\n' > "$TT"
     run_r() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" || { echo "FAIL $size: banana-ui (review) exited $?"; fail=1; }; }
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press a; press b; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press start"
     [ "$(cat "$TT")" = "$(printf 'nds/Yellow Planet [!].zip\tCaf\t')" ] || { echo "FAIL $size: m7 UTF-8 delete: $(od -c "$TT" | head -2 | tr -s ' ')"; fail=1; }
     printf 'nds/Yellow Planet [!].zip\tCustom\t\n' > "$TT"
-    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
     [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
     rm -f "$TT" "$FX/data/accounts.conf"
     run_r "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; press b; press start; press b"
@@ -408,21 +451,91 @@ for size in 640x480 1024x768; do
         done
     done
     # the game panel with the Pokémon companion (a made-up Emerald with made-up icons, RetroArch's replies from the
-    # decoder's test): the party, a member's summary by touch, another member from the strip, back, a battle (shown by
-    # itself), the Game tab (the panel's tiles and achievements); then the same in the light theme and in Chinese
+    # decoder's test): its pages from the start - the made-up ROM is none of the games the pages read, so "Not
+    # supported" alone, as for a ROM hack not in the list -, Back to game (the tiles, no tabs of the pages), a battle
+    # (the tiles stay);
+    # then the same in the light theme and in Chinese
     klog=$OUT/$size-pokemon.log
-    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 100 70; gshot pk-mon; gtouch 470 200; gshot pk-mon-stats; \
-        gtouch 134 384; gshot pk-mon2; gtouch 570 384; gshot pk-back; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; \
-        pokefeed $OUT/poke-battle.txt; gshot pk-battle; gtouch 580 447; gshot pk-game"
+    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; gbahost; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 600 28; gshot pk-game; \
+        gtouch 185 447; gshot pk-team; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle; \
+        gbutton back; gbutton back; gbutton back; gbutton f; gbutton f; gbutton l3"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$pkscript; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot pk-none" 2> "$klog" ||
         { echo "FAIL $size: banana-ui (Pokémon companion) exited $?"; fail=1; }
     kcheck() { grep -q "$1" "$klog" || { echo "FAIL $size: no '$1' (Pokémon companion)"; fail=1; }; }
     kcheck "gamepanel .*poke.gba: companion Pokémon Emerald"
     kcheck "413 icons (413 palette numbers, 3 palettes), 6 growth rates"
-    kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
-    kcheck "pokefeed .*poke-battle.txt: asked 6, party 4, battle 1, foes 1"
+    kcheck "gbahost: unsupported .*view pages:Party"
+    kcheck "pokefeed .*poke-party.txt: asked [0-9]*, party 4, battle 0, foes 0, view pages:Party"
+    kcheck "gtouch 600 28: action 0 keys 0 view game"
+    kcheck "gtouch 185 447: action 0 keys 0 view game"
+    kcheck "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view game"
+    # the switch: Back (its job Companion, the template's) the companion and the menu again; F the menu, and nothing on
+    # it; L3 (the game's own) nothing
+    kcheck "gbutton back: switched view pages:"
+    kcheck "gbutton back: switched view game"
+    kcheck "gbutton f: switched view game"
+    kcheck "gbutton f: nothing view game"
+    kcheck "gbutton l3: nothing view game"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
+    # the GBA companion's pages (gba/panel.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): its
+    # data read, Back to game shows the tiles with the pages' own tabs, and each of those opens its page
+    EM=$(ls "${GBA_ROMS:-$HOME/gba-companion/roms}"/*Emerald*.gba 2>/dev/null | head -n 1)
+    if [ -n "$EM" ]; then
+        GL=$OUT/$size-gba-pages.log
+        gs="home 0; gamepanel 1 $EM; pokefeed $OUT/poke-party.txt; gbahost; gshot gba-pages"
+        # Menu (the pages' corner) shows the menu, the icon in the same corner the pages again; then each page by the
+        # pages' own tabs (eight across the dock, x 12..628)
+        gs="$gs; gtouch 600 28; gshot gba-game; gtouch 600 28; gshot gba-again"
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            gs="$gs; gtouch $((12 + i * 604 / 8 + 604 / 16)) 447; gshot gba-tab-$page"
+            i=$((i + 1))
+        done
+        # a battle starting shows the Battle page (the made-up battle's replies on the player's Emerald)
+        gs="$gs; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot gba-battle"
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
+        grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
+        grep -q "pokefeed .*poke-battle.txt: asked [0-9]*, party 4, battle 1, foes 1, view pages:Battle" "$GL" || { echo "FAIL $size: a battle didn't show the Battle page: $(grep poke-battle "$GL" | tail -1)"; fail=1; }
+        # a Spanish release (#181: Esmeralda, BPES, the English one's tables) is read as its game, not "unsupported"
+        # (#209's new pages knew the English codes only): the player's Emerald with the Spanish code
+        ES=$OUT/esmeralda.gba; cp "$EM" "$ES"; printf 'BPES' | dd of="$ES" bs=1 seek=172 conv=notrunc 2>/dev/null
+        EL=$OUT/$size-gba-es.log
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $ES; pokefeed $OUT/poke-party.txt; gbahost; gshot gba-es" 2> "$EL" ||
+            { echo "FAIL $size: banana-ui (Esmeralda) exited $?"; fail=1; }
+        grep -q "gbahost: ready Esmeralda view pages:" "$EL" || { echo "FAIL $size: the Spanish Emerald: $(grep gbahost "$EL")"; fail=1; }
+        rm -f "$ES"
+        grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Menu didn't show the menu: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view pages:" "$GL" || { echo "FAIL $size: the menu's icon didn't show the pages: $(grep 'gtouch 600' "$GL" | tail -1)"; fail=1; }
+        cmp -s "$OUT/$size-gba-pages-bot.png" "$OUT/$size-gba-game-bot.png" && { echo "FAIL $size: the menu is the pages' picture"; fail=1; }
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            # (Battle: dimmed outside a battle, the tap stays on the page before)
+            x=$((12 + i * 604 / 8 + 604 / 16))
+            if [ $page = Battle ]; then want="pages:"; else want="pages:$page\$"; fi
+            grep -q "gtouch $x 447: action 0 keys 0 view $want" "$GL" || { echo "FAIL $size: the pages' $page tab: $(grep "gtouch $x 447" "$GL")"; fail=1; }
+            i=$((i + 1))
+        done
+    else
+        echo "the GBA pages' panel test skipped (no Emerald ROM in GBA_ROMS)"
+    fi
+    # Pokémon Unbound (CFRU; GBA_HACKS, default ~/gba-companion/hacks): its pages take the panel too (2026-11-04: it
+    # had only the old views), and switch with the menu
+    UB=$(find "${GBA_HACKS:-$HOME/gba-companion/hacks}" -maxdepth 2 -name '*Unbound*.gba' 2>/dev/null | head -n 1)
+    if [ -n "$UB" ]; then
+        UL=$OUT/$size-gba-unbound.log
+        "$HERE/banana-ui" --headless "$OUT/$size-ub-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $UB; gbahost; gshot ub-pages; gtouch 600 28; gshot ub-game; gtouch 600 28; gshot ub-again" 2> "$UL" ||
+            { echo "FAIL $size: banana-ui (Unbound's pages) exited $?"; fail=1; }
+        grep -q "gbahost: ready Unbound view pages:" "$UL" || { echo "FAIL $size: Unbound's pages: $(grep -E 'gbahost|gba companion' "$UL" | head -n 3 | tr '\n' ' ')"; fail=1; }
+        # (no save fed: the pages wait for it, their tabs not yet usable - the switch both ways)
+        grep -q "gtouch 600 28: action 0 keys 0 view game" "$UL" || { echo "FAIL $size: Unbound's Menu: $(grep 'gtouch 600' "$UL" | head -1)"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view pages:" "$UL" || { echo "FAIL $size: Unbound's icon: $(grep 'gtouch 600' "$UL" | tail -1)"; fail=1; }
+    else
+        echo "the Unbound panel test skipped (no Unbound ROM in GBA_HACKS)"
+    fi
     # the game panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the Keys tile opens it, a key types,
     # Done brings the tiles back (BANANA_TEST_VKBD: the tile without a /dev/uinput device)
     KK=$OUT/$size-keys.log
@@ -438,22 +551,24 @@ for size in 640x480 1024x768; do
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }
-    for s in pk-wait pk-party pk-mon pk-mon-stats pk-mon2 pk-back pk-battle pk-game pk-none zh-pk-party zh-pk-mon zh-pk-mon-stats zh-pk-battle zh-pk-game; do
+    for s in pk-wait pk-party pk-game pk-team pk-battle pk-none zh-pk-party zh-pk-game zh-pk-team zh-pk-battle; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
     done
     # the game panel with the game companion (gamecomp.h; definitions from the companion data in tests/companions):
-    # Castlevania's seven pages by their tabs with RetroArch's replies for each, a list row opened and closed, the Game
-    # tab; Golden Sun's party list; Tetris Worlds (reference pages: nothing read); Emerald (the Pokémon companion's)
+    # Castlevania's seven pages by their tabs with RetroArch's replies for each, a list row opened and closed, Menu (the
+    # corner) to the menu, its icon and Back back to the companion, F to the menu; Golden Sun's party list; Tetris
+    # Worlds (reference pages: nothing read); Emerald (the Pokémon companion's)
     glog=$OUT/$size-gamecomp.log
     tab() { echo "gtouch $((18 + 604 * $1 / $2 + 302 / $2)) 447"; }
     gcs="home 0; gcpanel 1 $HERE/tests/companions $OUT/gc-castlevania.gba; gshot gc-wait; gcfeed $OUT/gc-cv-status.txt; gshot gc-status"
     i=1; for pg in detail battle map bag collection progress; do
-        gcs="$gcs; $(tab $i 8); gcfeed $OUT/gc-cv-$pg.txt; gshot gc-$pg"; i=$((i + 1))
+        gcs="$gcs; $(tab $i 7); gcfeed $OUT/gc-cv-$pg.txt; gshot gc-$pg"; i=$((i + 1))
     done
-    gcs="$gcs; $(tab 4 8); gcfeed $OUT/gc-cv-bag.txt; gshot gc-bag2; gtouch 200 175; gshot gc-row; gtouch 200 175; gshot gc-row-back; $(tab 7 8); gshot gc-game"
-    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-goldensun.gba; gcfeed $OUT/gc-gs-status.txt; gshot gc-gs-status; $(tab 1 8); gcfeed $OUT/gc-gs-detail.txt; gshot gc-gs-detail"
+    gcs="$gcs; $(tab 4 7); gcfeed $OUT/gc-cv-bag.txt; gshot gc-bag2; gtouch 200 175; gshot gc-row; gtouch 200 175; gshot gc-row-back; gtouch 600 28; gshot gc-game"
+    gcs="$gcs; gtouch 600 28; gbutton back; gbutton back; gbutton f; gbutton f"
+    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-goldensun.gba; gcfeed $OUT/gc-gs-status.txt; gshot gc-gs-status; $(tab 1 7); gcfeed $OUT/gc-gs-detail.txt; gshot gc-gs-detail"
     gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-tetris.gba; gcfeed -; gshot gc-tetris; gcpanel 1 $HERE/tests/companions $OUT/gc-emerald.gba"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "$gcs" 2> "$glog" || { echo "FAIL $size: banana-ui (game companion) exited $?"; fail=1; }
@@ -463,6 +578,12 @@ for size in 640x480 1024x768; do
     gcheck "gcpanel .*gc-goldensun.gba: companion Golden Sun"
     gcheck "gcfeed -: asked 0 () seen 1"
     gcheck "gcpanel .*gc-emerald.gba: companion none"
+    gcheck "gtouch 600 28: action 0 keys 0 view game"
+    gcheck "gtouch 600 28: action 0 keys 0 view gc:bag"
+    gcheck "gbutton back: switched view game"
+    gcheck "gbutton back: switched view gc:bag"
+    gcheck "gbutton f: switched view game"
+    gcheck "gbutton f: nothing view game"
     for s in gc-wait gc-status gc-detail gc-battle gc-map gc-bag gc-collection gc-progress gc-row gc-row-back gc-game gc-gs-status gc-gs-detail gc-tetris; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
@@ -477,7 +598,8 @@ for size in 640x480 1024x768; do
     # the first-time setup's slides and the first boot's arrival
     . "$HERE/tests/setup.sh"
     # each view drew something of its own (not the same frame again)
-    for pair in "pk-party pk-mon" "pk-mon pk-mon2" "pk-mon2 pk-back" "pk-back pk-battle" "pk-battle pk-game" "pk-party zh-pk-party"; do
+    # (a ROM not supported: the tiles have no tabs and a battle leaves them be, so pk-game, pk-team and pk-battle match)
+    for pair in "pk-party pk-game" "pk-party zh-pk-party"; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
@@ -916,6 +1038,7 @@ PY
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
+OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
 # home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
 # the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket
@@ -942,6 +1065,73 @@ PY
         grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
     done
 fi
+# search: a word with a genre's spelling of its own ("rpg": role playing) finds the genre and a game with the word in its name
+SX=$OUT/search-fx; "$HERE/tests/fixture.sh" "$SX" >/dev/null
+cp "$SX/roms/snes/Super Smoothie World.sfc" "$SX/roms/snes/Super Mario RPG (USA).sfc"
+printf '<gameList><game><path>./Super Smoothie World.sfc</path><name>Super Smoothie World</name><genre>Role Playing Game</genre></game></gameList>\n' > "$SX/roms/snes/gamelist.xml"
+for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; do
+    q=${qn%:*}
+    "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
+    grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
+done
+# a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
+# under its name gets its own again
+IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null
+mkdir -p "$IX/roms/nds/A" "$IX/roms/nds/B"
+python3 -I -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); open(sys.argv[2], "wb").write(z.read([n for n in z.namelist() if n.endswith(".nds")][0]))' \
+    "$IX/roms/nds/Yellow Planet [!].zip" "$IX/roms/nds/B/Game.nds"
+mv "$IX/roms/nds/Peel Quest.nds" "$IX/roms/nds/A/Game.nds"
+irun() { "$HERE/banana-ui" --headless "$OUT/icons-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+    --roms "$IX/roms" --data "$IX/data" --script "$1" 2>> "$OUT/icons.log" || { echo "FAIL: banana-ui (icons) exited $?"; fail=1; }; }
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+icn() { find "$IX/data/cache/icons" -name "Game.nds*" $1 | wc -l; }
+[ "$(icn)" = 2 ] && [ "$(icn -empty)" = 1 ] || { echo "FAIL: icons: A/Game.nds and B/Game.nds share a cached icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+cp "$IX/roms/nds/B/Game.nds" "$IX/roms/nds/A/Game.nds"; touch -d '2001-01-01' "$IX/roms/nds/A/Game.nds"
+irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
+[ "$(icn '! -empty')" = 2 ] || { echo "FAIL: icons: a ROM replaced under its name kept the old one's (no) icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+# a layout theme's absurd numbers (a text's size and spacing, its lines, a shadow's blur, a list's count) draw
+# nothing much, and never take the menu down (a 1e6 px text asked for terabytes)
+BT2=$OUT/bad-theme.json
+sed -e 's/"text": "{sys.played}", "font": "inter-bold", "size": 20/"text": "{sys.played}", "font": "inter-bold", "size": 1e6/' \
+    -e 's/"text": "{upper(sys.maker)}", "size": 13, "spacing": 2/"text": "{upper(sys.maker)}", "size": "=1e308", "spacing": 1e6, "maxLines": 1e300, "wrap": true/' \
+    -e 's/"blur": 14/"blur": 1e300/' -e 's/"fit": "pixelContain", "x": 320, "y": 150, "w": 128, "h": 128/"fit": "pixelContain", "x": 320, "y": 150, "w": 1e6, "h": 1e6/' \
+    -e 's/"text": "{clock}", "font": "inter-semibold", "size": 15/"text": "{clock}", "font": "inter-semibold", "size": -5/' "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" > "$BT2"
+[ "$(grep -c '1e6\|1e300' "$BT2")" -ge 3 ] || { echo "FAIL: bad theme: the sed didn't apply"; fail=1; }
+"$HERE/banana-ui" --headless "$OUT/badtheme-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT2" \
+    --script "home 0; wait 300; shot home; press a; wait 300; shot lib; wait 1" 2> "$OUT/badtheme.log" ||
+    { echo "FAIL: a theme's absurd numbers took the menu down (exit $?): $(grep -m1 -i 'terminate\|error' "$OUT/badtheme.log")"; fail=1; }
+BT3=$OUT/bad-range.json
+sed -e 's/"count": 12,/"count": 1e300, "loop": true,/' -e 's/"range": 64/"range": 1e9/' "$HERE/../system/rootfs/usr/share/banana/themes/swiss-poster.json" > "$BT3"
+timeout 60 "$HERE/banana-ui" --headless "$OUT/badrange-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT3" \
+    --script "home 0; wait 300; shot home; wait 1" 2> "$OUT/badrange.log" || { echo "FAIL: a theme's list of 1e300 items took the menu down (exit $?)"; fail=1; }
+# what the player named is drawn as it is: a language whose lines match the fixture's game titles, file names, a
+# network's and a Bluetooth device's names ("Peel %s", "Split %s", "Office", "Cafe Free", "Wireless Controller") must
+# draw every one of these screens exactly as English does (the translator once made "Keep Calm" "Säilytä Calm")
+VX=$OUT/verbatim; rm -rf "$VX"; mkdir -p "$VX/assets/lang" "$VX/assets/rnds"; ln -s "$HERE/assets/rnds/"* "$VX/assets/rnds/"	# (rnds/../lang: the test's)
+printf '#: language = Test\n#: translated-by = nobody\nmenu\t\tPeel %%s\tZZ %%s\nmenu\t\tSplit %%s\tZZ %%s\nsettings\t\tPeel %%s\tZZ %%s\nsettings\t\tOffice\tZZ\nsettings\t\tCafe Free\tZZ\nsettings\t\tWireless Controller\tZZ\n' > "$VX/assets/lang/xx.tsv"
+for l in en xx; do
+    "$HERE/tests/fixture.sh" "$VX/fx-$l" >/dev/null
+    printf 'language = %s\n' $l >> "$VX/fx-$l/data/settings.conf"
+    vrun() { BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
+        "$HERE/banana-ui" --headless "$VX/$l-" --size 640x480 --assets "$VX/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$VX/fx-$l/roms" --data "$VX/fx-$l/data" "$@" 2>> "$VX/$l.log" ||
+        { echo "FAIL: banana-ui (verbatim, $l) exited $?"; fail=1; }; }
+    vrun --script "homeid nds; press a; wait 2400; press right; press right; wait 2400; shot lib; press right; wait 2400; shot lib2; press x; shot page"
+    vrun --theme "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" --script "homeid nds; press a; wait 1000; press down; press down; wait 1000; shot llib"
+    vrun --script "homeid files; press a; press a; press down; press a; press down; press down; press a; shot folder"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press a; wait 2500; shot wifi"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press down; press a; press right; wait 300; press down; press a; shot bt"
+done
+grep -q "language: Test (xx)" "$VX/xx.log" || { echo "FAIL: verbatim: the test language wasn't loaded"; fail=1; }
+for s in lib lib2 page llib folder wifi bt; do
+    for p in top bot; do
+        d=$(compare -metric AE "$VX/en-$s-$p.png" "$VX/xx-$s-$p.png" null: 2>&1) || true; d=${d%% *}
+        [ "$d" = 0 ] || { echo "FAIL: verbatim: $s-$p differs from English ($d px): a name went through the translator"; fail=1; }
+    done
+done
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png

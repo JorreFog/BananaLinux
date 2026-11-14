@@ -1,0 +1,3247 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "unbound",
+ "code": "BPRE",
+ "title": "Pokémon Unbound",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Unbound v2.1.1.1, FireRed base): region map section names, trainer names, teams and levels, species and evolution methods, map hidden items, read on the PC with throwaway tools",
+  "unboundwiki.com: Pokémon Unbound walkthrough parts 1-40",
+  "unboundwiki.com: legendary Pokémon, missions, raid dens, evolution items, mining items",
+  "gamebrew.org: Pokemon Unbound (GBA): features and change log (v2.1.1.1)"
+ ],
+ "places": {
+  "frozen-heights": {
+   "name": "Frozen Heights"
+  },
+  "route-1": {
+   "name": "Route 1"
+  },
+  "bellin-town": {
+   "name": "Bellin Town"
+  },
+  "icicle-cave": {
+   "name": "Icicle Cave"
+  },
+  "route-2": {
+   "name": "Route 2"
+  },
+  "dresco-town": {
+   "name": "Dresco Town"
+  },
+  "route-3": {
+   "name": "Route 3"
+  },
+  "flower-paradise": {
+   "name": "Flower Paradise"
+  },
+  "grim-woods": {
+   "name": "Grim Woods"
+  },
+  "route-4": {
+   "name": "Route 4"
+  },
+  "cinder-volcano": {
+   "name": "Cinder Volcano"
+  },
+  "route-5": {
+   "name": "Route 5"
+  },
+  "day-care": {
+   "name": "Pokémon Day Care"
+  },
+  "crater-town": {
+   "name": "Crater Town"
+  },
+  "kbt-expressway": {
+   "name": "KBT Expressway"
+  },
+  "valley-cave": {
+   "name": "Valley Cave"
+  },
+  "route-6": {
+   "name": "Route 6"
+  },
+  "route-7": {
+   "name": "Route 7"
+  },
+  "frost-mountain": {
+   "name": "Frost Mountain"
+  },
+  "route-8": {
+   "name": "Route 8"
+  },
+  "blizzard-city": {
+   "name": "Blizzard City"
+  },
+  "frozen-forest": {
+   "name": "Frozen Forest"
+  },
+  "fallshore-city": {
+   "name": "Fallshore City"
+  },
+  "route-11": {
+   "name": "Route 11"
+  },
+  "epidimy-town": {
+   "name": "Epidimy Town"
+  },
+  "route-10": {
+   "name": "Route 10"
+  },
+  "tehl-town": {
+   "name": "Tehl Town"
+  },
+  "underground-pass": {
+   "name": "Underground Pass"
+  },
+  "route-9": {
+   "name": "Route 9"
+  },
+  "thundercap-mt": {
+   "name": "Thundercap Mt."
+  },
+  "cliff-cave": {
+   "name": "Cliff Cave"
+  },
+  "tarmigan-town": {
+   "name": "Tarmigan Town"
+  },
+  "tarmigan-mansion": {
+   "name": "Tarmigan Mansion"
+  },
+  "route-12": {
+   "name": "Route 12"
+  },
+  "dehara-city": {
+   "name": "Dehara City"
+  },
+  "dehara-dept": {
+   "name": "Dehara Dept."
+  },
+  "game-corner": {
+   "name": "Game Corner"
+  },
+  "ruins-of-void": {
+   "name": "Ruins of Void"
+  },
+  "cube-space": {
+   "name": "Cube Space"
+  },
+  "shadow-base": {
+   "name": "Shadow Base"
+  },
+  "route-13": {
+   "name": "Route 13"
+  },
+  "route-14": {
+   "name": "Route 14"
+  },
+  "auburn-waterway": {
+   "name": "Auburn Waterway"
+  },
+  "lost-tunnel": {
+   "name": "Lost Tunnel"
+  },
+  "great-desert": {
+   "name": "Great Desert"
+  },
+  "tomb-of-borrius": {
+   "name": "Tomb of Borrius"
+  },
+  "gurun-town": {
+   "name": "Gurun Town"
+  },
+  "vivill-woods": {
+   "name": "Vivill Woods"
+  },
+  "vivill-town": {
+   "name": "Vivill Town"
+  },
+  "vivill-warehouse": {
+   "name": "Vivill Warehouse"
+  },
+  "distortion-world": {
+   "name": "Distortion World"
+  },
+  "rift-cave": {
+   "name": "Rift Cave"
+  },
+  "route-15": {
+   "name": "Route 15"
+  },
+  "route-16": {
+   "name": "Route 16"
+  },
+  "route-17": {
+   "name": "Route 17"
+  },
+  "antisis-city": {
+   "name": "Antisis City"
+  },
+  "antisis-port": {
+   "name": "Antisis Port"
+  },
+  "antisis-sewers": {
+   "name": "Antisis Sewers"
+  },
+  "ferrothorn-turf": {
+   "name": "Ferrothorn Turf"
+  },
+  "icy-hole": {
+   "name": "Icy Hole"
+  },
+  "seaport-city": {
+   "name": "Seaport City"
+  },
+  "ss-marine": {
+   "name": "S.S. Marine"
+  },
+  "polder-town": {
+   "name": "Polder Town"
+  },
+  "safari-zone": {
+   "name": "Safari Zone"
+  },
+  "cootes-bog": {
+   "name": "Cootes Bog"
+  },
+  "magnolia-town": {
+   "name": "Magnolia Town"
+  },
+  "crystal-peak": {
+   "name": "Crystal Peak"
+  },
+  "magnolia-fields": {
+   "name": "Magnolia Fields"
+  },
+  "redwood-village": {
+   "name": "Redwood Village"
+  },
+  "redwood-forest": {
+   "name": "Redwood Forest"
+  },
+  "route-18": {
+   "name": "Route 18"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "pokemon-league": {
+   "name": "Pokémon League"
+  },
+  "battle-frontier": {
+   "name": "Battle Frontier"
+  },
+  "newmoon-island": {
+   "name": "Newmoon Island"
+  },
+  "fullmoon-island": {
+   "name": "Fullmoon Island"
+  },
+  "desert-ruins": {
+   "name": "Desert Ruins"
+  },
+  "cave-of-being": {
+   "name": "Cave of Being"
+  }
+ },
+ "milestones": [
+  {
+   "id": "shadow-base-escape",
+   "name": "Escape the Shadow Base",
+   "kind": "team",
+   "place": "shadow-base",
+   "level_cap": 7,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Shadow",
+     "ace_level": 7
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "shadow-base",
+    "route-1",
+    "frozen-heights"
+   ],
+   "tips": "The game opens in a Shadow warehouse: you and the rival take on a grunt's Inkay and Skorupi together in a double battle, then slip out through a secret tunnel to Route 1.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 1"
+  },
+  {
+   "id": "rival-1",
+   "name": "Rival: first battle",
+   "kind": "rival",
+   "place": "frozen-heights",
+   "level_cap": 10,
+   "foe": [
+    {
+     "name": "Rival 1",
+     "class": "Rival",
+     "ace_level": 10
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "bellin-town"
+   ],
+   "tips": "Professor Log offers Beldum, Gible or Larvitar (Lv 10); the rival takes one of the other two and battles you on the spot.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 1"
+  },
+  {
+   "id": "grunt-package",
+   "name": "Recover the stolen package",
+   "kind": "team",
+   "place": "frozen-heights",
+   "level_cap": 9,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Shadow",
+     "ace_level": 9
+    }
+   ],
+   "done_when": "later",
+   "tips": "On the north side of Frozen Heights a grunt left behind after Marlon's group takes Articuno keeps the package; his lone Snorunt (Lv 9) is easy work.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 1"
+  },
+  {
+   "id": "sandslash-lair",
+   "name": "Alolan Sandslash in Icicle Cave",
+   "kind": "story",
+   "place": "icicle-cave",
+   "level_cap": 12,
+   "done_when": "later",
+   "opens": [
+    "icicle-cave",
+    "route-2"
+   ],
+   "tips": "A Lv 12 Alolan Sandslash waits in its lair off Icicle Cave 4F (the Sandslash thief mission); it cannot be caught. Fire, Fighting and Steel moves do well.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 2"
+  },
+  {
+   "id": "rival-2",
+   "name": "Rival: Icicle Cave",
+   "kind": "rival",
+   "place": "icicle-cave",
+   "level_cap": 13,
+   "foe": [
+    {
+     "name": "Rival 2",
+     "class": "Rival",
+     "ace_level": 13
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "dresco-town",
+    "route-3",
+    "flower-paradise"
+   ],
+   "tips": "On 2F the rival leads Swinub (Lv 12) and their starter (Lv 13). Heal at the Chansey by the 3F ladder first; he hands over Safety Goggles afterwards.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 2"
+  },
+  {
+   "id": "gym-1",
+   "name": "Gym 1: Mirskle",
+   "kind": "gym",
+   "place": "dresco-town",
+   "leader": "Mirskle",
+   "theme": "grass",
+   "level_cap": 16,
+   "foe": [
+    {
+     "name": "Mirskle",
+     "class": "Leader",
+     "ace_level": 16
+    },
+    {
+     "name": "Mirskle",
+     "class": "Leader",
+     "ace_level": 19
+    },
+    {
+     "name": "Mirskle",
+     "class": "Leader",
+     "ace_level": 21
+    }
+   ],
+   "done_when": "badge:1",
+   "opens": [
+    "grim-woods",
+    "route-4"
+   ],
+   "badge_note": "Leaf Badge and TM86 Grass Knot; the gym guide adds a Grass Gem.",
+   "tips": "A Grass-type double battle (Vanilla: Gloom and Flabébé; harder modes add Weedle and Comfey). The gym is filled with fog: bring a Defog user such as Edmund's Ducklett, plus Litleo from the Route 2 challenge.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 4"
+  },
+  {
+   "id": "marlon-cinder",
+   "name": "Shadow Admin Marlon: Cinder Volcano",
+   "kind": "team",
+   "place": "cinder-volcano",
+   "level_cap": 21,
+   "foe": [
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 21
+    },
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 22
+    },
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 23
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "cinder-volcano"
+   ],
+   "tips": "A Shadow Battle on 1F West alongside Jax, who lends Staravia, Magnemite and Golett; Marlon and a grunt field Duskull, Sableye and Cacnea. A Chansey by the 2F West ladder heals you first.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 5"
+  },
+  {
+   "id": "james-kbt",
+   "name": "Black Emboar: Boss James",
+   "kind": "story",
+   "place": "kbt-expressway",
+   "level_cap": 22,
+   "foe": [
+    {
+     "name": "James",
+     "class": "Emboar",
+     "ace_level": 22
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-5",
+    "day-care",
+    "crater-town",
+    "kbt-expressway"
+   ],
+   "tips": "Clear goons A-D on the KBT Expressway, then James (Koffing, Salandit, Alolan Grimer, Pignite) waits north of the mining area. He gives you the Motorcycle.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "gym-2",
+   "name": "Gym 2: Véga",
+   "kind": "gym",
+   "place": "crater-town",
+   "leader": "Véga",
+   "theme": "dark",
+   "level_cap": 23,
+   "foe": [
+    {
+     "name": "Véga",
+     "class": "Leader",
+     "ace_level": 23
+    },
+    {
+     "name": "Véga",
+     "class": "Leader",
+     "ace_level": 25
+    },
+    {
+     "name": "Véga",
+     "class": "Leader",
+     "ace_level": 26
+    }
+   ],
+   "done_when": "badge:2",
+   "badge_note": "Vision Badge and TM46 Thief.",
+   "tips": "Dark types (Vanilla: Liepard, Sneasel, Absol). The gym is dark: beating trainers widens your view, and the dark energy hurts anything that is not Dark or Ghost. Fighting, Bug and Fairy moves win.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "ivory-cinder",
+   "name": "Shadow Admin Ivory: Cinder Volcano",
+   "kind": "team",
+   "place": "cinder-volcano",
+   "level_cap": 22,
+   "foe": [
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 22
+    },
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 24
+    },
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 25
+    }
+   ],
+   "done_when": "later",
+   "tips": "Ivory has just captured Moltres; her Misdreavus and Kadabra (Vanilla) fall to Dark moves.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "zeph-cinder",
+   "name": "Shadow Boss Zeph: Cinder Volcano",
+   "kind": "team",
+   "place": "cinder-volcano",
+   "level_cap": 24,
+   "foe": [
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 24
+    },
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 25
+    },
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 26
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "valley-cave",
+    "route-6",
+    "route-7"
+   ],
+   "tips": "Zeph, the Shadow leader, sends out a single Houndoom (Lv 24 in Vanilla). Water, Ground, Rock and Fighting moves handle it. Afterwards a Hiker in the tunnel south of Crater Town gives HM01 Cut.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "rival-3",
+   "name": "Rival: Frost Mountain",
+   "kind": "rival",
+   "place": "frost-mountain",
+   "level_cap": 26,
+   "foe": [
+    {
+     "name": "Rival 3",
+     "class": "Rival",
+     "ace_level": 26
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "frost-mountain",
+    "route-8",
+    "blizzard-city"
+   ],
+   "tips": "On 1F: Trumbeak, Swinub and the rival's starter in its middle stage (Lv 26). Fire, Fighting and Steel moves cover most of it.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 9"
+  },
+  {
+   "id": "gym-3",
+   "name": "Gym 3: Alice",
+   "kind": "gym",
+   "place": "blizzard-city",
+   "leader": "Alice",
+   "theme": "flying",
+   "level_cap": 30,
+   "foe": [
+    {
+     "name": "Alice",
+     "class": "Leader",
+     "ace_level": 30
+    },
+    {
+     "name": "Alice",
+     "class": "Leader",
+     "ace_level": 32
+    },
+    {
+     "name": "Alice",
+     "class": "Leader",
+     "ace_level": 33
+    }
+   ],
+   "done_when": "badge:3",
+   "opens": [
+    "frozen-forest"
+   ],
+   "badge_note": "Wings Badge and TM40 Aerial Ace; Alice then smashes the KBT Expressway barrier and gives HM06 Rock Smash.",
+   "tips": "Flying types (Vanilla: Doduo, Gliscor, Minior) behind a fan maze. Gliscor is Ground/Flying, so Ice moves beat it where Electric fails. Get the Ice Stone and Crabominable in Frozen Forest first.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 10"
+  },
+  {
+   "id": "alexa",
+   "name": "Ace Trainer Alexa (Fire Gem)",
+   "kind": "story",
+   "place": "cinder-volcano",
+   "level_cap": 31,
+   "foe": [
+    {
+     "name": "Alexa",
+     "class": "Ace Trainer",
+     "ace_level": 31
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional: with Rock Smash, Alexa waits on Cinder Volcano 2F West (Breloom, Gardevoir, Magmar, Sealeo, Florges) and gives a Fire Gem.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 10"
+  },
+  {
+   "id": "candice",
+   "name": "Visiting Leader Candice (optional)",
+   "kind": "story",
+   "place": "blizzard-city",
+   "level_cap": 33,
+   "foe": [
+    {
+     "name": "Candice",
+     "ace_level": 33
+    }
+   ],
+   "done_when": "none",
+   "tips": "Upstairs in a house on Blizzard City's middle ring, Sinnoh's Candice battles once a day with Sneasel, Piloswine, Glaceon and Froslass and switches often; she gives an Ice Gem each win.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 9"
+  },
+  {
+   "id": "gruff",
+   "name": "Terror Granbull: Boss Gruff",
+   "kind": "story",
+   "place": "route-10",
+   "level_cap": 33,
+   "foe": [
+    {
+     "name": "Gruff",
+     "class": "GBull",
+     "ace_level": 33
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "fallshore-city",
+    "route-11",
+    "epidimy-town",
+    "route-10"
+   ],
+   "tips": "After the four Snubbull goons on Routes 9-10, Gruff (Probopass, Ariados, Crawdaunt, Granbull) waits north of the bridge on Route 10; the policeman gives TM106 Smart Strike.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 12"
+  },
+  {
+   "id": "ivory-route9",
+   "name": "Shadow Admin Ivory: Route 9",
+   "kind": "team",
+   "place": "route-9",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 34
+    },
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 35
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "tehl-town",
+    "underground-pass",
+    "route-9"
+   ],
+   "tips": "Reach Route 9 through Tehl Town's secret passage, beat the occupying grunts, then Ivory and a grunt in her house (Incineroar, Alakazam, Misdreavus with Gourgeist and Alolan Raticate). Jax offers to tag along; declining keeps your full team.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 13"
+  },
+  {
+   "id": "gym-4",
+   "name": "Gym 4: Mel",
+   "kind": "gym",
+   "place": "fallshore-city",
+   "leader": "Mel",
+   "theme": "normal",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "Mel",
+     "class": "Leader",
+     "ace_level": 34
+    },
+    {
+     "name": "Mel",
+     "class": "Leader",
+     "ace_level": 35
+    },
+    {
+     "name": "Mel",
+     "class": "Leader",
+     "ace_level": 36
+    }
+   ],
+   "done_when": "badge:4",
+   "badge_note": "Fall Badge, TM42 Facade and HM02 Fly; Strength works from now on.",
+   "tips": "Normal types under Inverse Battle rules, so type matchups flip: leave Fighting types out. Vanilla: Helioptile, Miltank, Lopunny; the walkthrough suggests Lv 35+ and strong moves of many types.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 14"
+  },
+  {
+   "id": "yale",
+   "name": "Mega Trainer Yale (Cameruptite)",
+   "kind": "story",
+   "place": "cinder-volcano",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "Yale",
+     "class": "Mega Trainer",
+     "ace_level": 34
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional, with Strength: Yale on Cinder Volcano 3F West ends with a Mega Camerupt and hands over the Cameruptite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 14"
+  },
+  {
+   "id": "thundercap-grunts",
+   "name": "Shadow grunts on Thundercap Mt.",
+   "kind": "team",
+   "place": "thundercap-mt",
+   "level_cap": 33,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Shadow",
+     "ace_level": 33
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "thundercap-mt"
+   ],
+   "tips": "Grunts block 1F-2F (A: Inkay, Trevenant, Skorupi). On 5F the last grunt carries the Barrier Key that switches off the electric fences. A nurse on 3F heals for free.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 15"
+  },
+  {
+   "id": "marlon-thundercap",
+   "name": "Shadow Admin Marlon: Thundercap summit",
+   "kind": "team",
+   "place": "thundercap-mt",
+   "level_cap": 37,
+   "foe": [
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 37
+    },
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 38
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "cliff-cave",
+    "tarmigan-town"
+   ],
+   "tips": "Marlon uses the Zapdos he caught (Lv 35) with Cacturne and Krookodile in Vanilla. Ice and Rock moves cover Zapdos; Water and Grass handle Krookodile.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 15"
+  },
+  {
+   "id": "maxima",
+   "name": "Successor Maxima: Tarmigan Mansion",
+   "kind": "story",
+   "place": "tarmigan-mansion",
+   "level_cap": 38,
+   "foe": [
+    {
+     "name": "Maxima",
+     "class": "Successor",
+     "ace_level": 38
+    },
+    {
+     "name": "Maxima",
+     "class": "Successor",
+     "ace_level": 39
+    },
+    {
+     "name": "Maxima",
+     "class": "Successor",
+     "ace_level": 40
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "tarmigan-mansion"
+   ],
+   "tips": "In the mansion's basement Maxima uses Wigglytuff, Delphox, Empoleon and Mega Altaria (Vanilla). Winning unlocks Mega Evolution: she gives the Mega Keystone and Altarianite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 16"
+  },
+  {
+   "id": "rival-4",
+   "name": "Rival: Route 12",
+   "kind": "rival",
+   "place": "route-12",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "Rival 4",
+     "class": "Rival",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-12",
+    "dehara-city",
+    "game-corner"
+   ],
+   "tips": "Toucannon, Vaporeon, Piloswine and the starter's middle stage. Professor Log gives HM03 Surf afterwards (usable after the Dehara badge).",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "ruins-grunt",
+   "name": "Ruins of Void: grunt and the portal challenge",
+   "kind": "team",
+   "place": "ruins-of-void",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "Grunt",
+     "class": "Shadow",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ruins-of-void",
+    "cube-space"
+   ],
+   "tips": "Talk to Jax at the Cloud Game Corner to go on. Claydol guards B2F, and a portal challenge sends Claydol, Raikou, Entei and Suicune at you with no break (level-scaled). A grunt on 1F has Cofagrigus and Sableye.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 18"
+  },
+  {
+   "id": "vega-agent",
+   "name": "Agent Véga and the Light of Ruin",
+   "kind": "team",
+   "place": "cinder-volcano",
+   "level_cap": 40,
+   "foe": [
+    {
+     "name": "Véga",
+     "class": "Agent",
+     "ace_level": 40
+    },
+    {
+     "name": "Véga",
+     "class": "Agent",
+     "ace_level": 42
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "cinder-volcano",
+    "shadow-base"
+   ],
+   "tips": "In Cinder Volcano's depths Véga (Liepard, Honchkrow, Mega Absol) and a Light of Ruin grunt take on you and Marlon; you pick three Pokémon. Heal before B2F: Marlon then fights Primal Groudon for you.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 19"
+  },
+  {
+   "id": "zeph-shadow-base",
+   "name": "Shadow Boss Zeph: Shadow Base",
+   "kind": "team",
+   "place": "shadow-base",
+   "level_cap": 42,
+   "foe": [
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 42
+    },
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 43
+    },
+    {
+     "name": "Zeph",
+     "class": "Boss",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "later",
+   "tips": "Wear Marlon's uniform and collect Key Cards 1-3 to reach B3F. Zeph: Mightyena, Exploud, Decidueye and Mega Gengar (Vanilla). Behind a level-2 door is your starter's Mega Stone; Houndoomite is on B3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 19"
+  },
+  {
+   "id": "gym-5",
+   "name": "Gym 5: Galavan",
+   "kind": "gym",
+   "place": "dehara-city",
+   "leader": "Galavan",
+   "theme": "electric",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Galavan",
+     "class": "Leader",
+     "ace_level": 44
+    },
+    {
+     "name": "Galavan",
+     "class": "Leader",
+     "ace_level": 45
+    }
+   ],
+   "done_when": "badge:5",
+   "opens": [
+    "route-13",
+    "route-14"
+   ],
+   "badge_note": "Battery Badge and TM92 Volt Switch; Surf can now be used.",
+   "tips": "Electric/Steel double battle (Vanilla: Alolan Golem, Eelektross, Magneton, Mega Manectric). The gym's magnetism makes everything levitate, so Ground moves miss: bring Fire (Mega Camerupt) and Fighting moves.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 20"
+  },
+  {
+   "id": "osean",
+   "name": "Ocean Master Osean",
+   "kind": "story",
+   "place": "route-13",
+   "level_cap": 43,
+   "foe": [
+    {
+     "name": "Osean",
+     "class": "Mega Trainer",
+     "ace_level": 43
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional: beat every trainer on Routes 13 and 14 and Osean appears in Route 13's south-east (Pelipper, Samurott, Ludicolo, Kingdra, Mega Gyarados); he gives the Gyaradosite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 21"
+  },
+  {
+   "id": "aklove-vivill",
+   "name": "Light of Ruin leader Aklove: Vivill Warehouse",
+   "kind": "team",
+   "place": "vivill-warehouse",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "Aklove",
+     "class": "Leader",
+     "ace_level": 50
+    },
+    {
+     "name": "Aklove",
+     "class": "Leader",
+     "ace_level": 51
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "auburn-waterway",
+    "lost-tunnel",
+    "great-desert",
+    "tomb-of-borrius",
+    "gurun-town",
+    "vivill-woods",
+    "vivill-town",
+    "vivill-warehouse"
+   ],
+   "tips": "Collect the password letters (AKLOVE) from the warehouse grunts to reach the Command Center. Aklove: Roserade, Primarina and Hoopa Unbound (Vanilla). The Go-Goggles from Dehara's hiker get you across the desert.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 25"
+  },
+  {
+   "id": "giratina",
+   "name": "Giratina in the Distortion World",
+   "kind": "story",
+   "place": "distortion-world",
+   "done_when": "later",
+   "opens": [
+    "distortion-world",
+    "rift-cave"
+   ],
+   "tips": "After Aklove you are sent to the Distortion World; solve its boulder and platform puzzles and defeat Giratina (level-scaled) to open the portal home, which comes out in Rift Cave.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 25"
+  },
+  {
+   "id": "vivian-mathis",
+   "name": "Fighting Challenge: Vivian and Mathis",
+   "kind": "story",
+   "place": "route-2",
+   "level_cap": 42,
+   "foe": [
+    {
+     "name": "Mathis",
+     "class": "Mega Trainer",
+     "ace_level": 42
+    },
+    {
+     "name": "Vivian",
+     "class": "Mega Trainer",
+     "ace_level": 42
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-15"
+   ],
+   "tips": "Optional: beat every other trainer on Routes 2 and 15, then the pair on Route 2's island (Hitmonlee, Hawlucha, two Mega Lopunny) give the Lopunnite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 26"
+  },
+  {
+   "id": "rory",
+   "name": "Black Ferrothorn: Rory",
+   "kind": "story",
+   "place": "antisis-port",
+   "level_cap": 49,
+   "foe": [
+    {
+     "name": "Rory",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-16",
+    "route-17",
+    "antisis-city",
+    "antisis-port"
+   ],
+   "tips": "Helping the Black Emboar in Antisis City: after the port smuggling run (after 8 PM), Rory and Chad fight on the eastern bridge (Weezing, Muk, Ferroseed or Ferrothorn, Krokorok).",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 27"
+  },
+  {
+   "id": "barbs",
+   "name": "Black Ferrothorn: Boss Barbs",
+   "kind": "story",
+   "place": "ferrothorn-turf",
+   "level_cap": 51,
+   "foe": [
+    {
+     "name": "Barbs",
+     "class": "Ferro",
+     "ace_level": 51
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "antisis-sewers",
+    "ferrothorn-turf"
+   ],
+   "tips": "Through the sewers (Flash and Surf) to Ferrothorn Turf's top floor; Barbs uses Alolan Muk, Honchkrow, Ferrothorn and Mega Heracross. James leaves the Heracronite outside.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 28"
+  },
+  {
+   "id": "gym-6",
+   "name": "Gym 6: Big Mo",
+   "kind": "gym",
+   "place": "antisis-city",
+   "leader": "Big Mo",
+   "theme": "fighting",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Big Mo",
+     "class": "Leader",
+     "ace_level": 52
+    },
+    {
+     "name": "Big Mo",
+     "class": "Leader",
+     "ace_level": 53
+    }
+   ],
+   "done_when": "badge:6",
+   "opens": [
+    "icy-hole"
+   ],
+   "badge_note": "Ring Badge and TM60 Drain Punch; Rock Climb can now be used.",
+   "tips": "First the Ring Challenge: three one-Pokémon fights, no Flying, Psychic or Fairy moves. Then Fighting types (Vanilla: Mienshao, Pangoro, Hariyama, Mega Lucario); a sturdy Pokémon with strong neutral moves helps.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 29"
+  },
+  {
+   "id": "lily",
+   "name": "Skiers Club: Mega Trainer Lily",
+   "kind": "story",
+   "place": "icicle-cave",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Lily",
+     "class": "Mega Trainer",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional: the Skiers Club island off Icicle Cave 1F (north ice puzzle). Lily ends with Mega Glalie; decline membership to get the Glalitite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 29"
+  },
+  {
+   "id": "aloysius",
+   "name": "Mountain Master Aloysius",
+   "kind": "story",
+   "place": "thundercap-mt",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "Aloysius",
+     "class": "Mega Trainer",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional: beat every other trainer on Thundercap's Antisis side and Aloysius appears on 2F (Politoed, Blissey, Braviary, Reuniclus, Mega Ampharos); he gives the Ampharosite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 30"
+  },
+  {
+   "id": "almuth",
+   "name": "Sky Master Almuth",
+   "kind": "story",
+   "place": "route-17",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Almuth",
+     "class": "Mega Trainer",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "seaport-city"
+   ],
+   "tips": "Optional Sky Battle (Flying types only) south-west of the broken Route 17 bridge: Noctowl, Tropius, Wash Rotom, Hawlucha, Mega Pidgeot. Bring three fliers; the prize is the Pidgeotite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 31"
+  },
+  {
+   "id": "electivire-gauntlet",
+   "name": "Seaport warehouses: the stolen Electivire",
+   "kind": "story",
+   "place": "seaport-city",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "Scientist",
+     "class": "Soci",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ss-marine"
+   ],
+   "tips": "The West Warehouse only lets in Ice- or Fairy-type teams (double battles with burglars). In the East Warehouse beat Electivire, then a Dynamax Electivire, then the Science Society scientist (Rotom, Magnezone, Manectric, Vikavolt).",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 32"
+  },
+  {
+   "id": "gym-7",
+   "name": "Gym 7: Tessy",
+   "kind": "gym",
+   "place": "polder-town",
+   "leader": "Tessy",
+   "theme": "water",
+   "level_cap": 56,
+   "foe": [
+    {
+     "name": "Tessy",
+     "class": "Leader",
+     "ace_level": 56
+    },
+    {
+     "name": "Tessy",
+     "class": "Leader",
+     "ace_level": 57
+    },
+    {
+     "name": "Tessy",
+     "class": "Leader",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "badge:7",
+   "opens": [
+    "safari-zone",
+    "cootes-bog",
+    "magnolia-town"
+   ],
+   "badge_note": "Swamp Badge and HM07 Waterfall.",
+   "tips": "Each Pokémon takes the types of its first two moves in this gym (yours too), so reorder moves first. Vanilla: Toxapex, Seismitoad, Armaldo, Mega Gyarados. Waves wash you back if you are still surfing.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 33"
+  },
+  {
+   "id": "rival-5",
+   "name": "Rival: Crystal Peak",
+   "kind": "rival",
+   "place": "crystal-peak",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Rival 5",
+     "class": "Rival",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "crystal-peak"
+   ],
+   "tips": "At the entrance: Toucannon, Vaporeon, Mamoswine, Aggron or Haxorus, and the starter's Mega final form (Lv 58). Afterwards you choose three Pokémon for the double battles beside the rival.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "tao-dragons",
+   "name": "Reshiram and Zekrom",
+   "kind": "story",
+   "place": "crystal-peak",
+   "done_when": "later",
+   "tips": "On 3F you and the rival face Reshiram and Zekrom together (level-scaled). An Alolan Ninetales with Icium Z can knock Zekrom out at once.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "ivory-crystal",
+   "name": "Light of Ruin Admin Ivory: Crystal Peak",
+   "kind": "team",
+   "place": "crystal-peak",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 58
+    },
+    {
+     "name": "Ivory",
+     "class": "Admin",
+     "ace_level": 59
+    }
+   ],
+   "done_when": "later",
+   "tips": "After her son, Ivory: Mismagius, Incineroar, Mandibuzz and Mega Alakazam (Vanilla). The 4F sandstorm hurts all but Rock, Steel and Ground types.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "hoopa-rayquaza",
+   "name": "Hoopa Unbound and Mega Rayquaza",
+   "kind": "story",
+   "place": "crystal-peak",
+   "done_when": "later",
+   "tips": "On the summit Hoopa Unbound and Mega Rayquaza fight as a pair (level-scaled). Hoopa Confined (Lv 60) is yours afterwards, with the Prison Bottle to switch its forms.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "aklove-crystal",
+   "name": "Aklove: Crystal Peak summit",
+   "kind": "team",
+   "place": "crystal-peak",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Aklove",
+     "class": "Leader",
+     "ace_level": 58
+    },
+    {
+     "name": "Aklove",
+     "class": "Leader",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "later",
+   "tips": "A double battle by the Ultimate Weapon controls: Klefki, Primarina, Raichu, Gardevoir, Roserade (Vanilla).",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "marlon-crystal",
+   "name": "Marlon: Crystal Peak summit",
+   "kind": "team",
+   "place": "crystal-peak",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 58
+    },
+    {
+     "name": "Marlon",
+     "class": "Shadow Admin",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "magnolia-fields",
+    "redwood-village",
+    "redwood-forest"
+   ],
+   "tips": "After Aklove comes a double battle with Marlon (Krookodile, Cacturne, Mega Sharpedo, Dusknoir in Vanilla), the rival at your side. Show Hoopa to the Epidimy elders for a Master Ball.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "gym-8",
+   "name": "Gym 8: Benjamin",
+   "kind": "gym",
+   "place": "redwood-village",
+   "leader": "Benjamin",
+   "theme": "bug",
+   "level_cap": 61,
+   "foe": [
+    {
+     "name": "Benjamin",
+     "class": "Leader",
+     "ace_level": 61
+    },
+    {
+     "name": "Benjamin",
+     "class": "Leader",
+     "ace_level": 62
+    }
+   ],
+   "done_when": "badge:8",
+   "opens": [
+    "route-18",
+    "victory-road"
+   ],
+   "badge_note": "Time Badge and TM49 Leech Fang; the League opens.",
+   "tips": "Bug types that devolve instead of fainting (yours do too, until the battle ends). Vanilla: Araquanid, Mega Scizor, Drapion, Butterfree. Room puzzle order: Crystal Peak, Thundercap, Cinder Volcano, Icicle Cave.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 36"
+  },
+  {
+   "id": "reena",
+   "name": "Route Master Reena",
+   "kind": "story",
+   "place": "route-18",
+   "level_cap": 61,
+   "foe": [
+    {
+     "name": "Reena",
+     "class": "Mega Trainer",
+     "ace_level": 61
+    }
+   ],
+   "done_when": "none",
+   "tips": "Optional: after every other Route 18 trainer, Reena (Tsareena, Rapidash, Milotic, Dragonite, Mega Sableye) gives the Sablenite.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 37"
+  },
+  {
+   "id": "portia-sterling",
+   "name": "Victory Road: Portia and Sterling",
+   "kind": "story",
+   "place": "victory-road",
+   "level_cap": 61,
+   "foe": [
+    {
+     "name": "Portia",
+     "class": "Mega Trainer",
+     "ace_level": 61
+    },
+    {
+     "name": "Sterling",
+     "class": "Mega Trainer",
+     "ace_level": 61
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "pokemon-league"
+   ],
+   "tips": "The last trainers before the League, a double battle on the Upper Ascent: Typhlosion, Meganium, Mega Charizard Y, Mega Venusaur. A psychic on 4F skips the ice puzzle for P45,000.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 38"
+  },
+  {
+   "id": "e4-moleman",
+   "name": "Elite Four: Moleman",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Moleman",
+   "theme": "ground",
+   "level_cap": 64,
+   "foe": [
+    {
+     "name": "Moleman",
+     "class": "Elite Four",
+     "ace_level": 64
+    },
+    {
+     "name": "Moleman",
+     "class": "Elite Four",
+     "ace_level": 65
+    },
+    {
+     "name": "Moleman",
+     "class": "Elite Four",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "tips": "Ground types in a double battle (Vanilla: Excadrill, Flygon, Gliscor, Quagsire). Ice moves hit three of them hard. The Elite Four can be taken in any order; you can't return to the lobby.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 39"
+  },
+  {
+   "id": "e4-elias",
+   "name": "Elite Four: Elias",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Elias",
+   "theme": "ghost",
+   "level_cap": 64,
+   "foe": [
+    {
+     "name": "Elias",
+     "class": "Elite Four",
+     "ace_level": 64
+    },
+    {
+     "name": "Elias",
+     "class": "Elite Four",
+     "ace_level": 65
+    },
+    {
+     "name": "Elias",
+     "class": "Elite Four",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "tips": "Ghost types, single battle (Vanilla: Mimikyu, Aegislash, Chandelure, Mega Banette). Dark and Ghost moves; mind Mimikyu's Disguise.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 39"
+  },
+  {
+   "id": "e4-arabella",
+   "name": "Elite Four: Arabella",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Arabella",
+   "theme": "fairy",
+   "level_cap": 64,
+   "foe": [
+    {
+     "name": "Arabella",
+     "class": "Elite Four",
+     "ace_level": 64
+    },
+    {
+     "name": "Arabella",
+     "class": "Elite Four",
+     "ace_level": 65
+    },
+    {
+     "name": "Arabella",
+     "class": "Elite Four",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "tips": "Fairy types, single battle (Vanilla: Ribombee, Sylveon, Azumarill, Mega Mawile). Poison and Steel moves; Fire or Ground for Mawile.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 39"
+  },
+  {
+   "id": "e4-penny",
+   "name": "Elite Four: Penny",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Penny",
+   "theme": "dragon",
+   "level_cap": 64,
+   "foe": [
+    {
+     "name": "Penny",
+     "class": "Elite Four",
+     "ace_level": 64
+    },
+    {
+     "name": "Penny",
+     "class": "Elite Four",
+     "ace_level": 65
+    },
+    {
+     "name": "Penny",
+     "class": "Elite Four",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "tips": "Dragons in a double battle (Vanilla: Goodra, Tyrantrum, Kommo-o, Mega Sceptile). Fairy and Ice moves.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 39"
+  },
+  {
+   "id": "champion-jax",
+   "name": "Champion: Jax",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "leader": "Jax",
+   "level_cap": 67,
+   "foe": [
+    {
+     "name": "Jax",
+     "class": "PKMN Trainer",
+     "ace_level": 67
+    },
+    {
+     "name": "Jax",
+     "class": "PKMN Trainer",
+     "ace_level": 68
+    },
+    {
+     "name": "Jax",
+     "class": "PKMN Trainer",
+     "ace_level": 69
+    }
+   ],
+   "done_when": "later",
+   "tips": "Your old ally is the Champion, in a double battle: Golurk, Staraptor, Magnezone, Pyroar, Gastrodon, Mega Salamence (Vanilla). Bring Revives and Full Restores.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 39"
+  },
+  {
+   "id": "aklove-final",
+   "name": "Post-game: Aklove in the Ruins of Void depths",
+   "kind": "postgame",
+   "place": "ruins-of-void",
+   "level_cap": 74,
+   "foe": [
+    {
+     "name": "Aklove",
+     "class": "Leader",
+     "ace_level": 74
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "frozen-heights",
+    "battle-frontier"
+   ],
+   "tips": "Buy the ADM from Captain Davy (P250,000), dive at the Ruins of Void, slip past the Claydol maze and a Dynamax Claydol, then a double battle beside Jax's Pokémon: Klefki, Roserade, Togekiss, Raichu, Primarina, Mega Gardevoir.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 trainer table; unboundwiki.com walkthrough part 40"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Choose a pseudo-legendary starter",
+   "text": "Professor Log offers Beldum, Gible or Larvitar at Lv 10; each has a Mega Stone later in the Shadow Base. Turn on the real-time clock; Vanilla difficulty is the walkthrough's pick for a first run.",
+   "stage": "rival-1",
+   "places": [
+    "frozen-heights"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 1"
+  },
+  {
+   "id": "step-bellin-egg",
+   "title": "Egg and missions in Bellin Town",
+   "text": "An old man south of the Sandslash house gives an Egg (Stunky, Skorupi or Glameow). Your mom gives the Mission Log for the Cube, the game's bag.",
+   "stage": "grunt-package",
+   "places": [
+    "bellin-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 1"
+  },
+  {
+   "id": "step-route2-challenge",
+   "title": "Route 2 Challenge Road",
+   "text": "Beat every trainer on Route 2 for the Challenge Giver's Litleo (Lv 10), handy against Mirskle. A Braille Converter in Icicle Cave's Tablet Cavern starts the tablet mission.",
+   "stage": "rival-2",
+   "places": [
+    "route-2",
+    "icicle-cave"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 2"
+  },
+  {
+   "id": "step-defog",
+   "title": "A Defog user for the first gym",
+   "text": "Edmund in Dresco Town trades a Lv 13 Ducklett that knows Defog for an Alolan Sandshrew from Icicle Cave 4F; Defog clears the gym's harmful fog. The Trainer House trainers can be rebattled for experience.",
+   "stage": "gym-1",
+   "places": [
+    "dresco-town",
+    "icicle-cave"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 3"
+  },
+  {
+   "id": "step-zygarde",
+   "title": "Start the Zygarde Cell hunt",
+   "text": "The scientists Zygfried and Zygardia in Dresco Town give a Super Cube part that detects Zygarde Cells; 100 of them earn a Power Construct Zygarde.",
+   "stage": "gym-1",
+   "places": [
+    "dresco-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 3; unboundwiki.com missions"
+  },
+  {
+   "id": "step-unova-starter",
+   "title": "Unova starter on Route 5",
+   "text": "In the house west of the Day Care pick Snivy, Tepig or Oshawott; the other two can be had at 4 and 7 badges. Start the Route 5 walking mission (150,000 steps) early.",
+   "stage": "gym-2",
+   "places": [
+    "route-5"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 6"
+  },
+  {
+   "id": "step-cut",
+   "title": "Cut and the mining game",
+   "text": "After Véga, a Hiker in the tunnel south of Crater Town gives HM01 Cut. HMs work from any party member that could learn them. The KBT Expressway mining game costs P1000 a try.",
+   "stage": "zeph-cinder",
+   "places": [
+    "crater-town",
+    "kbt-expressway"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "step-old-rod",
+   "title": "Old Rod on Route 7",
+   "text": "The fisherman in his house on Route 7 gives the Old Rod. A Chansey at the Route 6 cave exit heals for free.",
+   "stage": "rival-3",
+   "places": [
+    "route-7",
+    "route-6"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 8"
+  },
+  {
+   "id": "step-blizzard-errands",
+   "title": "Blizzard City errands",
+   "text": "Get the VS Seeker upstairs in the Berry house, HM06 Rock Smash's hiker east of the gym, and an Eviolite from the Pokémon Center breeder. With 15 Pokémon caught your Pokédex gets the DexNav upgrade.",
+   "stage": "gym-3",
+   "places": [
+    "blizzard-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 9"
+  },
+  {
+   "id": "step-crabominable",
+   "title": "Frozen Forest",
+   "text": "Solve the ice puzzle, beat Burglar Jett to return a woman's Alolan Ninetales (she gives an Alolan Vulpix Egg), then catch the Lv 32 Crabominable, your only chance.",
+   "stage": "gym-3",
+   "places": [
+    "frozen-forest"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 10"
+  },
+  {
+   "id": "step-fallshore",
+   "title": "Fallshore City's services",
+   "text": "Mission HQ (Trainer Catalogue after 5 missions), the Evolution House (Link Stone), the Inverse Battle House and the market. The old lady in the left house gives a Togepi Egg.",
+   "stage": "gruff",
+   "places": [
+    "fallshore-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 11"
+  },
+  {
+   "id": "step-strength",
+   "title": "HM04 Strength in Epidimy",
+   "text": "The Black Belt in Epidimy Town gives HM04 Strength (usable after Mel's badge); the fisherman next to the old couple upgrades you to the Good Rod.",
+   "stage": "gruff",
+   "places": [
+    "epidimy-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 12"
+  },
+  {
+   "id": "step-dowsing",
+   "title": "Dowsing Machine in Tehl Town",
+   "text": "With 30 Pokémon caught, the researcher's house in Tehl Town gives the Dowsing Machine for hidden items.",
+   "stage": "ivory-route9",
+   "places": [
+    "tehl-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 13"
+  },
+  {
+   "id": "step-mansion",
+   "title": "Through Tarmigan Mansion",
+   "text": "Three hidden statue switches open the mansion; two Chansey heal inside (1F stairs, 3F top room). The garden behind Maxima has a Raid Den.",
+   "stage": "maxima",
+   "places": [
+    "tarmigan-mansion",
+    "tarmigan-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 16"
+  },
+  {
+   "id": "step-dehara",
+   "title": "Dehara City",
+   "text": "The Game Corner man gives the Coin Case; the Dept. Store sells stones (3F) and TMs (4F). A trainer in the top-right house gives a Lv 30 Turtwig (Chimchar and Piplup at 6 and 8 badges).",
+   "stage": "rival-4",
+   "places": [
+    "dehara-city",
+    "dehara-dept",
+    "game-corner"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "step-surf-backtrack",
+   "title": "Surf backtracking",
+   "text": "With Galavan's badge Surf opens TM13 Ice Beam in Icicle Cave, TM35 Flamethrower in Cinder Volcano, TM30 Shadow Ball on Route 9 and the Steelixite in Fallshore City.",
+   "stage": "gym-5",
+   "places": [
+    "icicle-cave",
+    "cinder-volcano",
+    "route-9",
+    "fallshore-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 20"
+  },
+  {
+   "id": "step-go-goggles",
+   "title": "Go-Goggles for the Great Desert",
+   "text": "After the Dehara gym, a hiker in Dehara's south-east house gives the Go-Goggles; the desert's sandstorm otherwise hurts all but Rock, Steel and Ground types. Smash desert rocks for fossils, revived in Gurun Town.",
+   "stage": "aklove-vivill",
+   "places": [
+    "dehara-city",
+    "great-desert",
+    "gurun-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 24"
+  },
+  {
+   "id": "step-finn",
+   "title": "Hiker Finn and the Lost Tunnel",
+   "text": "On Auburn Waterway, beat Hiker Finn and dig him out of the Lost Tunnel with a Dig user (Excadrill from the volcano depths); he gives TM28 Dig. The Lost Tunnel is pitch dark and Flash does not help.",
+   "stage": "aklove-vivill",
+   "places": [
+    "auburn-waterway",
+    "lost-tunnel"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 22"
+  },
+  {
+   "id": "step-devon-scope",
+   "title": "Devon Scope and Rock Climb",
+   "text": "A stranger on Route 16 (Big Mo in disguise) gives the Devon Scope for invisible Kecleon; a Worker on Route 17 gives HM08 Rock Climb, usable after the Ring Badge.",
+   "stage": "barbs",
+   "places": [
+    "route-16",
+    "route-17"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 26; unboundwiki.com walkthrough part 29"
+  },
+  {
+   "id": "step-seaport",
+   "title": "Seaport City",
+   "text": "The Docks fisherman gives the Super Rod; the woman north of the market gives Rowlet (Lv 45; Litten and Popplio at 7 and 8 badges). The Breeder's School rewards hatching Eggs.",
+   "stage": "electivire-gauntlet",
+   "places": [
+    "seaport-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 31"
+  },
+  {
+   "id": "step-ice-fairy-team",
+   "title": "An Ice and Fairy team",
+   "text": "The West Warehouse admits only Ice or Fairy types: Alolan Ninetales, Sealeo, Piloswine and Jynx from Icy Hole are the walkthrough's picks. Heal between every fight; there is no way back past the boulder.",
+   "stage": "electivire-gauntlet",
+   "places": [
+    "seaport-city",
+    "icy-hole"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 32"
+  },
+  {
+   "id": "step-rotom",
+   "title": "Rotom in Polder Town",
+   "text": "Help the father of the TV-obsessed girl (brain scans of children in four towns, Dream Research Lab) for a Rotom; the Antisis warehouse changes its form.",
+   "stage": "gym-7",
+   "places": [
+    "polder-town",
+    "tarmigan-town",
+    "antisis-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 33"
+  },
+  {
+   "id": "step-tessy-mission",
+   "title": "Protector of the Swamp",
+   "text": "After the badge, Tessy's mission in Cootes Bog: double battles with her against Terror Granbull goons, ending with a Dynamax Feraligatr. She gives TM120 Nature Power.",
+   "stage": "rival-5",
+   "places": [
+    "cootes-bog",
+    "magnolia-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 34"
+  },
+  {
+   "id": "step-league-prep",
+   "title": "Before the League",
+   "text": "At the Victory Road entrance Professor Log gives two shards of each colour for move tutors; the Camomons Battle House in Seaport City can be rebattled for experience.",
+   "stage": "portia-sterling",
+   "places": [
+    "victory-road",
+    "seaport-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 37"
+  },
+  {
+   "id": "step-postgame",
+   "title": "After the credits",
+   "text": "You wake in Frozen Heights: the Battle Frontier is open, and Hoopa has opened portals across Borrius (the Portal Purge mission). A letter at home points at Aklove.",
+   "stage": "aklove-final",
+   "places": [
+    "frozen-heights",
+    "battle-frontier"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 39"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "hidden-frozen-forest-35-5",
+   "kind": "hidden-item",
+   "text": "Hidden Aguav Berry.",
+   "place": "frozen-forest",
+   "x": 35,
+   "y": 5,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-vivill-woods-42-6",
+   "kind": "hidden-item",
+   "text": "Hidden Big Mushroom.",
+   "place": "vivill-woods",
+   "x": 42,
+   "y": 6,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-vivill-woods-13-6",
+   "kind": "hidden-item",
+   "text": "Hidden Tiny Mushroom.",
+   "place": "vivill-woods",
+   "x": 13,
+   "y": 6,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-vivill-woods-35-13",
+   "kind": "hidden-item",
+   "text": "Hidden Big Mushroom.",
+   "place": "vivill-woods",
+   "x": 35,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-1-7-36",
+   "kind": "hidden-item",
+   "text": "Hidden Oran Berry.",
+   "place": "route-1",
+   "x": 7,
+   "y": 36,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-2-46-24",
+   "kind": "hidden-item",
+   "text": "Hidden Ring Target.",
+   "place": "route-2",
+   "x": 46,
+   "y": 24,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-2-43-7",
+   "kind": "hidden-item",
+   "text": "Hidden Rock Gem.",
+   "place": "route-2",
+   "x": 43,
+   "y": 7,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-3-9-34",
+   "kind": "hidden-item",
+   "text": "Hidden Deep Sea Tooth.",
+   "place": "route-3",
+   "x": 9,
+   "y": 34,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-3-33-20",
+   "kind": "hidden-item",
+   "text": "Hidden Deep Sea Scale.",
+   "place": "route-3",
+   "x": 33,
+   "y": 20,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-3-33-7",
+   "kind": "hidden-item",
+   "text": "Hidden Leftovers.",
+   "place": "route-3",
+   "x": 33,
+   "y": 7,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-8-10-26",
+   "kind": "hidden-item",
+   "text": "Hidden Blue Shard.",
+   "place": "route-8",
+   "x": 10,
+   "y": 26,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-8-47-35",
+   "kind": "hidden-item",
+   "text": "Hidden X Defense.",
+   "place": "route-8",
+   "x": 47,
+   "y": 35,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-8-71-54",
+   "kind": "hidden-item",
+   "text": "Hidden Nugget.",
+   "place": "route-8",
+   "x": 71,
+   "y": 54,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-8-78-27",
+   "kind": "hidden-item",
+   "text": "Hidden Ether.",
+   "place": "route-8",
+   "x": 78,
+   "y": 27,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-8-56-6",
+   "kind": "hidden-item",
+   "text": "Hidden Mago Berry.",
+   "place": "route-8",
+   "x": 56,
+   "y": 6,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-10-32-7",
+   "kind": "hidden-item",
+   "text": "Hidden Green Shard.",
+   "place": "route-10",
+   "x": 32,
+   "y": 7,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-10-7-35",
+   "kind": "hidden-item",
+   "text": "Hidden Max Elixir.",
+   "place": "route-10",
+   "x": 7,
+   "y": 35,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-10-58-22",
+   "kind": "hidden-item",
+   "text": "Hidden Psychic Seed.",
+   "place": "route-10",
+   "x": 58,
+   "y": 22,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-11-57-42",
+   "kind": "hidden-item",
+   "text": "Hidden Iapapa Berry.",
+   "place": "route-11",
+   "x": 57,
+   "y": 42,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-11-31-34",
+   "kind": "hidden-item",
+   "text": "Hidden Yellow Shard.",
+   "place": "route-11",
+   "x": 31,
+   "y": 34,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-11-14-23",
+   "kind": "hidden-item",
+   "text": "Hidden Ultra Ball.",
+   "place": "route-11",
+   "x": 14,
+   "y": 23,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-11-12-4",
+   "kind": "hidden-item",
+   "text": "Hidden Rare Candy.",
+   "place": "route-11",
+   "x": 12,
+   "y": 4,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-route-11-56-27",
+   "kind": "hidden-item",
+   "text": "Hidden Electric Seed.",
+   "place": "route-11",
+   "x": 56,
+   "y": 27,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-grim-woods-25-3",
+   "kind": "hidden-item",
+   "text": "Hidden Tiny Mushroom.",
+   "place": "grim-woods",
+   "x": 25,
+   "y": 3,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-grim-woods-42-21",
+   "kind": "hidden-item",
+   "text": "Hidden Super Repel.",
+   "place": "grim-woods",
+   "x": 42,
+   "y": 21,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-grim-woods-54-2",
+   "kind": "hidden-item",
+   "text": "Hidden Nest Ball.",
+   "place": "grim-woods",
+   "x": 54,
+   "y": 2,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items"
+  },
+  {
+   "id": "hidden-cinder",
+   "kind": "hidden-item",
+   "text": "Hidden in Cinder Volcano: Lava Cookie, Red Shard, Sun Stone, Max Revive, Zinc, Power Herb.",
+   "place": "cinder-volcano",
+   "condition": "spread over several floors",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-thundercap",
+   "kind": "hidden-item",
+   "text": "Hidden on Thundercap Mt.: Metal Powder, Heart Scale, HP Up, Nugget, Star Piece.",
+   "place": "thundercap-mt",
+   "condition": "spread over several floors",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-victory-road",
+   "kind": "hidden-item",
+   "text": "Hidden in Victory Road: Protector, Gengarite, Dragon Gem, Ground Gem, Max Revive.",
+   "place": "victory-road",
+   "condition": "spread over several floors",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-ruins",
+   "kind": "hidden-item",
+   "text": "Hidden in the Ruins of Void: Red Card, Ghost Gem, Psychic Gem, Sacred Ash, Nugget.",
+   "place": "ruins-of-void",
+   "condition": "spread over several floors",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-desert",
+   "kind": "hidden-item",
+   "text": "Hidden in the Great Desert: Rare Candy, Max Revive, Rare Bone, Carbos, Iron.",
+   "place": "great-desert",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-seaport",
+   "kind": "hidden-item",
+   "text": "Hidden in Seaport City: Slowbronite, Audinite and (East Warehouse) a Dubious Disc.",
+   "place": "seaport-city",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-route-13",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 13: Comet Shard, Water Stone, Big Pearl, Dive Ball.",
+   "place": "route-13",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-route-14",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 14: Dragon Scale, Rare Candy, Heart Scale.",
+   "place": "route-14",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-route-17",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 17: Prism Scale (evolves Feebas), Lum Berry.",
+   "place": "route-17",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-antisis-port",
+   "kind": "hidden-item",
+   "text": "Hidden at Antisis Port: Galladite (its gate opens at noon).",
+   "place": "antisis-port",
+   "condition": "time-gated gates",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-shadow-base",
+   "kind": "hidden-item",
+   "text": "Hidden in the Shadow Base: Houndoomite, Calcium, Pearl.",
+   "place": "shadow-base",
+   "condition": "Key Cards needed",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-route-4",
+   "kind": "hidden-item",
+   "text": "Hidden on Route 4: PP Max, Starf Berry, Full Restore.",
+   "place": "route-4",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-frost-mountain",
+   "kind": "hidden-item",
+   "text": "Hidden on Frost Mountain: Dusk Stone, Black Belt, Steel Gem.",
+   "place": "frost-mountain",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "hidden-icicle-cave",
+   "kind": "hidden-item",
+   "text": "Hidden in Icicle Cave: Ice Stone, Big Pearl, Blue Shard.",
+   "place": "icicle-cave",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 map hidden items; unboundwiki.com walkthrough"
+  },
+  {
+   "id": "gift-togepi-egg",
+   "kind": "gift",
+   "text": "The old lady in Fallshore City's left-hand house gives a Togepi Egg; keep a party slot free.",
+   "place": "fallshore-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 11"
+  },
+  {
+   "id": "gift-vulpix-egg",
+   "kind": "gift",
+   "text": "Return the stolen Alolan Ninetales (Burglar Jett, Frozen Forest) for an Alolan Vulpix Egg.",
+   "place": "blizzard-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 10"
+  },
+  {
+   "id": "gift-elekid-egg",
+   "kind": "gift",
+   "text": "Electivire's owner in Epidimy Town gives an Elekid Egg, Electirizer, Power Weight and Gold Bottle Cap once it is rescued.",
+   "place": "epidimy-town",
+   "condition": "after the Seaport East Warehouse",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 32"
+  },
+  {
+   "id": "gift-grimer-egg",
+   "kind": "gift",
+   "text": "A Black Emboar goon in Antisis City gives an Alolan Grimer Egg after the scientist mission.",
+   "place": "antisis-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 27"
+  },
+  {
+   "id": "gift-litleo",
+   "kind": "gift",
+   "text": "Lv 10 Litleo from the Challenge Giver for beating all Route 2 trainers.",
+   "place": "route-2",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 2"
+  },
+  {
+   "id": "gift-turtwig",
+   "kind": "gift",
+   "text": "Lv 30 Turtwig in Dehara's top-right house; Chimchar and Piplup come at 6 and 8 badges.",
+   "place": "dehara-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "gift-rowlet",
+   "kind": "gift",
+   "text": "Lv 45 Rowlet from the woman north of the Seaport market; Litten and Popplio at 7 and 8 badges.",
+   "place": "seaport-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 31"
+  },
+  {
+   "id": "gift-feebas",
+   "kind": "gift",
+   "text": "The Polder Town fisherman gives a Feebas for 100 Pokémon caught by fishing (10 Dive Balls at 10, Heart Scales at 50).",
+   "place": "polder-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 33"
+  },
+  {
+   "id": "gift-rotom",
+   "kind": "gift",
+   "text": "Rotom from the father in Polder Town after curing his TV-obsessed daughter.",
+   "place": "polder-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 33"
+  },
+  {
+   "id": "gift-hoopa",
+   "kind": "legendary",
+   "text": "Hoopa Confined (Lv 60) joins you after the summit battle, with the Prison Bottle.",
+   "place": "crystal-peak",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "gift-balloon-pikachu",
+   "kind": "gift",
+   "text": "Win 3000 coins in one day at Cloud Burst for a Lv 35 Balloon Pikachu.",
+   "place": "game-corner",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "gift-foongus",
+   "kind": "gift",
+   "text": "A Poké Ball by Vivill Woods' pond holds Foongus or Morelull (by Trainer ID); evolve it and trade in Vivill Town for the other line.",
+   "place": "vivill-woods",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 25"
+  },
+  {
+   "id": "gift-cosmog",
+   "kind": "legendary",
+   "text": "Cosmog sits in a bag on Route 12's west beach; on Difficult and harder it can only be taken after the Elite Four.",
+   "place": "route-12",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "trade-hitmontop",
+   "kind": "trade",
+   "text": "Saige in Epidimy Town trades a Hitmontop (holding Protect Pads) for a Lickitung from Route 5.",
+   "place": "epidimy-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 12"
+  },
+  {
+   "id": "trade-pachirisu",
+   "kind": "trade",
+   "text": "Tim in Tarmigan Town trades a Pachirisu (holding Old Gateau) for a Manectric.",
+   "place": "tarmigan-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 16"
+  },
+  {
+   "id": "trade-electrode",
+   "kind": "trade",
+   "text": "Alicia in Blizzard City trades an Electrode holding an Amulet Coin for an Onix from Frost Mountain.",
+   "place": "blizzard-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 9"
+  },
+  {
+   "id": "trade-ducklett",
+   "kind": "trade",
+   "text": "Edmund trades a Defog Ducklett (Lv 13) for an Alolan Sandshrew.",
+   "place": "dresco-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 3"
+  },
+  {
+   "id": "event-crabominable",
+   "kind": "event",
+   "text": "Lv 32 Crabominable after Burglar Jett; the only one in the game.",
+   "place": "frozen-forest",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 10"
+  },
+  {
+   "id": "event-mimikyu",
+   "kind": "event",
+   "text": "A catchable Lv 50 Mimikyu waits at a dead end in the West Warehouse's first passage.",
+   "place": "seaport-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 32"
+  },
+  {
+   "id": "tip-chansey",
+   "kind": "tip",
+   "text": "Wild Chansey heal your party in caves and routes (Icicle Cave 3F, Cinder Volcano 2F West, Route 9); a Porygon gives PC access.",
+   "place": "icicle-cave",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 2"
+  },
+  {
+   "id": "tip-master-ball",
+   "kind": "tip",
+   "text": "Show Hoopa to the old couple in Epidimy Town for a Master Ball.",
+   "place": "epidimy-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 12; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "tip-fossils",
+   "kind": "tip",
+   "text": "Smashed desert rocks sometimes drop fossils; the Gurun Town scientist revives them (Tyrunt, Amaura, Archen, Kabuto and more).",
+   "place": "gurun-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 24"
+  },
+  {
+   "id": "tip-type-null",
+   "kind": "tip",
+   "text": "20 missions done: the Mission HQ ranger gives Type: Null; 65 earn a Shiny Charm.",
+   "place": "fallshore-city",
+   "quality": "reference-only",
+   "source": "unboundwiki.com missions"
+  },
+  {
+   "id": "tip-evolution-stones",
+   "kind": "tip",
+   "text": "An Evolution Stone Man on an island in Thundercap's 3F lake (Antisis side) gives a random stone once a day.",
+   "place": "thundercap-mt",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 30"
+  },
+  {
+   "id": "legendary-groudon",
+   "kind": "legendary",
+   "text": "Groudon returns to Cinder Volcano B2F after the story once you have the Red Orb.",
+   "place": "cinder-volcano",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-kyurem",
+   "kind": "legendary",
+   "text": "Kyurem lives in Kyurem's Cave in Victory Road's snow area.",
+   "place": "victory-road",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-darkrai",
+   "kind": "legendary",
+   "text": "Darkrai on Newmoon Island, reached from Tarmigan Town.",
+   "place": "newmoon-island",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-cresselia",
+   "kind": "legendary",
+   "text": "Cresselia on Fullmoon Island (The Endless Nightmare mission).",
+   "place": "fullmoon-island",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-regirock",
+   "kind": "legendary",
+   "text": "Regirock inside the Desert Ruins in the Great Desert.",
+   "place": "desert-ruins",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-dialga",
+   "kind": "legendary",
+   "text": "Dialga in the Cave of Being (Guardians of the Lake mission).",
+   "place": "cave-of-being",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-palkia",
+   "kind": "legendary",
+   "text": "Palkia in Rift Cave (A Rift in Space mission).",
+   "place": "rift-cave",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-shaymin",
+   "kind": "legendary",
+   "text": "Shaymin in the northern restricted part of Flower Paradise.",
+   "place": "flower-paradise",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-heatran",
+   "kind": "legendary",
+   "text": "Heatran appears on Cinder Volcano 1F once you have the Magma Stone (Seaport Breeder's School, 100 Eggs hatched).",
+   "place": "cinder-volcano",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon; unboundwiki.com walkthrough part 31"
+  },
+  {
+   "id": "legendary-zygarde",
+   "kind": "legendary",
+   "text": "All 100 Zygarde Cells earn Zygarde from the Dresco Town scientists.",
+   "place": "dresco-town",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "legendary-jirachi",
+   "kind": "legendary",
+   "text": "Jirachi inside the locked house in Crater Town; with it in your party, Deoxys waits in a part of Route 13.",
+   "place": "crater-town",
+   "condition": "post-game",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Use a Link Stone to get Alakazam (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Use a Link Stone to get Machamp (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Use a Link Stone to get Golem (Alolan Graveler too) (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Use a Link Stone to get Gengar (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-boldore",
+   "species": 525,
+   "name": "Boldore",
+   "text": "Use a Link Stone to get Gigalith (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-gurdurr",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "Use a Link Stone to get Conkeldurr (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-karrablast",
+   "species": 588,
+   "name": "Karrablast",
+   "text": "Use a Link Stone to get Escavalier (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-shelmet",
+   "species": 616,
+   "name": "Shelmet",
+   "text": "Use a Link Stone to get Accelgor (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-phantump",
+   "species": 708,
+   "name": "Phantump",
+   "text": "Use a Link Stone to get Trevenant (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-pumpkaboo",
+   "species": 710,
+   "name": "Pumpkaboo",
+   "text": "Use a Link Stone to get Gourgeist (trading works too). Link Stones: Fallshore Evolution House, Route 12, Dehara Dept. Store 3F.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Use the King's Rock on it for Politoed (a Water Stone still gives Poliwrath); no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Use the King's Rock on it for Slowking (Slowbro still at Lv 37); no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Use the Metal Coat on it for Steelix; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Use the Metal Coat on it for Scizor; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Use the Dragon Scale on it for Kingdra; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Use the Protector on it for Rhyperior; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Use the Electirizer on it for Electivire; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Use the Magmarizer on it for Magmortar; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Use the Up-Grade on it for Porygon2; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Use the Dubious Disc on it for Porygon-Z; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Use the Prism Scale on it for Milotic; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Use the Reaper Cloth on it for Dusknoir; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-spritzee",
+   "species": 682,
+   "name": "Spritzee",
+   "text": "Use the Sachet on it for Aromatisse; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-swirlix",
+   "species": 684,
+   "name": "Swirlix",
+   "text": "Use the Whipped Dream on it for Slurpuff; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Use the Deep Sea Tooth or Deep Sea Scale on it for Huntail or Gorebyss; no trade needed.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Level up on Thundercap Mt. for Magnezone, or use a Thunder Stone.",
+   "quality": "reference-only",
+   "source": "ROM evolution table; unboundwiki.com walkthrough part 15"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Level up on Thundercap Mt. for Probopass, or use a Thunder Stone.",
+   "quality": "reference-only",
+   "source": "ROM evolution table; unboundwiki.com walkthrough part 15"
+  },
+  {
+   "id": "evo-charjabug",
+   "species": 737,
+   "name": "Charjabug",
+   "text": "Level up on Thundercap Mt. for Vikavolt, or use a Thunder Stone.",
+   "quality": "reference-only",
+   "source": "ROM evolution table; unboundwiki.com walkthrough part 15"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Use an Oval Stone for Chansey (the ROM ties it to a female). The Fallshore Evolution House gives one for showing a Happiny.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-doublade",
+   "species": 680,
+   "name": "Doublade",
+   "text": "Use a Dusk Stone for Aegislash.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-crabrawler",
+   "species": 739,
+   "name": "Crabrawler",
+   "text": "Use an Ice Stone for Crabominable.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-sandshrew-alola",
+   "species": 27,
+   "name": "Sandshrew",
+   "text": "Alolan Sandshrew (Icicle Cave) evolves with an Ice Stone.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-vulpix-alola",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "Alolan Vulpix evolves with an Ice Stone; the Kanto form still with a Fire Stone.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-voltorb-hisui",
+   "species": 100,
+   "name": "Voltorb",
+   "text": "Hisuian Voltorb evolves with a Leaf Stone.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-growlithe-hisui",
+   "species": 58,
+   "name": "Growlithe",
+   "text": "Both Growlithe forms evolve with a Fire Stone.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-meltan",
+   "species": 808,
+   "name": "Meltan",
+   "text": "No Pokémon GO candy: use a Metal Coat (the ROM also lists Metal Powder) for Melmetal.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-kubfu",
+   "species": 891,
+   "name": "Kubfu",
+   "text": "Use a Dusk Stone for Single Strike or a Water Stone for Rapid Strike Urshifu.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-applin",
+   "species": 840,
+   "name": "Applin",
+   "text": "Tart Apple or Sweet Apple from the Fallshore market (Gen 8 activation) for Flapple or Appletun.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-milcery",
+   "species": 868,
+   "name": "Milcery",
+   "text": "Use one of the candy Sweets sold in the Fallshore market (Gen 8 activation) for Alcremie.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-sinistea",
+   "species": 854,
+   "name": "Sinistea",
+   "text": "Use a Cracked Pot or Chipped Pot (Fallshore market) for Polteageist.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-slowpoke-galar",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Galarian Slowpoke: Galarica Cuff for Slowbro, Galarica Wreath for Slowking.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Use a Razor Fang for Gliscor.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Use a Razor Claw for Weavile (Hisuian Sneasel: Razor Claw for Sneasler).",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Shiny Stone for Togekiss.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Gardevoir at Lv 30; a Dawn Stone for Gallade.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Glalie at Lv 30; a Dawn Stone for Froslass.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-helioptile",
+   "species": 694,
+   "name": "Helioptile",
+   "text": "Sun Stone for Heliolisk.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "evo-eelektrik",
+   "species": 603,
+   "name": "Eelektrik",
+   "text": "Thunder Stone for Eelektross.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-engine",
+   "kind": "version",
+   "title": "Unbound 2.1.1.1",
+   "text": "Skeli's FireRed hack (built on the CFRU engine) set in the Borrius region, with species to Gen VII (Gen VIII forms with the activation) and Gen VIII battle mechanics. The ROM's trainer data holds a separate team per difficulty.",
+   "quality": "reference-only",
+   "source": "gamebrew.org: Pokemon Unbound; ROM Unbound 2.1.1.1 trainer table"
+  },
+  {
+   "id": "note-difficulty",
+   "kind": "tip",
+   "title": "Difficulty modes",
+   "text": "Vanilla, Difficult, Expert and Insane. Leaders, admins and the Elite Four have a different team in each; the level caps in this guide are the Vanilla teams' top levels, and the foe lists include the harder teams' levels. Puzzles have their own difficulty too.",
+   "quality": "reference-only",
+   "source": "gamebrew.org changelog; unboundwiki.com walkthrough part 1; ROM Unbound 2.1.1.1 trainer table"
+  },
+  {
+   "id": "note-mega",
+   "kind": "tip",
+   "title": "Mega Evolution",
+   "text": "Mega Evolution unlocks when Successor Maxima gives the Mega Keystone in Tarmigan Mansion. Many Mega Stones come from optional Mega Trainers (Yale, Osean, Lily, Aloysius, Almuth, Reena).",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 16"
+  },
+  {
+   "id": "note-z-moves",
+   "kind": "tip",
+   "title": "Z-Moves",
+   "text": "Z-Crystals are found around Borrius: Icium Z from an old man in Seaport City, Pikanium Z in Thundercap's Tablet Cavern, Rockium Z in Victory Road, Primarium Z after Aklove.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 32; unboundwiki.com walkthrough part 30; unboundwiki.com walkthrough part 38"
+  },
+  {
+   "id": "note-raids",
+   "kind": "tip",
+   "title": "Raid Dens and Dynamax",
+   "text": "32 Raid Dens hold Max Raid battles against Dynamax Pokémon with a partner. Star levels unlock with badges (1 star at one badge up to 5 stars at eight, 6 stars after the Elite Four).",
+   "quality": "reference-only",
+   "source": "unboundwiki.com raid dens"
+  },
+  {
+   "id": "note-missions",
+   "kind": "tip",
+   "title": "Missions",
+   "text": "84 missions (27 post-game), tracked in the Cube's Mission Log; Fallshore's Mission HQ gives many and rewards totals: Type: Null at 20, Latios or Latias at 45, Shiny Charm at 65.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com missions"
+  },
+  {
+   "id": "note-zygarde",
+   "kind": "tip",
+   "title": "Zygarde Cells",
+   "text": "100 Zygarde Cells are hidden across Borrius; the Super Cube from the Dresco scientists finds them. All 100 give Power Construct Zygarde.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com missions; unboundwiki.com walkthrough part 3"
+  },
+  {
+   "id": "note-mining",
+   "kind": "tip",
+   "title": "Mining",
+   "text": "The KBT Expressway mining game (P1000 a try) yields Hard Stones, Everstones, shards, evolution stones, Heart Scales; with the ADM you can also mine underwater and in Crystal Peak.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 7; unboundwiki.com mining items"
+  },
+  {
+   "id": "note-dexnav",
+   "kind": "tip",
+   "title": "DexNav",
+   "text": "Nat Log in Blizzard City upgrades your Pokédex with the DexNav once 15 Pokémon are caught.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 9"
+  },
+  {
+   "id": "note-game-corner",
+   "kind": "tip",
+   "title": "Cloud Game Corner",
+   "text": "Dehara City's Game Corner prizes: Emolga 500, Hawlucha 1000, Eevee 1500, Klefki 3000, Axew 5000, Porygon 9999 coins.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 17"
+  },
+  {
+   "id": "note-link-stone",
+   "kind": "tip",
+   "title": "No trades needed",
+   "text": "Trade evolutions use a Link Stone or the held item used directly; the dump confirms the item methods.",
+   "quality": "reference-only",
+   "source": "ROM Unbound 2.1.1.1 evolution table; unboundwiki.com evolution items"
+  },
+  {
+   "id": "note-rules-gyms",
+   "kind": "tip",
+   "title": "Gyms with special rules",
+   "text": "Mirskle: fog (Defog). Véga: darkness and dark energy. Mel: Inverse Battle. Galavan: levitation (no Ground moves). Tessy: types from the first two moves. Benjamin: Pokémon devolve instead of fainting.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough parts 4, 7, 14, 20, 33, 36"
+  },
+  {
+   "id": "note-starters",
+   "kind": "gift",
+   "title": "Extra starters",
+   "text": "Unova (Route 5 house), Sinnoh (Dehara City) and Alola (Seaport City) starters are gifts: one now, the rest at later badge counts.",
+   "species": [
+    495,
+    498,
+    501,
+    387,
+    390,
+    393
+   ],
+   "names": [
+    "Snivy",
+    "Tepig",
+    "Oshawott",
+    "Turtwig",
+    "Chimchar",
+    "Piplup"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 6; unboundwiki.com walkthrough part 17; unboundwiki.com walkthrough part 31"
+  },
+  {
+   "id": "note-latios",
+   "kind": "legendary",
+   "title": "Latios and Latias",
+   "text": "One roams after 45 missions (talk to the Mission HQ ranger), the other after the No Survivors mission (talk outside the Pokémon League); which is which depends on your gender. The ranger also gives Latiosite or Latiasite for beating every trainer.",
+   "species": [
+    380,
+    381
+   ],
+   "names": [
+    "Latias",
+    "Latios"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon; unboundwiki.com walkthrough part 11"
+  },
+  {
+   "id": "note-portal-purge",
+   "kind": "legendary",
+   "title": "Portal Purge",
+   "text": "After the League, Hoopa's portals hold Ultra Beasts, Tapus, Ho-Oh, Lugia, Xerneas, Yveltal, Reshiram, Zekrom, Necrozma and more around Borrius, many by day or night only. Catching them all gives a Master Ball and two starter Mega Stones.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon; unboundwiki.com missions"
+  },
+  {
+   "id": "note-beasts",
+   "kind": "legendary",
+   "title": "Raikou, Entei and Suicune",
+   "text": "After the Tomb of Borrius portal, Raikou and Entei roam; catch both and Suicune appears in the Ruins of Void's top room.",
+   "species": [
+    243,
+    244,
+    245
+   ],
+   "names": [
+    "Raikou",
+    "Entei",
+    "Suicune"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "note-birds",
+   "kind": "legendary",
+   "title": "The legendary birds",
+   "text": "The Shadows take Articuno, Moltres and Zapdos in the story; after it they wait at Frozen Heights (east of the KBT entrance), Cinder Volcano's peak and Thundercap's peak.",
+   "species": [
+    144,
+    145,
+    146
+   ],
+   "names": [
+    "Articuno",
+    "Zapdos",
+    "Moltres"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon; unboundwiki.com walkthrough part 1; unboundwiki.com walkthrough part 7"
+  },
+  {
+   "id": "note-regis",
+   "kind": "legendary",
+   "title": "The Regis",
+   "text": "Regirock in the Desert Ruins, Regice in Frozen Forest's hidden tomb, Registeel in a Route 18 tomb; with all three, Regigigas wakes on Icy Hole B1F.",
+   "species": [
+    377,
+    378,
+    379,
+    486
+   ],
+   "names": [
+    "Regirock",
+    "Regice",
+    "Registeel",
+    "Regigigas"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "note-swords",
+   "kind": "legendary",
+   "title": "Swords of Justice",
+   "text": "Cobalion, Terrakion and Virizion in Victory Road (Swords of Justice mission); Keldeo in the cave it opens on Route 17.",
+   "species": [
+    638,
+    639,
+    640,
+    647
+   ],
+   "names": [
+    "Cobalion",
+    "Terrakion",
+    "Virizion",
+    "Keldeo"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "note-lake",
+   "kind": "legendary",
+   "title": "Guardians of the Lake",
+   "text": "Uxie outside the Dream Research Lab, Mesprit on Shadow Base B3F and Azelf on Route 18; the mission ends with Dialga in the Cave of Being.",
+   "species": [
+    480,
+    481,
+    482,
+    483
+   ],
+   "names": [
+    "Uxie",
+    "Mesprit",
+    "Azelf",
+    "Dialga"
+   ],
+   "quality": "reference-only",
+   "source": "unboundwiki.com legendary Pokémon"
+  },
+  {
+   "id": "note-weather",
+   "kind": "tip",
+   "title": "Field weather",
+   "text": "Hail on Route 8 and sandstorms in the Great Desert and Crystal Peak 4F damage your Pokémon each turn; Safety Goggles or the right types avoid it.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 9; unboundwiki.com walkthrough part 24; unboundwiki.com walkthrough part 35"
+  },
+  {
+   "id": "note-postgame-features",
+   "kind": "tip",
+   "title": "Post-game",
+   "text": "The Battle Frontier opens after the League. The ADM (P250,000 from Captain Davy) dives, digs and uses HMs on its own; New Game+ opens after the post-game Aklove fight.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 39; unboundwiki.com walkthrough part 40"
+  },
+  {
+   "id": "note-camomons",
+   "kind": "tip",
+   "title": "Camomons and Inverse houses",
+   "text": "Fallshore's Inverse Battle House and Seaport's Camomons Battle House (types from the first two moves) have rematchable trainers for experience.",
+   "quality": "reference-only",
+   "source": "unboundwiki.com walkthrough part 11; unboundwiki.com walkthrough part 37"
+  }
+ ]
+}

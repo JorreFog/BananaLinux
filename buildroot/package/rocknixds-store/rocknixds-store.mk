@@ -33,6 +33,7 @@ define ROCKNIXDS_STORE_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0644 $(BR2_EXTERNAL_BANANA_PATH)/../store/catalog.json $(TARGET_DIR)/usr/share/banana/apps/store/catalog.json
 	$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/store/media
 	for d in $(BR2_EXTERNAL_BANANA_PATH)/../store/apps/*/; do \
+		ls $$d*.png >/dev/null 2>&1 || continue; \
 		$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/store/apps/$$(basename $$d) && \
 		$(INSTALL) -m 0644 $$d*.png $(TARGET_DIR)/usr/share/banana/apps/store/apps/$$(basename $$d)/ || exit 1; \
 	done

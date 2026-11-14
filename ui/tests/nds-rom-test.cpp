@@ -391,6 +391,69 @@ static bool learns(const Species& s, uint16_t move, uint8_t level)
 }
 static int evoCount(const Species& s, uint16_t method) { int n = 0; for (auto& e : s.evolutions) n += e.method == method; return n; }
 
+// an hg-engine ROM hack (rom.cpp hgEngine): Origin HeartGold v4.0.3 EN rc8 (2026-11-04, the owner's; a Japanese
+// HeartGold base in English): its own move, picture, personal and level-up formats, the national Pokédex to 1025
+static void checkHack(const RomData& r)
+{
+	const Game& g = r.game;
+	fprintf(stderr, "  %s: %zu species, %zu moves, %zu items, %zu zones, %zu trainers\n", g.title.c_str(), r.species.size(), r.moves.size(), r.items.size(), r.zones.size(), r.trainers.size());
+	if (g.hack != "origin-heartgold") { fprintf(stderr, "  (no checks for the hack %s)\n", g.hack.c_str()); return; }
+	EQ(g.title, std::string("Origin HeartGold"));
+	EQ((int)g.id, (int)GameId::HEARTGOLD);
+	EQ(g.code, std::string("IPKJ"));
+	EQ(g.dexSize, 1025);
+	CHECK(g.modern);
+	// names: the Pokédex's first and last, in the DS games' case as the hack writes them
+	EQ(r.species[1].name, std::string("Bulbasaur"));
+	EQ(r.species[1025].name, std::string("Pecharunt"));
+	EQ(r.species[1].category, std::string("Seed Pokémon"));
+	CHECK(r.species[1].dexText.find("seed") != std::string::npos);
+	// types: Fairy (the hack's type 9) and the newer generations' charts
+	CHECK(r.species[35].types[0] == FAIRY && r.species[35].types[1] == FAIRY);		// Clefairy
+	CHECK(r.species[39].types[0] == NORMAL && r.species[39].types[1] == FAIRY);	// Jigglypuff
+	CHECK(r.species[700].types[0] == FAIRY);										// Sylveon
+	EQ(r.species[1].abilities[0], (uint16_t)65);	// Overgrow
+	EQ(r.species[133].abilities[2], (uint16_t)107);	// Eevee's hidden ability, Anticipation
+	EQ((int)r.species[1].height, 7);
+	EQ((int)r.species[1].weight, 69);
+	// moves: its own records (921 names), the split, Fairy, priority
+	CHECK(r.moves.size() >= 900);
+	EQ(r.moves[585].name, std::string("Moonblast"));
+	EQ((int)r.moves[585].type, (int)FAIRY);
+	EQ((int)r.moves[585].cat, (int)MoveCategory::SPECIAL);
+	EQ((int)r.moves[242].cat, (int)MoveCategory::PHYSICAL);	// Crunch
+	EQ((int)r.moves[52].cat, (int)MoveCategory::SPECIAL);		// Ember
+	EQ((int)r.moves[45].cat, (int)MoveCategory::STATUS);		// Growl
+	EQ((int)(int8_t)r.moves[98].priority, 1);					// Quick Attack
+	EQ((int)(int8_t)r.moves[182].priority, 4);					// Protect
+	// level-up lists of (level, move): Bulbasaur's starts with Tackle at 1; evolutions, 10 a species
+	CHECK(!r.species[1].learnset.empty() && r.species[1].learnset[0].level == 1 && r.species[1].learnset[0].move == 33);
+	CHECK(!r.species[1].evolutions.empty() && r.species[1].evolutions[0].into == 2);
+	EQ(evoCount(r.species[133], evo::USE_ITEM), 4);		// Eevee: Fire, Water, Thunder, then Leaf and Ice Stones
+	// forms after the Pokédex, by name: Charizard's two Mega Evolutions, Deoxys' three formes
+	EQ((int)r.species[6].formCount, 3);
+	EQ((int)r.species[386].formCount, 4);
+	// wild Pokémon: real species (a form in the number's top bits split off), sane levels
+	int bad = 0;
+	for (auto& z : r.zones) for (auto& e : z.second.encounters) bad += e.species == 0 || e.species > g.dexSize || e.minLevel == 0 || e.minLevel > e.maxLevel || e.maxLevel > 100;
+	EQ(bad, 0);
+	CHECK(zoneNamed(r, "Route 29") != nullptr);
+	// pictures: plain (not scrambled) fronts in data/pokepic_*.narc, the shiny palette its own; a form's own picture,
+	// and Unown's letters from the base release's form archive (the hack's own records are copies of A)
+	auto b = r.sprite(1), bs = r.sprite(1), p = r.sprite(1025), d0 = r.sprite(386), d1 = r.sprite(386, false, 1), u0 = r.sprite(201), u5 = r.sprite(201, false, 5);
+	CHECK(b && !b->frames.empty() && b->normal != b->shiny);
+	CHECK(bs && p && !p->frames.empty());
+	CHECK(d0 && d1 && d0->frames[0] != d1->frames[0]);
+	CHECK(u0 && u5 && u0->frames[0] != u5->frames[0]);
+	int none = 0;
+	for (uint16_t sp = 1; sp <= 1025; sp++) none += !r.sprite(sp);
+	EQ(none, 0);
+	// teams aren't read (their layout isn't known well enough: rom.cpp trainers)
+	size_t mons = 0;
+	for (auto& t : r.trainers) mons += t.second.team.size();
+	EQ(mons, (size_t)0);
+}
+
 static void checkGame(const RomData& r)
 {
 	const Game& g = r.game;
@@ -731,7 +794,7 @@ static void testRoms(const std::string& dir, const std::string& cache)
 			if (pass == 0 && info.fromCache) { unlink(info.cacheFile.c_str()); r = loadRom(f, cache, &err, &info); if (!r) break; }
 			fprintf(stderr, "%s: %s in %.0f ms (cache %zu KiB)\n", r->game.code.c_str(), info.fromCache ? "cache read" : "decoded", info.ms, info.cacheBytes / 1024);
 			if (!cache.empty()) EQ(info.fromCache, pass == 1);
-			checkGame(*r);
+			if (r->game.hack.empty()) checkGame(*r); else checkHack(*r);
 			digest[pass] = digestOf(*r);
 			if (pass == 0) checkHints(*r);
 		}

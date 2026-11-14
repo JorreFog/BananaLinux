@@ -14,7 +14,7 @@ namespace banana::lang
 	namespace
 	{
 		// a line of the English or of a translation in pieces: text, or a placeholder ({name}, or printf's %d %s %.1f...)
-		struct Piece { std::string text; bool slot = false; bool named = false; };
+		struct Piece { std::string text; bool slot = false; bool named = false; char conv = 0; };	// conv: a %'s letter
 
 		std::vector<Piece> pieces(const std::string& s)
 		{
@@ -38,7 +38,7 @@ namespace banana::lang
 					while (k < s.size() && isdigit((unsigned char)s[k])) k++;
 					if (k < s.size() && s[k] == '.') { k++; while (k < s.size() && isdigit((unsigned char)s[k])) k++; }
 					while (k < s.size() && strchr("lhzj", s[k])) k++;
-					if (k < s.size() && strchr("dsuxXfgceip", s[k])) { flush(); out.push_back({ s.substr(i, k - i + 1), true, false }); i = k + 1; continue; }
+					if (k < s.size() && strchr("dsuxXfgceip", s[k])) { flush(); out.push_back({ s.substr(i, k - i + 1), true, false, s[k] }); i = k + 1; continue; }
 				}
 				lit += s[i++];
 			}
@@ -49,13 +49,32 @@ namespace banana::lang
 		struct Pattern { std::vector<Piece> en, tr; };
 
 		// does text match the English's pieces? caps: what each placeholder stands for, in order
+		// what a %d, %u, %x or %f slot can hold: its number and nothing else, so "Slot Machine" isn't line "Slot %d"
+		// (a %s, %c or a {name} can hold anything)
+		bool numberChar(char conv, char c, bool first)
+		{
+			switch (conv)
+			{
+			case 'd': case 'i': return isdigit((unsigned char)c) || (first && strchr("-+ ", c));
+			case 'u': return isdigit((unsigned char)c) || (first && c == ' ');
+			case 'x': case 'X': return isxdigit((unsigned char)c) || (first && c == ' ');
+			case 'f': case 'g': case 'e': return isdigit((unsigned char)c) || strchr("-+.eE", c);
+			default: return true;
+			}
+		}
+		bool numeric(char conv) { return conv && strchr("diuxXfge", conv); }
+
 		bool match(const std::string& t, size_t at, const std::vector<Piece>& p, size_t k, std::vector<std::string>& caps)
 		{
 			if (k == p.size()) return at == t.size();
 			if (!p[k].slot) return t.compare(at, p[k].text.size(), p[k].text) == 0 && match(t, at + p[k].text.size(), p, k + 1, caps);
 			// a placeholder: one character at least, the shortest that lets the rest match
+			bool digit = false;
 			for (size_t end = at + 1; end <= t.size(); end++)
 			{
+				if (!numberChar(p[k].conv, t[end - 1], end == at + 1)) break;
+				digit = digit || (p[k].conv == 'x' || p[k].conv == 'X' ? isxdigit((unsigned char)t[end - 1]) : isdigit((unsigned char)t[end - 1]));
+				if (numeric(p[k].conv) && !digit) continue;	// (a sign alone isn't one yet)
 				caps.push_back(t.substr(at, end - at));
 				if (match(t, end, p, k + 1, caps)) return true;
 				caps.pop_back();
@@ -150,7 +169,9 @@ namespace banana::lang
 			// all in capitals, with no line of its own: the line in any case, when that is one translation
 			bool upper = false, lowerSeen = false;
 			for (unsigned char c : s) { if (c >= 'A' && c <= 'Z') upper = true; if (c >= 'a' && c <= 'z') lowerSeen = true; }
-			if (upper && !lowerSeen)
+			// (not a button's name as printed on the handheld, a key cap's "START" / "SELECT": "Start" is a label's
+			// line, and in Finnish the START key turned into "Käynnistä" and pushed SELECT's hint off the bar)
+			if (upper && !lowerSeen && s != "START" && s != "SELECT")
 			{
 				auto f = folded.find(lower(s));
 				if (f != folded.end() && !f->second.empty()) return f->second;

@@ -6,7 +6,7 @@
 #   nds-reset drastic     all of DraStic's and SuperDrastic's settings (drastic.cfg, banana/superdrastic.conf)
 #   nds-reset bananads    BananaDS's settings (bananads.conf)
 #   nds-reset ds-buttons  L2, R2, L3 and R3 back to Banana's (Nintendo DS > Buttons: settings.conf's nds_btn_*, nds-buttons)
-DEF=/usr/share/drastic/config/drastic.cfg CFG=/data/drastic/config/drastic.cfg
+DEF=${NDS_RESET_DEF:-/usr/share/drastic/config/drastic.cfg} CFG=${NDS_RESET_CFG:-/data/drastic/config/drastic.cfg}   # (the variables: tests)
 case "$1" in
 buttons|drastic)
     [ -f $DEF ] || { echo "DraStic isn't installed."; exit 1; }
@@ -14,23 +14,28 @@ buttons|drastic)
     if [ $1 = buttons ]; then
         # the card's file without its controls, then the image's controls
         { grep -v '^controls_[ab]\[' $CFG; grep '^controls_[ab]\[' $DEF; } > $CFG.new
+        want=$(( $(grep -vc '^controls_[ab]\[' $CFG) + $(grep -c '^controls_[ab]\[' $DEF) ))
     else
         # the image's file with the card's firmware lines (the name the games show, the language, the birthday)
         awk 'NR == FNR { if (/^firmware\./) { k = $1; mine[k] = $0 } next } ($1 in mine) { print mine[$1]; next } { print }' \
             $CFG $DEF > $CFG.new
+        want=$(wc -l < $DEF)
         rm -f /data/banana/superdrastic.conf /data/drastic/config/.threaded_3d.settings /data/drastic/config/.hires_3d.settings	# (a game's Threaded 3D or 3D resolution left from a cut-off run)
     fi
+    # (the new file as long as it should be, or the old one stays: on a full card a file cut short went over it)
+    [ "$(wc -l < $CFG.new)" = "$want" ] || { rm -f $CFG.new; echo "DraStic's settings couldn't be written (the card full?)."; exit 1; }
     sync $CFG.new 2>/dev/null; mv -f $CFG.new $CFG && sync
     ;;
 bananads)
     rm -f /data/bananads/bananads.conf && sync
     ;;
 ds-buttons)
-    S=/data/banana/settings.conf
+    S=${NDS_RESET_SETTINGS:-/data/banana/settings.conf}
     [ -f $S ] || exit 0
     sed -e 's/^ *nds_btn_l2 *=.*/nds_btn_l2 = swap/' -e 's/^ *nds_btn_r2 *=.*/nds_btn_r2 = ff/' \
         -e 's/^ *nds_btn_l3 *=.*/nds_btn_l3 = blow/' -e 's/^ *nds_btn_r3 *=.*/nds_btn_r3 = none/' \
-        -e 's/^ *nds_swap_ab *=.*/nds_swap_ab = off/' $S > $S.new
+        -e 's/^ *nds_swap_ab *=.*/nds_swap_ab = off/' $S > $S.new &&
+        [ "$(wc -l < $S.new)" = "$(wc -l < $S)" ] || { rm -f $S.new; echo "The settings couldn't be written (the card full?)."; exit 1; }
     sync $S.new 2>/dev/null; mv -f $S.new $S && sync
     ;;
 *) echo "nds-reset buttons|drastic|bananads|ds-buttons"; exit 2 ;;
