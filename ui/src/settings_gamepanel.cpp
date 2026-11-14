@@ -1106,7 +1106,7 @@ namespace banana
 			float x = 18 + i * tstep, y = 300;
 			bool on = gFlash == i;
 			box(on ? "pick" : "slot", on, x, y, tw, 120);
-			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
+			Color fg = on ? p.onPick : (i == 4 ? Color::hex(light ? 0xc8303c : 0xff8a96) : p.ink);	// (Quit: a red that reads on either)
 			int k = std::max(1, (int)std::lround(3 * s));
 			float ix = std::round(X(x + tw / 2) - 6 * k), iy = std::round(X(y + 16));
 			for (int r = 0; r < 12; r++)

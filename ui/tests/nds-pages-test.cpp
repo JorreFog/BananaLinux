@@ -473,8 +473,22 @@ static void touchTests(const Ctx& c, int w, int h)
 	CHECK(tap(530, 30) == Pages::Action::CLOSE, "Back to game without a game");
 }
 
+// the pictures a theme names (the Glass themes' screens), as banana-ui decodes them
+static rnds::Bitmap stbLoad(const std::string& path)
+{
+	rnds::Bitmap b;
+	int w, h, n;
+	unsigned char* px = stbi_load(path.c_str(), &w, &h, &n, 4);
+	if (!px) return b;
+	b.w = w; b.h = h;
+	b.px.assign(px, px + (size_t)w * h * 4);
+	stbi_image_free(px);
+	return b;
+}
+
 int main(int argc, char** argv)
 {
+	rnds::setDecoder(stbLoad);
 	Ctx c;
 	c.out = std::string(argc > 1 ? argv[1] : "tests/out") + "/nds-pages";
 	c.assets = argc > 2 ? argv[2] : "assets/rnds";
@@ -539,6 +553,12 @@ int main(int argc, char** argv)
 	renderAll(c, 640, 480, "light", l, false);
 	std::string v = applyTheme("file:" + c.themes + "/ocean.json", "yellow");
 	renderAll(c, 1024, 768, "ocean", v == "light", false);
+	// the Glass themes: the panels frosted glass over the theme's picture, in Inter (as their Settings)
+	v = applyTheme("file:" + c.themes + "/glass-dark.json", "yellow");
+	CHECK(glassLook.blur > 0, "Glass dark's panels are glass");
+	renderAll(c, 640, 480, "glass-dark", v == "light", false);
+	v = applyTheme("file:" + c.themes + "/glass-light.json", "yellow");
+	renderAll(c, 1024, 768, "glass-light", v == "light", false);
 	v = applyTheme("dark", "pink");
 	renderAll(c, 640, 480, "pink", false, false);
 	fprintf(stderr, "%s: %d failed\n", fails ? "FAIL" : "ok", fails);
