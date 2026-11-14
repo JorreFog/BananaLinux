@@ -42,6 +42,9 @@
 #include "carts.h"
 #include "layout.h"
 #include "nas.h"
+#ifdef __ANDROID__
+#include "android_host.h"	// (the launcher app around the core: android/launcher)
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -3213,6 +3216,9 @@ int main(int argc, char** argv)
 		if (home.end || quit)
 		{
 			// another game picked, or the menu is going (a shutdown): this one ends, writing its saves
+#ifdef __ANDROID__
+			if (pid > 0)	// (Android: the quick sheet over another app's game, no process of ours to end)
+#endif
 			kill(-pid, SIGTERM);
 			if (held) gameFreeze(pid, false);
 			logf("home: the stopped game ended (%s)", quit ? "the menu is closing" : "another game was picked");
@@ -3481,6 +3487,36 @@ int main(int argc, char** argv)
 			home.resume = true;
 			return;
 		}
+#ifdef __ANDROID__
+		// Android: the game is another app, started through an intent from the launch table (android_launch.h). The menu
+		// stays as it is behind it; the Home button brings it back over the game, and the game back (android/launcher)
+		{
+			const std::string gp = settingsView.gamePerf(rom.substr(rom.rfind('/') + 1));
+			std::string page;
+			if (!android::runGame(sd, rom, settings["core." + sd.id], !gp.empty() ? gp : sd.perf, page)) { dirty = true; return; }
+			if (!page.empty())
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.setVariant(settings["theme"]);
+				if (!openPage(settingsView, page)) logf("launch: no page %s", page.c_str());
+				dirty = true;
+				return;
+			}
+			gameRomPath = rom;
+			playing.shelf = lib.shelf(lib.currentShelf()).def.id;
+			playing.title = lib.gameAt(game).title;
+			playing.perf = sd.perf;
+			std::ofstream(o.data + "/last-system") << ui->systemIndex() << "\n";
+			recordEvent("game", "start: %s (%s, by its intent)", playing.title.c_str(), sd.id.c_str());
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				settingsView.gameRom(gameRomPath);	// (the quick menu's Performance row: this game's)
+			}
+			rep.key = Key::NONE;
+			dirty = true;
+			return;
+		}
+#endif
 		gameRomPath = rom;
 		playing.shelf = lib.shelf(lib.currentShelf()).def.id;
 		playing.title = lib.gameAt(game).title;
@@ -3958,6 +3994,25 @@ int main(int argc, char** argv)
 	{
 		// the quick menu over a stopped game is its page and nothing else: closed (B), the game goes on
 		if (home.on && home.quick && !settingsView.isOpen()) { home.resume = true; continue; }
+#ifdef __ANDROID__
+		// Android: the Home button held over a game (the app times it): the quick menu on an overlay of the bottom
+		// screen, the game going on under it; and the launcher back over a game it started: that game's play time
+		if (int a = android::takeHomeAsk())
+		{
+			if (a == 2 && !home.on && disp.isOpen() && disp.sheetOpen()) homeMenu(0, true);
+			continue;
+		}
+		{
+			std::string backRom;
+			long backSecs = 0;
+			if (android::takeGameBack(backRom, backSecs))
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				const int at = findGame(lib, playing.shelf, backRom);
+				if (at >= 0) { lib.recordPlay(at, backSecs); ui->dataChanged(); dirty = true; }
+			}
+		}
+#endif
 		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
 		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
 		if (settingsView.typing() != wasTyping)

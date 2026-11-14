@@ -1,0 +1,41 @@
+// BananaLauncher in the ROM (android/product/banana.mk adds the module): the APK built with Gradle (README.md) put at
+// prebuilt/BananaLauncher.apk, re-signed with the platform key, installed as a privileged app on /system_ext and in
+// place of the stock launchers. The platform signature is what grants its signature permissions: the overlay window of
+// the quick sheet (SYSTEM_ALERT_WINDOW), all-files access to the card (MANAGE_EXTERNAL_STORAGE), the per-display
+// brightness (CONTROL_DISPLAY_BRIGHTNESS), Wi-Fi's networks (NETWORK_SETTINGS); the privileged ones it uses are listed
+// in privapp-permissions-org.bananaos.launcher.xml.
+android_app_import {
+    name: "BananaLauncher",
+    apk: "prebuilt/BananaLauncher.apk",
+    certificate: "platform",
+    privileged: true,
+    system_ext_specific: true,
+    overrides: [
+        "Launcher3",
+        "Trebuchet",
+        "Launcher3QuickStep",
+        "TrebuchetQuickStep",
+    ],
+    dex_preopt: {
+        enabled: false,
+    },
+    required: [
+        "privapp-permissions-org.bananaos.launcher.xml",
+        "default-permissions-org.bananaos.launcher.xml",
+    ],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-org.bananaos.launcher.xml",
+    src: "privapp-permissions-org.bananaos.launcher.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
+
+// the runtime permissions it is given at the first boot (Wi-Fi's scan needs the location; Bluetooth's devices)
+prebuilt_etc {
+    name: "default-permissions-org.bananaos.launcher.xml",
+    src: "default-permissions-org.bananaos.launcher.xml",
+    sub_dir: "default-permissions",
+    system_ext_specific: true,
+}

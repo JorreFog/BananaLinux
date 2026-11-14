@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaLauncher's runtime permissions, granted at the first boot (/system_ext/etc/default-permissions) -->
+<exceptions>
+    <exception package="org.bananaos.launcher">
+        <!-- Wi-Fi's scan results -->
+        <permission name="android.permission.ACCESS_FINE_LOCATION" fixed="false" />
+        <!-- Bluetooth's paired devices -->
+        <permission name="android.permission.BLUETOOTH_CONNECT" fixed="false" />
+        <permission name="android.permission.BLUETOOTH_SCAN" fixed="false" />
+    </exception>
+</exceptions>

@@ -1,0 +1,17 @@
+// BananaLauncher: banana-ui as Android's HOME app (README.md). Gradle 8.13 or newer, the Android SDK (platform 35,
+// build-tools 35) and NDK r28 (sdk.dir / ndk.dir in local.properties, or ANDROID_HOME)
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'BananaLauncher'
