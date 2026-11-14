@@ -1580,3 +1580,9 @@ settings		The original Game Boy's green.	Зелёный, как у первог�
 settings		The Game Boy Pocket's paler screen.	Более светлый экран Game Boy Pocket.
 settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Game Boy Color. Только Gambatte и mGBA.
 settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Super Game Boy. Только Gambatte и mGBA.
+settings		Emulator configurations	Настройки эмуляторов
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	Собственные настройки каждого эмулятора DS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic's settings: picture, speed, sound and hotkeys.	Настройки DraStic: изображение, скорость, звук и горячие клавиши.
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	Настройки BananaDS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic: самый быстрый. Его настройки — в «Настройках эмуляторов».
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Собственный эмулятор Banana на основе melonDS: самый точный. Его настройки — в «Настройках эмуляторов».
