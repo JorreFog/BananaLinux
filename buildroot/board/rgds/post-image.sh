@@ -13,6 +13,19 @@ universal) DTBS="rk3568-anbernic-rg-ds rk3568-anbernic-rg-ds-plus" ;;
 esac
 HERE=$(dirname "$0")
 cd "$BINARIES_DIR"
+# No host build may reach the card. `make ui` leaves x86 binaries in ui/ (the host gate), Buildroot's local-source
+# rsync copies them into the package's build dir, and an install step that skipped the target build puts one in
+# /usr/bin -- which booted to a black screen: the kernel and init came up, and the menu died on "syntax error".
+for f in banana-ui banana-scrape banana-sync banana-bshare banana-fetch bananatube; do
+    [ -f "$TARGET_DIR/usr/bin/$f" ] || continue
+    m=$(od -An -tx1 -j18 -N2 "$TARGET_DIR/usr/bin/$f" | tr -d ' \n')
+    [ "$m" = b700 ] || {
+        echo "post-image: $f is not an aarch64 binary (ELF machine $m): a host build reached the target." >&2
+        echo "post-image: rebuild it with 'make -C $(dirname "$BINARIES_DIR") banana-ui-rebuild', not -reinstall." >&2
+        echo "post-image: for bananatube, 'make -C $(dirname "$BINARIES_DIR") bananatube-dirclean bananatube'." >&2
+        exit 1
+    }
+done
 # the kernel on the card LZ4-compressed, still named Image: U-Boot's booti finds the LZ4 frame and unpacks it
 # (kernel_comp_addr_r), and U-Boot read the 21 MB of the plain one at ~10 MB/s (2.1 s of the RG DS's boot; 10.5 MB
 # and the unpacking: 1.8 s). Every Banana card's U-Boot has done LZ4 since 0.2.0. images/Image stays the plain one.

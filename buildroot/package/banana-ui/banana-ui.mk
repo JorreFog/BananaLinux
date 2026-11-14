@@ -11,6 +11,9 @@ BANANA_UI_LICENSE = MIT
 BANANA_UI_LICENSE_FILES = ../LICENSE
 BANANA_UI_DEPENDENCIES = freetype libdrm alsa-lib zlib host-pkgconf libcurl openssl libssh2 libsmb2
 
+# After changing ui/ (sources or assets): `make -C output/<board> banana-ui-rebuild`. A plain make does not notice a
+# local package's files changed, and `-reinstall` skips the target build and installs whatever is in the tree --
+# including the x86 binary `make ui` leaves in ui/. post-image.sh now refuses to package that.
 define BANANA_UI_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -B -C $(@D) CXX="$(TARGET_CXX)" PKG_CONFIG="$(PKG_CONFIG_HOST_BINARY)" \
 		CXXFLAGS="$(TARGET_CXXFLAGS) -O2" LDFLAGS="$(TARGET_LDFLAGS)" banana-ui banana-scrape banana-sync banana-bshare banana-fetch
