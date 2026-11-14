@@ -26,6 +26,8 @@ if [ -n "$BANANA_SYSTEM" ] && [ "${1#/}" = "$1" ]; then
     done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+# the system page's looks that are the core's own options (Colour correction, Game Boy palette), as run-retroarch
+[ -n "$BANANA_SYSTEM" ] && [ -x /usr/libexec/banana/ra-coreopts ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE"
 CFG=/data/retroarch/retroarch.cfg
 ra_cfg() { sed -n "/^$1 = \"\(.*\)\"/{s//\1/;h};\${x;p}" $CFG 2>/dev/null; }
 mkdir -p /data/saves /data/states /data/screenshots
@@ -114,8 +116,14 @@ EOF
     PNG=$BD/$MODE/$th/$BANANA_SYSTEM.png
     [ -n "$BH" ] && [ -f "$PNG" ] && set -- --border "$PNG" --border-rect "$BX,$BY,$BW,$BH" "$@"
 fi
-# the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
-[ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
+# the picture's size: Settings' Picture size (ra_scale, or the system's own ra_scale.<system>: fit, integer, full);
+# default: as RetroArch has it (Integer scale in its menu), else the core's aspect, as large as fits
+case $(own ra_scale) in
+fit) set -- --scale fit "$@" ;;
+integer) set -- --scale integer "$@" ;;
+full) set -- --scale stretch "$@" ;;
+*) [ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@" ;;
+esac
 # low latency: each frame started as late as it still makes its refresh (BananaFront measures its own frames), the
 # buttons read that much later: GBC 16.7 -> 7.5 ms from the read to the picture (bananafront_lowlat, on by default)
 [ "${BANANAFRONT_LOWLAT_SET:-$(setting bananafront_lowlat)}" != off ] && set -- --lowlat "$@"

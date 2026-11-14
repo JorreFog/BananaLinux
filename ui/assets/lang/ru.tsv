@@ -1552,3 +1552,31 @@ settings		This system's own settings: its emulator, screen, look and buttons.	С
 settings		Swap A/B and X/Y	Поменять A/B и X/Y
 settings		Per system configurations	Настройки систем
 settings		Each system's own settings: its emulator, screen, look and buttons.	Собственные настройки каждой системы: эмулятор, экран, вид и кнопки.
+settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	Собственные настройки системы: эмулятор, экран, вид и кнопки. Игр на карте пока нет.
+settings		Picture size	Размер изображения
+settings		How big other systems' games are drawn.	Насколько крупно показываются игры других систем.
+settings		How big this system's games are drawn.	Насколько крупно показываются игры этой системы.
+settings		Default	По умолчанию
+settings		Fit	Вписать
+settings		Pixel perfect	Чёткие пиксели
+settings		Full screen	Весь экран
+settings		As RetroArch has it.	Как настроено в RetroArch.
+settings		The game's shape, as large as fits.	Пропорции игры, как можно крупнее.
+settings		Sharp, even pixels at a whole-number size, with a black margin.	Чёткие ровные пиксели в целое число раз, с чёрными полями.
+settings		The whole screen. Some games look stretched.	Весь экран. Некоторые игры выглядят растянутыми.
+settings		Colour correction	Коррекция цвета
+settings		Colours as the handheld's own screen showed them.	Цвета, как их показывал экран самой консоли.
+settings		Emulator's own	Как в эмуляторе
+settings		As the emulator has it.	Как настроено в эмуляторе.
+settings		Softer colours, as on the real screen the games were made for.	Мягкие цвета, как на настоящем экране, для которого делались игры.
+settings		The colours as the game stores them: brighter and stronger.	Цвета, как они записаны в игре: ярче и насыщеннее.
+settings		Game Boy palette	Палитра Game Boy
+settings		The colours of Game Boy games.	Цвета игр Game Boy.
+settings		Grey	Серая
+settings		Pocket	Pocket
+settings		Super Game Boy	Super Game Boy
+settings		Shades of grey.	Оттенки серого.
+settings		The original Game Boy's green.	Зелёный, как у первого Game Boy.
+settings		The Game Boy Pocket's paler screen.	Более светлый экран Game Boy Pocket.
+settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Game Boy Color. Только Gambatte и mGBA.
+settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Super Game Boy. Только Gambatte и mGBA.

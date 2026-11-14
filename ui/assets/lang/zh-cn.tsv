@@ -1616,3 +1616,31 @@ settings		This system's own settings: its emulator, screen, look and buttons.	�
 settings		Swap A/B and X/Y	交换 A/B 和 X/Y
 settings		Per system configurations	各系统配置
 settings		Each system's own settings: its emulator, screen, look and buttons.	每个系统自己的设置：模拟器、屏幕、画面和按键。
+settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	此系统自己的设置：模拟器、屏幕、画面和按键。卡上还没有游戏。
+settings		Picture size	画面大小
+settings		How big other systems' games are drawn.	其他系统游戏的画面大小。
+settings		How big this system's games are drawn.	此系统游戏的画面大小。
+settings		Default	默认
+settings		Fit	适应
+settings		Pixel perfect	像素完美
+settings		Full screen	全屏
+settings		As RetroArch has it.	按 RetroArch 的设置。
+settings		The game's shape, as large as fits.	保持游戏比例，尽可能大。
+settings		Sharp, even pixels at a whole-number size, with a black margin.	整数倍放大，像素清晰均匀，四周留黑边。
+settings		The whole screen. Some games look stretched.	铺满整个屏幕。部分游戏会被拉伸。
+settings		Colour correction	色彩校正
+settings		Colours as the handheld's own screen showed them.	还原掌机原装屏幕上的色彩。
+settings		Emulator's own	模拟器默认
+settings		As the emulator has it.	按模拟器的设置。
+settings		Softer colours, as on the real screen the games were made for.	更柔和的色彩，与游戏原本面向的屏幕一致。
+settings		The colours as the game stores them: brighter and stronger.	游戏原始色彩：更亮、更浓。
+settings		Game Boy palette	Game Boy 调色板
+settings		The colours of Game Boy games.	Game Boy 游戏的色彩。
+settings		Grey	灰色
+settings		Pocket	Pocket
+settings		Super Game Boy	Super Game Boy
+settings		Shades of grey.	灰阶。
+settings		The original Game Boy's green.	初代 Game Boy 的绿色。
+settings		The Game Boy Pocket's paler screen.	Game Boy Pocket 较浅的屏幕。
+settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Game Boy Color 为游戏配的色彩。仅限 Gambatte 和 mGBA。
+settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Super Game Boy 为游戏配的色彩。仅限 Gambatte 和 mGBA。

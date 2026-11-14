@@ -33,6 +33,8 @@ namespace banana
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
+		const char* const SCALE[] = { "default", "fit", "integer", "full", nullptr };
+		const char* const GB_PALETTE[] = { "grey", "green", "pocket", "gbc", "sgb", nullptr };
 		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
@@ -84,6 +86,10 @@ namespace banana
 			// (these two for each system too, Other systems > the system: ra_shader.gba... No line: the general value)
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true, true },
 			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true, true },
+			{ "ra_scale", "default", ENUM, SCALE, 0, 0, true, true },
+			// only a system's own, no general line (the emulator's own option when there's none: ra-coreopts)
+			{ "ra_colour", "", ENUM, ON_OFF, 0, 0, true, true },
+			{ "ra_gb_palette", "", ENUM, GB_PALETTE, 0, 0, true, true },
 			// only a system's own, no general line (the general one is RetroArch's video_monitor_index):
 			// ra_screen.<system> top or bottom
 			{ "ra_screen", "", ENUM, TOP_BOTTOM, 0, 0, true, true },

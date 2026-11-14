@@ -120,6 +120,16 @@ read a system's own value first (`own`); banana-ui does for the screen it lends 
 system's own screen goes into RetroArch's appended config for that game only, and `retroarch.cfg` keeps the
 general one.
 
+**Picture size** (`ra_scale`, Picture & sound, and `ra_scale.<system>`): Default (as RetroArch has it), Fit (the
+game's shape, as large as fits), Pixel perfect (the largest whole-number size) or Full screen (both panels are 4:3).
+RetroArch gets it as appended lines for that game (put back after it, as the screen border's keys are), BananaFront
+as `--scale`, and PlayStation in PCSX-ReARMed's own override (which has the last word there). A screen border has its
+own size and wins. **Colour correction** (Game Boy Advance, Game Boy Color: `ra_colour.<system>`) and **Game Boy
+palette** (Game Boy: `ra_gb_palette.gb`: grey, green, pocket, gbc, sgb) are the emulators' own options:
+`ra-coreopts` writes them into the core's options file (`retroarch/config/<core>/<core>.opt`, which BananaFront reads
+too) for gpSP, mGBA and BananaGBA, Gambatte, Gearboy and VBA-M. "Emulator's own" takes Banana's line out again, unless
+it was changed in RetroArch's menu since (`banana/.ra-coreopts` remembers what Banana wrote).
+
 The other systems have their buttons too, on each system's page (Settings > Other systems > Per system configurations > the system; `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
 R2, L3 or R3 pressed alone does a job of RetroArch's instead of the game's button (fast-forward on and off, save or
 load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by default). RetroArch's own hotkeys only work

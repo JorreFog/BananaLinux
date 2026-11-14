@@ -397,6 +397,9 @@ namespace banana
 	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
+	// Picture size's choices (Other systems > Picture & sound, and each system's page): ra_scale
+	static const std::vector<std::string> SCALE_HINTS = { "As RetroArch has it.", "The game's shape, as large as fits.",
+		"Sharp, even pixels at a whole-number size, with a black margin.", "The whole screen. Some games look stretched." };
 	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
 		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
@@ -704,6 +707,9 @@ namespace banana
 			add(PS, "picture", "Screen border", "What fills the space around a game's picture.",
 				menu, "ra_border", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." };
+			add(PS, "picture", "Picture size", "How big other systems' games are drawn.",
+				menu, "ra_scale", { "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" });
+			items.back().hints = SCALE_HINTS;
 			add(PS, "music", "Audio latency", "How soon the sound follows the game.",
 				menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 			items.back().hints = { "The quickest. A busy game can crackle.", "The usual balance.", "The safest: no crackle, a little more delay." };
@@ -760,6 +766,25 @@ namespace banana
 				own("picture", "Screen border", "What fills the space around this system's picture.", "ra_border", "ra_border",
 					{ "Off", "On" }, { "off", "on" },
 					{ "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." });
+				own("picture", "Picture size", "How big this system's games are drawn.", "ra_scale", "ra_scale",
+					{ "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" }, SCALE_HINTS);
+				// the emulator's own options (ra-coreopts writes them into its options file): no line, the emulator's own
+				if (id == "gba" || id == "gbc")
+				{
+					add(S, "picture", "Colour correction", "Colours as the handheld's own screen showed them.",
+						menu, ("ra_colour." + id).c_str(), { "Emulator's own", "On", "Off" }, { "", "on", "off" });
+					items.back().hints = { "As the emulator has it.", "Softer colours, as on the real screen the games were made for.",
+						"The colours as the game stores them: brighter and stronger." };
+				}
+				if (id == "gb")
+				{
+					add(S, "picture", "Game Boy palette", "The colours of Game Boy games.",
+						menu, "ra_gb_palette.gb", { "Emulator's own", "Grey", "Green", "Pocket", "Game Boy Color", "Super Game Boy" },
+						{ "", "grey", "green", "pocket", "gbc", "sgb" });
+					items.back().hints = { "As the emulator has it.", "Shades of grey.", "The original Game Boy's green.",
+						"The Game Boy Pocket's paler screen.", "The colours a Game Boy Color gave the game. Gambatte and mGBA only.",
+						"The colours a Super Game Boy gave the game. Gambatte and mGBA only." };
+				}
 				// L2, R2, L3 and R3 alone, and A/B and X/Y swapped (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch).
 				// No line: the image's template (R2 fast-forwards in the 2D systems' games), else the game's own
 				if (id == "gba")
@@ -1004,7 +1029,7 @@ namespace banana
 			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
+			{ "Picture & sound", { "Shader", "Screen border", "Picture size", "Integer scaling", "VSync", "Audio latency" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)

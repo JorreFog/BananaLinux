@@ -60,4 +60,32 @@ if grep -q -e '^ *video_monitor_index *=' -e '^ *stdin_cmd_enable *=' "$CF" 2>/d
     sed -i -e '/^ *video_monitor_index *=/d' -e '/^ *stdin_cmd_enable *=/d' "$CF"
 fi
 
+# Settings > Other systems > Picture size (ra_scale, or PlayStation's own ra_scale.psx): this core's override has the
+# last word on the size, so it goes there (run-retroarch's own lines would lose to it). fit: the game's shape as large
+# as fits; integer: whole-number size; full: the whole panel. default: Banana's above, written back when Settings had
+# changed it (.ra-ps1-scale: what Settings last wrote)
+setting() {
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
+    printf '%s' "$v"
+}
+SC=$(setting ra_scale.psx); [ -n "$SC" ] || SC=$(setting ra_scale)
+SM=/data/banana/.ra-ps1-scale
+case $SC in fit|integer|full) ;; *) SC= ;; esac
+if [ "$SC" != "$(cat $SM 2>/dev/null)" ]; then
+    case $SC in
+    fit) INT=false A=22 ;;
+    integer) INT=true A=22 ;;
+    full) INT=false A=0 ;;
+    *) H=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p')
+       case ${H:-480} in 7[0-9][0-9]) INT=false ;; *) INT=true ;; esac
+       A= ;;
+    esac
+    sed -i -e '/^ *video_scale_integer *=/d' -e '/^ *aspect_ratio_index *=/d' "$CF"
+    printf 'video_scale_integer = "%s"\n' "$INT" >> "$CF"
+    [ -n "$A" ] && printf 'aspect_ratio_index = "%s"\n' "$A" >> "$CF"
+    if [ -n "$SC" ]; then echo "$SC" > $SM; else rm -f $SM; fi
+    sync
+fi
+
 exec /usr/libexec/banana/run-retroarch pcsx_rearmed "$1"

@@ -1,0 +1,93 @@
+#!/bin/sh
+# ra-coreopts <system> <core .so>: a system's page's looks that are its emulator's own options (Settings > Other
+# systems > Per system configurations > the system: Colour correction, Game Boy palette), written into the core's
+# options file (RetroArch's config/<core>/<core>.opt, which BananaFront reads too) before the game starts.
+#   ra_colour.<system>      on / off       the screen's colours as the handheld's LCD showed them (GBA, GBC)
+#   ra_gb_palette.<system>  grey / green / pocket / gbc / sgb     an original Game Boy game's colours (Game Boy)
+# No line: the emulator's own (what its options say). A value Banana wrote is remembered (/data/banana/.ra-coreopts:
+# "<file> <key> <value>"): set back to the emulator's own, the line is taken out again, unless it was changed in
+# RetroArch's menu since. A core with no such option (or not one of these) is left alone.
+SYS=$1
+c=${2##*/}; c=${c%_libretro.so}
+[ -n "$SYS" ] && [ -n "$c" ] || exit 0
+setting() {
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
+    printf '%s' "$v"
+}
+R=/data/retroarch
+M=/data/banana/.ra-coreopts
+GLOBAL=$R/retroarch-core-options.cfg
+changed=0
+# opt <folder> <key> <value or empty>
+opt() {
+    O=$R/config/$1/$1.opt
+    cur=$(sed -n "s/^$2 = \"\(.*\)\"\$/\1/p" "$O" 2>/dev/null | tail -n 1)
+    mine=$(awk -v f="$O" -v k="$2" '$1 == f && $2 == k { $1 = ""; $2 = ""; sub(/^  /, ""); v = $0 } END { print v }' "$M" 2>/dev/null)
+    if [ -n "$3" ]; then
+        [ "$cur" = "$3" ] && [ "$mine" = "$3" ] && return
+        if [ ! -f "$O" ]; then
+            # (RetroArch reads the shared file while a core has none of its own: its lines for this core come along,
+            # or they'd be lost once this file exists)
+            mkdir -p "${O%/*}"
+            grep "^${2%%_*}_" "$GLOBAL" 2>/dev/null > "$O"
+        fi
+        sed -i "/^$2 = /d" "$O"
+        printf '%s = "%s"\n' "$2" "$3" >> "$O"
+        mark "$O" "$2" "$3"
+        echo "ra-coreopts: $SYS: $2 = $3" >&2
+    elif [ -n "$mine" ]; then
+        # back to the emulator's own: Banana's line out, if it is still Banana's
+        [ "$cur" = "$mine" ] && sed -i "/^$2 = /d" "$O" && echo "ra-coreopts: $SYS: $2 back to the emulator's own" >&2
+        mark "$O" "$2" ""
+    fi
+}
+mark() {
+    { awk -v f="$1" -v k="$2" '!($1 == f && $2 == k)' "$M" 2>/dev/null; [ -n "$3" ] && printf '%s %s %s\n' "$1" "$2" "$3"; } > "$M.new"
+    mv "$M.new" "$M"
+    changed=1
+}
+
+# each system only touches its own rows' options (Game Boy and Game Boy Color share Gambatte's file, the GBA and the
+# GBC mGBA's: one system's choice isn't another's "emulator's own")
+COL=0; PAL=0
+case $SYS in gba|gbc) COL=1 ;; gb) PAL=1 ;; esac
+col=$(setting "ra_colour.$SYS")
+pal=$(setting "ra_gb_palette.$SYS")
+# colour <folder> <key> <on value> <off value>
+colour() {
+    [ $COL = 1 ] || return 0
+    case $col in on) opt "$1" "$2" "$3" ;; off) opt "$1" "$2" "$4" ;; *) opt "$1" "$2" "" ;; esac
+}
+# palette <folder> <key> <value for the choice>
+palette() { [ $PAL = 1 ] && opt "$1" "$2" "$3"; return 0; }
+
+case $c in
+gpsp)
+    colour gpSP gpsp_color_correction enabled disabled ;;
+mgba|bananagba)
+    # (BananaGBA is mGBA's: the same folder and options)
+    colour mGBA mgba_color_correction Auto OFF
+    case $pal in
+    grey) gp=Grayscale gs=0 ;; green) gp="DMG Green" gs=0 ;; pocket) gp="GB Pocket" gs=0 ;;
+    gbc) gp= gs=1 ;; sgb) gp= gs=2 ;; *) gp= gs= ;;
+    esac
+    palette mGBA mgba_gb_colors "$gp"; palette mGBA mgba_gb_colors_preset "$gs" ;;
+gambatte)
+    colour Gambatte gambatte_gbc_color_correction "GBC only" disabled
+    case $pal in
+    grey) gz=disabled gp= ;; green) gz=internal gp="GB - DMG" ;; pocket) gz=internal gp="GB - Pocket" ;;
+    gbc) gz=GBC gp= ;; sgb) gz=SGB gp= ;; *) gz= gp= ;;
+    esac
+    palette Gambatte gambatte_gb_colorization "$gz"; palette Gambatte gambatte_gb_internal_palette "$gp" ;;
+gearboy)
+    colour Gearboy gearboy_color_correction Enabled Disabled
+    case $pal in grey) gp=B/W ;; green) gp=Original ;; *) gp= ;; esac
+    palette Gearboy gearboy_palette "$gp" ;;
+vbam)
+    colour VBA-M vbam_lcdfilter enabled disabled
+    case $pal in grey) gp="black and white" ;; green) gp="original gameboy" ;; *) gp= ;; esac
+    palette VBA-M vbam_palettes "$gp" ;;
+esac
+[ $changed = 1 ] && sync
+exit 0

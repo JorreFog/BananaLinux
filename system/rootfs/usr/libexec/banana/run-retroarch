@@ -49,6 +49,8 @@ if [ -n "$BANANA_SYSTEM" ]; then
     done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+# the system page's looks that are the core's own options (Colour correction, Game Boy palette): into its options file
+[ -n "$BANANA_SYSTEM" ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE"
 # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
 c=${CORE##*/}; c=${c%_libretro.so}
 [ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
@@ -346,6 +348,26 @@ EOF
         echo "run-retroarch: screen border $MODE/$th/$BANANA_SYSTEM, picture at $BX,$BY ${BW}x$BH" >&2
     fi
 fi
+# Settings > Other systems > Picture & sound > Picture size (or the system's own, ra_scale.<system>): fit (the game's
+# shape, as large as fits: RetroArch's "core provided" aspect), integer (the largest whole-number size: sharp, even
+# pixels, a black margin) or full (the whole panel; the panels are 4:3). default: as RetroArch has it. Not with a
+# screen border (its own size and place). Its keys are put back after the game as the border's are (BKEYS, BKEEP).
+SCFG=/run/banana/retroarch-scale.cfg
+rm -f $SCFG
+SA=
+SC=$(own ra_scale)
+if [ -z "$BA" ] && [ -n "$BANANA_SYSTEM" ]; then
+    case $SC in
+    fit) printf 'aspect_ratio_index = "22"\nvideo_scale_integer = "false"\n' > $SCFG ;;
+    integer) printf 'aspect_ratio_index = "22"\nvideo_scale_integer = "true"\n' > $SCFG ;;
+    full) printf 'aspect_ratio_index = "0"\nvideo_scale_integer = "false"\n' > $SCFG ;;
+    esac
+    if [ -f $SCFG ]; then
+        grep -E "$BKEYS" $CFG > $BKEEP.new; mv $BKEEP.new $BKEEP && sync
+        SA="|$SCFG"
+        echo "run-retroarch: picture size $SC" >&2
+    fi
+fi
 # The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
 # able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
 # so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
@@ -418,7 +440,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
@@ -435,7 +457,7 @@ else
     [ "$SMON" != "${MON:-2}" ] && echo "video_monitor_index = \"$SMON\"" >> $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
@@ -460,11 +482,12 @@ if [ -n "$RBA" ]; then
     rm -f $RBCFG $RBKEEP
 fi
 rm -f $RBF
-if [ -n "$BA" ]; then
-    # the screen border's keys as they were before the game (RetroArch wrote the border's into retroarch.cfg on exit)
+if [ -n "$BA" ] || [ -n "$SA" ]; then
+    # the screen border's or the picture size's keys as they were before the game (RetroArch wrote them into
+    # retroarch.cfg on exit)
     sed -i -E "/$BKEYS/d" $CFG
     cat $BKEEP >> $CFG
-    rm -f $BCFG $BKEEP
+    rm -f $BCFG $SCFG $BKEEP
 fi
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     fix video_monitor_index ${MON:-2}
