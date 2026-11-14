@@ -60,6 +60,9 @@ Checked without a Thor:
 - **The installer** ran on a ROCKNIX checkout at `4fc79d7c` (the pin) and is idempotent; `rocknix/tests/thor.sh` runs
   it on a made-up checkout as well.
 
+- **`rocknix/tests/real-image.sh`** checks all of this against ROCKNIX's released SM8550 image (its root file system
+  from a release's update tar), below under "Against ROCKNIX's released image".
+
 **Not yet:** a ROCKNIX image build with the package, and a run on a Thor.
 
 ## What the image has, against BananaOS's own Thor image
@@ -164,11 +167,66 @@ Checked on a PC, without a Thor and without an image:
   Mesa, systemd, PulseAudio, SDL2, Python3) needs more disk and hours than that machine had, so the package itself
   has not been compiled with ROCKNIX's toolchain yet.
 
+#### Against ROCKNIX's released image
+
+`rocknix/tests/real-image.sh <root fs> [aarch64 build]` takes ROCKNIX's real SM8550 image. It was run on release
+20261101 (built from `next` at `cefc1433`, 140 commits before the pin; in what the package uses, the two differ only in
+the Retroid Nova's F2/F3 keys in InputPlumber's `ayn_mcu.yaml`, `setsettings.sh`'s dropped RGA scaling and swaybg no
+longer started). How to get the root file system is at the top of the script. What it checks, and what it found:
+
+- **Files and shapes.** `runemu.sh`'s arguments and per-game keys, `games.slice`, ROCKNIX's settings file and lock,
+  essway's unit, autostart's order (platform quirks, the common scripts, `/etc/profile` again, then `UI_SERVICE`), the
+  AYN Thor's sway lines and touchscreens, InputPlumber's Thor sources, the rings' and the fan's tools, and every program
+  the scripts call. All there. `grim`, `jq`, `python3` (3.14), `curl`, Box64 and InputPlumber are in the image. `tar`,
+  `unzip`, `xzcat`, `sha256sum`, `flock` and `date` are busybox's, and they take the options the scripts use. There is
+  no `zstd` program and no `libssh2` (ROCKNIX builds it as a static library, so `banana-fetch` links it in). glibc is
+  2.44, SDL 2.32 with Wayland.
+- **The converter on the real `es_systems.cfg`** (139 systems): every one with a start, DOS as `[dos]`, the Windows,
+  Steam and Heroic shelves through `runemu.sh`, Ports and Tools as ROCKNIX runs them. **Fixed:** the makers of ROCKNIX's
+  own shelves (Tools, Ports, Media Player...) were EmulationStation's icon glyph (U+E013) plus " System"; EmulationStation's
+  own screenshot viewer (`/usr/bin/true`) became a shelf of games that did nothing; the menu opened on ROCKNIX's first
+  system in its alphabetical order (an empty Game Boy shelf) instead of the DS.
+- **Every system's game page** (`rocknix-options rows`) from the real `es_features.cfg` and `system.cfg`: all 136 that
+  start through `runemu.sh`.
+- **The board** for every handheld ROCKNIX has quirks for, and the 14 SM8550 device trees' models: `thor` on
+  "AYN Thor" only (not the Thor Lite, the Odin 2s, the AYANEO Pockets including the two-screen Pocket DS).
+- **In a chroot running the image's own bash, busybox, python3 and ROCKNIX's scripts** (qemu-user), over a made-up
+  AYN Thor `/sys`: the Thor's quirks, `099-banana-frontend` and `UI_SERVICE` (and `banana.frontend = 0` giving
+  EmulationStation back); `handheld` over ROCKNIX's `ledcontrol`, `analog_sticks_ledcontrol`, `gpu_overclock`, `fancontrol`;
+  `backlight` with ROCKNIX's `brightness` hotkey stepping the screen it set; `run-rocknix`; Wi-Fi; `usb-debug` over
+  `usbgadget`; `pc-games`; `update`; `sysstat`. **Fixed:**
+  - `wifi up` never ended on ROCKNIX: `wifi-nm`'s ROCKNIX setting called itself instead of `set_setting` (the host test
+    took its other branch).
+  - A game's performance mode reached ROCKNIX once only: ROCKNIX's `set_setting` can't replace a game's key (its `sed`
+    reads `["<rom>"]` as a bracket expression), so `runemu.sh` kept reading the first value. `run-rocknix` writes
+    through `rocknix-options` now (the RetroAchievements account too).
+  - The GPU boost: ROCKNIX's `gpu_overclock` is in `/usr/lib/autostart/quirks/platforms/SM8550/bin`, not `/usr/bin`, so
+    `handheld` wrote the clock itself and ROCKNIX's `enable.gpu-overclock` was never set.
+  - Setting up PC games stopped at VKD3D-Proton's `.tar.zst` (no `zstd`): `pc-games` unpacks it with Python's
+    `compression.zstd` when there's no `zstd`.
+  - The volume: ROCKNIX's PipeWire socket is `/run/pipewire`, not BananaOS's `/run/banana/pipewire`.
+- **The binaries on ROCKNIX's userland.** `banana-ui` (SDL=1 ALSA=1) and its helpers cross-built for aarch64 against the
+  image's libraries: every library and symbol version they need is in the image (up to GLIBC_2.38, GLIBCXX_3.4.30).
+  `banana-ui --headless` from the installed package's paths, on the image, draws both Thor screens with the converted
+  systems and the Thor OLED theme as the default.
+- **ROCKNIX's own sway** (headless, pixman, under qemu) with 111-sway-init's AYN Thor lines and `start_banana.sh` started
+  with it, as `UI_SERVICE` does: both windows fullscreen, the top on the 1920x1080 output and the bottom on the
+  1240x1080 one, the second output on and upright. **Fixed:** on a Thor, ROCKNIX's sway config turns the second output
+  on, rotates it and powers it off again from an exec a second or two after sway's start. A menu that started faster
+  than that had its bottom screen powered off under it, or opened its window on the output before it was upright (shown
+  by stretching the exec's delay). `start_banana.sh` now waits for that exec. It also resets a scanout scale a game
+  left behind, as `start_es.sh` does.
+- **Not possible here:** a build with ROCKNIX's toolchain (its cross toolchain, glibc, Mesa and the rest need far more
+  disk than the 14 GB this machine had).
+
 Only the Thor can tell:
 
 - that `rocknix-device` sees the model as `AYN Thor` (`cat /run/banana/board` says `thor`);
 - the Thor button's key code under InputPlumber (`evtest` on InputPlumber's pad and keyboard, then `HW_HOME_KEY`);
-- that the second output and its touchscreen come on with the menu (ROCKNIX's sway config starts them off on a Thor);
+- that the second output and its touchscreen come on with the menu (ROCKNIX's sway config starts them off on a Thor,
+  then turns the output upright from an exec that `start_banana.sh` now waits for: checked under ROCKNIX's own sway
+  headless, not on the panels);
+- the volume and the menu's sounds through ROCKNIX's PipeWire (`/run/pipewire`);
 - the backlights' names and order, the output names (`WLR_CON`) against `BANANA_TOP`, the touchscreens' names;
 - Box64 + Wine + DXVK under ROCKNIX's sway and Mesa (a first game from "Set up PC games"); DepotDownloader's start on
   ROCKNIX's glibc and OpenSSL (`/usr/libexec/banana/steam status`, then a QR sign-in);

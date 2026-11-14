@@ -26,5 +26,6 @@ Run `tools/rocknix-banana.sh` again after changing `ui/`.
 | `ROCKNIX` | the ROCKNIX commit this is made and checked against |
 | `tests/run.sh` | the converter on a sample `es_systems.cfg`, then every other check here (run by `make test`) |
 | `tests/thor.sh` | the Thor's pieces in services mode, and the installer on a made-up checkout |
+| `tests/real-image.sh` | all of it against ROCKNIX's released SM8550 image: `tests/real-image.sh <its root fs> [an aarch64 build]` (`run.sh` runs it when `ROCKNIX_ROOTFS` is set) |
 
 The plan and its status are in `docs/THOR-ROCKNIX.md`.

@@ -8,7 +8,7 @@
 BDATA=${BANANA_DATA:-/data/banana}
 # ROCKNIX's own settings (its profile's set_setting; a host test: $ROCKNIX_SETTINGS, the same key=value file)
 setting() {
-    if [ -z "$ROCKNIX_SETTINGS" ] && [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; setting "$@" ) >/dev/null 2>&1
+    if [ -z "$ROCKNIX_SETTINGS" ] && [ -r /etc/profile.d/001-functions ]; then ( . /etc/profile.d/001-functions; set_setting "$@" ) >/dev/null 2>&1
     elif [ -n "$ROCKNIX_SETTINGS" ]; then { grep -v "^$1=" "$ROCKNIX_SETTINGS" 2>/dev/null; echo "$1=$2"; } > "$ROCKNIX_SETTINGS.new" && mv -f "$ROCKNIX_SETTINGS.new" "$ROCKNIX_SETTINGS"; fi
 }
 NM=${BANANA_NMCLI:-nmcli}

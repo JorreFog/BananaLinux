@@ -41,6 +41,8 @@ sh "$L/sd2" scan; [ ! -e "$T/run/sd2/slot" ] || { echo "FAIL rocknix services: s
 # a one-screen system and lit again, left alone for the DS
 printf '#!/bin/sh\necho "runemu $*" >> "%s/log"\n' "$T" > "$T/bin/runemu.sh"; chmod +x "$T/bin/runemu.sh"
 printf '#!/bin/sh\necho "backlight $*" >> "%s/log"\n' "$T" > "$T/backlight"; chmod +x "$T/backlight"
+# (ROCKNIX's settings written through rocknix-options, beside run-rocknix)
+cp "$L/rocknix-options" "$T/rocknix-options"; export ROCKNIX_LOCK="$T/lock"
 echo "performance performance" > "$T/run/perf"
 env BANANA_LIBEXEC="$T" BANANA_RUNEMU="$T/bin/runemu.sh" sh "$L/run-rocknix" psp "/roms/psp/Some Game.iso" --core=ppsspp --emulator=ppsspp-sa
 ok log 'runemu /roms/psp/Some Game.iso -Ppsp --core=ppsspp --emulator=ppsspp-sa'

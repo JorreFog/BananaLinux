@@ -35,6 +35,9 @@ for f in "$HERE"/packages/emulators/standalone/*/scripts/*.sh; do bash -n "$f" |
 sh "$HERE/tests/bananads-sway.sh" || fail=1
 sh "$HERE/tests/gamepanel-sway.sh" || fail=1
 bash -n "$HERE/packages/ui/banana-frontend/sources/099-banana-frontend" || { echo "FAIL rocknix: 099-banana-frontend"; fail=1; }
+# ROCKNIX's real image, when one is given (ROCKNIX_ROOTFS: an extracted SM8550 root fs; ROCKNIX_BUILD: an aarch64
+# build of banana-ui and its helpers): tests/real-image.sh
+if [ -n "$ROCKNIX_ROOTFS" ]; then sh "$HERE/tests/real-image.sh" "$ROCKNIX_ROOTFS" $ROCKNIX_BUILD || fail=1; fi
 grep -q "^commit=[0-9a-f]\{40\}$" "$HERE/ROCKNIX" || { echo "FAIL rocknix: no ROCKNIX commit in rocknix/ROCKNIX"; fail=1; }
 [ $fail = 0 ] && echo "rocknix: all passed"
 exit $fail

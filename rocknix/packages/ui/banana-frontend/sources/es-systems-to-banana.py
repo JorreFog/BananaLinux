@@ -19,6 +19,10 @@ PERF = {'performance': {'psp', 'pspminis', 'ps2', 'gamecube', 'wii', 'wiiware', 
         'steady': {'nds', 'ndsiware'}}
 # systems whose shelf stays even with no games (where a fresh card's games go)
 ALWAYS = {'nds', 'gba', 'gbc', 'gb', 'snes', 'nes', 'psx', 'n64', 'megadrive', 'genesis', 'ports'}
+# the shelves' order: these first, as BananaOS's own list has them (the DS first), then the rest in es_systems.cfg's
+# (alphabetical) order, so the menu doesn't open on ROCKNIX's first system (3DO, or an empty Game Boy shelf)
+FIRST = ['nds', '3ds', 'gba', 'gbc', 'gb', 'nes', 'snes', 'megadrive', 'genesis', 'psx', 'n64', 'psp', 'ps2',
+         'gamecube', 'wii', 'dreamcast', 'saturn', 'arcade', 'gameandwatch']
 # ROCKNIX's system ids that mean something else to the menu: its "pc" is MS-DOS (DOSBox), while the menu's [pc] is the
 # PC games hub (Windows games, Steam). Its shelf is "dos" here; its games still start as ROCKNIX's "pc" (run-rocknix
 # pc ...) and rocknix-options takes "dos" for "pc". The hub's games are in roms/windows (ROCKNIX's "pc" folder is
@@ -91,8 +95,11 @@ flat = yes
 
 
 def text(el, tag):
+    """the element's text, without EmulationStation's icon glyphs (its font's private-use characters: ROCKNIX's
+    tools, ports and media systems have their maker as one, U+E013 " System")"""
     t = el.find(tag)
-    return (t.text or '').strip() if t is not None else ''
+    s = (t.text or '') if t is not None else ''
+    return ''.join(c for c in s if not 0xE000 <= ord(c) <= 0xF8FF).strip()
 
 
 def default_emulator(system):
@@ -110,11 +117,16 @@ def default_emulator(system):
 
 def convert(root):
     out = ['# made by es-systems-to-banana.py from ROCKNIX\'s es_systems.cfg (each game through runemu.sh)', '']
-    for s in root.findall('system'):
+    systems = root.findall('system')
+    systems.sort(key=lambda s: FIRST.index(text(s, 'name')) if text(s, 'name') in FIRST else len(FIRST))
+    for s in systems:
         sid = text(s, 'name')
         if not sid or not all(c.isalnum() or c in '-_' for c in sid):
             continue
         cmd = text(s, 'command')
+        # (EmulationStation's own viewers: a command that does nothing, its screenshots shown by ES itself)
+        if cmd in ('/usr/bin/true', '/bin/true', 'true'):
+            continue
         emu, core = default_emulator(s)
         if 'runemu.sh' in cmd:
             run = RUN.format(sys=sid, core=core, emu=emu)

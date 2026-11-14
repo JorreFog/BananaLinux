@@ -6,6 +6,7 @@
 /ui/tests/servers/share/
 /ui/tests/servers/tls/
 /ui/tests/out/
+/rocknix/tests/out/
 /ui/tests/pokemon-test
 /ui/tests/gamecomp-test
 /ui/tests/lang-test

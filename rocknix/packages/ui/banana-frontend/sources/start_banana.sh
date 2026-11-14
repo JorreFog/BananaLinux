@@ -6,6 +6,9 @@
 
 # the same setup EmulationStation's start gets (sway's outputs, the device's quirks)
 [ -x /usr/bin/es_settings ] && . /usr/bin/es_settings
+# and what start_es.sh does after it: an output scale a game left (ROCKNIX's scanout scaling on SM8550) put back, unless
+# a game is still running
+type scanout_reset_stale >/dev/null 2>&1 && scanout_reset_stale
 
 # /data (the package's link to /storage/.config/banana-data): the menu's and its apps' folders, ROCKNIX's roms and bios
 D=/storage/.config/banana-data
@@ -79,6 +82,17 @@ SECOND=${SDL_VIDEO_DISPLAY_PRIORITY#*,}
 [ "${SECOND}" = "${SDL_VIDEO_DISPLAY_PRIORITY}" ] && SECOND=
 [ -n "${SECOND}" ] || SECOND=$(swaymsg -t get_outputs 2>/dev/null | jq -r ".[] | select(.name != \"${WLR_CON:-DSI-2}\") | .name" 2>/dev/null | head -n 1)
 if [ -n "${SECOND}" ]; then
+  # ...and, just after sway's start, rotates it in the background: an exec in that config turns it on, sets transform
+  # 90 and powers it off again (a second apart). The menu waits for that to finish, so its bottom window isn't opened on
+  # the output before it is turned upright, nor the output powered off under it
+  SWAYCFG=${BANANA_SWAY_CONFIG:-/storage/.config/sway/config}
+  if grep -qF "swaymsg output ${SECOND} transform 90; sleep 1; swaymsg output ${SECOND} power off" "${SWAYCFG}" 2>/dev/null; then
+    i=0
+    while [ $i -lt 40 ] && [ "$(swaymsg -t get_outputs 2>/dev/null | jq -r ".[] | select(.name == \"${SECOND}\") | .transform" 2>/dev/null)" != 90 ]; do
+      sleep 0.25; i=$((i + 1))
+    done
+    sleep 1.5
+  fi
   swaymsg "output ${SECOND} power on" >/dev/null 2>&1
   swaymsg 'input "0:0:bottom_touchscreen" events enabled' >/dev/null 2>&1
   export BANANA_BOTTOM_OUTPUT="${SECOND}"

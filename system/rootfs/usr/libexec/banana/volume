@@ -31,7 +31,12 @@ fi
 # a board whose sound is a server (bananad writes "pipewire <node>": the AYN Thor): the default sink's volume, through
 # wpctl (WirePlumber keeps it per device, across boots); its percent is the cubic one the desktop's sliders use
 if [ "$CARD" = pipewire ]; then
-    export PIPEWIRE_RUNTIME_DIR=${PIPEWIRE_RUNTIME_DIR:-/run/banana/pipewire}
+    # (the server's socket: BananaOS's own in /run/banana/pipewire; ROCKNIX's system units' in /run/pipewire)
+    if [ -z "$PIPEWIRE_RUNTIME_DIR" ]; then
+        PIPEWIRE_RUNTIME_DIR=/run/banana/pipewire
+        [ ! -S "$PIPEWIRE_RUNTIME_DIR/pipewire-0" ] && [ -S /run/pipewire/pipewire-0 ] && PIPEWIRE_RUNTIME_DIR=/run/pipewire
+    fi
+    export PIPEWIRE_RUNTIME_DIR
     pget() { v=$(wpctl get-volume "$CONTROL" 2>/dev/null | sed -n 's/^Volume: \([0-9.]*\).*/\1/p'); [ -n "$v" ] || exit 1
         awk -v v="$v" 'BEGIN { p = int(v * 100 + 0.5); if (p > 100) p = 100; print p }'; }
     pset() { p=$1; case "$p" in ''|*[!0-9-]*) echo "volume: not a level: $p" >&2; exit 2 ;; esac

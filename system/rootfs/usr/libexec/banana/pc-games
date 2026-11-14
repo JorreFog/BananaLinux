@@ -145,6 +145,14 @@ dlls() {
     done
 }
 
+# a .zst's contents to stdout: zstd's own program, else Python's module (ROCKNIX's image has no zstd program; its
+# Python 3.14 has compression.zstd)
+unzst() {
+    if command -v zstd >/dev/null 2>&1; then zstd -dc "$1"
+    else python3 -c 'import sys, shutil, compression.zstd as z; shutil.copyfileobj(z.open(sys.argv[1]), sys.stdout.buffer, 1 << 20)' "$1"
+    fi
+}
+
 case $1 in
 status)
     if mount_img && ready; then echo ready; else echo "not set up"; fi
@@ -174,7 +182,7 @@ setup)
     if [ ! -d "$MNT/vkd3d-proton-$VKD3D_VER" ]; then
         say "fetching VKD3D-Proton $VKD3D_VER"
         fetch "$VKD3D_URL" "$T/vkd3d.tar.zst" "$VKD3D_SUM" || die "VKD3D-Proton's download failed"
-        zstd -dc "$T/vkd3d.tar.zst" | tar -xf - -C "$MNT" || die "couldn't unpack VKD3D-Proton"
+        unzst "$T/vkd3d.tar.zst" | tar -xf - -C "$MNT" || die "couldn't unpack VKD3D-Proton"
         rm -f "$T/vkd3d.tar.zst"
     fi
     rmdir "$T" 2>/dev/null

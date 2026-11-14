@@ -32,12 +32,19 @@ conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$DATA/settings.
 has_fan() { ls "$SYS"/class/hwmon/hwmon*/pwm1 >/dev/null 2>&1; }
 has_leds() { [ -d "$LED/multi-ledl1" ] && [ -d "$LED/multi-ledr1" ]; }
 GPUFREQ=$SYS/class/devfreq/3d00000.gpu
+# ROCKNIX's GPU boost: in its platform's quirks (/usr/lib/autostart/quirks/platforms/SM8550/bin, where EmulationStation
+# runs it from: it isn't in /usr/bin), else beside the other tools
+GPU_OC=$TOOLS/gpu_overclock
+if [ ! -x "$GPU_OC" ] && [ -z "$BANANA_TOOLS" ]; then
+    hw=$(sed -n 's/^HW_DEVICE="*\([^"]*\)"*$/\1/p' /etc/os-release 2>/dev/null)
+    [ -n "$hw" ] && [ -x "/usr/lib/autostart/quirks/platforms/$hw/bin/gpu_overclock" ] && GPU_OC=/usr/lib/autostart/quirks/platforms/$hw/bin/gpu_overclock
+fi
 # (max_freq is only a ceiling: a boost is there to offer only if the kernel's table has the 1 GHz clock. Linux 7.2's
 # for the Adreno 740 ends at 680 MHz, so BananaOS's Thor image has none until its device tree adds one)
-has_gpu() { [ -x "$TOOLS/gpu_overclock" ] || grep -qw 1000000000 "$GPUFREQ/available_frequencies" 2>/dev/null; }
+has_gpu() { [ -x "$GPU_OC" ] || grep -qw 1000000000 "$GPUFREQ/available_frequencies" 2>/dev/null; }
 # ROCKNIX's tools where the system is ROCKNIX; on BananaOS's own image the same things done here (native: the fan's
 # curve in a loop of this script, the rings' and the GPU's sysfs files written directly)
-rocknix() { [ -x "$TOOLS/analog_sticks_ledcontrol" ] || [ -x "$TOOLS/gpu_overclock" ]; }
+rocknix() { [ -x "$TOOLS/analog_sticks_ledcontrol" ] || [ -x "$GPU_OC" ]; }
 rings() {   # rings <brightness> <red> <green> <blue>: both rings, as ROCKNIX's analog_sticks_ledcontrol writes them
     for s in l r; do for n in 1 2 3 4; do
         d=$LED/multi-led$s$n/leds/rgb:$s$n
@@ -184,8 +191,8 @@ leds-effect)
     ;;
 gpu)
     has_gpu || exit 0
-    if [ -x "$TOOLS/gpu_overclock" ]; then
-        case $2 in on) "$TOOLS/gpu_overclock" enable ;; off) "$TOOLS/gpu_overclock" disable ;; *) exit 2 ;; esac >/dev/null 2>&1
+    if [ -x "$GPU_OC" ]; then
+        case $2 in on) "$GPU_OC" enable ;; off) "$GPU_OC" disable ;; *) exit 2 ;; esac >/dev/null 2>&1
     else
         # (the Adreno 740's two top clocks: 680 MHz as shipped, 1 GHz)
         case $2 in on) echo 1000000000 > "$GPUFREQ/max_freq" ;; off) echo 680000000 > "$GPUFREQ/max_freq" ;; *) exit 2 ;; esac 2>/dev/null
