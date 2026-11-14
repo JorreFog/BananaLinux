@@ -8,11 +8,13 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp
+SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp src/gamesync.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/panel.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
+# (Home server's pairing pages, and the QR code library they draw RomM's approval page with)
+SRC += src/settings_homesrv.cpp src/qr/qrcodegen.cpp src/get_list.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
 SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib
@@ -33,8 +35,8 @@ banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
 # home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
-banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/json.cpp -ldl
+banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_adapt.h src/save_paths.cpp src/save_paths.h src/save_vault.cpp src/save_vault.h src/sync_core.h src/sync_romm.h src/sync_util.h src/get_list.cpp src/get_list.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/save_adapt.cpp src/save_paths.cpp src/save_vault.cpp src/get_list.cpp src/json.cpp -ldl
 
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)
@@ -83,6 +85,17 @@ tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src
 tests/lang-raw-test: tests/lang-raw-test.cpp src/lang.cpp src/lang.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/lang-raw-test.cpp src/lang.cpp -lpthread
 
+# the save sync's blank saves, vault and journal (tests/run.sh runs it)
+tests/paths-test: tests/paths-test.cpp src/save_paths.cpp src/save_paths.h src/sync_core.cpp src/sync_core.h src/json.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/paths-test.cpp src/save_paths.cpp src/sync_core.cpp src/json.cpp -ldl
+
+tests/vault-test: tests/vault-test.cpp src/save_adapt.cpp src/save_adapt.h src/save_vault.cpp src/save_vault.h src/sync_core.cpp src/sync_core.h src/json.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/vault-test.cpp src/save_adapt.cpp src/save_vault.cpp src/sync_core.cpp src/json.cpp -ldl
+
+# the menu's side of the sync around a game (tests/run.sh runs it)
+tests/gamesync-test: tests/gamesync-test.cpp src/gamesync.cpp src/gamesync.h src/sync_util.h src/json.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamesync-test.cpp src/gamesync.cpp src/json.cpp
+
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
@@ -127,7 +140,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items
+	rm -f banana-ui banana-leaseshim.so libasound_module_pcm_banana_eq.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/vault-test tests/wav-test tests/eq-test tests/lang-raw-test tests/lang-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen tests/gba-hidden-items tests/paths-test tests/gamesync-test
 
 .PHONY: host install clean
 

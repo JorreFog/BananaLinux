@@ -110,7 +110,8 @@ wlan0)
         # script reads the setting itself; nothing is downloaded). After the clock had its chance: TLS needs it
         ( sleep 20; /usr/libexec/banana/update check --daily ) >/dev/null 2>&1 &
         # Settings > Network > Home server: Auto sync "Leaving a game and on Wi-Fi" syncs games and saves with the
-        # paired server (banana-sync reads the setting itself, and does nothing while a game runs or one is going)
+        # paired server, "Leaving a game" sends the saves that couldn't be sent when their game ended (banana-sync
+        # reads the setting itself, and does nothing while a game runs or one is going)
         ( sleep 25; [ -x /usr/bin/banana-sync ] && /usr/bin/banana-sync sync --auto wifi ) >/dev/null 2>&1 &
         ;;
     DISCONNECTED)

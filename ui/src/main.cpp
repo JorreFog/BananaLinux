@@ -41,6 +41,7 @@
 #include "carts.h"
 #include "layout.h"
 #include "nas.h"
+#include "gamesync.h"
 
 #include <algorithm>
 #include <atomic>
@@ -51,6 +52,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
 #include <functional>
@@ -63,6 +65,7 @@
 #include <poll.h>
 #include <sstream>
 #include <sys/eventfd.h>
+#include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #ifndef SYS_pidfd_open
@@ -176,12 +179,7 @@ static bool stbSize(const std::string& path, int& w, int& h)
 
 // settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
-static std::string shellQuote(const std::string& s)
-{
-	std::string r = "'";
-	for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; }
-	return r + "'";
-}
+using gamesync::shellQuote;
 
 static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
 {
@@ -614,6 +612,129 @@ struct FetchNotice
 	}
 };
 
+// The home server sync after a game (gamesync::syncAfterGame, in the background): what it did, said in the banner at
+// the top as Files' and Bshare's news are, so leaving a game says whether its save reached the server. banana-sync
+// writes its lines to a file of this game end's own, <run>/gameend-<ms>.status ("running ..." then "done <games>
+// <removed> <up> <down> <conflicts> <errors>|<first error or note>"), so an earlier game's sync still going, which
+// writes to its own, isn't read as this one's.
+// A sync that takes more than a second shows "Syncing the save" while it runs (a press hides that, the outcome still
+// shows); a sync that wrote nothing in 15 s (not paired: banana-sync says nothing then), or whose "running" line is
+// 120 s old with no run holding save.lock, is let go quietly
+struct GameEndNotice
+{
+	std::string title, body, game, file, run;
+	int sign = 1;
+	uint32_t accent = 0x6ad07a;
+	double until = 0, from = 0, lookedAt = -1e9;
+	bool watching = false, running = false, quiet = false;
+	bool showing(double now) const { return until > now; }
+	bool hide(double now) { bool was = showing(now); until = 0; if (running) quiet = true; return was; }
+	void arm(const std::string& runDir, const std::string& name, double now)
+	{
+		run = runDir;
+		file = run + "/gameend-" + std::to_string((long long)now) + ".status";
+		unlink(file.c_str());
+		sweep();
+		game = name;
+		from = now;
+		lookedAt = -1e9;
+		watching = true;
+		running = quiet = false;
+		until = 0;
+	}
+	// a run holds save.lock: a shared look that fails while one has it, and leaves it as it was
+	bool saveLockHeld() const
+	{
+		int fd = open((run + "/save.lock").c_str(), O_RDONLY | O_CLOEXEC);
+		if (fd < 0) return false;
+		bool held = flock(fd, LOCK_SH | LOCK_NB) != 0;
+		close(fd);
+		return held;
+	}
+	// the earlier game ends' files, each gone once its run is over: read already and removed then, or let go while its
+	// sync still ran. One still running is left to finish; the next look (a game's end, or this one's last line) removes it
+	void sweep() const
+	{
+		if (DIR* d = opendir(run.c_str()))
+		{
+			while (dirent* e = readdir(d))
+			{
+				std::string n = e->d_name, p = run + "/" + n;
+				if (n.compare(0, 8, "gameend-") != 0 || n.size() < 15 || n.compare(n.size() - 7, 7, ".status") != 0 || p == file) continue;
+				std::string line;
+				std::getline(std::ifstream(p), line);
+				if (line.compare(0, 5, "done ") == 0 || line.compare(0, 6, "error ") == 0 || line == "error" || runGone(p, line)) unlink(p.c_str());
+			}
+			closedir(d);
+		}
+	}
+	// a run gone without its last line, crashed: "running" unchanged for 120 s and save.lock, which the run holds while
+	// it works, free. A long upload writes no new line, and is still holding it
+	bool runGone(const std::string& path, const std::string& line) const
+	{
+		struct stat st;
+		return line.compare(0, 7, "running") == 0 && stat(path.c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 120 && !saveLockHeld();
+	}
+	// how soon the loop should look again (-1: not watching)
+	int wake(double now) const { return watching ? std::max(1, (int)(lookedAt + 500 - now) + 1) : -1; }
+	// true when what is shown changed
+	bool check(double now)
+	{
+		if (!watching || now - lookedAt < 500) return false;
+		lookedAt = now;
+		std::string line;
+		std::getline(std::ifstream(file), line);
+		std::istringstream in(line);
+		std::string state;
+		in >> state;
+		std::string rest = line.find('|') == std::string::npos ? "" : line.substr(line.find('|') + 1);
+		auto show = [&](const std::string& t, const std::string& b, int sg, uint32_t acc, double ms)
+		{
+			title = t; body = b; sign = sg; accent = acc; until = now + ms;
+		};
+		if (state == "running")
+		{
+			if (runGone(file, line))
+			{
+				unlink(file.c_str());
+				watching = running = false;
+				bool was = showing(now);
+				until = 0;
+				logf("game end: the sync said nothing more");
+				return was;
+			}
+			running = true;
+			if (quiet || now - from < 1000) return false;
+			bool was = showing(now);
+			show("Syncing the save", game, 0, 0x4a9bff, 1500);	// (kept up by each look while it runs)
+			return !was;
+		}
+		if (state == "done" || state == "error")
+		{
+			watching = running = false;
+			unlink(file.c_str());	// (the run is over: its line read, nothing more to come)
+			sweep();
+			// (banana-sync's own words, "saves: " off them; it says itself when the save waits for the next sync)
+			const size_t sp = line.find(' ');
+			std::string why = state != "error" ? rest : sp == std::string::npos ? "" : line.substr(sp + 1);
+			if (why.compare(0, 7, "saves: ") == 0) why = why.substr(7);
+			const std::string about = why.empty() ? game : game + ": " + why;
+			if (state == "error") { show("Save not synced", about, 2, 0xffb340, 4000); return true; }
+			int g = 0, rm = 0, up = 0, dn = 0, cf = 0, er = 0;
+			in >> g >> rm >> up >> dn >> cf >> er;
+			// (sync.cpp's line for a game whose saves stay on this handheld: nothing to say)
+			if (rest == "its saves stay on this handheld") { bool was = showing(now); until = 0; return was; }	// ("Syncing the save" taken down if it was up)
+			if (er) show("Save not synced", about, 2, 0xffb340, 4000);
+			else if (cf) show("Save conflict", game + ": settle it in Settings > Network > Home server > Manage saves.", 3, 0xffb340, 5000);
+			// (a note beside it, a state kept in the vault or a save held back: said, with "!" rather than the tick)
+			else show(up || dn ? "Save synced" : "Save up to date", about, why.empty() ? 1 : 3, why.empty() ? 0x6fdc87 : 0xffb340, why.empty() ? 3000 : 4000);
+			return true;
+		}
+		if (now - from > 15000) { watching = running = false; until = 0; }
+		return false;
+	}
+};
+
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
@@ -629,10 +750,20 @@ static bool launchPath(Host& lib, const std::string& want)
 	return false;
 }
 
+// a game's title in the library by its path (its file's name, without the extension, when it isn't there)
+static std::string gameTitle(Host& lib, const std::string& path)
+{
+	for (int s = 0; s < lib.systemCount(); s++)
+		for (auto& g : lib.shelf(s).games)
+			if (g.path == path && !g.title.empty()) return g.title;
+	std::string n = path.substr(path.find_last_of('/') + 1);
+	return n.substr(0, n.find_last_of('.'));
+}
+
 // Settings > Sleep & power > Power off after sleeping: bananad saved the game's resume state and shut the handheld
 // down, naming the game in banana/resume-boot ("rom=", "emulator=" lines). It starts again once, at this boot: the
 // marker goes first (a game that fails at once isn't started at every boot), and once (/run/banana/resume-once) names
-// it for its launcher, which loads the resume state then, Quick resume on or off. (once null: the headless test.)
+// it for its launcher, which loads the resume state then, Quick resume on or off.
 // A game on the second SD card isn't in the library yet at boot (bananad's sd2 mounts it beside the menu's start: QA
 // #8, back on the home row): it is kept in later and tried again after each new read of the games, for 30 s or until
 // a press (the menu is someone's by then).
@@ -645,9 +776,9 @@ struct ResumeLater
 
 static bool resumeLaunch(Host& lib, const std::string& rom, const std::string& emu, const char* once)
 {
-	if (once) std::ofstream(once) << rom << "\n";
+	std::ofstream(once) << rom << "\n";
 	if (launchPath(lib, rom)) { logf("resume after power-off: %s (%s)", rom.c_str(), emu.c_str()); return true; }
-	if (once) unlink(once);
+	unlink(once);
 	return false;
 }
 
@@ -879,11 +1010,26 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	LowBattery low;
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
+	GameEndNotice gameEnd;
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	// the sync before a game as on the device, with its files under the output prefix and Wi-Fi as "wifi" says; its two
+	// settings read from the card at each game, as the device's are (a pairing turns Auto sync on)
+	auto homesync = [&](const char* key) { return getConfValue(o.data + "/settings.conf", key, "off"); };
+	gamesync::Wait gate;
+	gamesync::WifiFacts testWifi;
+	const std::string testRun = o.headless + "run";
+	std::string gateRom, gateSys;
+	auto gamePlays = [&] { if (!gate.active()) { if (gate.backed()) logf("game not started: %s", gateRom.c_str()); else logf("game starts: %s", gateRom.c_str()); } };
+	gate.wifi = [&] { return testWifi; };
+	settings.setWifiFacts([&] { return testWifi; });
+	gate.log = [](const std::string& s) { logf("%s", s.c_str()); };
 	be.overlay = [&](int screen)
 	{
-		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		std::string gl1, gl2;
+		if (screen == 0 && gate.text(gl1, gl2)) settings.popup(gl1, gl2);
+		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		else if (screen == 0 && gameEnd.showing(now)) settings.banner(gameEnd.title, gameEnd.body, gameEnd.sign, gameEnd.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
 	};
@@ -911,12 +1057,32 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
 		// type <text>: typed on the open keyboard at once (the rest of the command, spaces too; never logged)
 		else if (op == "type") { std::string t; std::getline(cs >> std::ws, t); settings.typeText(t); }
-		else if (op == "resumeboot") { ResumeLater later; resumeAfterPoweroff(lib, o.data, nullptr, &later, now); }	// as at boot after Power off after sleeping
+		else if (op == "resumeboot") { ResumeLater later; resumeAfterPoweroff(lib, o.data, (testRun + "/resume-once").c_str(), &later, now); }	// as at boot after Power off after sleeping
 		// filesdone: real time until Files' job on its thread (BANANA_FILES_ASYNC) is over, 30 s at most; the update
 		// after this command tells its outcome
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
 		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
+		// wifi online|coming|none: what wlan0 says from now on, as the sync before a game reads it
+		else if (op == "wifi")
+		{
+			std::string w; cs >> w;
+			testWifi = {};
+			testWifi.operUp = w == "online" || w == "coming";
+			testWifi.hasAddr = w == "online";
+		}
+		else if (op == "launchpath") { std::string p; std::getline(cs >> std::ws, p); if (!launchPath(lib, p)) logf("no game at %s", p.c_str()); }
+		// gameend: what the menu does when the game last started ends
+		else if (op == "gameend")
+		{
+			if (gamesync::gamePlayed(gateSys, gateRom)) logf("game end: nds-saves told");
+			if (gamesync::syncsAfterGame(homesync("homesync_auto")) && !gamesync::shutdownAtGameEnd(o.data, testRun))
+			{
+				gameEnd.arm(testRun, gameTitle(lib, gateRom), now);
+				if (gamesync::syncAfterGame(gamesync::syncTool(), gateRom, testRun, gameEnd.file)) logf("game end: home server sync started");
+				else gameEnd.watching = false;
+			}
+		}
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -935,13 +1101,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			if (gate.active()) { gate.press(it->second == Key::B ? 'b' : it->second == Key::A ? 'a' : it->second == Key::X ? 'x' : 0); gamePlays(); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped,
+					lib.systemOf(ui.gameIndex()).folder);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -1049,6 +1217,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		// helpcheck: every Settings row's help (and a game page's) laid out as the top panel would: fits or OVERFLOW
 		else if (op == "helpcheck") { int n = settings.helpCheck([&](const std::string& l) { logf("%s", l.c_str()); }); logf("helpcheck: %d texts", n); }
+		// helpof <key>: that Settings row's help as it is worded now, in the language loaded (a line put together from
+		// what the card holds, which helpcheck's layout doesn't read)
+		else if (op == "helpof") { std::string k; cs >> k; logf("helpof %s: %s", k.c_str(), settings.helpShown(k).c_str()); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
 		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
 		else if (op == "inkon")
@@ -1449,6 +1620,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
+		if (gameEnd.check(now)) logf("notice: %s: %s", gameEnd.title.c_str(), gameEnd.body.c_str());
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
@@ -1456,11 +1628,25 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
-			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			else
+			{
+				logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+				gateRom = lib.gameAt(g).path; gateSys = lib.systemOf(g).id;
+				if (gamesync::wanted(homesync("homesync_auto"), homesync("homesync_launch"), o.data + "/romsync.json", o.roms, gateRom, testRun + "/resume-once", gamesync::sd2Roms(testRun)))
+					gate.begin(gamesync::syncTool(), gateRom, testRun, now);
+				unlink((testRun + "/resume-once").c_str());	// (its launcher's to remove)
+				gamePlays();
+			}
+		}
+		else if (gate.active())
+		{
+			gate.step(now);
+			gamePlays();
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
 	}
+	gate.end();
 	return 0;
 }
 
@@ -2072,6 +2258,9 @@ int main(int argc, char** argv)
 	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
 	normalizeSettings(o.data);
 	auto settings = readSettings(o.data);
+	// the home server's Auto sync and Sync before playing, read from the card at each game: a pairing turns Auto sync on
+	// without the settings above being read again
+	auto homesync = [&](const char* key) { return getConfValue(o.data + "/settings.conf", key, "off"); };
 	if (!o.theme.empty()) settings["theme"] = "file:" + o.theme;	// --theme: the theme being made (headless render)
 	// the menu's language (Settings > System > Language): every text laid out goes through its translations; the lines
 	// with none stay English and are listed in /run/banana/lang-missing.txt (for the translator's next round)
@@ -2297,6 +2486,7 @@ int main(int argc, char** argv)
 	BshareNotice bsNotice;
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, nowMs());	// (the jobs finished before the menu started: not news)
+	GameEndNotice gameEnd;				// the sync after a game: what it did
 	bool fetchDone = false;				// /run/banana/fetch.finished written: a Files job finished
 	// a job of Files' the last menu paused for a game and never let go on (it went away during the game): on again, or
 	// it would hold the sleep (bananad) and the queue until a reboot
@@ -2322,6 +2512,10 @@ int main(int argc, char** argv)
 		// game quit back to the list (owner, beta.7)
 		return roms.due > 0 && ui->view() == rnds::UI::HOME ? 1 : 0;
 	};
+	gamesync::Wait gate;	// the sync before a game
+	int gateGame = -1;
+	gate.wifi = [] { return gamesync::readWifi("/run/banana"); };
+	gate.log = [](const std::string& s) { logf("%s", s.c_str()); };
 	be.overlay = [&](int screen)
 	{
 		if (screen != 0) return;
@@ -2329,9 +2523,12 @@ int main(int argc, char** argv)
 		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
 		if (access("/run/banana/recording", F_OK) == 0)
 			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
-		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		std::string gl1, gl2;
+		if (gate.text(gl1, gl2)) settingsView.popup(gl1, gl2);
+		else if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
 		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		else if (gameEnd.showing(t)) settingsView.banner(gameEnd.title, gameEnd.body, gameEnd.sign, gameEnd.accent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -2430,8 +2627,15 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
-			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
-			if (lowWas || bsWas || fetchWas) dirty = true;
+			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs()), endWas = gameEnd.hide(nowMs());	// (all hidden, whichever showed)
+			if (lowWas || bsWas || fetchWas || endWas) dirty = true;
+		}
+		// the sync before a game: the menu is waiting, not listening. B plays now, a press ends a notice, and a question
+		// takes A, X and B
+		if (gate.active() && (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN))
+		{
+			gate.press(ev.type != InputEvent::PRESS ? 0 : ev.key == Key::B ? 'b' : ev.key == Key::A ? 'a' : ev.key == Key::X ? 'x' : 0);
+			return;
 		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
@@ -2467,7 +2671,8 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped,
+					lib.systemOf(g).folder);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -2922,6 +3127,14 @@ int main(int argc, char** argv)
 		nas::pauseRunner(fetchPaths, true);
 		const char* PROGRESS = "/run/banana/ra-progress";	// "<unlocked> <total>", from the emulator (docs/EMULATORS.md)
 		unlink(PROGRESS);
+		// no sync touches the saves while the game has them (a sync of every save still going stops at its next game; one
+		// placing a save, as the sync after the last game may be when it is started again at once, is given 2 s to end).
+		// A sync that keeps the lock past that is told the game is starting all the same (game.pid can only name it once
+		// it runs): a save it was about to place stays unplaced, for the next sync to decide
+		std::ofstream("/run/banana/game.starting") << getpid() << "\n";
+		gamesync::gamePlayedDone();	// (the last DS game's end, told to nds-saves before this one's launcher asks it)
+		int saveLock = gamesync::holdSaves("/run/banana", 2000);
+		if (saveLock < 0) logf("game start: another sync is saving");
 		double start = nowMs();
 		pid_t pid = fork();
 		// The parent lets go of its copy of the lease right away, whether the fork worked or not: the child has its own
@@ -2962,6 +3175,10 @@ int main(int argc, char** argv)
 			f << pid;
 			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
 			f << "\n";
+		}
+		unlink("/run/banana/game.starting");
+		if (pid > 0)
+		{
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
@@ -3021,6 +3238,7 @@ int main(int argc, char** argv)
 			ndsOverlay.close();
 			compLink.close();
 		}
+		gamesync::releaseSaves(saveLock);
 		const double ended = nowMs();
 		if (panel)
 		{
@@ -3081,29 +3299,19 @@ int main(int argc, char** argv)
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
 		gameEnded = nowMs();
-		// Settings > Network > Home server > Auto sync: the saves to the server now the game has let go of them
-		// (banana-sync reads the setting too, and does nothing unpaired or while another sync runs)
-		if (settings["homesync_auto"] == "quit" || settings["homesync_auto"] == "both")
+		// a DS game: its saves as it left them, told to nds-saves, which drops a resume state the next start finds over
+		// another save (one put there by hand since) instead of loading it
+		if (gamesync::gamePlayed(sd.id, rom)) logf("game end: nds-saves told");
+		// Settings > Network > Home server > Auto sync: the game's save to the server now the game has let go of it
+		// (banana-sync reads the setting too, and does nothing unpaired; beside a sync copying games it takes its turn
+		// over the saves)
+		// (not when the game's end is a shutdown, bananad's own or Power off after sleeping: the handheld turns off
+		// now, which would cut the sync; the game's next start sends the save)
+		if (gamesync::syncsAfterGame(homesync("homesync_auto")) && !gamesync::shutdownAtGameEnd(o.data, "/run/banana"))
 		{
-			const char* tool = getenv("BANANA_SYNC") ? getenv("BANANA_SYNC") : "/usr/bin/banana-sync";
-			if (access(tool, X_OK) == 0)
-			{
-				pid_t p = fork();
-				if (p == 0)
-				{
-					if (fork() == 0)
-					{
-						setsid();
-						int nul = open("/dev/null", O_RDWR);
-						if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
-						execl(tool, tool, "sync", "--auto", "quit", (char*)nullptr);
-						_exit(127);
-					}
-					_exit(0);
-				}
-				if (p > 0) waitpid(p, nullptr, 0);
-				logf("game end: home server sync started");
-			}
+			gameEnd.arm("/run/banana", gameTitle(lib, rom), nowMs());
+			if (gamesync::syncAfterGame(gamesync::syncTool(), rom, "/run/banana", gameEnd.file)) logf("game end: home server sync started");
+			else gameEnd.watching = false;
 		}
 		// the menu's clocks only now: the panels opened again and the iris ran at the game's (~1.4 GHz at most on schedutil
 		// otherwise, from the game's end)
@@ -3199,8 +3407,16 @@ int main(int argc, char** argv)
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
 		}
+		else if (settingsView.syncWaitsForWifi() || settingsView.watchesSync())
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			// (Sync now, left waiting for Wi-Fi: started once it's back; Get games' picks: the next run started for a game
+			// picked after the last one's last look at the list; the library again for the games that came)
+			settingsView.update(now);
+			if (settingsView.takeLibraryChanged()) roms.due = now;
+		}
 		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
-		if (access("/run/banana/launch", F_OK) == 0)
+		if (!gate.active() && access("/run/banana/launch", F_OK) == 0)
 		{
 			std::string want;
 			{
@@ -3222,7 +3438,7 @@ int main(int argc, char** argv)
 			else if (now > launchLaterUntil) { logf("launch file: no game at %s (20 s)", launchLater.c_str()); launchLater.clear(); }
 		}
 		int g = lib.pendingLaunch();
-		if (g >= 0)
+		if (g >= 0 && !gate.active())
 		{
 			lib.clearLaunch();
 			std::string page = internalPage(lib.systemOf(g));
@@ -3237,6 +3453,22 @@ int main(int argc, char** argv)
 				else logf("launch: no page %s", page.c_str());
 				continue;
 			}
+			// the game's save first, while the menu still has the panels (the game waits, the menu goes on drawing)
+			gateGame = g;
+			const std::string& path = lib.gameAt(g).path;
+			if (gamesync::wanted(homesync("homesync_auto"), homesync("homesync_launch"), o.data + "/romsync.json", o.roms, path, "/run/banana/resume-once", gamesync::sd2Roms("/run/banana")))
+			{
+				rep.key = Key::NONE;
+				gate.begin(gamesync::syncTool(), path, "/run/banana", nowMs());
+				dirty = true;
+			}
+		}
+		if (gate.active() && gate.step(nowMs())) dirty = true;
+		if (gateGame >= 0 && !gate.active())
+		{
+			g = gateGame;
+			gateGame = -1;
+			if (gate.backed()) { dirty = true; continue; }
 			runGame(g);
 			continue;
 		}
@@ -3251,7 +3483,7 @@ int main(int argc, char** argv)
 		time_t wall = time(nullptr);
 		int minute = (int)(wall / 60);
 		if (minute != lastMinute) { lastMinute = minute; dirty = true; batteryDue = true; }
-		if (roms.due > 0 && now >= roms.due && !settingsView.isOpen())
+		if (roms.due > 0 && now >= roms.due && !settingsView.isOpen() && !gate.active())	// (a waiting game is held by its place in the list)
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (ui->view() == rnds::UI::HOME)
@@ -3279,7 +3511,7 @@ int main(int argc, char** argv)
 			logf("resume after power-off: %s didn't come in 30 s", resumeLater.rom.c_str());
 			resumeLater.until = 0;
 		}
-		else if (resumeLater.until > 0 && now >= resumeLater.next && !settingsView.isOpen())
+		else if (resumeLater.until > 0 && now >= resumeLater.next && !settingsView.isOpen() && !gate.active())
 		{
 			resumeLater.next = now + 500;
 			struct stat st;
@@ -3305,6 +3537,7 @@ int main(int argc, char** argv)
 			}
 		}
 		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
+		if (gameEnd.check(now)) { logf("notice: %s: %s", gameEnd.title.c_str(), gameEnd.body.c_str()); dirty = true; }
 		if (fetchDone)
 		{
 			fetchDone = false;
@@ -3352,6 +3585,7 @@ int main(int argc, char** argv)
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			timeout = want || drawn ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
+			if (!want && !drawn && !settingsView.isOpen() && (settingsView.syncWaitsForWifi() || settingsView.watchesSync())) timeout = timeout < 0 ? 250 : std::min(timeout, 250);
 		}
 		if (want && !drawn && !disp.flipPending())	// ...unless no flip is pending: then the end of the quiet refresh
 			timeout = std::max(1, (int)(quietUntil - nowMs() + 0.999));
@@ -3368,7 +3602,7 @@ int main(int argc, char** argv)
 		bool rescanCan;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			rescanCan = roms.due > 0 && !settingsView.isOpen() && ui->view() == rnds::UI::HOME;	// else the next press brings it
+			rescanCan = roms.due > 0 && !settingsView.isOpen() && !gate.active() && ui->view() == rnds::UI::HOME;	// else the next press brings it
 		}
 		if (rescanCan)
 		{
@@ -3376,6 +3610,7 @@ int main(int argc, char** argv)
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		if (resumeLater.until > 0 && (timeout < 0 || timeout > 500)) timeout = 500;
+		if (gate.polls() && (timeout < 0 || timeout > 100)) timeout = 100;
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;
@@ -3391,6 +3626,12 @@ int main(int argc, char** argv)
 			int left = (int)(fetchNotice.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		if (gameEnd.showing(now))
+		{
+			int left = (int)(gameEnd.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (int left = gameEnd.wake(now); left > 0 && (timeout < 0 || left < timeout)) timeout = left;
 		{
 			int left = (int)(bsNotice.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
 			if (left > 0 && (timeout < 0 || left < timeout)) timeout = left;
@@ -3502,6 +3743,7 @@ int main(int argc, char** argv)
 				input.read(p.fd, handle);
 		}
 	}
+	gate.end();	// (a quit while a game waited: no sync left behind)
 	{
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";

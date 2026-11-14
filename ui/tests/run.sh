@@ -13,6 +13,9 @@ fail=0
 # defaults it uses up to date with git (tools/systems-history.sh)
 sh "$HERE/tests/systems-merge.sh" || fail=1
 sh "$HERE/../tools/systems-history.sh" --check || fail=1
+# the Save Mover puts each save where the card's sync and emulators look (node, when there is one)
+if command -v node >/dev/null; then node "$HERE/tests/save-mover-test.js" > "$OUT/save-mover-test.log" 2>&1 || { echo "FAIL the Save Mover: $(grep FAIL "$OUT/save-mover-test.log" | head -3)"; fail=1; }
+else echo "SKIP the Save Mover's test (no node here)"; fi
 # the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
 # leaves in $OUT for the game panel's run below
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }
@@ -54,6 +57,10 @@ make -s -C "$HERE" tests/eq-test >/dev/null && "$HERE/tests/eq-test" > "$OUT/eq-
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
+# the save sync's blank saves, vault and journal
+make -s -C "$HERE" tests/vault-test >/dev/null && rm -rf "$OUT/vault-card" && "$HERE/tests/vault-test" "$OUT/vault-card" 2> "$OUT/vault-test.log" || { echo "FAIL the save sync's vault: $(grep FAIL "$OUT/vault-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/gamesync-test >/dev/null && "$HERE/tests/gamesync-test" "$OUT/gamesync" 2> "$OUT/gamesync-test.log" || { echo "FAIL the sync around a game: $(grep FAIL "$OUT/gamesync-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/paths-test >/dev/null && rm -rf "$OUT/paths-card" && sh "$HERE/tests/paths-test.sh" "$OUT/paths-card" 2> "$OUT/paths-test.log" || { echo "FAIL the save sync's save paths: $(grep FAIL "$OUT/paths-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
 awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg" | while read -r ic; do
     [ -f "$HERE/assets/rnds/icons/$ic" ] || { echo "FAIL systems.cfg: no icons/$ic"; exit 1; }
@@ -1141,5 +1148,8 @@ for size in 640x480 1024x768; do
         --script "ndsoverlay" 2> "$OUT/$size-ndsoverlay.log" ||
         { echo "FAIL $size: the DS companion's overlay: $(grep -h 'FAIL\|ndsoverlay:' "$OUT/$size-ndsoverlay.log" | head -2)"; fail=1; }
 done
+# RomM's slotted saves, which the save sync is built on: the stand-in checked against what a real RomM 5.4.1 does
+OUT="$OUT" "$HERE/tests/sync-slots.sh" || fail=1
+OUT="$OUT" "$HERE/tests/romm-interop.sh" || fail=1
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

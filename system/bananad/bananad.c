@@ -358,6 +358,14 @@ static int battery_discharging_pct(void);
  * unmounted put the handheld to sleep instead, found asleep hours later */
 static int shutting_down;
 static int powering_off(void) { return shutting_down || access("/run/banana/powering-off", F_OK) == 0; }
+/* rcK's flag, written here too before a game is asked to quit for a shutdown: the menu comes back from the game while
+ * the handheld is still going down, and reads it to leave the game's save unsynced (a sync cut by the power, or one
+ * that put the server's save in place over the resume state just written); the game's next start sends it */
+static void mark_powering_off(void)
+{
+	int fd = open("/run/banana/powering-off", O_WRONLY | O_CREAT | O_CLOEXEC, 0644);
+	if (fd >= 0) close(fd);
+}
 static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
 /* (the fallback to s2idle is for the one sleep that needed it: the next sleep, and a sleep again after the battery
  * check, try deep again. Both handhelds' xhci-hcd fails a suspend now and then ("Clearing Run/Stop bit failed",
@@ -770,6 +778,17 @@ static void ra_button(const char *name)	/* (c: a command of up to 38, the newlin
 	fclose(f);
 }
 
+/* a DS game quit by bananad itself, not through the menu (Power off after sleeping, a shutdown under a game): nds-saves
+ * told what its saves hold now, as the menu tells it when a game ends. The game's resume state belongs with those saves,
+ * and the launcher's nds-saves drops it at the next start when the save is another by then (replaced on a PC) */
+static void nds_played(const char *rom)
+{
+	if (!rom[0]) return;
+	const char *tool = getenv("BANANAD_TEST_NDS_SAVES");	/* (sleep-test.sh's stand-in) */
+	char *played[] = { (char *)(tool ? tool : "/usr/libexec/banana/nds-saves"), (char *)rom, "--played", NULL };
+	run(played);
+}
+
 /* waits up to secs for the game to quit, the backlights kept off meanwhile (a display handed back, or banana-ui's
  * modeset, can switch a panel's backlight on again); 1 when it has */
 static int game_gone(pid_t game, double secs)
@@ -785,6 +804,7 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 {
 	sleep_log("asleep %.0f min: the game saved, then shutting down (poweroff_after_sleep_minutes)", asleep / 60);
 	backlights_power(0);
+	mark_powering_off();
 	if (game) {
 		/* quiet: the game runs again for a moment to save. The levels kept first (the next boot restores them), then
 		 * the volume down; not Bluetooth headphones, whose own volume would stay down */
@@ -855,6 +875,7 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			wait = 10;
 		}
 		if (game_gone(game, wait)) {
+			int ds = emu && (!strcmp(emu, "superdrastic") || !strcmp(emu, "bananads"));
 			/* SuperDrastic quits after 5 s whether or not DraStic wrote the state, and BananaDS when it can't
 			 * write it: then an older resume state (or none) is all there is, and the next boot mustn't start the
 			 * game from it as if it were this one (review 0.4.3: resume-boot was written either way) */
@@ -876,6 +897,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 				}
 				sleep_log("%s saved %s: it starts again at the next boot", emu, rom);
 			}
+			/* (after resume-boot, which the menu, back from the game by now, also reads before it syncs: nds-saves
+			 * reads both saves and syncs the card twice, and resume-boot waited behind that) */
+			if (ds) nds_played(rom);
 		} else sleep_log("the game hasn't quit after %.0f s: shutting down anyway", wait);
 	}
 	backlights_power(0);
@@ -1051,11 +1075,15 @@ static void shutdown_now(const char *why)
 	shutting_down = 1;
 	rec("power", "shutting down (%s)", why);
 	rec_flush();
+	mark_powering_off();
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
+		char rom[1024] = "";
+		if (pg > 0 && (pgrp_member(pg, "drastic") || pgrp_member(pg, "bananads"))) game_rom(game, rom, sizeof rom);
 		kill(pg > 0 ? -pg : game, SIGTERM);	/* let the emulator write its saves */
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
+		if (kill(game, 0) != 0) nds_played(rom);
 	}
 	sync();
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */

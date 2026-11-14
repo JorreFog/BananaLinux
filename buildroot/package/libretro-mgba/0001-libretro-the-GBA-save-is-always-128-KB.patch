@@ -1,0 +1,30 @@
+libretro: the GBA save is always 128 KB, whatever type the game turned out to use
+
+The core keeps every GBA save in one 128 KB buffer (0xFF, with the frontend's file copied in), but reports its size
+to the frontend as 128 KB only while the save type is still undetected and as the detected type's size afterwards.
+A type is detected from what the game touches: Flash starts as 64 KB and becomes 128 KB only when the game selects
+its second bank, EEPROM starts as 512 bytes and becomes 8 KB only when the game writes past them. RetroArch asks for
+the size afresh when it writes the save at exit, so a 128 KB Flash save played by a session that stayed in bank 0
+came back as 64 KB with bank 1 gone from the file, and an 8 KB EEPROM save by a session that stayed in its first
+512 bytes came back as 512 bytes (measured on RetroArch 1.22.2 with small test ROMs; a game in mGBA's override list
+has its type from the start and isn't affected). RetroArch's autosave thread, which takes the size once at load,
+already writes 128 KB all session; gpSP, the other GBA core, writes 128 KB always. This makes the exit write the
+same: 128 KB for every type, with the padding past the game's data 0xFF as gpSP pads it, so the two cores write the
+same file for the same game and nothing is cut. A game known to have no save (FORCE_NONE) still gets none.
+
+--- a/src/platform/libretro/libretro.c
++++ b/src/platform/libretro/libretro.c
+@@ -2309,10 +2309,10 @@
+ #ifdef M_CORE_GBA
+ 		case mPLATFORM_GBA:
+ 			switch (((struct GBA*) core->board)->memory.savedata.type) {
+-			case GBA_SAVEDATA_AUTODETECT:
+-				return GBA_SIZE_FLASH1M;
++			case GBA_SAVEDATA_FORCE_NONE:
++				return 0;
+ 			default:
+-				return GBASavedataSize(&((struct GBA*) core->board)->memory.savedata);
++				return GBA_SIZE_FLASH1M;
+ 			}
+ #endif
+ #ifdef M_CORE_GB

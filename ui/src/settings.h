@@ -22,6 +22,7 @@
 #include "gamecomp.h"
 #include "gba/panel.h"
 #include "lang.h"
+#include "gamesync.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -42,6 +43,7 @@ namespace banana
 		// every Settings row's help and every game page row's (as the panel would lay it out now: the language's too)
 		// that doesn't fit its box at the smallest size, one line each to log; and how many were checked (ui/tests)
 		int helpCheck(const std::function<void(const std::string&)>& log);
+		std::string helpShown(const std::string& key);	// a row's help as the panel words it now, in the language loaded ("" for no such row)
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
@@ -91,6 +93,13 @@ namespace banana
 		static void bshareServe(bool want);
 		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
+		// Sync now waiting for Wi-Fi to come back: update() looks every 250 ms, with Settings closed too (the menu's
+		// loop calls it then); the headless tests give wlan0's state
+		bool syncWaitsForWifi() const { return syncWifiUntil > 0; }
+		// a sync this menu started still to watch with Settings closed: one gone without a word to say, or Get games'
+		// picks still waiting on it (a game picked after its last look at the list needs the next run started)
+		bool watchesSync() const { return syncGroup > 0 || !pickAsked.empty(); }
+		void setWifiFacts(std::function<gamesync::WifiFacts()> f) { wifiFacts = std::move(f); }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
@@ -164,7 +173,7 @@ namespace banana
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
-			const std::string& scraped = "");
+			const std::string& scraped = "", const std::string& folder = "");	// folder: the system's on the card (Save sync's key)
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
@@ -244,19 +253,61 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES, HOMESRV } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
-		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
+		struct PickGame { std::string sys, key, title, failed; long long bytes = 0; bool on = false, there = false; };	// failed: why its download didn't come (Get games)
 		std::vector<PickGame> pickGames;
-		std::vector<std::string> pickSys;		// the systems' folders, in the server's order
+		std::vector<std::string> pickSys;		// the systems' folders, by their names
 		int pickLevel = 0, pickSysSel = 0, pickSel = 0, pickTop = 0;	// level 0: the systems, 1: a system's games
 		bool pickLoading = false, pickDirty = false;
 		std::string pickError;
 		wifi::Job pickJob;
-		void openPickGames();
+		// get: RomM's Get games, the same lists, A putting a game on the download list (banana/homesync-get.txt, which
+		// any sync takes games off as they come) and starting a sync; on: waiting on that list
+		bool pickGet = false;
+		double pickPoll = 0;
+		// query: Get games' search (Y), the titles holding it; from the systems, every system's (pickSysSel -1)
+		std::string pickQuery;
+		// asked: the games A put on the list on this visit; restarted: those a sync has been started again for, once
+		// each, when one ended without reading the list after they were asked for (wasSync: a sync ran at the last look)
+		std::set<std::string> pickAsked, pickRestarted;
+		bool pickWasSync = false;
+		std::string pickServer;	// the paired address pickAsked's games were picked for
+		double getRestartAt = 0;
+		bool pollGetRestart();
+		// Get games' list as banana-sync keeps it on the card (banana/homesync-server-games.tsv): when the server listed
+		// it, the file's time as last read, and a refresh (X) under way with the kept list still up
+		double pickListedAt = 0;
+		long long pickCacheMtime = -1;
+		double pickCacheAt = 0;
+		bool pickRefreshing = false;
+		std::string pickCachePath() const;
+		bool loadPickCache();
+		std::string takePickRows(const std::string& text);	// banana-sync games' lines as the page's, the cursor kept; "" or why not
+		void openPickGames(bool get);
+		bool editGetList(const std::string& key, bool add);
+		std::set<std::string> readGetList() const;
+		bool gameOnCard(const std::string& rel) const;
+		int getWaiting = -1;		// the Get games row's count (-1 not read yet)
+		double getWaitingAt = 0;
 		bool pollPickGames();
 		Result pressPickGames(Key k);
 		void renderPickGames();
+		// Home server > Saves: each game with a conflict, a held save, or kept copies; what can be done with it (by
+		// banana-sync's saves, resolve and restore)
+		struct SaveAct { std::string label, args; };
+		struct SaveGame { std::string rel, tag, detail; std::vector<SaveAct> acts; };
+		std::vector<SaveGame> saveGames;
+		std::string savesOpen;	// the game open at level 1, by its save: the list is rebuilt after each choice
+		int savesLevel = 0, savesGame = 0, savesSel = 0, savesTop = 0;	// level 0: the games, 1: one game's
+		bool savesBusy = false, savesAct = false;	// savesAct: what is running is a choice, not the list
+		std::string savesMsg;
+		wifi::Job savesJob;
+		void openSaves();
+		void savesRun(const std::string& args, bool act);
+		bool pollSaves();
+		Result pressSaves(Key k);
+		void renderSaves();
 		void savePickGames();
 		std::vector<int> pickList() const;		// the games of the system open (indices into pickGames)
 		void stopSync();
@@ -292,7 +343,12 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_SYNC };
+		// Save sync (paired with RomM): off keeps this game's saves on this handheld, its line "<system folder>/<ROM file
+		// name>" in banana/homesync-local.txt, which banana-sync reads
+		std::string pgLocalKey;
+		bool pgLocal = false;
+		bool setSaveLocal(const std::string& key, bool local);
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
@@ -308,13 +364,14 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_HS_URL, ENTRY_HS_PORT, ENTRY_HS_NAME, ENTRY_HS_SLOT, ENTRY_BETA_PASS, ENTRY_GET_SEARCH, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
+		bool urlKeys() const;		// the keyboard's symbols are an address's pieces (RomM's address)
 		std::string account(const char* key);
 		std::string shareUser();
 		static void popChar(std::string& t);
@@ -544,6 +601,7 @@ namespace banana
 		void gameFrame();	// gameRender()'s frame: the game panel, a companion's view or the tiles
 
 		void build();
+		void loadAll();						// every row's value read from its file
 		void load(Item& it);
 		Result change(int dir);
 		// the language switch asked first (owner: "Are you sure?"), in the language now and the one picked, No first:
@@ -611,17 +669,98 @@ namespace banana
 		std::string syncLine;				// that file's line, as last read
 		double syncNext = 0;
 		std::string hsUrl, hsName, hsKind;	// the server being paired with
-		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running
+		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running,
+											// 4 asking RomM's address (probe --romm), 5 reading its certificate
+											// (cert), 6 keeping the one its owner trusted (trust)
 		wifi::Job hsJob;
+		wifi::Job nameJob;	// banana-sync rename, from the Device name row
+		wifi::Job forgetJob;	// banana-sync forget, from Forget this server
+		pid_t hsPairGroup = 0;	// the pairing running: its process group (banana-sync and the sh before it), what B stops
+		static bool groupAlive(pid_t p);	// a process group with a process still running in it (a zombie is gone)
+		pid_t syncGroup = 0;	// the process group of the sync the menu started, until its first line replaces the menu's own
+		pid_t hsStopGroup = 0;	// a pairing stopped, its group not gone yet: the next one waits for it
+		double hsStopAt = 0;	// (when it was stopped: SIGKILL after 5 s)
+		bool hsStopKilled = false;
+		bool hsStopping = false;	// a pairing asked for while that one ends: started once it has
+		std::string hsStopCode;	// (its code, "" for the device flow)
+		std::string hsPrevSync;	// the status line a pairing replaced (the last sync's), put back when it doesn't pair
 		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
 		bool pollSync(double t);			// true when something to show changed
-		void startSync();
+		bool pollSyncStatus(double t, bool force);	// sync.status read (also with Settings closed); true when its line changed
+		bool syncLineFresh = false;
+		double hsRowsAt = 0;	// the next look at whether the Home server rows are still the pairing's	// a new status line pollSync hasn't yet handled (the pairing screen's)
+		bool hsTurnAutoOn();	// a first pairing's: Auto sync on when it was off (true: it was)
+		bool hsWasPaired = false;	// a server was paired already when the pairing running began
+		double hsGoneAt = 0;		// when RomM's pairing was first seen with no process left and no last word (0: not)
+		bool hsTurnLaunchOn();
+		bool hsSlotsKept();			// the paired RomM keeps save slots (5.4 and newer, as the pairing found it)
+		std::string hsSlot();		// the slot saves sync with, as Settings names it: autosave unless a custom one
+		std::string slotShown = "autosave";	// (the Save slot row's value, read when the page is built and when it is set)	// a RomM 5.4 pairing's: Sync before playing on when it was off (true: it was)
+		bool startSync(bool gamesOnly = false);	// (true: a sync was started, or waits for Wi-Fi coming back to start; gamesOnly: Get games' downloads alone)
+		void runSync();
+		// Sync now as Wi-Fi comes back (pressed as the lid opens, before it has an address): waited for until this time
+		// (the menu's clock, 0 not waiting), as the sync before a game waits; wifiFacts: wlan0's state, the headless
+		// tests' "wifi" in place of the device's
+		double syncWifiUntil = 0;
+		bool syncGamesOnly = false;	// the sync started (or waiting for Wi-Fi) is Get games' own, sync --games-only
+		std::function<gamesync::WifiFacts()> wifiFacts;
+		bool pollSyncWifi();
 		void startPairing();
-		void hsRun(const std::string& args);	// banana-sync <args> in the background
+		pid_t hsRun(const std::string& args);	// banana-sync <args> in the background (its process group, 0 if unknown)
+		// banana-sync with this card's root, pairing and settings, then args, as one sh command line (the Sync row's
+		// runs, the Saves page's and the games to choose from all start it so)
+		std::string syncCmd(const std::string& args) const;
 		std::string syncShort() const;		// for the Sync now row: "Not yet", "12 / 300", "Done", "Didn't work"
 		std::string homeServer() const;		// the paired server's name, "" when none
-		mutable std::string hsPaired;
-		mutable double hsPairedAt = -1e18;
+		std::string hsBackend() const;		// the paired server's kind: "romm", "romhost", "" when none
+		mutable std::string hsPaired, hsPairedKind, hsPairedUrl, hsPairedName;
+		mutable int hsConflicts = 0, hsHeld = 0;	// the paired server's saves to settle and held back (romsync.json)
+		std::string hsSettleShort() const;		// "1 conflict, 2 held", "" for none
+		mutable std::string hsPairedSig;	// romsync.json as last read (inode, size, time), "" to read it again
+		std::string hsRowsFor = "?";		// the kind the Home server page's rows were made for (build())
+		void hsRebuild();					// the rows made again for the kind paired now, the cursor on the same row
+		// Home server, the pages of its own (settings_homesrv.cpp): RomM or Romhost chosen, RomM's address (protocol,
+		// address, port, certificate check), and RomM's pairing screen (its code, the page that approves it as a QR code)
+		enum HsView { HS_CHOOSE, HS_FORM, HS_PAIR } hsView = HS_CHOOSE;
+		int hsSel = 0;
+		bool hsHttps = true;
+		std::string hsHost, hsPort, hsPath;	// RomM's address as typed, in parts (hsPort "": the protocol's own)
+		std::string hsMsg;					// the form's or the pairing screen's last word
+		std::string hsCause, hsMoved;		// why the address failed (probe's word), and where a redirect went
+		std::string hsNote;					// said on the pairing screen too (a RomM before 5.4)
+		std::string hsCode, hsVerify;		// RomM's code and the page that approves it
+		double hsExpires = 0;				// when the code runs out (the menu's clock)
+		int hsShownSec = -1;				// the second the countdown last drew
+		bool hsDone = false;				// paired: the pairing screen says so, A goes on
+		rnds::TexPtr hsQr;					// the QR code of hsVerify, made for hsQrFor at hsQrPx a module
+		std::string hsQrFor;
+		int hsQrPx = 0, hsQrSize = 0;
+		void openHome(HsView v);
+		Result pressHome(Key k);
+		Result touchHome(float cx, float cy);
+		void renderHome();
+		std::string hsBase() const;			// the form's parts as one base URL
+		void hsSetAddress(const std::string& typed);	// a URL typed (or pasted) into the parts
+		void hsConnect();					// probe --romm on the form's address
+		// a certificate nothing vouches for, shown for its owner to trust or not (Y on the form's error): what banana-sync
+		// cert read, asked about over the form until A (banana-sync trust, then Connect again) or B
+		bool hsCertAsk = false;
+		std::string hsCertFor, hsCertSubject, hsCertIssuer, hsCertDates, hsCertPrint;
+		void hsReadCert();
+		void hsCertRead(const std::string& out);
+		void hsCertTrusted(const std::string& out);
+		bool hsBusy() const { return hsStep >= 4; }	// the form waiting on banana-sync: its rows don't answer
+		bool hsTrusts(const std::string& origin) const;	// whether that server's certificate was trusted by hand
+		void hsProbed(const std::string& out);
+		void hsRommFound(const std::string& url, const std::string& ver, bool old);	// a probe's RomM, about to be paired
+		void hsStartPair(const std::string& code);	// banana-sync pair --romm (no code: the device flow)
+		void hsPairLine(const std::string& ln);	// a line of the status file while RomM pairs
+		void hsCancelPair();				// the pairing running stopped (its process group)
+		bool hsPollStopped();				// a pairing stopped, once gone: the last sync's line back, a pairing waiting started
+		void hsPutBackSync();				// the last sync's status line back over a pairing's own
+		std::string hsWhy(const std::string& cause, const std::string& detail) const;	// probe's word, for a person
+		void hsFailed(const std::string& kind, const std::string& detail);	// hsCause, hsMoved and hsMsg for a failure
+		std::vector<int> hsFormRows() const;
 		void syncBar(float x, float y, float w);
 		std::string syncTool() const;
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
@@ -785,6 +924,7 @@ namespace banana
 		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
 		struct Chip { Key key; std::string face, label; bool right = false; };
 		void drawChips(const std::vector<Chip>& cs);
+		std::vector<Chip> homeChips();		// the Home server pages' buttons
 		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
 		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
 		std::vector<Chip> keyboardChips();

@@ -1548,3 +1548,304 @@ menu		Games went into their system's folder.	Pelit menivät järjestelmänsä ka
 menu		Nothing was sent.	Mitään ei lähetetty.
 bananads		or press L3	tai paina L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Peli kuulee puhalluksen punaisen viivan yli (herkkyys: %s).
+# (the save sync's and the home server's rows below (the wait before a game, RomM's address and pairing, Get games,
+# Manage saves, Device name, the banner after a game) are a machine-translated draft, not HANHITSI's: for them to
+# check in the next round)
+menu		Syncing the save	Synkronoidaan tallennusta
+menu		Save not synced	Tallennusta ei synkronoitu
+menu		its saves stay on this handheld	sen tallennukset jäävät tälle käsikonsolille
+menu		Save conflict	Tallennusristiriita
+menu		{game}: settle it in Settings > Network > Home server > Manage saves.	{game}: ratkaise se kohdassa Asetukset > Verkko > Kotipalvelin > Hallitse tallennuksia.
+menu		Save synced	Tallennus synkronoitu
+menu		Save up to date	Tallennus ajan tasalla
+menu		No save here: the server has one, {server}{when}	Täällä ei ole tallennusta: palvelimella on, {server}{when}
+menu		Save conflict: here {here}, server {server}{when}	Tallennusristiriita: täällä {here}, palvelin {server}{when}
+menu		Not synced yet	Ei vielä synkronoitu
+menu		It syncs when you quit	Synkronoidaan, kun lopetat
+menu		Playing this handheld's save	Pelataan tämän käsikonsolin tallennuksella
+menu		A: take the server's  B: play without	A: ota palvelimen tallennus  B: pelaa ilman
+menu		A: this handheld's  X: the server's  B: later	A: tämän käsikonsolin  X: palvelimen  B: myöhemmin
+menu		Settling the save...	Ratkaistaan tallennusta...
+menu		The save couldn't be settled	Tallennusta ei voitu ratkaista
+menu		A: play this handheld's  B: back	A: pelaa tämän käsikonsolin tallennuksella  B: takaisin
+menu		The server's newer save didn't arrive	Palvelimen uudempi tallennus ei tullut perille
+menu		A: play this handheld's (older)  B: back	A: pelaa tämän käsikonsolin tallennuksella (vanhempi)  B: takaisin
+menu		Waiting for Wi-Fi...	Odotetaan Wi-Fiä...
+menu		Syncing this game's save...	Synkronoidaan tämän pelin tallennusta...
+menu		B: play now	B: pelaa nyt
+settings		Game Boy Advance	Game Boy Advance
+settings		Game Boy Color	Game Boy Color
+settings		Game Boy	Game Boy
+settings		Super Nintendo	Super Nintendo
+settings		Mega Drive	Mega Drive
+settings		Commodore 64	Commodore 64
+settings		ZX Spectrum	ZX Spectrum
+settings		PlayStation	PlayStation
+settings		Nintendo 64	Nintendo 64
+settings		Your saves synced, and your games, from your own RomM or Romhost server.	Tallennuksesi ja pelisi synkronoituina omalta RomM- tai Romhost-palvelimeltasi.
+settings		Syncs the saves both ways, and downloads any games waiting in Get games. It carries on in the background.	Synkronoi tallennukset molempiin suuntiin ja lataa Lataa pelejä -listalla odottavat pelit. Jatkuu taustalla.
+settings		Get games	Lataa pelejä
+settings		Downloads the server's games, one at a time. Once on the card a game is yours: nothing updates or removes it.	Lataa palvelimen pelit yksi kerrallaan. Kun peli on kortilla, se on sinun: mikään ei päivitä tai poista sitä.
+settings		Games go to	Pelien sijainti
+settings		Where downloaded games go: this card or the second SD card. With the second card out, its games wait.	Mihin ladatut pelit menevät: tälle kortille tai toiselle SD-kortille. Kun toinen kortti on poissa, sen pelit odottavat.
+settings		This card	Tämä kortti
+settings		Leaving a game: its save goes to the server as you leave it. And on Wi-Fi: every save and waiting game too, whenever Wi-Fi connects. Never while a game runs.	Pelistä poistuttaessa: sen tallennus lähtee palvelimelle samalla. Ja Wi-Fissä: myös kaikki tallennukset ja odottavat pelit aina, kun Wi-Fi yhdistyy. Ei koskaan pelin aikana.
+settings		Sync before playing	Synkronoi ennen pelaamista
+settings		On: a game's save is updated from the server before it starts (with Auto sync on). B skips the wait.	Päällä: pelin tallennus päivitetään palvelimelta ennen pelin alkua (kun Automaattinen synkronointi on päällä). B ohittaa odotuksen.
+settings		On: save states sync too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	Päällä: myös pikatallennukset synkronoidaan. RomMista tullut säilytetään kohdassa Hallitse tallennuksia, eikä sitä koskaan ladata itsestään. Pikajatkon tiloja ei synkronoida koskaan.
+settings		Manage saves	Hallitse tallennuksia
+settings		Settle conflicts and held-back saves, or put back an older copy of any save the sync replaced.	Ratkaise ristiriidat ja pidätetyt tallennukset tai palauta vanhempi kopio mistä tahansa tallennuksesta, jonka synkronointi korvasi.
+settings		Systems	Järjestelmät
+settings		Which systems' saves sync. For one game: X on it in the library, then Save sync.	Minkä järjestelmien tallennukset synkronoidaan. Yksittäiselle pelille: X pelin kohdalla kirjastossa, sitten Tallennusten synkronointi.
+settings		Device name	Laitteen nimi
+settings		This handheld's name in RomM, shown on the saves it sends.	Tämän käsikonsolin nimi RomMissa, näkyy sen lähettämissä tallennuksissa.
+settings		Games	Pelit
+settings		Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.	Mihin ladatut pelit menevät. Toinen SD-kortti: sen roms-kansio (luodaan, jos sitä ei ole), kun kortti on paikallaan ja Toinen SD-kortti näyttää sen pelit. Kortilla jo oleva peli pysyy siellä; kun toinen kortti on poissa, sen pelit odottavat seuraavaa synkronointia.
+settings		Games to sync	Synkronoitavat pelit
+settings		All: every game of those systems. Chosen: only the games ticked in Choose games (one unticked later stays until you delete it).	Kaikki: kaikki näiden järjestelmien pelit. Valitut: vain kohdassa Valitse pelit rastitetut pelit (myöhemmin poistettu rasti ei poista peliä ennen kuin poistat sen itse).
+settings		All	Kaikki
+settings		Chosen	Valitut
+settings		Choose games	Valitse pelit
+settings		Tick the games to sync, for Games to sync on Chosen.	Rastita synkronoitavat pelit, kun Synkronoitavat pelit on Valitut.
+settings		Unpairs this handheld: nothing syncs until it is paired again. Games and saves stay on the card. Press A twice.	Poistaa tämän käsikonsolin parituksen: mitään ei synkronoida, ennen kuin se paritetaan uudelleen. Pelit ja tallennukset jäävät kortille. Paina A kahdesti.
+settings		Sync: its games' saves sync with RomM. Skip: they stay on this handheld.	Synkronoi: sen pelien tallennukset synkronoidaan RomMin kanssa. Ohita: ne jäävät tälle käsikonsolille.
+settings		As RomM lists this handheld	Kuten RomM listaa tämän käsikonsolin
+settings		Unpaired. The games and saves stay on the card. A on Server pairs it again.	Parittamaton. Pelit ja tallennukset jäävät kortille. A kohdassa Palvelin parittaa sen uudelleen.
+settings		Not paired. A pairs this handheld with RomM or Romhost.	Ei paritettu. A parittaa tämän käsikonsolin RomMin tai Romhostin kanssa.
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again.	Paritettu kohteen {n} kanssa osoitteessa {hsPairedUrl}. A avaa sen osoitteen ja Tarkista varmenne -asetuksen. Siellä Yhdistä parittaa uudelleen.
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again.	Paritettu kohteen {n} (Romhost) kanssa osoitteessa {hsPairedUrl}. A parittaa uudelleen.
+settings		{value} in conflict (decide in Homeport)	{value} ristiriidassa (ratkaise Homeportissa)
+settings		{value} in conflict (both are kept and the save is held: choose on Manage saves)	{value} ristiriidassa (molemmat säilytetään ja tallennus pidätetään: valitse kohdassa Hallitse tallennuksia)
+settings		The last sync couldn't reach the server: {syncLine}. Check Wi-Fi, then Sync now again.	Viimeisin synkronointi ei tavoittanut palvelinta: {syncLine}. Tarkista Wi-Fi ja valitse sitten uudelleen Synkronoi nyt.
+settings		Renaming	Nimetään uudelleen
+settings		{getWaiting} waiting	{getWaiting} odottaa
+settings		Stop	Pysäytä
+settings		Set up	Määritä
+settings		Not renamed: {out}	Ei nimetty uudelleen: {out}
+settings		Romhost's address: its name or IP, and :port when it isn't 8092. A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	Romhostin osoite: sen nimi tai IP sekä :port, jos se ei ole 8092. A kirjoittaa merkin, B poistaa, L symbolit (piste ja kaksoispiste), START kun se on kirjoitettu.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL. L: symbols, and keys for https://, .com and the like. START when it is typed.	Kuten selaimessa: romm.example.com, 192.168.1.20 tai koko URL. L: symbolit sekä näppäimet https://, .com ja vastaaville. START kun se on kirjoitettu.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP); empty for the usual. START when it is typed.	Vain jos RomM ei ole tavallisessa portissa (443 HTTPS:lle, 80 HTTP:lle); tyhjä tavalliselle. START kun se on kirjoitettu.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START renames it in RomM.	A kirjoittaa merkin, B poistaa, X isot kirjaimet, L symbolit, Y välilyönti, START nimeää sen uudelleen RomMissa.
+settings		In RomM: Settings > Client API Tokens > Pair device shows a code like ABCD-1234, good for 60 seconds. A client token (rmm_...) works too. START when it is typed.	RomMissa: Settings > Client API Tokens > Pair device näyttää koodin, kuten ABCD-1234, joka on voimassa 60 sekuntia. Myös asiakastunnus (rmm_...) käy. START kun se on kirjoitettu.
+settings		The code Homeport shows under ROMs > Pair a device. START when it is typed.	Koodi, jonka Homeport näyttää kohdassa ROMs > Pair a device. START kun se on kirjoitettu.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START searches the server's games: part of a title or a file name is enough. Nothing typed: every game again.	A kirjoittaa merkin, B poistaa, X isot kirjaimet, L symbolit, Y välilyönti, START hakee palvelimen pelejä: osa nimestä tai tiedostonimestä riittää. Ei mitään kirjoitettu: taas kaikki pelit.
+settings		{value} game	{value} peli
+settings		{value} games	{value} peliä
+settings		{total} MB	{total} Mt
+settings		Stopped before it started.	Pysäytetty ennen kuin se alkoi.
+settings		The server doesn't know this handheld any more: pair it again.	Palvelin ei enää tunne tätä käsikonsolia: parita se uudelleen.
+settings		The server's list can't be read: {ln}.	Palvelimen listaa ei voi lukea: {ln}.
+settings		The server listed no games.	Palvelin ei listannut yhtään peliä.
+settings		Couldn't refresh. {reason}	Päivitys ei onnistunut. {reason}
+settings		Home server > Get games: the games to download, taken off as each comes	Kotipalvelin > Lataa pelejä: ladattavat pelit, poistetaan listalta sitä mukaa kuin ne tulevat
+settings		Home server > Get games: why a game still on the list didn't come last time	Kotipalvelin > Lataa pelejä: miksi listalla yhä oleva peli ei tullut viime kerralla
+settings		{value} game waits	{value} peli odottaa
+settings		{value} games wait	{value} peliä odottaa
+settings		{on} to download: Sync now brings them, and every sync until they're in.	{on} ladattavana: Synkronoi nyt tuo ne, samoin jokainen synkronointi, kunnes ne ovat perillä.
+settings		On the card already.	Jo kortilla.
+settings		The download list can't be written: the card may be read-only.	Latauslistaa ei voi kirjoittaa: kortti voi olla vain luku -tilassa.
+settings		Search every system	Hae kaikista järjestelmistä
+settings		Search this system	Hae tästä järjestelmästä
+settings		%.1f GB	%.1f Gt
+settings		waiting, {value}	odottaa, {value}
+settings		chosen, {value}	valittu, {value}
+settings		A opens a system. Y searches every system. X gets the server's list again.	A avaa järjestelmän. Y hakee kaikista järjestelmistä. X hakee palvelimen listan uudelleen.
+settings		A downloads a game, or cancels one waiting. L and R jump a page. B clears the search.	A lataa pelin tai peruu odottavan. L ja R hyppäävät sivun. B tyhjentää haun.
+settings		A downloads a game, or cancels one waiting. Y searches this system. L and R jump a page.	A lataa pelin tai peruu odottavan. Y hakee tästä järjestelmästä. L ja R hyppäävät sivun.
+settings		{value} · didn't come	{value} · ei tullut
+settings		{value} · waiting to download	{value} · odottaa latausta
+settings		{value} · on the card	{value} · kortilla
+settings		{value} · chosen	{value} · valittu
+settings		{failed}. The next sync tries again.	{failed}. Seuraava synkronointi yrittää uudelleen.
+settings		Every system	Kaikki järjestelmät
+settings		Refreshing...	Päivitetään...
+settings		Listed just now	Listattu juuri nyt
+settings		Listed {age} min ago	Listattu {age} min sitten
+settings		Listed {age} h ago	Listattu {age} h sitten
+settings		Listed {age} days ago	Listattu {age} päivää sitten
+settings		, {in} on card	, {in} kortilla
+settings		, {ch} waiting	, {ch} odottaa
+settings		{ch} of {all}{b}	{ch} / {all}{b}
+settings		No games match "{pickQuery}".	Mikään peli ei vastaa hakua "{pickQuery}".
+settings		No games here.	Täällä ei ole pelejä.
+settings		Waiting	Odottaa
+settings		On card	Kortilla
+settings		Sync · on card	Synkronoi · kortilla
+settings		Refresh	Päivitä
+settings		All / none	Kaikki / ei mitään
+settings		Tick	Rastita
+settings		Refreshing	Päivitetään
+settings		Get	Lataa
+settings		Done.	Valmis.
+settings		Not done.	Ei tehty.
+settings		%lld bytes	%lld tavua
+settings		Held back	Pidätetty
+settings		Conflict	Ristiriita
+settings		, from {device}	, laitteelta {device}
+settings		This handheld: {here}. The server: {server}{from}{when}. The one not chosen stays in the vault.	Tämä käsikonsoli: {here}. Palvelin: {server}{from}{when}. Valitsematta jäänyt säilyy holvissa.
+settings		Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.	Muutettu täällä ja palvelimella. Seuraava palvelimen tavoittava synkronointi hakee sen kopion valittavaksi.
+settings		Missing or blank here since the last sync. Nothing is put back by itself.	Puuttuu tai on tyhjä täällä viime synkronoinnin jälkeen. Mitään ei palauteta itsestään.
+settings		DraStic's and BananaDS's saves differ. Starting the game brings them together.	DraSticin ja BananaDS:n tallennukset eroavat. Pelin käynnistäminen yhdistää ne.
+settings		DraStic's save here can't be read. The game isn't synced until it can.	DraSticin tallennusta täällä ei voi lukea. Peliä ei synkronoida, ennen kuin se voidaan lukea.
+settings		The server's save is in a format or size this handheld can't use. It stays on the server.	Palvelimen tallennus on muodossa tai koossa, jota tämä käsikonsoli ei voi käyttää. Se jää palvelimelle.
+settings		Keep this handheld's	Pidä tämän käsikonsolin
+settings		Use the server's	Käytä palvelimen
+settings		Last good	Viimeisin toimiva
+settings		Restore {when} ({f})	Palauta {when} ({f})
+settings		Working...	Työskennellään...
+settings		Saves	Tallennukset
+settings		Reading the card...	Luetaan korttia...
+settings		Nothing here: no conflicts, nothing held, and no kept copies.	Täällä ei ole mitään: ei ristiriitoja, ei pidätettyjä eikä säilytettyjä kopioita.
+settings		A puts a kept copy back, and the save it replaces is kept too. The next sync sends it.	A palauttaa säilytetyn kopion, ja sen korvaama tallennus säilytetään myös. Seuraava synkronointi lähettää sen.
+settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	A avaa pelin. Ristiriita pysyy ennallaan, kunnes ratkaiset sen: mitään ei menetetä sillä välin.
+settings		Home server: the games whose saves stay on this handheld (the game page's Save sync)	Kotipalvelin: pelit, joiden tallennukset jäävät tälle käsikonsolille (pelin sivun Tallennusten synkronointi)
+settings		Save sync can't be changed: the card may be read-only.	Tallennusten synkronointia ei voi muuttaa: kortti voi olla vain luku -tilassa.
+settings		On: this game's saves sync with RomM. Off: they stay on this handheld only, for a playthrough of its own here; the server's are left as they are.	Päällä: tämän pelin tallennukset synkronoidaan RomMin kanssa. Pois: ne jäävät vain tälle käsikonsolille omaa läpipeluuta varten; palvelimen tallennukset jätetään ennalleen.
+settings		Save sync	Tallennusten synkronointi
+settings		Off: saves stay here	Pois: tallennukset jäävät tänne
+settings		This game's timing	Tämän pelin ajoitus
+settings		This game's saves	Tämän pelin tallennukset
+settings		A port is a number from 1 to 65535, or nothing for the usual one.	Portti on luku väliltä 1-65535, tai tyhjä tavalliselle.
+settings		The name can't be empty.	Nimi ei voi olla tyhjä.
+settings		No code typed: the QR code is still the way to pair.	Koodia ei kirjoitettu: QR-koodi on yhä tapa parittaa.
+settings		Checking {ra}...	Tarkistetaan {ra}...
+settings		{value} conflict	{value} ristiriita
+settings		{value} conflicts	{value} ristiriitaa
+settings		{hsHeld} held	{hsHeld} pidätetty
+settings		No Romhost answered. Its address	Yksikään Romhost ei vastannut. Sen osoite
+settings		Romhost	Romhost
+settings		No Romhost answers there. Check the address (and :port, when it isn't 8092) and that the handheld is on the same network as Homeport. For RomM, choose RomM instead: A on Server.	Mikään Romhost ei vastaa siellä. Tarkista osoite (ja :port, jos se ei ole 8092) ja että käsikonsoli on samassa verkossa kuin Homeport. RomMia varten valitse sen sijaan RomM: A kohdassa Palvelin.
+settings		Paired with {ln}. Saves now sync as you leave a game (Auto sync). Sync now, below, gets the games and saves.	Paritettu kohteen {ln} kanssa. Tallennukset synkronoidaan nyt, kun poistut pelistä (Automaattinen synkronointi). Alla oleva Synkronoi nyt hakee pelit ja tallennukset.
+settings		Stopped.	Pysäytetty.
+settings		Protocol	Protokolla
+settings		Address	Osoite
+settings		Port	Portti
+settings		Its address	Sen osoite
+settings		Type RomM's address first.	Kirjoita ensin RomMin osoite.
+settings		RomM {ver}	RomM {ver}
+settings		RomM {ver}: until it's 5.4 or newer, saves sync after a game, not before one, and there are no save slots.	RomM {ver}: ennen versiota 5.4 tallennukset synkronoidaan pelin jälkeen mutta ei ennen sitä, eikä tallennuspaikkoja ole.
+settings		banana-sync didn't answer.	banana-sync ei vastannut.
+settings		Asking {hsName} for a code...	Kysytään koodia kohteelta {hsName}...
+settings		Pairing with the code...	Paritetaan koodilla...
+settings		Paired with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Paritettu kohteen {srv} kanssa. Tallennukset synkronoidaan nyt, kun poistut pelistä (Automaattinen synkronointi). Lataa pelejä tuo pelit.
+settings		Paired with {srv}. Get games brings games over.	Paritettu kohteen {srv} kanssa. Lataa pelejä tuo pelit.
+settings		Paired as {dev} with {srv}. Saves now sync as you leave a game (Auto sync). Get games brings games over.	Paritettu nimellä {dev} kohteen {srv} kanssa. Tallennukset synkronoidaan nyt, kun poistut pelistä (Automaattinen synkronointi). Lataa pelejä tuo pelit.
+settings		Paired with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Paritettu kohteen {srv} kanssa. Tallennukset synkronoidaan nyt ennen pelaamista ja kun poistut pelistä. Lataa pelejä tuo pelit.
+settings		Paired as {dev} with {srv}. Saves now sync before you play and as you leave a game. Get games brings games over.	Paritettu nimellä {dev} kohteen {srv} kanssa. Tallennukset synkronoidaan nyt ennen pelaamista ja kun poistut pelistä. Lataa pelejä tuo pelit.
+settings		Paired as {dev} with {srv}. Get games brings games over.	Paritettu nimellä {dev} kohteen {srv} kanssa. Lataa pelejä tuo pelit.
+settings		Refused in RomM. A asks for a new code.	Hylätty RomMissa. A pyytää uuden koodin.
+settings		The code ran out before it was approved. A asks for a new one.	Koodi vanheni ennen hyväksyntää. A pyytää uuden.
+settings		Can't find {host}. Check the address, and that this Wi-Fi reaches the network RomM is on.	Osoitetta {host} ei löydy. Tarkista osoite ja että tämä Wi-Fi yltää verkkoon, jossa RomM on.
+settings		{host} refused the connection. Check the port, and HTTPS or HTTP.	{host} kieltäytyi yhteydestä. Tarkista portti sekä HTTPS tai HTTP.
+settings		{host} didn't answer in time. Is it reachable from this Wi-Fi? Check the port, and HTTPS or HTTP.	{host} ei vastannut ajoissa. Onko se tavoitettavissa tästä Wi-Fistä? Tarkista portti sekä HTTPS tai HTTP.
+settings		The certificate can't be checked yet: the clock isn't set from the internet. Wait a minute on Wi-Fi and try again.	Varmennetta ei voi vielä tarkistaa: kelloa ei ole asetettu internetistä. Odota minuutti Wi-Fissä ja yritä uudelleen.
+settings		homesync_ca names a file that can't be read: check it in banana/settings.conf.	homesync_ca viittaa tiedostoon, jota ei voi lukea: tarkista se tiedostosta banana/settings.conf.
+settings		{host} answers with another page, not RomM: a login in front of it, most likely. The handheld can't log in there: let RomM's API (/api) through without one. Your phone still logs in, for the page that approves the handheld.	{host} vastaa toisella sivulla, ei RomMilla: todennäköisesti sen edessä on kirjautuminen. Käsikonsoli ei voi kirjautua siellä: päästä RomMin API (/api) läpi ilman kirjautumista. Puhelimesi kirjautuu silti sivulle, jolla käsikonsoli hyväksytään.
+settings		The server sends this address to {hsMoved}. Y uses that address.	Palvelin ohjaa tämän osoitteen osoitteeseen {hsMoved}. Y käyttää sitä osoitetta.
+settings		The server sends this address elsewhere, not to RomM: {detail}	Palvelin ohjaa tämän osoitteen muualle kuin RomMiin: {detail}
+settings		{host} refused access ({detail}). Something in front of RomM may be blocking the handheld (a firewall, bot protection, a login page): let /api through.	{host} esti pääsyn ({detail}). Jokin RomMin edessä voi estää käsikonsolin (palomuuri, bottisuojaus, kirjautumissivu): päästä /api läpi.
+settings		{host} answered {detail} where RomM's API should be. Check the host, and the path if RomM is served under one (https://example.com/romm).	{host} vastasi {detail} siellä, missä RomMin API:n pitäisi olla. Tarkista palvelin ja polku, jos RomM on jonkin polun alla (https://example.com/romm).
+settings		Something answers at {url}, but not RomM's API. Check the host, and the path if RomM is served under one (https://example.com/romm).	Osoitteessa {url} vastaa jokin, mutta ei RomMin API. Tarkista palvelin ja polku, jos RomM on jonkin polun alla (https://example.com/romm).
+settings		No answer from {host}.	Ei vastausta kohteelta {host}.
+settings		No answer from {host} ({detail}).	Ei vastausta kohteelta {host} ({detail}).
+settings		RomM	RomM
+settings		Port (443 if empty)	Portti (443, jos tyhjä)
+settings		Port (80 if empty)	Portti (80, jos tyhjä)
+settings		Pairing code	Parituskoodi
+settings		Use it	Käytä sitä
+settings		Use a code	Käytä koodia
+settings		Home server > RomM	Kotipalvelin > RomM
+settings		Pair with a server	Parita palvelimen kanssa
+settings		RomM, on this network or the internet. You approve this handheld by scanning a QR code with your phone.	RomM tässä verkossa tai internetissä. Hyväksyt tämän käsikonsolin skannaamalla QR-koodin puhelimellasi.
+settings		Romhost (Homeport), on this network: found by itself, then paired with the code Homeport shows.	Romhost (Homeport) tässä verkossa: löytyy itsestään ja paritetaan Homeportin näyttämällä koodilla.
+settings		This replaces the pairing with {homeServer}.	Tämä korvaa parituksen kohteen {homeServer} kanssa.
+settings		RomM's address	RomMin osoite
+settings		HTTPS for a server on the internet or with a certificate. HTTP for a plain one on this network.	HTTPS internetissä olevalle tai varmenteelliselle palvelimelle. HTTP tavalliselle palvelimelle tässä verkossa.
+settings		As in a browser: romm.example.com, 192.168.1.20, or a full URL such as https://example.com:8443/romm.	Kuten selaimessa: romm.example.com, 192.168.1.20 tai koko URL, kuten https://example.com:8443/romm.
+settings		Only if RomM isn't on the usual port (443 for HTTPS, 80 for HTTP).	Vain jos RomM ei ole tavallisessa portissa (443 HTTPS:lle, 80 HTTP:lle).
+settings		On: the server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust. A change holds at once.	Päällä: palvelimen varmenne tarkistetaan, kuten selain tekee. Pois: itse allekirjoitetulle varmenteelle. Pidä se Päällä verkoissa, joihin et luota. Muutos tulee voimaan heti.
+settings		Asks {hsBase} for RomM, then shows a QR code to approve this handheld from your phone.	Kysyy RomMia osoitteesta {hsBase} ja näyttää sitten QR-koodin, jolla hyväksyt tämän käsikonsolin puhelimellasi.
+settings		the address	osoite
+settings		Scan the QR code below with your phone, or open:	Skannaa alla oleva QR-koodi puhelimellasi tai avaa:
+settings		Waiting for approval in RomM...	Odotetaan hyväksyntää RomMissa...
+settings		Scan with your phone	Skannaa puhelimellasi
+settings		Asking RomM	Kysytään RomMilta
+settings		A: Sync now syncs the saves. B: back to Home server.	A: Synkronoi nyt synkronoi tallennukset. B: takaisin Kotipalvelimeen.
+settings		A moment...	Hetki...
+settings		A asks RomM for a new code. X pairs with a code from RomM instead. B goes back to the address.	A pyytää RomMilta uuden koodin. X parittaa sen sijaan RomMin koodilla. B palaa osoitteeseen.
+settings		Which server?	Mikä palvelin?
+settings		Romhost (Homeport)	Romhost (Homeport)
+settings		Address and QR code	Osoite ja QR-koodi
+settings		On this network	Tässä verkossa
+settings		HTTPS	HTTPS
+settings		HTTP	HTTP
+settings		Usual (443)	Tavallinen (443)
+settings		Usual (80)	Tavallinen (80)
+settings		Check certificate	Tarkista varmenne
+settings		Last sync, Get games' downloads: {g} files of games down. The saves weren't synced: Sync now syncs them{er}	Viimeisin synkronointi, Lataa pelejä -lataukset: {g} pelitiedostoa alas. Tallennuksia ei synkronoitu: Synkronoi nyt synkronoi ne{er}
+# (Save slot, on Settings > Network > Home server: a machine-translated draft, for the translator to check in the next round)
+settings		Save slot	Tallennuspaikka
+settings		The RomM slot this handheld's saves sync with. Grout and RomM's own page use Autosave.	RomM-paikka, jonka kanssa tämän käsikonsolin tallennukset synkronoidaan. Grout ja RomMin oma sivu käyttävät Autosavea.
+settings		Empty for Autosave	Tyhjä: Autosave
+settings		A slot of your own naming: letters, digits, spaces, - and _. Only devices set to the same slot share a game's save; Grout and RomM's page use Autosave. Empty for Autosave. START when it is typed.	Itse nimeämäsi paikka: kirjaimet, numerot, välilyönnit, - ja _. Vain samaan paikkaan asetetut laitteet jakavat pelin tallennuksen; Grout ja RomMin sivu käyttävät Autosavea. Tyhjä: Autosave. START, kun se on kirjoitettu.
+settings		Autosave	Autosave
+settings		A slot's name is letters, digits, spaces, - and _, up to 64.	Paikan nimi on kirjaimia, numeroita, välilyöntejä, - ja _, enintään 64.
+settings		Saves sync with Autosave from the next sync, as Grout's and RomM's page's do.	Tallennukset synkronoidaan Autosaven kanssa seuraavasta synkronoinnista alkaen, kuten Groutin ja RomMin sivun.
+settings		Saves sync with {slot} from the next sync. Only devices set to the same slot share them.	Tallennukset synkronoidaan paikan {slot} kanssa seuraavasta synkronoinnista alkaen. Vain samaan paikkaan asetetut laitteet jakavat ne.
+# (trusting a server's own certificate, on RomM's address form, and a few lines said when the menu is kept waiting: a
+# machine-translated draft, for the translator to check in the next round)
+settings		The server's certificate isn't trusted. For a certificate of your own making, Y shows it, to trust that one certificate (or put your CA's certificate on the card as homesync_ca).	Palvelimen varmenteeseen ei luoteta. Jos varmenne on itse tekemäsi, Y näyttää sen, jotta voit luottaa juuri siihen varmenteeseen (tai laita CA:si varmenne kortille nimellä homesync_ca).
+settings		Certificate	Varmenne
+settings		Trust this certificate?	Luotetaanko tähän varmenteeseen?
+settings		Trust it	Luota
+settings		Issued to	Myönnetty
+settings		Issued by	Myöntäjä
+settings		Valid	Voimassa
+settings		No authority vouches for it. Trust it only if it is your own server's: from then on this certificate, and no other, is accepted for this server.	Mikään varmentaja ei takaa sitä. Luota siihen vain, jos se on oman palvelimesi: sen jälkeen tälle palvelimelle hyväksytään tämä varmenne eikä mitään muuta.
+settings		Reading the server's certificate...	Luetaan palvelimen varmennetta...
+settings		The server's certificate couldn't be read. Check the address and try Connect again.	Palvelimen varmennetta ei voitu lukea. Tarkista osoite ja yritä Yhdistä uudelleen.
+settings		The certificate couldn't be kept on the card. Is the card full?	Varmennetta ei voitu tallentaa kortille. Onko kortti täynnä?
+settings		On, its own trusted	Päällä, oma luotettu
+settings		A moment...	Hetki...
+settings		Still finishing the last search. Try Connect again in a moment.	Edellinen haku on vielä kesken. Yritä Yhdistä hetken päästä uudelleen.
+settings		The pairing stopped by itself. A tries again.	Paritus pysähtyi itsestään. A yrittää uudelleen.
+settings		The last name is still being set. Try again in a moment.	Edellistä nimeä asetetaan vielä. Yritä hetken päästä uudelleen.
+settings		Couldn't unpair: the card didn't take the change. Try again.	Parituksen purku ei onnistunut: kortti ei ottanut muutosta vastaan. Yritä uudelleen.
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again. Its certificate isn't checked (Check certificate is off).	Paritettu kohteen {n} kanssa osoitteessa {hsPairedUrl}. A avaa sen osoitteen ja Tarkista varmenne -asetuksen. Siellä Yhdistä parittaa uudelleen. Sen varmennetta ei tarkisteta (Tarkista varmenne on pois päältä).
+settings		Paired with {n} at {hsPairedUrl}. A opens its address and Check certificate. Connect there pairs again. Its certificate is one you trusted on this handheld.	Paritettu kohteen {n} kanssa osoitteessa {hsPairedUrl}. A avaa sen osoitteen ja Tarkista varmenne -asetuksen. Siellä Yhdistä parittaa uudelleen. Sen varmenne on sellainen, johon olet luottanut tällä käsikonsolilla.
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate isn't checked (Check certificate is off).	Paritettu kohteen {n} (Romhost) kanssa osoitteessa {hsPairedUrl}. A parittaa uudelleen. Sen varmennetta ei tarkisteta (Tarkista varmenne on pois päältä).
+settings		Paired with {n} (Romhost) at {hsPairedUrl}. A pairs again. Its certificate is one you trusted on this handheld.	Paritettu kohteen {n} (Romhost) kanssa osoitteessa {hsPairedUrl}. A parittaa uudelleen. Sen varmenne on sellainen, johon olet luottanut tällä käsikonsolilla.
+# (Home server's page: the help and hints of its rows as they are worded now, the waits of a pairing:
+# a machine-translated draft, for the translator to check in the next round)
+settings		Syncs saves both ways and downloads the games waiting in Get games.	Synkronoi tallennukset molempiin suuntiin ja lataa Lataa pelejä -kohdassa odottavat pelit.
+settings		Where Get games puts a game.	Minne Lataa pelejä tallentaa pelin.
+settings		This card's roms folder.	Tämän kortin roms-kansio.
+settings		The second card's roms folder. With the card out, a game waits for the next sync.	Toisen kortin roms-kansio. Jos kortti ei ole paikallaan, peli odottaa seuraavaa synkronointia.
+settings		When syncing happens by itself.	Milloin synkronointi tapahtuu itsestään.
+settings		Only when you choose Sync now.	Vain kun valitset Synkronoi nyt.
+settings		After you leave a game, and before one with Sync before playing on (B skips the wait).	Kun lopetat pelin, ja ennen peliä, jos Synkronoi ennen pelaamista on päällä (B ohittaa odotuksen).
+settings		Also every save and the waiting games when Wi-Fi connects. Never while a game runs.	Myös kaikki tallennukset ja odottavat pelit, kun Wi-Fi yhdistyy. Ei koskaan pelin aikana.
+settings		Whether a game's save is brought up to date before it starts.	Päivitetäänkö pelin tallennus ajan tasalle ennen pelin alkua.
+settings		The game starts at once.	Peli alkaa heti.
+settings		With Auto sync on. B plays at once.	Kun Automaattinen synkronointi on päällä. B aloittaa pelin heti.
+settings		Whether save states sync too.	Synkronoidaanko myös pikatallennukset.
+settings		Only the games' own saves.	Vain pelien omat tallennukset.
+settings		Save states too. One from RomM is kept in Manage saves, never loaded by itself. Quick-resume states never sync.	Myös pikatallennukset. RomM:stä tullut säilytetään kohdassa Hallitse tallennuksia, eikä sitä ladata itsestään. Pikajatkamisen tilat eivät synkronoidu koskaan.
+settings		Copies the server's games to the card and syncs saves both ways. Your own files stay.	Kopioi palvelimen pelit kortille ja synkronoi tallennukset molempiin suuntiin. Omat tiedostosi säilyvät.
+settings		What comes from the server.	Mitä palvelimelta tulee.
+settings		Games and their saves.	Pelit ja niiden tallennukset.
+settings		Only the saves.	Vain tallennukset.
+settings		Where downloaded games go.	Minne ladatut pelit menevät.
+settings		The second card's roms folder, while it's in.	Toisen kortin roms-kansio, kun kortti on paikallaan.
+settings		Which of the server's games come to the card. Saves sync for every game on the card.	Mitkä palvelimen peleistä tulevat kortille. Tallennukset synkronoidaan jokaiselle kortilla olevalle pelille.
+settings		Every game of the systems above: on a large server, maybe more than the card holds.	Kaikki yllä olevien järjestelmien pelit: suurella palvelimella ehkä enemmän kuin kortille mahtuu.
+settings		Only the games ticked in Choose games. One unticked later stays until you delete it.	Vain Valitse pelit -kohdassa valitut pelit. Myöhemmin valinnasta poistettu peli säilyy, kunnes poistat sen.
+settings		The server's games, a system at a time. A ticks one, X ticks them all.	Palvelimen pelit, järjestelmä kerrallaan. A valitsee yhden, X valitsee kaikki.
+settings		After you leave a game.	Kun lopetat pelin.
+settings		After a game, and when Wi-Fi connects. Never while a game runs.	Pelin jälkeen ja kun Wi-Fi yhdistyy. Ei koskaan pelin aikana.
+settings		On: an https server's certificate is checked, as a browser does. Off: for a self-signed certificate. Keep it On on networks you don't trust.	Päällä: https-palvelimen varmenne tarkistetaan kuten selaimessa. Pois: itse allekirjoitettua varmennetta varten. Pidä Päällä verkoissa, joihin et luota.
+settings		Unpairs the handheld. Games and saves stay on the card. Press A twice.	Poistaa käsikonsolin parituksen. Pelit ja tallennukset säilyvät kortilla. Paina A kahdesti.
+settings		Forgetting the server...	Unohdetaan palvelinta...
+settings		The server's certificate isn't trusted. For a certificate of your own making, turn off Check certificate below (or put your CA's certificate on the card as homesync_ca), then pair again.	Palvelimen varmenteeseen ei luoteta. Jos varmenne on itse tekemäsi, poista alta Tarkista varmenne käytöstä (tai laita varmentajasi varmenne kortille nimellä homesync_ca) ja parita uudelleen.
+settings		Stopping the last pairing...	Pysäytetään edellistä paritusta...
+settings		A sync is running. Wait for it to end, or stop it on Sync now, then pair.	Synkronointi on käynnissä. Odota sen päättymistä tai pysäytä se kohdasta Synkronoi nyt ja parita sitten.

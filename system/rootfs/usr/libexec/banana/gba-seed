@@ -1,0 +1,35 @@
+#!/bin/sh
+# The Game Boy Advance's one save folder, /data/saves/gba/<game>.srm, which every GBA core reads whichever frontend
+# starts it: a game with no save there yet gets a copy of its newest one from a core's own folder
+# (/data/saves/<core>/<game>.srm, where RetroArch kept them before; saves-flat moves those folders over, and this is
+# for a game started while that move hasn't gone through), one with data in it: a core that only ever wrote a blank one
+# doesn't win. The core folders' files stay as they were. Run by run-retroarch and run-bananafront before a GBA game,
+# the one script for both, so the two frontends can't come to seed differently.
+# The copy is put there as save-put.sh says (written beside the save, the card synced, renamed over, synced again): a
+# power cut can't leave a half-written save under the name the cores read, which no later start would seed again, the
+# file being there.
+#   gba-seed <rom>
+#   BANANA_ROOT=<dir> gba-seed ...   the data partition somewhere else than /data (the tests' cards)
+DATA=${BANANA_ROOT:-/data}
+case $0 in */*) . "${0%/*}/save-put.sh" ;; *) . /usr/libexec/banana/save-put.sh ;; esac
+G=$DATA/saves/gba
+n=${1##*/}; n=${n%.*}
+[ -n "$n" ] || exit 2
+mkdir -p "$G"
+[ -f "$G/$n.srm" ] && exit 0
+stale_tmps seed "$G/$n.srm.seed."*.tmp
+best=
+for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+    f="$DATA/saves/$d/$n.srm"
+    [ -s "$f" ] || continue
+    # (blank: what the save sync also counts as no save, all 0xff or all 0x00 for a GBA core)
+    banana-sync blank "$f" "$d" && continue
+    if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+done
+[ -n "$best" ] || exit 0
+if put_synced "$best" "$G/$n.srm" seed; then
+    echo "gba-seed: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
+else
+    echo "gba-seed: the GBA save from $best couldn't be copied to $G/$n.srm (the card full?)" >&2
+    exit 1
+fi

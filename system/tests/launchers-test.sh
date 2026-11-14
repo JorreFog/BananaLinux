@@ -1,7 +1,8 @@
 #!/bin/sh
 # The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117)
 # and nds-buttons' DraStic controls (#151), taken from the launchers themselves (their functions, not a copy); nds-saves on
-# a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96).
+# a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96), and a resume state is loaded
+# only over the save the game was quit with.
 #   sh system/tests/launchers-test.sh
 cd "$(dirname "$0")/../.." || exit 1
 R=$PWD L=$PWD/system/rootfs/usr/libexec/banana
@@ -116,6 +117,17 @@ check "$(held)" "8192s 8192s " "no .dsv yet: made from the .sav"
 saves 8192 0 sav; saves_again=$(held)
 BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"
 check "$(held) $(wc -c < "$T/log" | tr -d ' ')" "$saves_again 0" "a second run: nothing more to do"
+# the record of what the two last held unreadable (a power cut while it was written) holds two saves at a sync, not a
+# save and a file that is none: the empty one gives way at once, as it does with a record, and no file's time is asked
+saves 8192 - x
+head -c 100 /dev/zero | tr '\0' s > "$D/saves/nds/Game.sav"; : > "$D/banana/nds-saves/Game.md5"
+BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"; rc=$?
+check "$rc $(held)" "0 8192d 8192d " "an unreadable record, a 100-byte .sav and a real .dsv: the .dsv over it, not held"
+check "$(grep -c 'empty (100 bytes)' "$T/log") $(grep -c 'never agreed' "$T/log")" "1 0" "...said as the empty save it is, not as two that never agreed"
+check "$(cat "$D/banana/nds-saves/Game.md5" | wc -c | tr -d ' ')" "33" "...and the record written again"
+head -c 8192 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"; : > "$D/banana/nds-saves/Game.md5"
+BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"; rc=$?
+check "$rc $(held)" "3 8192d 8192t " "an unreadable record and two real saves that differ: held, neither touched"
 # a ROCKNIX save beside the game (#25): an empty one is not taken
 rm -rf "$D"; mkdir -p "$T/roms"; : > "$T/roms/Game.dsv"
 BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
@@ -123,6 +135,7 @@ check "$(held)" "- - " "an empty ROCKNIX .dsv beside the game is not taken"
 head -c 8192 /dev/zero | tr '\0' r > "$T/roms/Game.dsv"
 BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
 check "$(held)" "8192r 8192r " "one with a save in it is"
+check "$(ls "$D/drastic/backup" | grep -c 'tmp$')" "0" "...through a file of its own beside it, renamed over, none left behind"
 
 # the save folders: RetroArch's per-core saves move to the one folder the Home server syncs; GBA stays in its own;
 # system folders (nds, megadrive) and their files are left alone
@@ -149,6 +162,35 @@ BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" s
 check "$(cat "$D/data/saves/cdata/game.p8d.txt" 2>/dev/null)" "cart" "PICO-8's cart data stays in saves/cdata"
 check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "new" "the newer core save is the flat one"
 check "$(cat "$D/data/banana/saves-legacy/replaced/Game.srm" 2>/dev/null)" "old" "the flat save it replaced is kept"
+# a core folder's saves go flat together, the card synced twice for the folder and not twice for each save (sync stood
+# in for, and counted: twice for the folder, once more for the marker); and a game two cores have a save of is weighed
+# folder by folder, the later folder's newer save against the flat one the earlier folder left, which is kept too
+D=$T/flat-batch; mkdir -p "$D/data/saves/Snes9x" "$D/data/saves/gpSP" "$D/data/saves/mGBA" "$D/run" "$D/etc" "$D/bin"
+printf '[gba]\n' > "$D/etc/systems.conf"
+printf '#!/bin/sh\necho sync >> "%s"\n' "$D/synced" > "$D/bin/sync"; chmod +x "$D/bin/sync"
+for g in One Two Three; do echo "snes $g" > "$D/data/saves/Snes9x/$g.srm"; done
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/One.srm" "$D/data/saves/Two.srm" "$D/data/saves/Three.srm" 2>/dev/null | tr '\n' ',')" "snes One,snes Two,snes Three," "a core folder's saves all flat"
+check "$(wc -l < "$D/synced" | tr -d ' ')" "3" "the card synced twice for the folder, not for each save"
+check "$(ls "$D/data/saves/Snes9x" "$D/data/saves" | grep -c '\.tmp$')" "0" "nothing left beside the flat saves"
+rm -f "$D/run/saves-flat"
+echo older > "$D/data/saves/gpSP/Game.srm"; touch -t 202601010000 "$D/data/saves/gpSP/Game.srm"; echo newer > "$D/data/saves/mGBA/Game.srm"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/gba/Game.srm" 2>/dev/null)" "newer" "two cores' saves of one game: the later folder's newer one is the flat one"
+check "$(cat "$D/data/banana/saves-legacy/replaced/gba/Game.srm" 2>/dev/null)" "older" "...and the earlier folder's, which it replaced, is kept"
+# the card's second sync failing (the flat saves under their names, not known to be on the card): the core folder's
+# files stay where they are and no marker is written; the next run finds the flat save as new as the core's, moves the
+# core's to the backup and keeps no second copy of a save it replaced
+D=$T/flat-sync2; mkdir -p "$D/data/saves/Snes9x" "$D/run" "$D/etc" "$D/bin"
+printf '[gba]\n' > "$D/etc/systems.conf"
+printf '#!/bin/sh\necho sync >> "%s"\n[ "$(wc -l < "%s")" != 2 ]\n' "$D/synced" "$D/synced" > "$D/bin/sync"; chmod +x "$D/bin/sync"
+echo was > "$D/data/saves/Game.srm"; touch -t 202601010000 "$D/data/saves/Game.srm"; echo now > "$D/data/saves/Snes9x/Game.srm"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Snes9x/Game.srm" 2>/dev/null)/$(cat "$D/data/saves/Game.srm")/$([ -e "$D/run/saves-flat" ] && echo marked)" "now/now/" "the second sync failed: the core folder's save stays, no marker"
+PATH="$D/bin:$PATH" BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Game.srm")/$(cat "$D/data/banana/saves-legacy/Snes9x/Game.srm" 2>/dev/null)/$([ -e "$D/run/saves-flat" ] && echo marked)" "now/now/marked" "...the next run finishes the move"
+check "$(ls "$D/data/banana/saves-legacy/replaced" | tr '\n' ',')/$(cat "$D/data/banana/saves-legacy/replaced/Game.srm")" "Game.srm,/was" "...with one copy of the save it replaced"
+check "$(ls "$D/data/saves/Snes9x" "$D/data/saves" | grep -c '\.tmp$')" "0" "...and nothing left beside the flat save"
 # a blank save (only 0xff or only 0x00 bytes: a core that never got to write one) never goes over one with data in it,
 # newer or not; a save with data goes over a blank one (fl: its first bytes, a blank one's as F or 0)
 fl() { head -c 4 "$1" 2>/dev/null | tr '\377\000' F0; }
@@ -198,6 +240,41 @@ check "$(cat "$D/data/saves/FCEUmm/Unknown.srm" "$D/data/saves/Gambatte/Unknown.
 check "$(cat "$D/data/saves/Mario (USA).srm" 2>/dev/null)" "new" "one system's game in two cores: the newer save is flat"
 check "$(grep -c 'Pac-Man (USA).srm' "$T/log")" "1" "the clash is said in the log, once"
 check "$([ -f "$D/run/saves-flat" ] && echo marked || echo again)" "again" "no marker: tried again at the next boot"
+check "$(find "$T"/flat* -name '*.tmp' -o -name '*.new' | wc -l | tr -d ' ')" "0" "saves-flat leaves no file of its own beside a save"
+# a run cut before its rename left its copy beside the save: cleared by the next run that writes that save, one of a
+# run still going (this shell's number) left alone
+D=$T/flat5; mkdir -p "$D/data/saves/Snes9x" "$D/run" "$D/etc"; : > "$D/etc/systems.conf"
+echo new > "$D/data/saves/Snes9x/Game.srm"; echo cut > "$D/data/saves/Game.srm.saves-flat.999999999.tmp"; echo mine > "$D/data/saves/Game.srm.saves-flat.$$.tmp"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Game.srm" 2>/dev/null) $(ls "$D/data/saves" | grep -c '\.tmp$')" "new 1" "a cut run's copy beside the save is cleared, a running one's left"
+
+echo "gba-seed: a GBA game with no save in saves/gba yet gets its newest non-blank one from a core's folder"
+# (banana-sync blank, which the seed asks: a stand-in that calls all 0xff or all 0x00 blank, as the real one does a GBA core's)
+D=$T/seed; mkdir -p "$D/bin" "$D/saves/gpSP" "$D/saves/mGBA" "$D/saves/VBA-M"
+cat > "$D/bin/banana-sync" <<'EOS'
+#!/bin/sh
+[ "$1" = blank ] || exit 2
+[ "$(tr -d '\377' < "$2" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$2" | head -c 1 | wc -c)" = 0 ]
+EOS
+chmod +x "$D/bin/banana-sync"
+seed() { PATH="$D/bin:$PATH" BANANA_ROOT=$D sh "$L/gba-seed" "/roms/gba/$1.gba" 2> "$T/log"; }
+echo old > "$D/saves/gpSP/Game.srm"; touch -d '2026-01-01 10:00' "$D/saves/gpSP/Game.srm"
+echo new > "$D/saves/mGBA/Game.srm"; touch -d '2026-01-01 11:00' "$D/saves/mGBA/Game.srm"
+head -c 1024 /dev/zero | tr '\0' '\377' > "$D/saves/VBA-M/Game.srm"; touch -d '2026-01-01 12:00' "$D/saves/VBA-M/Game.srm"
+echo cut > "$D/saves/gba.pre"; mkdir -p "$D/saves/gba"; mv "$D/saves/gba.pre" "$D/saves/gba/Game.srm.seed.999999999.tmp"
+echo mine > "$D/saves/gba/Game.srm.seed.$$.tmp"
+seed Game; rc=$?
+check "$rc $(cat "$D/saves/gba/Game.srm" 2>/dev/null)" "0 new" "the newest with data in it, not a newer blank one"
+check "$(cat "$D/saves/gpSP/Game.srm" "$D/saves/mGBA/Game.srm" | tr '\n' ' ')" "old new " "the core folders' files stay as they were"
+check "$(ls "$D/saves/gba" | tr '\n' ' ')" "Game.srm Game.srm.seed.$$.tmp " "its own copy renamed over, a cut run's cleared, a running one's left"
+check "$(grep -c "the GBA save from $D/saves/mGBA/Game.srm" "$T/log")" "1" "...and said"
+echo newer > "$D/saves/gpSP/Game.srm"; seed Game
+check "$(cat "$D/saves/gba/Game.srm")" "new" "a save already there is never seeded over"
+head -c 1024 /dev/zero > "$D/saves/gpSP/Blank.srm"; seed Blank
+check "$([ -e "$D/saves/gba/Blank.srm" ] && echo seeded || echo none) $(wc -c < "$T/log" | tr -d ' ')" "none 0" "only a blank one in a core's folder: nothing seeded"
+seed Nothing
+check "$(ls "$D/saves/gba" | grep -c Nothing)" "0" "no save in any core's folder: nothing"
+check "$(grep -c 'gba-seed "\$2"' "$L/run-retroarch") $(grep -c 'gba-seed "\$ROM"' "$L/run-bananafront")" "1 1" "both frontends' launchers seed by it"
 
 echo "run-nds: a DSi game goes to BananaDS whatever Settings say, zipped too"
 # (the launcher with its paths in a made-up root: the two emulators' launchers only say which one would run)
@@ -258,5 +335,87 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+
+echo "nds-saves: a resume state is loaded only over the save the game was quit with (the menu's --played at its end)"
+MST=$D/states/nds/Game.resume.mst DSS=$D/drastic/savestates/Game.resume.dss
+nds() { BANANA_ROOT=$D sh "$L/nds-saves" /roms/nds/Game.nds "$@" > "$T/log"; }
+states() { printf '%s %s' "$( [ -f "$MST" ] && echo mst || echo -)" "$( [ -f "$DSS" ] && echo dss || echo -)"; }
+# st <file>: a state written anew, as an emulator leaves one: never the bytes of the one before
+STN=0; st() { for _f; do STN=$((STN + 1)); echo "state $STN" > "$_f"; done; }
+# sav <letter>, dsv <letter>: that save as the game writes another in play
+sav() { head -c 8192 /dev/zero | tr '\0' "$1" > "$D/saves/nds/Game.sav"; }
+dsv() { head -c 8192 /dev/zero | tr '\0' "$1" > "$D/drastic/backup/Game.dsv"; }
+# record: the game-end record, its MD5s told only as that
+record() { sed 's/[0-9a-f]\{32\}/md5/g' "$D/banana/nds-saves/Game.played" | tr '\n' ' '; }
+saves 8192 - x; mkdir -p "$D/states/nds" "$D/drastic/savestates"; st "$MST" "$DSS"
+nds --played
+check "$(record)" "dsv md5 sav md5 " "--played: the raw save each file holds, recorded"
+nds --prefer sav
+check "$(states) $(record)" "mst dss dsv md5 started sav md5 md5 " "the save as the game left it: BananaDS's state stays, its line of the record taken up with what the save and the state hold, DraStic's left"
+# (the session quit: its state written anew, as an emulator leaves it)
+st "$MST"; nds --played; sav n
+nds --prefer sav
+check "$(states) $(grep -c 'resume state dropped' "$T/log")" "- - 1" "the .sav replaced by hand since: BananaDS's state dropped, said (DraStic's goes with the save nds-saves gives it)"
+st "$MST" "$DSS"; sav m; rm -f "$D/banana/nds-saves/Game.played"
+nds --prefer sav
+check "$(states)" "mst -" "no record of the game's end (a power-off's resume, a card from before): BananaDS's state kept"
+nds --played; dsv e
+nds --prefer dsv
+check "$(states)" "- -" "the .dsv replaced: DraStic's state dropped, and BananaDS's with the save nds-saves gives it"
+# a session that never came to its end (the battery, a crash: no --played): the state it started from would put back
+# what the game saved during it, so that emulator's goes at its next start; the other's, and a clean quit's, stay.
+# Nothing saved in the game, the state is its save's still, and stays: the spot it holds is the only one there is
+st "$MST" "$DSS"; nds --played; nds --prefer sav
+check "$(states)" "mst dss" "a start after a clean quit: both states stay"
+# (no state written from here on: both are the ones the start just made found)
+nds --prefer sav
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "mst dss 0" "a start after a session with no end told, nothing saved in the game: BananaDS's state stays"
+nds --prefer sav
+check "$(states)" "mst dss" "...and after a second such session"
+# (the files' times say nothing: a clock set back, or forward, between the sessions)
+touch -t 202001010000 "$MST" "$D/banana/nds-saves/Game.played"; nds --prefer sav
+touch -t 203001010000 "$MST"; nds --prefer sav
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "mst dss 0" "...whatever the files' times say"
+sav p; touch -t 203001010000 "$MST"
+nds --prefer sav
+check "$(states | cut -d' ' -f1) $(grep -c 'never came to its end' "$T/log")" "- 1" "the game saved in a session with no end told: BananaDS's state from before it dropped, said, though its time is the newer"
+st "$DSS"; nds --played; nds --prefer dsv
+check "$(states)" "- dss" "DraStic's start after a clean quit: its state stays"
+dsv q; nds --prefer dsv
+check "$(states) $(grep -c 'never came to its end' "$T/log")" "- - 1" "...its session with no end told, the game saved in it: dropped at the start after"
+st "$DSS"; nds --played; nds --prefer dsv
+check "$(states) $(record)" "- dss sav md5 started dsv md5 md5 " "a clean quit writes the record afresh: the state stays"
+# a start that finds the end not yet told (the menu's --played still running, the game started again at once) keeps a
+# state the session wrote, and an end told with the state the one from before (the emulator crashed, the menu still
+# there to tell it) drops it when the game saved, and leaves it when it didn't
+nds --played; st "$MST"; nds --played; nds --prefer sav; sav r; st "$MST"
+nds --prefer sav
+check "$(states | cut -d' ' -f1) $(grep -c 'never came to its end' "$T/log")" "mst 0" "started again before its end was told: the state the session wrote stays"
+nds --played
+check "$(states | cut -d' ' -f1) $(grep -c 'no resume state written' "$T/log")" "mst 0" "an end told with no state written and nothing saved in the game: the state stays"
+nds --prefer sav; sav u; nds --played
+check "$(states | cut -d' ' -f1) $(grep -c 'no resume state written' "$T/log")" "- 1" "an end told with the state still the one from before the session, the game having saved: dropped, said"
+st "$MST"; nds --played; nds --prefer sav; st "$DSS"; sav v; nds --played
+check "$(states)" "- dss" "...the other emulator's state, whose session it wasn't, left"
+# (the record as the release before left it, a bare "started": nothing known of that start, so the state stays)
+st "$MST"; nds --played; nds --prefer sav; sed -i 's/^started sav .*/started sav/' "$D/banana/nds-saves/Game.played"; sav w
+nds --prefer sav
+check "$(states | cut -d' ' -f1) $(record | grep -c 'started sav md5 md5')" "mst 1" "a bare \"started\" from the release before: the state stays, and the line is written as it is now"
+
+echo "nds-saves: BananaDS's save cut short (a power cut as it was written) is never written for DraStic"
+card sav; nds; cp "$D/drastic/backup/Game.dsv" "$T/good.dsv"
+head -c 5000 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"
+nds; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$T/good.dsv" && echo kept) $(grep -c 'cut short' "$T/log")" "6 kept 1" "5000 bytes, a size no DS save has: DraStic's left as it is, said, exit 6"
+nds --prefer sav; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$T/good.dsv" && echo kept)" "6 kept" "...BananaDS starting too"
+rm "$D/drastic/backup/Game.dsv"; nds; rc=$?
+check "$rc $([ -e "$D/drastic/backup/Game.dsv" ] || echo none)" "6 none" "...and with no save of DraStic's: none made from it"
+cp "$T/good.dsv" "$D/drastic/backup/Game.dsv"; head -c 8192 /dev/zero | tr '\0' t > "$D/saves/nds/Game.sav"
+nds; rc=$?
+check "$rc $(cmp -s "$D/drastic/backup/Game.dsv" "$D/saves/nds/Game.sav" && echo taken)" "0 taken" "written whole again by BananaDS: DraStic takes it"
+# File sharing keeps the Home server's pairing off the network: romsync.json holds the server's token, and the copy
+# written beside it while it is replaced (romsync.json.new) holds it too
+check "$(grep -c '^[[:space:]]*veto files = .*/\*romsync\.json\*/' "$L/share")" "1" "the share vetoes romsync.json and the copy beside it"
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

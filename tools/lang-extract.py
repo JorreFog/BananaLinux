@@ -39,7 +39,7 @@ NOT_SHOWN = set("""fprintf printf puts perror syslog mlog SLOG LOG LOGE LOGW LOG
  regcomp fnmatch glob inet_pton setlocale strftime_ mount umount2 ioctl_
  tcp_connect http_get http_post curl_easy_setopt
  assert static_assert
- dsflip_log ralog start_mark memcmp prop setopt set_clock gameOpen bootMark read jsonField jsonObjects
+ dsflip_log ralog start_mark memcmp prop setopt set_clock gameOpen bootMark read jsonField jsonObjects say
  resume_control_button control_button_any control_button_in ctl_keys applyColors give_up tmark mark
  """.split())
 LOG_RE = re.compile(r"\b(?:f?printf\s*\(\s*stderr|LOG\w*|\w*log\w*)\s*\($", re.I)
@@ -334,6 +334,7 @@ BL_UI = [
     ("ui/src/library.cpp", "menu", "Menu: library, dates and times"),
     ("ui/src/layout.cpp", "menu", "Menu (layout themes)"),
     ("ui/src/main.cpp", "menu", "Menu"),
+    ("ui/src/gamesync.cpp", "menu", "Menu"),
     ("ui/src/theme.cpp", "menu", "Menu"),
     ("ui/src/splash.cpp", "menu", "Menu"),
     ("ui/src/settings.cpp", "settings", "Settings"),
@@ -342,6 +343,7 @@ BL_UI = [
     ("ui/src/settings_servers.cpp", "settings", "Files: servers, downloads and archives"),
     ("ui/src/settings_bshare.cpp", "settings", "Bshare"),
     ("ui/src/settings_gamepanel.cpp", "settings", "Game panel (second screen)"),
+    ("ui/src/settings_homesrv.cpp", "settings", "Settings: Home server pairing"),
     ("ui/src/wifi.cpp", "settings", "Settings: Wi-Fi and the keyboard"),
     ("ui/src/bluetooth.cpp", "settings", "Settings: Bluetooth"),
     ("ui/src/scrape.cpp", "settings", "Box art download"),

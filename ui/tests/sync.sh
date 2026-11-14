@@ -5,15 +5,17 @@
 #            $ROMHOST_PY imports aiohttp; skipped otherwise
 # What must hold: pairing (RomM's device code, a client token's pairing code; Romhost's code from Homeport, UDP
 # discovery), the games with their covers and gamelist entries in the card's layout, a gamelist's own entries and a
-# file of the user's at a server path left alone, a system skipped on the handheld left as it is, a game gone from
-# the server removed (unless changed on the card), and the saves both ways with nothing lost in a conflict.
+# file of the user's at a server path left alone, RomM's Get games (only what was asked for comes, once, and stays the
+# owner's: a game gone from the server or deleted from the card is left so), a RomM before 5.4 only giving its saves (one changed on both sides
+# held, both kept), and Romhost's saves both ways with nothing lost in a conflict. RomM's saves by slot are
+# tests/sync-slots.sh's.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}/sync
 rm -rf "$OUT"; mkdir -p "$OUT"
 fail=0
 bad() { echo "FAIL sync: $*"; fail=1; }
 BIN=$OUT/banana-sync
-${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
+${CXX:-g++} -std=c++17 -O2 -Wall -Wno-unused-function -o "$BIN" "$HERE/src/sync.cpp" "$HERE/src/sync_core.cpp" "$HERE/src/sync_romm.cpp" "$HERE/src/get_list.cpp" "$HERE/src/save_adapt.cpp" "$HERE/src/save_paths.cpp" "$HERE/src/save_vault.cpp" "$HERE/src/json.cpp" -ldl || { echo "FAIL sync: banana-sync doesn't build"; exit 1; }
 PIDS=""
 cleanup() { for p in $PIDS; do kill "$p" 2>/dev/null; done; }
 trap cleanup EXIT INT TERM
@@ -21,7 +23,18 @@ port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0));
 waitport() { for i in $(seq 50); do curl -s "http://127.0.0.1:$1$2" >/dev/null && return 0; sleep 0.1; done; return 1; }
 # card <name>: a throwaway card (its /data); bs <card> <args>: banana-sync on it
 card() { mkdir -p "$OUT/$1/banana" "$OUT/$1/run" "$OUT/$1/roms"; }
-bs() { c=$OUT/$1; shift; BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
+# (the image's systems.conf, and no RetroArch cores: the systems whose save folder is a core's are said, not synced)
+export BANANA_SYSTEMS="$HERE/../system/rootfs/etc/banana/systems.conf" BANANA_LIBRETRO="$OUT/no-cores"
+# (RomM's games come only by Get games: before a sync run by hand, every game the server lists for a system the card
+# syncs is asked for, as the cases here were written for a card holding them all, unless GETALL=0, a case asking for
+# its own)
+getall() { skip=" $(sed -n 's/^homesync\.\([a-z0-9]*\) *= *off.*/\1/p' "$1/banana/settings.conf" 2>/dev/null | tr '\n' ' ') "
+    "$BIN" --root "$1" --run "$1/run" games 2>/dev/null | awk -F'\t' -v s="$skip" 'index(s, " " $1 " ") == 0 { print $2 }' |
+        tr '\n' '\0' | xargs -0 -r "$BIN" --root "$1" --run "$1/run" get >/dev/null; }
+bs() { c=$OUT/$1; shift
+    case " $* " in *" --rom "*|*" --saves-only "*|*" --auto "*) ;; " sync "*)
+        [ "${GETALL:-1}" = 1 ] && grep -qs '"backend": *"romm"' "$c/banana/romsync.json" && getall "$c" ;; esac
+    BANANA_SYNC_NAME="test $c" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" "$@"; }
 st() { cat "$OUT/$1/run/sync.status" 2>/dev/null; }
 has() { [ -f "$OUT/$1" ] || bad "no $1"; }
 
@@ -47,7 +60,7 @@ echo "the user's own" > "$OUT/ra/roms/gba/Old Game (USA).gba"
 bs ra pair "$U" > "$OUT/romm-pair.log" 2>&1 & PP=$!
 for i in $(seq 30); do grep -q '^pair ' "$OUT/ra/run/sync.status" 2>/dev/null && break; sleep 0.2; done
 UC=$(st ra | cut -d' ' -f2)
-case "$(st ra)" in "pair $UC $U/pair/device?user_code=$UC") ;; *) bad "RomM pairing showed no code, or an address without it (#141): $(st ra)";; esac
+case "$(st ra)" in "pair $UC $U/pair/device?user_code=$UC 600") ;; *) bad "RomM pairing showed no code, the address without it (#141), or not the time it lasts: $(st ra)";; esac
 curl -s -XPOST "$U/test/approve" -d "{\"user_code\": \"$UC\"}" >/dev/null
 wait $PP || bad "RomM pairing failed: $(cat "$OUT/romm-pair.log")"
 grep -q '"token": "rmm_' "$OUT/ra/banana/romsync.json" || bad "no RomM token on the card"
@@ -69,36 +82,334 @@ bs ra sync > "$OUT/romm-sync2.log" 2>&1
 grep -q "0 to download" "$OUT/romm-sync2.log" || bad "a second sync downloaded again: $(head -2 "$OUT/romm-sync2.log")"
 [ "$(grep -c '<path>./Banana Run' "$G")" = 1 ] || bad "the entry was added twice"
 # a system that makes its own covers (systems.conf: covers = own, as Game & Watch): its game comes, the server's cover
-# and the gamelist's picture for it don't
+# and the gamelist's picture for it don't (sync first: bs asks Get games for every game only for a run that starts so)
 card ro
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs ro pair "$U" "$CODE" >/dev/null 2>&1 || bad "ro: pairing failed: $(st ro)"
 printf '[gba]\nname = Game Boy Advance\ncovers = own\n' > "$OUT/ro/systems.conf"
-bs ro --systems "$OUT/ro/systems.conf" sync > "$OUT/own-covers.log" 2>&1 || bad "own covers sync: $(tail -3 "$OUT/own-covers.log")"
+bs ro sync --systems "$OUT/ro/systems.conf" > "$OUT/own-covers.log" 2>&1 || bad "own covers sync: $(tail -3 "$OUT/own-covers.log")"
 has "ro/roms/gba/Banana Run (USA).gba"
 [ -e "$OUT/ro/roms/gba/media/box/Banana Run (USA).png" ] && bad "covers = own: the server's cover was downloaded"
 grep -q '<image>' "$OUT/ro/roms/gba/gamelist.xml" && bad "covers = own: the gamelist names a cover that isn't there"
+# a cover the server names as a whole URL on another server: fetched there, without the paired server's token, which
+# goes to the paired server alone
+CP=$(port); RA=$(port)
+python3 - "$CP" "$OUT/cover-asked.txt" 2>> "$OUT/fake-romm.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path != "/":
+            open(sys.argv[2], "a").write((self.headers.get("Authorization") or "none") + "\n")
+        import os
+        body = b"\x89PNG\r\n\x1a\nelsewhere" + (b"\0" * (17 << 20) if os.path.exists(sys.argv[2] + ".big") else b"")
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+EOF
+FAKE_ROMM_COVER_AT="http://127.0.0.1:$CP" python3 "$HERE/tests/fake-romm.py" "$RA" "$L" 2> "$OUT/fake-romm-cover.log" & PIDS="$PIDS $!"
+waitport "$CP" / || bad "the other server for covers didn't start"
+waitport "$RA" /api/heartbeat || bad "fake-romm (covers elsewhere) didn't start"
+card celse
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs celse pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "celse: pairing failed: $(st celse)"
+bs celse sync > "$OUT/cover-elsewhere.log" 2>&1 || bad "a cover on another server: $(tail -3 "$OUT/cover-elsewhere.log")"
+has "celse/roms/gba/media/box/Banana Run (USA).png"
+[ "$(sort -u "$OUT/cover-asked.txt" 2>/dev/null)" = none ] || bad "a cover on another server was asked for with the token: $(sort -u "$OUT/cover-asked.txt" 2>&1)"
+# (the same cover sent 17 MB long, by a server that could as well never stop: taken up to the most a cover can be and
+# no further, nothing of it kept, the game itself still copied)
+: > "$OUT/cover-asked.txt.big"; card cbig
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs cbig pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "cbig: pairing failed: $(st cbig)"
+bs cbig sync > "$OUT/cover-big.log" 2>&1
+rm -f "$OUT/cover-asked.txt.big"
+grep -q 'Banana Run (USA).png: the server sent more than it said, or than this can be' "$OUT/cover-big.log" || bad "a cover without end not stopped, or not said: $(tail -4 "$OUT/cover-big.log")"
+[ -z "$(find "$OUT/cbig/roms/gba/media" -type f 2>/dev/null)" ] || bad "a cover without end left something on the card: $(find "$OUT/cbig/roms/gba/media" -type f)"
+has "cbig/roms/gba/Banana Run (USA).gba"
+# (a game's download refused by something in front of the server, its page longer than the game: said by its status,
+# not as a file longer than it should be, and nothing of the page kept)
+card c403
+CODE=$(curl -s -XPOST "http://127.0.0.1:$RA/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs c403 pair "http://127.0.0.1:$RA" "$CODE" >/dev/null 2>&1 || bad "c403: pairing failed: $(st c403)"
+getall "$OUT/c403"
+curl -s -XPOST "http://127.0.0.1:$RA/test/fault" -d '{"path": "GET /api/roms/.*/content/", "kind": "403", "arg": 400000, "count": 1}' >/dev/null
+GETALL=0 bs c403 sync > "$OUT/rom-403.log" 2>&1
+grep -q ': HTTP 403' "$OUT/rom-403.log" && ! grep -q 'the server sent more than it said' "$OUT/rom-403.log" || bad "a download refused with a long page not said by its status: $(tail -4 "$OUT/rom-403.log")"
+[ -z "$(find "$OUT/c403/roms" -name '*.part' 2>/dev/null)" ] || bad "a download refused with a long page left it on the card: $(find "$OUT/c403/roms" -name '*.part')"
+# a pairing whose server names, as the page that approves it, something that isn't a path of its own ("@host/…" would
+# make the QR code a link to another server): refused at once, no code shown
+curl -s -XPOST "http://127.0.0.1:$RA/test/fault" -d '{"path": "POST /api/auth/device/init", "kind": "replace", "arg": {"device_code": "d", "user_code": "ABCD2345", "verification_path_complete": "@elsewhere.example/pair/device?user_code=ABCD2345", "expires_in": 600, "interval": 5}}' >/dev/null
+card cpath
+bs cpath pair --romm "http://127.0.0.1:$RA" > "$OUT/pair-path.log" 2>&1 && bad "a pairing whose approval page is on another server went on"
+[ "$(st cpath)" = "error the server's pairing answer isn't RomM's (its code, or the page that approves it)" ] || bad "an approval page on another server not refused: $(st cpath) $(cat "$OUT/pair-path.log")"
 # a client token's pairing code (RomM: Profile > Client tokens > Pair) on a second card
 card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rb pair "$U" "$CODE" >/dev/null 2>&1 || bad "pairing with a client token's code failed: $(st rb)"
 bs rb pair "$U" "WRONGCOD" >/dev/null 2>&1 && bad "a wrong pairing code was taken"
-# choosing games (homesync_games = chosen): only the chosen game comes, the list says which are chosen and on the card,
-# and un-choosing a game already on the card leaves it there
+# each card a RomM device of its own, whichever way it paired (the device flow, a pairing code, a token pasted), as
+# bananaos-<the card's banana/sync-id>; the same device when it pairs again; registered again when deleted in RomM; no
+# saves while RomM has its sync switched off
+mint() { curl -s -XPOST "$U/test/token" -d "${1:-{\}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])'; }
+AT=$(mint)
+devs() { curl -s -H "Authorization: Bearer $AT" "$U/api/devices"; }
+devof() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("device") or "")' "$OUT/$1/banana/romsync.json"; }
+dev() { devs | python3 -c 'import json,sys; d = [x for x in json.load(sys.stdin) if x["id"] == sys.argv[1]]; print(" ".join(str(d[0][k]) for k in ("hostname", "client", "platform", "sync_mode")) if d else "none")' "$1"; }
+ndevs() { devs | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))'; }
+DA=$(devof ra); DB=$(devof rb)
+[ "$(dev "$DA")" = "bananaos-$(cat "$OUT/ra/banana/sync-id") bananaos BananaOS api" ] || bad "card A's device (the device flow): $(dev "$DA")"
+[ -n "$DB" ] && [ "$DB" != "$DA" ] && [ "$(dev "$DB")" = "bananaos-$(cat "$OUT/rb/banana/sync-id") bananaos BananaOS api" ] || bad "card B (a pairing code) has no device of its own: $DB $(dev "$DB")"
+card rp; bs rp pair "$U" "$(mint)" >/dev/null 2>&1 || bad "pairing with a pasted token failed: $(st rp)"
+DD=$(devof rp)
+[ -n "$DD" ] && [ "$(dev "$DD")" = "bananaos-$(cat "$OUT/rp/banana/sync-id") bananaos BananaOS api" ] || bad "a pasted token's card has no device: $DD"
+n=$(ndevs); CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+# (named otherwise this time: the device held is brought up to date, which a registration RomM matches by hostname isn't)
+c=$OUT/ra; BANANA_SYNC_NAME="RG DS renamed" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" pair "$U" "$CODE" >/dev/null 2>&1 || bad "card A pairing again failed: $(st ra)"
+[ "$(devof ra)" = "$DA" ] && [ "$(ndevs)" = "$n" ] || bad "pairing again made another device: $(devof ra), $(ndevs) devices (were $n)"
+devs | grep -q '"name": "RG DS renamed"' || bad "the device held wasn't brought up to date when the card paired again"
+# (rename: the name in RomM's Devices at once and kept as the pairing's; a sync after it doesn't write the old one back;
+# an empty name or one on a card not paired changes nothing)
+[ "$(bs ra rename 'Living room DS')" = ok ] || bad "rename: $(bs ra rename 'Living room DS')"
+devs | grep -q '"name": "Living room DS"' || bad "rename: RomM's device not renamed"
+grep -q '"name": "Living room DS"' "$OUT/ra/banana/romsync.json" || bad "rename: the name not kept on the card"
+bs ra sync --saves-only > "$OUT/romm-rename.log" 2>&1
+grep -q '"name": "Living room DS"' "$OUT/ra/banana/romsync.json" || bad "rename: a sync wrote the old name back: $(grep name "$OUT/ra/banana/romsync.json")"
+[ "$(bs ra rename '  ')" = "error a name of 1 to 63 characters" ] || bad "rename: an empty name taken"
+card rn; [ "$(bs rn rename x)" = "error not paired" ] || bad "rename: a card not paired renamed"
+# (a card holding no device, RomM having one for its hostname under another name: allow_existing gives that device back
+# as it was, and the rename still names it in RomM)
+nodev() { python3 -c 'import json,sys; p=sys.argv[1]; j=json.load(open(p)); j["device"]=""; json.dump(j, open(p, "w"))' "$OUT/$1/banana/romsync.json"; }
+curl -s -XPUT -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"name": "Old name"}' "$U/api/devices/$DA" >/dev/null
+nodev ra; n=$(ndevs)
+[ "$(bs ra rename 'Kitchen DS')" = ok ] || bad "rename with no device held: $(bs ra rename 'Kitchen DS')"
+[ "$(devof ra)" = "$DA" ] && [ "$(ndevs)" = "$n" ] || bad "rename with no device held: $(devof ra) (was $DA), $(ndevs) devices (were $n)"
+devs | grep -q '"name": "Kitchen DS"' || bad "rename with no device held: RomM kept the device's old name: $(devs)"
+# (a full sync whose own registration failed, a rename registering the device while it runs: the sync's write-back
+# keeps the rename's device rather than the none it had)
+nodev ra
+curl -s -XPOST "$U/test/fault" -d '{"path": "POST /api/devices", "kind": "500", "count": 1}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 4, "count": 1}' >/dev/null
+n0=$(curl -s "$U/test/log" | grep -o 'GET /api/saves?' | wc -l)
+bs ra sync > "$OUT/romm-rename2.log" 2>&1 & SP=$!
+for i in $(seq 50); do [ "$(curl -s "$U/test/log" | grep -o 'GET /api/saves?' | wc -l)" -gt "$n0" ] && break; sleep 0.2; done
+[ "$(bs ra rename 'Hall DS')" = ok ] || bad "rename during a sync failed"
+wait $SP
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+[ "$(devof ra)" = "$DA" ] || bad "a sync wrote back its own missing device over the rename's: '$(devof ra)' (was $DA) $(cat "$OUT/romm-rename2.log")"
+grep -q '"name": "Hall DS"' "$OUT/ra/banana/romsync.json" && devs | grep -q '"name": "Hall DS"' || bad "rename during a sync: the name not kept"
+# (and a pairing again with no device held, under another name: "Paired as" the name RomM shows)
+nodev ra; CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+c=$OUT/ra; BANANA_SYNC_NAME="Porch DS" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" pair "$U" "$CODE" >/dev/null 2>&1 || bad "card A pairing with no device held failed: $(st ra)"
+[ "$(devof ra)" = "$DA" ] && devs | grep -q '"name": "Porch DS"' || bad "a pairing with no device held left RomM's old name: $(devof ra) $(devs)"
+curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$DD" >/dev/null
+bs rp sync --saves-only > "$OUT/romm-dev1.log" 2>&1
+grep -q 'the device was gone from RomM' "$OUT/romm-dev1.log" && grep -q 'registered as RomM device' "$OUT/romm-dev1.log" && [ "$(dev "$(devof rp)")" != none ] || bad "a deleted device wasn't registered again: $(cat "$OUT/romm-dev1.log")"
+curl -s -XPUT -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"sync_enabled": false}' "$U/api/devices/$(devof rp)" >/dev/null
+printf 'homesync.nds = off\nhomesync.psx = off\n' > "$OUT/rp/banana/settings.conf"
+bs rp sync > "$OUT/romm-dev2.log" 2>&1
+grep -q 'save sync is off for this handheld in RomM (Devices)' "$OUT/romm-dev2.log" || bad "RomM's sync switched off not said: $(cat "$OUT/romm-dev2.log")"
+has "rp/roms/gba/Banana Run (USA).gba"
+# a token that can't touch devices: paired all the same, its syncs say so and aren't errors
+card rq; bs rq pair "$U" "$(mint '{"scopes": ["me.read", "roms.read", "platforms.read", "assets.read", "assets.write"]}')" > "$OUT/romm-dev3.log" 2>&1 ||
+    bad "a token without the devices scopes didn't pair: $(cat "$OUT/romm-dev3.log")"
+grep -q 'not registered as a device yet' "$OUT/romm-dev3.log" || bad "a pairing without a device not said: $(cat "$OUT/romm-dev3.log")"
+bs rq sync --saves-only > "$OUT/romm-dev4.log" 2>&1 || bad "a sync without a device failed: $(cat "$OUT/romm-dev4.log")"
+grep -q 'not registered as a RomM device' "$OUT/romm-dev4.log" && ! grep -q 'error:' "$OUT/romm-dev4.log" || bad "a sync without a device: $(cat "$OUT/romm-dev4.log")"
+# a dry run registers nothing
+curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$(devof rp)" >/dev/null; n=$(ndevs)
+bs rp sync --saves-only --dry-run > "$OUT/romm-dev5.log" 2>&1
+grep -q 'would register as a RomM device' "$OUT/romm-dev5.log" && ! grep -q 'registered' "$OUT/romm-dev5.log" && [ "$(ndevs)" = "$n" ] || bad "a dry run registered a device: $(ndevs) (were $n) $(cat "$OUT/romm-dev5.log")"
+# a card that can't keep its id (banana/sync-id unwritable): no pairing at all, rather than one device for all of them
+card rw; mkdir "$OUT/rw/banana/sync-id"
+bs rw pair "$U" "$(mint)" >/dev/null 2>&1 && bad "paired without the card's id"
+[ "$(st rw)" = "error can't write banana/sync-id" ] && [ "$(ndevs)" = "$n" ] || bad "no card id: $(st rw), $(ndevs) devices (were $n)"
+# Get games (RomM): only the game asked for comes, with its gamelist entry, and leaves the list once it's in; the list
+# says which wait and which are on the card; a game taken back before a sync doesn't come; one deleted from the card
+# afterwards isn't brought back, and one gone from the server stays: once on the card a game is the owner's
 card rc
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rc pair "$U" "$CODE" >/dev/null 2>&1 || bad "rc: pairing failed: $(st rc)"
-printf 'homesync_games = chosen\n' > "$OUT/rc/banana/settings.conf"
-printf 'gba/Banana Run (USA).gba\n' > "$OUT/rc/banana/homesync-games.txt"
-bs rc sync > "$OUT/pick-sync1.log" 2>&1 || bad "pick sync: $(tail -3 "$OUT/pick-sync1.log")"
+[ "$(bs rc get 'gba/Banana Run (USA).gba' 'nds/Peel Quest (USA).nds')" = ok ] || bad "get: games not added to the list"
+[ "$(bs rc get --drop 'nds/Peel Quest (USA).nds')" = ok ] || bad "get --drop: a game not taken back"
+[ "$(bs rc get '../x')" = "error not a game: ../x" ] || bad "get: a path out of the roms folder taken"
+bs rc games > "$OUT/pick-games0.tsv" 2>&1
+grep -q "^gba	gba/Banana Run (USA).gba	.*	1	0$" "$OUT/pick-games0.tsv" || bad "games: the game asked for not listed as waiting: $(cat "$OUT/pick-games0.tsv")"
+GETALL=0 bs rc sync > "$OUT/pick-sync1.log" 2>&1 || bad "get sync: $(tail -3 "$OUT/pick-sync1.log")"
 has "rc/roms/gba/Banana Run (USA).gba"
-[ -e "$OUT/rc/roms/nds/Peel Quest (USA).nds" ] && bad "pick: a game that wasn't chosen came to the card"
+grep -q 'Banana Run' "$OUT/rc/roms/gba/gamelist.xml" 2>/dev/null || bad "get: no gamelist entry for the game asked for"
+[ -e "$OUT/rc/roms/nds/Peel Quest (USA).nds" ] && bad "get: a game taken back (or never asked for) came to the card"
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get.txt" && bad "get: the game stayed on the list once in: $(cat "$OUT/rc/banana/homesync-get.txt")"
 bs rc games > "$OUT/pick-games.tsv" 2>&1 || bad "games: $(head -2 "$OUT/pick-games.tsv")"
-grep -q "^gba	gba/Banana Run (USA).gba	.*	1	1$" "$OUT/pick-games.tsv" || bad "games: the chosen game not listed as chosen + on the card: $(cat "$OUT/pick-games.tsv")"
-grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not chosen + not on the card: $(cat "$OUT/pick-games.tsv")"
-: > "$OUT/rc/banana/homesync-games.txt"
-bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "pick sync 2: $(tail -3 "$OUT/pick-sync2.log")"
+grep -q "^gba	gba/Banana Run (USA).gba	.*	0	1$" "$OUT/pick-games.tsv" || bad "games: the game got not listed as on the card: $(cat "$OUT/pick-games.tsv")"
+grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not waiting + not on the card: $(cat "$OUT/pick-games.tsv")"
+# (the server's games kept on the card for Get games' page: games writes them whole, under the server's address; a
+# sync writes them whole too, a system set to Skip included (on RomM that keeps only its saves here); one game's sync
+# leaves them; Forget takes them away)
+GC=$OUT/rc/banana/homesync-server-games.tsv
+head -1 "$GC" 2>/dev/null | grep -q "^# $U	[0-9][0-9]*$" || bad "games: the list not kept on the card under the server: $(head -1 "$GC" 2>&1)"
+# (but for its last column, on the card, which the page looks at for itself: 0 in what is kept)
+[ "$(tail -n +2 "$GC")" = "$(grep '	' "$OUT/pick-games.tsv" | sed 's/	[01]$/	0/')" ] || bad "games: the kept list isn't what was printed: $(cat "$GC")"
+printf 'gba\tgba/Gone (USA).gba\tGone\t1\t0\t0\n' >> "$GC"
+cp "$GC" "$OUT/gc-before.tsv"
+bs rc sync --rom "gba/Banana Run (USA).gba" > "$OUT/pick-gc-rom.log" 2>&1
+cmp -s "$GC" "$OUT/gc-before.tsv" || bad "a game's own sync rewrote the kept list: $(cat "$GC")"
+printf 'homesync.nds = off\n' >> "$OUT/rc/banana/settings.conf"
+bs rc sync --saves-only > "$OUT/pick-gc-sync.log" 2>&1 || bad "gc sync: $(tail -3 "$OUT/pick-gc-sync.log")"
+grep -q 'Gone (USA)' "$GC" && bad "a sync didn't replace the kept list's games of a system it listed: $(cat "$GC")"
+grep -q '^nds	nds/Peel Quest (USA).nds	' "$GC" || bad "a sync dropped a skipped system's games from the kept list: $(cat "$GC")"
+grep -q '^gba	gba/Banana Run (USA).gba	' "$GC" || bad "a sync's kept list lost a listed system's game: $(cat "$GC")"
+rm -f "$GC"
+bs rc sync --saves-only > "$OUT/pick-gc-sync2.log" 2>&1 || bad "gc sync 2: $(tail -3 "$OUT/pick-gc-sync2.log")"
+grep -q '^nds	nds/Peel Quest (USA).nds	' "$GC" || bad "a sync with no kept list before left a skipped system's games out of it: $(cat "$GC" 2>&1)"
+sed -i '/^homesync\.nds/d' "$OUT/rc/banana/settings.conf"
+cp -r "$OUT/rc" "$OUT/rcf"
+printf 'gba/Asked (USA).gba\n' >> "$OUT/rcf/banana/homesync-get.txt"; printf 'gba/Asked (USA).gba\tchecksum mismatch\n' >> "$OUT/rcf/banana/homesync-get-failed.txt"
+bs rcf forget >/dev/null 2>&1
+[ -e "$OUT/rcf/banana/homesync-server-games.tsv" ] && bad "Forget left the server's kept games"
+[ -e "$OUT/rcf/banana/homesync-get.txt" ] || [ -e "$OUT/rcf/banana/homesync-get-failed.txt" ] && bad "Forget left the games asked of the server"
+# (paired again with the same server: what was asked of it still waits; paired with another one, without a Forget
+# first: the last one's games, list and failures gone as a Forget takes them, or its next sync would bring them)
+cp -r "$OUT/rc" "$OUT/rcp"
+printf 'gba/Asked (USA).gba\n' >> "$OUT/rcp/banana/homesync-get.txt"; printf 'gba/Asked (USA).gba\tchecksum mismatch\n' >> "$OUT/rcp/banana/homesync-get-failed.txt"
+CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rcp pair "$U" "$CODE" >/dev/null 2>&1 || bad "rcp: pairing again failed: $(st rcp)"
+grep -qx 'gba/Asked (USA).gba' "$OUT/rcp/banana/homesync-get.txt" 2>/dev/null || bad "paired again with the same server: the games asked of it dropped"
+[ -e "$OUT/rcp/banana/homesync-server-games.tsv" ] || bad "paired again with the same server: its kept games dropped"
+P2=$(port)
+python3 "$HERE/tests/fake-romm.py" "$P2" "$L" 2> "$OUT/fake-romm-2.log" & PIDS="$PIDS $!"
+waitport "$P2" /api/heartbeat || bad "the second fake RomM didn't start"
+CODE=$(curl -s -XPOST "http://127.0.0.1:$P2/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rcp pair "http://127.0.0.1:$P2" "$CODE" >/dev/null 2>&1 || bad "rcp: pairing with another server failed: $(st rcp)"
+[ -e "$OUT/rcp/banana/homesync-server-games.tsv" ] && bad "paired with another server: the last one's kept games left"
+[ -e "$OUT/rcp/banana/homesync-get.txt" ] || [ -e "$OUT/rcp/banana/homesync-get-failed.txt" ] && bad "paired with another server: the games asked of the last one left"
+# (a server that doesn't answer at all, as with Wi-Fi not back yet: the sync ends at once as that, said in words, not
+# as each part failing in turn)
+cp -r "$OUT/rc" "$OUT/rcn"
+python3 -c 'import json,sys; p=sys.argv[1]; j=json.load(open(p)); j["server"]="http://127.0.0.1:1"; json.dump(j, open(p, "w"))' "$OUT/rcn/banana/romsync.json"
+bs rcn sync --saves-only > "$OUT/noconnect.log" 2>&1 && bad "a sync with the server unreachable said it worked"
+case $(st rcn) in "error noconnect "?*) ;; *) bad "the server unreachable: $(st rcn)" ;; esac
+grep -q 'the server can.t be reached' "$OUT/noconnect.log" || bad "the server unreachable not said: $(cat "$OUT/noconnect.log")"
+# (games asked for while a sync runs: brought by it, the saves' look at the library held up so the list changes mid-run)
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-sync3.log" 2>&1 & _k=$!
+sleep 1; bs rc get 'nds/Peel Quest (USA).nds' >/dev/null; wait $_k
+has "rc/roms/nds/Peel Quest (USA).nds"
+rm "$OUT/rc/roms/gba/Banana Run (USA).gba"
+GETALL=0 bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "get sync 2: $(tail -3 "$OUT/pick-sync2.log")"
+[ -e "$OUT/rc/roms/gba/Banana Run (USA).gba" ] && bad "get: a game deleted from the card was brought back"
+# (a download that fails: the game stays on the list, why said in homesync-get-failed.txt for the page; the next sync
+# brings it and the line goes)
+bs rc get 'gba/Banana Run (USA).gba' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "badhash", "count": 9}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail.log" 2>&1
+grep -q '^gba/Banana Run (USA).gba	.*mismatch' "$OUT/rc/banana/homesync-get-failed.txt" 2>/dev/null || bad "get: a failed download's reason not kept: $(cat "$OUT/rc/banana/homesync-get-failed.txt" 2>&1) $(tail -3 "$OUT/pick-fail.log")"
+grep -qx 'gba/Banana Run (USA).gba' "$OUT/rc/banana/homesync-get.txt" || bad "get: a failed download left the list"
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail2.log" 2>&1
 has "rc/roms/gba/Banana Run (USA).gba"
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get-failed.txt" && bad "get: a game that came kept its failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+# (two failing, the first a GBA game, the second the disc set by a file other than the one it is listed by: each
+# game's line is its own, never the other's error)
+DK=$(bs rc games | awk -F'\t' '$1 == "psx" { print $2 }')
+case $DK in *.bin) DX=cue ;; *) DX=bin ;; esac
+rm -rf "$OUT/rc/roms/gba/Banana Run (USA).gba" "$OUT/rc/roms/psx/Disc Game (USA)"*
+bs rc get 'gba/Banana Run (USA).gba' "$DK" >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "badhash", "count": 9}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d "{\"path\": \"GET /api/roms/.*/files/content/.*\\\\.$DX\$\", \"kind\": \"badhash\", \"count\": 9}" >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-fail3.log" 2>&1
+curl -s -XPOST "$U/test/fault" -d '{"clear": true}' >/dev/null
+DL=$(grep -F "$DK	" "$OUT/rc/banana/homesync-get-failed.txt" 2>/dev/null)
+case $DL in *"Banana Run"*|"") bad "get: the disc set's failure not its own: '$DL' $(grep -i 'error\|mismatch' "$OUT/pick-fail3.log")" ;; esac
+case $DL in *".$DX: "*) ;; *) bad "get: the disc set's failure doesn't name its file: '$DL'" ;; esac
+grep -q '^gba/Banana Run (USA).gba	.*mismatch' "$OUT/rc/banana/homesync-get-failed.txt" || bad "get: the GBA game's failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+# (asked for again, by banana-sync get as by the page: that game's failure gone, the other's kept)
+bs rc get 'gba/Banana Run (USA).gba' >/dev/null
+grep -q 'Banana Run' "$OUT/rc/banana/homesync-get-failed.txt" && bad "get: a game asked for again kept its failure: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+grep -qF "$DK	" "$OUT/rc/banana/homesync-get-failed.txt" || bad "get: another game's failure went with it: $(cat "$OUT/rc/banana/homesync-get-failed.txt")"
+GETALL=0 bs rc sync > "$OUT/pick-fail4.log" 2>&1
+has "rc/roms/gba/Banana Run (USA).gba"
+# (a game asked for during the saves comes after them, save.lock let go first: the sync after a game runs beside that
+# download at once, not after a 10 s wait for the lock)
+rm "$OUT/rc/roms/nds/Peel Quest (USA).nds"
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms", "kind": "delay", "arg": 2}' >/dev/null
+curl -s -XPOST "$U/test/fault" -d '{"path": "GET /api/roms/.*/content/Peel", "kind": "delay", "arg": 6}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-late.log" 2>&1 & _k=$!
+sleep 1; bs rc get 'nds/Peel Quest (USA).nds' >/dev/null; sleep 2.5
+t=$(date +%s); bs rc sync --rom "gba/Banana Run (USA).gba" > "$OUT/pick-late-rom.log" 2>&1
+[ $(( $(date +%s) - t )) -lt 4 ] && ! grep -q 'another sync is saving' "$OUT/pick-late-rom.log" ||
+    bad "get: the sync after a game waited on a download after the saves: $(cat "$OUT/pick-late-rom.log")"
+wait $_k
+has "rc/roms/nds/Peel Quest (USA).nds"
+# (a game asked for that is on the card already, copied by hand: adopted, nothing downloaded, and the gamelist entry
+# its owner gave it kept. Get games' own run, --games-only: the game and not the saves, a save new on the card left for
+# the next sync of the saves)
+cp "$L/gba/Old Game (USA).gba" "$OUT/rc/roms/gba/"
+sed -i 's|</gameList>|  <game><path>./Old Game (USA).gba</path><name>Mine</name></game>\n</gameList>|' "$OUT/rc/roms/gba/gamelist.xml"
+mkdir -p "$OUT/rc/saves/gba"; printf 'old game save' > "$OUT/rc/saves/gba/Old Game (USA).srm"
+bs rc get 'gba/Old Game (USA).gba' >/dev/null
+GETALL=0 bs rc sync --games-only > "$OUT/pick-adopt.log" 2>&1
+grep -q 'Old Game (USA).srm' "$OUT/rc/banana/romsync.json" && bad "sync --games-only synced a save: $(cat "$OUT/pick-adopt.log")"
+st rc | grep -q '^done .*|games only' || bad "sync --games-only's line doesn't say so: $(st rc)"
+GETALL=0 bs rc sync > "$OUT/pick-adopt2.log" 2>&1
+grep -q 'Old Game (USA).srm' "$OUT/rc/banana/romsync.json" || bad "the save --games-only left wasn't synced by the next sync: $(cat "$OUT/pick-adopt2.log")"
+grep -q '0 to download' "$OUT/pick-adopt.log" || bad "get: a game on the card already was downloaded: $(head -3 "$OUT/pick-adopt.log")"
+grep -q '<name>Mine</name>' "$OUT/rc/roms/gba/gamelist.xml" || bad "get: an adopted game's own gamelist entry was replaced: $(grep -A1 'Old Game' "$OUT/rc/roms/gba/gamelist.xml")"
+grep -q 'Old Game' "$OUT/rc/banana/homesync-get.txt" && bad "get: an adopted game stayed on the list"
+# (a system set to Skip keeps its saves on the card in a sync that also brings games: Get games' part lists every
+# system, and the saves after it go by Systems all the same)
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "skip: the GBA save was synced before the test"
+head -c 8192 /dev/urandom > "$OUT/rc/saves/gba/Banana Run (USA).srm"
+printf 'homesync.gba = off\n' >> "$OUT/rc/banana/settings.conf"
+bs rc get 'nds/Peel Quest (USA).nds' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-skip.log" 2>&1
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "a sync bringing games synced a skipped system's save: $(grep -i 'banana run' "$OUT/pick-skip.log")"
+# (and a game of that system asked for while the saves are going still comes, by the pass after them: the saves'
+# leaving the system out isn't the list's)
+rm "$OUT/rc/roms/gba/Old Game (USA).gba"
+curl -s -XPOST "$U/test/fault" -d '{"path": "POST /api/sync/negotiate", "kind": "delay", "arg": 4}' >/dev/null
+GETALL=0 bs rc sync > "$OUT/pick-skip2.log" 2>&1 & _k=$!
+sleep 1.5; bs rc get 'gba/Old Game (USA).gba' >/dev/null
+wait $_k
+[ -f "$OUT/rc/roms/gba/Old Game (USA).gba" ] || bad "skip: a game of a skipped system asked for during the saves didn't come: $(grep -i 'old game\|roms:' "$OUT/pick-skip2.log")"
+grep -q 'Old Game' "$OUT/rc/banana/homesync-get.txt" && bad "skip: a game asked for during the saves stayed on the list"
+grep -q 'Banana Run (USA).srm' "$OUT/rc/banana/romsync.json" && bad "a sync bringing a skipped system's game synced its save: $(grep -i 'banana run' "$OUT/pick-skip2.log")"
+sed -i '/^homesync\.gba/d' "$OUT/rc/banana/settings.conf"; rm "$OUT/rc/saves/gba/Banana Run (USA).srm"
+# a stand-in of its own (its ids apart from the one above): a zipped hack, its base game and one title from two regions.
+# A zip comes down whole, checked by its members' CRCs, as RomM's hashes of a zip are of what is inside; each game is
+# listed (Choose games, the gamelist) by its title and its tags, the regions only where a title is shared
+LZ=$OUT/romm-lib-tags
+mkdir -p "$LZ/gba"
+python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Pocket Hack (USA) [Hack by Someone v1.0].gba", b"hacked rom " * 5000)' "$LZ/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip"
+head -c 40000 /dev/urandom > "$LZ/gba/Pocket Hack (USA).gba"
+# (and a zip whose list of members isn't read here, its entry count not what its central directory holds, as zipMembers
+# also finds zip64's: kept, not checked, rather than a mismatch thrown away and fetched again every sync)
+python3 -c 'import sys, zipfile
+z = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); z.writestr("Odd Zip (USA).gba", b"odd rom " * 5000); z.close()
+b = bytearray(open(sys.argv[1], "rb").read()); e = b.rfind(b"PK\x05\x06"); b[e + 8:e + 12] = (2).to_bytes(2, "little") * 2
+open(sys.argv[1], "wb").write(b)' "$LZ/gba/Odd Zip (USA).zip"
+head -c 30000 /dev/urandom > "$LZ/gba/Twin (USA).gba"
+head -c 30000 /dev/urandom > "$LZ/gba/Twin (Japan).gba"
+PZ=$(port)
+python3 "$HERE/tests/fake-romm.py" "$PZ" "$LZ" & PIDS="$PIDS $!"
+waitport "$PZ" /api/heartbeat || bad "the tags stand-in didn't start"
+UZ=http://127.0.0.1:$PZ
+card rz
+bs rz pair "$UZ" "$(curl -s -XPOST "$UZ/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')" >/dev/null 2>&1 || bad "rz: pairing failed: $(st rz)"
+bs rz sync > "$OUT/tags-sync.log" 2>&1 || bad "a zipped hack's sync: $(tail -3 "$OUT/tags-sync.log")"
+has "rz/roms/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip"
+grep -q 'mismatch' "$OUT/tags-sync.log" && bad "a zip checked against RomM's hash of what's inside: $(cat "$OUT/tags-sync.log")"
+has "rz/roms/gba/Odd Zip (USA).zip"
+grep -q "Odd Zip (USA).zip: its members can't be read here, not checked" "$OUT/tags-sync.log" || bad "a zip whose members aren't read: $(grep -i 'odd zip' "$OUT/tags-sync.log")"
+cmp -s "$LZ/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip" "$OUT/rz/roms/gba/Pocket Hack (USA) [Hack by Someone v1.0].zip" || bad "the zip isn't the server's"
+bs rz games > "$OUT/tags-games.tsv" 2>&1 || bad "tags games: $(head -2 "$OUT/tags-games.tsv")"
+for t in "Pocket Hack [Hack by Someone v1.0]" "Pocket Hack" "Twin (USA)" "Twin (Japan)"; do
+    cut -f3 "$OUT/tags-games.tsv" | grep -qxF "$t" || bad "games: no title '$t': $(cut -f3 "$OUT/tags-games.tsv" | tr '\n' '|')"
+done
+grep -qF '<name>Pocket Hack [Hack by Someone v1.0]</name>' "$OUT/rz/roms/gba/gamelist.xml" && grep -qF '<name>Twin (Japan)</name>' "$OUT/rz/roms/gba/gamelist.xml" ||
+    bad "gamelist names: $(grep '<name>' "$OUT/rz/roms/gba/gamelist.xml" | tr -d '\t' | tr '\n' ' ')"
 # games to the second SD card (homesync_roms_to = sd2; its roms folder is the one run/sd2/roms names, as the sd2
 # script writes it): new games go there with their covers and gamelist, a game already on this card stays here, a
 # card that's out holds its games back (never this card instead), and back in nothing downloads twice
@@ -175,6 +486,7 @@ fi
 # a download cut short goes on from its .part (a Range request), and is checked whole
 mkdir -p "$OUT/rb/roms/nds"; head -c 1000 "$L/nds/Peel Quest (USA).nds" > "$OUT/rb/roms/nds/Peel Quest (USA).nds.part"
 printf 'homesync.gba = off\nhomesync.psx = off\n' > "$OUT/rb/banana/settings.conf"
+: > "$OUT/rb/banana/homesync-get.txt"	# (what the killed sync was asked for: Get games' list doesn't go by Systems)
 bs rb sync >/dev/null 2>&1
 curl -s "$U/test/log" | grep -q 'Peel%20Quest%20%28USA%29.nds? range=bytes=1000-' || bad "no Range request for the .part"
 cmp -s "$L/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/Peel Quest (USA).nds" || bad "the resumed download isn't the server's file"
@@ -185,53 +497,22 @@ printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves.log" > "$OUT/nds-saves";
 BANANA_NDS_SAVES=$OUT/nds-saves bs rb sync --saves-only >/dev/null 2>&1
 grep -q "rb/roms/nds/Peel Quest (USA).nds$" "$OUT/nds-saves.log" 2>/dev/null || bad "nds-saves wasn't run for the .dsv"
 rm -rf "$OUT/rb/roms/nds" "$OUT/rb/drastic"; : > "$OUT/rb/banana/settings.conf"
-# saves: up from card A (RetroArch's flat saves/ and BananaDS's saves/nds), down to card B
-mkdir -p "$OUT/ra/saves/nds"; echo "ds v1" > "$OUT/ra/saves/nds/Peel Quest (USA).sav"; echo "gba v1" > "$OUT/ra/saves/Banana Run (USA).srm"
-echo bak > "$OUT/ra/saves/Banana Run (USA).srm.bak"; echo resume > "$OUT/ra/saves/nds/Peel Quest (USA).resume.sav"
-bs ra sync --saves-only > "$OUT/romm-saves1.log" 2>&1
-grep -q "2 saves up" "$OUT/romm-saves1.log" || bad "RomM saves up: $(tail -2 "$OUT/romm-saves1.log")"
-curl -s "$U/test/state" | grep -q 'resume\|\.bak' && bad "a .bak or quick-resume file was uploaded"
-mkdir -p "$OUT/rb/roms/nds"; cp "$OUT/ra/roms/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/"
-bs rb sync --saves-only > "$OUT/romm-saves2.log" 2>&1
-[ "$(cat "$OUT/rb/saves/nds/Peel Quest (USA).sav" 2>/dev/null)" = "ds v1" ] || bad "card B didn't get the DS save"
-[ "$(cat "$OUT/rb/saves/Banana Run (USA).srm" 2>/dev/null)" = "gba v1" ] || bad "card B didn't get the GBA save"
-# changed on B, synced; A gets it
-echo "ds v2 from B" > "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
-bs ra sync --saves-only >/dev/null 2>&1
-[ "$(cat "$OUT/ra/saves/nds/Peel Quest (USA).sav")" = "ds v2 from B" ] || bad "card A didn't get B's change"
-# both changed: the newer wins, the other kept beside it as .bak (never lost), and it's counted
-echo "gba A" > "$OUT/ra/saves/Banana Run (USA).srm"; sleep 1.1; echo "gba B newer" > "$OUT/rb/saves/Banana Run (USA).srm"
-bs rb sync --saves-only >/dev/null 2>&1
-bs ra sync --saves-only > "$OUT/romm-conflict.log" 2>&1
-grep -q "1 conflicts" "$OUT/romm-conflict.log" || bad "the conflict wasn't counted: $(tail -1 "$OUT/romm-conflict.log")"
-[ "$(cat "$OUT/ra/saves/Banana Run (USA).srm")" = "gba B newer" ] || bad "the newer save didn't win"
-ls "$OUT/ra/saves/" | grep -q 'Banana Run (USA).srm.card-.*\.bak' || bad "the card's save wasn't kept in a conflict"
-# a save deleted on the card is forgotten, not deleted on the server
-rm "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
-curl -s "$U/test/state" | grep -q 'Peel Quest (USA).sav' || bad "deleting a save on the card deleted it on the server"
-# choosing games also applies to saves: an unchosen game's save is not pulled to the card
-card rd
-CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
-bs rd pair "$U" "$CODE" >/dev/null 2>&1 || bad "rd: pairing failed: $(st rd)"
-printf 'homesync_games = chosen\n' > "$OUT/rd/banana/settings.conf"
-printf 'gba/Banana Run (USA).gba\n' > "$OUT/rd/banana/homesync-games.txt"
-bs rd sync --saves-only > "$OUT/pick-saves.log" 2>&1 || bad "pick saves: $(tail -3 "$OUT/pick-saves.log")"
-[ -f "$OUT/rd/saves/Banana Run (USA).srm" ] || bad "pick saves: the chosen game's save didn't come"
-[ -e "$OUT/rd/saves/nds/Peel Quest (USA).sav" ] && bad "pick saves: an unchosen game's save came to the card"
-# a system skipped on this handheld: left as it is; a game gone from the server: removed; changed on the card: kept
+# games gone from the server (RomM): left on the card with their gamelist entries, as Get games' games are the
+# owner's; a game asked for again that was changed on the card since: kept, not downloaded over
 printf 'homesync.nds = off\n' > "$OUT/ra/banana/settings.conf"
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 104}' >/dev/null      # Peel Quest (nds, skipped)
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 102}' >/dev/null      # Banana Run (gba)
 bs ra sync > "$OUT/romm-sync3.log" 2>&1
 has "ra/roms/nds/Peel Quest (USA).nds"
-[ -f "$OUT/ra/roms/gba/Banana Run (USA).gba" ] && bad "a game removed on the server stayed"
-grep -q 'Banana Run (USA).gba' "$G" && bad "its gamelist entry stayed"
-grep -q '<name>My own</name>' "$G" || bad "the gamelist's own entry was lost on removal"
+has "ra/roms/gba/Banana Run (USA).gba"
+grep -q 'Banana Run (USA).gba' "$G" || bad "a game gone from the server lost its gamelist entry"
+grep -q '<name>My own</name>' "$G" || bad "the gamelist's own entry was lost"
 printf 'homesync.nds = on\n' > "$OUT/ra/banana/settings.conf"
 echo patched >> "$OUT/ra/roms/nds/Peel Quest (USA).nds"
+bs ra get "nds/Peel Quest (USA).nds" >/dev/null
 bs ra sync > "$OUT/romm-sync4.log" 2>&1
-has "ra/roms/nds/Peel Quest (USA).nds"
-grep -q "changed on the card, kept" "$OUT/romm-sync4.log" || bad "a ROM changed on the card wasn't kept: $(tail -3 "$OUT/romm-sync4.log")"
+tail -c 8 "$OUT/ra/roms/nds/Peel Quest (USA).nds" | grep -q patched || bad "a ROM changed on the card was downloaded over: $(tail -3 "$OUT/romm-sync4.log")"
+grep -q 'Peel Quest' "$OUT/ra/banana/homesync-get.txt" 2>/dev/null && bad "a game held back by a file of the owner's stayed on the list"
 # an empty server listing never empties the card
 rm -rf "$L/nds" "$L/gba" "$L/psx"; bs ra sync > "$OUT/romm-sync5.log" 2>&1
 has "ra/roms/psx/Disc Game (USA).m3u"
@@ -244,6 +525,274 @@ cp "$OUT/ra/banana/logs/sync.log" "$OUT/sync-log-before"
 bs ra sync --auto quit >/dev/null 2>&1
 cmp -s "$OUT/sync-log-before" "$OUT/ra/banana/logs/sync.log" || bad "an automatic sync that did nothing replaced the last sync's report"
 bs ra forget; [ -f "$OUT/ra/banana/romsync.json" ] && bad "forget left the pairing"
+# RomM on HTTPS (behind a reverse proxy), its certificate from the owner's own CA: found at the plain address, not
+# trusted until homesync_ca names that CA's certificate, then paired and synced
+LT=$OUT/romm-tls-lib; mkdir -p "$LT/gba"; head -c 3000 /dev/urandom > "$LT/gba/Secure Run (USA).gba"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/tls.key" -out "$OUT/tls.pem" -days 2 -subj /CN=127.0.0.1 \
+    -addext "subjectAltName=IP:127.0.0.1" >/dev/null 2>&1 || bad "openssl made no certificate"
+PT=$(port)
+FAKE_ROMM_TLS="$OUT/tls.pem:$OUT/tls.key" python3 "$HERE/tests/fake-romm.py" "$PT" "$LT" 2> "$OUT/fake-romm-tls.log" & PIDS="$PIDS $!"
+for i in $(seq 50); do curl -sk "https://127.0.0.1:$PT/api/heartbeat" >/dev/null && break; sleep 0.1; done
+UT=https://127.0.0.1:$PT
+card rt
+TT=$(curl -sk -XPOST "$UT/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls1.log" 2>&1 && bad "an HTTPS server nothing vouches for was trusted"
+[ "$(st rt)" = "error the server's certificate isn't trusted (homesync_ca)" ] || bad "an untrusted certificate not said: $(st rt) $(cat "$OUT/romm-tls1.log")"
+printf 'homesync_ca = banana/no-such-ca.pem\n' > "$OUT/rt/banana/settings.conf"
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls0.log" 2>&1 && bad "paired with a homesync_ca that isn't there"
+[ "$(st rt)" = "error homesync_ca can't be read" ] || bad "a homesync_ca that isn't there not said: $(st rt) $(cat "$OUT/romm-tls0.log")"
+cp "$OUT/tls.pem" "$OUT/rt/banana/home-ca.pem"; printf 'homesync_ca = banana/home-ca.pem\n' > "$OUT/rt/banana/settings.conf"
+[ "$(bs rt probe "$UT")" = "romm $UT RomM 5.4.1" ] || bad "probe didn't find RomM on HTTPS: $(bs rt probe "$UT")"
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls2.log" 2>&1 || bad "pairing on HTTPS with homesync_ca: $(st rt) $(cat "$OUT/romm-tls2.log")"
+grep -q "\"server\": \"$UT\"" "$OUT/rt/banana/romsync.json" || bad "the HTTPS address not kept: $(grep server "$OUT/rt/banana/romsync.json")"
+bs rt sync > "$OUT/romm-tls3.log" 2>&1 || bad "a sync on HTTPS: $(tail -3 "$OUT/romm-tls3.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/rt/roms/gba/Secure Run (USA).gba" || bad "a ROM over HTTPS: $(tail -3 "$OUT/romm-tls3.log")"
+grep -q 'registered as RomM device\|error:' "$OUT/romm-tls3.log" && bad "the device on HTTPS: $(cat "$OUT/romm-tls3.log")"
+grep -q 'certificate checks are off' "$OUT/romm-tls3.log" && bad "certificate checks said off while on"
+# a self-signed certificate taken as it is, the owner's choice (homesync_tls = off): paired and synced, and each
+# run says the checks are off
+card ru; printf 'homesync_tls = off\n' > "$OUT/ru/banana/settings.conf"
+bs ru pair "$UT" "$TT" > "$OUT/romm-tls4.log" 2>&1 || bad "pairing with homesync_tls off: $(st ru) $(cat "$OUT/romm-tls4.log")"
+bs ru sync > "$OUT/romm-tls5.log" 2>&1 || bad "a sync with homesync_tls off: $(tail -3 "$OUT/romm-tls5.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/ru/roms/gba/Secure Run (USA).gba" || bad "a ROM with homesync_tls off: $(tail -3 "$OUT/romm-tls5.log")"
+grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls4.log" && grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls5.log" ||
+    bad "certificate checks off not said"
+# a certificate of the server's own making trusted on the handheld (the form's Y: cert reads it for its owner to look
+# at, trust keeps that one): the server is checked against that certificate and no other, the check on and no
+# homesync_ca, whatever name the certificate carries (this one names another host, as one made for a LAN does)
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/pin1.key" -out "$OUT/pin1.pem" -days 2 -subj /CN=my-romm >/dev/null 2>&1 &&
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/pin2.key" -out "$OUT/pin2.pem" -days 2 -subj /CN=my-romm >/dev/null 2>&1 || bad "openssl made no certificate to trust"
+PP=$(port); UP=https://127.0.0.1:$PP
+FAKE_ROMM_TLS="$OUT/pin1.pem:$OUT/pin1.key" python3 "$HERE/tests/fake-romm.py" "$PP" "$LT" 2> "$OUT/fake-romm-pin.log" & PINPID=$!; PIDS="$PIDS $PINPID"
+for i in $(seq 50); do curl -sk "$UP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+card rp
+TP1=$(curl -sk -XPOST "$UP/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+r=$(bs rp cert "$UP")
+[ "$(echo "$r" | cut -f1,2)" = "cert	$UP" ] && [ "$(echo "$r" | cut -f7)" = "$(openssl x509 -in "$OUT/pin1.pem" -noout -fingerprint -sha1 | cut -d= -f2)" ] ||
+    bad "cert: the server's certificate not shown with its fingerprint: $r"
+echo "$r" | cut -f3 | grep -q 'my-romm' || bad "cert: whom the certificate names not shown: $r"
+[ ! -e "$OUT/rp/banana/homesync-server.pem" ] || bad "cert: a certificate only looked at was kept as trusted"
+bs rp pair "$UP" "$TP1" > "$OUT/pin0.log" 2>&1 && bad "a certificate only looked at was trusted"
+# (the card is paired with the server above: this one's certificate waits in the run folder until the pairing with it
+# is written, then it is the card's)
+[ "$(bs rp trust | tail -1)" = ok ] && [ "$(head -1 "$OUT/rp/run/server-trusted.pem")" = "# for $UP" ] && [ ! -e "$OUT/rp/banana/homesync-server.pem" ] ||
+    bad "trust: the certificate shown not kept for its server, waiting for its pairing: $(head -1 "$OUT/rp/run/server-trusted.pem" 2>&1)"
+[ "$(bs rp trust | tail -1)" = "error no certificate was shown to trust" ] || bad "trust with no certificate shown"
+bs rp pair "$UP" "$TP1" > "$OUT/pin1.log" 2>&1 || bad "pairing with the server's certificate trusted: $(st rp) $(cat "$OUT/pin1.log")"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem" 2>/dev/null)" = "# for $UP" ] && [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "paired: the certificate trusted for the server not the card's: $(ls "$OUT/rp/banana" "$OUT/rp/run")"
+bs rp sync > "$OUT/pin2.log" 2>&1 || bad "a sync with the server's certificate trusted: $(tail -3 "$OUT/pin2.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/rp/roms/gba/Secure Run (USA).gba" || bad "a ROM with the server's certificate trusted: $(tail -3 "$OUT/pin2.log")"
+grep -q 'certificate checks are off' "$OUT/pin1.log" "$OUT/pin2.log" && bad "certificate checks said off with one certificate trusted"
+# (it is that server's alone: another server, here the one above on its own port, is checked as ever, and refused)
+[ "$(bs rp probe --romm "$UT" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a certificate trusted for one server let another through: $(bs rp probe --romm "$UT")"
+# (and that certificate alone: the same address showing another, someone standing in for the server or the server's
+# made again, is refused, nothing sent; shown and trusted in its turn, it is the one from then on)
+kill "$PINPID" 2>/dev/null; wait "$PINPID" 2>/dev/null
+FAKE_ROMM_TLS="$OUT/pin2.pem:$OUT/pin2.key" python3 "$HERE/tests/fake-romm.py" "$PP" "$LT" 2>> "$OUT/fake-romm-pin.log" & PINPID=$!; PIDS="$PIDS $PINPID"
+for i in $(seq 50); do curl -sk "$UP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+bs rp sync > "$OUT/pin3.log" 2>&1 && bad "another certificate at the trusted server's address was taken: $(tail -3 "$OUT/pin3.log")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "another certificate at the trusted server's address not said as untrusted: $(bs rp probe --romm "$UP")"
+r=$(bs rp cert "$UP"); [ "$(echo "$r" | cut -f7)" = "$(openssl x509 -in "$OUT/pin2.pem" -noout -fingerprint -sha1 | cut -d= -f2)" ] || bad "cert: the new certificate not shown: $r"
+[ "$(bs rp trust | tail -1)" = ok ] && [ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "the new certificate, trusted in its turn, not taken: $(bs rp probe --romm "$UP")"
+# (another server's certificate trusted while this one is paired, the form's address changed and the pairing there not
+# gone through: this pairing's certificate stays the card's and its server still passes; the other's waits in the run
+# folder, checks that server meanwhile, and is the card's once paired with it)
+PQ=$(port); UQ=https://127.0.0.1:$PQ
+FAKE_ROMM_TLS="$OUT/pin1.pem:$OUT/pin1.key" python3 "$HERE/tests/fake-romm.py" "$PQ" "$LT" 2> "$OUT/fake-romm-pin-b.log" & PIDS="$PIDS $!"
+for i in $(seq 50); do curl -sk "$UQ/api/heartbeat" >/dev/null && break; sleep 0.1; done
+TQ=$(curl -sk -XPOST "$UQ/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+bs rp cert "$UQ" >/dev/null; [ "$(bs rp trust | tail -1)" = ok ] || bad "trust: another server's certificate, while paired"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UP" ] && [ "$(head -1 "$OUT/rp/run/server-trusted.pem" 2>/dev/null)" = "# for $UQ" ] ||
+    bad "another server's certificate trusted while paired went over the paired server's: $(head -1 "$OUT/rp/banana/homesync-server.pem")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "the paired server no longer passes after another server's certificate was trusted: $(bs rp probe --romm "$UP")"
+[ "$(bs rp probe --romm "$UQ" | cut -d' ' -f1)" = romm ] || bad "a certificate trusted for a server not yet paired with doesn't check it: $(bs rp probe --romm "$UQ")"
+bs rp pair "$UQ" "$TQ" > "$OUT/pin5.log" 2>&1 || bad "pairing with the other server, its certificate trusted: $(st rp) $(cat "$OUT/pin5.log")"
+[ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UQ" ] && [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "paired with the other server: its certificate not the card's: $(head -1 "$OUT/rp/banana/homesync-server.pem")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "the server paired with before is still trusted: $(bs rp probe --romm "$UP")"
+# (the card's file left for a server the card isn't paired with, as a cut between a pairing and its write leaves it, and
+# that server's certificate since changed: trusted again, the one waiting is the one it is checked against, not the
+# card's old one, which would refuse it and ask again without end)
+cp "$OUT/rp/banana/homesync-server.pem" "$OUT/pin-uq.keep"
+{ echo "# for $UP"; cat "$OUT/pin1.pem"; } > "$OUT/rp/banana/homesync-server.pem"
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1)" = romm ] || bad "a certificate trusted again isn't the one checked while the card holds an older one for that server: $(bs rp probe --romm "$UP")"
+cp "$OUT/pin-uq.keep" "$OUT/rp/banana/homesync-server.pem"; rm -f "$OUT/rp/run/server-trusted.pem"
+# (and one trusted for a third server, the pairing made with this one again instead: it doesn't go on waiting)
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+[ "$(head -1 "$OUT/rp/run/server-trusted.pem" 2>/dev/null)" = "# for $UP" ] || bad "a certificate trusted for another server, while paired, isn't waiting"
+bs rp pair "$UQ" "$TQ" > "$OUT/pin6.log" 2>&1 || bad "pairing again with the paired server: $(st rp) $(cat "$OUT/pin6.log")"
+[ ! -e "$OUT/rp/run/server-trusted.pem" ] && [ "$(head -1 "$OUT/rp/banana/homesync-server.pem")" = "# for $UQ" ] || bad "a certificate that waited for another server's pairing still waits after a pairing with this one: $(ls "$OUT/rp/run")"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a server whose certificate waited, never paired with, is still trusted: $(bs rp probe --romm "$UP")"
+bs rp cert "$UP" >/dev/null; bs rp trust >/dev/null
+# (Forget: the certificate goes with the pairing, and the next pairing asks again)
+bs rp forget; [ ! -e "$OUT/rp/run/server-trusted.pem" ] || bad "forget left a certificate trusted for a server never paired with"
+[ ! -e "$OUT/rp/banana/homesync-server.pem" ] || bad "forget left the trusted certificate"
+[ "$(bs rp probe --romm "$UP" | cut -d' ' -f1,2)" = "fail tls" ] || bad "a server trusted before a Forget still trusted after it"
+# a RomM before 5.4 (no slots, nor the device records the other clients sync by): every save by content, sent only
+# over the version last agreed, and the note says to update it; a development build counts as new (its saves by slot)
+LV=$OUT/romm-old-lib; mkdir -p "$LV/gba"; printf 'gba rom down' > "$LV/gba/Down (USA).gba"; printf 'gba rom up' > "$LV/gba/Up (USA).gba"
+for v in 5.3.1 development; do
+    p=$(port); cv=rv-$v
+    FAKE_ROMM_VERSION=$v python3 "$HERE/tests/fake-romm.py" "$p" "$LV" 2> "$OUT/fake-romm-$v.log" & PIDS="$PIDS $!"
+    waitport "$p" /api/heartbeat || bad "the fake RomM $v didn't start"
+    # (the plain probe, as Romhost's address finds a RomM, marks one before 5.4 as probe --romm does)
+    case $v in 5.3.1) want="romm http://127.0.0.1:$p RomM 5.3.1 old" ;; *) want="romm http://127.0.0.1:$p RomM $v" ;; esac
+    card "$cv"; [ "$(bs "$cv" probe "127.0.0.1:$p")" = "$want" ] || bad "RomM $v: probe: $(bs "$cv" probe "127.0.0.1:$p")"
+    t=$(curl -s -XPOST "http://127.0.0.1:$p/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+    card "$cv"; bs "$cv" pair "http://127.0.0.1:$p" "$t" >/dev/null 2>&1 && bs "$cv" sync >/dev/null 2>&1 || bad "RomM $v: pairing and the games: $(st "$cv")"
+    sl=; [ $v = 5.3.1 ] || sl='"slot": "autosave", '
+    # (a GBA EEPROM's 512 bytes, a size a GBA save comes in)
+    curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{$sl\"rom_id\": 101, \"file_name\": \"Down (USA).srm\", \"data\": \"0102030405$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+    # (a GBA EEPROM's 512 bytes again: a save of a size its system's saves don't come in isn't sent)
+    mkdir -p "$OUT/$cv/saves/gba"; { printf "this handheld's"; head -c 497 /dev/zero | tr '\0' x; } > "$OUT/$cv/saves/gba/Up (USA).srm"; cp "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm"
+    bs "$cv" sync --saves-only > "$OUT/romm-$v.log" 2>&1
+    [ "$(head -c 5 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
+    sent=$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+    [ "$sent" = 1 ] || bad "RomM $v: the save wasn't sent: $(cat "$OUT/romm-$v.log")"
+    case $v in
+    5.3.1)
+        # (with no slot: the row Grout and RomM's page would never read on 5.4)
+        [ "$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["slot"])')" = None ] || bad "RomM 5.3.1: the save went up into a slot"
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "status: $(bs "$cv" status)"
+        srvmd5() { curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=$1" | python3 -c 'import json,sys; print(" ".join(sorted(s["content_hash"] for s in json.load(sys.stdin))))'; }
+        # a save changed here alone since it synced: sent, over the version agreed
+        { printf "played on here"; head -c 498 /dev/zero | tr '\0' y; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] || bad "RomM 5.3.1: a save changed here alone not sent: $(cat "$OUT/romm-$v-up.log")"
+        # (the server's copy changed by another device between this sync's listing and its upload: not sent over it)
+        { printf "played once more"; head -c 496 /dev/zero | tr '\0' z; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        was=$(srvmd5 102)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "GET /api/saves/[0-9]+$", "kind": "replace", "arg": {"id": 1, "updated_at": "2031-01-01T00:00:00Z"}}' >/dev/null
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        grep -q 'Up (USA).srm: changed on the server meanwhile, next time' "$OUT/romm-$v-up.log" && [ "$(srvmd5 102)" = "$was" ] || bad "RomM 5.3.1: a save sent over a copy that moved meanwhile: $(cat "$OUT/romm-$v-up.log")"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-up.log" 2>&1
+        [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] || bad "RomM 5.3.1: the save not sent at the next sync: $(cat "$OUT/romm-$v-up.log")"
+        # a save changed here and on the server since: held, both kept,
+        # the card's as it is, the server's in the vault, nothing beside the save; never the newer by the files' times
+        { printf "this handheld's"; head -c 497 /dev/zero | tr '\0' x; } > "$OUT/$cv/saves/gba/Up (USA).srm"; cp "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm"
+        # (the server's as another handheld of this kind leaves it: the same row, written over in place)
+        sleep 1; curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"emulator\": \"retroarch\", \"data\": \"0a0b0c0d0e$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        touch -d "@$(( $(date +%s) + 86400 ))" "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" && grep -q 'conflict, both kept: saves/gba/Up (USA).srm (the server.s in the vault)' "$OUT/romm-$v-held.log" &&
+            [ -z "$(ls "$OUT/$cv/saves/gba" | grep '\.bak$')" ] && ls "$OUT/$cv/banana/save-vault/saves/gba/Up (USA)/" 2>/dev/null | grep -q '\.srm$' &&
+            python3 -c 'import json,sys; h = json.load(open(sys.argv[1]))["held"]; sys.exit(0 if h["102/autosave"]["path"] == "saves/gba/Up (USA).srm" and h["102/autosave"]["vault"] else 1)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a save changed on both sides: $(cat "$OUT/romm-$v-held.log") $(ls "$OUT/$cv/saves/gba")"
+        # (kept on the Saves page: the card's goes up over the server's, whose copy is in the vault, and the next sync
+        # has nothing to hold)
+        [ "$(bs "$cv" resolve 102/autosave card 2> "$OUT/romm-$v-resolve.log" | tail -1)" = ok ] && cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" &&
+            srvmd5 102 | grep -q "$(md5sum < "$OUT/up-$v.srm" | cut -d' ' -f1)" ||
+            bad "RomM 5.3.1: keeping this handheld's: $(cat "$OUT/romm-$v-resolve.log") $(bs "$cv" saves) server: $(srvmd5 102)"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' || bad "RomM 5.3.1: a kept save held again: $(cat "$OUT/romm-$v-held.log")"
+        # (the server's chosen instead, and the game played before any sync: the version chosen is on record as the one
+        # both hold, so what the game saved goes up as a change to it, not held against it again)
+        { printf "played here"; head -c 501 /dev/zero | tr '\0' y; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        sleep 1; curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"emulator\": \"retroarch\", \"data\": \"0a0b0c0d0f$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1; was=$(srvmd5 102)
+        [ "$(bs "$cv" resolve 102/autosave server 2> "$OUT/romm-$v-resolve.log" | tail -1)" = ok ] && [ "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" = "$was" ] ||
+            bad "RomM 5.3.1: taking the server's: $(cat "$OUT/romm-$v-resolve.log") $(bs "$cv" saves)"
+        { printf "played on"; head -c 503 /dev/zero | tr '\0' z; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' && [ "$(srvmd5 102)" = "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" ] ||
+            bad "RomM 5.3.1: a game played on the server's chosen save held again: $(cat "$OUT/romm-$v-held.log")"
+        # a save gone from the card since it synced: left as it is and said, never put back by itself (its last good copy
+        # is in the vault); its record stays, so the next sync doesn't take the server's over nothing either
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1; bs "$cv" sync --saves-only >> "$OUT/romm-$v-gone.log" 2>&1
+        [ ! -e "$OUT/$cv/saves/gba/Down (USA).srm" ] && grep -q 'missing here since the last sync, left as it is: saves/gba/Down' "$OUT/romm-$v-gone.log" &&
+            bs "$cv" saves | grep -q "^held	101/autosave	saves/gba/Down (USA).srm	missing here since the last sync" ||
+            bad "RomM 5.3.1: a save gone from the card: $(cat "$OUT/romm-$v-gone.log") $(bs "$cv" saves)"
+        # (blank instead of gone: noted the same, so the Saves page says so)
+        head -c 8192 /dev/zero > "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
+        bs "$cv" saves | grep -q "^held	101/autosave	saves/gba/Down (USA).srm	blank here since the last sync" || bad "RomM 5.3.1: a blank save not noted: $(bs "$cv" saves)"
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
+        # (a new save written where the lost one was, the game started over: not the agreed save played on, so held
+        # against the server's, at every sync, never sent over it)
+        was=$(srvmd5 101); { printf "started over"; head -c 500 /dev/zero | tr '\0' w; } > "$OUT/$cv/saves/gba/Down (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1; bs "$cv" sync --saves-only >> "$OUT/romm-$v-gone.log" 2>&1
+        [ "$(srvmd5 101)" = "$was" ] && [ "$(grep -c 'conflict, both kept: saves/gba/Down (USA).srm' "$OUT/romm-$v-gone.log")" = 2 ] ||
+            bad "RomM 5.3.1: a save started over where one was lost went up over the server's: $(cat "$OUT/romm-$v-gone.log")"
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
+        # (one game's save, here a game of a system the server has none of: this RomM has no slots to sync it by alone,
+        # so every save of every system comes down, as after a game before)
+        printf 'gba rom third' > "$LV/gba/Third (USA).gba"; cp "$LV/gba/Third (USA).gba" "$OUT/$cv/roms/gba/"
+        curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/roms?limit=500" >/dev/null
+        curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 103, \"file_name\": \"Third (USA).srm\", \"data\": \"0605040302$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        # (before a game starts, though, nothing: every save isn't worth the wait)
+        echo 'homesync_auto = quit' >> "$OUT/$cv/banana/settings.conf"
+        lists() { curl -s "http://127.0.0.1:$p/test/log" | grep -o 'GET /api/platforms' | wc -l; }
+        n=$(lists)
+        bs "$cv" sync --auto launch --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1
+        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] && bad "RomM 5.3.1: every save synced before a game: $(cat "$OUT/romm-$v-rom.log")"
+        [ "$(lists)" = "$n" ] || bad "RomM 5.3.1: its games listed before a game: $(cat "$OUT/romm-$v-rom.log")"
+        sed -i '/^homesync_auto/d' "$OUT/$cv/banana/settings.conf"
+        # (a game started during a sync of every save: the saves not reached yet stay as they are)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 2}' >/dev/null
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1 & _k=$!; sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/$cv/run/game.pid"; wait $_k; kill $_g; rm "$OUT/$cv/run/game.pid"
+        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] || ! grep -q 'a game started, the rest next time' "$OUT/romm-$v-rom.log" &&
+            bad "RomM 5.3.1: a game started during a sync: $(cat "$OUT/romm-$v-rom.log")"
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1
+        grep -q "RomM 5.3.1: every save synced, not only nds/Elsewhere (USA).nds's" "$OUT/romm-$v-rom.log" &&
+            [ "$(head -c 5 "$OUT/$cv/saves/gba/Third (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0605040302 ] ||
+            bad "RomM 5.3.1: --rom: $(cat "$OUT/romm-$v-rom.log")"
+        # (a game left with the server out of reach: its save waits, and the Wi-Fi's return, with no slot to send it by
+        # alone, syncs every save; nothing waits after)
+        echo 'homesync_auto = quit' >> "$OUT/$cv/banana/settings.conf"
+        { printf "played offline"; head -c 498 /dev/zero | tr '\0' q; } > "$OUT/$cv/saves/gba/Up (USA).srm"
+        sed -i "s|\"server\": \"http://127.0.0.1:$p\"|\"server\": \"http://127.0.0.1:1\"|" "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --rom "gba/Up (USA).gba" > "$OUT/romm-$v-q.log" 2>&1
+        sed -i "s|\"server\": \"http://127.0.0.1:1\"|\"server\": \"http://127.0.0.1:$p\"|" "$OUT/$cv/banana/romsync.json"
+        python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("queue") else 1)' "$OUT/$cv/banana/romsync.json" || bad "RomM 5.3.1: a save not left waiting with the server out of reach: $(cat "$OUT/romm-$v-q.log")"
+        # (the save's upload failing: it waits still, for the next return of Wi-Fi to send)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null
+        bs "$cv" sync --auto wifi > "$OUT/romm-$v-q.log" 2>&1
+        python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("queue") else 1)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a waiting save whose upload failed no longer waits: $(cat "$OUT/romm-$v-q.log")"
+        bs "$cv" sync --auto wifi > "$OUT/romm-$v-q.log" 2>&1
+        srvmd5 102 | grep -q "$(md5sum < "$OUT/$cv/saves/gba/Up (USA).srm" | cut -d' ' -f1)" &&
+            python3 -c 'import json, sys; sys.exit(1 if json.load(open(sys.argv[1])).get("queue") else 0)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a waiting save not sent when Wi-Fi came back, or still waiting: $(cat "$OUT/romm-$v-q.log")"
+        sed -i '/^homesync_auto/d' "$OUT/$cv/banana/settings.conf"
+        rm "$LV/gba/Third (USA).gba"	# (the next RomM's ids as before)
+        # (RomM updated, or downgraded, since the pairing: the name follows the heartbeat)
+        sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --saves-only >/dev/null 2>&1
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "the server's name didn't follow its version: $(bs "$cv" status)"
+        sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" >/dev/null 2>&1
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "--rom: the server's name didn't follow its version: $(bs "$cv" status)" ;;
+    *)
+        [ "$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["slot"])')" = autosave ] || bad "RomM $v taken for an old one: its save not sent to the slot" ;;
+    esac
+done
+
+# (a pairing refused because a sync holds the lock: "error busy" over the menu's "pairing", never over the line the
+# running sync wrote)
+card pb; flock "$OUT/pb/run/sync.lock" sleep 6 & _f=$!; sleep 0.3
+echo 'running 2 9 Saves|Banana Run (USA).srm' > "$OUT/pb/run/sync.status"
+bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'running 2 9 Saves|Banana Run (USA).srm' ] || bad "a pairing refused by a running sync wrote over its line: $r $(st pb)"
+echo pairing > "$OUT/pb/run/sync.status"
+bs pb pair --romm http://127.0.0.1:1 >/dev/null 2>&1
+[ "$(st pb)" = 'error busy' ] || bad "a pairing refused by a running sync didn't say so: $(st pb)"
+pkill -P $_f 2>/dev/null; kill $_f 2>/dev/null; wait $_f 2>/dev/null	# (flock's sleep too: it holds the lock)
+# (a sync asked for by hand as the last one lets go of the lock, as Get games starts its next run on the done line the
+# last wrote before it ended: waits for it and runs, rather than ending at once with the menu's "running 0 0 |" left)
+flock "$OUT/pb/run/sync.lock" sleep 1.5 & _f=$!; sleep 0.3
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+GETALL=0 bs pb sync >/dev/null 2>&1; r=$?
+[ $r != 3 ] && [ "$(st pb)" != 'running 0 0 |' ] || bad "a sync started as the last one ended gave up: $r $(st pb)"
+wait $_f 2>/dev/null
+# (one still running ten seconds on: said over the menu's line; started automatically, it ends at once and says nothing)
+flock "$OUT/pb/run/sync.lock" sleep 13 & _f=$!; sleep 0.3
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+GETALL=0 bs pb sync >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'error busy: another sync is running' ] || bad "a sync refused by a running one didn't say so: $r $(st pb)"
+echo 'running 0 0 |' > "$OUT/pb/run/sync.status"
+bs pb sync --auto wifi >/dev/null 2>&1; r=$?
+[ $r = 3 ] && [ "$(st pb)" = 'running 0 0 |' ] || bad "an automatic sync refused by a running one wrote a line: $r $(st pb)"
+pkill -P $_f 2>/dev/null; kill $_f 2>/dev/null; wait $_f 2>/dev/null
 
 # ---------------------------------------------------------------- RomM on https (#109)
 # behind a certificate of its own making (no CA on the handheld for it): https typed is used as it is, the check
@@ -254,12 +803,104 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     FAKE_ROMM_TLS="$TLS/cert.pem:$TLS/key.pem" python3 "$HERE/tests/fake-romm.py" "$TP" "$L" 2> "$OUT/romm-tls.log" & PIDS="$PIDS $!"
     for i in $(seq 50); do curl -sk "https://127.0.0.1:$TP/api/heartbeat" >/dev/null && break; sleep 0.1; done
     card ta
-    [ "$(bs ta probe "https://127.0.0.1:$TP" | cut -d' ' -f1)" = none ] || bad "https: a certificate of no CA's was taken with Check certificate On"
+    [ "$(bs ta probe "https://127.0.0.1:$TP")" = "none tls" ] || bad "https: a certificate of no CA's was taken with Check certificate On, or not said as the certificate: $(bs ta probe "https://127.0.0.1:$TP")"
+    # (said as the certificate, not the clock, though this card's run has had no time sync: its dates aren't what failed)
+    r=$(bs ta probe --romm "https://127.0.0.1:$TP"); case $r in "fail tls"*) ;; *) bad "https: a certificate of no CA's, before a time sync: $r" ;; esac
+    # one not valid until 2099, as a real one is to a clock the RTC left behind: the clock before a time sync, the
+    # certificate after one (OpenSSL 3.0's req can't date a certificate ahead: ca can)
+    FT=$TLS/future; mkdir -p "$FT/db"; : > "$FT/db/index"; echo 01 > "$FT/db/serial"
+    printf '[ca]\ndefault_ca = d\n[d]\ndatabase = %s\nserial = %s\nnew_certs_dir = %s\ndefault_md = sha256\npolicy = p\n[p]\ncommonName = supplied\n' \
+        "$FT/db/index" "$FT/db/serial" "$FT/db" > "$FT/ca.cnf"
+    if openssl req -new -newkey rsa:2048 -nodes -subj /CN=romm.lan -keyout "$FT/key.pem" -out "$FT/req.pem" >/dev/null 2>&1 &&
+        openssl ca -batch -notext -config "$FT/ca.cnf" -selfsign -keyfile "$FT/key.pem" -in "$FT/req.pem" \
+            -startdate 20990101000000Z -enddate 20991231000000Z -out "$FT/cert.pem" >/dev/null 2>&1; then
+        FP=$(port)
+        FAKE_ROMM_TLS="$FT/cert.pem:$FT/key.pem" python3 "$HERE/tests/fake-romm.py" "$FP" "$L" 2>> "$OUT/romm-tls.log" & PIDS="$PIDS $!"
+        for i in $(seq 50); do curl -sk "https://127.0.0.1:$FP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+        r=$(bs ta probe --romm "https://127.0.0.1:$FP"); case $r in "fail clock"*) ;; *) bad "https: a certificate not valid yet, before a time sync: $r" ;; esac
+        mkdir -p "$OUT/ta/run"; : > "$OUT/ta/run/time-synced"
+        r=$(bs ta probe --romm "https://127.0.0.1:$FP"); case $r in "fail tls"*) ;; *) bad "https: a certificate not valid yet, after a time sync: $r" ;; esac
+        rm -f "$OUT/ta/run/time-synced"
+    else
+        bad "openssl couldn't make a certificate dated ahead"
+    fi
     printf 'homesync_tls = off\n' > "$OUT/ta/banana/settings.conf"
     [ "$(bs ta probe "https://127.0.0.1:$TP")" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "https probe: $(bs ta probe "https://127.0.0.1:$TP")"
     t0=$(date +%s); r=$(bs ta probe "127.0.0.1:$TP"); t1=$(date +%s)
     [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "http to the TLS port: $r"
     [ $((t1 - t0)) -le 3 ] || bad "http to the TLS port took $((t1 - t0)) s"
+    # an address typed with http:// whose server sends everything to https on the same host (a proxy in front): the
+    # https address it names is tried, and kept; a redirect to another host isn't followed there (the other host is
+    # RomM itself under another name, localhost, so a probe that followed it would find a server and say so)
+    RP=$(port)
+    python3 - "$RP" "https://127.0.0.1:$TP" "https://localhost:$TP" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys
+port, to, other = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(301)
+        # (/login...: a proxy's sign-in in RomM's place, on another host with the page asked for as its query, on this
+        # host, and as Cloudflare Access sends it)
+        login = {"/login-away": "https://auth.example.com/?rd=http://127.0.0.1/api/heartbeat", "/login-here": "/oauth2/sign_in?rd=/api/heartbeat",
+                 "/login-cf": "https://team.cloudflareaccess.com/cdn-cgi/access/login/romm.example.com"}.get(self.path.replace("/api/heartbeat", ""))
+        if self.path.startswith("/query"): login = to + "/api/heartbeat?next=%2F"
+        self.send_header("Location", login or (other if self.path.startswith("/other") else to) + self.path.replace("/other", "", 1))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+EOF
+    waitport "$RP" / || true
+    r=$(bs ta probe "http://127.0.0.1:$RP"); [ "$r" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "http:// redirected to https on the same host: $r"
+    r=$(bs ta probe "http://127.0.0.1:$RP/other"); [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "a redirect to another host was followed: $r"
+    # RomM's own form asks the one address and follows nothing: a redirect that still ends at the heartbeat is the same
+    # API elsewhere (the form offers it), one to any other page is something in RomM's place, a login whoever's it is
+    r=$(bs ta probe --romm "http://127.0.0.1:$RP"); [ "$r" = "fail redirect https://127.0.0.1:$TP/api/heartbeat" ] || bad "a redirect to the same API not said as one: $r"
+    # (a query after the heartbeat's path: the address named is the one the form can take, without it)
+    r=$(bs ta probe --romm "http://127.0.0.1:$RP/query"); [ "$r" = "fail redirect https://127.0.0.1:$TP/api/heartbeat" ] || bad "a redirect to the same API with a query not said as its address: $r"
+    for w in away here cf; do
+        r=$(bs ta probe --romm "http://127.0.0.1:$RP/login-$w"); [ "$(echo "$r" | cut -d' ' -f1,2)" = "fail access" ] || bad "a login page in RomM's place ($w) not said as one: $r"
+    done
+    # a pairing whose requests the server sends on elsewhere (its heartbeat answered, every POST redirected): none of
+    # them follows, so neither the pairing code nor anything else reaches the other server
+    RQ=$(port); RR=$(port)
+    python3 - "$RQ" "$RR" "$OUT/redirect-asked.txt" 2>> "$OUT/romm-tls.log" <<'EOF' & PIDS="$PIDS $!"
+import http.server, sys, threading
+front, back, seen = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
+class Front(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = b'{"SYSTEM": {"VERSION": "5.4.1"}}' if self.path == "/api/heartbeat" else b"{}"
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.send_response(307)
+        self.send_header("Location", "http://localhost:%d%s" % (back, self.path))
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+    def log_message(self, *a): pass
+class Back(http.server.BaseHTTPRequestHandler):
+    def answer(self):
+        if self.path != "/":
+            open(seen, "a").write("%s %s\n" % (self.command, self.path))
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.send_response(200)
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"{}")
+    do_GET = do_POST = answer
+    def log_message(self, *a): pass
+threading.Thread(target=http.server.ThreadingHTTPServer(("127.0.0.1", back), Back).serve_forever, daemon=True).start()
+http.server.ThreadingHTTPServer(("127.0.0.1", front), Front).serve_forever()
+EOF
+    waitport "$RQ" /api/heartbeat || bad "the redirecting server for a pairing didn't start"; waitport "$RR" / || bad "its other server didn't start"
+    card tredir
+    bs tredir pair --romm "http://127.0.0.1:$RQ" "ABCD2345" > "$OUT/pair-redirect.log" 2>&1 && bad "a pairing whose requests were redirected elsewhere went through"
+    [ ! -s "$OUT/redirect-asked.txt" ] || bad "a pairing's requests followed a redirect to another server: $(cat "$OUT/redirect-asked.txt")"
+    [ ! -e "$OUT/tredir/banana/romsync.json" ] || bad "a pairing redirected elsewhere left a pairing behind"
     # a bare address: Romhost's 8092 first, https (443) when nothing answers on the http ports. 443 needs its own network
     # namespace (root in there, nobody's port 443 out here)
     if unshare -rn true 2>/dev/null; then
@@ -330,20 +971,633 @@ if [ -x "$HERE/banana-ui" ]; then
     FX=$OUT/fixture; "$HERE/tests/fixture.sh" "$FX" >/dev/null
     printf 'wifi = on\n' >> "$FX/data/settings.conf"
     SL=$OUT/fake-sync.log; : > "$SL"
-    # Settings > Network (the fifth tile) > its last row (Home server) > Server: A looks on the LAN, finds the stand-in's
-    # server and asks for its code (typed: 1, START); then Sync now
+    export BANANA_RUN=$OUT/ui-run; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
+    # Settings > Network (the fifth tile) > its last row (Home server) > Server, not paired: A asks which kind, Romhost
+    # (DOWN, A) looks on the LAN, finds the stand-in's server and asks for its code (typed: 1, START); then Sync now
     BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; shot hs-row; press a; shot hs-page; press a; wait 300; shot hs-code; press a; press start; wait 300; shot hs-paired; press down; shot hs-sync; press b; press b" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; shot hs-row; press a; shot hs-page; press a; shot hs-choose; press down; press a; wait 300; shot hs-code; press a; press start; sleep 300; wait 600; shot hs-paired; press down; shot hs-sync; press b; press b" \
         2> "$OUT/ui.log" || bad "banana-ui (Home server) exited $?"
     grep -q '^discover' "$SL" || bad "the Server row didn't look on the LAN: $(cat "$SL")"
     grep -q 'pair http://192.168.50.96:8092 .' "$SL" || bad "the code wasn't sent to pair: $(cat "$SL")"
     grep -q '"token": "rh1_test"' "$FX/data/romsync.json" 2>/dev/null || bad "no pairing written"
-    for s in hs-row hs-page hs-code hs-paired hs-sync; do
+    # (a pairing turns Auto sync on, Leaving a game, when it is off, and says so)
+    grep -q '^homesync_auto = quit' "$FX/data/settings.conf" || bad "pairing didn't turn Auto sync on: $(grep homesync_auto "$FX/data/settings.conf")"
+    grep -q 'home server: Auto sync on' "$OUT/ui.log" || bad "Auto sync turned on not said: $(grep 'home server' "$OUT/ui.log")"
+    for s in hs-row hs-page hs-choose hs-code hs-paired hs-sync; do
         [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"
     done
     cmp -s "$OUT/ui-hs-row-top.png" "$OUT/ui-hs-page-top.png" && bad "A on Home server didn't open its page"
+    cmp -s "$OUT/ui-hs-paired-top.png" "$OUT/ui-hs-sync-top.png" && bad "Romhost paired: the page's rows weren't made for it (no Sync now under Server)"
+    # (no Romhost on the LAN, and RomM's address typed where Romhost's was asked for: RomM's pairing screen, its code
+    # shown, and paired once it is approved)
+    FXR=$OUT/fixture-rh; "$HERE/tests/fixture.sh" "$FXR" >/dev/null; printf 'wifi = on\n' >> "$FXR/data/settings.conf"; : > "$SL"
+    BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" FAKE_SYNC_FIND=romm "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FXR/roms" --data "$FXR/data" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press a; press down; press a; wait 300; press a; press start; sleep 300; wait 600; shot hs-rhromm; sleep 2600; wait 600" \
+        2> "$OUT/ui-rhromm.log" || bad "banana-ui (RomM where Romhost's address was asked) exited $?"
+    grep -q ' pair --romm http://' "$SL" || bad "RomM where Romhost's address was asked: no RomM pairing: $(cat "$SL")"
+    grep -q '"token": "rmm_test"' "$FXR/data/romsync.json" 2>/dev/null || bad "RomM where Romhost's address was asked: not paired: $(grep 'home server' "$OUT/ui-rhromm.log")"
+    grep -q 'home server: RomM 5.4.1 at http://' "$OUT/ui-rhromm.log" || bad "RomM where Romhost's address was asked: not taken as RomM's form takes it: $(grep 'home server' "$OUT/ui-rhromm.log")"
+    grep -q '^homesync_launch = on' "$FXR/data/settings.conf" || bad "RomM where Romhost's address was asked: Sync before playing not turned on"
+    # Home server > Saves: a game's conflict settled, then a kept copy restored; X deletes nothing
+    : > "$SL"
+    BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press a; wait 300; shot sv-list; press a; wait 100; shot sv-game; press a; wait 300; press down; press down; press x; press x; wait 100; press a; wait 300; shot sv-restored" \
+        2> "$OUT/ui-sv.log" || bad "banana-ui (Saves) exited $?"
+    grep -q "resolve 5/autosave card" "$SL" || bad "Saves: this handheld's not chosen: $(cat "$SL")"
+    [ "$(grep -c "^.* saves" "$SL")" -ge 2 ] || bad "Saves: the list not read again after a choice: $(cat "$SL")"
+    grep -q "restore /v/20261101T100000Z-bb.srm" "$SL" && ! grep -q "drop " "$SL" || bad "Saves: a kept copy not restored, or X deleted one: $(cat "$SL")"
+    cmp -s "$OUT/ui-sv-list-top.png" "$OUT/ui-sv-game-top.png" && bad "Saves: A didn't open a game"
+    # (a game with nothing to choose: every button on it is safe. Two conflicts, the first settled: the next A opens the
+    # list's, never settles the second's. Left during a choice and come back to: no freeze)
+    SAVESCRIPT="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press a; wait 300"
+    uis() { BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" FAKE_SYNC_SAVES=$1 "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$SAVESCRIPT; $2" 2> "$OUT/ui-sv.log" || bad "banana-ui (Saves, $1) exited $?"; }
+    : > "$SL"; uis queued "press a; wait 100; press down; press a; press x; press r; press a; wait 100; press b; wait 100"
+    grep -q "resolve\\|restore\\|drop" "$SL" && bad "Saves: a game with no actions ran: $(cat "$SL")"
+    : > "$SL"; uis two "press a; wait 100; press a; wait 300; press a; wait 300"
+    [ "$(grep -c "resolve 5/autosave card" "$SL")" -ge 1 ] && ! grep -q "resolve 6/autosave" "$SL" || bad "Saves: a settled game's page acted on another: $(cat "$SL")"
+    : > "$SL"; uis twokept "press a; wait 100; press a; wait 300; press a; wait 300"
+    grep -q "restore /v/a.srm" "$SL" && ! grep -q "resolve 6/autosave" "$SL" || bad "Saves: the game open changed under a choice: $(cat "$SL")"
+    : > "$SL"; FAKE_SYNC_RESOLVE=slow uis conflict "press a; wait 100; press a; press b; press b; press a; wait 100; wait 2200; wait 300"
+    grep -q "resolve 5/autosave card" "$SL" || bad "Saves: leaving during a choice: $(cat "$SL")"
+    # (a save held for its format, DraStic's and BananaDS's apart, DraStic's unreadable, or gone here: a line of its own
+    # for each, and A on the first three, which have nothing to choose, runs nothing)
+    for k in format ds unread server; do
+        : > "$SL"; uis $k "press a; wait 100; shot sv-$k; press a; wait 300"
+        [ -s "$OUT/ui-sv-$k-top.png" ] || bad "no screenshot sv-$k"
+        [ $k = server ] || ! grep -q "resolve\\|restore" "$SL" || bad "Saves: a $k note with nothing to choose ran: $(cat "$SL")"
+    done
+    grep -q "resolve 5/autosave server" "$SL" || bad "Saves: a save gone here, the server's not taken: $(cat "$SL")"
+    for p in format:ds format:unread ds:unread unread:server ds:server; do
+        cmp -s "$OUT/ui-sv-${p%:*}-top.png" "$OUT/ui-sv-${p#*:}-top.png" && bad "Saves: two kinds of note shown alike (${p%:*}, ${p#*:})"
+    done
+fi
+# ---------------------------------------------------------------- RomM paired by its address (Network > Home server)
+if [ -x "$HERE/banana-ui" ]; then
+    FX=$OUT/fixture-r; "$HERE/tests/fixture.sh" "$FX" >/dev/null
+    printf 'wifi = on\n' >> "$FX/data/settings.conf"
+    SL=$OUT/fake-sync-r.log
+    export BANANA_RUN=$OUT/ui-run-r
+    HS="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press a"
+    # ur <name> <script> [VAR=value...]: the menu on a card never paired, from the Home server choice page, with the
+    # stand-in; its log in $OUT/ui-<name>.log. UR_SYNC_PID: a sync's pid in sync.pid from the start; UR_STATUS: the
+    # last sync's status line
+    ur() {
+        n=$1 sc=$2; shift 2
+        # (a pairing the case before started and left running, as deny's A asking again does, gone first: it writes
+        # its line seconds later into the same status file, and on a busy machine that landed in the next case, whose
+        # pairing then read "error refused in RomM" as its own)
+        pkill -KILL -f "$HERE/tests/fake-sync.sh" 2>/dev/null; pkill -KILL -f "$OUT/slow-bin/banana-sync" 2>/dev/null
+        : > "$SL"; rm -rf "$BANANA_RUN" "$FX/data/romsync.json"; mkdir -p "$BANANA_RUN"
+        [ -n "${UR_SYNC_PID:-}" ] && echo "$UR_SYNC_PID" > "$BANANA_RUN/sync.pid"
+        [ -n "${UR_STATUS:-}" ] && echo "$UR_STATUS" > "$BANANA_RUN/sync.status"
+        env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$@" "$HERE/banana-ui" --headless "$OUT/ui-" --size ${UR_SIZE:-640x480} --assets "$HERE/assets/rnds" \
+            --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "$HS; $sc" 2> "$OUT/ui-$n.log" || bad "banana-ui (RomM, $n) exited $?"
+    }
+    rlog() { grep -q "$2" "$OUT/ui-$1.log" || bad "RomM ($1): no \"$2\" in the menu's log: $(grep 'home server' "$OUT/ui-$1.log")"; }
+    # RomM, A: the form, on Address; its URL keyboard's https:// key (L, the symbols' first row), the rest typed with a
+    # port and a folder: they go to their rows. START connects: the stand-in's RomM, then its code and QR code, approved
+    # 2 s later; A then goes to Sync now on the paired page, with RomM's rows
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = off\n' >> "$FX/data/settings.conf"
+    ur romm "shot hs-choose-romm; press a; shot hs-form0; press a; press l; press up; shot hs-urlkeys; press a; type romm.example.com:8443/romm; press start; shot hs-form; press start; sleep 400; wait 600; sleep 300; wait 600; shot hs-pair; sleep 2500; wait 600; wait 600; shot hs-paired-r; press a; shot hs-after"
+    grep -q 'probe --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the form's address not asked as one URL: $(cat "$SL")"
+    grep -q 'pair --romm https://romm.example.com:8443/romm$' "$SL" || bad "RomM: the device flow not started at the address checked: $(cat "$SL")"
+    grep -q 'discover' "$SL" && bad "RomM: looked on the LAN for Romhost"
+    # (the URL keyboard's L chip, tapped, opens the address keys as L does: http:// typed from them, over the form's https)
+    ur urlchip "press a; press a; touch 1 345 442; wait 100; shot hs-urlchip; press up; press right; press a; type romm.example.com; press start; press start; sleep 300; wait 300" FAKE_SYNC_PAIR=hang
+    grep -q 'probe --romm http://romm.example.com$' "$SL" || bad "RomM: the L chip's keys didn't type http://: $(cat "$SL")"
+    rlog romm "home server: RomM 5.4.1 at https://romm.example.com:8443/romm"
+    rlog romm "home server: code ABCD-EFGH, approve at https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH"
+    rlog romm "home server: QR code"
+    rlog romm "home server: paired with RomM 5.4.1"
+    rlog romm "home server: Auto sync on (Leaving a game)"
+    grep -q '^homesync_auto = quit' "$FX/data/settings.conf" || bad "RomM: pairing didn't turn Auto sync on: $(grep homesync_auto "$FX/data/settings.conf")"
+    rlog romm "home server: Sync before playing on"
+    grep -q '^homesync_launch = on' "$FX/data/settings.conf" || bad "RomM 5.4: pairing didn't turn Sync before playing on: $(grep homesync_launch "$FX/data/settings.conf")"
+    # (a RomM before 5.4 has no sync before a game: its pairing turns Auto sync on and leaves Sync before playing off)
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = off\n' >> "$FX/data/settings.conf"
+    ur romm-old "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 2500; wait 600; wait 600" FAKE_SYNC_PROBE=old
+    rlog romm-old "home server: paired with RomM 5.3.0"
+    rlog romm-old "home server: Auto sync on (Leaving a game)"
+    grep -q '^homesync_launch = off' "$FX/data/settings.conf" || bad "RomM 5.3: pairing turned Sync before playing on: $(grep homesync_launch "$FX/data/settings.conf")"
+    # (and the game started next, with Sync before playing on, has its sync before it: the setting read from the card at
+    # the game, not as the menu read it before the pairing)
+    sed -i '/^homesync_auto/d; /^homesync_launch/d' "$FX/data/settings.conf"; printf 'homesync_auto = off\nhomesync_launch = on\n' >> "$FX/data/settings.conf"
+    ur romm-launch "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 2500; wait 600; wait 600; press start; wait 300; wifi online; launchpath $FX/roms/gba/Orchard Tactics.gba; sleep 300; wait 100"
+    rlog romm-launch "home server: Auto sync on (Leaving a game)"
+    grep -q 'sync --auto launch --rom' "$SL" || bad "RomM: the game after a pairing had no sync before it: $(cat "$SL")"
+    sed -i '/^homesync_launch/d' "$FX/data/settings.conf"
+    # (Device name, the paired page's row after Systems: typed, renamed in RomM by banana-sync rename, the new name on the row)
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-namerow; press a; press b; press b; press b; press b; press b; type Den DS; press start; sleep 300; wait 600; wait 600; shot hs-renamed" \
+        2> "$OUT/ui-rename.log" || bad "banana-ui (rename) exited $?"
+    grep -q ' rename Den DS$' "$SL" || bad "Device name: no rename asked: $(tail -3 "$SL")"
+    grep -q '"name": "Den DS"' "$FX/data/romsync.json" || bad "Device name: the name not kept: $(cat "$FX/data/romsync.json")"
+    rlog rename "home server: rename ok"
+    for s in hs-namerow hs-renamed; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
+    grep -q '"backend": "romm"' "$FX/data/romsync.json" 2>/dev/null || bad "RomM: no pairing written"
+    for s in hs-choose-romm hs-form0 hs-urlkeys hs-form hs-pair hs-paired-r hs-after; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
+    cmp -s "$OUT/ui-hs-form-bot.png" "$OUT/ui-hs-pair-bot.png" && bad "RomM: the pairing screen shows no QR code"
+    cmp -s "$OUT/ui-hs-pair-top.png" "$OUT/ui-hs-paired-r-top.png" && bad "RomM: the approval not shown"
+    # (the QR code read back, where a reader is at hand: the bottom panel's picture names the approval page)
+    if command -v zbarimg >/dev/null 2>&1; then
+        q=$(zbarimg -q --raw "$OUT/ui-hs-pair-bot.png" 2>/dev/null)
+        [ "$q" = "https://romm.example.com:8443/romm/pair/device?user_code=ABCD-EFGH" ] || bad "RomM: the QR code reads \"$q\""
+    else
+        echo "SKIP sync: the QR code read back (no zbarimg)"
+    fi
+    # (and at 1024x768: the code and QR code as large as that panel allows)
+    UR_SIZE=1024x768 ur romm-l "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; sleep 300; wait 600; shot hs-pair-l; press b; wait 100"
+    [ -s "$OUT/ui-hs-pair-l-bot.png" ] || bad "no screenshot hs-pair-l"
+    # http:// redirected to https://: said, and Y takes the address it went to; then a RomM before 5.4 is said on the
+    # pairing screen, and B cancels the pairing back to the form
+    ur redirect "press a; press up; press right; press down; press a; type romm.example.com; press start; press start; sleep 300; wait 300; shot hs-redirect; press y; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-redirected; press b; wait 100; shot hs-cancelled" FAKE_SYNC_PROBE=redirect FAKE_SYNC_PAIR=hang
+    grep -q 'probe --romm http://romm.example.com$' "$SL" && grep -q 'probe --romm https://romm.example.com$' "$SL" || bad "RomM: the redirect's address not taken: $(cat "$SL")"
+    rlog redirect "home server: no RomM: redirect https://romm.example.com/api/heartbeat"
+    rlog redirect "home server: code ABCD-EFGH"
+    cmp -s "$OUT/ui-hs-redirected-top.png" "$OUT/ui-hs-cancelled-top.png" && bad "RomM: B on the pairing screen didn't go back"
+    # a login page in front of RomM (a proxy's sign-in): said, nothing paired; a pairing code instead (X on the pairing screen)
+    ur access "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; shot hs-access" FAKE_SYNC_PROBE=access
+    rlog access "home server: no RomM: access https://auth.example.com/"
+    grep -q 'pair' "$SL" && bad "RomM: paired past a login page in front of it: $(cat "$SL")"
+    # a sync running (a banana-sync's pid in sync.pid): the pairing says so and isn't started, and B leaves that sync be
+    # (a sleep named banana-sync, in a folder of its own: $BIN, the real one, is used again after)
+    mkdir -p "$OUT/busy-bin"; ln -sf "$(command -v sleep)" "$OUT/busy-bin/banana-sync"; "$OUT/busy-bin/banana-sync" 60 & BP=$!
+    UR_SYNC_PID=$BP ur busy "press a; press a; type romm.example.com; press start; press start; sleep 400; wait 600; shot hs-busy; press b; wait 100"
+    rlog busy "home server: pairing not started: a sync is running"
+    grep -q 'pair --romm' "$SL" && bad "RomM: a pairing started under a running sync: $(cat "$SL")"
+    kill -0 $BP 2>/dev/null || bad "RomM: B on the pairing screen stopped a sync that was running"
+    kill $BP 2>/dev/null; wait $BP 2>/dev/null
+    ur code "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; type ABCD-1234; press start; sleep 300; wait 600; sleep 300; wait 300; shot hs-code-r" FAKE_SYNC_PAIR=hang
+    grep -q "pair --romm https://romm.example.com 'ABCD-1234'\|pair --romm https://romm.example.com ABCD-1234" "$SL" || bad "RomM: the pairing code not sent: $(cat "$SL")"
+    rlog code "home server: paired with RomM 5.4.1"
+    # (X, then nothing typed: back on the pairing still running, its QR code still the way to pair, not stopped)
+    ur codeempty "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press x; press start; wait 300; shot hs-code-empty" FAKE_SYNC_PAIR=hang
+    [ "$(grep -c 'pair --romm' "$SL")" = 1 ] || bad "RomM: X and no code started another pairing: $(cat "$SL")"
+    grep -q '^pair ABCD-EFGH ' "$BANANA_RUN/sync.status" || bad "RomM: X and no code stopped the pairing: $(cat "$BANANA_RUN/sync.status")"
+    pkill -f 'sleep 60' 2>/dev/null
+    # (B on the pairing screen: the Sync now row keeps the last sync's line, not a failure for a sync that never ran;
+    # also for a pairing that takes a moment to end, and one refused in RomM)
+    UR_STATUS="done 1 0 0 0 0 0|" ur cancelst "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; press b; wait 300; sleep 300; wait 300" FAKE_SYNC_PAIR=hang
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: B on the pairing screen left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    UR_STATUS="done 1 0 0 0 0 0|" ur cancelslow "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; press b; wait 100; sleep 1500; wait 300; sleep 300; wait 300" BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_PAIR=slowstop
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: a pairing slow to stop left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    UR_STATUS="done 1 0 0 0 0 0|" ur denyst "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600" FAKE_SYNC_PAIR=deny
+    rlog denyst "home server: pairing failed: refused in RomM"
+    [ "$(cat "$BANANA_RUN/sync.status")" = "done 1 0 0 0 0 0|" ] || bad "RomM: a pairing refused left the Sync now row: $(cat "$BANANA_RUN/sync.status")"
+    unset UR_STATUS	# (an assignment before a function call stays set after it in sh)
+    # refused in RomM: said, A asks again
+    ur deny "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 2500; wait 600; wait 600; shot hs-denied; press a; sleep 300; wait 300" FAKE_SYNC_PAIR=deny
+    rlog deny "home server: pairing failed: refused in RomM"
+    [ "$(grep -c 'pair --romm' "$SL")" -ge 2 ] || bad "RomM: A after a refusal didn't ask again: $(cat "$SL")"
+    # (the pairing's own probe refusing the certificate, the form's having passed: back on the form, where Y shows the
+    # certificate the server gave, A there trusts that one and connects again, and Check certificate stays on; B there
+    # trusts nothing)
+    sed -i '/^homesync_tls/d' "$FX/data/settings.conf"; rm -f "$FX/data/homesync-server.pem"
+    ur pairtls "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; shot hs-pairtls; press y; sleep 300; wait 300; shot hs-cert; press a; sleep 300; wait 300; sleep 300; wait 300" FAKE_SYNC_PAIR=tls
+    rlog pairtls "home server: pairing failed: tls"
+    rlog pairtls "home server: certificate of https://romm.example.com shown (28:8E:52:6F:46:0D:17:FA:E0:2D:6B:60:A9:23:4C:02:87:36:FD:C1)"
+    rlog pairtls "home server: certificate of https://romm.example.com trusted"
+    grep -q '^homesync_tls = off' "$FX/data/settings.conf" && bad "RomM: trusting a certificate turned Check certificate off: $(grep homesync_tls "$FX/data/settings.conf")"
+    [ "$(head -1 "$FX/data/homesync-server.pem" 2>/dev/null)" = "# for https://romm.example.com" ] || bad "RomM: the certificate trusted isn't kept for its server: $(head -1 "$FX/data/homesync-server.pem" 2>&1)"
+    grep -q '^.* cert https://romm.example.com$' "$SL" && grep -q ' trust$' "$SL" || bad "RomM: Y and A on the certificate didn't read and trust it: $(cat "$SL")"
+    [ "$(grep -c 'probe --romm https://romm.example.com$' "$SL")" -ge 2 ] || bad "RomM: trusting the certificate didn't connect again: $(cat "$SL")"
+    rm -f "$FX/data/homesync-server.pem"
+    ur pairtlsno "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; wait 300; press y; sleep 300; wait 300; press b; wait 100; shot hs-cert-left" FAKE_SYNC_PAIR=tls
+    rlog pairtlsno "home server: certificate of https://romm.example.com shown"
+    grep -q ' trust$' "$SL" && bad "RomM: B on the certificate trusted it: $(cat "$SL")"
+    [ ! -e "$FX/data/homesync-server.pem" ] || bad "RomM: B on the certificate kept it"
+    grep -q '^homesync_tls = off' "$FX/data/settings.conf" && bad "RomM: B on the certificate turned Check certificate off"
+    # (a pairing stopped that takes a moment to end, and Connect pressed at once: no wait on the press, the new pairing
+    # started once the old one is gone, not said as a sync running)
+    mkdir -p "$OUT/slow-bin"; ln -sf "$HERE/tests/fake-sync.sh" "$OUT/slow-bin/banana-sync"
+    ur slowstop "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 300; press b; wait 100; press start; sleep 300; wait 300; shot hs-stopping; sleep 1500; wait 300; sleep 300; wait 300" BANANA_SYNC="$OUT/slow-bin/banana-sync" FAKE_SYNC_PAIR=slowstop
+    [ "$(grep -c 'pair --romm' "$SL")" = 2 ] || bad "RomM: a pairing asked for while the stopped one ended wasn't started after it: $(cat "$SL")"
+    grep -q 'pairing not started: a sync is running' "$OUT/ui-slowstop.log" && bad "RomM: the pairing being stopped was said as a sync running"
+    sleep 1; pkill -f "$OUT/slow-bin/banana-sync" 2>/dev/null
+    # (B the moment the pairing starts, before banana-sync has written sync.pid: stopped all the same, not approved
+    # behind the menu's back two seconds later)
+    ur latepid "press a; press a; type romm.example.com; press start; press start; sleep 300; wait 300; sleep 400; press b; wait 100; sleep 2500; wait 100" BANANA_SYNC="$OUT/slow-bin/banana-sync" FAKE_SYNC_PAIR=latepid
+    grep -q 'pair --romm' "$SL" || bad "RomM: B before sync.pid: no pairing started: $(cat "$SL")"
+    [ -e "$FX/data/romsync.json" ] && bad "RomM: a pairing stopped before its sync.pid was written went on and paired"
+    # paired with RomM: Get games (the third row, after Server and Sync now) lists the server's games; A on one on the
+    # card does nothing, A on one that isn't puts it on the download list and starts a sync, A again takes it back
+    pkill -KILL -f "$OUT/slow-bin/banana-sync" 2>/dev/null	# (latepid's pairing, should B have failed to stop it, gone before it pairs this card)
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
+    GL=$FX/data/homesync-get.txt; rm -f "$GL"; : > "$SL"; rm -rf "$BANANA_RUN"; mkdir -p "$BANANA_RUN"
+    # (A on Server, paired with RomM: its form on the paired address, as the row's help says, not the choice of server)
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$HS; wait 100; shot hs-server-romm" 2> "$OUT/ui-server-romm.log" || bad "banana-ui (Server, RomM paired) exited $?"
+    grep -q "home server: RomM's form at https://romm.example.com$" "$OUT/ui-server-romm.log" || bad "Server, RomM paired: not its form on the paired address: $(grep 'home server' "$OUT/ui-server-romm.log")"
+    # (a pairing that names no kind of server is Romhost's, as banana-sync takes it: its rows, Forget the last of them
+    # after Check certificate; Forget, in the background, unpairs)
+    printf '{"server": "http://192.168.50.96:8092", "token": "rh1_test", "serverName": "Test server"}\n' > "$FX/data/romsync.json"
+    env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot hs-nobackend; press a; press a; sleep 300; wait 300" \
+        2> "$OUT/ui-nobackend.log" || bad "banana-ui (no backend) exited $?"
+    grep -q ' forget$' "$SL" || bad "a pairing naming no kind: Forget not the Romhost page's last row, or not run: $(cat "$SL")"
+    grep -q 'home server: forgotten' "$OUT/ui-nobackend.log" || bad "Forget's end not taken: $(grep 'home server' "$OUT/ui-nobackend.log")"
+    [ -e "$FX/data/romsync.json" ] && bad "Forget left the pairing"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1"}\n' > "$FX/data/romsync.json"
+    : > "$SL"
+    ug() { env BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$1" 2> "$OUT/ui-get.log" || bad "banana-ui (Get games) exited $?"; }
+    GET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; shot hs-getrow; press a; sleep 300; wait 300"
+    ug "$GET; shot hs-get0; press a; shot hs-get1; press a; wait 100; press down; press a; sleep 300; wait 1100; shot hs-get2"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" 2>/dev/null || bad "Get games: A didn't put the game on the list: $(cat "$GL" 2>&1)"
+    grep -qx 'gba/Orchard Tactics.gba' "$GL" && bad "Get games: a game on the card was put on the list"
+    grep -q ' sync --games-only$' "$SL" || bad "Get games: no sync of its own started: $(cat "$SL")"
+    for s in hs-getrow hs-get0 hs-get1 hs-get2; do [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"; done
+    cmp -s "$OUT/ui-hs-get0-bot.png" "$OUT/ui-hs-get1-bot.png" && bad "Get games: A didn't open the system"
+    # (a download that failed: Failed on its row, why under its title)
+    printf '# x\ngba/Pocket Hack.gba\tchecksum mismatch\n' > "$FX/data/homesync-get-failed.txt"
+    ug "$GET; press a; press down; sleep 300; wait 1100; shot hs-get-failed"
+    cmp -s "$OUT/ui-hs-get2-top.png" "$OUT/ui-hs-get-failed-top.png" && bad "Get games: a failed download not shown"
+    # (A on it tries it again: still on the list, its failure gone, Get games' own sync started; A then takes it back.
+    # The stand-in's sync started above never says it's done: said here, or the menu rightly starts none beside it)
+    echo 'done 0 0 0 0 0 0|games only' > "$BANANA_RUN/sync.status"
+    : > "$SL"
+    ug "$GET; press a; press down; press a; sleep 300; wait 1100"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: Try again took the game off the list: $(cat "$GL")"
+    grep -q 'Pocket Hack' "$FX/data/homesync-get-failed.txt" 2>/dev/null && bad "Get games: tried again, the game kept its last failure: $(cat "$FX/data/homesync-get-failed.txt")"
+    grep -q ' sync --games-only$' "$SL" || bad "Get games: Try again started no sync: $(cat "$SL")"
+    ug "$GET; press a; press down; press a; sleep 300; wait 1100"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" && bad "Get games: A again didn't take the game back: $(cat "$GL")"
+    rm -f "$FX/data/homesync-get-failed.txt"
+    # (a sync that ends without having taken a game asked for on this visit, or said why: started again, once, the
+    # page left at once for the Home server page)
+    : > "$SL"; rm -f "$BANANA_RUN/sync.status"
+    FAKE_SYNC_DONE=1 ug "$GET; press a; press down; press a; press b; press b; sleep 1500; wait 1100; sleep 1500; wait 1100; sleep 1500; wait 1100"
+    n=$(grep -c ' sync --games-only$' "$SL")
+    [ "$n" = 2 ] || bad "Get games: a sync ending with the game still waiting not started again once ($n syncs): $(cat "$SL")"
+    # (and its line says it was Get games' own, for Sync now's report: the saves weren't looked at)
+    grep -q '^done 0 0 0 0 0 0|games only$' "$BANANA_RUN/sync.status" || bad "Get games: its run's line doesn't say so: $(cat "$BANANA_RUN/sync.status")"
+    : > "$GL"
+    # (a game picked while a sync runs, Settings then closed for the library before that sync ends: the next run still
+    # started, with Settings closed. Its done line written only once the menu says Settings closed)
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Downloading|x' > "$BANANA_RUN/sync.status"
+    ( for i in $(seq 200); do grep -q 'settings closed' "$OUT/ui-get.log" 2>/dev/null && break; sleep 0.1; done; sleep 0.5
+      echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
+    ug "$GET; press a; press down; press a; sleep 300; press b; press b; press b; press b; press b; press b; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
+    wait $_d
+    grep -q 'settings closed' "$OUT/ui-get.log" || bad "Get games, Settings closed: the script didn't close Settings: $(grep 'press b' "$OUT/ui-get.log" | tail -2)"
+    [ "$(grep -c ' sync --games-only$' "$SL")" = 1 ] || bad "Get games: a game picked during a sync, Settings closed: the next run not started: $(cat "$SL")"
+    : > "$GL"
+    # (and Get games left and opened again before that sync ends: the game picked on the first visit still watched for.
+    # The done line written once the page has opened the second time)
+    : > "$SL"; : > "$OUT/ui-get.log"; echo 'running 1 2 Downloading|x' > "$BANANA_RUN/sync.status"
+    ( for i in $(seq 200); do [ "$(grep -c ' games$' "$SL" 2>/dev/null)" -ge 2 ] && break; sleep 0.1; done; sleep 0.5
+      echo 'done 1 0 0 0 0 0|' > "$BANANA_RUN/sync.status" ) & _d=$!
+    ug "$GET; press a; press down; press a; sleep 300; press b; press b; press a; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000"
+    wait $_d
+    [ "$(grep -c ' games$' "$SL")" -ge 2 ] || bad "Get games, opened again: the script didn't open it twice: $(cat "$SL")"
+    [ "$(grep -c ' sync --games-only$' "$SL")" = 1 ] || bad "Get games: a game picked on an earlier visit: the next run not started: $(cat "$SL")"
+    : > "$GL"; rm -f "$BANANA_RUN/sync.status"
+    # (three games picked one after another, as anyone would, with the real banana-sync behind the menu and the RomM
+    # stand-in: Peel Quest first, its download slowed to ten seconds; Banana Run while it comes; Settings closed for the
+    # library, then opened again and Disc Game picked. All three on the card, the list emptied, the last line done, and
+    # never a sync that ended before it started)
+    # (a stand-in and a library of its own: the shared one's games are deleted and changed by the cases before)
+    LE=$OUT/romm-lib-e2e; mkdir -p "$LE/nds" "$LE/gba" "$LE/psx/Disc Game (USA)"
+    head -c 300000 /dev/urandom > "$LE/nds/Peel Quest (USA).nds"
+    head -c 70000 /dev/urandom > "$LE/gba/Banana Run (USA).gba"
+    head -c 5000 /dev/urandom > "$LE/psx/Disc Game (USA)/Disc Game (USA) (Disc 1).bin"
+    printf 'FILE "Disc Game (USA) (Disc 1).bin" BINARY\n' > "$LE/psx/Disc Game (USA)/Disc Game (USA) (Disc 1).cue"
+    PE=$(port); python3 "$HERE/tests/fake-romm.py" "$PE" "$LE" 2> "$OUT/fake-romm-e2e.log" & PIDS="$PIDS $!"
+    waitport "$PE" /api/heartbeat || bad "the e2e RomM stand-in didn't start"
+    UE=http://127.0.0.1:$PE
+    card rce
+    CODE=$(curl -s -XPOST "$UE/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rce pair "$UE" "$CODE" > "$OUT/rce-pair.log" 2>&1 || bad "rce: pairing failed: $(st rce) $(cat "$OUT/rce-pair.log")"
+    bs rce games >/dev/null 2>&1
+    curl -s -XPOST "$UE/test/fault" -d '{"path": "GET /api/roms/.*/content/Peel", "kind": "slow", "arg": 30000, "count": 1}' >/dev/null
+    E_GET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press a; sleep 300; wait 300"
+    # (Settings opened again on the group it was left on, Network: A at once)
+    E_OPEN="press start; press a; press up; press up; press a; press down; press down; press a; sleep 300; wait 300"
+    E_WAIT="sleep 1000"; for i in $(seq 13); do E_WAIT="$E_WAIT; sleep 1000"; done
+    # (the systems: Game Boy Advance, Nintendo DS, PlayStation; a system opens on its first game)
+    E_SCRIPT="$E_GET; press down; press a; press a; sleep 800; wait 100; press b; press up; press a; press a; sleep 800; wait 100"
+    E_SCRIPT="$E_SCRIPT; press b; press b; press b; press b; press b; press b; sleep 1000; $E_OPEN; press down; press down; press a; press a; shot e2e-third; $E_WAIT"
+    env BANANA_SYNC="$BIN" BANANA_RUN="$OUT/rce/run" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$OUT/rce/roms" --data "$OUT/rce/banana" --script "$E_SCRIPT" \
+        2> "$OUT/ui-e2e.log" || bad "banana-ui (Get games, the real banana-sync) exited $?"
+    grep -q 'settings closed' "$OUT/ui-e2e.log" || bad "Get games, three picks: the script didn't close Settings between them"
+    for g in "nds/Peel Quest (USA).nds" "gba/Banana Run (USA).gba"; do [ -e "$OUT/rce/roms/$g" ] || bad "Get games, three picks: $g didn't come: $(cat "$OUT/rce/banana/logs/sync.log" 2>&1)"; done
+    find "$OUT/rce/roms/psx" -name 'Disc Game*' 2>/dev/null | grep -q . || bad "Get games, three picks: Disc Game didn't come: $(cat "$OUT/rce/banana/logs/sync.log" 2>&1)"
+    grep -v '^#' "$OUT/rce/banana/homesync-get.txt" 2>/dev/null | grep -q . && bad "Get games, three picks: games left on the list: $(cat "$OUT/rce/banana/homesync-get.txt")"
+    case $(st rce) in done\ *) ;; *) bad "Get games, three picks: the last line isn't done: $(st rce)" ;; esac
+    grep -q 'ended before it started' "$OUT/ui-e2e.log" && bad "Get games, three picks: a sync ended before it started"
+    # (the pairing made again while a game asked for comes down: the run stops at the file it can't record, the game it
+    # brought has its gamelist entry all the same, being on the card, and the saves aren't looked at with a token the
+    # card no longer holds)
+    card rcs
+    CODE=$(curl -s -XPOST "$UE/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rcs pair "$UE" "$CODE" > "$OUT/rcs-pair.log" 2>&1 || bad "rcs: pairing failed: $(st rcs) $(cat "$OUT/rcs-pair.log")"
+    printf 'gba/Banana Run (USA).gba\n' > "$OUT/rcs/banana/homesync-get.txt"
+    curl -s -XPOST "$UE/test/fault" -d '{"path": "GET /api/roms/.*/content/Banana", "kind": "slow", "arg": 20000, "count": 1}' >/dev/null
+    GETALL=0 bs rcs sync > "$OUT/rcs.log" 2>&1 & RCSP=$!
+    sleep 1; sed -i 's/"token": "[^"]*"/"token": "another"/' "$OUT/rcs/banana/romsync.json"; wait $RCSP
+    grep -q "stopped: what was copied couldn't be recorded" "$OUT/rcs.log" || bad "Get games, the pairing made again under it: the run not stopped: $(cat "$OUT/rcs.log")"
+    [ -s "$OUT/rcs/roms/gba/Banana Run (USA).gba" ] && grep -q 'Banana Run' "$OUT/rcs/roms/gba/gamelist.xml" 2>/dev/null || bad "Get games, stopped: the game it brought has no gamelist entry: $(cat "$OUT/rcs.log")"
+    grep -q 'saves: left alone, the run stopped' "$OUT/rcs.log" || bad "Get games, stopped: the saves were still looked at: $(cat "$OUT/rcs.log")"
+    grep -q '"token": "another"' "$OUT/rcs/banana/romsync.json" || bad "Get games, stopped: the pairing made meanwhile was written over"
+    # (the progress line while games come down counts games, not files: two games of one system with their covers are
+    # four files, by path both ROMs before either cover; the line says game 1 of 2 through the first game's ROM and
+    # cover, by its title, then game 2 of 2. The first cover slowed to a few seconds so its line is seen)
+    LV=$OUT/romm-lib-covers; mkdir -p "$LV/gba" "$LV/covers"
+    head -c 30000 /dev/urandom > "$LV/gba/Banana Run (USA).gba"; head -c 30000 /dev/urandom > "$LV/gba/Orchard Tactics (USA).gba"
+    for i in 101 102; do head -c 4000 /dev/urandom > "$LV/covers/$i.png"; done	# (the stand-in numbers ROMs from 101)
+    PV=$(port); python3 "$HERE/tests/fake-romm.py" "$PV" "$LV" 2> "$OUT/fake-romm-covers.log" & PIDS="$PIDS $!"
+    waitport "$PV" /api/heartbeat || bad "the covers RomM stand-in didn't start"
+    UV=http://127.0.0.1:$PV
+    card rcv
+    CODE=$(curl -s -XPOST "$UV/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+    bs rcv pair "$UV" "$CODE" > "$OUT/rcv-pair.log" 2>&1 || bad "rcv: pairing failed: $(st rcv) $(cat "$OUT/rcv-pair.log")"
+    "$BIN" --root "$OUT/rcv" --run "$OUT/rcv/run" get "gba/Banana Run (USA).gba" "gba/Orchard Tactics (USA).gba" >/dev/null
+    curl -s -XPOST "$UV/test/fault" -d '{"path": "GET /assets/romm/resources/roms/", "kind": "slow", "arg": 1000, "count": 1}' >/dev/null
+    GETALL=0 bs rcv sync --games-only > "$OUT/rcv-sync.log" 2>&1 & _v=$!
+    : > "$OUT/rcv-lines"
+    while kill -0 $_v 2>/dev/null; do st rcv >> "$OUT/rcv-lines"; sleep 0.1; done
+    wait $_v || bad "rcv: the sync bringing two games and their covers failed: $(st rcv) $(cat "$OUT/rcv-sync.log")"
+    grep -q '^running [0-9]* [0-9]* Downloading game 1 of 2|Banana Run.* (cover)$' "$OUT/rcv-lines" || bad "progress: the first game's cover not said as game 1 of 2: $(sort -u "$OUT/rcv-lines")"
+    grep -q '^running [0-9]* [0-9]* Downloading game 2 of 2|Orchard Tactics' "$OUT/rcv-lines" || bad "progress: the second game not said as game 2 of 2: $(sort -u "$OUT/rcv-lines")"
+    grep -q ' of [3-9]|\| Games ' "$OUT/rcv-lines" && bad "progress: the line counted files: $(sort -u "$OUT/rcv-lines")"
+    [ -e "$OUT/rcv/roms/gba/media/box/Orchard Tactics (USA).png" ] || bad "progress: the second cover didn't come: $(cat "$OUT/rcv/banana/logs/sync.log" 2>&1)"
+    # (search, Y: from the systems every system's games, part of a title; B takes it away)
+    ug "$GET; press y; type pock; press start; wait 300; shot hs-get-search; press a; sleep 300; wait 300; press b; press b; wait 100"
+    grep -q 'get games: "pock" finds 1' "$OUT/ui-get.log" || bad "Get games: the search: $(grep 'get games' "$OUT/ui-get.log")"
+    grep -qx 'gba/Pocket Hack.gba' "$GL" || bad "Get games: A on a game found didn't put it on the list: $(cat "$GL" 2>&1)"
+    : > "$GL"	# (the game the search put on the list taken off for the cases after)
+    ug "$GET; press a; press y; type zzz; press start; wait 300; press down; press a; wait 100"
+    grep -q 'get games: "zzz" finds 0' "$OUT/ui-get.log" || bad "Get games: a search finding nothing: $(grep 'get games' "$OUT/ui-get.log")"
+    # (the server's list kept on the card: shown at once with nothing asked of the server, Start asks it once, another
+    # server's isn't shown; X (Refresh) asks it again, from the systems or a system's games)
+    GKF=$FX/data/homesync-server-games.tsv
+    printf '# https://romm.example.com\t%s\ngba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t0\n' "$(($(date +%s) - 7200))" > "$GKF"
+    : > "$SL"
+    ug "$GET; shot hs-get-kept; press a; wait 300; press down; wait 100"
+    grep -q ' games$' "$SL" && bad "Get games: a kept list, yet the server asked: $(cat "$SL")"
+    grep -q "get games: the server's list of 2 games, as kept on the card" "$OUT/ui-get.log" || bad "Get games: the kept list not shown: $(grep 'get games' "$OUT/ui-get.log")"
+    # (on the card as the cards say now, not as the kept list had it: a game kept as there, deleted since, is asked for
+    # by A)
+    printf '# https://romm.example.com\t%s\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t1\ngba\tgba/Orchard Tactics.gba\tOrchard Tactics\t1024\t0\t1\n' "$(($(date +%s) - 7200))" > "$GKF"
+    : > "$GL"; : > "$SL"
+    ug "$GET; press a; wait 300; press a; sleep 300; wait 300"
+    grep -qx 'gba/Kept Only.gba' "$GL" || bad "Get games: a game gone from the card since the list was kept couldn't be asked for: $(cat "$GL")"
+    : > "$GL"
+    : > "$SL"
+    ug "$GET; press x; sleep 300; wait 600; shot hs-get-refreshed; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: X didn't ask the server once: $(cat "$SL")"
+    grep -q 'get games: refreshed, 2 games' "$OUT/ui-get.log" || bad "Get games: X's list not taken: $(grep 'get games' "$OUT/ui-get.log")"
+    : > "$SL"
+    ug "$GET; press a; wait 300; press down; press x; sleep 300; wait 600; shot hs-get-refreshed1; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: X in a system's games didn't ask the server once: $(cat "$SL")"
+    printf '# https://other.example.com\t1\ngba\tgba/Kept Only.gba\tKept Only\t2048\t0\t0\n' > "$GKF"; : > "$SL"
+    ug "$GET; wait 100"
+    [ "$(grep -c ' games$' "$SL")" = 1 ] || bad "Get games: another server's kept list was shown: $(cat "$SL")"
+    rm -f "$GKF"
+    # (saves to settle: counted on Manage saves' row and on Network's Home server row, nothing said with none)
+    NET="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; wait 100"
+    ug "$NET; shot net-settle0; press a; press down; press down; press down; press down; press down; press down; wait 100; shot hs-settle0"
+    cp "$FX/data/romsync.json" "$OUT/romsync-plain.json"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1", "conflicts": {"5/autosave": {"path": "saves/gba/Orchard Tactics.srm", "why": "both changed"}}, "held": {"6/autosave": {"path": "saves/gba/Aaa.srm", "why": "a format this handheld doesn'"'"'t read"}}}\n' > "$FX/data/romsync.json"
+    ug "$NET; shot net-settle1; press a; press down; press down; press down; press down; press down; press down; wait 100; shot hs-settle1"
+    cp "$OUT/romsync-plain.json" "$FX/data/romsync.json"
+    cmp -s "$OUT/ui-net-settle0-bot.png" "$OUT/ui-net-settle1-bot.png" && bad "Network's Home server row: saves to settle not counted"
+    cmp -s "$OUT/ui-hs-settle0-bot.png" "$OUT/ui-hs-settle1-bot.png" && bad "Manage saves' row: saves to settle not counted"
+    # (Save slot, below Device name, on a RomM that keeps slots only: a name typed is the slot's, both settings written and said; one no
+    # slot can have refused, nothing written; emptied, Autosave again)
+    SLOTROW="$NET; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; wait 100"
+    SCF=$FX/data/settings.conf
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.3.1", "serverVersion": "5.3.1"}\n' > "$FX/data/romsync.json"
+    ug "$SLOTROW; shot hs-slot-old"
+    printf '{"backend": "romm", "server": "https://romm.example.com", "token": "rmm_test", "serverName": "RomM 5.4.1", "serverVersion": "5.4.1"}\n' > "$FX/data/romsync.json"
+    ug "$SLOTROW; shot hs-slotrow; press a; type Den Slot; shot hs-slot-entry; press start; wait 100; shot hs-slot-set"
+    cmp -s "$OUT/ui-hs-slot-old-bot.png" "$OUT/ui-hs-slotrow-bot.png" && bad "Save slot: the same rows on a RomM before 5.4"
+    grep -qx 'homesync_slot = custom' "$SCF" && grep -qx 'homesync_slot_name = Den Slot' "$SCF" && grep -q 'home server: save slot Den Slot' "$OUT/ui-get.log" ||
+        bad "Save slot: a name typed not taken: $(grep homesync_slot "$SCF") $(grep 'save slot' "$OUT/ui-get.log")"
+    ug "$SLOTROW; press a; press b; press b; press b; press b; press b; press b; press b; press b; type bad:x; press start; wait 100; shot hs-slot-bad"
+    grep -qx 'homesync_slot_name = Den Slot' "$SCF" && ! grep -q 'home server: save slot' "$OUT/ui-get.log" || bad "Save slot: a name no slot can have taken: $(grep homesync_slot "$SCF")"
+    ug "$SLOTROW; press a; press b; press b; press b; press b; press b; press b; press b; press b; press start; wait 100"
+    grep -qx 'homesync_slot = autosave' "$SCF" && grep -q 'home server: save slot autosave' "$OUT/ui-get.log" || bad "Save slot: emptied, not Autosave again: $(grep homesync_slot "$SCF")"
+    cp "$OUT/romsync-plain.json" "$FX/data/romsync.json"
+    # (Sync now as Wi-Fi comes back, pressed as the lid opens: it waits, and starts once Wi-Fi has an address)
+    HSN="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a"
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; wifi coming; press down; press a; sleep 1000; wait 100; shot hs-wifiwait"
+    grep -q 'home server: the sync waits for Wi-Fi' "$OUT/ui-get.log" || bad "Sync now with Wi-Fi coming back didn't wait: $(grep 'home server' "$OUT/ui-get.log")"
+    grep -q ' sync$' "$SL" && bad "Sync now started before Wi-Fi was back: $(cat "$SL")"
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; wifi coming; press down; press a; sleep 500; wait 100; wifi online; sleep 500; wait 100"
+    grep -q 'home server: the sync starts' "$OUT/ui-get.log" && [ "$(grep -c ' sync$' "$SL")" = 1 ] || bad "Sync now didn't start once Wi-Fi was back: $(cat "$SL")"
+    rm -f "$BANANA_RUN/sync.status"
+    # (a sync started that ends without a word, as banana-sync did on the device when the last run still held the lock:
+    # the row says so at once, not "running" for the 120 s until the stale line is given up on)
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    ug "$HSN; press down; press a; sleep 600; wait 300; sleep 600; wait 300"
+    grep -q 'home server: the sync ended before it started' "$OUT/ui-get.log" && [ "$(cat "$BANANA_RUN/sync.status")" = "error the sync ended before it started" ] \
+        || bad "Sync now: a sync that ended without a word left the row running: $(cat "$BANANA_RUN/sync.status")"
+    # (and Stop on one running before it has written sync.pid: stopped through its group, the row saying so)
+    rm -f "$BANANA_RUN/sync.status"; : > "$SL"
+    FAKE_SYNC_SILENT=1 ug "$HSN; press down; press a; sleep 600; wait 300; press a; sleep 600; wait 300"
+    [ "$(cat "$BANANA_RUN/sync.status")" = "error stopped" ] || bad "Sync now: Stop before sync.pid didn't stop it: $(cat "$BANANA_RUN/sync.status")"
+    pgrep -f "$HERE/tests/fake-sync.sh" >/dev/null && bad "Sync now: Stop before sync.pid left the sync running"
+    pkill -f "$HERE/tests/fake-sync.sh" 2>/dev/null
+    rm -f "$BANANA_RUN/sync.status"
+    # (the game page, X on a game in the library: Save sync, paired with RomM, after the DS rows (DS CPU speed the last), name,
+# sort and art)
+    LC=$FX/data/homesync-local.txt; rm -f "$LC"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; shot pg-sync; press right; wait 300; press b; wait 300"
+    grep -qx 'nds/Banana Kart DS.nds' "$LC" 2>/dev/null || bad "Save sync: the game's line not written: $(cat "$LC" 2>&1)"
+    ug "lib 0 0; press x; wait 300; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press left; wait 300; press b; wait 300"
+    grep -q 'Banana Kart' "$LC" && bad "Save sync on again left the line: $(cat "$LC")"
+    rm -f "$FX/data/romsync.json"
+    unset BANANA_RUN
+fi
+# ---------------------------------------------------------------- the sync before a game
+if [ -x "$HERE/banana-ui" ]; then
+    FX=$OUT/fixture-g; "$HERE/tests/fixture.sh" "$FX" >/dev/null
+    printf 'homesync_auto = quit\nhomesync_launch = on\n' >> "$FX/data/settings.conf"
+    printf '{"backend": "romm", "server": "http://x", "token": "t"}\n' > "$FX/data/romsync.json"
+    ROM="$FX/roms/gba/Orchard Tactics.gba"
+    SL=$OUT/game-sync.log; PX=$OUT/g-; RUNG=${PX}run; mkdir -p "$RUNG"
+    # gs <how> <script>: a run; its log in $UL, what banana-sync was called with in $SL
+    UL=$OUT/g-ui.log
+    gs() {
+        : > "$SL"
+        BANANA_SYNC=${TOOL:-$HERE/tests/fake-sync.sh} FAKE_SYNC_LOG="$SL" FAKE_SYNC_LAUNCH=$1 "$HERE/banana-ui" --headless "$PX" --size 640x480 --assets "$HERE/assets/rnds" \
+            --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; $2" 2> "$UL" || bad "banana-ui (sync before a game) exited $?"
+    }
+    has() { grep -q "$1" "$UL" || bad "$2: no \"$1\": $(grep -a 'sync before\|game starts' "$UL")"; }
+    hasnt() { grep -q "$1" "$UL" && bad "$2: \"$1\": $(grep -a 'sync before\|game starts' "$UL")"; }
+    called() { [ -s "$SL" ] && bad "$1: banana-sync was called: $(cat "$SL")"; }
+    # online and quick: the exact call, the game after it, no pop-up
+    gs answer "wifi online; launchpath $ROM; sleep 300; sleep 100; shot g-quick; wait 100"
+    [ "$(cat "$SL")" = "--run $RUNG sync --auto launch --rom $ROM" ] || bad "the sync before a game's call: $(cat "$SL")"
+    has "sync before the game: done" "a quick sync"; has "game starts: $ROM" "a quick sync"
+    # the first answer never comes: stopped at 5 s, not before; said; then the game
+    gs silent "wifi online; launchpath $ROM; sleep 200; wait 450; shot g-plain; wait 4000; sleep 100"
+    hasnt "no answer" "a server silent for under 5 s"; hasnt "game starts" "a server silent for under 5 s"
+    gs silent "wifi online; launchpath $ROM; sleep 200; wait 500; shot g-sync; wait 4500; shot g-not; sleep 100; wait 1000; wait 600; wait 100"
+    has "sync before the game: no answer" "a silent server"; has "sync before the game: Not synced yet" "a silent server"; has "game starts: $ROM" "a silent server"
+    cmp -s "$OUT/g-g-sync-top.png" "$OUT/g-g-not-top.png" && bad "the notice looks like the wait"
+    # the saves held by another sync (the one after the last game, still placing): waited out, and the server then has
+    # its 5 s for a first answer from there, so no answer at all is said 5 s after the hold, not 5 s into it or at the
+    # cap. (The fake holds them 8 s of real time, and the menu's clock moves with every sleep and wait, a step of the
+    # wait at each: the hold is slept through a second at a time to 5.3 s, each step seeing it, the menu's drawing
+    # between steps costing real time but no clock; one sleep of 3.5 s more is past the hold however slow the drawing;
+    # then 4.9 s and 0.2 s of wait)
+    HOLD="sleep 300; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 3500"
+    gs held "wifi online; launchpath $ROM; $HOLD; wait 1400"
+    hasnt "no answer" "the saves held, then silence, 4.9 s after the hold"; hasnt "game starts" "the saves held, then silence, 4.9 s after the hold"
+    gs held "wifi online; launchpath $ROM; $HOLD; wait 1400; wait 200; wait 1600; wait 100"
+    has "sync before the game: no answer" "the saves held, then silence"; hasnt "stopped at the cap" "the saves held, then silence"; has "game starts: $ROM" "the saves held, then silence"
+    # (held throughout: the cap, 20 s from the wait's start, ends it)
+    gs heldlong "wifi online; launchpath $ROM; sleep 300; wait 19000"
+    hasnt "game starts" "the saves held, at 19.3 s"
+    gs heldlong "wifi online; launchpath $ROM; sleep 300; wait 19000; wait 1000; wait 1600; wait 100"
+    has "sync before the game: no answer" "the saves held past the cap"; has "game starts: $ROM" "the saves held past the cap"
+    # answered, then slow: past 5 s it goes on, the cap at 20 s stops it
+    gs hang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 10000; sleep 100"
+    hasnt "stopped at the cap" "a transfer before the cap"
+    gs hang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 14000; sleep 100; wait 1600; wait 100"
+    has "stopped at the cap" "a transfer at the cap"; has "Not synced yet" "a transfer at the cap"; has "game starts" "a transfer at the cap"
+    # B plays now: during the sync, and during the wait for Wi-Fi
+    gs silent "wifi online; launchpath $ROM; sleep 200; press b; wait 100"
+    has "B, played now" "B while syncing"; has "game starts: $ROM" "B while syncing"; hasnt "Not synced yet" "B while syncing"
+    ls "$RUNG" | grep -q '^sync-' && bad "a stopped sync's files left: $(ls "$RUNG")"
+    gs silent "wifi coming; launchpath $ROM; wait 500; shot g-wifi; press b; wait 100"
+    # (a mark an earlier game's run left says nothing of this one: a B before this sync starts asks nothing)
+    : > "$RUNG/launch.older"
+    gs silent "wifi coming; launchpath $ROM; wait 500; press b; wait 100"
+    hasnt "newer save couldn't be fetched" "a stale mark, B during the wait for Wi-Fi"; has "game starts: $ROM" "a stale mark, B during the wait for Wi-Fi"
+    gs silent "wifi coming; launchpath $ROM; wait 500; shot g-wifi; press b; wait 100"
+    has "B, played now" "B on Wi-Fi"; has "game starts: $ROM" "B on Wi-Fi"; called "B on Wi-Fi"
+    cmp -s "$OUT/g-g-wifi-top.png" "$OUT/g-g-sync-top.png" && bad "the wait for Wi-Fi looks like the sync"
+    # the pop-up leaves with the wait: the menu as it was
+    gs silent "wait 3000; shot g-before; wifi coming; launchpath $ROM; wait 500; press b; wait 100; shot g-after"
+    has "game starts: $ROM" "the wait over"
+    cmp -s "$OUT/g-g-before-top.png" "$OUT/g-g-after-top.png" || bad "the pop-up stayed after the wait"
+    # A on a game in its list, the way a game really starts
+    gs answer "wifi online; lib 1 0; press a; wait 3000; wait 1; sleep 300; wait 100"
+    has "^banana-ui: launch " "A on a game"; has "sync before the game: done" "A on a game"; has "game starts: " "A on a game"
+    # the signs of Wi-Fi coming up not quite meeting: still waiting, and the sync starts when the address comes
+    gs answer "wifi coming; launchpath $ROM; wait 3000; wifi none; wait 3000; wifi online; wait 100; sleep 300; wait 100"
+    has "sync before the game: done" "a gap in Wi-Fi coming up"; hasnt "no Wi-Fi" "a gap in Wi-Fi coming up"
+    # a conflict held for another reason than the two sides (nothing to choose): a notice, which a press ends
+    FAKE_SYNC_SAVES=none gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-conflict; press a; shot g-x"
+    has "game starts: $ROM" "a press on the notice"
+    # a conflict: asked before the game, and it waits for the answer however long that takes. B leaves it held
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 25000; shot g-ask; press y; wait 100"
+    has "asking about a conflict" "a conflict"; hasnt "game starts" "a conflict unanswered"
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "decided later" "a conflict put off"; has "game starts: $ROM" "a conflict put off"; grep -q resolve "$SL" && bad "a conflict put off was settled: $(cat "$SL")"
+    # settled there, then the game
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100"
+    grep -q "resolve 5/autosave card" "$SL" || bad "the prompt's A: $(cat "$SL")"; has "settled" "the prompt's A"; has "game starts: $ROM" "the prompt's A"
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press x; sleep 300; wait 100"
+    grep -q "resolve 5/autosave server" "$SL" || bad "the prompt's X: $(cat "$SL")"
+    # (it can't be settled: asked, the conflict still held: A plays the card's save, B goes back and no game starts)
+    FAKE_SYNC_RESOLVE=fail gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100; shot g-unsettled; press a; wait 100"
+    has "Not settled" "a conflict not settled"; has "not settled" "a conflict not settled"; has "game starts: $ROM" "a conflict not settled"
+    FAKE_SYNC_RESOLVE=fail gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100; press b; wait 100"
+    has "Not settled" "back from a conflict not settled"; has "game not started: $ROM" "back from a conflict not settled"; hasnt "game starts" "back from a conflict not settled"
+    # (a choice runs its course: B does nothing, and the cap ends it, which asks the same)
+    FAKE_SYNC_RESOLVE=hang gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; wait 100; press b; wait 100; wait 20000; sleep 100; wait 1600; wait 100; press a; wait 100"
+    has "Not settled at the cap" "a choice at the cap"; has "game starts: $ROM" "a choice at the cap"; hasnt "played now" "B during a choice"
+    # a save gone or blank here since the last sync, the server's there to take back: asked; A takes it, B plays without
+    FAKE_SYNC_SAVES=server gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-gone; press a; sleep 300; wait 100"
+    grep -q "resolve 5/autosave server" "$SL" || bad "the question of a save gone here, A: $(cat "$SL")"; has "game starts: $ROM" "a save gone here, taken back"
+    FAKE_SYNC_SAVES=server gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "decided later" "a save gone here, played without"; has "game starts: $ROM" "a save gone here, played without"; grep -q resolve "$SL" && bad "a save gone here, B: settled: $(cat "$SL")"
+    # (decided later: asked again at the next launch)
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    [ "$(grep -c 'asking about a conflict' "$UL")" = 2 ] || bad "a conflict put off wasn't asked again: $(grep -a 'sync before' "$UL")"
+    # a newer save still coming at the cap: asked too; and at a B, which doesn't play over it unasked
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 14000; sleep 100; wait 100; press a; wait 100"
+    has "couldn't be fetched" "a stop at the cap with a newer save"; has "game starts: $ROM" "a stop at the cap with a newer save"
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "couldn't be fetched" "B with a newer save coming"; hasnt "game starts" "B with a newer save coming"
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100; press a; wait 100"
+    has "game starts: $ROM" "B with a newer save coming, then A"
+    # a newer save on the server that didn't arrive: asked. A plays the older, B goes back and no game starts
+    gs older "wifi online; launchpath $ROM; sleep 300; wait 100; press a; wait 100"
+    has "played on this handheld's older save" "an older save"; has "game starts: $ROM" "an older save"
+    gs older "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "game not started: $ROM" "back from an older save"; hasnt "game starts" "back from an older save"
+    # no banana-sync: no wait
+    TOOL=$OUT/none gs answer "wifi online; launchpath $ROM; wait 100"
+    has "no banana-sync" "no banana-sync"; has "game starts: $ROM" "no banana-sync"
+    # another game's resume marker left behind: this one still syncs
+    printf '%s\n' "$FX/roms/gba/Other.gba" > "$RUNG/resume-once"
+    gs answer "wifi online; launchpath $ROM; sleep 300; wait 100"
+    has "sync before the game: done" "a stale resume marker"
+    # Wi-Fi: off, nothing; not coming in 8 s, the game; there part way, the sync starts
+    gs answer "wifi none; launchpath $ROM; wait 100"
+    has "no Wi-Fi" "Wi-Fi off"; has "game starts: $ROM" "Wi-Fi off"; called "Wi-Fi off"
+    gs answer "wifi coming; launchpath $ROM; wait 7000; wait 2000; wait 1600; wait 100"
+    has "Not synced yet" "Wi-Fi never came"; has "game starts: $ROM" "Wi-Fi never came"; called "Wi-Fi never came"
+    gs answer "wifi coming; launchpath $ROM; wait 3000; wifi online; wait 100; sleep 300; wait 100"
+    has "sync before the game: done" "Wi-Fi came"
+    # a conflict and a failure are said, and the game starts on the card's save
+    FAKE_SYNC_SAVES=none gs conflict "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
+    has "Save conflict" "a conflict"; has "game starts: $ROM" "a conflict"
+    gs fail "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
+    has "Not synced yet" "a failed sync"
+    # the game started again after a power-off: nothing waits for it
+    printf 'rom=%s\nemulator=x\n' "$ROM" > "$FX/data/resume-boot"
+    gs answer "wifi online; resumeboot; wait 100"
+    has "game starts: $ROM" "the resume launch"; called "the resume launch"
+    # the game's end: the exact call
+    gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"
+    # (its lines to a file of this game end's own, so an earlier game's sync still going isn't read as this one's)
+    [ "$(sed -E 's/gameend-[0-9]+\.status/gameend-N.status/' "$SL")" = "--run $RUNG --report $RUNG/gameend-N.status sync --auto quit --rom $ROM" ] ||
+        bad "the sync after a game's call: $(cat "$SL")"
+    # (not when the game's end is a shutdown: bananad's flag there, as it writes it before it asks the game to quit, or
+    # the game named in resume-boot, and no sync is started under it)
+    : > "$RUNG/powering-off"; gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"; rm -f "$RUNG/powering-off"
+    called "a game's end under a shutdown"
+    printf 'rom=%s\nemulator=x\n' "$ROM" > "$FX/data/resume-boot"; gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"; rm -f "$FX/data/resume-boot"
+    called "a game's end with the game named in resume-boot"
+    # what it did, said in the banner: sent, nothing to send, a conflict, the server out of reach; a slow one says it
+    # is syncing first, and its outcome after
+    for q in sent:"Save synced" same:"Save up to date" conflict:"Save conflict" note:"Save up to date: Orchard Tactics: 1 state from the server" \
+        away:"Save not synced: Orchard Tactics: the server's name wasn't found (no connection yet?); kept to send with the next sync"; do
+        FAKE_SYNC_QUIT=${q%%:*} gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 600; shot ge-${q%%:*}"
+        has "notice: ${q#*:}" "the sync after a game, ${q%%:*}"
+    done
+    FAKE_SYNC_QUIT=slow gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 1200; sleep 300; shot ge-running; sleep 1500; sleep 600"
+    has "notice: Syncing the save: Orchard Tactics" "a slow sync after a game"; has "notice: Save synced: Orchard Tactics" "a slow sync after a game's outcome"
+    # a game whose saves stay here: nothing said; a run gone with its line left: let go, nothing more said
+    FAKE_SYNC_QUIT=local gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 600"
+    hasnt "notice:" "the sync after a game kept here"
+    FAKE_SYNC_QUIT=stuck gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; wait 600"
+    has "the sync said nothing more" "a sync after a game gone"; hasnt "notice:" "a sync after a game gone"
+    # (a line as old from a run still holding save.lock, as a long upload is: watched on, its outcome said)
+    FAKE_SYNC_QUIT=held gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; sleep 2500; wait 600"
+    hasnt "the sync said nothing more" "a long sync after a game"; has "notice: Save synced: Orchard Tactics" "a long sync after a game's outcome"
+    # (two game ends, the first's sync still going at the second: each file gone once its run is over, none left in
+    # /run, which is memory)
+    rm -f "$RUNG"/gameend-*.status
+    FAKE_SYNC_QUIT=held gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300; launchpath $ROM; wait 100; gameend; sleep 300; wait 1200; sleep 2500; wait 600; sleep 2500; wait 600"
+    [ -z "$(ls "$RUNG" | grep '^gameend-')" ] || bad "game ends' status files left: $(ls "$RUNG" | grep '^gameend-' | tr '\n' ' ')"
+    # (a DS game's end: nds-saves told what its saves hold now, --played, beside the sync; not for a GBA game, above)
+    NDSROM="$FX/roms/nds/Peel Quest.nds"
+    BANANA_NDS_SAVES=$HERE/tests/fake-sync.sh gs answer "wifi none; launchpath $NDSROM; wait 100; gameend; sleep 300"
+    grep -qx -- "$NDSROM --played" "$SL" && sed -E 's/gameend-[0-9]+\.status/gameend-N.status/' "$SL" | grep -qxF -- "--run $RUNG --report $RUNG/gameend-N.status sync --auto quit --rom $NDSROM" ||
+        bad "a DS game's end: $(cat "$SL")"
 fi
 [ $fail = 0 ] && echo "banana-sync: all checks passed"
 exit $fail
