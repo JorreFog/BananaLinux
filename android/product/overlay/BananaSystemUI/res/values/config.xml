@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaOS: SystemUI (target: com.android.systemui). The launcher has its own quick menu (Home button held);
+     Android's notification shade stays as the fallback, with only the tiles a handheld uses. The user can still
+     edit them. -->
+<resources>
+    <string name="quick_settings_tiles_default" translatable="false">
+        internet,bt,dnd,rotation,battery
+    </string>
+</resources>

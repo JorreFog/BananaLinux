@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BananaOS: first-boot defaults (target: com.android.providers.settings). They apply to a fresh /data only; a
+     user's own choice in Settings wins afterwards. -->
+<resources>
+    <!-- No lock screen: the handheld wakes straight into the launcher or the game it was in. A PIN or pattern set
+         by the user still applies. -->
+    <bool name="def_lockscreen_disabled">true</bool>
+
+    <!-- Window and transition animations at half length: the menu feels quicker on 120 Hz, nothing is skipped. -->
+    <fraction name="def_window_animation_scale">50%</fraction>
+    <fraction name="def_window_transition_scale">50%</fraction>
+
+    <!-- Screen off after 5 minutes without input (gamepad input counts as user activity). banana-hwd and the
+         launcher handle sleep themselves; this is Android's fallback. -->
+    <integer name="def_screen_off_timeout">300000</integer>
+</resources>

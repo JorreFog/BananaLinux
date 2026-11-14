@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BananaOS on LineageOS for the AYN Thor: the local manifest.
+
+  Copy (or symlink) this file to .repo/local_manifests/banana.xml in a LineageOS 24.0 (Android 17) checkout:
+
+      repo init -u https://github.com/LineageOS/android.git -b lineage-24.0 (plus the git-lfs and
+          no-clone-bundle options; the exact command is in docs/THOR-LINEAGE.md, an XML comment can't hold it)
+      mkdir -p .repo/local_manifests
+      cp <this repository>/android/manifest/banana.xml .repo/local_manifests/
+      repo sync -c -j8
+
+  Everything below is what the product lineage_banana_thor needs on top of LineageOS's own manifest
+  (https://github.com/LineageOS/android, branch lineage-24.0, which already carries hardware/qcom-caf/sm8550/*,
+  device/qcom/sepolicy_vndr/sm8550 and the other CAF repositories these trees use). The remote "github" and the
+  default revision (refs/heads/lineage-24.0) come from LineageOS's default.xml.
+
+  The Thor is an OFFICIAL LineageOS device (codename odin2thor, maintainers AnierinBliss and npjohnson; in
+  LineageOS's build targets as "odin2thor userdebug lineage-24.0 W"). Nothing here is a community fork: the device,
+  common, kernel and hardware trees are LineageOS's own, the proprietary files are TheMuppets' (the vendor
+  repositories LineageOS's own builds use).
+
+  Pins: each tree is pinned to the commit its lineage-24.0 branch pointed at on 2026-11-14 (checked with
+  git ls-remote), so a sync is reproducible. To follow LineageOS, replace a revision with its upstream branch
+  (or a newer commit) and build again; docs/THOR-LINEAGE.md ("Moving the pins") says what to re-check.
+  The Banana project tracks main; pin it to a tag or commit for a release build.
+-->
+<manifest>
+
+  <!-- The Thor's device tree: lineage_odin2thor.mk, BoardConfig, both displays' configuration (display_id_*.xml,
+       device_state_configuration.xml: DUAL_SCREEN / TOP_SCREEN_ONLY / BOTTOM_SCREEN_ONLY), touch idc files, the
+       stick controller's firmware note. Last commit 239aa70 (2026-10-29). -->
+  <project path="device/ayn/odin2thor" name="LineageOS/android_device_ayn_odin2thor" remote="github"
+           revision="239aa7063f9d8c1ecbce620d73fd76bcff6ef408" upstream="lineage-24.0" />
+
+  <!-- What the SM8550 AYN handhelds share (Odin 2, Odin 2 Mini, Odin 2 Portal, Thor): BoardConfigCommon.mk
+       (kernel, partitions, A/B), common.mk (HALs), sepolicy, init scripts. Last commit de86751 (2026-10-31). -->
+  <project path="device/ayn/qcs8550-common" name="LineageOS/android_device_ayn_qcs8550-common" remote="github"
+           revision="de867510c198f2a28ac269d838dde9c2fbc369f8" upstream="lineage-24.0" />
+
+  <!-- AYN's hardware bits: AynParts (stick RGB, stick calibration, gamepad display focus), charger_rgb,
+       recovery_rgb, left_stick_axis_swap, overlays, ueventd rules for /sys/class/moorechip-joystick and the
+       stick LEDs. Last push 2026-11-12. -->
+  <project path="hardware/ayn" name="LineageOS/android_hardware_ayn" remote="github"
+           revision="73eedc7201a9312467ef45df45d7dd18cbd33372" upstream="lineage-24.0" />
+
+  <!-- The kernel: Qualcomm's 5.15 (GKI) kernel for kalama with AYN's ("moorechip") config fragment, its device
+       trees (kalamap-ayn-odin2-thor*.dts) and out-of-tree modules (display, audio, WLAN, ayn-drivers). The kernel
+       and devicetrees branches are the same commit on lineage-23.2 and lineage-24.0. -->
+  <project path="kernel/ayn/qcs8550" name="LineageOS/android_kernel_ayn_qcs8550" remote="github"
+           revision="5646ff2f4a184a5c45e6f57d35668323efa608e3" upstream="lineage-24.0" />
+  <project path="kernel/ayn/qcs8550-devicetrees" name="LineageOS/android_kernel_ayn_qcs8550-devicetrees" remote="github"
+           revision="9b2d195ef5734f2e4089d40119a73c0865e3b6b4" upstream="lineage-24.0" />
+  <project path="kernel/ayn/qcs8550-modules" name="LineageOS/android_kernel_ayn_qcs8550-modules" remote="github"
+           revision="efe02f64a536b04b666109a4e392dfa81e927f08" upstream="lineage-24.0" />
+  <project path="kernel/ayn/common-modules" name="LineageOS/android_kernel_ayn_common-modules" remote="github"
+           revision="8a706e59e3c848b0a9643b69b001c5a579b813a3" upstream="lineage-24.0" />
+
+  <!-- Proprietary files (blobs and the firmware images that go to abl, xbl, tz, modem...), extracted by
+       TheMuppets from AYN's stock build Thor.20260112.215904. The radio/*.img files are stored with Git LFS:
+       git-lfs must be installed before the sync ("repo init ... git-lfs"), or the images are 130-byte pointers
+       and the build fails its sha1 checks. -->
+  <project path="vendor/ayn/odin2thor" name="TheMuppets/proprietary_vendor_ayn_odin2thor" remote="github"
+           revision="556875dec4d0fca8120a123fd094d71585c3a64a" upstream="lineage-24.0" clone-depth="1" />
+  <project path="vendor/ayn/qcs8550-common" name="TheMuppets/proprietary_vendor_ayn_qcs8550-common" remote="github"
+           revision="00fa869649193d74780bb1e3d7810e3406065085" upstream="lineage-24.0" clone-depth="1" />
+
+  <!-- BananaOS itself: the product (vendor/banana/android/product), the launcher, banana-hwd, the emulators.
+       The linkfile hands LineageOS's board hook (build/make/core/board_config.mk does
+       "-include vendor/extra/BoardConfigExtra.mk") Banana's board additions: the daemon's sepolicy directories.
+       It only acts when TARGET_PRODUCT is lineage_banana_thor. If vendor/extra already exists in your tree for
+       something else, drop this linkfile and include vendor/banana/android/product/BoardConfigBanana.mk from
+       your own vendor/extra/BoardConfigExtra.mk. -->
+  <project path="vendor/banana" name="JorreFog/BananaLinux" remote="github" revision="main">
+    <linkfile src="android/product/BoardConfigBanana.mk" dest="vendor/extra/BoardConfigExtra.mk" />
+  </project>
+
+</manifest>
