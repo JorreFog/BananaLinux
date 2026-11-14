@@ -189,10 +189,10 @@ namespace banana
 		// run commands at once instead of in the background (the headless test)
 		void setSync(bool on) { sync = on; }
 
-		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
-		// percent, a title and a line or two, in the bubble style near the bottom of the panel
+		// a notification over the screen being drawn (between the backend's beginScreen and endScreen): a banner across
+		// the top as the toasts' (one look for all of them), its sign in the accent's square, a title and a line or
+		// two. notice: the battery at percent in the square; banner: sign 1 a tick, 2 a cross, 3 an exclamation mark
 		void notice(const std::string& title, const std::string& body, int percent);
-		// a notification's banner at the top (Bshare's): sign 1 a tick, 2 a cross, 3 "!", in the accent's square
 		void banner(const std::string& title, const std::string& body, int sign, uint32_t accent);
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)

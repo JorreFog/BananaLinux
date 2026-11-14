@@ -69,6 +69,9 @@
 #define SYS_pidfd_open 434	// (the toolchain's headers predate it; the handhelds' kernel has it)
 #endif
 #include <sys/inotify.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
 #include <set>
 #include <sys/socket.h>
 #include <linux/netlink.h>
@@ -453,9 +456,10 @@ static void bootMark(const char* what)
 }
 
 // ---- the low-battery notice ---------------------------------------------------------------------------------------
-// At 20% (the LED turns red), 10% and 5% (it blinks), on the battery: a notice over the top panel for 8 s, which any
-// button hides. Each step once, until the charger has been on; a step passed during a game shows when the menu is
-// back. bananad does the shutting down (battery_shutdown_percent); this only says it is coming.
+// At 20% (the LED turns red), 15%, 10%, 5% (it blinks) and each percent below, on the battery (as Android warns): a
+// banner at the top for 5 s, which any button hides. Each step once, until the charger has been on; during a RetroArch
+// game on the game panel, during another game when the menu is back. bananad does the
+// shutting down (battery_shutdown_percent); this only says it is coming.
 struct LowBattery
 {
 	int shownStep = 101, percent = -1;
@@ -472,13 +476,13 @@ struct LowBattery
 			shownStep = 101;
 			return hide(now);
 		}
-		int step = p.percent <= 5 ? 5 : p.percent <= 10 ? 10 : p.percent <= 20 ? 20 : 0;
+		int step = p.percent <= 5 ? std::max(1, p.percent) : p.percent <= 10 ? 10 : p.percent <= 15 ? 15 : p.percent <= 20 ? 20 : 0;
 		if (!step || step >= shownStep) return false;
 		shownStep = step;
 		percent = p.percent;
-		until = now + 8000;
+		until = now + 5000;
 		std::string off = std::to_string(shutdownAt) + "%";
-		if (step == 5)
+		if (step <= 5)
 		{
 			title = "Battery nearly empty: " + std::to_string(percent) + "%";
 			body = "Save your game now. At " + off + " Banana closes it and shuts down.";
@@ -611,6 +615,79 @@ struct FetchNotice
 		accent = st.failed ? 0xffb340 : 0x6fdc87;
 		until = now + 4000;
 		return true;
+	}
+};
+
+// ---- the system's notifications -----------------------------------------------------------------------------------
+// What changed that is worth a word, shown as Bshare's news is (the banner at the top, 4 s, any press hides it): Wi-Fi
+// connected, Bluetooth headphones connected or gone, the flight recorder on. Looked at once a second; a newer one
+// replaces the one showing. Not said: what a sleep does by itself (the Wi-Fi going and coming back within two minutes
+// awake, the headphones' hold through a sleep: bananad's /run/banana/bt/hold).
+struct EventNotice
+{
+	std::string title, body;
+	int sign = 1;			// Settings::banner's
+	uint32_t accent = 0x6ad07a;
+	double until = 0, lookedAt = -1e9, wifiDownAt = -1e9;
+	int recording = -1, wifi = -1, bt = -1;	// (-1: not looked at yet)
+	bool btHeld = false;	// the headphones gone for a sleep: their coming back isn't news
+	bool showing(double now) const { return until > now; }
+	bool hide(double now) { bool was = showing(now); until = 0; return was; }
+	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
+	{
+		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	static std::string address()
+	{
+		std::string a;
+		ifaddrs* ifs = nullptr;
+		if (getifaddrs(&ifs) != 0) return a;
+		for (ifaddrs* i = ifs; i && a.empty(); i = i->ifa_next)
+			if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && i->ifa_name && !strcmp(i->ifa_name, "wlan0"))
+			{
+				char b[INET_ADDRSTRLEN] = "";
+				inet_ntop(AF_INET, &((sockaddr_in*)i->ifa_addr)->sin_addr, b, sizeof b);
+				a = b;
+			}
+		freeifaddrs(ifs);
+		return a;
+	}
+	// true when a new one came
+	bool check(double now)
+	{
+		if (now - lookedAt < 1000) return false;
+		lookedAt = now;
+		bool came = false;
+		int rec = access("/run/banana/recording", F_OK) == 0;
+		if (rec != recording)
+		{
+			if (rec) { show("Flight recorder on", "Hold Select for 2 seconds to mark a moment.", 3, 0xff5a4f, now); came = true; }
+			recording = rec;
+		}
+		std::string op;
+		{ std::ifstream f("/sys/class/net/wlan0/operstate"); std::getline(f, op); }
+		int up = op == "up";
+		if (up != wifi)
+		{
+			if (up && wifi >= 0 && now - wifiDownAt > 120000)
+			{
+				std::string a = address();
+				show("Wi-Fi connected", a.empty() ? "" : "Address " + a, 1, 0x5ac8fa, now);
+				came = true;
+			}
+			if (!up) wifiDownAt = now;
+			wifi = up;
+		}
+		int head = access("/run/banana/bt/audio", F_OK) == 0;
+		if (head != bt)
+		{
+			bool held = access("/run/banana/bt/hold", F_OK) == 0;
+			if (bt >= 0 && head && !btHeld) { show("Bluetooth headphones connected", "The sound plays through them.", 1, 0x5ac8fa, now); came = true; }
+			if (bt >= 0 && !head && !held) { show("Bluetooth headphones disconnected", "The sound is back on the speakers.", 2, 0xffb340, now); came = true; }
+			btHeld = !head && held;
+			bt = head;
+		}
+		return came;
 	}
 };
 
@@ -2297,6 +2374,23 @@ int main(int argc, char** argv)
 	BshareNotice bsNotice;
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, nowMs());	// (the jobs finished before the menu started: not news)
+	EventNotice events;		// Wi-Fi, Bluetooth headphones, the flight recorder
+	int gameNoticeScreen = -1;	// a RetroArch game's panel (gamePanel): the notifications there meanwhile
+	// the notification showing, if any (the battery's first)
+	auto drawNotice = [&](double t)
+	{
+		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
+		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		else if (events.showing(t)) settingsView.banner(events.title, events.body, events.sign, events.accent);
+		else return false;
+		return true;
+	};
+	auto noticeTitle = [&](double t) -> std::string
+	{
+		return low.showing(t) ? low.title : bsNotice.showing(t) ? bsNotice.title : fetchNotice.showing(t) ? fetchNotice.title
+			: events.showing(t) ? events.title : "";
+	};
 	bool fetchDone = false;				// /run/banana/fetch.finished written: a Files job finished
 	// a job of Files' the last menu paused for a game and never let go on (it went away during the game): on again, or
 	// it would hold the sleep (bananad) and the queue until a reboot
@@ -2324,14 +2418,13 @@ int main(int argc, char** argv)
 	};
 	be.overlay = [&](int screen)
 	{
+		if (screen == gameNoticeScreen) { drawNotice(nowMs()); return; }
 		if (screen != 0) return;
 		double t = nowMs();
 		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
 		if (access("/run/banana/recording", F_OK) == 0)
 			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
-		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
-		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
-		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
+		if (drawNotice(t)) {}
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -2430,8 +2523,9 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
-			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
-			if (lowWas || bsWas || fetchWas) dirty = true;
+			double t = nowMs();
+			bool lowWas = low.hide(t), bsWas = bsNotice.hide(t), fetchWas = fetchNotice.hide(t), eventWas = events.hide(t);	// (all hidden, whichever showed)
+			if (lowWas || bsWas || fetchWas || eventWas) dirty = true;
 		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
@@ -2571,12 +2665,14 @@ int main(int argc, char** argv)
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
 		}
+		gameNoticeScreen = panelScreen;	// (the notifications on the panel meanwhile)
 		be.invalidate();
 		bool want = true;
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		bool linkSeen = false, pipeWarned = false;
+		const int offAt = shutdownPercent(o.data);	// (the low-battery notice's: read once a game, not every 100 ms)
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -2607,6 +2703,21 @@ int main(int argc, char** argv)
 						gameComp.feed(rep.data(), rep.size());
 					}
 				}
+			}
+			{
+				// the notifications meanwhile: on the panel, lit
+				bool was = !noticeTitle(t).empty(), came = false;
+				if (low.check(lib.power(), offAt, t) && low.showing(t)) came = true;
+				if (bsNotice.check(t)) came = true;
+				if (events.check(t)) came = true;
+				std::string nt = noticeTitle(t);
+				if (came && !nt.empty())
+				{
+					bottomIdle.activity(t);
+					logf("notice in a game: %s", nt.c_str());
+					recordEvent("notice", "%s", nt.c_str());
+				}
+				if (came || was != !nt.empty()) want = true;
 			}
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2717,6 +2828,7 @@ int main(int argc, char** argv)
 					});
 		}
 		if (pidFd >= 0) ::close(pidFd);
+		gameNoticeScreen = -1;
 		if (gbaHost)
 		{
 			// (before gbaHost goes: the panel's pages let go of it; the Session saves the journey as it stops)
@@ -3301,15 +3413,16 @@ int main(int argc, char** argv)
 			if (low.check(lib.power(), shutdownPercent(o.data), now))
 			{
 				dirty = true;
-				if (low.showing(now)) recordEvent("notice", "%s", low.title.c_str());
+				if (low.showing(now)) { recordEvent("notice", "%s", low.title.c_str()); sound.play("notify"); }
 			}
 		}
-		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
+		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; sound.play("notify"); }
+		if (events.check(now)) { logf("notice: %s", events.title.c_str()); recordEvent("notice", "%s", events.title.c_str()); dirty = true; sound.play("notify"); }
 		if (fetchDone)
 		{
 			fetchDone = false;
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			if (fetchNotice.check(o.data, now)) { logf("notice: %s", fetchNotice.title.c_str()); settingsView.offerSd2Roms(); dirty = true; }
+			if (fetchNotice.check(o.data, now)) { logf("notice: %s", fetchNotice.title.c_str()); settingsView.offerSd2Roms(); dirty = true; sound.play("notify"); }
 		}
 
 		bool want;
@@ -3389,6 +3502,11 @@ int main(int argc, char** argv)
 		if (fetchNotice.showing(now))
 		{
 			int left = (int)(fetchNotice.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (events.showing(now))
+		{
+			int left = (int)(events.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		{

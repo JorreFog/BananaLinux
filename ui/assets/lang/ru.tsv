@@ -1532,6 +1532,13 @@ settings		Looking... Open LocalSend on the other device.	Поиск… Откр�
 settings		An empty folder.	Пустая папка.
 settings		Games go into their system's folder, everything else into banana/received.	Игры попадают в папку своей системы, всё остальное — в banana/received.
 menu		Open Bshare to accept.	Откройте Bshare, чтобы принять.
+menu		Flight recorder on	Бортовой самописец включён
+menu		Hold Select for 2 seconds to mark a moment.	Удерживайте Select 2 секунды, чтобы отметить момент.
+menu		Wi-Fi connected	Wi-Fi подключён
+menu		Bluetooth headphones connected	Bluetooth-наушники подключены
+menu		The sound plays through them.	Звук идёт через них.
+menu		Bluetooth headphones disconnected	Bluetooth-наушники отключены
+menu		The sound is back on the speakers.	Звук снова идёт через динамики.
 menu		In banana/received.	В banana/received.
 menu		Games went into their system's folder.	Игры помещены в папки своих систем.
 menu		Nothing was sent.	Ничего не отправлено.
