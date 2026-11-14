@@ -9,9 +9,18 @@ setting() {
     [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
-# own <key>: the system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+PGROM=$2
+# pg <name>: this game's own value (X on the game in the library > its rows: banana/ra-per-game-<name>.conf, a line
+# "<system>/<ROM file name> = <value>", the last one for it counts), else nothing
+pg() {
+    [ -n "$BANANA_SYSTEM" ] && [ -f /data/banana/ra-per-game-$1.conf ] || return 0
+    awk -v k="$BANANA_SYSTEM/${PGROM##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' /data/banana/ra-per-game-$1.conf
+}
+# own <key>: this game's own value, else the system's (Settings > Other systems > the system: <key>.<system>), else the
+# general one
 own() {
-    o=; [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM")
+    o=$(pg "${1#ra_}")
+    [ -n "$o" ] || { [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM"); }
     [ -n "$o" ] || o=$(setting "$1")
     printf '%s' "$o"
 }
@@ -28,7 +37,7 @@ n64|psx|"") ;;
     retroarch) bf=0 ;;
     *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac
         # BananaSNES (Settings > Other systems > Super Nintendo > Emulator) is made for BananaFront: chosen, it runs there in Auto too
-        [ "$BANANA_SYSTEM" = snes ] && [ "$(setting core.snes)" = bananasnes ] && bf=1
+        [ "$BANANA_SYSTEM" = snes ] && { c=$(pg core); [ -n "$c" ] || c=$(setting core.snes); [ "$c" = bananasnes ]; } && bf=1
         # (RetroAchievements in Hardcore: RetroArch, which retroachievements.org knows; an unknown client's hardcore
         # unlocks are only accepted with its warning)
         grep -q '^cheevos_hardcore_mode_enable = "true"' /data/retroarch/retroarch.cfg 2>/dev/null && bf=0 ;;
@@ -42,7 +51,8 @@ esac
 # installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
 # with RetroArch's Core Downloader; one not installed is ignored
 if [ -n "$BANANA_SYSTEM" ]; then
-    c=$(setting "core.$BANANA_SYSTEM")
+    # (this game's own first: X on the game > Emulator)
+    c=$(pg core); [ -n "$c" ] || c=$(setting "core.$BANANA_SYSTEM")
     # (the image's cores, then the ones RetroArch's Core Downloader put on the card)
     for d in /usr/lib/libretro /data/retroarch/cores; do
         [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
@@ -50,7 +60,7 @@ if [ -n "$BANANA_SYSTEM" ]; then
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 # the system page's looks that are the core's own options (Colour correction, Game Boy palette): into its options file
-[ -n "$BANANA_SYSTEM" ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE"
+[ -n "$BANANA_SYSTEM" ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE" "$2"
 # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
 c=${CORE##*/}; c=${c%_libretro.so}
 [ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
@@ -426,7 +436,7 @@ MON=$(sed -n '/^video_monitor_index = "\([0-9]\)"/{s//\1/;h};${x;p}' $CFG)
 # the screen this system's games play on (Settings > Other systems > the system > Screen, ra_screen.<system>), else the
 # general one (Other systems > Screen, retroarch.cfg's). With the game panel banana-ui lent the right one already
 SMON=${MON:-2}
-case $BANANA_SYSTEM in ?*) case $(setting "ra_screen.$BANANA_SYSTEM") in top) SMON=2 ;; bottom) SMON=1 ;; esac ;; esac
+case $BANANA_SYSTEM in ?*) case $(own ra_screen) in top) SMON=2 ;; bottom) SMON=1 ;; esac ;; esac
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the game panel (banana-ui keeps the other panel): RetroArch draws on the panel it was lent (a DRM lease, its
     # only connector, so monitor 1, through banana-leaseshim.so), takes banana-ui's tiles as commands on its stdin,

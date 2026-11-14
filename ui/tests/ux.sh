@@ -257,6 +257,12 @@ ux_head() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 
 for s in sd-page hotkeys-sd-back ds-row sd-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
 [ "$(ux_diff "$OUT/$size-ux-sd-page-head.png" "$OUT/$size-ux-hotkeys-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic's hotkeys wasn't back on its Hotkeys row"; fail=1; }
 [ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Emulator configurations"; fail=1; }
+# X on a GBA game: its system page's rows for this game only, each "Same as system" first, under Achievements. Screen is the first (no core
+# installed here, so no Emulator row): Right twice keeps "bottom" for this game in banana/ra-per-game-screen.conf,
+# as "gba/<ROM file name> = bottom" (what run-retroarch's pg and the menu's game start read)
+ux_run pg-ra "homeid gba; wait 2400; press a; wait 2400; press x; press down; press right; press right"
+grep -q '^gba/[^/]*\.gba = bottom$' "$UXFX/data/ra-per-game-screen.conf" 2>/dev/null || { echo "FAIL $size: a GBA game's own Screen wasn't kept: $(cat "$UXFX/data/ra-per-game-screen.conf" 2>/dev/null)"; fail=1; }
+rm -f "$UXFX/data/ra-per-game-screen.conf"
 # Other systems > Picture & sound opens its page (Shader first), B back on its row
 ux_run ra-picture "home 0; press start; row Other systems ra_picture; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
 for s in ra-row ra-picture ra-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done

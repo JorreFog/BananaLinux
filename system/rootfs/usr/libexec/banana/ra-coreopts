@@ -1,11 +1,12 @@
 #!/bin/sh
-# ra-coreopts <system> <core .so>: a system's page's looks that are its emulator's own options (Settings > Other
+# ra-coreopts <system> <core .so> [<ROM>]: a system's page's looks that are its emulator's own options (Settings > Other
 # systems > Per system configurations > the system: Colour correction, Game Boy palette), written into the core's
 # options file (RetroArch's config/<core>/<core>.opt, which BananaFront reads too) before the game starts.
 #   ra_colour.<system>      on / off       the screen's colours as the handheld's LCD showed them (GBA, GBC)
 #   ra_gb_palette.<system>  grey / green / pocket / gbc / sgb     an original Game Boy game's colours (Game Boy)
 # No line: the emulator's own (what its options say). A value Banana wrote is remembered (/data/banana/.ra-coreopts:
-# "<file> <key> <value>"): set back to the emulator's own, the line is taken out again, unless it was changed in
+# "<file> <key> <value>"). A game's own (X on it: banana/ra-per-game-colour.conf, ra-per-game-gb_palette.conf,
+# "<system>/<ROM file name> = <value>") comes first. Set back to the emulator's own, the line is taken out again, unless it was changed in
 # RetroArch's menu since. A core with no such option (or not one of these) is left alone.
 SYS=$1
 c=${2##*/}; c=${c%_libretro.so}
@@ -52,8 +53,14 @@ mark() {
 # GBC mGBA's: one system's choice isn't another's "emulator's own")
 COL=0; PAL=0
 case $SYS in gba|gbc) COL=1 ;; gb) PAL=1 ;; esac
-col=$(setting "ra_colour.$SYS")
-pal=$(setting "ra_gb_palette.$SYS")
+# the game's own, else the system's
+pg() {
+    [ -n "$ROM" ] && [ -f /data/banana/ra-per-game-$1.conf ] || return 0
+    awk -v k="$SYS/${ROM##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' /data/banana/ra-per-game-$1.conf
+}
+ROM=$3
+col=$(pg colour); [ -n "$col" ] || col=$(setting "ra_colour.$SYS")
+pal=$(pg gb_palette); [ -n "$pal" ] || pal=$(setting "ra_gb_palette.$SYS")
 # colour <folder> <key> <on value> <off value>
 colour() {
     [ $COL = 1 ] || return 0

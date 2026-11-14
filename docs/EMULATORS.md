@@ -130,6 +130,14 @@ palette** (Game Boy: `ra_gb_palette.gb`: grey, green, pocket, gbc, sgb) are the 
 too) for gpSP, mGBA and BananaGBA, Gambatte, Gearboy and VBA-M. "Emulator's own" takes Banana's line out again, unless
 it was changed in RetroArch's menu since (`banana/.ra-coreopts` remembers what Banana wrote).
 
+**Per game configurations**: X on another system's game (its game page) has its system page's rows for that game only
+(Emulator, Screen, Second screen, Shader, Screen border, Picture size, and Colour correction or Game Boy palette where
+its system has them), each **Same as system** at first, showing what the system has now. A game's choice is a line in
+`banana/ra-per-game-<row>.conf` (`core`, `screen`, `panel`, `shader`, `border`, `scale`, `colour`, `gb_palette`):
+`<system>/<ROM file name> = <value>`, as the DS games' `nds-per-game*.conf`. The launchers' `own` (and `pg`),
+`ra-coreopts`, `run-ps1` and banana-ui's game start look for the game's line first, then the system's, then the
+general one. The buttons stay per system.
+
 The other systems have their buttons too, on each system's page (Settings > Other systems > Per system configurations > the system; `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
 R2, L3 or R3 pressed alone does a job of RetroArch's instead of the game's button (fast-forward on and off, save or
 load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by default). RetroArch's own hotkeys only work

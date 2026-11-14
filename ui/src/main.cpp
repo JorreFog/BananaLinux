@@ -2838,9 +2838,18 @@ int main(int argc, char** argv)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		// a system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+		// this game's own value (X on it: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>", as
+		// run-retroarch's pg), else the system's (Settings > Other systems > the system: <key>.<system>), else the general one
 		auto own = [&](const std::string& key) -> std::string
 		{
+			{
+				const std::string name = key == "retroarch_panel" ? "panel" : key.rfind("ra_", 0) == 0 ? key.substr(3) : key;
+				const std::string want = sd.id + "/" + rom.substr(rom.rfind('/') + 1) + " = ";
+				std::ifstream f(o.data + "/ra-per-game-" + name + ".conf");
+				std::string ln, v;
+				while (std::getline(f, ln)) if (ln.compare(0, want.size(), want) == 0) v = ln.substr(want.size());
+				if (!v.empty()) return v;
+			}
 			auto i = settings.find(key + "." + sd.id);
 			if (i != settings.end() && !i->second.empty()) return i->second;
 			i = settings.find(key);

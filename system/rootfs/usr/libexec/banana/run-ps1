@@ -69,7 +69,10 @@ setting() {
     [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
-SC=$(setting ra_scale.psx); [ -n "$SC" ] || SC=$(setting ra_scale)
+# (this game's own first: X on the game > Picture size, banana/ra-per-game-scale.conf)
+SC=
+[ -f /data/banana/ra-per-game-scale.conf ] && SC=$(awk -v k="psx/${1##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' /data/banana/ra-per-game-scale.conf)
+[ -n "$SC" ] || SC=$(setting ra_scale.psx); [ -n "$SC" ] || SC=$(setting ra_scale)
 SM=/data/banana/.ra-ps1-scale
 case $SC in fit|integer|full) ;; *) SC= ;; esac
 if [ "$SC" != "$(cat $SM 2>/dev/null)" ]; then

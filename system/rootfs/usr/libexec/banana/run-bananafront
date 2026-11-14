@@ -12,22 +12,31 @@ setting() {
     [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
-# own <key>: the system's own value (Settings > Other systems > the system: <key>.<system>), else the general one
+PGROM=$2
+# pg <name>: this game's own value (X on the game in the library > its rows: banana/ra-per-game-<name>.conf, a line
+# "<system>/<ROM file name> = <value>", the last one for it counts), else nothing
+pg() {
+    [ -n "$BANANA_SYSTEM" ] && [ -f /data/banana/ra-per-game-$1.conf ] || return 0
+    awk -v k="$BANANA_SYSTEM/${PGROM##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' /data/banana/ra-per-game-$1.conf
+}
+# own <key>: this game's own value, else the system's (Settings > Other systems > the system: <key>.<system>), else the
+# general one
 own() {
-    o=; [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM")
+    o=$(pg "${1#ra_}")
+    [ -n "$o" ] || { [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM"); }
     [ -n "$o" ] || o=$(setting "$1")
     printf '%s' "$o"
 }
 # the core Settings > Other systems picked for the system (as run-retroarch: the image's, then the card's)
 if [ -n "$BANANA_SYSTEM" ] && [ "${1#/}" = "$1" ]; then
-    c=$(setting "core.$BANANA_SYSTEM")
+    c=$(pg core); [ -n "$c" ] || c=$(setting "core.$BANANA_SYSTEM")
     for d in /usr/lib/libretro /data/retroarch/cores; do
         [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
     done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 # the system page's looks that are the core's own options (Colour correction, Game Boy palette), as run-retroarch
-[ -n "$BANANA_SYSTEM" ] && [ -x /usr/libexec/banana/ra-coreopts ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE"
+[ -n "$BANANA_SYSTEM" ] && [ -x /usr/libexec/banana/ra-coreopts ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE" "$ROM"
 CFG=/data/retroarch/retroarch.cfg
 ra_cfg() { sed -n "/^$1 = \"\(.*\)\"/{s//\1/;h};\${x;p}" $CFG 2>/dev/null; }
 mkdir -p /data/saves /data/states /data/screenshots
@@ -151,7 +160,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
 fi
 MON=$(ra_cfg video_monitor_index)
 # (or the system's own screen, ra_screen.<system>)
-case $BANANA_SYSTEM in ?*) case $(setting "ra_screen.$BANANA_SYSTEM") in top) MON=2 ;; bottom) MON=1 ;; esac ;; esac
+case $BANANA_SYSTEM in ?*) case $(own ra_screen) in top) MON=2 ;; bottom) MON=1 ;; esac ;; esac
 . /usr/libexec/banana/one-panel
 case ${MON:-2} in 2) one_panel_dark top; S=top ;; *) one_panel_dark bottom; S=bottom ;; esac
 # commands on stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), as run-retroarch has them
