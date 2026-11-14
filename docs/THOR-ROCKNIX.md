@@ -364,7 +364,7 @@ in `es_features.cfg`).
 
 | # | What | How | Status |
 |---|---|---|---|
-| 2.1 | BananaDS | `bananads-sa`: its SDL frontend with a two-window mode, pads through SDL (InputPlumber's), the stylus a touch on the bottom window (patch 0001); melonDS from ROCKNIX's `melonds-sa` source, the same commit. The game page's 3D resolution. Its KMS frontend (in-game menu, the DS companion overlay) needs DRM master, which sway holds | done (SDL route); `rocknix/tests/bananads-sway.sh` runs it under sway |
+| 2.1 | BananaDS | `bananads-sa`: its SDL frontend with a two-window mode, pads through SDL (InputPlumber's), the stylus a touch on the bottom window (patch 0001); melonDS from ROCKNIX's `melonds-sa` source, the same commit. The game page's 3D resolution. Its KMS frontend (in-game menu, the DS companion overlay) needs DRM master, which sway holds | done (SDL route); built and run on x86 (2026-11-14): patch 0001 and BananaDS's 75 melonDS patches apply to the pins, `rocknix/tests/bananads-sway.sh` passes (each window full screen on its own output at the Thor's sizes, the picture the same as the headless frontend's). Not yet built for aarch64 with ROCKNIX's toolchain |
 | 2.2 | SuperDrastic with DraStic | Reuse ROCKNIX's `drastic-sa`, already DraStic under sway. SuperDrastic is DraStic drawn onto the RG DS's panels through KMS; there is nothing for it to add under a compositor | ROCKNIX's DraStic |
 | 2.3 | BananaFront | `bananafront-sa`: an SDL display backend (`video_sdl.c`, `make sdl`; patch 0001), cores named `bananafront-<core>` so `runemu.sh` starts `start_bananafront.sh` | done; run under sway by hand |
 | 2.4 | BananaGBA, BananaNES, BananaSNES | `*-lr` RetroArch cores beside ROCKNIX's (no RG DS profile-guided optimisation: other CPU, other GCC) | done |
