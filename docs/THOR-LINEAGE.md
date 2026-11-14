@@ -378,3 +378,37 @@ On a new LineageOS major version, also re-check:
   [AYNTechnologies/u-boot](https://github.com/AYNTechnologies/u-boot).
 - **This repository.** `docs/THOR-PORT.md`, `buildroot/board/thor/openabl-README.txt`,
   `system/rootfs/etc/banana/hw/thor.conf`.
+
+## A prompt for an AI agent on your PC
+
+Paste this into Claude Code (or another coding agent) on a Linux PC with about 300 GB free and 32 GB RAM or more:
+
+```text
+Build the stripped LineageOS for the AYN Thor with BananaOS's launcher, up to a flashable build. Do not flash it.
+
+Setup
+- Repository: https://github.com/JorreFog/BananaLinux, branch claude/pensive-rubin-cy7ro4. Read docs/THOR-LINEAGE.md
+  (this guide), docs/THOR-LINEAGE-PARITY.md, android/launcher/README.md, android/system/hwd/PROTOCOL.md first.
+- Check the machine: Linux x86_64, ~300 GB free, 32 GB+ RAM, git-lfs installed. If it falls short, stop and say so.
+- Build the launcher APK as android/launcher/README.md says and put the release APK at
+  android/launcher/prebuilt/BananaLauncher.apk. Run android/system/emulators/fetch.sh for the emulator APKs.
+- Follow this guide's steps exactly: repo init on the LineageOS branch it names, the local manifest
+  android/manifest/banana.xml, sync, then `breakfast banana_thor` and `m bacon`, in the background, checking on it.
+
+When it fails
+- Fix the cause in this repository (android/product, android/system, android/launcher, android/manifest), never
+  only inside the LineageOS tree. Keep the pinned device, kernel and vendor revisions unless one truly can't build,
+  and then say why.
+- Don't get green by removing BananaOS's pieces (BananaLauncher, banana-hwd, banana_emulators) or the strip lists'
+  reasons; if a strip removal breaks the build, move it to the aggressive list with a note.
+
+Git
+- Commit each fix separately on the branch with a message saying what failed and why the change fixes it. No AI or
+  model names in commits or files. Push only to claude/pensive-rubin-cy7ro4.
+
+Report back when it finishes or is stuck
+- Whether the image exists, its path and size.
+- Each failure: package, the error, the fix, the commit.
+- Anything removed or disabled, anything still failing, total build time.
+- What was not verified. A finished image has only been compiled, never booted.
+```

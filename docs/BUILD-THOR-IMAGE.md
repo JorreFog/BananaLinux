@@ -227,3 +227,47 @@ Before pushing a fix, run this repository's checks: `make test` (or at least `sh
 which turns what the handheld reports into fixes. The menu's log is
 `/storage/.config/banana-data/banana/logs/banana-ui.log`; its service is `bananasway` (`journalctl -u bananasway`).
 Known gap: the boot animation has no artwork for the Thor's screen shapes yet, so the menu starts without it.
+
+## A prompt for an AI agent on your PC (route A)
+
+Paste this into Claude Code (or another coding agent) on a Linux PC with about 120 GB free, started in the folder
+where the checkout should go:
+
+```text
+Build the AYN Thor SD card image for BananaOS on this machine and get it to a finished image file.
+
+Setup
+- Repository: https://github.com/JorreFog/BananaLinux, branch claude/pensive-rubin-cy7ro4. Clone it if it isn't
+  here, and check out that branch.
+- Read docs/BUILD-THOR-IMAGE.md section A first, then docs/THOR-EMULATORS.md ("Build state") and
+  .claude/skills/banana-board-port.
+- Check this machine first: Linux x86_64, at least 100 GB free, 16 GB RAM or more. Install the host packages the
+  guide lists. If disk or RAM falls short, stop and say so instead of starting.
+
+The build
+- Run `make thor 2>&1 | tee thor-build.log` from the repo root, in the background, checking on it. It resumes
+  after a failure; never delete output/thor between attempts.
+- Done means output/thor/images/banana-thor.img.gz exists. Do not flash anything or touch any SD card or disk.
+
+When it fails
+- Find the first real error in the log and fix the cause in the repository's recipe (buildroot/package/<name>/,
+  buildroot/configs/banana_thor_defconfig, buildroot/board/thor/, buildroot/buildroot-patches/), never only in
+  output/ or .buildroot/.
+- Buildroot applies patches with no fuzz: regenerate a patch from the real source rather than hand-editing hunks.
+- Retry one package with `make <package>-dirclean-thor && make <package>-thor`, then continue with `make thor`.
+- Don't get green by removing things (no dropping packages, disabling features, or changing pinned versions or
+  checksums just to pass); if something truly can't build, say which and why. Keep the compiler's CPU setting
+  (cortex-a710 without SVE, buildroot/external.mk).
+- If WebKit or Dolphin runs out of memory, lower the parallel jobs rather than changing the package.
+- After three different failed attempts on one package, move on if the build can continue without it, and report it.
+
+Git
+- Commit each fix separately on the branch with a message saying what failed and why the change fixes it. No AI or
+  model names in commits or files. Push only to claude/pensive-rubin-cy7ro4.
+
+Report back when it finishes or is stuck
+- Whether the image exists, its path and size.
+- Each failure: package, the error, the fix, the commit.
+- Anything removed or disabled, anything still failing, total build time.
+- What was not verified. A finished image has only been compiled, never booted.
+```

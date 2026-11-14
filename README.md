@@ -364,6 +364,15 @@ The first build fetches Buildroot and everything it builds, and takes an hour or
 
 There is an image for the AYN Thor (Snapdragon 8 Gen 2) in this tree: `make thor`. It has not been built end to end or booted on a Thor yet, so it is for people who want to bring it up, not to play on. It adds the Thor's emulators (54 systems), Windows games through Box64 and Wine with your Steam library, a web browser, a Home button that brings the menu up over a running game, and its own theme. Start at [docs/THOR-OS.md](docs/THOR-OS.md); building and the first boot are in [docs/BUILD-THOR-IMAGE.md](docs/BUILD-THOR-IMAGE.md).
 
+Three routes to the Thor are in this tree, none of them booted on a Thor yet. Each guide ends with a prompt to paste
+into an AI agent on your own PC that builds it:
+
+| Route | What it is | Guide |
+|---|---|---|
+| BananaOS's own image (Buildroot) | the menu straight on the panels, the lightest system | [docs/BUILD-THOR-IMAGE.md](docs/BUILD-THOR-IMAGE.md) |
+| ROCKNIX with BananaOS as its frontend | ROCKNIX's system and emulators, BananaOS's menu, themes and tools | [docs/THOR-ROCKNIX.md](docs/THOR-ROCKNIX.md) |
+| LineageOS, stripped, BananaOS as the launcher | official LineageOS 24 for the Thor, Android's emulator apps | [docs/THOR-LINEAGE.md](docs/THOR-LINEAGE.md) |
+
 ### Work on the menu
 
 No handheld needed:
