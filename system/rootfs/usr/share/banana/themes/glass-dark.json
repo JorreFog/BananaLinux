@@ -40,7 +40,7 @@
     "favorites": "glass/icons/favorites.png", "downloads": "glass/icons/downloads.png",
     "bshare": "glass/icons/bshare.png", "together": "glass/icons/together.png", "rocknixdsstore": "glass/icons/rocknixdsstore.png",
     "storeapps": "glass/icons/storeapps.png", "rocknixdsbank": "glass/icons/rocknixdsbank.png",
-    "ereaderds": "glass/icons/ereaderds.png"
+    "ereaderds": "glass/icons/ereaderds.png", "files": "glass/icons/files.png", "activity": "glass/icons/activity.png"
   },
 
   "vars": {
