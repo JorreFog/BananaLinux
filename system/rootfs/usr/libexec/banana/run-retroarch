@@ -346,6 +346,26 @@ fi
 # one file serves both. A game with no save there yet gets a copy of its newest one from a core's folder (one with
 # data in it: a core that only ever wrote a blank one doesn't win); the core folders' files stay as they were, as
 # backups. States stay per core (their formats differ). What RetroArch saves of the two keys on exit is put back below.
+# flat_gba_save <game name> <rom>: saves/<name>.srm when it can only be this GBA game's save. Every other system's saves
+# are there, so the Save Mover's packs (before it knew) and saves copied by hand put a GBA save there too, where no GBA
+# core looked: the game started without it. Not when another system's folder has a game of that name (a Game Boy
+# game's save is there as well, and the two can't be told apart by their size), on either card.
+# (BANANA_ROOT, BANANA_RUN: the tests' made-up card, as nds-saves and saves-flat)
+flat_gba_save() {
+    _d=${BANANA_ROOT:-/data}; _f=$_d/saves/$1.srm
+    [ -s "$_f" ] || return 0
+    _roots="$_d/roms
+$(cat "${BANANA_RUN:-/run/banana}/sd2/roms" 2>/dev/null)"
+    # (the game's own system folder, the part after its card's roms/)
+    _mine=$(printf '%s\n' "$_roots" | while read -r _r; do [ -n "$_r" ] || continue; case $2 in "$_r"/*/*) _m=${2#"$_r"/}; echo "${_m%%/*}" ;; esac; done | head -n 1)
+    printf '%s\n' "$_roots" | while read -r _r; do
+        [ -n "$_r" ] || continue
+        for _g in "$_r"/*/"$1".* "$_r"/*/*/"$1".*; do
+            [ -e "$_g" ] || continue
+            _s=${_g#"$_r"/}; [ "${_s%%/*}" = "$_mine" ] || { echo other; exit; }
+        done
+    done | grep -q other || echo "$_f"
+}
 GBASAVE=
 if [ "$BANANA_SYSTEM" = gba ]; then
     GBASAVE=/data/saves/gba
@@ -353,8 +373,9 @@ if [ "$BANANA_SYSTEM" = gba ]; then
     n=${2##*/}; n=${n%.*}
     if [ ! -f "$GBASAVE/$n.srm" ]; then
         best=
-        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor ""; do
             f="/data/saves/$d/$n.srm"
+            [ -n "$d" ] || f=$(flat_gba_save "$n" "$2")     # (and the one in saves/ itself, when it is this game's)
             [ -s "$f" ] || continue
             # (blank: only 0xff or only 0x00 bytes; counted, not compared: the shell drops a NUL from $(...))
             [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue

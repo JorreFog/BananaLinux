@@ -297,5 +297,28 @@ check "$(UNZIP_FAIL=1 un)" "2  " "unzip failed (a full card, a damaged zip): no 
 check "$(UNZIP_NOGAME=1 un)" "1  " "a zip with no game in it: 1"
 check "$(un)" "0 4096 Game.nds " "...and unpacked again once there is room"
 
+echo "run-retroarch, run-bananafront: a GBA save left in saves/ (the Save Mover's, a copy by hand) is the game's when no other system has a game of that name"
+fn "$L/run-retroarch" flat_gba_save
+G=$T/gbacard; mkdir -p "$G/saves" "$G/roms/gba/hacks" "$G/roms/gb" "$G/run/sd2" "$G/sd2/roms/gbc" "$G/sd2/roms/gba"
+fg() { (BANANA_ROOT=$G BANANA_RUN=$G/run; flat_gba_save "$1" "$2"); }
+: > "$G/roms/gba/Emerald (USA).gba"; echo save > "$G/saves/Emerald (USA).srm"
+check "$(fg 'Emerald (USA)' "$G/roms/gba/Emerald (USA).gba")" "$G/saves/Emerald (USA).srm" "the save in saves/, only a GBA game of that name: it"
+: > "$G/roms/gba/Emerald (USA).zip"; : > "$G/roms/gba/hacks/Emerald (USA).gba"
+check "$(fg 'Emerald (USA)' "$G/roms/gba/hacks/Emerald (USA).gba")" "$G/saves/Emerald (USA).srm" "...also zipped, and one folder down in the GBA's folder"
+check "[$(fg 'Fusion' "$G/roms/gba/Fusion.gba")]" "[]" "no save in saves/: nothing"
+: > "$G/saves/Empty.srm"; : > "$G/roms/gba/Empty.gba"
+check "[$(fg 'Empty' "$G/roms/gba/Empty.gba")]" "[]" "an empty file: nothing"
+: > "$G/roms/gba/Tetris.gba"; : > "$G/roms/gb/Tetris.gb"; echo save > "$G/saves/Tetris.srm"
+check "[$(fg 'Tetris' "$G/roms/gba/Tetris.gba")]" "[]" "a Game Boy game of that name too: its save may be the Game Boy's, left alone"
+: > "$G/roms/gba/Mario [!].gba"; : > "$G/roms/gb/Mario [x].gb"; echo save > "$G/saves/Mario [!].srm"
+check "$(fg 'Mario [!]' "$G/roms/gba/Mario [!].gba")" "$G/saves/Mario [!].srm" "brackets in a name are the name's, not a pattern"
+echo "$G/sd2/roms" > "$G/run/sd2/roms"; : > "$G/roms/gba/Zelda.gba"; : > "$G/sd2/roms/gbc/Zelda.gbc"; echo save > "$G/saves/Zelda.srm"
+check "[$(fg 'Zelda' "$G/roms/gba/Zelda.gba")]" "[]" "a game of that name on the second card, in another system: left alone"
+: > "$G/sd2/roms/gba/Golden Sun.gba"; echo save > "$G/saves/Golden Sun.srm"
+check "$(fg 'Golden Sun' "$G/sd2/roms/gba/Golden Sun.gba")" "$G/saves/Golden Sun.srm" "a GBA game on the second card: its save in saves/"
+fn "$L/run-bananafront" flat_gba_save
+check "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-bananafront" | cksum)" "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-retroarch" | cksum)" "run-bananafront's flat_gba_save is run-retroarch's"
+check "$(grep -c 'f=$(flat_gba_save "$n" ' "$L/run-retroarch" "$L/run-bananafront" | tr '\n' ' ')" "$L/run-retroarch:1 $L/run-bananafront:1 " "both launchers look there for a GBA game with no save yet"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
