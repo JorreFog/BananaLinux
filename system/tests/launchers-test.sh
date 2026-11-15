@@ -258,5 +258,44 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+echo "rcS: the card the system booted from is the one the root is on"
+fn "$R/system/rootfs/etc/init.d/rcS" root_disk
+# a made-up /sys: the eMMC, this card in the first slot (mmcblk1), another Banana card in the second (mmcblk2)
+S=$T/sys; mkdir -p "$S/dev/block" "$S/class/block"
+blk() {   # blk <host> <disk> <major:minor of the disk> <partitions>
+    d=$S/devices/platform/$1/block/$2; mkdir -p "$d"; ln -s "../../devices/platform/$1/block/$2" "$S/dev/block/$3"
+    i=1; while [ $i -le "$4" ]; do mkdir -p "$d/$2p$i"; ln -s "../../devices/platform/$1/block/$2/$2p$i" "$S/dev/block/${3%:*}:$(( ${3#*:} + i ))"; i=$((i + 1)); done
+}
+blk mmc0 mmcblk0 179:0 3; blk mmc1 mmcblk1 179:32 4; blk mmc2 mmcblk2 179:64 4
+mi() { printf '%s\n' "$@" > "$T/mountinfo"; root_disk "$T/mountinfo" "$S"; }
+check "$(mi '1 0 179:34 / / ro,relatime - squashfs /dev/root ro')" "/dev/mmcblk1" "slot a of the first slot's card, a second Banana card in or not"
+check "$(mi '1 0 179:35 / / ro,relatime - squashfs /dev/root ro' '20 1 0:5 / /proc rw - proc proc rw')" "/dev/mmcblk1" "slot b"
+check "$(mi '1 0 179:66 / / ro,relatime - squashfs /dev/root ro')" "/dev/mmcblk2" "the kernel took the second slot's card for the root: that card"
+check "$(mi '1 0 0:2 / / rw - rootfs rootfs rw' '15 1 179:34 / / ro - squashfs /dev/root ro')" "/dev/mmcblk1" "the last mount at / counts"
+check "[$(mi '1 0 179:32 / / ro - squashfs /dev/root ro')]" "[]" "a root on a whole disk: nothing (rcS then looks for banana-root-a)"
+check "[$(mi '1 0 0:17 / / rw - tmpfs tmpfs rw')]" "[]" "a root that is no block device: nothing"
+check "[$(root_disk "$T/none" "$S")]" "[]" "no mountinfo: nothing"
+
+echo "run-bananads: a zipped game is only kept when it unpacked whole"
+fn "$L/run-bananads" unpack
+# a stand-in for unzip: writes the game (cut short and failing with UNZIP_FAIL set, as on a full card)
+mkdir -p "$T/bin" "$T/unz"
+cat > "$T/bin/unzip" <<'EOF'
+#!/bin/sh
+while [ $# -gt 0 ]; do case $1 in -d) d=$2; shift ;; -*) ;; *) z=$1 ;; esac; shift; done
+mkdir -p "$d/folder"
+[ -n "$UNZIP_NOGAME" ] && { echo readme > "$d/folder/readme.txt"; exit 0; }
+[ -n "$UNZIP_FAIL" ] && { head -c 100 "$z" > "$d/folder/Game.nds"; echo "unzip: write error" >&2; exit 1; }
+cat "$z" > "$d/folder/Game.nds"
+EOF
+chmod +x "$T/bin/unzip"
+head -c 4096 /dev/zero | tr '\0' 'g' > "$T/unz/Game.zip"
+un() { (PATH=$T/bin:$PATH; unpack "$T/unz/Game.zip" "$T/unz/cache" "$T/unz/cache/Game.nds" 2>/dev/null; echo "$? $(wc -c 2>/dev/null < "$T/unz/cache/Game.nds" | tr -d ' ') $(ls -A "$T/unz/cache" | tr '\n' ' ')"); }
+mkdir -p "$T/unz/cache"; echo old > "$T/unz/cache/Other.nds"
+check "$(un)" "0 4096 Game.nds " "unpacked whole: the game, the one unpacked before gone, nothing else left"
+check "$(UNZIP_FAIL=1 un)" "2  " "unzip failed (a full card, a damaged zip): no cut-short game kept, 2"
+check "$(UNZIP_NOGAME=1 un)" "1  " "a zip with no game in it: 1"
+check "$(un)" "0 4096 Game.nds " "...and unpacked again once there is room"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
