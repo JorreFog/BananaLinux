@@ -326,6 +326,31 @@ job 95-out "$id" no no "get|1000|/Games/GBA/Peel.gba|$OUT/elsewhere/Peel.gba" "g
 $F run
 check "a file outside the job's card or in banana/ isn't written" \
     '[ ! -e "$OUT/elsewhere/Peel.gba" ] && [ ! -e "$BANANA_DATA/downloads/x.job" ] && [ "$(grep -c "Not a place on the cards" "$J/95-out.finished.done")" = 2 ] && grep -q "Not a place" "$J/96-banana.finished.done"'
+# ...nor into banana/ under another spelling of its name: the cards take "Data", "data." and a doubled slash for the same
+# folder (exFAT and FAT; this test's own file system doesn't, so the folders must not be made at all). $BANANA_DATA is
+# $OUT/data here
+own=$(basename "$BANANA_DATA"); OWN=$(echo "$own" | tr a-z A-Z)
+{ printf 'title = spelled\nserver = %s\ntemp_root = %s\n' "$id" "$OUT"
+  for l in "$OUT/$OWN/s1.gba" "$OUT//$own/s2.gba" "$OUT/$own./s3.gba" "$OUT/$OWN /sub/s4.gba"; do printf 'get\t1000\t/Games/GBA/Peel.gba\t%s\n' "$l"; done
+  printf 'get\t1000\t/Games/GBA/Peel.gba\t%s\n' "$OUT/${own}2/s5.gba"; } > "$J/96b-spelled.job"
+$F run
+check "banana/ under another spelling of its name isn't written either; a folder that only starts like it is" \
+    '[ ! -e "$OUT/$OWN" ] && [ ! -e "$BANANA_DATA/s2.gba" ] && [ ! -e "$OUT/$own." ] && [ ! -e "$OUT/$OWN " ] && [ "$(grep -c "Not a place on the cards" "$J/96b-spelled.finished.done")" = 4 ] && [ -f "$OUT/${own}2/s5.gba" ]'
+# ...nor by an archive unpacked at the card's root that has a banana/ folder in it: refused whole, nothing of it lands
+python3 - "$OUT" "$own" "$OWN" <<'PY'
+import sys, zipfile
+w, own, OWN = sys.argv[1:4]
+z = zipfile.ZipFile(w + '/own1.zip', 'w'); z.writestr('Game.gba', b'game'); z.writestr(own + '/own1.conf', b'x'); z.close()
+z = zipfile.ZipFile(w + '/own2.zip', 'w'); z.writestr('Game2.gba', b'game'); z.writestr(OWN + '/sub/own2.conf', b'x'); z.close()
+z = zipfile.ZipFile(w + '/own3.zip', 'w'); z.writestr('Game3.gba', b'game'); z.writestr('roms/' + own + '/fine.txt', b'x'); z.close()
+PY
+for n in 1 2 3; do
+    { printf 'title = own%s\nunpack = yes\nunwrap = yes\ntemp_root = %s\n' $n "$OUT"; printf 'extract\t%s\t%s\n' "$OUT/own$n.zip" "$OUT"; } > "$J/96c-own$n.job"
+done
+$F run
+check "an archive with a banana/ folder, unpacked at the card's root: refused whole" \
+    '[ ! -e "$BANANA_DATA/own1.conf" ] && [ ! -e "$OUT/Game.gba" ] && [ ! -e "$OUT/$OWN" ] && [ ! -e "$OUT/Game2.gba" ] && grep -q "unsafe" "$J/96c-own1.finished.done" && grep -q "unsafe" "$J/96c-own2.finished.done"'
+check "...and one whose folder of that name is further down, unpacked" '[ -f "$OUT/Game3.gba" ] && [ -f "$OUT/roms/$own/fine.txt" ]'
 # the card taken out: its file system isn't the one the job was written for. Stopped and kept, nothing written
 job 97-gone "$id" no no "get|1000|/Games/GBA/Peel.gba|$T/Gone.gba"
 echo "card_dev = 1" >> "$J/97-gone.job"
