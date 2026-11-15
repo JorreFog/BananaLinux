@@ -113,6 +113,34 @@ j = json.loads(res["r"][1])
 post("upload?sessionId=%s&fileId=a1&token=%s" % (j["sessionId"], j["files"]["a1"]), raw=b"nds")
 check(os.path.isfile(T + "/data/mine/Banana Kart.nds"), "Choose where: the file in the folder chosen, not roms/nds")
 check(open(T + "/run/bshare-receive").read().strip().endswith(T + "/data/mine"), "bshare-receive says where")
+# Choose where, the card itself: a file whose name has a folder goes there with it, but never into Banana's own folder
+# (banana/, however its name is written): into banana/received instead
+def ask3(): res["r"] = post("prepare-upload", files(("h1", "Holiday.jpg", b"jpg"), ("h2", "album/Beach.jpg", b"jpg"),
+    ("h3", "banana/bananads.env", b"env"), ("h4", "Banana\\ssh\\authorized_keys2", b"key"), ("h5", "BANANA./wifi2.conf", b"wif")))
+th = threading.Thread(target=ask3); th.start()
+for i in range(50):
+    if os.path.exists(T + "/run/bshare-request"): break
+    time.sleep(0.1)
+req = dict(l.split("\t", 1) for l in open(T + "/run/bshare-request").read().splitlines())
+open(T + "/run/bshare-answer", "w").write("accept %s %s/data\n" % (req["id"], T))
+th.join()
+j = json.loads(res["r"][1])
+for fid in ("h1", "h2", "h3", "h4", "h5"): post("upload?sessionId=%s&fileId=%s&token=%s" % (j["sessionId"], fid, j["files"][fid]), raw=b"jpg")
+check(os.path.isfile(T + "/data/Holiday.jpg") and os.path.isfile(T + "/data/album/Beach.jpg"), "Choose where, the card itself: the files there, a folder kept")
+own = [os.path.join(d, f) for d, _, fs in os.walk(T + "/data") for f in fs if f in ("bananads.env", "authorized_keys2", "wifi2.conf")]
+check(len(own) == 3 and all(p.startswith(T + "/data/banana/received/") for p in own), "...but nothing into Banana's own folder: banana/received instead (%s)" % [p[len(T) + 6:] for p in own])
+check(not os.path.exists(T + "/data/Banana") and not os.path.exists(T + "/data/BANANA") and not os.path.exists(T + "/data/banana/ssh"), "no banana/ of another spelling made, no banana/ssh")
+# the folder chosen is Banana's own: banana/received all the same
+th = threading.Thread(target=ask); th.start()
+for i in range(50):
+    if os.path.exists(T + "/run/bshare-request"): break
+    time.sleep(0.1)
+req = dict(l.split("\t", 1) for l in open(T + "/run/bshare-request").read().splitlines())
+open(T + "/run/bshare-answer", "w").write("accept %s %s/data/banana\n" % (req["id"], T))
+th.join()
+j = json.loads(res["r"][1])
+post("upload?sessionId=%s&fileId=a1&token=%s" % (j["sessionId"], j["files"]["a1"]), raw=b"nds")
+check(os.path.isfile(T + "/data/banana/received/Banana Kart.nds") and not os.path.exists(T + "/data/banana/Banana Kart.nds"), "Choose where, banana/ itself: banana/received")
 # a folder off the cards is refused: the default places instead
 th = threading.Thread(target=ask); th.start()
 for i in range(50):

@@ -375,6 +375,18 @@ namespace
 		return path;
 	}
 
+	// whether <path> is in Banana's own folder on the card (banana/: the settings, the systems list and its commands,
+	// the Wi-Fi's and the accounts' files, SSH's keys) and not in banana/received. The names as exFAT takes them, case
+	// aside ("Banana/" is banana/ there)
+	bool inOwnFolder(const std::string& path)
+	{
+		if (path.compare(0, data.size() + 1, data + "/") != 0) return false;
+		std::string rel = path.substr(data.size() + 1);
+		for (auto& c : rel) c = (char)tolower((unsigned char)c);
+		if (rel != "banana" && rel.compare(0, 7, "banana/") != 0) return false;
+		return rel.compare(0, 16, "banana/received/") != 0;
+	}
+
 	// ---- receiving -------------------------------------------------------------------------------------------------
 	struct RFile { std::string name, token, dest; long long size = -1; bool done = false; };
 	struct Session
@@ -649,7 +661,15 @@ namespace
 				if (ok)
 				{
 					s->games = false; s->other = true;
-					for (auto& f : s->files) f.second.dest = w + "/" + f.second.name;
+					// (never into Banana's own folder: a file's name keeps its folders, so with the card itself chosen a
+					// sender's "banana/systems.conf", unseen behind the first file's name on the request, became the
+					// systems list, whose commands the menu runs; banana/wifi.conf and banana/ssh the same way. Those
+					// go to banana/received, as with no folder chosen)
+					for (auto& f : s->files)
+					{
+						f.second.dest = w + "/" + f.second.name;
+						if (inOwnFolder(f.second.dest)) f.second.dest = data + "/banana/received/" + f.second.name;
+					}
 					s->where = w;
 				}
 			}
