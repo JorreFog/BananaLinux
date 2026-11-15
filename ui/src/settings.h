@@ -163,7 +163,10 @@ namespace banana
 
 		// what the host has to do after an input (ACTED: a page did something that changes no setting, as Files' copy or
 		// rename: the select sound alone, not CHANGED's settings.conf read again and the menu's texts made again)
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED, LAUNCH };
+		// LAUNCH: an entry of the library to start (launchPath: Other systems > Open RetroArch; the Settings already closed)
+		std::string launchPath;
+		static constexpr const char* RA_MENU_ENTRY = "/usr/share/banana/apps/retroarch/RetroArch.app";
 		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)

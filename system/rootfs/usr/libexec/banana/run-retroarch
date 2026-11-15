@@ -2,6 +2,11 @@
 # The other systems: RetroArch with one libretro core, on its KMS driver (no compositor), configuration and saves
 # on the data partition.
 #   run-retroarch <core> <rom>       e.g. run-retroarch gpsp /data/roms/gba/game.gba
+# run-retroarch --menu: RetroArch itself, on its own menu with no game (Settings > Other systems > Open RetroArch,
+# through run-retroarch-menu): Banana's settings and buttons as for a game, no core and no system's own look
+MENU=0
+[ "$1" = --menu ] && { MENU=1; unset BANANA_SYSTEM; }
+ROM=$2
 CORE=/usr/lib/libretro/$1_libretro.so
 # setting <key>: the card's value, else the image's template (a card from an older Banana, or a line taken out)
 setting() {
@@ -58,12 +63,16 @@ if [ -n "$BANANA_SYSTEM" ]; then
         [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
     done
 fi
-[ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
-# the system page's looks that are the core's own options (Colour correction, Game Boy palette): into its options file
-[ -n "$BANANA_SYSTEM" ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE" "$2"
-# the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
-c=${CORE##*/}; c=${c%_libretro.so}
-[ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
+if [ $MENU = 1 ]; then
+    echo "run-retroarch: RetroArch's menu, no game" >&2
+else
+    [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+    # the system page's looks that are the core's own options (Colour correction, Game Boy palette): into its options file
+    [ -n "$BANANA_SYSTEM" ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE" "$2"
+    # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
+    c=${CORE##*/}; c=${c%_libretro.so}
+    [ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
+fi
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
 mkdir -p /data/saves /data/states /data/screenshots
@@ -214,7 +223,7 @@ set_cfg savestate_auto_load ${q:-false}
 # slot turned down to -1, SAVE_STATE, QUIT) and shut down, and banana-ui started it again at the next boot
 # (/run/banana/resume-once names it): the automatic state loaded this once, Quick resume on or off
 ONCE=0
-[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$2}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-retroarch: resuming after Power off after sleeping" >&2; }
+[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$ROM}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-retroarch: resuming after Power off after sleeping" >&2; }
 # (the slot as it was before the game: bananad's save leaves -1, the automatic one, and RetroArch writes it on exit)
 SLOT=$(sed -n '/^state_slot = "\(-*[0-9]*\)"/{s//\1/;h};${x;p}' $CFG); SLOT=${SLOT:-0}
 # the RetroAchievements account from the setup (banana/accounts.conf) for RetroArch: its name in retroarch.cfg, but its
@@ -432,6 +441,13 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
+# RetroArch with what it opens: the game with its core, or (--menu) its menu. Run in the background (&): exec, so $!
+# is RetroArch itself (PRE: a library it starts with, the lease's shim)
+PRE=
+ra() {
+    if [ $MENU = 1 ]; then exec ${PRE:+env LD_PRELOAD=$PRE} retroarch "$@" --menu
+    else exec ${PRE:+env LD_PRELOAD=$PRE} retroarch "$@" -L "$CORE" "$ROM"; fi
+}
 MON=$(sed -n '/^video_monitor_index = "\([0-9]\)"/{s//\1/;h};${x;p}' $CFG)
 # the screen this system's games play on (Settings > Other systems > the system > Screen, ra_screen.<system>), else the
 # general one (Other systems > Screen, retroarch.cfg's). With the game panel banana-ui lent the right one already
@@ -450,8 +466,9 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" --verbose \
-        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
+    PRE=/usr/lib/banana/banana-leaseshim.so
+    ra --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" --verbose \
+        --log-file /run/banana/retroarch.log < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
 else
@@ -467,7 +484,7 @@ else
     [ "$SMON" != "${MON:-2}" ] && echo "video_monitor_index = \"$SMON\"" >> $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" -L "$CORE" "$2" < $FIFO &
+    ra --config $CFG --appendconfig "$L|$RA$BA$SA$RBA" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP

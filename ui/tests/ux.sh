@@ -497,3 +497,8 @@ sed "s|^folder = /data/store/tiles|folder = $SAFX/tiles|" "$HERE/../system/rootf
 [ "$(convert "$OUT/$size-ux-glass-storeapp-bot.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.003]' info: 2>/dev/null)" = 1 ] ||
     { echo "FAIL $size: Glass: a Store app's tile isn't its own icon"; fail=1; }
 
+# Other systems > Open RetroArch: one A closes the Settings and starts RetroArch's entry (its menu, no game)
+ux_run raopen "home nds; press start; row Other systems ra_open; press a"
+grep -q "launch: /usr/share/banana/apps/retroarch/RetroArch.app" "$OUT/$size-raopen.log" ||
+    { echo "FAIL $size: Open RetroArch didn't start RetroArch's entry"; fail=1; }
+

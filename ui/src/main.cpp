@@ -1050,6 +1050,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
 				if (r == Settings::CHANGED || r == Settings::THEME) rnds::endlessHome = readSettings(o.data)["home_endless"] != "off";
 				if (r == Settings::SHELVES) { lib.appsTile = readSettings(o.data)["apps_tile"] != "off"; afterShelves(lib, ui); }
+				// (Other systems > Open RetroArch: the entry the menu would start)
+				if (r == Settings::LAUNCH) logf("launch: %s", settings.launchPath.c_str());
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -2486,6 +2488,11 @@ int main(int argc, char** argv)
 	{
 		switch (r)
 		{
+		case Settings::LAUNCH:
+			// Other systems > Open RetroArch: its entry on the Apps shelf, started as a game (the main loop: runGame)
+			sound.play("select");
+			if (!launchPath(lib, settingsView.launchPath)) logf("launch: %s isn't in the library", settingsView.launchPath.c_str());
+			break;
 		case Settings::MOVED: sound.play("scroll"); break;
 		case Settings::LANGUAGE:
 			// every text cached in the menus is in the old language: banana-ui starts again (init runs it anew)
