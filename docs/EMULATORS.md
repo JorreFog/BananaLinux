@@ -67,10 +67,13 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 Everything under `/usr` is read-only: an emulator that writes next to itself (DraStic) is copied to `/data`
 first by its launcher.
 
-RetroArch keeps a save folder per core (`/data/saves/gpSP`, `/data/saves/mGBA`...), except for the Game Boy
-Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a game can switch between gpSP and
-mGBA (Settings > Other systems) with the same save. A game with no save there yet gets a copy of its newest
-non-blank one from a core's folder; those files stay as they were. States stay per core (their formats differ).
+RetroArch and BananaFront keep every system's saves in one folder, `/data/saves/<game>.srm` (0.5.3 on: before, a
+folder per core, `/data/saves/gpSP`, `/data/saves/mGBA`...; `saves-flat` moves those once, the old files kept in
+`banana/saves-legacy`), except for the Game Boy Advance: every GBA core uses `/data/saves/gba/<game>.srm`
+(run-retroarch, run-bananafront), so a game can switch between gpSP and mGBA (Settings > Other systems) with the
+same save. A GBA game with no save there yet gets a copy of its newest non-blank one from a core's folder, or of
+`/data/saves/<game>.srm` when no other system has a game of that name (a save copied there by hand, or by the Save
+Mover before it knew); those files stay as they were. States stay per core (their formats differ).
 
 The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game, writes the
 newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` over the other in its own
@@ -194,7 +197,7 @@ nothing more, in the same files, so a game goes on in either:
   panel RetroArch's `video_monitor_index` names. The display plane scales the core's own picture (no GPU); with
   `ra_shader` the GPU draws libretro's zfast-lcd / zfast-crt / sharp-bilinear (SuperDrastic's shader folder).
 - **Sound:** ALSA `default` at 48 kHz, `ra_audio_latency`'s buffer, dynamic rate control against the panel's refresh.
-- **Files:** RetroArch's names and formats: saves `/data/saves/<core>/<game>.srm` (`/data/saves/gba` for every GBA
+- **Files:** RetroArch's names and formats: saves `/data/saves/<game>.srm` (`/data/saves/gba` for every GBA
   core), states `/data/states/<core>/<game>.state[N]` (RASTATE in RZIP) + `.png` thumbnails, `.state.auto` for Quick
   resume (`savestate_auto_save`), screenshots `/data/screenshots/<game>-YYMMDD-HHMMSS.png`, core options read from
   RetroArch's `config/<core>/<core>.opt` and `<game>.opt` (never written).
@@ -227,8 +230,8 @@ fallback, as for the rest):
   `[c64]` in `systems.conf` takes `.d64`, `.d71`, `.d81` disks, `.tap` and `.t64` tapes, `.prg` programs, `.crt`
   cartridges, and zip/7z archives. VICE wants keys for most things (autostart, `LOAD"*",8,1`, a trainer's menu):
   BananaFront gives it the handheld's on-screen keyboard (F + B, below) or a USB/Bluetooth one. Saves are
-  `/data/saves/VICE x64sc/<game>.srm` (VICE's own save format) and states `/data/states/VICE x64sc/`, the folders
-  RetroArch's VICE core uses too.
+  `/data/saves/<game>.srm` (VICE's own save format) and states `/data/states/VICE x64sc/`, where
+  RetroArch's VICE core keeps them too.
 - **ZX Spectrum** (`fuse`, package `buildroot/package/libretro-fuse`): Fuse. `[zxspectrum]` takes `.tap` and `.tzx`
   tapes, `.z80`, `.sna` and `.szx` snapshots, `.dsk` and `.trd` disks, and zip/7z archives. Fuse has libretro's
   on-screen keyboard (SELECT opens it); BananaFront's F + B keyboard works there too, and either is what keyword
