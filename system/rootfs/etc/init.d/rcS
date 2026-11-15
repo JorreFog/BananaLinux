@@ -49,8 +49,23 @@ hostname banana	# (before syslogd: it takes the name once, and the kernel's defa
 syslogd -O /run/banana/messages -s 256 -b 1
 
 # the card we booted from: the system is one of its two root slots (partitions 2 and 3, banana-root-a and -b; the
-# kernel's root= says which one booted), the games and settings its fourth partition
-for u in /sys/class/block/*p2/uevent; do
+# kernel's root= says which one booted), the games and settings its fourth partition. The card the root is on, asked of
+# the kernel and not looked for by its partitions' names: with another Banana card in the RG DS Plus's second slot
+# (the old card, to copy its games from) there are two banana-root-a, and the last one found, the second slot's
+# (mmcblk2), was taken for this card: its games and settings shown as this one's, an update written to its slots
+# root_disk <mountinfo> <sys>: the disk of the partition mounted at /, as /dev/<disk>; nothing when the root isn't a
+# partition named <disk>p<n> (the names the rest of the boot goes by)
+root_disk() {
+    _d=$(awk '$5 == "/" { d = $3 } END { print d }' "$1" 2>/dev/null)   # (its major:minor; the last mount at /)
+    [ -n "$_d" ] || return 0
+    _p=$(readlink "$2/dev/block/$_d" 2>/dev/null)                      # (.../block/mmcblk1/mmcblk1p2)
+    _n=${_p##*/}; _p=${_p%/*}; _p=${_p##*/}
+    case $_n in "$_p"p[0-9]*) [ -n "$_p" ] && echo "/dev/$_p" ;; esac
+    return 0
+}
+DISK=$(root_disk /proc/self/mountinfo /sys)
+# (a root the kernel can't name that way: the card with a banana-root-a, as before)
+[ -n "$DISK" ] || for u in /sys/class/block/*p2/uevent; do
     grep -q '^PARTNAME=banana-root-a$' "$u" 2>/dev/null || continue
     p=${u%/uevent}; DISK=/dev/${p##*/}; DISK=${DISK%p2}
 done
