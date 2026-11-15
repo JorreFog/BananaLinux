@@ -1026,6 +1026,17 @@ namespace banana
 		r.icon = themedIcon(systemOf(i).id, lookOf(systemOf(i).id).icon);
 		r.accent = accentOf(systemOf(i));
 		if (!g.toolIcon.empty()) { r.tool = true; r.icon = g.toolIcon; }
+		// an app from the Store (an entry of the Apps system, storeapps): its own icon, the one the Store gave its entry
+		// (eReaderDS's icon.png), not the Apps tile's (the Glass themes' four squares)
+		const bool storeApp = systemOf(i).id == "storeapps";
+		if (storeApp && !g.box.empty()) r.icon = g.box;
+		// an app on the Apps tile with an icon from the theme (the Glass themes' reader): that icon as its picture, over
+		// the one the app brings (eReaderDS's icon.png), so the tile keeps the theme's look
+		if (lib < (int)shelves.size() && shelves[lib].apps && !r.tool && !storeApp && rnds::themeFiles.icons.count(systemOf(i).id))
+		{
+			r.cart.clear(); r.label.clear(); r.marquee.clear();
+			r.box = r.icon;
+		}
 		// an app on the Apps tile with no picture of its own (Files, Bshare, Poketool...): its icon as its picture
 		if (lib < (int)shelves.size() && shelves[lib].apps && r.box.empty() && r.cart.empty() && r.label.empty() && r.marquee.empty()) r.box = r.icon;
 		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)

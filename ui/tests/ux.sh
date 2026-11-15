@@ -451,3 +451,20 @@ ux_run splore-own "lib pico-8 0; wait 2400; shot ux-splore-own"
 UXFX=$UXFX_SAVE
 [ "$(convert "$OUT/$size-ux-splore-own-top.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.02]' info: 2>/dev/null)" = 1 ] ||
     { echo "FAIL $size: Splore doesn't show PICO-8's own icon"; fail=1; }
+
+# Glass: an app from the Store (an entry of the Apps system, as eReaderDS) is its own icon from the Store (a magenta
+# stand-in here) on its tile, not the Apps tile's four squares
+SAFX=$OUT/ux-storeapp-fixture-$size
+rm -rf "$SAFX"; "$HERE/tests/fixture.sh" "$SAFX" >/dev/null
+mkdir -p "$SAFX/tiles/media"; printf '#!/bin/sh\n' > "$SAFX/tiles/Reader.sh"
+convert -size 128x128 xc:'#ff00ff' "$SAFX/tiles/media/reader.png"
+printf '<?xml version="1.0"?>\n<gameList>\n  <game>\n    <path>./Reader.sh</path>\n    <name>Reader</name>\n    <image>./media/reader.png</image>\n  </game>\n</gameList>\n' > "$SAFX/tiles/gamelist.xml"
+sed "s|^folder = /data/store/tiles|folder = $SAFX/tiles|" "$HERE/../system/rootfs/etc/banana/systems.conf" > "$SAFX/systems.conf"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$SAFX/systems.conf" --roms "$SAFX/roms" --data "$SAFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-dark.json" \
+    --script "lib storeapps 0; wait 2400; shot ux-glass-storeapp" 2> "$OUT/$size-glass-storeapp.log" ||
+    { echo "FAIL $size: banana-ui (glass store app) exited $?"; fail=1; }
+[ "$(convert "$OUT/$size-ux-glass-storeapp-bot.png" -fx '(r > 0.9 && g < 0.1 && b > 0.9) ? 1 : 0' -format '%[fx:mean > 0.003]' info: 2>/dev/null)" = 1 ] ||
+    { echo "FAIL $size: Glass: a Store app's tile isn't its own icon"; fail=1; }
+
