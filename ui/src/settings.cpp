@@ -132,6 +132,19 @@ namespace banana
 		return readLine("/etc/banana/board");
 	}
 
+	// Only charging uses this fallback; universal cards carry both board DTBs.
+	static bool chargingPlus_()
+	{
+		std::string b = board_();
+		if (b != "universal") return b == "rgds-plus";
+		const char* path = getenv("BANANA_CMDLINE_FILE");
+		std::istringstream cmd(readLine(path ? path : "/proc/cmdline"));
+		std::string arg, detected;
+		while (cmd >> arg)
+			if (arg.compare(0, 13, "banana.board=") == 0) detected = arg.substr(13);
+		return detected == "rgds-plus";
+	}
+
 	// a program in the background, not waited for (Wi-Fi coming up takes seconds)
 	static void spawn(const char* path, const char* arg, const char* arg2 = nullptr)
 	{
@@ -504,7 +517,7 @@ namespace banana
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
-		if (board_() == "rgds-plus")
+		if (chargingPlus_())
 		{
 			add(P, "moon", "Higher charging limit", "For this connection only, with a 5 V / 3 A rated supply and cable. Unplugging or sleeping restores normal charging. Press A twice.",
 				"", "charge_higher", { "" }, { "" }, Item::ACTION);
@@ -1354,17 +1367,18 @@ namespace banana
 				mOpen = false;
 				return CLOSED;
 			}
-			if (armed != sel) { armed = sel; return MOVED; }
+			if (armed != sel) { message.clear(); armed = sel; return MOVED; }
 			if (it.key == "charge_higher" || it.key == "charge_normal")
 			{
 				armed = -1;
 				const char* command = it.key == "charge_higher"
-					? "/usr/libexec/banana/charging higher --confirm-5v-3a 2>&1"
-					: "/usr/libexec/banana/charging normal 2>&1";
+					? "\"${BANANA_CHARGING:-/usr/libexec/banana/charging}\" higher --confirm-5v-3a 2>&1"
+					: "\"${BANANA_CHARGING:-/usr/libexec/banana/charging}\" normal 2>&1";
 				FILE* p = popen(command, "r");
 				std::string out;
 				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; }
 				int rc = p ? pclose(p) : -1;
+				out = trim(out);
 				message = out.empty() ? (rc == 0 ? "Charging limit selected." : "The charging limit could not be changed.") : out;
 				return MOVED;
 			}
@@ -1551,6 +1565,7 @@ namespace banana
 		{
 			// round within the group's own list
 			int n = e - b;
+			message.clear();
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
 			if (sel < top) top = sel;
@@ -1564,6 +1579,7 @@ namespace banana
 			// are B's grid; L/R went to the next group's list, one more thing the list didn't say)
 			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? ROWS : -ROWS)));
 			if (to == sel) return NONE;
+			message.clear();
 			sel = to;
 			armed = -1;
 			if (sel < top) top = sel;
@@ -1577,6 +1593,7 @@ namespace banana
 		case Key::RIGHT: return items[sel].kind == Item::ACTION || items[sel].key == "scrape" || items[sel].key == "hs_sync" ? NONE : change(1);
 		case Key::A: if (items[sel].key == "theme") { openThemes(); return MOVED; } return change(1);	// (the gallery)
 		case Key::B:
+			message.clear();
 			if (const Subpage* s = subpageOf(groups[g]))	// a subpage: back to the row that opened it
 			{
 				message.clear();
@@ -1789,13 +1806,14 @@ namespace banana
 			float ry = 82 + r * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			int i = top + r;
-			if (i != sel) { sel = i; armed = -1; return MOVED; }
+			if (i != sel) { message.clear(); sel = i; armed = -1; return MOVED; }
 			// the selected row: its value's left half steps back, the rest forward
 			return change(downX < 400 && items[i].kind != Item::ACTION ? -1 : 1);
 		}
 		// a swipe up or down scrolls (within the group)
 		if (std::fabs(cy - downY) > 40)
 		{
+			message.clear();
 			int gb = groupStart(groupOf(sel));
 			top = std::max(gb, std::min(std::max(gb, gEnd - ROWS), top + (cy < downY ? ROWS : -ROWS)));
 			sel = std::max(top, std::min(sel, top + ROWS - 1));
@@ -2339,7 +2357,7 @@ namespace banana
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
 		}
 		if ((cur.key == "hs_server" || cur.key == "hs_forget") && !message.empty()) help = message;
-		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
+		if ((cur.key == "charge_higher" || cur.key == "charge_normal" || cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "colors")
 		{
 			ScreenColors c = ScreenColors::load(data + "/screen-colors.conf");

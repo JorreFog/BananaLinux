@@ -5,8 +5,9 @@ Subject: [PATCH 2/2] power: supply: rk817-charger: make the USB input current
  limit writable
 
 The driver fixes the USB input current limit at 1.5A, at init and after
-every unplug, and offers no way to change it, so a charger able to supply
-more cannot be used for faster charging.
+every unplug, and offers no way to change it, so users cannot select a
+higher input ceiling. Actual current can still be constrained by the
+unchanged 4.5V input-voltage floor.
 
 Expose the limit as the charger's input_current_limit, readable and
 writable in microamps. Reads report what the PMIC is set to. A write
@@ -33,6 +34,9 @@ for each charger:
 - A failed default reset aborts probe or suspend rather than carrying
   an unconfirmed input limit into operation or sleep.
 - If writing a limit fails, the default is written back.
+
+Take an error-checked suspend snapshot and commit it only after all
+register accesses succeed; do not reuse unchecked gauge refresh values.
 
 The minimum input voltage is unchanged at 4.5V and is now written
 together with the current limit.
@@ -412,14 +416,73 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
  
  	/* Start from what the counter did during sleep, not the pre-sleep soc. */
  	regmap_bulk_read(rk808->regmap, RK817_GAS_GAUGE_Q_PRES_H3,
-@@ -1449,8 +1599,19 @@
+@@ -1446,22 +1596,72 @@
+ 	rk817_record_battery_nvram_values(charger);
+ }
+ 
++/* Take an error-checked snapshot without changing the reported gauge state. */
++static int rk817_bat_snapshot_sleep(struct rk817_charger *charger)
++{
++	struct regmap *regmap = charger->rk808->regmap;
++	unsigned int status, online;
++	int charge_uah, current_ua, ret;
++	u8 bulk_reg[4];
++
++	ret = regmap_bulk_read(regmap, RK817_GAS_GAUGE_Q_PRES_H3,
++			       bulk_reg, 4);
++	if (ret)
++		return ret;
++	charge_uah = ADC_TO_CHARGE_UAH((s32)get_unaligned_be32(bulk_reg),
++				       charger->res_div);
++	charge_uah = clamp(charge_uah, 0, charger->fcc_mah * 1000);
++
++	ret = regmap_bulk_read(regmap, RK817_GAS_GAUGE_BAT_CUR_H,
++			       bulk_reg, 2);
++	if (ret)
++		return ret;
++	current_ua = ADC_TO_CURRENT((s16)get_unaligned_be16(bulk_reg),
++				    charger->res_div);
++
++	ret = regmap_read(regmap, RK817_PMIC_CHRG_STS, &status);
++	if (ret)
++		return ret;
++	ret = regmap_read(regmap, RK817_SYS_STS, &online);
++	if (ret)
++		return ret;
++
++	/* No partially updated snapshot if clearing the old flags fails. */
++	ret = regmap_write_bits(regmap, RK817_GAS_GAUGE_GG_STS,
++				RK817_RELAX_VOL_UPD, 0);
++	if (ret)
++		return ret;
++
++	status = (status >> 4) & 0x07;
++	charger->slp_boottime = ktime_get_boottime_seconds();
++	charger->slp_charge_uah = charge_uah;
++	charger->slp_cur_ua = abs(current_ua);
++	charger->slp_charging = (online & RK817_PLUG_IN_STS) &&
++				(status == CC_OR_CV_CHRG || status == TRICKLE_CHRG);
++
++	return 0;
++}
++
  static int __maybe_unused rk817_suspend(struct device *dev)
  {
  	struct rk817_charger *charger = dev_get_drvdata(dev);
 +	int ret;
  
  	cancel_delayed_work_sync(&charger->work);
-+
+ 
+-	charger->slp_boottime = ktime_get_boottime_seconds();
+-	charger->slp_charge_uah = charger->charge_now_uah;
+-	charger->slp_cur_ua = abs(charger->cur_avg_ua);
+-	charger->slp_charging = charger->plugged_in &&
+-				(charger->charge_status == CC_OR_CV_CHRG ||
+-				 charger->charge_status == TRICKLE_CHRG);
+-
+-	/* Any relax pair found at resume will postdate this suspend. */
+-	regmap_write_bits(charger->rk808->regmap, RK817_GAS_GAUGE_GG_STS,
+-			  RK817_RELAX_VOL_UPD, 0);
 +	/* Do not enter sleep with a raised input limit after a bus error. */
 +	ret = rk817_chg_reset_input(charger);
 +	if (ret) {
@@ -428,11 +491,15 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
 +	}
 +
 +	/* Refresh the current sampled for the existing sleep-charge estimate. */
-+	rk817_read_props(charger);
++	ret = rk817_bat_snapshot_sleep(charger);
++	if (ret) {
++		mod_delayed_work(system_percpu_wq, &charger->work, 0);
++		return ret;
++	}
  
- 	charger->slp_boottime = ktime_get_boottime_seconds();
- 	charger->slp_charge_uah = charger->charge_now_uah;
-@@ -1481,8 +1642,14 @@
+ 	return 0;
+ }
+@@ -1481,8 +1681,14 @@
  
  static SIMPLE_DEV_PM_OPS(rk817_charger_pm, rk817_suspend, rk817_resume);
  

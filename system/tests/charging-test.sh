@@ -47,9 +47,22 @@ BANANA_BOARD=rgds run 1 higher --confirm-5v-3a; limit 1500000
 BANANA_BOARD=unknown run 1 higher --confirm-5v-3a; limit 1500000
 printf '0\n' > "$T/charger/online"
 run 1 higher --confirm-5v-3a; limit 1500000
-run 0 normal; limit 1500000
+# A sentinel proves disconnected normal makes no write, unlike a plain file's
+# permissive write semantics (the actual kernel would return ENODEV).
+printf '2000000\n' > "$T/charger/input_current_limit"
+run 0 normal; limit 2000000
 rm "$T/charger/online"
-run 1 higher --confirm-5v-3a; limit 1500000
+run 1 higher --confirm-5v-3a; limit 2000000
+
+fixture
+printf 'quiet banana.board=rgds-plus root=/dev/mmcblk0p2\n' > "$T/cmdline"
+BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 0 higher --confirm-5v-3a; limit 2000000
+fixture
+printf 'quiet banana.board=rgds\n' > "$T/cmdline"
+BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 1 higher --confirm-5v-3a; limit 1500000
+printf 'quiet\n' > "$T/cmdline"
+BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 1 higher --confirm-5v-3a; limit 1500000
+BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/missing" run 1 higher --confirm-5v-3a; limit 1500000
 
 for property in constant_charge_current_max constant_charge_voltage_max; do
     for value in '' nonsense -1 0 999999999999999999999999999999999; do

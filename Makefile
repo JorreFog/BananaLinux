@@ -44,6 +44,7 @@ ui:
 
 test: ui
 	sh system/tests/charging-test.sh
+	sh ui/tests/charging-test.sh
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi

@@ -4,6 +4,10 @@
 # not have a writable input_current_limit and are left alone.
 SUPPLIES=${BANANA_POWER_SUPPLY_ROOT:-/sys/class/power_supply}
 BOARD=${BANANA_BOARD:-$(cat /etc/banana/board 2>/dev/null)}
+# Universal cards get the detected board from U-Boot, as panel-tune does.
+if [ "$BOARD" = universal ]; then
+    BOARD=$(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' "${BANANA_CMDLINE_FILE:-/proc/cmdline}")
+fi
 CHARGER=$SUPPLIES/charger
 BATTERY=$SUPPLIES/battery
 fail() { echo "$*" >&2; exit 1; }
@@ -27,6 +31,13 @@ current=$(read_value "$CHARGER/input_current_limit")
 number "$current" || fail "Could not read the input current limit."
 if [ "$1" = status ]; then
     printf 'Input current limit: %s microamps.\n' "$current"
+    exit 0
+fi
+
+# The kernel rejects writes while disconnected and resets on every plug-in.
+# Treat normal as already selected without attempting a sysfs write then.
+if [ "$1" = normal ] && [ "$(read_value "$CHARGER/online")" = 0 ]; then
+    echo "No charger connected. Normal charging applies on connection."
     exit 0
 fi
 

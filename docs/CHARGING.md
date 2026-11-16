@@ -10,8 +10,10 @@ current or charging speed. The 4.5 V input-voltage floor is unchanged, so a weak
 supply or resistive cable can still limit charging. It does not request a higher
 USB voltage or add a USB PD or Quick Charge protocol.
 
-The choice is deliberately not saved. Unplugging, sleeping, shutting down, or
-restarting restores normal charging. Changing the supply needs a new explicit
+The choice is deliberately not saved. The driver restores normal charging on
+plug events, suspend and orderly shutdown, and again when it starts. A bus
+failure can prevent a reset; a forced power-off or panic does not run the
+shutdown hook. Changing the supply needs a new explicit
 selection. No startup service re-applies it.
 
 The kernel enables the RK817's hardware charge thermal foldback, independently
@@ -47,6 +49,8 @@ missing properties, malformed values, unsupported boards, repeated requests and
 normal restoration. It writes no actual power-supply files. Kernel validation
 must additionally cover probe failures, register-write/readback failures,
 concurrent disconnects, suspend/resume, shutdown and removal.
+
+Universal images identify the handheld through U-Boot's `banana.board=` argument.
 
 Before treating the higher limit as a charging improvement, measure input power,
 battery current and temperatures on an RG DS Plus with a rated supply and cable,
