@@ -140,7 +140,7 @@ settings		The top screen's bob and shine. Off holds it still and saves a little 
 settings		On	Päällä
 settings		Off	Pois
 settings		Volume	Äänenvoimakkuus
-settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	Kaiuttimet tai kuulokkeet sen mukaan, kumpi on käytössä. Äänenvoimakkuusnäppäimet toimivat kaikkialla.
+settings		The speakers or headphones. The volume keys change it anywhere.	Kaiuttimet tai kuulokkeet sen mukaan, kumpi on käytössä. Äänenvoimakkuusnäppäimet toimivat kaikkialla.
 settings		Menu sounds	Valikkoäänet
 settings		The menu's clicks, and the cartridge going into the console.	Valikon naksahdukset ja kasetin asettuminen konsoliin.
 settings		Battery	Akku
@@ -246,7 +246,7 @@ settings		While a game plays on one screen, the other shows its RetroAchievement
 settings		Game panel	Pelipaneeli
 settings		Network	Verkko
 settings		Wi-Fi	Wi-Fi
-settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	Löydetyt verkot: A liittyy valittuun verkkoon. Kirjoita salasana näppäimistöllä tai koskettamalla.
+settings		Networks nearby. A on one joins it.	Löydetyt verkot: A liittyy valittuun verkkoon. Kirjoita salasana näppäimistöllä tai koskettamalla.
 settings		File sharing	Tiedostojen jakaminen
 settings		System	Järjestelmä
 settings		Time zone	Aikavyöhyke
@@ -256,7 +256,7 @@ settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a p
 settings		Box art	Kansikuvat
 settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Hakee peleille kansikuvat, aloitusruudut, lajityypit ja vuodet libretron ilmaisista kokoelmista (ei tiliä, Wi-Fi tarvitaan). Haku jatkuu taustalla ja ohittaa pelit, joilla on jo kuvat.
 settings		Previous version	Edellinen versio
-settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Käynnistyy toiseen paikkaan: versio, joka oli käytössä ennen viime päivitystä. Paina A kahdesti.
+settings		Restarts into the version from before the last update. Press A twice.	Käynnistyy toiseen paikkaan: versio, joka oli käytössä ennen viime päivitystä. Paina A kahdesti.
 settings		SSH	SSH
 settings		First-time setup	Ensimmäinen käyttöönotto
 settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	Ensimmäisen käynnistyksen vaiheet uudelleen: Wi-Fi, aikavyöhyke ja RetroAchievements-tili (ScreenScraper: ei vielä saatavilla).
@@ -471,7 +471,7 @@ settings		Mic sensitivity	Mikrofonin herkkyys
 settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	Miten paljon huoneen kohinan yläpuolella sanan tai puhalluksen on oltava, jotta se välittyy peliin. Portti pois antaa pelin kuulla kaiken, mitä mikrofoni ottaa vastaan, myös oman äänensä kaiuttimesta.
 settings		Gate off	Portti pois
 settings		Reset BananaDS	Nollaa BananaDS
-settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	BananaDS:n asetukset palautetaan Bananan asetuksiin. Tallennukset, pikatallennukset ja kunkin pelin kello säilyvät. Paina A kahdesti.
+settings		Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.	BananaDS:n asetukset palautetaan Bananan asetuksiin. Tallennukset, pikatallennukset ja kunkin pelin kello säilyvät. Paina A kahdesti.
 settings		Threaded 3D	Säikeistetty 3D
 settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	Päällä piirtää DS:n 3D:n pelin rinnalla, nopeammalla tavalla. Pois piirtää sen pelin tahdissa: pelille, jonka 3D näkyy väärällä näytöllä tai ruudun myöhässä sen ollessa päällä (Dragon Quest -pelit).
 settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	Kokeellinen. Päällä: ei ruutujonoa: jokainen ruutu menee näytöille seuraavassa mahdollisessa virkistyksessä, ja DraStic aloittaa jokaisen ruudun niin myöhään kuin se sallii, joten painallus näkyy noin kaksi virkistystä aiemmin (ääni myös hieman aiemmin). Epätasaiset ruudut (2x, raskaat kohtaukset) voivat näkyä pieninä nykäyksinä, jotka jono peittäisi.
@@ -799,7 +799,7 @@ settings		The emulator (RetroArch core) for this system's games: the first is Ba
 settings		Home server	Kotipalvelin
 settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	Pelisi, niiden kansikuvat ja tallennuksesi kotona olevasta palvelimesta: Romhost (Homeportin ROM-kirjasto) tai RomM. A avaa sen sivun: paritus, Synkronoi nyt ja mitä synkronoidaan.
 settings		Credits	Tekijät
-settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	Tämän BananaOS-version tekijät: kehitys, käännökset, testaus ja kiitokset. A avaa luettelon.
+settings		The people behind this version of BananaOS.	Tämän BananaOS-version tekijät: kehitys, käännökset, testaus ja kiitokset. A avaa luettelon.
 settings		SuperDrastic: F + SELECT	SuperDrastic: F + SELECT
 settings		Swap the screens	Vaihda näytöt
 settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	DS-pelit SuperDrasticissa: DS:n ylänäyttö alanäytöllä ja alanäyttö ylänäytöllä (kosketus seuraa mukana: RG DS:n ylempi kosketusnäyttö; RG DS Plussalla ei kosketusta vaihdon aikana), ja päinvastoin. Säilyy pelikohtaisesti.
@@ -816,7 +816,7 @@ settings		Auto sync	Automaattinen synkronointi
 settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	Pelin lopettaminen: sen tallennukset menevät palvelimelle, kun lopetat (muutama sekunti, taustalla). Wi-Fi:llä myös pelit ja tallennukset aina, kun Wi-Fi yhdistyy. Ei koskaan pelin pyöriessä.
 settings		Leaving a game	Pelin lopettaminen
 settings		And on Wi-Fi	Wi-Fi:llä myös
-settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Mitkä järjestelmät synkronoidaan tällä käsikonsolilla. Ohitetun järjestelmän pelit pysyvät kortilla ennallaan.
+settings		Which systems sync here. Skipped systems stay as they are.	Mitkä järjestelmät synkronoidaan tällä käsikonsolilla. Ohitetun järjestelmän pelit pysyvät kortilla ennallaan.
 settings		Forget this server	Unohda tämä palvelin
 settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Poistaa käsikonsolin parituksen: mikään ei synkronoidu ennen kuin se paritetaan uudelleen. Pelit ja tallennukset jäävät kortille. Paina A kahdesti.
 settings		Home server systems	Kotipalvelimen järjestelmät

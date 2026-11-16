@@ -138,7 +138,7 @@ settings		The top screen's bob and shine. Off holds it still and saves a little 
 settings		On	Вкл
 settings		Off	Выкл
 settings		Volume	Громкость
-settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	Динамики или наушники, смотря через что сейчас идет звук. Кнопки громкости меняют её в любом месте.
+settings		The speakers or headphones. The volume keys change it anywhere.	Динамики или наушники, смотря через что сейчас идет звук. Кнопки громкости меняют её в любом месте.
 settings		Menu sounds	Звуки меню
 settings		The menu's clicks, and the cartridge going into the console.	Щелчки в меню и звук установки картриджа.
 settings		Battery	Батарея
@@ -244,7 +244,7 @@ settings		While a game plays on one screen, the other shows its RetroAchievement
 settings		Game panel	Игровая панель
 settings		Network	Сеть
 settings		Wi-Fi	Wi-Fi
-settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	Доступные сети: нажмите A для подключения и введите пароль с помощью экранной клавиатуры (или сенсором).
+settings		Networks nearby. A on one joins it.	Доступные сети: нажмите A для подключения и введите пароль с помощью экранной клавиатуры (или сенсором).
 settings		File sharing	Общий доступ к файлам
 settings		System	Система
 settings		Time zone	Часовой пояс
@@ -254,7 +254,7 @@ settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a p
 settings		Box art	Обложки
 settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Обложки, титульные экраны, жанры и годы выпуска игр из открытой базы libretro (без аккаунта, нужен Wi-Fi). Загрузка идёт в фоне; игры с готовыми обложками пропускаются, поэтому повторный запуск скачивает только новые.
 settings		Previous version	Предыдущая версия
-settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Перезагрузка во второй слот: версия, работавшая до последнего обновления. Нажмите A дважды.
+settings		Restarts into the version from before the last update. Press A twice.	Перезагрузка во второй слот: версия, работавшая до последнего обновления. Нажмите A дважды.
 settings		SSH	SSH
 settings		First-time setup	Начальная настройка
 settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	Повтор начальной настройки: Wi-Fi, часовой пояс и аккаунт RetroAchievements (ScreenScraper пока недоступен).
@@ -466,7 +466,7 @@ settings		Mic sensitivity	Чувствительность микрофона
 settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	Насколько звук голоса или дуновения должен превышать фоновый шум комнаты, чтобы дойти до игры. «Без фильтра» передаёт игре абсолютно всё, включая звук из динамиков.
 settings		Gate off	Без фильтра
 settings		Reset BananaDS	Сброс BananaDS
-settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	Сброс настроек BananaDS к стандартным. Обычные и быстрые сохранения, а также часы игр сохраняются. Нажмите A дважды.
+settings		Restores BananaDS's settings. Saves, states and game clocks stay. Press A twice.	Сброс настроек BananaDS к стандартным. Обычные и быстрые сохранения, а также часы игр сохраняются. Нажмите A дважды.
 settings		Threaded 3D	Многопоточный 3D-рендеринг
 settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	«Вкл» отрисовывает 3D-графику параллельно игре (быстрее). «Выкл» отрисовывает синхронно с игрой: для игр, где при включении 3D отображается не на том экране или отстает на кадр (серия Dragon Quest).
 settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	Экспериментально. «Вкл»: без очереди кадров, каждый кадр выводится на дисплей при первой возможности, а DraStic начинает отрисовку как можно позже, снижая задержку ввода примерно на 2 кадра обновления (звук также опережает). При неравномерном фреймрейте (2x, тяжелые сцены) возможны микрорывки, которые очередь кадров скрыла бы.
@@ -794,7 +794,7 @@ settings		The emulator (RetroArch core) for this system's games: the first is Ba
 settings		Home server	Домашний сервер
 settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	Ваши игры, обложки и сохранения с домашнего сервера: Romhost (библиотека ROM-файлов Homeport) или RomM. Кнопка A открывает страницу: сопряжение, «Синхронизировать сейчас» и параметры синхронизации.
 settings		Credits	Авторы
-settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	Люди, создавшие эту версию BananaOS: разработка, перевод, тестирование и благодарности. Кнопка A открывает список.
+settings		The people behind this version of BananaOS.	Люди, создавшие эту версию BananaOS: разработка, перевод, тестирование и благодарности. Кнопка A открывает список.
 settings		SuperDrastic: F + SELECT	SuperDrastic: F + SELECT
 settings		Swap the screens	Поменять экраны местами
 settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Игры DS в SuperDrastic: верхний экран DS на нижней панели, а нижний — на верхней (сенсор перемещается вместе с экраном: на верхний сенсорный экран RG DS; на RG DS Plus при смене экранов сенсор не работает) и обратно. Запоминается для каждой игры.
@@ -811,7 +811,7 @@ settings		Auto sync	Автосинхронизация
 settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	«При выходе из игры»: сохранения отправляются на сервер при выходе из игры (за пару секунд, в фоне). «И по Wi-Fi»: также синхронизирует игры и сохранения при каждом подключении к Wi-Fi. Никогда не выполняется во время запущенной игры.
 settings		Leaving a game	При выходе из игры
 settings		And on Wi-Fi	И по Wi-Fi
-settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Какие системы синхронизировать на этой консоли. Игры пропущенных систем останутся на карте памяти без изменений.
+settings		Which systems sync here. Skipped systems stay as they are.	Какие системы синхронизировать на этой консоли. Игры пропущенных систем останутся на карте памяти без изменений.
 settings		Forget this server	Забыть этот сервер
 settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Отвязывает консоль: синхронизация прекратится до повторного сопряжения. Игры и сохранения останутся на карте памяти. Нажмите A дважды.
 settings		Home server systems	Системы домашнего сервера
