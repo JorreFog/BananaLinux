@@ -422,7 +422,8 @@ namespace banana::nds
 		{
 			const auto& f = rnds::themeFiles;
 			// a Glass theme: Inter, as its Settings (banana's fonts, beside the rnds assets); one that doesn't load: the theme's
-			if (glassLook.blur > 0)
+			// (a theme with fonts of its own, Plaza's Nunito: those)
+			if (glassLook.blur > 0 && (f.fontRegular.empty() || f.fontMedium.empty()))
 			{
 				R = rnds::Font::load(assets + "/../banana/fonts/Inter-Regular.ttf");
 				M = rnds::Font::load(assets + "/../banana/fonts/Inter-Medium.ttf");

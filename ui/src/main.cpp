@@ -1144,6 +1144,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				ui.touch(scr, x * k, y * k, true);
 				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
+				// a layout theme's X, START or SELECT tapped (the device presses them: handleAgain)
+				std::string tk = ui.takeTapKey();
+				if (!tk.empty()) logf("touch: key %s", tk.c_str());
+				if (tk == "select") settings.openSearch(lib.searchQuery());
+				else if (tk == "start") settings.open();
 			}
 		}
 		else if (op == "gamepanel")
@@ -2497,6 +2502,7 @@ int main(int argc, char** argv)
 	};
 
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
+	std::function<void(const InputEvent&)> handleAgain;	// (handle, for a tapped button the menu hands back)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
@@ -2577,7 +2583,15 @@ int main(int argc, char** argv)
 		}
 		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, true); return; }
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
-		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
+		if (ev.type == InputEvent::TOUCH_UP)
+		{
+			std::string k;
+			{ std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); k = ui->takeTapKey(); }
+			// a layout theme's X, START or SELECT button tapped: as if pressed
+			Key key = k == "x" ? Key::X : k == "start" ? Key::START : k == "select" ? Key::SELECT : Key::NONE;
+			if (key != Key::NONE && handleAgain) { InputEvent p; p.type = InputEvent::PRESS; p.key = key; p.t = ev.t; handleAgain(p); }
+			return;
+		}
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
 		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
 		{
@@ -2614,6 +2628,8 @@ int main(int argc, char** argv)
 			rep.key = ev.key; rep.since = rep.last = now;
 		}
 	};
+	handleAgain = handle;
+
 
 	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and tiles drawn when they
 	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one

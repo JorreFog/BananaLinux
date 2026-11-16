@@ -48,7 +48,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint", "zoom", "zoom.steps", "zoomed", "timeLeft", "letter", "page", "pages" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -174,6 +174,12 @@ namespace banana
 		std::vector<std::pair<std::string, double>> cues;
 		bool wrap = false, debug = false;
 		int serials = 0;
+		// behavior.zoom: { "steps": 3, "start": 1 }: the "zoom" hook 0..steps-1 (a grid's columns, the theme's), changed by
+		// the zoomIn / zoomOut buttons and kept per view (home, each system: Library's zoom.txt)
+		int zoomSteps = 0, zoomStart = 0;
+		double zoomedAt = -1e9;
+		mutable std::map<std::string, int> zoomSeen;
+		std::string tapKey;	// a tapped button the host handles (x, start, select): takeTapKey
 
 		// fonts by name: the theme's, then the built-in ones
 		std::map<std::string, std::string> fontFiles;
@@ -422,6 +428,11 @@ namespace banana
 				if (const JVal* e = b->get("scrollEase")) scrollBounce = e->isStr() && e->s == "bounce";
 				fps = std::max(1.0, std::min(60.0, b->num("fps", fps)));
 				wrap = b->flag("wrap", wrap);
+				if (const JVal* z = b->get("zoom"))
+				{
+					zoomSteps = std::max(0, std::min(9, (int)(z->isNum() ? z->n : z->num("steps", 3))));
+					zoomStart = std::max(0, std::min(std::max(0, zoomSteps - 1), (int)(z->isObj() ? z->num("start", zoomSteps / 2) : zoomSteps / 2)));
+				}
 				extraHints = b->flag("extraHints", extraHints);
 				if (const JVal* c = b->get("cues")) for (auto& e : c->obj) if (e.second->isNum()) cues.emplace_back(e.first, e.second->n);
 				std::sort(cues.begin(), cues.end(), [](const std::pair<std::string, double>& a, const std::pair<std::string, double>& b) { return a.second < b.second; });
@@ -476,6 +487,54 @@ namespace banana
 		}
 		int count() const { return m->mView == rnds::UI::HOME ? (int)systems.size() : (int)games.size(); }
 		int cursor() const { return m->mView == rnds::UI::HOME ? m->mSys : m->mGame; }
+		// the zoom's view: "home", or the library's system
+		std::string zoomKey() const
+		{
+			if (m->mView == rnds::UI::HOME) return "home";
+			return m->mSys >= 0 && m->mSys < (int)systems.size() ? systems[m->mSys].id : std::string("library");
+		}
+		int zoomNow() const
+		{
+			if (zoomSteps <= 0) return 0;
+			std::string k = zoomKey();
+			auto it = zoomSeen.find(k);
+			if (it == zoomSeen.end())
+			{
+				Library* lib = dynamic_cast<Library*>(m->src);
+				int z = lib ? lib->zoom(k) : -1;
+				it = zoomSeen.emplace(k, z < 0 ? zoomStart : z).first;
+			}
+			return std::max(0, std::min(zoomSteps - 1, it->second));
+		}
+		// a theme's var as it is now (the row moves' "columns")
+		mutable bool inVarNum = false;	// (a var reading "page" while varNum works one out: no loop)
+		double varNum(const std::string& name, double def) const
+		{
+			if (inVarNum) return def;
+			struct Guard { bool& b; Guard(bool& v) : b(v) { b = true; } ~Guard() { b = false; } } g(inVarNum);
+			Scope root;
+			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
+			Scope vs;
+			vs.parent = &root;
+			for (auto& v : vars) vs.set(v.first, v.second.eval(vs));
+			EV o;
+			return vs.lookup(name, o) ? o.num() : def;
+		}
+		// a page of a "pages" grid: the theme's "columns" x "rows"
+		int perPage() const
+		{
+			return std::max(1, (int)std::lround(varNum("columns", 1))) * std::max(1, (int)std::lround(varNum("rows", 1)));
+		}
+		// a game's first letter, as the A-Z button groups them: A..Z, or "#" for a digit or anything else
+		static std::string initial(const std::string& t)
+		{
+			for (unsigned char ch : t)
+			{
+				if (isalpha(ch)) return std::string(1, (char)toupper(ch));
+				if (isdigit(ch)) return "#";
+			}
+			return "#";
+		}
 		std::string viewName() const { return m->mView == rnds::UI::HOME ? "home" : m->mView == rnds::UI::LIBRARY ? "library" : "launch"; }
 
 		bool sysField(const rnds::SysInfo& si, int index, const std::string& f, EV& out) const
@@ -577,6 +636,25 @@ namespace banana
 			if (nId == HOOK("games.count") || nId == HOOK("gameCount")) { out = EV((double)games.size()); return true; }
 			if (nId == HOOK("launch.t")) { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
 			if (nId == HOOK("launch.progress")) { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
+			if (nId == HOOK("zoom")) { out = EV((double)zoomNow()); return true; }
+			if (nId == HOOK("zoom.steps")) { out = EV((double)zoomSteps); return true; }
+			if (nId == HOOK("zoomed")) { out = EV(now - zoomedAt); return true; }
+			// Parental controls' play time left today in minutes (rounded up), -1 with no limit
+			if (nId == HOOK("timeLeft"))
+			{
+				Library* lib = dynamic_cast<Library*>(m->src);
+				long left = lib ? lib->playLeft() : -1;
+				out = EV(left < 0 ? -1.0 : (double)((left + 59) / 60));
+				return true;
+			}
+			// a "pages" grid's page (the theme's "columns" x "rows" a page) and how many there are
+			if (nId == HOOK("page") || nId == HOOK("pages"))
+			{
+				int per = perPage();
+				out = EV(nId == HOOK("page") ? (double)(std::max(0, cursor()) / per) : (double)std::max(1, (count() + per - 1) / per));
+				return true;
+			}
+			if (nId == HOOK("letter")) { out = EV(m->mView != rnds::UI::HOME && m->mGame < (int)games.size() ? initial(games[m->mGame].title) : std::string()); return true; }
 			if (nId == HOOK("empty")) { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
 			if (nId == HOOK("empty.title")) { out = EV(m->src->emptyTitle()); return true; }
 			if (nId == HOOK("empty.hint")) { out = EV(m->src->emptyHint()); return true; }
@@ -1341,6 +1419,11 @@ namespace banana
 			float itemW = (float)num(c, K("itemW"), dirn == "column" ? w : 100), itemH = (float)num(c, K("itemH"), dirn == "row" ? h : 40);
 			float gap = (float)num(c, K("gap"), 0);
 			int cols = intIn(num(c, K("columns"), 1), 1, 1024);
+			// "pages": a grid of "rows" x "columns" a page, the pages side by side ("pageW" apart: the list's width),
+			// the one with the selection in view, sliding to the next as it changes
+			const bool paged = dirn == "pages";
+			int per = paged ? cols * intIn(num(c, K("rows"), 1), 1, 1024) : 1;
+			float pageW = paged ? (float)num(c, K("pageW"), w) : 0;
 			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
 			std::string mode = str(c, K("scrollMode"), "center");
 			bool loop = flag(c, K("loop")) && n > 0;
@@ -1380,6 +1463,21 @@ namespace banana
 				lo = dirn == "grid" ? l0 * cols : l0;
 				hi = dirn == "grid" ? l1 * cols + cols - 1 : l1;
 				if (!loop) hi = std::min(n - 1, hi);
+			}
+			float pv = 0;	// (pages: the eased page in view)
+			if (paged)
+			{
+				Smoothed& st = smoothed[key + ".page"];
+				double target = std::max(0, cur) / per;
+				double dt = st.set ? std::max(0.0, now - st.at) : 0;
+				if (!st.set) { st.set = true; st.v = target; }
+				st.target = target;
+				st.at = now;
+				st.v += (st.target - st.v) * (1 - std::exp(-dt / std::max(1.0, scrollMs)));
+				if (std::fabs(st.v - st.target) < 0.002) st.v = st.target; else smoothMoving = true;
+				pv = (float)st.v;
+				lo = std::max(0, (int)std::floor(pv) * per);
+				hi = std::min(n - 1, ((int)std::ceil(pv) + 1) * per - 1);
 			}
 			if (n == 0) return;
 			hi = std::min(hi, lo + 8192);	// (a looping list has no end of its own: at most this many are drawn)
@@ -1439,6 +1537,7 @@ namespace banana
 				float ix = 0, iy = 0;
 				if (dirn == "row") ix = (v - first) * stepX;
 				else if (dirn == "column") iy = (v - first) * stepY;
+				else if (paged) { int pg = v / per, k = v % per; ix = (pg - pv) * pageW + (k % cols) * stepX; iy = (float)(k / cols) * stepY; }
 				else if (dirn == "grid") { int row = (int)std::floor((float)v / cols); ix = (v - row * cols) * stepX; iy = (row - first) * stepY; }
 				if (dirn == "row" && mode == "none") ix = v * stepX;
 				if (dirn == "column" && mode == "none") iy = v * stepY;
@@ -1689,7 +1788,14 @@ namespace banana
 		auto& map = d->input[v];
 		auto it = map.find(buttonName(b));
 		if (it == map.end()) return false;
-		std::string act = it->second, arg;
+		return runAction(it->second);
+	}
+
+	// one of input's actions ("next", "prev:10", "zoomIn"...): a button's, or a tap's "do:<action>"
+	bool LayoutMenu::runAction(const std::string& action)
+	{
+		if (d->launchAt >= 0) return false;
+		std::string act = action, arg;
 		size_t colon = act.find(':');
 		if (colon != std::string::npos) { arg = act.substr(colon + 1); act = act.substr(0, colon); }
 		int n = d->count(), c = d->cursor();
@@ -1722,6 +1828,59 @@ namespace banana
 		if (act == "next") return move(c + k);
 		if (act == "first") return move(0);
 		if (act == "last") return move(n - 1);
+		// a grid's rows: as many as the theme's "columns" var (its zoom's); the last row's short end still reached
+		if (act == "prevRow" || act == "nextRow")
+		{
+			int cols = std::max(1, (int)std::lround(d->varNum("columns", 1)));
+			int to = c + (act == "nextRow" ? cols : -cols);
+			if (to >= n) to = c / cols < (n - 1) / cols ? n - 1 : (d->wrap ? to : c);
+			if (to < 0 && !d->wrap) return false;
+			return move(to);
+		}
+		// a "pages" grid: left and right go on to the page beside at a row's end, up and down stay on the page, a
+		// swipe turns the page (the same place on it, or its last)
+		if (act == "gridLeft" || act == "gridRight" || act == "gridUp" || act == "gridDown" || act == "nextPage" || act == "prevPage")
+		{
+			if (n == 0) return false;
+			int cols = std::max(1, (int)std::lround(d->varNum("columns", 1))), per = d->perPage();
+			int pg = c / per, k = c % per, col = k % cols, row = k / cols, pages = (n + per - 1) / per;
+			int to = c;
+			if (act == "gridRight") to = col < cols - 1 && c + 1 < n ? c + 1 : pg + 1 < pages ? std::min(n - 1, (pg + 1) * per + row * cols) : c;
+			else if (act == "gridLeft") to = col > 0 ? c - 1 : pg > 0 ? (pg - 1) * per + row * cols + cols - 1 : c;
+			else if (act == "gridUp") to = row > 0 ? c - cols : c;
+			else if (act == "gridDown") to = (row + 1) * cols < per && pg * per + (row + 1) * cols < n ? std::min(n - 1, c + cols) : c;
+			else if (act == "nextPage") to = pg + 1 < pages ? std::min(n - 1, (pg + 1) * per + k) : c;
+			else to = pg > 0 ? (pg - 1) * per + k : c;
+			return move(to);
+		}
+		if (act == "zoomIn" || act == "zoomOut")
+		{
+			if (d->zoomSteps <= 0) return false;
+			int z = d->zoomNow(), to = std::max(0, std::min(d->zoomSteps - 1, z + (act == "zoomIn" ? 1 : -1)));
+			if (to == z) return false;
+			std::string key = d->zoomKey();
+			d->zoomSeen[key] = to;
+			if (Library* lib = dynamic_cast<Library*>(src)) lib->setZoom(key, to);
+			d->zoomedAt = d->now;
+			return true;
+		}
+		// the A-Z button: the first game of the next (or the previous) letter, round to the start
+		if ((act == "nextLetter" || act == "prevLetter") && mView != rnds::UI::HOME && n > 1)
+		{
+			const std::string here = Impl::initial(d->games[c].title);
+			if (act == "nextLetter")
+			{
+				for (int i = c + 1; i < n; i++) if (Impl::initial(d->games[i].title) != here) return move(i);
+				return move(0);
+			}
+			int i = c;
+			while (i > 0 && Impl::initial(d->games[i - 1].title) == here) i--;	// (the start of this letter, then the one before's)
+			if (i != c) return move(i);
+			if (i == 0) return false;
+			std::string before = Impl::initial(d->games[i - 1].title);
+			while (i > 0 && Impl::initial(d->games[i - 1].title) == before) i--;
+			return move(i);
+		}
 		if (mView == rnds::UI::HOME)
 		{
 			if (n == 0) return false;
@@ -1786,7 +1945,13 @@ namespace banana
 		// a swipe across the bottom screen: one step the other way, as Banana's own themes (the games, or the systems)
 		float dx = x - downX, dy = y - downY;
 		if (screen == 1 && downScreen == 1 && x >= 0 && std::fabs(dx) > 56 * d->s && std::fabs(dx) > std::fabs(dy) * 1.2f)
+		{
+			// the theme's own swipe ("input": { "library": { "swipeLeft": "nextPage" } }), else the arrow
+			auto& map = d->input[mView == rnds::UI::HOME ? "home" : "library"];
+			auto sw = map.find(dx < 0 ? "swipeLeft" : "swipeRight");
+			if (sw != map.end()) return runAction(sw->second);
 			return press(dx < 0 ? rnds::UI::RIGHT : rnds::UI::LEFT);
+		}
 		if (screen != downScreen || std::fabs(dx) > 24 * d->s || std::fabs(dy) > 24 * d->s) return false;
 		// the topmost thing under the finger: the last drawn
 		for (auto it = d->hits.rbegin(); it != d->hits.rend(); ++it)
@@ -1801,6 +1966,9 @@ namespace banana
 				for (auto& ch : a) ch = (char)tolower((unsigned char)ch);
 				static const std::map<std::string, Button> btn = { { "a", rnds::UI::A }, { "b", rnds::UI::B }, { "x", rnds::UI::X }, { "y", rnds::UI::Y },
 					{ "l", rnds::UI::L }, { "r", rnds::UI::R }, { "left", rnds::UI::LEFT }, { "right", rnds::UI::RIGHT }, { "up", rnds::UI::UP }, { "down", rnds::UI::DOWN } };
+				// X (a game's page), START (Settings) and SELECT (Search) are the host's: it takes them (takeTapKey)
+				if (a == "x" || a == "start" || a == "select") { d->tapKey = a; return true; }
+				if (act.compare(0, 3, "do:") == 0) return runAction(act.substr(3));
 				auto b = btn.find(a);
 				if (b != btn.end()) return press(b->second);
 				continue;
@@ -1860,8 +2028,10 @@ namespace banana
 	{
 		return std::fabs(d->scroll - (float)d->cursor()) > 0.002f || d->launchAt >= 0 || d->smoothMoving ||
 			(d->scrollBounce && d->now - d->scrollT0 < d->scrollMs) || (d->usedGlint && d->glintPhase() < Impl::GLINT_SWEEP) ||
-			d->now - std::max(d->movedAt, d->enteredAt) < d->settleMs;
+			d->now - std::max(std::max(d->movedAt, d->enteredAt), d->zoomedAt) < d->settleMs;
 	}
+
+	std::string LayoutMenu::takeTapKey() { std::string k; k.swap(d->tapKey); return k; }
 
 	int LayoutMenu::nextWake() const
 	{

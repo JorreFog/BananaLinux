@@ -34,6 +34,8 @@ namespace banana
 		virtual void trim() {}	// a game is starting: drawn pictures it can make again let go (the memory is the game's)
 		// workOnce guards what it shares with the drawing itself: the worker may run it without the UI's lock
 		virtual bool ownLocking() const { return false; }
+		// a tapped button the host handles itself (a layout theme's "x", "start", "select"), once: "" none
+		virtual std::string takeTapKey() { return ""; }
 	};
 
 	// ROCKNIXDS Pixel's engine, the Dark and Light themes

@@ -259,8 +259,10 @@ namespace banana
 				glassPrewarm((int)std::lround(X(640)), (int)std::lround(X(480)), (int)std::lround(X(glassLook.blur)));
 			cache.clear(); cacheBytes = 0; drawnLook = look;
 		}
-		// the Carts and Glass themes write in Inter (a clean typeface), the others in the theme's Pixelify Sans
-		bool clean = (v == "carts" || glassLook.blur > 0) && !fontDir.empty();
+		// the Carts and Glass themes write in Inter (a clean typeface), the others in the theme's Pixelify Sans. A theme
+		// with panels ("settings.glass") and fonts of its own (Plaza's Nunito) writes in those
+		bool clean = (v == "carts" || glassLook.blur > 0) && !fontDir.empty() &&
+			!(glassLook.blur > 0 && !rnds::themeFiles.fontRegular.empty() && !rnds::themeFiles.fontMedium.empty());
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
 		if (clean != cleanFonts || !R || fonts != fontsLoaded)
 		{

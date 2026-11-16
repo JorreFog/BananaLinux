@@ -11,6 +11,11 @@ Ten more come with the system (0.5.0), made with the Banana Theme Studio, which 
 layout: comic-panel, coral-reef, felt-table, neon-arcade, oak-bookshelf, orbital-hud, paper-notebook,
 phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio to make your own from it.
 
+Plaza light and Plaza dark (plaza-light.json, plaza-dark.json) draw the systems and games as tiles in pages side by
+side: L and R zoom (7, 5 or 3 across, kept for each system), a swipe turns the page, every button is on the bottom
+screen. Their icons are RetroArch's system shapes (libretro's retroarch-assets, CC BY 4.0) on Plaza's tiles, their
+typeface Nunito (SIL OFL). tools/plaza-theme/make.py makes their pictures, icons and sounds.
+
     {
       "name": "My theme",          the name shown in Settings (else the file name)
       "author": "you",             (shown nowhere yet)

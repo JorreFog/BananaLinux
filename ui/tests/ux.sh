@@ -358,3 +358,31 @@ a=$(gl_corner "$OUT/$size-ux-glass-first-top.png"); gl_bad=0
 for i in $(seq 200); do [ "$(gl_corner "$OUT/$size-ux-glass-$i-top.png")" = "$a" ] || gl_bad=$((gl_bad + 1)); done
 [ -n "$a" ] && [ $gl_bad = 0 ] || { echo "FAIL $size: Glass's wallpaper gone in $gl_bad of 200 frames scrolling"; fail=1; }
 rm -f "$OUT/$size"-ux-glass-[0-9]*
+
+# Plaza: the games in pages side by side (5 x 3 at its start). Right at a row's end goes on to the next page's same
+# row, a swipe turns the page, up stays on the page; R and L zoom (kept per system in zoom.txt); the A-Z button
+# (tapped) goes to the next letter's first game; a tapped X is the host's (the game's page)
+PZFX=$OUT/ux-plaza-fixture-$size
+rm -rf "$PZFX"; "$HERE/tests/fixture.sh" "$PZFX" >/dev/null
+rm -f "$PZFX"/roms/gba/*.gba
+for i in $(seq 10 29); do : > "$PZFX/roms/gba/Apple $i.gba"; done
+for i in $(seq 10 19); do : > "$PZFX/roms/gba/Berry $i.gba"; done
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$PZFX/roms" --data "$PZFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/plaza-light.json" \
+    --script "lib gba 0; wait 1500; shot ux-plaza; press right; press right; press right; press right; press right; press up; swipe 100 240 500 240; swipe 500 240 100 240; press down; press r; press r; press l; touch 1 560 31; touch 1 300 450" \
+    2> "$OUT/$size-plaza.log" || { echo "FAIL $size: banana-ui (plaza) exited $?"; fail=1; }
+ux_check plaza "press right: used, view 1 sys [0-9]* game 4"
+ux_check plaza "press right: used, view 1 sys [0-9]* game 15"          # the next page, the same (first) row
+ux_check plaza "press up: unused, view 1 sys [0-9]* game 15"           # (the page's top row)
+ux_check plaza "swipe 100 240 -> 500 240: used"                         # back a page: 0, the same place
+ux_check plaza "swipe 500 240 -> 100 240: used"                         # on again: 15
+ux_check plaza "press down: used, view 1 sys [0-9]* game 20"
+ux_check plaza "press r: used"
+ux_check plaza "press r: unused"                                       # (the biggest already)
+grep -q "gba 1" "$PZFX/data/zoom.txt" 2>/dev/null || { echo "FAIL $size: Plaza's zoom isn't kept for the system ($(cat "$PZFX/data/zoom.txt" 2>/dev/null))"; fail=1; }
+ux_check plaza "touch 560 31: used"                                    # A-Z: Berry 10, the first B
+ux_check plaza "touch 300 450: used"
+ux_check plaza "touch: key x"
+grep "theme:" "$OUT/$size-plaza.log" && { echo "FAIL $size: Plaza's theme has errors"; fail=1; }
+
