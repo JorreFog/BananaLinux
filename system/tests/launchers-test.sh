@@ -276,6 +276,19 @@ check "[$(mi '1 0 179:32 / / ro - squashfs /dev/root ro')]" "[]" "a root on a wh
 check "[$(mi '1 0 0:17 / / rw - tmpfs tmpfs rw')]" "[]" "a root that is no block device: nothing"
 check "[$(root_disk "$T/none" "$S")]" "[]" "no mountinfo: nothing"
 
+echo "rcS: a machine id of the card's own (#174), made once"
+fn "$R/system/rootfs/etc/init.d/rcS" machine_id
+mkdir -p "$T/mid"
+machine_id "$T/mid/card" "$T/mid/run"; id1=$(cat "$T/mid/card")
+check "$(echo "$id1" | grep -cE '^[0-9a-f]{32}$')" "1" "32 hex digits on the card"
+check "$(cat "$T/mid/run")" "$id1" "...and the copy /etc/machine-id points at"
+rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(cat "$T/mid/card") $(cat "$T/mid/run")" "$id1 $id1" "the next boot: the same id"
+machine_id "$T/mid/card2" "$T/mid/run2"
+check "$([ "$(cat "$T/mid/card2")" != "$id1" ] && echo other)" "other" "another card: another id"
+echo "not an id" > "$T/mid/card"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "a file that isn't an id is made again"
+
 echo "run-bananads: a zipped game is only kept when it unpacked whole"
 fn "$L/run-bananads" unpack
 # a stand-in for unzip: writes the game (cut short and failing with UNZIP_FAIL set, as on a full card)

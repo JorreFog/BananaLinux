@@ -93,6 +93,19 @@ data || {
     echo "${DISK}p4 could not be mounted" > /run/banana/data-failed
 }
 /usr/libexec/banana/data-layout
+# a machine id of the card's own (#174): the image had none, so every handheld was the same machine to a program that
+# asks - BananaDS makes the DS's network address from it, and two handhelds in one game need two. Made once and kept on
+# the card; /etc/machine-id (the root is read-only) points at the copy in /run
+# machine_id <the card's file> <the copy>
+machine_id() {
+    # (32 hex digits, as systemd's: the kernel's random UUID without its dashes; a file that isn't that is made again)
+    case $(cat "$1" 2>/dev/null) in
+    *[!0-9a-f]*|"") tr -d '-' < /proc/sys/kernel/random/uuid > "$1.new" 2>/dev/null && mv -f "$1.new" "$1" ;;
+    esac
+    [ "$(wc -c < "$1" 2>/dev/null)" = 33 ] && cp "$1" "$2" 2>/dev/null
+    return 0
+}
+machine_id /data/banana/machine-id /run/banana/machine-id
 mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
