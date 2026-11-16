@@ -8,8 +8,13 @@ set -e
 # last check below makes that folder. With it there, one run's files were the next run's menus' (the setup's box art
 # slide found a fetch "running"): as root the suite passed once on a machine and failed from then on. Without the
 # rights for it, as before (/run can't be written then, and nothing is left there)
+# ...and a /data of its own the same way: Settings writes the emulators' own files where they are on the handheld
+# (/data/bananads/bananads.conf, /data/retroarch/retroarch.cfg) whatever --data says, so as root the checks changed
+# this machine's /data, and found there what the run before had set (BANANA_TEST_OWN_DATA: it is this run's alone)
 if [ -z "$BANANA_TEST_OWN_RUN" ] && [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
-    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c 'mount -t tmpfs tmpfs /run 2>/dev/null; exec "$0" "$@"' "$0" "$@"
+    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c 'mount -t tmpfs tmpfs /run 2>/dev/null
+        mkdir -p /data 2>/dev/null && mount -t tmpfs tmpfs /data 2>/dev/null && export BANANA_TEST_OWN_DATA=1
+        exec "$0" "$@"' "$0" "$@"
 fi
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}
@@ -336,6 +341,9 @@ for size in 640x480 1024x768; do
     [ -e "$FR" ] && { echo "FAIL $size: leaving 4x asked or kept it: $(cat "$FR")"; fail=1; }
     # Settings > Nintendo DS > BananaDS > 3D resolution lists 1x, 2x, 3x, 4x left to right (#250: it was 2x, 1x, 3x, 4x,
     # so Left from the default 2x went round to the 4x question): Left from 2x is 1x, a change, not the question
+    # (from BananaDS's settings as a new card has them: with a /data of this run's own, the other panel size's run of
+    # this check left 1x there)
+    [ -z "$BANANA_TEST_OWN_DATA" ] || rm -f /data/bananads/bananads.conf
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press a; press down; press left" 2> "$OUT/$size-res-order.log" \
         || { echo "FAIL $size: banana-ui (3D resolution order) exited $?"; fail=1; }
