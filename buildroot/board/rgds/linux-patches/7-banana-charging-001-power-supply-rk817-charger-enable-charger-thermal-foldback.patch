@@ -1,0 +1,58 @@
+From ddb2b134a0ca04dc852235c0cd3f1a2c264b58ce Mon Sep 17 00:00:00 2001
+From: Marlos001 <marlos.guedes@sou.inteli.edu.br>
+Date: Mon, 16 Nov 2026 11:31:21 -0300
+Subject: [PATCH 1/2] power: supply: rk817-charger: enable charger thermal
+ foldback
+
+The RK817 can lower its charge current by itself once its die reaches a
+preset temperature, to keep the die within an appropriate range. The
+datasheet calls this thermal foldback; it is CHRG_CT_EN, bit 3 of
+PMIC_CHRG_OUT, and resets to disabled. Nothing in this driver enables
+it, so the charger runs at the programmed current however hot the die
+gets.
+
+Enable it at init with a masked write. It can only lower the charge
+current, and being in hardware it keeps acting while the system is
+suspended or off. The datasheet does not document the temperature at
+which it acts.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+ drivers/power/supply/rk817_charger.c | 11 +++++++++++
+ include/linux/mfd/rk808.h            |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
+index b764512..fa8a1d8 100644
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -1115,6 +1115,17 @@ static int rk817_battery_init(struct rk817_charger *charger,
+ 			  ret);
+ 	}
+ 
++	/*
++	 * Enable the charger's thermal foldback, which lowers the charge
++	 * current by itself once the die reaches a preset temperature. It
++	 * resets to disabled.
++	 */
++	ret = regmap_set_bits(rk808->regmap, RK817_PMIC_CHRG_OUT,
++			      RK817_CHRG_CT_EN);
++	if (ret)
++		dev_warn(charger->dev,
++			 "unable to enable charger thermal foldback: %d\n", ret);
++
+ 	/* Set charge finishing mode to analog */
+ 	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_TERM,
+ 			  RK817_CHRG_TERM_ANA_DIG, (0x0 << 2));
+diff --git a/include/linux/mfd/rk808.h b/include/linux/mfd/rk808.h
+index 2bc58de..9533311 100644
+--- a/include/linux/mfd/rk808.h
++++ b/include/linux/mfd/rk808.h
+@@ -1289,6 +1289,7 @@ enum rk809_reg_id {
+ 
+ #define RK817_PMIC_CHRG_OUT		0xe4
+ #define RK817_CHRG_VOL_SEL		(0x07 << 4)
++#define RK817_CHRG_CT_EN		(0x01 << 3)
+ #define RK817_CHRG_CUR_SEL		(0x07 << 0)
+ 
+ #define RK817_PMIC_CHRG_IN		0xe5

@@ -1,0 +1,449 @@
+From e4927cd97467ceaf96a27d2c6a5577d2a393bd1a Mon Sep 17 00:00:00 2001
+From: Marlos001 <marlos.guedes@sou.inteli.edu.br>
+Date: Mon, 16 Nov 2026 11:32:33 -0300
+Subject: [PATCH 2/2] power: supply: rk817-charger: make the USB input current
+ limit writable
+
+The driver fixes the USB input current limit at 1.5A, at init and after
+every unplug, and offers no way to change it, so a charger able to supply
+more cannot be used for faster charging.
+
+Expose the limit as the charger's input_current_limit, readable and
+writable in microamps. Reads report what the PMIC is set to. A write
+selects the highest of the PMIC's limits (80mA, 450mA, 850mA, 1.5A,
+1.75A and 2A) that does not exceed the request, so requests above 2A
+select 2A; requests below 80mA are rejected. The 2.5A and 3A settings
+are not offered: the driver cannot tell what the source supplies, and
+the datasheet gives the 3A setting a 2.8A to 3.2A tolerance.
+
+The default stays 1.5A, and anything higher has to be asked for again
+for each charger:
+
+- A write fails with -ENODEV when no charger is attached. The plug
+  state is checked under a mutex that the unplug handler also takes to
+  restore the default, so that restore always follows any write it
+  races with.
+- Every plug-in retries the default reset, including after a failed
+  unplug reset.
+- The default is also restored at suspend, at shutdown, when probe
+  fails and when the driver is unbound, after its power supplies are
+  unregistered.
+- Limits above the default fail with -EOPNOTSUPP unless thermal
+  foldback is enabled and the battery ceilings are at most 2A/4.35V.
+- A failed default reset aborts probe or suspend rather than carrying
+  an unconfirmed input limit into operation or sleep.
+- If writing a limit fails, the default is written back.
+
+The minimum input voltage is unchanged at 4.5V and is now written
+together with the current limit.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -9,9 +9,11 @@
+  */
+ 
+ #include <linux/unaligned.h>
++#include <linux/bitfield.h>
+ #include <linux/devm-helpers.h>
+ #include <linux/math64.h>
+ #include <linux/mfd/rk808.h>
++#include <linux/mutex.h>
+ #include <linux/irq.h>
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+@@ -54,6 +56,9 @@
+ 	struct power_supply *chg_ps;
+ 	bool plugged_in;
+ 	bool battery_present;
++
++	/* Serialises USB input limit writes against the default resets. */
++	struct mutex input_lock;
+ 
+ 	/*
+ 	 * voltage_k and voltage_b values are used to calibrate the ADC
+@@ -158,6 +163,24 @@
+ 	else
+ 		return -EINVAL;
+ }
++
++/*
++ * USB input current limits in uA, indexed by the RK817_USB_ILIM_SEL value.
++ * The selector is not ordered by current.
++ */
++static const int rk817_input_cur_ua[] = {
++	450000, 80000, 850000, 1500000, 1750000, 2000000, 2500000, 3000000,
++};
++
++/* Input limits applied at init and after every unplug: 1.5A and 4.5V. */
++#define RK817_INPUT_CUR_DEFAULT_SEL	3
++#define RK817_INPUT_VOL_DEFAULT_SEL	5
++
++/*
++ * Highest input current limit userspace may select. The 3A setting may draw
++ * up to 3.2A, and the driver cannot tell what the source supplies.
++ */
++#define RK817_INPUT_CUR_MAX_UA		2000000
+ 
+ static int rk817_chg_cur_from_reg(u8 reg)
+ {
+@@ -604,11 +627,22 @@
+ 			      union power_supply_propval *val)
+ {
+ 	struct rk817_charger *charger = power_supply_get_drvdata(ps);
++	unsigned int reg;
++	int ret;
+ 
+ 	switch (prop) {
+ 	case POWER_SUPPLY_PROP_ONLINE:
+ 		val->intval = charger->plugged_in;
+ 		break;
++	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
++		ret = regmap_read(charger->rk808->regmap, RK817_PMIC_CHRG_IN,
++				  &reg);
++		if (ret)
++			return ret;
++		if (!(reg & RK817_USB_ILIM_EN))
++			return -ENODATA;
++		val->intval = rk817_input_cur_ua[FIELD_GET(RK817_USB_ILIM_SEL, reg)];
++		break;
+ 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
+ 		/* max voltage from datasheet at 5.5v (default 5.0v) */
+ 		val->intval = 5500000;
+@@ -635,12 +669,104 @@
+ 
+ }
+ 
++/* Writes the current limit with the default minimum input voltage. */
++static int rk817_chg_write_input(struct rk817_charger *charger,
++				 unsigned int ilim_sel)
++{
++	lockdep_assert_held(&charger->input_lock);
++
++	return regmap_write_bits(charger->rk808->regmap, RK817_PMIC_CHRG_IN,
++				 RK817_USB_VLIM_EN | RK817_USB_VLIM_SEL |
++				 RK817_USB_ILIM_EN | RK817_USB_ILIM_SEL,
++				 RK817_USB_VLIM_EN |
++				 FIELD_PREP(RK817_USB_VLIM_SEL,
++					    RK817_INPUT_VOL_DEFAULT_SEL) |
++				 RK817_USB_ILIM_EN |
++				 FIELD_PREP(RK817_USB_ILIM_SEL, ilim_sel));
++}
++
++static int rk817_chg_write_default_input(struct rk817_charger *charger)
++{
++	int ret;
++
++	ret = rk817_chg_write_input(charger, RK817_INPUT_CUR_DEFAULT_SEL);
++	if (ret)
++		dev_warn(charger->dev, "unable to set default input limits: %d\n",
++			 ret);
++
++	return ret;
++}
++
++/*
++ * Set minimum USB input voltage to 4.5v and average USB input current limit
++ * to 1.5A, and enable both limits.
++ */
++static int rk817_chg_reset_input(struct rk817_charger *charger)
++{
++	guard(mutex)(&charger->input_lock);
++
++	return rk817_chg_write_default_input(charger);
++}
++
++/*
++ * A raised input limit is only for the charger attached now, and only while
++ * the charger's thermal foldback is enabled. The plug state is checked under
++ * input_lock, which the unplug handler takes to put the default back, so that
++ * reset always lands after any write that raced with the unplug.
++ */
++static int rk817_chg_set_input_current(struct rk817_charger *charger, int ua)
++{
++	struct regmap *regmap = charger->rk808->regmap;
++	unsigned int i, reg;
++	int sel = -1;
++	int ret;
++
++	ua = min(ua, RK817_INPUT_CUR_MAX_UA);
++	for (i = 0; i < ARRAY_SIZE(rk817_input_cur_ua); i++) {
++		if (rk817_input_cur_ua[i] > ua)
++			continue;
++		if (sel < 0 || rk817_input_cur_ua[i] > rk817_input_cur_ua[sel])
++			sel = i;
++	}
++	if (sel < 0)
++		return -EINVAL;
++
++	guard(mutex)(&charger->input_lock);
++
++	if (rk817_input_cur_ua[sel] >
++	    rk817_input_cur_ua[RK817_INPUT_CUR_DEFAULT_SEL]) {
++		ret = regmap_read(regmap, RK817_PMIC_CHRG_OUT, &reg);
++		if (ret)
++			return ret;
++		if (!(reg & RK817_CHRG_CT_EN) ||
++		    rk817_chg_cur_from_reg(FIELD_GET(RK817_CHRG_CUR_SEL, reg)) >
++		    2000000 || FIELD_GET(RK817_CHRG_VOL_SEL, reg) > 5)
++			return -EOPNOTSUPP;
++	}
++
++	ret = regmap_read(regmap, RK817_SYS_STS, &reg);
++	if (ret)
++		return ret;
++	if (!charger->plugged_in || !(reg & RK817_PLUG_IN_STS))
++		return -ENODEV;
++
++	ret = rk817_chg_write_input(charger, sel);
++	if (ret)
++		rk817_chg_write_default_input(charger);
++
++	return ret;
++}
++
+ static irqreturn_t rk817_plug_in_isr(int irq, void *cg)
+ {
+ 	struct rk817_charger *charger;
+ 
+ 	charger = (struct rk817_charger *)cg;
+-	charger->plugged_in = 1;
++	scoped_guard(mutex, &charger->input_lock) {
++		/* Retry a failed unplug reset before exposing a new connection. */
++		rk817_chg_write_default_input(charger);
++		charger->plugged_in = 1;
++	}
+ 	power_supply_changed(charger->chg_ps);
+ 	power_supply_changed(charger->bat_ps);
+ 	/* try to recalibrate capacity if we hit full charge. */
+@@ -656,39 +782,45 @@
+ static irqreturn_t rk817_plug_out_isr(int irq, void *cg)
+ {
+ 	struct rk817_charger *charger;
+-	struct rk808 *rk808;
+ 
+ 	charger = (struct rk817_charger *)cg;
+-	rk808 = charger->rk808;
+-	charger->plugged_in = 0;
++
++	/*
++	 * For some reason the bits of RK817_PMIC_CHRG_IN reset whenever the
++	 * power cord is unplugged. This was not documented in the BSP kernel
++	 * or the datasheet and only discovered by trial and error. Put the
++	 * default limits back, which also drops any raised input limit.
++	 */
++	scoped_guard(mutex, &charger->input_lock) {
++		charger->plugged_in = 0;
++		rk817_chg_write_default_input(charger);
++	}
+ 	power_supply_changed(charger->bat_ps);
+ 	power_supply_changed(charger->chg_ps);
+ 
+-	/*
+-	 * For some reason the bits of RK817_PMIC_CHRG_IN reset whenever the
+-	 * power cord is unplugged. This was not documented in the BSP kernel
+-	 * or the datasheet and only discovered by trial and error. Set minimum
+-	 * USB input voltage to 4.5v and enable USB voltage input limit.
+-	 */
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN,
+-			  RK817_USB_VLIM_SEL, (0x05 << 4));
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN, RK817_USB_VLIM_EN,
+-			  (0x01 << 7));
+-
+-	/*
+-	 * Set average USB input current limit to 1.5A and enable USB current
+-	 * input limit.
+-	 */
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN,
+-			  RK817_USB_ILIM_SEL, 0x03);
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN, RK817_USB_ILIM_EN,
+-			  (0x01 << 3));
+-
+ 	rk817_read_props(charger);
+ 
+ 	dev_dbg(charger->dev, "Power Cord Removed\n");
+ 
+ 	return IRQ_HANDLED;
++}
++
++static int rk817_chg_set_prop(struct power_supply *ps,
++			      enum power_supply_property prop,
++			      const union power_supply_propval *val)
++{
++	struct rk817_charger *charger = power_supply_get_drvdata(ps);
++	int ret;
++
++	switch (prop) {
++	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
++		ret = rk817_chg_set_input_current(charger, val->intval);
++		if (!ret)
++			power_supply_changed(charger->chg_ps);
++		return ret;
++	default:
++		return -EINVAL;
++	}
+ }
+ 
+ static int rk817_bat_set_prop(struct power_supply *ps,
+@@ -734,6 +866,7 @@
+ 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
+ 	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
+ 	POWER_SUPPLY_PROP_VOLTAGE_AVG,
++	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
+ };
+ 
+ static int rk817_bat_prop_writeable(struct power_supply *psy,
+@@ -745,6 +878,12 @@
+ 	default:
+ 		return 0;
+ 	}
++}
++
++static int rk817_chg_prop_writeable(struct power_supply *psy,
++				    enum power_supply_property psp)
++{
++	return psp == POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT;
+ }
+ 
+ static const struct power_supply_desc rk817_bat_desc = {
+@@ -764,7 +903,9 @@
+ 		     BIT(POWER_SUPPLY_USB_TYPE_UNKNOWN),
+ 	.properties = rk817_chg_props,
+ 	.num_properties = ARRAY_SIZE(rk817_chg_props),
++	.property_is_writeable = rk817_chg_prop_writeable,
+ 	.get_property = rk817_chg_get_prop,
++	.set_property = rk817_chg_set_prop,
+ };
+ 
+ static int rk817_read_battery_nvram_values(struct rk817_charger *charger)
+@@ -1002,8 +1143,11 @@
+ 	u8 bulk_reg[2];
+ 
+ 	/* Get initial plug state */
+-	regmap_read(rk808->regmap, RK817_SYS_STS, &tmp);
+-	charger->plugged_in = (tmp & RK817_PLUG_IN_STS);
++	ret = regmap_read(rk808->regmap, RK817_SYS_STS, &tmp);
++	if (ret)
++		return ret;
++	scoped_guard(mutex, &charger->input_lock)
++		charger->plugged_in = (tmp & RK817_PLUG_IN_STS);
+ 
+ 	/*
+ 	 * Turn on all ADC functions to measure battery, USB, and sys voltage,
+@@ -1154,23 +1298,9 @@
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	/*
+-	 * Set minimum USB input voltage to 4.5v and enable USB voltage input
+-	 * limit.
+-	 */
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN,
+-			  RK817_USB_VLIM_SEL, (0x05 << 4));
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN, RK817_USB_VLIM_EN,
+-			  (0x01 << 7));
+-
+-	/*
+-	 * Set average USB input current limit to 1.5A and enable USB current
+-	 * input limit.
+-	 */
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN,
+-			  RK817_USB_ILIM_SEL, 0x03);
+-	regmap_write_bits(rk808->regmap, RK817_PMIC_CHRG_IN, RK817_USB_ILIM_EN,
+-			  (0x01 << 3));
++	ret = rk817_chg_reset_input(charger);
++	if (ret)
++		return ret;
+ 
+ 	/*
+ 	 * Shutdown the system voltage in bat_off mode, unless
+@@ -1202,6 +1332,11 @@
+ 	struct device_node *node = data;
+ 
+ 	of_node_put(node);
++}
++
++static void rk817_chg_teardown_input(void *data)
++{
++	rk817_chg_reset_input(data);
+ }
+ 
+ static void rk817_put_battery_info(void *data)
+@@ -1240,6 +1375,10 @@
+ 	charger->dev = &pdev->dev;
+ 	platform_set_drvdata(pdev, charger);
+ 
++	ret = devm_mutex_init(dev, &charger->input_lock);
++	if (ret)
++		return ret;
++
+ 	rk817_bat_calib_vol(charger);
+ 
+ 	pscfg.drv_data = charger;
+@@ -1285,6 +1424,15 @@
+ 	}
+ 
+ 	charger->sleep_filter_current_ua = of_value;
++
++	/*
++	 * Put the default input limits back on probe failure and when the
++	 * driver goes away. Registered ahead of the power supplies, so it runs
++	 * after they are gone and nothing can raise the limit again.
++	 */
++	ret = devm_add_action_or_reset(dev, rk817_chg_teardown_input, charger);
++	if (ret)
++		return ret;
+ 
+ 	charger->bat_ps = devm_power_supply_register(&pdev->dev,
+ 						     &rk817_bat_desc, &pscfg);
+@@ -1390,8 +1538,10 @@
+ 	if (!charger->battery_present || elapsed <= 0)
+ 		return;
+ 
+-	regmap_read(rk808->regmap, RK817_SYS_STS, &sts);
+-	charger->plugged_in = (sts & RK817_PLUG_IN_STS);
++	if (!regmap_read(rk808->regmap, RK817_SYS_STS, &sts)) {
++		scoped_guard(mutex, &charger->input_lock)
++			charger->plugged_in = (sts & RK817_PLUG_IN_STS);
++	}
+ 
+ 	/* Start from what the counter did during sleep, not the pre-sleep soc. */
+ 	regmap_bulk_read(rk808->regmap, RK817_GAS_GAUGE_Q_PRES_H3,
+@@ -1449,8 +1599,19 @@
+ static int __maybe_unused rk817_suspend(struct device *dev)
+ {
+ 	struct rk817_charger *charger = dev_get_drvdata(dev);
++	int ret;
+ 
+ 	cancel_delayed_work_sync(&charger->work);
++
++	/* Do not enter sleep with a raised input limit after a bus error. */
++	ret = rk817_chg_reset_input(charger);
++	if (ret) {
++		mod_delayed_work(system_percpu_wq, &charger->work, 0);
++		return ret;
++	}
++
++	/* Refresh the current sampled for the existing sleep-charge estimate. */
++	rk817_read_props(charger);
+ 
+ 	charger->slp_boottime = ktime_get_boottime_seconds();
+ 	charger->slp_charge_uah = charger->charge_now_uah;
+@@ -1481,8 +1642,14 @@
+ 
+ static SIMPLE_DEV_PM_OPS(rk817_charger_pm, rk817_suspend, rk817_resume);
+ 
++static void rk817_charger_shutdown(struct platform_device *pdev)
++{
++	rk817_chg_reset_input(platform_get_drvdata(pdev));
++}
++
+ static struct platform_driver rk817_charger_driver = {
+ 	.probe    = rk817_charger_probe,
++	.shutdown = rk817_charger_shutdown,
+ 	.driver   = {
+ 		.name  = "rk817-charger",
+ 		.pm		= &rk817_charger_pm,

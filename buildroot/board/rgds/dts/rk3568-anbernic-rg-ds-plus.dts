@@ -190,16 +190,14 @@
 	 * node was left at 2500000. "factory-internal-resistance-micro-ohms"
 	 * was set at 80 but based on context should likely be 80000.
 	 *
-	 * "constant-charge-current-max-microamp" is set at 10 AMPs
-	 * which is likely incorrect but I cannot validate; furthermore
-	 * the onboard charger of the rk817 cannot charge past 3.5A
-	 * anyway.
+	 * The battery charging ceiling is the vendor charger's 2 A setting,
+	 * independently of the USB input current limit.
 	 */
 	battery: battery {
 		compatible = "simple-battery";
 		charge-full-design-microamp-hours = <4247000>;
 		charge-term-current-microamp = <300000>;
-		constant-charge-current-max-microamp = <10000000>;
+		constant-charge-current-max-microamp = <2000000>;
 		constant-charge-voltage-max-microvolt = <4350000>;
 		factory-internal-resistance-micro-ohms = <80000>;
 		precharge-current-microamp = <180000>;

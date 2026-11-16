@@ -504,6 +504,13 @@ namespace banana
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
+		if (board_() == "rgds-plus")
+		{
+			add(P, "moon", "Higher charging limit", "For this connection only, with a 5 V / 3 A rated supply and cable. Unplugging or sleeping restores normal charging. Press A twice.",
+				"", "charge_higher", { "" }, { "" }, Item::ACTION);
+			add(P, "moon", "Normal charging limit", "Restores the normal input current limit. Press A twice.",
+				"", "charge_normal", { "" }, { "" }, Item::ACTION);
+		}
 		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -1348,6 +1355,19 @@ namespace banana
 				return CLOSED;
 			}
 			if (armed != sel) { armed = sel; return MOVED; }
+			if (it.key == "charge_higher" || it.key == "charge_normal")
+			{
+				armed = -1;
+				const char* command = it.key == "charge_higher"
+					? "/usr/libexec/banana/charging higher --confirm-5v-3a 2>&1"
+					: "/usr/libexec/banana/charging normal 2>&1";
+				FILE* p = popen(command, "r");
+				std::string out;
+				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; }
+				int rc = p ? pclose(p) : -1;
+				message = out.empty() ? (rc == 0 ? "Charging limit selected." : "The charging limit could not be changed.") : out;
+				return MOVED;
+			}
 			if (it.key == "switch")
 			{
 				// the other slot made the default, then a restart; the script says why not when it can't
