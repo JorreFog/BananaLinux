@@ -994,7 +994,10 @@ static void suspend_now(const char *why)
 			if (again) { if (safer) sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
 			if (lid_closed) backlights_power(0);	/* can't sleep: at least dark until the lid opens */
-			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
+			/* ...and not tried again every 5 s with the lid still shut. (Only with it shut: set after a failed sleep by
+			 * the power button, lid open, nothing took it back - the lid's opening after a sleep is read below, not
+			 * as an event - and "lid still closed" never slept again: a lid shut during a download stayed awake) */
+			if (lid_closed) lid_retry_off = 1;
 			break;
 		}
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
@@ -1034,6 +1037,10 @@ static void suspend_now(const char *why)
 	 * lid's state is read from the kernel instead */
 	drain_inputs();
 	read_lid();
+	if (!lid_closed) lid_retry_off = 0;	/* (the lid's opening was drained above: what its event would have done) */
+	/* a sleep the menu asked for half a second before this one began (Power > Sleep, then the lid shut at once) is
+	 * this sleep: left pending, it put the handheld back to sleep the moment the lid opened */
+	menu_sleep_at = 0;
 	leds_update();
 	if (headphones_in() != headphones) { headphones = !headphones; if (!sound_child) audio_route(); }	/* (else sound_poll routes) */
 	ignore_power_until = mono() + 1.0;
@@ -1870,7 +1877,13 @@ static void handle(const struct input_event *e)
 	double now = mono();
 	if (e->type == EV_KEY && (e->value != 2 || e->code == KEY_VOLUMEUP || e->code == KEY_VOLUMEDOWN)) {
 		const char *k = key_name(e->code);
-		if (k) rec("button", "%s %s", k, e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
+		/* (the recorder: not which button while the on-screen keyboard is open, as a touch's place isn't: the
+		 * keyboard is typed on with the d-pad and A too, its cursor always starting on the same key, so the buttons'
+		 * names in a session file read back as the password. The power and volume keys type nothing) */
+		int typing = recst.on && e->code != KEY_POWER && e->code != KEY_VOLUMEUP && e->code != KEY_VOLUMEDOWN &&
+			access("/run/banana/keyboard", F_OK) == 0;
+		if (typing) rec("button", "%s (keyboard open: which not recorded)", e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
+		else if (k) rec("button", "%s %s", k, e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
 		else rec("button", "key %d %s", e->code, e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
 		if (e->code == BTN_SELECT && e->value != 2) { sel_down = e->value; sel_since = now; sel_marked = 0; }	/* (the loop times the hold) */
 	}
