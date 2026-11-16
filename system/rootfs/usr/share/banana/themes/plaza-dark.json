@@ -86,10 +86,12 @@
     "breathe": "=motion ? (0.5 - 0.5 * cos(moved * 0.0042)) * (1 - progress(moved, 3000)) : 0",   // the frame, 3 s after a move
     "rise": "=motion && view != 'launch' ? 18 * (1 - easeOut(progress(entered, 320))) : 0",
     "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0",
-    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), a ring
-    // going out from the middle of the bottom screen (Motion off: the card, still)
+    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), and a glow in
+    // the accent goes out from the game's tile, up into the top screen too (Motion off: the card, still, no glow)
     "land": "=view != 'launch' ? 0 : motion ? easeOut(progress(launch.t - 220, 480)) : 1",
-    "ripple": "=motion && view == 'launch' ? progress(launch.t - 120, 760) : 0"
+    "spread": "=motion && view == 'launch' ? easeOut(progress(launch.t - 200, 740)) : 0",
+    "glowSize": "=120 + 1500 * spread",
+    "glowA": "=motion && view == 'launch' ? min(1, max(0, launch.t - 200) / 140) * (1 - 0.4 * spread) : 0"
   },
 
   "behavior": { "launchMs": 1000, "scrollMs": 160, "settleMs": 3000, "wrap": false, "cues": { "insert": 40 },
@@ -158,8 +160,11 @@
             { "type": "group", "w": 56, "h": 22, "visible": "=battery >= 0", "children": [
               { "type": "rect", "x": 0, "y": 5, "w": 25, "h": 13, "radius": 3.5, "border": 1.6, "borderColor": "=sub" },
               { "type": "rect", "x": 2.5, "y": 7.5, "w": "=20 * battery / 100", "h": 8, "radius": 1.5,
-                "fill": "=charging ? '#34c26a' : battery < 20 ? quit : sub" },
+                "fill": "=charging ? '#ffb340' : battery < 20 ? quit : sub" },
               { "type": "rect", "x": 26, "y": 9, "w": 2, "h": 5, "radius": 1, "fill": "=sub" },
+              // on the charger: the level in the charging LED's amber, a bolt over it (edged in the screen's colour)
+              { "type": "image", "src": "plaza/ui/bolt.png", "x": 6.5, "y": 1.5, "w": 12, "h": 20, "fit": "contain", "tint": "=bg", "visible": "=charging" },
+              { "type": "image", "src": "plaza/ui/bolt.png", "x": 7.5, "y": 3, "w": 10, "h": 17, "fit": "contain", "tint": "=ink", "visible": "=charging" },
               { "type": "text", "x": 32, "y": 3, "w": 24, "align": "right", "text": "=battery", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] }
           ] }
       ]
@@ -275,51 +280,61 @@
     "library": {
       "top": [
         { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
+        // a game starting: the bottom screen's glow coming up into this one (its middle where the game's tile is, below)
+        { "type": "image", "src": "plaza/glow.png", "x": 320, "y": 720, "w": "=glowSize", "h": "=glowSize", "anchor": "center",
+          "fit": "fill", "tint": "=accent", "opacity": "=glowA", "visible": "=view == 'launch'" },
         { "type": "group", "x": "=slide", "opacity": "=motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1", "visible": "=!empty", "children": [
           // the game's box or logo on a tile
           { "type": "group", "x": "=40 + 173 * land", "y": "=62 + 22 * land", "w": 214, "h": 214, "radius": 28, "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": "=6 + 6 * land", "blur": "=18 + 14 * land", "color": "=shade" },
             "children": [
               { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
-                "x": 14, "y": 14, "w": 186, "h": 186, "radius": 14 },
-              { "type": "text", "x": 186, "y": -12, "text": "★", "font": "inter-bold", "size": 26, "color": "=accent",
-                "visible": "=game.fav", "outline": { "width": 3, "color": "=tile" } }
+                "x": 14, "y": 14, "w": 186, "h": 186, "radius": 14 }
             ] },
           { "type": "text", "x": 40, "y": 292, "w": 214, "align": "center", "text": "{cursor + 1} of {count}", "font": "nunito-extrabold",
             "size": 14, "color": "=sub", "opacity": "=1 - land" },
-          // its name, its system, its numbers
+          // its name, its system and players; its details: the favourite's star (gold, else grey), the year, the genre, the
+          // age rating, then who made it (each left out when Scrape artworks found none)
           { "type": "group", "x": "=282 + 40 * land", "y": 66, "w": 330, "layout": "column", "gap": 6, "opacity": "=1 - min(1, land * 1.6)", "children": [
             { "type": "text", "w": 330, "text": "{game.title}", "font": "nunito-black", "size": 26, "color": "=ink", "wrap": true, "maxLines": 3, "lineHeight": 31 },
-            { "type": "text", "w": 330, "text": "{sys.name}", "font": "nunito-extrabold", "size": 16, "color": "=sub" },
+            { "type": "text", "w": 330, "text": "=sys.name + (game.players == '' || sys.apps ? '' : game.players == '1' ? ' · 1 player' : ' · 1–' + game.players + ' players')",
+              "font": "nunito-extrabold", "size": 16, "color": "=sub" },
             { "type": "rect", "w": 330, "h": 8 },
             { "type": "rect", "w": 330, "h": 1.5, "fill": "=edge" },
-            { "type": "group", "w": 330, "h": 54, "layout": "row", "justify": "between", "children": [
-              { "type": "group", "w": 70, "h": 54, "children": [
-                { "type": "text", "y": 8, "text": "=either(game.plays, '0')", "font": "nunito-black", "size": 21, "color": "=ink" },
-                { "type": "text", "y": 36, "text": "Plays", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
-              { "type": "group", "w": 130, "h": 54, "children": [
-                { "type": "text", "y": 8, "w": 130, "text": "=either(game.last, 'Never')", "font": "nunito-black", "size": 21, "color": "=ink" },
-                { "type": "text", "y": 36, "text": "Last played", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
-              { "type": "group", "w": 90, "h": 54, "children": [
-                { "type": "text", "y": 8, "w": 90, "text": "=either(game.time, '0m')", "font": "nunito-black", "size": 21, "color": "=ink" },
-                { "type": "text", "y": 36, "text": "Time", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] }
-            ] }
+            { "type": "rect", "w": 330, "h": 4 },
+            { "type": "group", "w": 330, "h": 30, "layout": "row", "gap": 6, "align": "center", "visible": "=!sys.apps", "children": [
+              { "type": "image", "src": "plaza/ui/star.png", "w": 24, "h": 24, "fit": "contain", "tint": "=game.fav ? accent : edge" },
+              { "type": "rect", "w": 2, "h": 2 },
+              { "type": "group", "layout": "row", "padding": 9, "h": 28, "radius": 14, "fill": "=tile", "border": 1, "borderColor": "=edge", "visible": "=game.year != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.year}", "font": "nunito-black", "size": 14, "color": "=ink" } ] },
+              { "type": "group", "layout": "row", "padding": 9, "h": 28, "radius": 14, "fill": "=tile", "border": 1, "borderColor": "=edge", "visible": "=game.genre != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.genre}", "font": "nunito-black", "size": 14, "color": "=ink" } ] },
+              { "type": "group", "layout": "row", "padding": 7, "h": 28, "radius": 7, "fill": "=chip", "visible": "=game.esrb != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.esrb}", "font": "nunito-black", "size": 14, "color": "=chipInk" } ] }
+            ] },
+            { "type": "text", "w": 330, "font": "nunito-extrabold", "size": 14, "color": "=sub", "visible": "=game.publisher != '' || game.developer != ''",
+              "text": "=game.publisher == '' ? game.developer : game.developer == '' || game.developer == game.publisher ? game.publisher : game.publisher + ' · ' + game.developer" }
           ] },
-          // under them: its genre and year, its achievements (else whether it's a favourite), its system's tile
+          // under them, your own numbers: plays, when, how long, and the achievements' bar (a game with achievements);
+          // its system's tile
           { "type": "group", "x": 40, "y": "=332 + 30 * land", "w": 560, "h": 104, "radius": 24, "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": 3, "blur": 10, "color": "=shade" }, "opacity": "=1 - min(1, land * 1.6)",
             "children": [
-              { "type": "text", "x": 24, "y": 18, "w": 360, "text": "{upper(game.sub)}", "font": "nunito-black", "size": 12, "spacing": 1, "color": "=hi" },
+              { "type": "group", "x": 26, "y": "=game.achB > 0 ? 12 : 24", "w": 400, "h": 54, "layout": "row", "children": [
+                { "type": "group", "w": 110, "h": 54, "children": [
+                  { "type": "text", "text": "=either(game.plays, '0')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Plays", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
+                { "type": "group", "w": 160, "h": 54, "children": [
+                  { "type": "text", "w": 150, "text": "=either(game.last, 'Never')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Last played", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
+                { "type": "group", "w": 130, "h": 54, "children": [
+                  { "type": "text", "w": 130, "text": "=either(game.time, '0m')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Time", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] }
+              ] },
               { "type": "group", "visible": "=game.achB > 0", "children": [
-                { "type": "text", "x": 24, "y": 38, "w": 360, "text": "{game.achLabel}", "font": "nunito-black", "size": 19, "color": "=ink" },
-                { "type": "rect", "x": 24, "y": 72, "w": 340, "h": 10, "radius": 5, "fill": "=well" },
-                { "type": "rect", "x": 24, "y": 72, "w": "=max(10, 340 * game.achProgress)", "h": 10, "radius": 5, "fill": "=accent" } ] },
-              { "type": "group", "x": 0, "y": 30, "w": 400, "h": 64, "visible": "=game.achB <= 0 && !sys.apps", "onTap": "y", "children": [
-                { "type": "image", "src": "plaza/ui/star.png", "x": 24, "y": 9, "w": 20, "h": 20, "fit": "contain", "tint": "=game.fav ? accent : edge" },
-                { "type": "text", "x": 52, "y": 8, "w": 330, "text": "=game.fav ? 'One of your favourites' : 'Add it to your favourites'",
-                  "font": "nunito-black", "size": 19, "color": "=ink" },
-                { "type": "text", "x": 24, "y": 36, "w": 360, "text": "=game.fav ? 'Y takes it out' : 'Y adds it'",
-                  "font": "nunito-extrabold", "size": 14, "color": "=sub" } ] },
+                { "type": "rect", "x": 26, "y": 78, "w": 250, "h": 9, "radius": 4.5, "fill": "=well" },
+                { "type": "rect", "x": 26, "y": 78, "w": "=max(9, 250 * game.achProgress)", "h": 9, "radius": 4.5, "fill": "=accent" },
+                { "type": "text", "x": 288, "y": 73, "w": 170, "text": "{game.achLabel}", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] },
               { "type": "image", "src": "{sys.icon}", "x": 470, "y": 18, "w": 68, "h": 68, "fit": "contain" }
             ] }
         ] },
@@ -385,8 +400,8 @@
         { "use": "bar" },
         { "type": "group", "visible": "=view == 'launch'", "children": [
           { "type": "group", "opacity": "=land", "children": [ { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } } ] },
-          { "type": "rect", "x": 320, "y": 240, "w": "=110 + 420 * easeOut(ripple)", "h": "=110 + 420 * easeOut(ripple)", "anchor": "center",
-            "radius": "50%", "fill": "#00000000", "border": "=6 * (1 - ripple) + 1", "borderColor": "=accent", "opacity": "=(1 - ripple) * 0.8" },
+          { "type": "image", "src": "plaza/glow.png", "x": 320, "y": 240, "w": "=glowSize", "h": "=glowSize", "anchor": "center",
+            "fit": "fill", "tint": "=accent", "opacity": "=glowA" },
           { "type": "group", "x": 320, "y": 240, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" }, "opacity": "=land",
             "scale": "=motion ? 0.7 + 0.3 * easeOutBack(progress(launch.t - 220, 520)) : 1",

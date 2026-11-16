@@ -128,6 +128,7 @@ UI = {
     'search': OURS['search'],
     'gear': gear_path(),
     'star': OURS['favorites'],
+    'bolt': '<path d="M38 2L10 36h17l-5 26 30-38H34z"/>',
     'wifi': '<path fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" d="M10 26a31 31 0 0 1 44 0M18 35a19 19 0 0 1 28 0"/>'
             '<circle cx="32" cy="46" r="5.5"/>',
 }
@@ -223,6 +224,21 @@ def backgrounds(v):
         im.filter(ImageFilter.GaussianBlur(14 * K / 2)).save(os.path.join(OUT, '%s-%s-frost.jpg' % (v, name)), quality=88)
 
 
+def glow():
+    """a game starting: a soft round light, white (the theme tints it the accent), brightest in the middle and gone at
+    the edge; the GPU scales it up to both screens, so it's made once and small"""
+    S = 256
+    a = Image.new('L', (S, S), 0)
+    px = a.load()
+    for y in range(S):
+        for x in range(S):
+            r = math.hypot(x - S / 2 + 0.5, y - S / 2 + 0.5) / (S / 2)
+            px[x, y] = int(255 * max(0.0, 1 - r) ** 2.2) if r < 1 else 0
+    im = Image.new('RGBA', (S, S), (255, 255, 255, 0))
+    im.putalpha(a)
+    return im
+
+
 RATE = 44100
 
 
@@ -289,6 +305,7 @@ if __name__ == '__main__':
     for name, body in UI.items():
         g = svg_png('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="#ffffff">%s</svg>' % body, 96)
         g.save(os.path.join(OUT, 'ui', name + '.png'), optimize=True)
+    glow().save(os.path.join(OUT, 'glow.png'), optimize=True)
     for v in VARIANTS:
         backgrounds(v)
     sounds()
