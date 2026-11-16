@@ -1170,7 +1170,11 @@ static void audio_route(void)
 	else
 		snprintf(play, sizeof play, "\"null\"");
 	if (card_codec >= 0)
-		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
+		/* (route_policy copy: a program that records one channel - the DS emulators' microphone - gets the left one,
+		 * where the microphone is, as it is. The plug's own way is the two channels' average: half the level when the
+		 * right one is silent, and nothing at all when it is the left one's mirror, as a differential input's can
+		 * be: "the game only hears me when I shout", #14) */
+		snprintf(cap, sizeof cap, "{ type plug route_policy copy slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
 	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
