@@ -53,7 +53,7 @@ namespace banana
 		void toRow(const std::string& key);		// the cursor on that row, in its group's list (headless runs: row)
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
-		// the systems for Shown systems (id, name); withGames: the ids with games on the card (Games artworks > Systems
+		// the systems for Shown systems (id, name); withGames: the ids with games on the card (Scrape artworks > Systems
 		// lists those, and any set to Skip)
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames = {});
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
@@ -658,6 +658,7 @@ namespace banana
 		// with Settings closed: that box art's run followed (the library read again once it's done: takeLibraryChanged)
 		void followArt(double nowMs) { if (scraping()) pollScrape(nowMs); }
 	private:
+		std::string artShort() const;		// Look & sound's row: "410 of 530 games", "None yet", "120 / 530"
 		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
 		// home server sync (Network > Home server): banana-sync runs on its own and says how far it got in
 		// /run/banana/sync.status; the pairing is in banana/romsync.json

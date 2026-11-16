@@ -8,6 +8,7 @@
 // any other new sound cuts the one playing.
 // The theme's sounds are loaded again when the theme changes (reload); the intro and the outro always play the menu's
 // own sounds (playBase), whichever theme is chosen.
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <map>
@@ -31,6 +32,7 @@ namespace banana
 		// (a game opening the device meanwhile waits in the kernel for it, while everything before its open goes on)
 		void release(bool wait = true);
 		bool enabled = true;
+		std::atomic<float> gain{ 1.0f };	// Settings > Look & sound > Sound > Menu sounds: 1 Normal, less Quiet
 
 	private:
 		struct Clip { std::vector<int16_t> pcm; int rate = 44100, channels = 2; };

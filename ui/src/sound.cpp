@@ -252,6 +252,12 @@ namespace banana
 				size_t total = cur->pcm.size() / openCh;
 				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
 				p = cur->pcm.data() + at * openCh;
+				if (float g = gain; g < 0.999f)	// (Quiet: the block scaled, the clip itself as it was loaded)
+				{
+					mixed.resize((size_t)frames * openCh);
+					for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)(p[i] * g);
+					p = mixed.data();
+				}
 				at += (size_t)frames;
 				if (at >= total) { cur = nullptr; lastSound = now; if (closeAfter || closing) tail = TAIL; }
 			}
@@ -271,7 +277,8 @@ namespace banana
 				add(cur, at);
 				add(under, underAt);
 				mixed.resize(n * openCh);
-				for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)std::min(32767, std::max(-32768, acc[i]));
+				const float g = gain;
+				for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)std::min(32767, std::max(-32768, (int32_t)(acc[i] * g)));
 				p = mixed.data();
 				frames = (snd_pcm_sframes_t)n;
 				if (!cur && !under) { lastSound = now; if (closeAfter || closing) tail = TAIL; }

@@ -1,6 +1,7 @@
 #include "lang.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <dirent.h>
 #include <fstream>
@@ -317,5 +318,25 @@ namespace banana::lang
 	{
 		std::lock_guard<std::mutex> l(mu);
 		missingPath = path;
+	}
+
+	const char* const DATE_FORMATS[] = { "md", "dm", "dm.", "iso", "mon-d", "d-mon", "wd-mon-d", "wd-d-mon", nullptr };
+
+	std::string date(const std::string& format, const struct tm& t)
+	{
+		static const char* const MON[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+		static const char* const DAY[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+		const int m = std::min(11, std::max(0, t.tm_mon)), w = std::min(6, std::max(0, t.tm_wday)), d = t.tm_mday;
+		const std::string mon = tr("date", MON[m]), day = tr("date", DAY[w]);
+		char b[48];
+		if (format == "dm") snprintf(b, sizeof b, "%02d/%02d", d, m + 1);
+		else if (format == "dm.") snprintf(b, sizeof b, "%02d.%02d.", d, m + 1);
+		else if (format == "iso") snprintf(b, sizeof b, "%04d-%02d-%02d", t.tm_year + 1900, m + 1, d);
+		else if (format == "mon-d") snprintf(b, sizeof b, "%s %d", mon.c_str(), d);
+		else if (format == "d-mon") snprintf(b, sizeof b, "%d %s", d, mon.c_str());
+		else if (format == "wd-mon-d") snprintf(b, sizeof b, "%s, %s %d", day.c_str(), mon.c_str(), d);
+		else if (format == "wd-d-mon") snprintf(b, sizeof b, "%s %d %s", day.c_str(), d, mon.c_str());
+		else snprintf(b, sizeof b, "%02d/%02d", m + 1, d);
+		return b;
 	}
 }

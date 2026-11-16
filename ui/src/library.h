@@ -86,6 +86,7 @@ namespace banana
 		void recordPlay(int game, long seconds, int achA = -1, int achB = 0);
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
+		std::string dateFormat = "md";	// Settings > Look & sound > Date (lang::date's formats)
 
 		// the battery: percent (-1 unknown) and whether it is charging (or full on the charger)
 		struct Power { int percent = -1; bool charging = false; };
@@ -131,7 +132,7 @@ namespace banana
 		std::string gameKey(int game);
 		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
 		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
-		// Settings > Look & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// Settings > Look & sound > Theme options > Game pictures: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
 

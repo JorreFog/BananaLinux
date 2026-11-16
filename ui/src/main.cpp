@@ -727,7 +727,7 @@ static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host&
 	for (auto& d : lib.systemDefs()) r.push_back({ d.id, d.name });
 	return r;
 }
-// the systems with games on the home row (Games artworks > Systems lists them)
+// the systems with games on the home row (Scrape artworks > Systems lists them)
 static std::set<std::string> gameSystems(Host& lib)
 {
 	std::set<std::string> r;
@@ -2230,6 +2230,7 @@ int main(int argc, char** argv)
 	lib.motion = settings["motion"] != "off";
 	lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 	lib.twelveHour = settings["clock"] == "12h";
+	lib.dateFormat = settings["date_format"];
 	lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 
 	if (!o.headless.empty())
@@ -2279,7 +2280,7 @@ int main(int argc, char** argv)
 	Sound sound(o.assets + "/sounds");
 	FrameStats fstat;
 	ClockBoost boost;
-	sound.enabled = settings["sounds"] != "off";
+	sound.enabled = settings["sounds"] != "off"; sound.gain = settings["sounds"] == "quiet" ? 0.4f : 1.0f;
 	// (a library's cue is a launch animation's: its sound the last before the game, so the device closes once it has played)
 	lib.onCue = [&sound](const std::string& n) { sound.play(n, true); };
 
@@ -2475,8 +2476,9 @@ int main(int argc, char** argv)
 			lib.motion = settings["motion"] != "off";
 			lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 			lib.twelveHour = settings["clock"] == "12h";
+			lib.dateFormat = settings["date_format"];
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
-			sound.enabled = settings["sounds"] != "off";
+			sound.enabled = settings["sounds"] != "off"; sound.gain = settings["sounds"] == "quiet" ? 0.4f : 1.0f;
 			bottomReload();	// the idle dim's timeout or level may have changed
 			ui->dataChanged();
 			sound.play("select");
@@ -2487,6 +2489,8 @@ int main(int argc, char** argv)
 			// the menu again in the other palette, on the system it was showing
 			settings = readSettings(o.data);
 			rnds::accentTextMode = rnds::accentTextModeOf(settings["accent_text"]);
+			lib.motion = settings["motion"] != "off";	// (Reset theme options: these too)
+			lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 			variant = applyTheme(settings["theme"], settings["accent"]);
 			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();
@@ -3432,7 +3436,7 @@ int main(int argc, char** argv)
 				ui->dataChanged();
 				ui->setHome(at);
 				roms.watch(lib.watchDirs());
-				settingsView.setSystems(shelfSystems(lib), gameSystems(lib));	// (Games artworks > Systems: new ones with games)
+				settingsView.setSystems(shelfSystems(lib), gameSystems(lib));	// (Scrape artworks > Systems: new ones with games)
 				logf("the games on the card changed: %d systems", lib.systemCount());
 				// a system's "changed" command (systems.conf), for a change in its folder
 				roms.run(lib.changedRuns(roms.changed), "a system's folder changed");

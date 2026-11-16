@@ -610,7 +610,7 @@ int main(int argc, char** argv)
 	{
 		auto lr = LIBRETRO.find(sys.id);
 		if (lr == LIBRETRO.end()) continue;
-		if (setting(("art." + sys.id).c_str(), "on") == "off") continue;	// (Games artworks > Systems: Skip)
+		if (setting(("art." + sys.id).c_str(), "on") == "off") continue;	// (Scrape artworks > Systems: Skip)
 		std::vector<std::pair<std::string, std::vector<std::string>>> places;	// a folder and the games in it
 		int count = 0;
 		for (size_t ri = 0; ri < roots.size(); ri++)

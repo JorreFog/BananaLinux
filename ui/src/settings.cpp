@@ -525,39 +525,63 @@ namespace banana
 			add(D, "picture", "Theme", "How the menu looks. Your own themes go in banana/themes on the card.",
 				menu, "theme", names, values);
 		}
-		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
-			{ "Yellow", "Orange", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "orange", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
-			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
-		items.back().hints = { "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." };
-		// each panel its own backlight (N2); F + volume steps both
-		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens anywhere, in games too.", "", "top",
-			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
-			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
-		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
-			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
-		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
-		items.back().hints = { "The menu plays its sounds.", "The menu is silent. Games keep their sound." };
-		add(D, "music", "Speaker EQ", "", "", "speaker_eq_page", {}, {}, Item::PAGE);
-		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
-		add(D, "picture", "Menu look", "Motion, the battery and clock, the boot animation and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
-		// the Menu look page (Look & sound > Menu look)
+		add(D, "picture", "Theme options", "The theme's colours, its game pictures and its motion.", "", "theme_options", {}, {}, Item::PAGE);
+		// the Theme options page (Look & sound > Theme options): what the theme chosen above does
 		{
-			const char* ML = "Menu look";
-			add(ML, "picture", "Motion", "The top screen's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
-			items.back().hints = { "The top screen moves and shines.", "The top screen holds still, and saves a little battery." };
-			add(ML, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
-			items.back().hints = { "Just the battery icon.", "The icon, and how full it is in percent." };
-			add(ML, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
-			items.back().hints = { "Like 14:30.", "Like 2:30 PM." };
-			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
-			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
-			add(ML, "picture", "DS cartridges", "What the cartridges on the bottom screen show (in Glass, every game's card).", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
-			items.back().hints = { "The covers Games artworks fetched. A game without one shows its own icon.",
-				"A DS game's own icon, as the DSi menu shows it. In Glass, other games show their logo, or their box art without one." };
+			const char* TO = "Theme options";
+			add(TO, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
+				{ "Yellow", "Orange", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "orange", "blue", "red", "green", "purple", "pink" });
+			add(TO, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
+				{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
+			hint({ "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." });
+			add(TO, "picture", "Game pictures", "What the games show: the cartridges, Glass's cards, Plaza's tiles.", menu, "ds_cart_art",
+				{ "Box art", "Game icon" }, { "box", "icon" });
+			hint({ "The covers Scrape artworks fetched. A game without one shows its own icon.",
+				"A DS game's own icon, as the DSi menu shows it. Other games show their logo, or their box art without one." });
+			add(TO, "picture", "Motion", "The menu's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
+			hint({ "The menu moves and shines.", "The menu holds still, and saves a little battery." });
+			add(TO, "picture", "Reset theme options", "The accent, its text, the game pictures and motion as they first were. Press A twice.",
+				"", "theme_reset", { "" }, { "" }, Item::ACTION);
 		}
+		add(D, "picture", "Screens", "Each screen's brightness, and its colours.", "", "screens_page", {}, {}, Item::PAGE);
+		// the Screens page (Look & sound > Screens): each panel its own backlight (N2); F + volume steps both
+		{
+			const char* SC = "Screens";
+			add(SC, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens, in games too.", "", "top",
+				{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+			add(SC, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens, in games too.", "", "bottom",
+				{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+			add(SC, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
+		}
+		add(D, "music", "Sound", "The volume, the menu's sounds and the speakers' EQ.", "", "sound_page", {}, {}, Item::PAGE);
+		// the Sound page (Look & sound > Sound)
+		{
+			const char* SO = "Sound";
+			add(SO, "music", "Volume", "The speakers or headphones. The volume keys change it anywhere.", "", "",
+				{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
+			add(SO, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds",
+				{ "Normal", "Quiet", "Off" }, { "on", "quiet", "off" });
+			hint({ "The menu plays its sounds.", "The menu's sounds, softer than the games.", "The menu is silent. Games keep their sound." });
+			add(SO, "music", "Speaker EQ", "Evens out the speakers. Headphones stay as they are.", "", "speaker_eq_page", {}, {}, Item::PAGE);
+		}
+		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
+		add(D, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
+		hint({ "Like 14:30.", "Like 2:30 PM." });
+		{
+			// the date's formats, each shown with today's date
+			time_t now = time(nullptr);
+			struct tm t;
+			localtime_r(&now, &t);
+			std::vector<std::string> names, values;
+			for (int i = 0; lang::DATE_FORMATS[i]; i++) { values.push_back(lang::DATE_FORMATS[i]); names.push_back(lang::date(lang::DATE_FORMATS[i], t)); }
+			add(D, "picture", "Date", "How the date shows on the top screen, in the themes that show it.", menu, "date_format", names, values);
+			hint({ "Month, then day.", "Day, then month.", "Day, then month, with dots.", "Year, month, day.", "The month's name, then the day.",
+				"The day, then the month's name.", "The weekday, the month's name, the day.", "The weekday, the day, the month's name." });
+		}
+		add(D, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
+		hint({ "Just the battery icon.", "The icon, and how full it is in percent." });
+		add(D, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
+		hint({ "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." });
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
@@ -891,7 +915,7 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
-		add(D, "picture", "Games artworks", "Covers, logos and title screens: fetch them, for the systems you pick.", "", "sys_boxart", {}, {}, Item::PAGE);
+		add(D, "picture", "Scrape artworks", "Covers, logos and title screens: fetch them, for the systems you pick.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
@@ -904,9 +928,9 @@ namespace banana
 			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
 			add(UP, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
-		// the Games artworks page (Look & sound > Games artworks); its Systems page's rows are addShelfRows()
+		// the Scrape artworks page (Look & sound > Scrape artworks); its Systems page's rows are addShelfRows()
 		{
-			const char* BA = "Games artworks";
+			const char* BA = "Scrape artworks";
 			add(BA, "picture", "Fetch artworks", "Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.",
 				"", "scrape", {}, {}, Item::PAGE);
 			add(BA, "picture", "Systems", "Which systems' games get artworks.", "", "art_systems", {}, {}, Item::PAGE);
@@ -1048,14 +1072,16 @@ namespace banana
 			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
 			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
-			{ "Look & sound", { "Shown systems", "Theme", "Accent colour", "Text on accent", "Menu look", "Games artworks", "Top brightness", "Bottom brightness", "Screen colours", "Volume", "Menu sounds", "Speaker EQ" } },
+			{ "Look & sound", { "Theme", "Theme options", "Shown systems", "Scrape artworks", "Screens", "Sound", "Clock", "Date", "Battery", "Boot animation" } },
+			{ "Theme options", { "Accent colour", "Text on accent", "Game pictures", "Motion", "Reset theme options" } },
+			{ "Screens", { "Top brightness", "Bottom brightness", "Screen colours" } },
+			{ "Sound", { "Volume", "Menu sounds", "Speaker EQ" } },
 			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "Waking up", "LEDs" } },
 			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "Picture size", "Integer scaling", "VSync", "Audio latency" } },
-			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
 		{
@@ -1415,10 +1441,12 @@ namespace banana
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
-				{ "sys_boxart", "Games artworks" },
+				{ "sys_boxart", "Scrape artworks" },
 				{ "art_systems", "Artwork systems" },
 				{ "sys_reset", "Reset options" },
-				{ "menu_look", "Menu look" },
+				{ "theme_options", "Theme options", "accent" },
+				{ "screens_page", "Screens" },
+				{ "sound_page", "Sound", "sounds" },
 				{ "ds_buttons", "DS buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
@@ -1553,6 +1581,22 @@ namespace banana
 			{
 				armed = -1;
 				return resetApply(it.key == "reset_emulator");
+			}
+			if (it.key == "theme_reset")
+			{
+				// Theme options as they first were (the template's values); an accent the theme owns ("From the theme") stays
+				armed = -1;
+				for (const char* k : { "accent", "accent_text", "ds_cart_art", "motion" })
+					for (auto& x : items)
+						if (x.key == k && x.kind == Item::CHOICE)
+						{
+							auto at = std::find(x.values.begin(), x.values.end(), settingDefault(k));
+							if (at != x.values.end() && at - x.values.begin() != x.at) { x.at = (int)(at - x.values.begin()); save(x); }
+						}
+				rnds::accentTextMode = rnds::accentTextModeOf(settingDefault("accent_text"));
+				setVariant(getConfValue(data + "/settings.conf", "theme", "dark"));
+				toast("Theme options reset", "The accent, its text, the game pictures and motion as they first were.", 0x6ad07a, 1, 4000);
+				return THEME;
 			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
@@ -1808,7 +1852,7 @@ namespace banana
 			items.push_back(it);
 			load(items.back());
 		}
-		// Games artworks > Systems: a row each system artworks can be fetched for (artsystems.h) with games on the card (or
+		// Scrape artworks > Systems: a row each system artworks can be fetched for (artsystems.h) with games on the card (or
 		// set to Skip, to be set back), Fetch or Skip
 		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Artwork systems"; }), items.end());
 		for (auto& sy : shelfSystems)
@@ -2973,7 +3017,8 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
-			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
+			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
+			else if (it.kind == Item::PAGE && it.key == "sys_boxart") v = artShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
@@ -7141,7 +7186,7 @@ namespace banana
 				if (have > 0) status = std::to_string(have) + " of " + std::to_string(all) + " games have art";
 			}
 			help = scraping() ? "Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes."
-				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Games artworks runs it again for new games.";
+				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Scrape artworks runs it again for new games.";
 			break;
 		case SL_DONE:
 			help = "Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.";
@@ -7180,7 +7225,7 @@ namespace banana
 				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
 			auto art = artCount ? artCount() : std::pair<int, int>(0, 0);
 			bool artBefore = scrapeLine.empty() && art.first > 0;	// (fetched before: an update, the setup again)
-			row("Games artworks", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
+			row("Scrape artworks", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
 				artBefore ? std::to_string(art.first) + " of " + std::to_string(art.second) + " games have art" : skipped(SL_ART) ? "Skipped" : "Not fetched",
 				scraping() || scrapeLine.compare(0, 4, "done") == 0 || artBefore ? 1 : -1);
 			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
@@ -7338,6 +7383,19 @@ namespace banana
 		if (scraping() || !wifiOn()) return false;
 		startScrape();
 		return true;
+	}
+
+	// Look & sound's Scrape artworks row: the games with a cover (never "Not yet"), else what a fetch is doing
+	std::string Settings::artShort() const
+	{
+		if (scraping() || scrapeLine.compare(0, 5, "error") == 0) return scrapeShort();
+		if (artCount)
+		{
+			auto [have, all] = artCount();
+			if (all > 0) return have > 0 ? std::to_string(have) + " of " + std::to_string(all) + " games" : "None yet";
+		}
+		std::string v = scrapeShort();
+		return v == "Not yet" ? "" : v;
 	}
 
 	std::string Settings::scrapeShort() const

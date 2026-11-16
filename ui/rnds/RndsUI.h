@@ -47,7 +47,7 @@ namespace rnds
 		std::string cart;		// the real cartridge scan (its label art fills the drawn cartridge)
 		std::string label;		// label art made from the cover (the media tool's "boxback"), when there is no scan
 		std::string cartArt;	// the bottom screen's cartridge picture when the host chose one (the DS game's own icon,
-								// Settings > Look & sound > Menu look > DS cartridges): before the art above on the shelf
+								// Settings > Look & sound > Theme options > Game pictures): before the art above on the shelf
 		std::string rom;		// a DS ROM (.nds, .zip) whose own icon goes on the bottom screen's cartridge instead
 								// of the art above (the host's opt-in setting; the art when the ROM has no icon)
 		std::string marquee;	// the game's logo, or a DS game's own icon (a layout theme's "marquee"); "" without one

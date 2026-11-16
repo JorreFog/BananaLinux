@@ -1,5 +1,6 @@
 #include "library.h"
 #include "theme.h"
+#include "lang.h"
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
@@ -1026,9 +1027,7 @@ namespace banana
 		time_t now = time(nullptr);
 		struct tm t;
 		localtime_r(&now, &t);
-		char b[16];
-		strftime(b, sizeof b, "%m/%d", &t);
-		return b;
+		return lang::date(dateFormat, t);
 	}
 
 	// (BOOTTIME: it counts the time asleep, so the first look after a wake reads /sys again)

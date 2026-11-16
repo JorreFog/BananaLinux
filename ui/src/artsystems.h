@@ -1,6 +1,6 @@
 #pragma once
 // The systems games' artworks are fetched for (banana-scrape): a system's id -> its collection in libretro's thumbnails
-// (thumbnails.libretro.com/<collection>/). Settings > Look & sound > Games artworks > Systems lists these; the fetch
+// (thumbnails.libretro.com/<collection>/). Settings > Look & sound > Scrape artworks > Systems lists these; the fetch
 // goes through them, skipping the ones set to Skip there (settings.conf's art.<id> = off).
 #include <map>
 #include <string>

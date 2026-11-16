@@ -83,12 +83,21 @@ ux_check ink-light "inkon f0b429: ink ffffff"
 sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"
 
 # L/R go a page: five games in a list (the shoulders name the games they land on), five rows in a settings list
-# (Look & sound, the third tile: Menu look's row, A opens it, Clock is its first row, Right sets 12-hour)
-ux_run page "lib 0 0; wait 2400; shot ux-page; press r; press l; press start; row Look & sound menu_look; press a; press right; press b; press b; press b"
+# (Look & sound, the third tile: its Clock row, Right sets 12-hour)
+ux_run page "lib 0 0; wait 2400; shot ux-page; press r; press l; press start; row Look & sound clock; press right; press b; press b"
 ux_check page "press r: used, view 1 sys 0 game 4"
 ux_check page "press l: used, view 1 sys 0 game 0"
-grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: Look & sound > Menu look didn't reach Clock"; fail=1; }
+grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: Look & sound > Clock didn't set 12-hour"; fail=1; }
 sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"
+
+# Look & sound's pages: Date (Right: day/month), Sound > Menu sounds (Right: Quiet), Theme options > Reset theme
+# options (A twice: the accent and motion back to the template's)
+sed -i 's/^accent = .*//; s/^motion = .*//' "$UXFX/data/settings.conf"; printf 'accent = blue\nmotion = off\n' >> "$UXFX/data/settings.conf"
+ux_run looksound "home nds; press start; row Look & sound date_format; press right; row Sound sounds; press right; shot ux-sound; row Theme options theme_reset; shot ux-themeopts; press a; press a; press b; press b"
+grep -q '^date_format = dm$' "$UXFX/data/settings.conf" || { echo "FAIL $size: Look & sound > Date: Right didn't set day/month"; fail=1; }
+grep -q '^sounds = quiet$' "$UXFX/data/settings.conf" || { echo "FAIL $size: Sound > Menu sounds: Right didn't set Quiet"; fail=1; }
+grep -q '^accent = yellow$' "$UXFX/data/settings.conf" && grep -q '^motion = on$' "$UXFX/data/settings.conf" || { echo "FAIL $size: Reset theme options didn't put the accent and motion back: $(grep -E '^(accent|motion) =' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+sed -i 's/^date_format = .*/date_format = md/; s/^sounds = .*/sounds = on/' "$UXFX/data/settings.conf"
 
 # no noise: the home bubble has no second line repeating the name ("Nintendo DS" / "Nintendo"), and no count under a
 # shelf of a few systems (the rail runs on under where "01 / 07" was)
@@ -218,7 +227,7 @@ ux_check noports-link "press a: used, view 1 sys 5"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Look & sound > Shown systems (its first row) hides one
+# gets ports: deleting the last port must not take it away); Look & sound > Shown systems (its third row) hides one
 # (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
 ux_run shelves "home 0; press left; press start; row Look & sound shelves; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
@@ -396,8 +405,8 @@ ux_check plaza "touch 300 450: used"
 ux_check plaza "touch: key x"
 if grep "theme:" "$OUT/$size-plaza.log"; then echo "FAIL $size: Plaza's theme has errors"; fail=1; fi
 
-# Look & sound > Games artworks > Systems: a row each system artworks come for (Fetch or Skip); Right on the first sets
+# Look & sound > Scrape artworks > Systems: a row each system artworks come for (Fetch or Skip); Right on the first sets
 # it to Skip (settings.conf's art.<id> = off, which the fetch leaves out)
-ux_run artsys "home 0; press start; row Games artworks art_systems; press a; shot ux-artsys; press right; press b; press b; press b"
-grep -q '^art\.[a-z0-9-]* = off' "$UXFX/data/settings.conf" || { echo "FAIL $size: Games artworks > Systems: Skip wasn't saved: $(grep '^art\.' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+ux_run artsys "home 0; press start; row Scrape artworks art_systems; press a; shot ux-artsys; press right; press b; press b; press b"
+grep -q '^art\.[a-z0-9-]* = off' "$UXFX/data/settings.conf" || { echo "FAIL $size: Scrape artworks > Systems: Skip wasn't saved: $(grep '^art\.' "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 sed -i '/^art\./d' "$UXFX/data/settings.conf"

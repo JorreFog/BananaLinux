@@ -27,6 +27,7 @@ namespace banana
 
 		// each list ends in nullptr: valid() walks it to the end
 		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const SOUNDS[] = { "on", "quiet", "off", nullptr };
 		const char* const DS_CART_ART[] = { "box", "icon", nullptr };
 		const char* const ALL_CHOSEN[] = { "all", "chosen", nullptr };
 		const char* const BSHARE_RECEIVE[] = { "off", "ask", "auto", nullptr };
@@ -63,12 +64,13 @@ namespace banana
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ds_cart_art", "box", ENUM, DS_CART_ART, 0, 0 },
 			{ "homesync_games", "all", ENUM, ALL_CHOSEN, 0, 0 },
-			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
+			{ "sounds", "on", ENUM, SOUNDS, 0, 0 },
 			{ "speaker_eq", "on", ENUM, ON_OFF, 0, 0 },
 			{ "speaker_eq_profile", "tuned", TEXT, nullptr, 0, 0 },
 			{ "speaker_eq_bands", "0,0,0,0,0,0,0", TEXT, nullptr, 0, 0 },
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
+			{ "date_format", "md", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
 			{ "bottom_idle_mode", "dim", ENUM, IDLE, 0, 0 },
 			{ "bottom_idle_seconds", "30", INTEGER, nullptr, 0, 3600 },
