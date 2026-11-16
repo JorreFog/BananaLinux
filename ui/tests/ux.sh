@@ -154,6 +154,22 @@ for f in "roms/gba/Biosphere.gba" "roms/gba/Wait... What.gba"; do
     [ -e "$UXFX/$f" ] && { echo "FAIL $size: no Delete for $f"; fail=1; rm -f "$UXFX/$f"; }
 done
 [ -e "$UXFX/roms/gba/Orchard Tactics.gba" ] && [ -e "$UXFX/roms/gba/Tiny Fruit Advance.gba" ] || { echo "FAIL $size: Delete game (names) took another game"; fail=1; }
+# Networks: a saved network with a password, and a nearer one of the same name with none. With both in reach the row is
+# the one with the password (A joins it with the saved password); with only the open one, A doesn't join it and the
+# saved password stays (it put an open network in its place, joined from then on wherever one of that name was)
+for twin in both only; do
+    UXD=$OUT/ux-wifi-twin-$twin-$size; rm -rf "$UXD"; cp -r "$UXFX/data" "$UXD"
+    printf 'network={\n\tssid="Cafe Free"\n\tkey_mgmt=NONE\n\tpriority=2\n}\nnetwork={\n\tssid="Banana Home"\n\tpsk="my-own-password"\n\tpriority=1\n}\n' > "$UXD/wifi.conf"
+    BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_TWIN=$twin "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXD" \
+        --script "home 0; press start; press r; press r; press r; press a; press down; press a; sleep 300; shot ux-wifi-twin-$twin; press a; sleep 200; shot ux-wifi-twin-$twin-a" 2> "$OUT/$size-wifi-twin-$twin.log"
+    grep -q 'psk="my-own-password"' "$UXD/wifi.conf" && ! grep -A2 'ssid="Banana Home"' "$UXD/wifi.conf" | grep -q 'key_mgmt=NONE' ||
+        { echo "FAIL $size: Networks ($twin): an open network of a saved one's name took the saved password's place: $(tr -d '\t' < "$UXD/wifi.conf" | tr '\n' ' ')"; fail=1; }
+done
+[ "$(sed -n 's/^[[:space:]]*ssid=//p' "$OUT/ux-wifi-twin-both-$size/wifi.conf" | head -n 1)" = '"Banana Home"' ] ||
+    { echo "FAIL $size: Networks (both): A didn't join the saved network (its block not moved first)"; fail=1; }
+[ "$(sed -n 's/^[[:space:]]*ssid=//p' "$OUT/ux-wifi-twin-only-$size/wifi.conf" | head -n 1)" = '"Cafe Free"' ] ||
+    { echo "FAIL $size: Networks (only the open one): wifi.conf was written"; fail=1; }
 # Networks: a new scan puts the networks in another order (a signal dropped): the cursor stays on its network, and Y
 # forgets that one, not the one that has its row now
 printf 'network={\n\tssid="Bravo"\n\tpsk="bravo-password"\n}\nnetwork={\n\tssid="Charlie"\n\tpsk="charlie-password"\n}\n' > "$OUT/ux-wifi-move.conf"

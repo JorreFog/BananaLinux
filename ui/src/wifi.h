@@ -34,6 +34,8 @@ namespace banana
 
 		// the networks in a wifi.conf
 		std::vector<std::string> savedNames(const std::string& conf);
+		// whether the saved network of that name has a password (a psk or sae_password line in its block)
+		bool savedWithPassword(const std::string& conf, const std::string& ssid);
 		// a network's block written first in wifi.conf (any older block for the same name replaced), with the highest
 		// priority so wpa_supplicant tries it first; password empty for an open network
 		bool remember(const std::string& conf, const Network& n, const std::string& password);

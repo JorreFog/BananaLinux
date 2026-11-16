@@ -2853,6 +2853,10 @@ namespace banana
 			else if (net.current && wizard) { page = SETUP; message.clear(); startTest(); }	// (the setup: tested)
 			else if (net.current)
 				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
+			else if (!net.secured && net.saved && wifi::savedWithPassword(wifiConf, net.ssid))
+				// (only a network without a password by that name in reach: joining it would write an open network over
+				// the saved password, and the handheld would join any network of that name from then on)
+				message = net.ssid + " is saved with a password, and the one in reach has none: it may not be yours. Not joined; Y forgets the saved one first.";
 			else if (!net.secured || (net.saved && net.ssid != failed))
 			{
 				join(net, "");	// open, or saved: no password to type
