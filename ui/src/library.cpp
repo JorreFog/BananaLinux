@@ -710,6 +710,24 @@ namespace banana
 					sh.games.push_back(g);
 				}
 			}
+			// games whose names come out the same once "(USA)" and "[Hack v1.0]" are off them (a game and its hacks, two
+			// regions, two revisions: one name twice on the shelf, and no telling which is which, #137) keep their file
+			// names, underscores aside. Only names made from the file's: one from a gamelist or given on the game's page
+			// (X) is somebody's choice
+			{
+				std::map<std::string, int> seen;
+				for (auto& g : sh.games) seen[lower(g.title)]++;
+				for (auto& g : sh.games)
+				{
+					if (seen[lower(g.title)] < 2) continue;
+					size_t sl = g.rel.rfind('/');
+					std::string stem = g.rel.substr(sl == std::string::npos ? 0 : sl + 1);
+					stem = stem.substr(0, stem.rfind('.'));
+					if (cleanTitle(stem) != g.title) continue;
+					for (auto& c : stem) if (c == '_') c = ' ';
+					g.title = trim(stem);
+				}
+			}
 			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
 			// on the home row with something to start in it. PortMaster's own entry counts: it is what gets ports, and
 			// with it left out, deleting the last port took PortMaster off the row too (reachable again only through

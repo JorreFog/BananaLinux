@@ -959,6 +959,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				auto t = lib.gameTitles(key);
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
 				logf("press x: game page for %s", path.c_str());
+				logf("game page title: %s", lib.gameAt(ui.gameIndex()).title.c_str());
 				continue;
 			}
 			if (!settings.isOpen() && (it->second == Key::A || it->second == Key::X) && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&

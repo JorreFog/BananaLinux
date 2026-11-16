@@ -112,6 +112,19 @@ ux_run poweroff "home 0; press start; press y; press down; press down; press a; 
 [ "$(grep -c 'press a: settings result' "$OUT/$size-poweroff.log")" = 2 ] && grep -q 'press a: settings result 6' "$OUT/$size-poweroff.log" \
     || { echo "FAIL $size: Shut down: $(grep 'press a' "$OUT/$size-poweroff.log" | tr '\n' ' ')"; fail=1; }
 
+# two games whose names are the same once the brackets are off (#137: a game and its hack): each keeps its file's name;
+# a game whose name is its own keeps the tidy one
+echo x > "$UXFX/roms/gb/Pocket Peel [Hack v1.0].gb"
+ux_run same-names "lib 2 0; press x; press b; lib 2 1; press x; press b; lib 1 0; press x"
+ux_check same-names "game page title: Pocket Peel\$"
+ux_check same-names "game page title: Pocket Peel \[Hack v1.0\]\$"
+ux_check same-names "game page title: Orchard Tactics\$"
+rm -f "$UXFX/roms/gb/Pocket Peel [Hack v1.0].gb"
+echo x > "$UXFX/roms/gb/Pocket Peel (USA).gb"; mv "$UXFX/roms/gb/Pocket Peel.gb" "$UXFX/roms/gb/Pocket Peel (Europe).gb"
+ux_run same-names2 "lib 2 0; press x; press b; lib 2 1; press x"
+ux_check same-names2 "game page title: Pocket Peel (Europe)\$"
+ux_check same-names2 "game page title: Pocket Peel (USA)\$"
+rm -f "$UXFX/roms/gb/Pocket Peel (USA).gb"; mv "$UXFX/roms/gb/Pocket Peel (Europe).gb" "$UXFX/roms/gb/Pocket Peel.gb"
 # a program that ends (#228): a game's place in its library again, but an app with a tile of its own on the row (Files
 # here; Activity, the Store on the handheld) its tile, not a list of its one entry
 ux_run app-tile "homeid files"
