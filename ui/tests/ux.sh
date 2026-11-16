@@ -112,6 +112,13 @@ ux_run poweroff "home 0; press start; press y; press down; press down; press a; 
 [ "$(grep -c 'press a: settings result' "$OUT/$size-poweroff.log")" = 2 ] && grep -q 'press a: settings result 6' "$OUT/$size-poweroff.log" \
     || { echo "FAIL $size: Shut down: $(grep 'press a' "$OUT/$size-poweroff.log" | tr '\n' ' ')"; fail=1; }
 
+# a program that ends (#228): a game's place in its library again, but an app with a tile of its own on the row (Files
+# here; Activity, the Store on the handheld) its tile, not a list of its one entry
+ux_run app-tile "homeid files"
+ux_app=$(sed -n 's/.*homeid files: tile //p' "$OUT/$size-app-tile.log")
+ux_run app-back "lib ${ux_app:-0} 0; ended 0; lib 1 0; ended 1"
+ux_check app-back "ended: view 0 sys ${ux_app:-x}\$"
+ux_check app-back "ended: view 1 sys 1\$"
 # Delete game (X on a game, the page's last row): A asks, A again deletes. The game only: its save stays. With its
 # saves, states and art (Right): those go, and nothing else (another game's save, a BIOS of the same name, the other
 # DS games); the library is read again without it

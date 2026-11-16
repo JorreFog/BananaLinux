@@ -699,6 +699,17 @@ template <class U> static void afterDelete(Host& lib, U& ui, const std::vector<s
 
 // the games with a cover, of all the games on the shelves (each once: a favourite is in its system too), for the setup's
 // Box art slide
+// Where the menu is when a program it started has ended: a game's place in its library; for an app with a tile of its
+// own on the home row (Activity, the Store, Poketool, Döda Kvarter: A on the tile starts it), that tile again. It went
+// to the app's library, a list of its one entry that nobody had opened: leaving Activity looked like another Activity
+// page, one more B away from the row (#228)
+template <class UI> static void backFromProgram(Host& lib, UI& ui, int game)
+{
+	const int s = lib.currentShelf();
+	if (s >= 0 && s < lib.systemCount() && lib.system(s).app) ui.setHome(s);
+	else ui.setLibrary(s, game);
+}
+
 static std::pair<int, int> artCount(Host& lib)
 {
 	std::set<std::string> all, have;
@@ -905,6 +916,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		// ended <game>: the program started from the open shelf has ended (what the handheld's loop does then)
+		else if (op == "ended") { int g = 0; cs >> g; backFromProgram(lib, ui, g); logf("ended: view %d sys %d", (int)ui.view(), ui.systemIndex()); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
@@ -3076,7 +3089,7 @@ int main(int argc, char** argv)
 			lib.recordPlay(game, secs, achA, achB);	// (a start that failed straight away isn't a play)
 		}
 		ui->dataChanged();
-		ui->setLibrary(lib.currentShelf(), game);
+		backFromProgram(lib, *ui, game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
 		if (!forceStorm && stormIrqs >= 0 && disp.isOpen())
 		{
