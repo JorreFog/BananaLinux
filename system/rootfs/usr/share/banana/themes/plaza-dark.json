@@ -89,8 +89,12 @@
     // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), and a glow in
     // the accent goes out from the game's tile, up into the top screen too (Motion off: the card, still, no glow)
     "land": "=view != 'launch' ? 0 : motion ? easeOut(progress(launch.t - 220, 480)) : 1",
-    "spread": "=motion && view == 'launch' ? pow(progress(launch.t - 150, 800), 2) : 0",
-    "glowSize": "=140 + 1900 * spread",
+    // the game's tile flies from its place in the grid to the middle, the glow going out from it as it goes
+    "cell0": "=mod(max(0, cursor), columns * rows)",
+    "tileX": "=lerp(gx + mod(cell0, columns) * step + step / 2, 320, land)",
+    "tileY": "=lerp(62 + floor(cell0 / columns) * stepY + gap / 2 + size / 2, 240, land)",
+    "spread": "=motion && view == 'launch' ? pow(progress(launch.t - 150, 550), 2) : 0",
+    "glowSize": "=140 + 900 * spread",
     "glowA": "=motion && view == 'launch' ? min(1, max(0, launch.t - 150) / 120) * (0.9 - 0.3 * spread) : 0"
   },
 
@@ -195,7 +199,7 @@
     "cell": {
       "type": "group", "x": "=step / 2", "y": "=gap / 2 + size / 2", "w": "=size * (sel ? 1.07 + 0.3 * go : 1)",
       "h": "=size * (sel ? 1.07 + 0.3 * go : 1)", "anchor": "center", "smooth": { "w": 360, "h": 360 }, "ease": "bounce",
-      "opacity": "=sel ? 1 : 1 - go",
+      "opacity": "=sel ? (view == 'launch' ? 0 : 1) : 1 - go",
       "children": [
         { "type": "rect", "x": -6, "y": -6, "right": -6, "bottom": -6, "radius": "=r + 6", "fill": "#00000000",
           "border": 4, "borderColor": "=accent", "visible": "=sel", "opacity": "=1 - 0.6 * breathe",
@@ -207,7 +211,7 @@
     "face": {
       "type": "group", "x": "=step / 2", "y": "=gap / 2 + size / 2", "w": "=size * (sel ? 1.07 + 0.3 * go : 1)",
       "h": "=size * (sel ? 1.07 + 0.3 * go : 1)", "anchor": "center", "smooth": { "w": 360, "h": 360 }, "ease": "bounce",
-      "opacity": "=sel ? 1 : 1 - go"
+      "opacity": "=sel ? (view == 'launch' ? 0 : 1) : 1 - go"
     },
     "star": { "type": "text", "right": -4, "y": -7, "text": "★", "font": "inter-bold", "size": "=max(13, size * 0.18)", "color": "=accent",
               "visible": "=item.fav", "outline": { "width": 2, "color": "=tile" } }
@@ -281,7 +285,7 @@
       "top": [
         { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
         // a game starting: the bottom screen's glow coming up into this one (its middle where the game's tile is, below)
-        { "type": "image", "src": "plaza/glow.png", "x": 320, "y": 720, "w": "=glowSize", "h": "=glowSize", "anchor": "center",
+        { "type": "image", "src": "plaza/glow.png", "x": "=tileX", "y": "=tileY + 480", "w": "=glowSize", "h": "=glowSize", "anchor": "center",
           "fit": "fill", "tint": "=accent", "opacity": "=glowA", "visible": "=view == 'launch'" },
         { "type": "group", "x": "=slide", "opacity": "=motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1", "visible": "=!empty", "children": [
           // the game's box or logo on a tile
@@ -400,11 +404,11 @@
         { "use": "bar" },
         { "type": "group", "visible": "=view == 'launch'", "children": [
           { "type": "group", "opacity": "=land", "children": [ { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } } ] },
-          { "type": "image", "src": "plaza/glow.png", "x": 320, "y": 240, "w": "=glowSize", "h": "=glowSize", "anchor": "center",
+          { "type": "image", "src": "plaza/glow.png", "x": "=tileX", "y": "=tileY", "w": "=glowSize", "h": "=glowSize", "anchor": "center",
             "fit": "fill", "tint": "=accent", "opacity": "=glowA" },
-          { "type": "group", "x": 320, "y": 240, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
-            "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" }, "opacity": "=land",
-            "scale": "=motion ? 0.7 + 0.3 * easeOutBack(progress(launch.t - 220, 520)) : 1",
+          { "type": "group", "x": "=tileX", "y": "=tileY", "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
+            "scale": "=motion ? lerp(size * 1.07 / 120, 1, easeOutBack(progress(launch.t - 220, 520))) : 1",
             "children": [ { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
                             "x": 10, "y": 10, "w": 100, "h": 100, "radius": 10 } ] }
         ] }
