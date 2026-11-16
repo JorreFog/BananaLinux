@@ -173,7 +173,7 @@ done
 # Networks: a new scan puts the networks in another order (a signal dropped): the cursor stays on its network, and Y
 # forgets that one, not the one that has its row now
 printf 'network={\n\tssid="Bravo"\n\tpsk="bravo-password"\n}\nnetwork={\n\tssid="Charlie"\n\tpsk="charlie-password"\n}\n' > "$OUT/ux-wifi-move.conf"
-rm -f "$OUT/ux-wifi-move.n"; cp "$UXFX/data/settings.conf" "$OUT/ux-wifi-move.settings" 2>/dev/null
+rm -f "$OUT/ux-wifi-move.n"
 ( UXD=$OUT/ux-wifi-data-$size; rm -rf "$UXD"; cp -r "$UXFX/data" "$UXD"; cp "$OUT/ux-wifi-move.conf" "$UXD/wifi.conf"
   BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_MOVE="$OUT/ux-wifi-move.n" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
       --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXD" \
