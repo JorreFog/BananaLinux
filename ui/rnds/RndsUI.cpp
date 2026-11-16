@@ -24,6 +24,7 @@ namespace rnds
 	ThemeFiles themeFiles;
 	void setAccent(const Accent& a) { accent = a; }
 	int accentTextMode = 0;
+	bool endlessHome = true;
 	static float relLum(uint32_t c)
 	{
 		auto ch = [](uint32_t v) { float x = v / 255.0f; return x <= 0.03928f ? x / 12.92f : std::pow((x + 0.055f) / 1.055f, 2.4f); };
@@ -1069,7 +1070,7 @@ namespace rnds
 		// drawn left of it, and the last is the rightmost (left on the first still goes to the last, the row sliding to
 		// that end). The home row goes round endlessly, as in 0.4.1: Recently played starts it, the Apps tile ends it,
 		// and Recently played follows the Apps tile again
-		bool linear() const { return ui->mView != HOME; }
+		bool linear() const { return ui->mView != HOME || !endlessHome; }	// (Endless row off: the home row too)
 
 		float thumbLeft(int at, int n, float inner) { return n < 2 ? 0 : at * (inner - 42) / (n - 1); }
 

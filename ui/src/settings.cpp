@@ -564,7 +564,18 @@ namespace banana
 			hint({ "The menu plays its sounds.", "The menu's sounds, softer than the games.", "The menu is silent. Games keep their sound." });
 			add(SO, "music", "Speaker EQ", "Evens out the speakers. Headphones stay as they are.", "", "speaker_eq_page", {}, {}, Item::PAGE);
 		}
-		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
+		add(D, "picture", "Home row", "Which systems are on it, where the apps go, and whether it goes round.", "", "home_row", {}, {}, Item::PAGE);
+		// the Home row page (Look & sound > Home row)
+		{
+			const char* HR = "Home row";
+			add(HR, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
+			add(HR, "picture", "Apps", "Where Files, Bshare, PortMaster and the Store's apps go on the home row.", menu, "apps_tile",
+				{ "In an Apps tile", "With the systems" }, { "on", "off" });
+			hint({ "One Apps tile at the end of the row holds every app.", "Each app has its own tile on the row, among the systems." });
+			add(HR, "picture", "Endless row", "Whether the home row goes round, the first system after the last.", menu, "home_endless",
+				{ "On", "Off" }, { "on", "off" });
+			hint({ "The row goes round: right on the last is the first again.", "The row has two ends, as a game list. Plaza's pages always do." });
+		}
 		add(D, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
 		hint({ "Like 14:30.", "Like 2:30 PM." });
 		{
@@ -1072,7 +1083,8 @@ namespace banana
 			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
 			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
 			// (the menu's own look first, then the screens and the sound)
-			{ "Look & sound", { "Theme", "Theme options", "Shown systems", "Scrape artworks", "Screens", "Sound", "Clock", "Date", "Battery", "Boot animation" } },
+			{ "Look & sound", { "Theme", "Theme options", "Home row", "Scrape artworks", "Screens", "Sound", "Clock", "Date", "Battery", "Boot animation" } },
+			{ "Home row", { "Shown systems", "Apps", "Endless row" } },
 			{ "Theme options", { "Accent colour", "Text on accent", "Game pictures", "Motion", "Reset theme options" } },
 			{ "Screens", { "Top brightness", "Bottom brightness", "Screen colours" } },
 			{ "Sound", { "Volume", "Menu sounds", "Speaker EQ" } },
@@ -1447,6 +1459,7 @@ namespace banana
 				{ "theme_options", "Theme options", "accent" },
 				{ "screens_page", "Screens" },
 				{ "sound_page", "Sound", "sounds" },
+				{ "home_row", "Home row" },
 				{ "ds_buttons", "DS buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
@@ -1627,6 +1640,7 @@ namespace banana
 		save(it);
 		if (it.key == "language") return LANGUAGE;	// (saved above; the menu starts again in it)
 		if (it.key.compare(0, 6, "shelf.") == 0) return SHELVES;	// (the home row read again)
+		if (it.key == "apps_tile") return SHELVES;	// (the apps in their tile, or on the row)
 		if (it.key == "theme")
 		{
 			setVariant(it.values[at]);

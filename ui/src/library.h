@@ -91,7 +91,8 @@ namespace banana
 		void recordPlay(int game, long seconds, int achA = -1, int achB = 0);
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
-		std::string dateFormat = "md";	// Settings > Look & sound > Date (lang::date's formats)
+		std::string dateFormat = "md";
+		bool appsTile = true;	// Settings > Look & sound > Home row > Apps: in one Apps tile, else each on the row as a system	// Settings > Look & sound > Date (lang::date's formats)
 
 		// the battery: percent (-1 unknown) and whether it is charging (or full on the charger)
 		struct Power { int percent = -1; bool charging = false; };

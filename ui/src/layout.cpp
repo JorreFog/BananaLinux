@@ -173,6 +173,8 @@ namespace banana
 		float scrollFrom = 0, scrollTo = 0; double scrollT0 = -1e9;
 		std::vector<std::pair<std::string, double>> cues;
 		bool wrap = false, debug = false;
+		// the theme's wrap, but not on the home row when Settings' Endless row is off
+		bool wraps() const { return wrap && (m->mView != rnds::UI::HOME || rnds::endlessHome); }
 		int serials = 0;
 		// behavior.zoom: { "steps": 3, "start": 1 }: the "zoom" hook 0..steps-1 (a grid's columns, the theme's), changed by
 		// the zoomIn / zoomOut buttons and kept per view (home, each system: Library's zoom.txt)
@@ -1421,7 +1423,7 @@ namespace banana
 			float pageW = paged ? (float)num(c, K("pageW"), w) : 0;
 			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
 			std::string mode = str(c, K("scrollMode"), "center");
-			bool loop = flag(c, K("loop")) && n > 0;
+			bool loop = flag(c, K("loop")) && n > 0 && (source != "systems" || rnds::endlessHome);	// (Endless row off: two ends)
 			// the list the cursor is on scrolls with its eased position; another one stands at its selection
 			bool active = (source == "systems" && m->mView == rnds::UI::HOME) || (source == "games" && m->mView != rnds::UI::HOME);
 			float pos0 = active ? scroll : (float)std::max(0, cur);
@@ -1797,15 +1799,15 @@ namespace banana
 		auto move = [&](int to)
 		{
 			if (n == 0) return false;
-			if (d->wrap) to = ((to % n) + n) % n;
+			if (d->wraps()) to = ((to % n) + n) % n;
 			else to = std::min(std::max(0, to), n - 1);
 			if (to == c) return false;
 			d->moveDir = to > c ? 1 : -1;
-			if (d->wrap && std::abs(to - c) > n / 2) d->moveDir = -d->moveDir;
+			if (d->wraps() && std::abs(to - c) > n / 2) d->moveDir = -d->moveDir;
 			if (mView == rnds::UI::HOME) { mSys = to; src->selectSystem(to); }
 			else { mGame = to; src->selectGame(to); }
 			// (a wrap's jump: the eased scroll goes the short way, as if it came from beside)
-			if (d->wrap && std::abs(to - c) > n / 2) d->scroll += to > c ? n : -n;
+			if (d->wraps() && std::abs(to - c) > n / 2) d->scroll += to > c ? n : -n;
 			d->movedAt = d->now;
 			return true;
 		};
@@ -1828,8 +1830,8 @@ namespace banana
 		{
 			int cols = std::max(1, (int)std::lround(d->varNum("columns", 1)));
 			int to = c + (act == "nextRow" ? cols : -cols);
-			if (to >= n) to = c / cols < (n - 1) / cols ? n - 1 : (d->wrap ? to : c);
-			if (to < 0 && !d->wrap) return false;
+			if (to >= n) to = c / cols < (n - 1) / cols ? n - 1 : (d->wraps() ? to : c);
+			if (to < 0 && !d->wraps()) return false;
 			return move(to);
 		}
 		// a "pages" grid: left and right go on to the page beside at a row's end, up and down stay on the page, a

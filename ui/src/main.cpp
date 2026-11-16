@@ -1048,7 +1048,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					logf("titles %s: \"%s\" / \"%s\"", settings.gameKey.c_str(), settings.gameName.c_str(), settings.gameSort.c_str());
 				}
 				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
-				if (r == Settings::SHELVES) afterShelves(lib, ui);
+				if (r == Settings::CHANGED || r == Settings::THEME) rnds::endlessHome = readSettings(o.data)["home_endless"] != "off";
+				if (r == Settings::SHELVES) { lib.appsTile = readSettings(o.data)["apps_tile"] != "off"; afterShelves(lib, ui); }
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -2254,6 +2255,8 @@ int main(int argc, char** argv)
 	lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 	lib.twelveHour = settings["clock"] == "12h";
 	lib.dateFormat = settings["date_format"];
+	lib.appsTile = settings["apps_tile"] != "off";
+	rnds::endlessHome = settings["home_endless"] != "off";
 	lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 
 	if (!o.headless.empty())
@@ -2497,6 +2500,7 @@ int main(int argc, char** argv)
 			lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 			lib.twelveHour = settings["clock"] == "12h";
 			lib.dateFormat = settings["date_format"];
+			rnds::endlessHome = settings["home_endless"] != "off";
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 			sound.enabled = settings["sounds"] != "off"; sound.gain = settings["sounds"] == "quiet" ? 0.4f : 1.0f;
 			bottomReload();	// the idle dim's timeout or level may have changed
@@ -2549,7 +2553,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::SHELVES: afterShelves(lib, *ui); roms.watch(lib.watchDirs()); break;
+		case Settings::SHELVES: settings = readSettings(o.data); lib.appsTile = settings["apps_tile"] != "off"; afterShelves(lib, *ui); roms.watch(lib.watchDirs()); break;
 		case Settings::DELETED:
 		{
 			afterDelete(lib, *ui, settingsView.deletedFiles);

@@ -160,6 +160,9 @@ namespace rnds
 	// light by contrast with that colour (accentTextMode 0, Auto), or always dark (1) or light (2); the second line
 	// (a sublabel, a value) is the surface's own hue darkened or lightened towards the ink until it reads (4.5:1)
 	extern int accentTextMode;
+	// Settings > Look & sound > Home row > Endless row: the home row goes round (the last system then the first), else
+	// it has two ends. Off also stops a layout theme's wrap and loop on the home row
+	extern bool endlessHome;
 	inline int accentTextModeOf(const std::string& v) { return v == "dark" ? 1 : v == "light" ? 2 : 0; }	// settings.conf's accent_text
 	uint32_t inkOn(uint32_t rgb);					// 0x17161c or 0xffffff
 	uint32_t subInkOn(uint32_t rgb);

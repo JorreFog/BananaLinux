@@ -229,16 +229,22 @@ ux_check noports-link "press a: used, view 1 sys 6"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Look & sound > Shown systems (its third row) hides one
+# gets ports: deleting the last port must not take it away); Look & sound > Home row (its third row) > Shown systems hides one
 # (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home recently-played; press left; press start; row Look & sound shelves; press a; press down; press right; press up; press up; press up; press right; press b; press start; home recently-played; press left"
+ux_run shelves "home recently-played; press left; press start; row Home row shelves; press a; press down; press right; press up; press up; press up; press right; press b; press start; home recently-played; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
 [ "$(grep -o 'shown systems: [0-9]*' "$OUT/$size-shelves.log" | cut -d' ' -f3 | tr '\n' ' ')" = "$first $((first - 1)) " ] \
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
+
+# Look & sound > Home row > Apps: With the systems puts each app on the row (more tiles), In an Apps tile back to one
+ux_run appstile "home nds; press start; row Home row apps_tile; press right; row Home row apps_tile; press left; press b; press b"
+grep -q '^apps_tile = on$' "$UXFX/data/settings.conf" || { echo "FAIL $size: Home row > Apps: back to the tile wasn't saved"; fail=1; }
+set -- $(grep -o 'shown systems: [0-9]*' "$OUT/$size-appstile.log" | cut -d' ' -f3)
+[ $# -eq 2 ] && [ "$1" -gt "$2" ] || { echo "FAIL $size: Home row > Apps: the apps on the row didn't add tiles: $*"; fail=1; }
 
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
 # languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu

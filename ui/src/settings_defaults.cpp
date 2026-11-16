@@ -71,6 +71,8 @@ namespace banana
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "date_format", "md", TEXT, nullptr, 0, 0 },
+			{ "home_endless", "on", ENUM, ON_OFF, 0, 0 },
+			{ "apps_tile", "on", ENUM, ON_OFF, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
 			{ "bottom_idle_mode", "dim", ENUM, IDLE, 0, 0 },
 			{ "bottom_idle_seconds", "30", INTEGER, nullptr, 0, 3600 },

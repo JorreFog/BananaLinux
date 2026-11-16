@@ -763,7 +763,13 @@ namespace banana
 					g.rel = g.title + ".app"; g.path = folderPath(romRoot, def.folder) + "/" + g.rel;
 					sh.games.push_back(g);
 				}
-				for (auto& g : sh.games) { apps.games.push_back(g); apps.appDefs.push_back(def); }
+				if (appsTile)
+				{
+					for (auto& g : sh.games) { apps.games.push_back(g); apps.appDefs.push_back(def); }
+					continue;
+				}
+				// (Apps: With the systems: the app's own tile on the row, as upstream's Banana has it)
+				if (!sh.games.empty()) shelves.push_back(sh);
 				continue;
 			}
 			bool launchable = !sh.games.empty();
