@@ -12,9 +12,10 @@ cat > "$HELPER" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "$CHARGING_CALLS"
 case $CHARGING_RESULT in
-success) echo 'Higher input limit selected for this connection.' ;;
+success) echo 'Higher input limit selected for this connection. Unplugging or sleeping restores normal charging.' ;;
 error) echo 'Connect the rated charger first.' >&2; exit 1 ;;
 normal) echo 'Normal charging selected.' ;;
+offline) echo 'No charger connected. Normal charging applies on connection.' ;;
 esac
 EOF
 chmod +x "$HELPER"
@@ -43,13 +44,26 @@ run error error rgds-plus 'press a; press a; shot result; press down; shot norma
 [ "$(cat "$OUT/calls")" = 'higher --confirm-5v-3a' ] || { echo 'FAIL failed helper was not invoked'; exit 1; }
 if same "$OUT/error-result-top.png" "$OUT/success-result-top.png"; then echo 'FAIL success/error feedback hidden'; exit 1; fi
 same "$OUT/success-normal-top.png" "$OUT/error-normal-top.png" || { echo 'FAIL feedback leaked to another row'; exit 1; }
+run offline offline rgds-plus 'press down; press a; press a; shot result'
+[ "$(cat "$OUT/calls")" = normal ] || { echo 'FAIL disconnected-normal arguments'; exit 1; }
 run normal normal rgds-plus 'press down; shot initial; press a; press a; shot result'
 [ "$(cat "$OUT/calls")" = normal ] || { echo 'FAIL normal action arguments'; exit 1; }
 if same "$OUT/normal-initial-top.png" "$OUT/normal-result-top.png"; then echo 'FAIL normal feedback hidden'; exit 1; fi
+if same "$OUT/offline-result-top.png" "$OUT/normal-result-top.png"; then echo 'FAIL disconnected-normal feedback hidden'; exit 1; fi
 printf 'quiet banana.board=rgds-plus root=/dev/mmcblk0p2\n' > "$OUT/cmdline"
 run universal success universal 'press a; press a; shot result'
 [ "$(cat "$OUT/calls")" = 'higher --confirm-5v-3a' ] || { echo 'FAIL universal Plus detection'; exit 1; }
 printf 'quiet banana.board=rgds\n' > "$OUT/cmdline"
 run nonplus success universal 'shot result'
-if same "$OUT/universal-result-top.png" "$OUT/nonplus-result-top.png"; then echo 'FAIL charging exposed on non-Plus'; exit 1; fi
+[ ! -s "$OUT/calls" ] || { echo 'FAIL non-Plus helper call'; exit 1; }
+run rgds success rgds 'shot result'
+same "$OUT/nonplus-result-top.png" "$OUT/rgds-result-top.png" || { echo 'FAIL universal non-Plus differs from ordinary RG DS'; exit 1; }
+if same "$OUT/rgds-result-top.png" "$OUT/success-initial-top.png"; then echo 'FAIL charging exposed on ordinary RG DS'; exit 1; fi
+# Preserve pre-existing shared feedback after up/down. Wi-Fi is off, so this
+# exercises the home-server message path without discovery or network work.
+printf 'wifi = off\n' >> "$OUT/fixture/data/settings.conf"
+nav='home 0; press start; press r; press r; press r; press a; press down; press down; press down; press a'
+run server success rgds-plus 'shot initial; press a; shot message; press down; press up; shot retained'
+if same "$OUT/server-initial-top.png" "$OUT/server-message-top.png"; then echo 'FAIL no home-server feedback'; exit 1; fi
+same "$OUT/server-message-top.png" "$OUT/server-retained-top.png" || { echo 'FAIL home-server feedback lost on navigation'; exit 1; }
 echo 'Charging menu: confirmation, success/error feedback, normal, navigation and universal board checks passed.'

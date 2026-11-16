@@ -65,7 +65,7 @@ BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 1 higher --confirm-5
 BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/missing" run 1 higher --confirm-5v-3a; limit 1500000
 
 for property in constant_charge_current_max constant_charge_voltage_max; do
-    for value in '' nonsense -1 0 999999999999999999999999999999999; do
+    for value in '' nonsense -1 0 0002000000 999999999999999999999999999999999; do
         fixture
         printf '%s\n' "$value" > "$T/battery/$property"
         run 1 higher --confirm-5v-3a; limit 1500000

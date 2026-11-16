@@ -6,13 +6,13 @@ SUPPLIES=${BANANA_POWER_SUPPLY_ROOT:-/sys/class/power_supply}
 BOARD=${BANANA_BOARD:-$(cat /etc/banana/board 2>/dev/null)}
 # Universal cards get the detected board from U-Boot, as panel-tune does.
 if [ "$BOARD" = universal ]; then
-    BOARD=$(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' "${BANANA_CMDLINE_FILE:-/proc/cmdline}")
+    BOARD=$(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' "${BANANA_CMDLINE_FILE:-/proc/cmdline}" 2>/dev/null)
 fi
 CHARGER=$SUPPLIES/charger
 BATTERY=$SUPPLIES/battery
 fail() { echo "$*" >&2; exit 1; }
 read_value() { cat "$1" 2>/dev/null; }
-number() { case $1 in ''|*[!0-9]*) return 1;; esac; }
+number() { case $1 in ''|*[!0-9]*) return 1;; esac; [ "${#1}" -le 9 ]; }
 
 case ${1:-} in
 status|normal) [ "$#" = 1 ] || exit 2 ;;
@@ -55,12 +55,12 @@ if [ "$1" = higher ]; then
     target=2000000
 fi
 
-if ! printf '%s\n' "$target" > "$CHARGER/input_current_limit"; then
+if ! printf '%s\n' "$target" 2>/dev/null > "$CHARGER/input_current_limit"; then
     fail "The kernel rejected the charging limit."
 fi
 if [ "$(read_value "$CHARGER/input_current_limit")" != "$target" ]; then
     # A concurrent disconnect or a failed read must not be reported as success.
-    printf '1500000\n' > "$CHARGER/input_current_limit" 2>/dev/null || :
+    printf '1500000\n' 2>/dev/null > "$CHARGER/input_current_limit" || :
     fail "The charging limit could not be confirmed; select it again after connecting."
 fi
 if [ "$target" = 2000000 ]; then
