@@ -1,0 +1,202 @@
+From: VektorKnight <4340480+VektorKnight@users.noreply.github.com>
+Subject: [PATCH] ASoC: codecs: aw88166: start the amplifier once the I2S clock runs
+
+The PA's PLL locks to the I2S bit clock. The start was queued from the
+AIF_RX widget's PRE_PMU event, which runs at the stream's prepare, while
+the CPU DAI (rockchip-i2s-tdm, clock master here) only drives the bit
+clock from its trigger. The start work's PLL check then ran with no
+clock: its first try failed on every stream, and AW88166_START_RETRIES
+tries (a DSP firmware reload after each, about 3.4 s in all on the RG DS
+Plus) gave up when the stream was started later than that after its
+prepare. The PA then stayed off for the whole stream: one speaker silent,
+or both.
+
+Load the profile at PRE_PMU as before, but only arm the start there and
+queue it from the DAI's trigger, once the stream (and its clock) runs; or
+at once if the stream already runs. At POST_PMD, disarm and cancel a
+start still queued or retrying before the stop, so a late one cannot
+power the PA on after its stream has gone. A try that fails after the
+stream has stopped again ends the retries: there is no clock to retry
+on, the DSP reloads would only hold up the stop, and the next trigger
+starts the PA again.
+---
+--- a/sound/soc/codecs/aw88166.c
++++ b/sound/soc/codecs/aw88166.c
+@@ -37,6 +37,11 @@
+ 	unsigned int re_init_val;
+ 	unsigned int dither_st;
+ 	bool phase_sync;
++
++	/* start_armed and stream_on, which the DAI trigger reads in atomic context */
++	spinlock_t start_lock;
++	bool start_armed;	/* the stream powered up and the profile is loaded */
++	bool stream_on;		/* playback triggered: the I2S bit clock runs */
+ };
+ 
+ static const struct regmap_config aw88166_remap_config = {
+@@ -1152,6 +1157,19 @@
+ error:
+ 	aw_dev_select_memclk(aw_dev, AW88166_DEV_MEMCLK_PLL);
+ 	return ret;
++}
++
++/* the stream is powered up and running: its bit clock is there to lock to */
++static bool aw88166_start_wanted(struct aw88166 *aw88166)
++{
++	unsigned long flags;
++	bool wanted;
++
++	spin_lock_irqsave(&aw88166->start_lock, flags);
++	wanted = aw88166->start_armed && aw88166->stream_on;
++	spin_unlock_irqrestore(&aw88166->start_lock, flags);
++
++	return wanted;
+ }
+ 
+ static void aw88166_start_pa(struct aw88166 *aw88166)
+@@ -1162,6 +1180,13 @@
+ 		ret = aw88166_dev_start(aw88166);
+ 		if (ret) {
+ 			dev_err(aw88166->aw_pa->dev, "aw88166 device start failed. retry = %d", i);
++			/*
++			 * The stream stopped meanwhile: no clock to retry on, and a
++			 * DSP reload per try would only hold up its stop. Its next
++			 * trigger starts the PA again.
++			 */
++			if (!aw88166_start_wanted(aw88166))
++				break;
+ 			ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_ON, true);
+ 			if (ret) {
+ 				dev_err(aw88166->aw_pa->dev, "fw update failed");
+@@ -1184,6 +1209,29 @@
+ 	mutex_unlock(&aw88166->lock);
+ }
+ 
++/*
++ * The PA's PLL locks to the I2S bit clock, which the CPU DAI only drives once
++ * the stream is triggered. Started from the DAPM event (at prepare), the PLL
++ * check ran before there was a clock, and a stream triggered more than a few
++ * seconds after its prepare found the PA given up: that speaker silent until
++ * the next stream. Arm the start here; it is queued from the DAI trigger, or
++ * now if the stream already runs.
++ */
++static void aw88166_arm_start(struct aw88166 *aw88166)
++{
++	unsigned long flags;
++	bool running;
++
++	spin_lock_irqsave(&aw88166->start_lock, flags);
++	aw88166->start_armed = true;
++	running = aw88166->stream_on;
++	spin_unlock_irqrestore(&aw88166->start_lock, flags);
++
++	if (running)
++		queue_delayed_work(system_dfl_wq, &aw88166->start_work,
++				   AW88166_START_WORK_DELAY_MS);
++}
++
+ static void aw88166_start(struct aw88166 *aw88166, bool sync_start)
+ {
+ 	int ret;
+@@ -1203,9 +1251,7 @@
+ 	if (sync_start == AW88166_SYNC_START)
+ 		aw88166_start_pa(aw88166);
+ 	else
+-		queue_delayed_work(system_dfl_wq,
+-			&aw88166->start_work,
+-			AW88166_START_WORK_DELAY_MS);
++		aw88166_arm_start(aw88166);
+ }
+ 
+ static int aw_dev_check_sysint(struct aw_device *aw_dev)
+@@ -1260,10 +1306,52 @@
+ 	return 0;
+ }
+ 
++/* atomic context: only the flags, and the start queued once the clock runs */
++static int aw88166_dai_trigger(struct snd_pcm_substream *substream, int cmd,
++			       struct snd_soc_dai *dai)
++{
++	struct aw88166 *aw88166 = snd_soc_component_get_drvdata(dai->component);
++	unsigned long flags;
++	bool start = false;
++
++	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
++		return 0;
++
++	spin_lock_irqsave(&aw88166->start_lock, flags);
++	switch (cmd) {
++	case SNDRV_PCM_TRIGGER_START:
++	case SNDRV_PCM_TRIGGER_RESUME:
++	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
++		aw88166->stream_on = true;
++		start = aw88166->start_armed;
++		break;
++	case SNDRV_PCM_TRIGGER_STOP:
++	case SNDRV_PCM_TRIGGER_SUSPEND:
++	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
++		aw88166->stream_on = false;
++		break;
++	default:
++		break;
++	}
++	spin_unlock_irqrestore(&aw88166->start_lock, flags);
++
++	/* (a restart after an xrun finds the PA on: the work returns at once) */
++	if (start)
++		queue_delayed_work(system_dfl_wq, &aw88166->start_work,
++				   AW88166_START_WORK_DELAY_MS);
++
++	return 0;
++}
++
++static const struct snd_soc_dai_ops aw88166_dai_ops = {
++	.trigger = aw88166_dai_trigger,
++};
++
+ static struct snd_soc_dai_driver aw88166_dai[] = {
+ 	{
+ 		.name = "aw88166-aif",
+ 		.id = 1,
++		.ops = &aw88166_dai_ops,
+ 		.playback = {
+ 			.stream_name = "Speaker_Playback",
+ 			.channels_min = 1,
+@@ -1649,19 +1737,27 @@
+ {
+ 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
+ 	struct aw88166 *aw88166 = snd_soc_component_get_drvdata(component);
++	unsigned long flags;
+ 
+-	mutex_lock(&aw88166->lock);
+ 	switch (event) {
+ 	case SND_SOC_DAPM_PRE_PMU:
++		mutex_lock(&aw88166->lock);
+ 		aw88166_start(aw88166, AW88166_ASYNC_START);
++		mutex_unlock(&aw88166->lock);
+ 		break;
+ 	case SND_SOC_DAPM_POST_PMD:
++		spin_lock_irqsave(&aw88166->start_lock, flags);
++		aw88166->start_armed = false;
++		spin_unlock_irqrestore(&aw88166->start_lock, flags);
++		/* a start still queued or retrying must not power the PA on after the stop */
++		cancel_delayed_work_sync(&aw88166->start_work);
++		mutex_lock(&aw88166->lock);
+ 		aw88166_stop(aw88166->aw_pa);
++		mutex_unlock(&aw88166->lock);
+ 		break;
+ 	default:
+ 		break;
+ 	}
+-	mutex_unlock(&aw88166->lock);
+ 
+ 	return 0;
+ }
+@@ -1820,6 +1916,7 @@
+ 		return -ENOMEM;
+ 
+ 	mutex_init(&aw88166->lock);
++	spin_lock_init(&aw88166->start_lock);
+ 
+ 	i2c_set_clientdata(i2c, aw88166);
+ 
