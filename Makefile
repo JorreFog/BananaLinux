@@ -44,6 +44,7 @@ ui:
 
 test: ui
 	ui/tests/run.sh
+	@sh store/apps/randomizer/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
 	@if [ -n "$(ROCKNIXDS_STORE)" ]; then python3 store/test-banana.py "$(ROCKNIXDS_STORE)"; else echo "store test skipped (set ROCKNIXDS_STORE to a rocknixds-store checkout)"; fi

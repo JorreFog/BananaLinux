@@ -1,0 +1,9 @@
+#!/bin/sh
+# Randomizer (systems.conf's [randomizer], store/apps/randomizer): one random game from the card on the top
+# screen, the three choices on the bottom one. The app reads the menu's files and writes only
+# /run/banana/launch (the menu starts the game it names); this log is the launcher's, kept small.
+#   run-randomizer <Randomizer.app>
+L=/data/banana/logs/randomizer.log
+mkdir -p /data/banana/logs
+[ -f "$L" ] && [ "$(wc -c < "$L")" -gt 262144 ] && mv -f "$L" "$L.1"
+exec /usr/bin/banana-randomizer >> "$L" 2>&1

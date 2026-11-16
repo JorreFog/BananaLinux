@@ -19,6 +19,9 @@ define BANANA_UI_BUILD_CMDS
 	# Activity (store/apps/activity, #213): built here from its source, not the prebuilt binary beside it
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) -O2 -std=c++17 $(TARGET_LDFLAGS) -o $(@D)/banana-activity \
 		$(BR2_EXTERNAL_BANANA_PATH)/../store/apps/activity/banana-activity.cpp
+	# Randomizer (store/apps/randomizer): the same, one C++ file with its font atlas and stb_image
+	$(TARGET_CXX) $(TARGET_CXXFLAGS) -O2 -std=c++17 $(TARGET_LDFLAGS) -o $(@D)/banana-randomizer \
+		$(BR2_EXTERNAL_BANANA_PATH)/../store/apps/randomizer/banana-randomizer.cpp
 endef
 
 define BANANA_UI_INSTALL_TARGET_CMDS
@@ -26,6 +29,9 @@ define BANANA_UI_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/banana-activity $(TARGET_DIR)/usr/bin/banana-activity
 	mkdir -p $(TARGET_DIR)/usr/share/banana/apps/activity
 	touch $(TARGET_DIR)/usr/share/banana/apps/activity/Activity.app
+	$(INSTALL) -D -m 0755 $(@D)/banana-randomizer $(TARGET_DIR)/usr/bin/banana-randomizer
+	mkdir -p $(TARGET_DIR)/usr/share/banana/apps/randomizer
+	touch $(TARGET_DIR)/usr/share/banana/apps/randomizer/Randomizer.app
 endef
 
 $(eval $(generic-package))

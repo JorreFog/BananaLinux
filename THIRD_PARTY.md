@@ -14,12 +14,14 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | The Spanish translation | ui/assets/lang/es.tsv | by Pixelado Dev | given to BananaOS by its translator |
 | The BananaUI banana mark (redrawn as pixel art by tools/make-pixel-banana.py) | ui/assets/banana, the logo and boot animation | [JorreFog/helios](https://github.com/JorreFog/helios) app/src/main/res/drawable-nodpi/banana_mark.png | the same author's |
 | DraStic settings and button map for the RG DS | buildroot/board/rgds/drastic.cfg | ROCKNIX drastic-sa (config/RK3566/drastic.cfg.rgds) | GPL-2.0 (ROCKNIX) |
-| stb_image, stb_image_write | ui/third_party | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
+| stb_image, stb_image_write | ui/third_party, store/apps/randomizer | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
 | Kernel patches, RG DS and RG DS Plus device trees, kernel config, U-Boot patches | buildroot/board/rgds | [ROCKNIX](https://github.com/ROCKNIX/distribution), pinned in board/rgds/ROCKNIX | GPL-2.0 |
 | Generic DSI panel driver | buildroot/board/rgds/kernel/panel-generic-dsi.c | ROCKNIX (stolen/overlay_server) | GPL-2.0 |
 | ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |
 | RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
 | Nintendo DS cheat files (Action Replay codes, for BananaDS) | buildroot/package/libretro-cheats-nds (tarball) | [libretro/libretro-database](https://github.com/libretro/libretro-database) cht/Nintendo - Nintendo DS at 12c21cf | CC BY-SA 4.0 |
+
+Randomizer's baked glyphs (`store/apps/randomizer/randomizer-font.h`) are Pixelify Sans (SIL OFL 1.1), generated from `ui/assets/rnds/fonts` by Activity's `tools/make-font.py`; its `stb_image.h` is a copy of `ui/third_party/stb_image.h`. The die shelf icon is Banana's own drawing (`store/apps/randomizer/tools/make-icon.py`).
 
 Bshare (`ui/src/bshare.cpp`, `ui/src/settings_bshare.cpp`) is Banana's own code: it speaks the open protocol of
 [LocalSend](https://localsend.org), the free and open-source app by Tien Do Nam and its contributors, as documented in
