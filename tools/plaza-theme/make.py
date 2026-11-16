@@ -225,15 +225,15 @@ def backgrounds(v):
 
 
 def glow():
-    """a game starting: a soft round light, white (the theme tints it the accent), brightest in the middle and gone at
-    the edge; the GPU scales it up to both screens, so it's made once and small"""
+    """a game starting: a round light, white (the theme tints it the accent), full in the middle and fading out
+    towards its edge, so the edge reads as it grows; the GPU scales it up to both screens, so it's made once and small"""
     S = 256
     a = Image.new('L', (S, S), 0)
     px = a.load()
     for y in range(S):
         for x in range(S):
             r = math.hypot(x - S / 2 + 0.5, y - S / 2 + 0.5) / (S / 2)
-            px[x, y] = int(255 * max(0.0, 1 - r) ** 2.2) if r < 1 else 0
+            px[x, y] = int(255 * (1 - r * r) ** 2) if r < 1 else 0
     im = Image.new('RGBA', (S, S), (255, 255, 255, 0))
     im.putalpha(a)
     return im
