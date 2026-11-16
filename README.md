@@ -336,6 +336,7 @@ Known issues from 0.5.0:
 - **RetroAchievements** shows "Achievement Unlocked: Unsupported Game Version" for a game it doesn't recognise; nothing is unlocked.
 - **4x resolution** heats the handheld in heavy 3D games; use 2x for long sessions.
 - **A DS game can freeze after a very long sleep** (reported after 2 hours with the lid shut): the in-game menu still works and quitting is fine. Being investigated.
+- **Charging while switched off:** it charges, but no light shows it (the lights are the system's, and it isn't running), and after such a charge the percentage can read low, or stop near 95%, until the charge finishes ([#99](https://github.com/JorreFog/BananaLinux/issues/99), [#104](https://github.com/JorreFog/BananaLinux/issues/104), [#116](https://github.com/JorreFog/BananaLinux/issues/116)).
 - **Bluetooth headphones** were tested with a SteelSeries headset (and AirPods on an earlier beta); tell us how others do.
 
 Not available yet:
