@@ -89,6 +89,25 @@ $F unpack "$OUT/game.zip" "$U/game" 2>/dev/null
 check "a zip of one folder unwrapped" '[ -f "$U/game/Zip Kart.nds" ]'
 r=$(BANANA_FETCH_TEST_FREE=1000 $F unpack "$OUT/game.zip" "$U/full" 2>&1 || true)
 check "a full card refused before writing" 'echo "$r" | grep -q "(no_space)" && [ ! -e "$U/full/Zip Kart.nds" ]'
+# sizes that aren't so: a member that unpacks to more than its directory entry says (the room on the card is counted
+# from that) is stopped there, not once it has all been written; a zip64 end record whose directory's place and size
+# wrap around is not a directory to make room for (1 GB of it: under a limit of memory here, as the handheld has)
+python3 - "$OUT" <<'PY'
+import struct, sys, zipfile
+w = sys.argv[1]
+z = zipfile.ZipFile(w + '/liar.zip', 'w', zipfile.ZIP_DEFLATED); z.writestr('big.bin', b'\0' * (8 << 20)); z.close()
+d = bytearray(open(w + '/liar.zip', 'rb').read())
+cd = d.rfind(b'PK\x01\x02'); d[cd + 24:cd + 28] = struct.pack('<I', 1000)     # the directory: 1000 bytes unpacked
+open(w + '/liar.zip', 'wb').write(d)
+r64 = struct.pack('<IQHHIIQQQQ', 0x06064b50, 44, 45, 45, 0, 0, 1, 1, 1 << 30, (1 << 64) - (1 << 30))
+loc = struct.pack('<IIQI', 0x07064b50, 0, 0, 1)
+end = struct.pack('<IHHHHIIH', 0x06054b50, 0, 0, 0xffff, 0xffff, 0xffffffff, 0xffffffff, 0)
+open(w + '/wrap.zip', 'wb').write(r64 + loc + end)
+PY
+r=$($F unpack "$OUT/liar.zip" "$U/liar" 2>&1 || true)
+check "a member bigger than its directory entry says: not unpacked, nothing left" '[ ! -e "$U/liar/big.bin" ] && [ ! -e "$U/liar/.banana-unpack" ] && ! echo "$r" | grep -q "^ok"'
+r=$( (ulimit -v 700000; $F inspect "$OUT/wrap.zip" 2>&1; echo "rc=$?") || true)
+check "a zip64 directory whose place and size wrap: refused without asking for its gigabyte ($(echo "$r" | tr '\n' ' '))" 'echo "$r" | grep -q "rc=1" && ! echo "$r" | grep -qi "bad_alloc\|terminate\|abort"'
 mkdir -p "$U/clash/saves"; echo kept > "$U/clash/saves/game.sav"; echo kept > "$U/clash/notes"
 $F unpack "$OUT/clash.zip" "$U/clash" 2>/dev/null
 check "a file never takes a folder's place, nor a folder a file's" \
