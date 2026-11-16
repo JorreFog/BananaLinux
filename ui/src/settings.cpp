@@ -661,6 +661,11 @@ namespace banana
 			add(PS, "picture", "VSync", "Whether frames wait for the screen's refresh.",
 				menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Nothing tears.", "Games run as fast as they can. The screen can show a half-drawn frame." };
+			// (#219: RetroArch's own key, which BananaFront follows too - its in-game switch is forgotten at the next
+			// start, and nothing in the menu set it; Screen border has the picture's size to itself while it is on)
+			add(PS, "picture", "Integer scaling", "Whether the picture is a whole multiple of the game's size.",
+				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
+			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -929,7 +934,7 @@ namespace banana
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
+			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
