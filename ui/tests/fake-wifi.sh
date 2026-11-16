@@ -1,6 +1,21 @@
 #!/bin/sh
 # A stand-in for /usr/libexec/banana/wifi in the headless test: networks around, and "connected" to the network
 # written first in $FAKE_WIFI_CONF (the settings screen puts the one it joins there).
+# FAKE_WIFI_MOVE=<file>: three networks that change places between scans instead (Bravo's signal drops after the second
+# scan, counted in the file), none of them connected: for the cursor that must stay on its network
+if [ -n "$FAKE_WIFI_MOVE" ]; then
+    case $1 in
+    scan)
+        n=$(cat "$FAKE_WIFI_MOVE" 2>/dev/null); n=$((${n:-0} + 1)); echo $n > "$FAKE_WIFI_MOVE"
+        bravo=-50; [ $n -gt 2 ] && bravo=-70
+        printf 'bssid / frequency / signal level / flags / ssid\n'
+        printf '02:00:00:00:00:01\t2437\t-40\t[WPA2-PSK-CCMP][ESS]\tAlpha\n'
+        printf '02:00:00:00:00:02\t2437\t%s\t[WPA2-PSK-CCMP][ESS]\tBravo\n' $bravo
+        printf '02:00:00:00:00:03\t2437\t-60\t[WPA2-PSK-CCMP][ESS]\tCharlie\n' ;;
+    status) printf 'wpa_state=SCANNING\n' ;;
+    esac
+    exit 0
+fi
 case $1 in
 scan)
     printf 'bssid / frequency / signal level / flags / ssid\n'

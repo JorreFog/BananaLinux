@@ -508,7 +508,7 @@ namespace banana
 		void openNetworks();
 		void startScan();
 		void pollStatus();
-		void markNetworks();
+		void markNetworks(const std::string* selected = nullptr);
 		void join(const wifi::Network& n, const std::string& password);
 		Result pressNetworks(Key k);
 		Result pressKeyboard(Key k);

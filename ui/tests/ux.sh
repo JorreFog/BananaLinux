@@ -123,13 +123,47 @@ ux_run delete-keep "lib 0 3; press x; $D7 press a; press b; press b; lib 0 3; pr
     || { echo "FAIL $size: Delete game (the game only): $(ls "$UXFX/roms/nds" "$UXFX/saves/nds" | tr '\n' ' ')"; fail=1; }
 [ "$(grep -c '^banana-ui: deleted ' "$OUT/$size-delete-keep.log")" = 1 ] || { echo "FAIL $size: the first A deleted, or more than the ROM went"; fail=1; }
 ux_check delete-keep "deleted: nds's list again, 4 games"
+# (and not another system's game of the same name's: the Super Nintendo's "Peel Quest" keeps its save and state, in the
+# folders every system shares; nor those of a game whose name goes on from there in another system's folder)
+mkdir -p "$UXFX/saves/gba" "$UXFX/states"
+for f in "roms/snes/Peel Quest.sfc" "saves/Peel Quest.srm" "states/Peel Quest.state1" "roms/gb/Peel Quest.v2.gb" "saves/Peel Quest.v2.srm"; do echo x > "$UXFX/$f"; done
 ux_run delete-all "lib 0 2; press x; $D7 press right; press a; press a; wait 300"
 for f in "roms/nds/Peel Quest.nds" "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "roms/nds/media/box/Peel Quest.png"; do
     [ -e "$UXFX/$f" ] && { echo "FAIL $size: Delete game left $f"; fail=1; }
 done
-for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kart DS.nds" "roms/nds/media/box/Banana Kart DS.png"; do
+for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kart DS.nds" "roms/nds/media/box/Banana Kart DS.png" \
+    "roms/snes/Peel Quest.sfc" "saves/Peel Quest.srm" "states/Peel Quest.state1" "saves/Peel Quest.v2.srm"; do
     [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game took $f"; fail=1; }
 done
+rm -f "$UXFX/roms/snes/Peel Quest.sfc" "$UXFX/saves/Peel Quest.srm" "$UXFX/states/Peel Quest.state1" "$UXFX/roms/gb/Peel Quest.v2.gb" "$UXFX/saves/Peel Quest.v2.srm"
+# the other way round: a GBA game named as a DS game, deleted with its saves: its own save goes (saves/gba), the DS
+# game's stay (DraStic's newest one in drastic/backup, BananaDS's in saves/nds)
+for f in "roms/gba/Banana Kart DS.gba" "saves/gba/Banana Kart DS.srm" "drastic/backup/Banana Kart DS.dsv" "saves/nds/Banana Kart DS.sav"; do echo x > "$UXFX/$f"; done
+ux_run delete-gba "lib 1 0; press x; press up; press right; press a; press a; wait 300"
+for f in "roms/gba/Banana Kart DS.gba" "saves/gba/Banana Kart DS.srm"; do
+    [ -e "$UXFX/$f" ] && { echo "FAIL $size: Delete game (a GBA game named as a DS game) left $f"; fail=1; }
+done
+for f in "roms/nds/Banana Kart DS.nds" "drastic/backup/Banana Kart DS.dsv" "saves/nds/Banana Kart DS.sav"; do
+    [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game (a GBA game named as a DS game) took the DS game's $f"; fail=1; }
+done
+rm -f "$UXFX/drastic/backup/Banana Kart DS.dsv" "$UXFX/saves/nds/Banana Kart DS.sav"
+# a game with ".." or "bios" in its name has its Delete row too (only a folder of that name is kept from it)
+echo x > "$UXFX/roms/gba/Biosphere.gba"; echo x > "$UXFX/roms/gba/Wait... What.gba"
+ux_run delete-names "lib 1 0; press x; press up; press a; press a; wait 300; lib 1 2; press x; press up; press a; press a; wait 300"
+for f in "roms/gba/Biosphere.gba" "roms/gba/Wait... What.gba"; do
+    [ -e "$UXFX/$f" ] && { echo "FAIL $size: no Delete for $f"; fail=1; rm -f "$UXFX/$f"; }
+done
+[ -e "$UXFX/roms/gba/Orchard Tactics.gba" ] && [ -e "$UXFX/roms/gba/Tiny Fruit Advance.gba" ] || { echo "FAIL $size: Delete game (names) took another game"; fail=1; }
+# Networks: a new scan puts the networks in another order (a signal dropped): the cursor stays on its network, and Y
+# forgets that one, not the one that has its row now
+printf 'network={\n\tssid="Bravo"\n\tpsk="bravo-password"\n}\nnetwork={\n\tssid="Charlie"\n\tpsk="charlie-password"\n}\n' > "$OUT/ux-wifi-move.conf"
+rm -f "$OUT/ux-wifi-move.n"; cp "$UXFX/data/settings.conf" "$OUT/ux-wifi-move.settings" 2>/dev/null
+( UXD=$OUT/ux-wifi-data-$size; rm -rf "$UXD"; cp -r "$UXFX/data" "$UXD"; cp "$OUT/ux-wifi-move.conf" "$UXD/wifi.conf"
+  BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_MOVE="$OUT/ux-wifi-move.n" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+      --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXD" \
+      --script "home 0; press start; press r; press r; press r; press a; press down; press a; sleep 300; press down; sleep 300; shot ux-wifi-move1; wait 16000; sleep 300; shot ux-wifi-move2; press y" 2> "$OUT/$size-wifi-move.log"
+  grep -q 'ssid="Charlie"' "$UXD/wifi.conf" && ! grep -q 'ssid="Bravo"' "$UXD/wifi.conf" ) ||
+    { echo "FAIL $size: Networks: after a new scan Y forgot another network than the one selected ($(grep -c ssid= "$OUT/ux-wifi-data-$size/wifi.conf") left: $(sed -n 's/.*ssid="\(.*\)"/\1/p' "$OUT/ux-wifi-data-$size/wifi.conf" | tr '\n' ' '))"; fail=1; }
 
 # a card without roms/ports (#78: a deleted PortMaster folder once kept the menu from starting): the menu starts and
 # Ports is off the row; with Shown systems > Ports > Always its shelf is on it (one more tile), and opens empty; a

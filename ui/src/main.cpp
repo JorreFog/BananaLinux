@@ -935,8 +935,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			// (as the handheld's own loop: no search and no settings while a game is being started, and X only on a game
+			// that is there - a search with no result has none; a script that did either crashed the test run)
+			if (!settings.isOpen() && ui.view() == rnds::UI::LAUNCH && (it->second == Key::SELECT || it->second == Key::START)) { logf("press %s: ignored (launching)", b.c_str()); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
-			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && ui.gameIndex() < lib.gameCount())
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
@@ -1449,6 +1452,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
+		if (lib.pendingLaunch() >= 0 && lib.pendingLaunch() >= lib.gameCount()) lib.clearLaunch();	// (the shelf changed under it)
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
