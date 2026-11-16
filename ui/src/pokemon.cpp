@@ -737,7 +737,7 @@ namespace banana::pkmn
 					int k = 0;
 					for (;; k++)
 					{
-						long p = romPtr(rom, n, a + k * 4, 2);
+						long p = romPtr(rom, n, a + k * 4, 22);	// (the 22 bytes nameAt may read: a name can't start in a ROM's last 21)
 						int l = p < 0 ? -1 : nameAt(rom + p, 22);
 						if (l < 2) break;
 					}
@@ -792,7 +792,7 @@ namespace banana::pkmn
 					size_t r = a + k * 8;
 					if (r + 8 > n || rom[r + 2] == 0 || rom[r + 3] == 0 || rom[r + 2] > 28 || rom[r + 3] > 15) break;
 					if (!loose && !hidden(r) && (rom[r] >= 28 || rom[r + 1] >= 15)) break;
-					long p = romPtr(rom, n, r + 4, 2);
+					long p = romPtr(rom, n, r + 4, 22);
 					if (p < 0 || (!k && sectionName(rom + p, 22) < 2)) break;	// (a few sections have no name)
 				}
 				return k;

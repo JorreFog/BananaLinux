@@ -62,7 +62,9 @@ namespace banana
 			if (!at(le64(loc + 8)) || !get(r, 56) || le32(r) != 0x06064b50) return false;
 			count = le64(r + 32); cdSize = le64(r + 40); cdAt = le64(r + 48);
 		}
-		if (cdAt + cdSize > total || cdSize > (1u << 30)) return false;
+		// (not as a sum: a zip64 record's two 64-bit numbers can wrap it, and a file of a hundred bytes then had a
+		// directory of 1 GB to make room for - the menu reads zips for the DS games' icons)
+		if (cdAt > total || cdSize > total - cdAt || cdSize > (1u << 30)) return false;
 		std::vector<uint8_t> cd((size_t)cdSize);
 		if (cdSize && (!at(cdAt) || !get(cd.data(), cd.size()))) return false;
 		size_t p = 0;
@@ -109,7 +111,9 @@ namespace banana
 		uint8_t lh[30];
 		if (!at(e.local) || !get(lh, 30) || le32(lh) != 0x04034b50) return false;
 		uint64_t dataAt = e.local + 30 + le16(lh + 26) + le16(lh + 28);
-		if (dataAt + e.csize > total || !at(dataAt)) return false;
+		if (dataAt > total || e.csize > total - dataAt || !at(dataAt)) return false;
+		// (a stored member is as long as its bytes: one that says otherwise isn't read)
+		if (e.method == 0 && e.csize != e.size) return false;
 
 		std::vector<uint8_t> in(256 * 1024);
 		uLong crc = crc32(0, nullptr, 0);
@@ -149,6 +153,9 @@ namespace banana
 			if (r != Z_OK && r != Z_STREAM_END) { ok = false; break; }
 			size_t got = buf.size() - s.avail_out;
 			if (!got) continue;
+			// (more than the directory said: stopped here, not at the end - the room on the card was counted from what
+			// the directory said, and a member of a few KB that unpacks to gigabytes filled it first)
+			if (got > e.size - out) { ok = false; break; }
 			out += got;
 			crc = crc32(crc, buf.data(), (uInt)got);
 			if (!sink(buf.data(), got)) { inflateEnd(&s); return true; }

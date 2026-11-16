@@ -91,6 +91,14 @@ set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file 
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
+# one apply or switch at a time (Settings starts them; a second one over SSH, or a press that got through twice): a
+# second apply emptied the first one's unpacked package under it and wrote the same slot. The one that has to go says
+# so and leaves the status line alone: it is the running one's progress
+install_lock() {
+    mkdir -p $RUN 2>/dev/null
+    exec 7> $RUN/update-apply.lock
+    flock -n 7 || { echo "update: an update is being installed already" >&2; exit 1; }
+}
 # ---- over the air: helpers -------------------------------------------------------------------------------------
 # Settings' value of a key (banana/settings.conf: "key = value"), or the default
 conf_get() {
@@ -98,6 +106,10 @@ conf_get() {
     echo "${_v:-$2}"
 }
 field() { sed -n "s/^$1=//p" $CHECK 2>/dev/null | head -n 1; }    # a line of the last check's answer
+# num <value>: it when it is a number, else nothing. The times and sizes read back from the card's .check go into the
+# shell's sums: one damaged line there ("fetched=17x3", a card written badly) was an arithmetic error that ended every
+# later check before it wrote a new .check, so Check for updates failed for good
+num() { case $1 in ''|*[!0-9]*) ;; *) echo "$1" ;; esac; }
 lastchan() { _c=$(field channel); echo ${_c:-github}; }   # the channel it asked (a check from before the beta channel: GitHub)
 size_of() { ls -ln "$1" 2>/dev/null | awk '{ print $5 }'; }      # (busybox has no stat, and its wc -c reads it all)
 dl() { echo "$*" > $DL.new && mv -f $DL.new $DL; }
@@ -154,6 +166,7 @@ status)
     done
     ;;
 switch)
+    install_lock
     to=${2:-$(other $SLOT)}
     [ -f /boot/$to/Image ] || fail "slot $to holds no system"
     set_default $to
@@ -161,6 +174,7 @@ switch)
     echo "the next boot runs slot $to"
     ;;
 apply)
+    install_lock
     P=$2
     [ -e "$P" ] || fail "no such package: $P"
     status "checking"
@@ -199,6 +213,12 @@ apply)
         [ -f "$P" ] && fail "$bad is damaged in $(basename "$P"): download it again. (Its SHA-256 starts $(hash_of "$P" | cut -c1-12); the release's SHA256SUMS file lists the right one.)"
         fail "$bad is damaged (its hash is wrong)"
     fi
+    # ...and every file that is installed is one of them: a sums file without one (cut short) passed the check above,
+    # and the kernel or a device tree went onto the card unchecked; without the root's line the slot was written whole
+    # before "reads back wrong", the other slot's kernel (Previous version) gone by then
+    for f in Image rootfs.squashfs $(cd "$DIR" && ls *.dtb); do
+        grep -q "^[0-9a-f]\{64\} [ *]$f\$" "$DIR/sha256sums" || fail "the package's sha256sums doesn't list $f: download it again"
+    done
     ROOT_HASH=$(sed -n 's/ \+rootfs.squashfs$//p' "$DIR/sha256sums")
     TO=$(other $SLOT); PART=$(partition $TO)
     [ -b "$PART" ] || fail "no partition for slot $TO ($PART)"
@@ -245,7 +265,7 @@ check)
     if [ "$2" = --daily ]; then
         # Wi-Fi's hook, when it connects: only with Settings' "Check once a day" on, and a day since the last answer
         [ "$(conf_get update_daily off)" = on ] || exit 0
-        last=$(field checked)
+        last=$(num "$(field checked)")
         [ -n "$last" ] && [ $(( $(date +%s) - last )) -lt 72000 ] && [ $(( $(date +%s) - last )) -ge 0 ] && exit 0
     fi
     mkdir -p $UPDATES $RUN 2>/dev/null
@@ -256,7 +276,7 @@ check)
     [ $CHANNEL = beta ] && pre=on
     feed=$UPDATES/.feed.json; etag=$UPDATES/.feed.etag; hdr=$RUN/update-feed.hdr
     [ $CHANNEL = beta ] && { feed=$UPDATES/.feed-beta.json; etag=$UPDATES/.feed-beta.etag; }
-    now=$(date +%s); fetched=$(field fetched); checked=$(field checked); err=
+    now=$(date +%s); fetched=$(num "$(field fetched)"); checked=$(num "$(field checked)"); err=
     [ "$(lastchan)" = $CHANNEL ] || fetched=     # the other channel's list: asked again
     # GitHub answers 60 questions an hour from one address without an account (a whole household's, behind one
     # router; an unchanged list's 304 counts too when there is no account): the list fetched less than 5 minutes ago
@@ -399,7 +419,7 @@ download)
     flock -n 9 || { echo "update: a download is already running" >&2; exit 1; }
     echo $$ > $DL.pid
     cpid=
-    F=$(field file); URL=$(field url); SUMS=$(field sums); TOTAL=$(field size); TOTAL=${TOTAL:-0}
+    F=$(field file); URL=$(field url); SUMS=$(field sums); TOTAL=$(num "$(field size)"); TOTAL=${TOTAL:-0}
     [ "$(field state)" = newer ] || [ "$(field last_state)" = newer ] || dfail "there is no newer version to download: Check for updates first"
     [ "$(field board)" = "$BOARD" ] || dfail "that check was for the $(field board), this is the $BOARD"
     case $F in banana-"$BOARD"-*.update.tar) ;; *) dfail "the release's package has an odd name ($F)" ;; esac

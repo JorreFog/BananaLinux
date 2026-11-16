@@ -66,5 +66,34 @@ run switch apply "$P" || bad "switch: the apply after the cut-off one failed"
 run switch switch a || bad "switch: back to slot a refused (it holds a system)"
 [ "$(dflt switch)" = a ] || bad "switch: back to a didn't happen"
 
+# 5. a package whose sha256sums lists no kernel (a sums file cut short): refused before anything on the card changes,
+# so Previous version (slot b's kernel) and slot b's root are as they were; and one without the root's line the same
+for miss in Image rootfs.squashfs; do
+    c=sums-$miss; card "$c"; P=$(pkg "$c" 0.5.3 x)
+    d=$OUT/$c/re; mkdir -p "$d"; tar -xf "$P" -C "$d"; sed -i "/ $miss\$/d" "$d"/*/sha256sums; tar -cf "$P" -C "$d" "$(ls "$d")"; rm -rf "${d:?}"
+    before=$(sha256sum < "$OUT/$c/dev/mmcblk0p3")
+    run "$c" apply "$P" && bad "$c: a package whose sha256sums doesn't list $miss was installed"
+    grep -q "^failed: .*sha256sums doesn't list $miss" "$OUT/$c/run/update-status" || bad "$c: the status doesn't say why: $(cat "$OUT/$c/run/update-status" 2>/dev/null)"
+    [ "$(dflt "$c")" = a ] || bad "$c: the default moved to $(dflt "$c")"
+    [ "$(cat "$OUT/$c/boot/b/Image" 2>/dev/null)" = kernel-b-old ] || bad "$c: slot b's kernel (Previous version) is gone though nothing was installed"
+    [ "$(sha256sum < "$OUT/$c/dev/mmcblk0p3")" = "$before" ] || bad "$c: slot b's root was written though the package was refused"
+    [ -e "$OUT/$c/data/banana/updates/.unpack" ] && bad "$c: the unpacked package was left on the card"
+done
+
+# 6. an apply (and a switch) while another is installing: refused, and the running one's progress line left alone
+card busy; P=$(pkg busy 0.5.3 x)
+echo "writing 42%" > "$OUT/busy/run/update-status"; mkdir -p "$OUT/busy/data/banana/updates/.unpack"; echo part > "$OUT/busy/data/banana/updates/.unpack/keep"
+( flock 7; sleep 4 ) 7> "$OUT/busy/run/update-apply.lock" &
+HOLD=$!; sleep 0.5
+run busy apply "$P" && bad "busy: a second apply ran beside the first"
+run busy apply /nonexistent && bad "busy: a second apply (no such package) reported success"
+run busy switch b && bad "busy: a switch ran beside an apply"
+[ "$(cat "$OUT/busy/run/update-status")" = "writing 42%" ] || bad "busy: the running apply's status was overwritten: $(cat "$OUT/busy/run/update-status")"
+[ -f "$OUT/busy/data/banana/updates/.unpack/keep" ] || bad "busy: the running apply's unpacked package was deleted under it"
+[ "$(dflt busy)" = a ] || bad "busy: the default moved to $(dflt busy)"
+wait $HOLD
+run busy apply "$P" || bad "busy: the apply after the first one ended failed"
+[ "$(dflt busy)" = b ] || bad "busy: after a good apply the default is $(dflt busy), not b"
+
 [ $fails = 0 ] && echo "update-apply: all passed ($SH)"
 exit $((fails > 0))

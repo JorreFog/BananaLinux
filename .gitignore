@@ -3,6 +3,9 @@
 /ui/banana-ui
 /ui/banana-bshare
 /ui/banana-fetch
+/ui/banana-scrape
+/ui/banana-sync
+/ui/banana-leaseshim.so
 /ui/tests/servers/share/
 /ui/tests/servers/tls/
 /ui/tests/out/

@@ -17,6 +17,12 @@ if ! cmp -s "$T" "$D/../templates.js" || ! cmp -s "$G" "$D/../guide.js"; then
     rm -f "$T" "$G"; exit 1
 fi
 rm -f "$T" "$G"
+# a ready-made theme the image ships too is the image's file: the editor started people from Phosphor Terminal as it
+# was before its list was clipped (fixed in the image's copy only)
+for f in "$D"/../premade/*.json; do
+    s=$D/../../../system/rootfs/usr/share/banana/themes/$(basename "$f")
+    [ ! -f "$s" ] || cmp -s "$f" "$s" || { echo "  FAIL premade/$(basename "$f") isn't the image's themes/$(basename "$f"): copy it over, then make-templates.py"; exit 1; }
+done
 echo "  ok"
 echo
 echo "== expressions (port vs the real engine) =="

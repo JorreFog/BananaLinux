@@ -15,11 +15,13 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 
-try:
-    from PySide6.QtWidgets import QApplication
-except ImportError:
+# skipped only where PySide6 isn't there at all: one that is installed and doesn't load (a library of Qt's missing,
+# "libEGL.so.1: cannot open shared object file") was reported as "not installed" too, and the test passed
+import importlib.util						# noqa: E402
+if importlib.util.find_spec('PySide6') is None:
     print('  (skipped: PySide6 is not installed)')
     sys.exit(0)
+from PySide6.QtWidgets import QApplication			# noqa: E402
 
 import style							# noqa: E402
 

@@ -8,6 +8,16 @@ cd "$(dirname "$0")/.." || exit 1
 export LC_ALL=C	# (sort/comm: the committed file must compare the same on every host, CI's C included)
 CHECK=0; [ "$1" = --check ] && CHECK=1
 git rev-parse --git-dir >/dev/null 2>&1 || { [ $CHECK = 1 ] && exit 0; echo "not a git checkout" >&2; exit 1; }
+# a shallow clone (git clone --depth, a CI checkout without fetch-depth: 0) has only the newest systems.conf files: the
+# list made from it would lack the older ones' values. Never written from one (committed, cards copied from an old
+# systems.conf.default would keep their old defaults), and not compared: said, not failed as "out of date" - but failed
+# in CI, which must check it
+if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
+    m="a shallow clone has not every earlier systems.conf: git fetch --unshallow first"
+    [ $CHECK = 1 ] || { echo "systems-history: $m; systems.history is left as it is" >&2; exit 1; }
+    [ -n "$CI" ] && { echo "FAIL systems.history can't be checked: $m (CI: actions/checkout's fetch-depth: 0)"; exit 1; }
+    echo "note: systems.history not checked: $m"; exit 0
+fi
 F=system/rootfs/etc/banana/systems.conf
 norm() {  # file -> "id\tkey\tvalue" lines, read as systems-merge reads them
     awk 'function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }

@@ -258,5 +258,80 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+echo "rcS: the card the system booted from is the one the root is on"
+fn "$R/system/rootfs/etc/init.d/rcS" root_disk
+# a made-up /sys: the eMMC, this card in the first slot (mmcblk1), another Banana card in the second (mmcblk2)
+S=$T/sys; mkdir -p "$S/dev/block" "$S/class/block"
+blk() {   # blk <host> <disk> <major:minor of the disk> <partitions>
+    d=$S/devices/platform/$1/block/$2; mkdir -p "$d"; ln -s "../../devices/platform/$1/block/$2" "$S/dev/block/$3"
+    i=1; while [ $i -le "$4" ]; do mkdir -p "$d/$2p$i"; ln -s "../../devices/platform/$1/block/$2/$2p$i" "$S/dev/block/${3%:*}:$(( ${3#*:} + i ))"; i=$((i + 1)); done
+}
+blk mmc0 mmcblk0 179:0 3; blk mmc1 mmcblk1 179:32 4; blk mmc2 mmcblk2 179:64 4
+mi() { printf '%s\n' "$@" > "$T/mountinfo"; root_disk "$T/mountinfo" "$S"; }
+check "$(mi '1 0 179:34 / / ro,relatime - squashfs /dev/root ro')" "/dev/mmcblk1" "slot a of the first slot's card, a second Banana card in or not"
+check "$(mi '1 0 179:35 / / ro,relatime - squashfs /dev/root ro' '20 1 0:5 / /proc rw - proc proc rw')" "/dev/mmcblk1" "slot b"
+check "$(mi '1 0 179:66 / / ro,relatime - squashfs /dev/root ro')" "/dev/mmcblk2" "the kernel took the second slot's card for the root: that card"
+check "$(mi '1 0 0:2 / / rw - rootfs rootfs rw' '15 1 179:34 / / ro - squashfs /dev/root ro')" "/dev/mmcblk1" "the last mount at / counts"
+check "[$(mi '1 0 179:32 / / ro - squashfs /dev/root ro')]" "[]" "a root on a whole disk: nothing (rcS then looks for banana-root-a)"
+check "[$(mi '1 0 0:17 / / rw - tmpfs tmpfs rw')]" "[]" "a root that is no block device: nothing"
+check "[$(root_disk "$T/none" "$S")]" "[]" "no mountinfo: nothing"
+
+echo "rcS: a machine id of the card's own (#174), made once"
+fn "$R/system/rootfs/etc/init.d/rcS" machine_id
+mkdir -p "$T/mid"
+machine_id "$T/mid/card" "$T/mid/run"; id1=$(cat "$T/mid/card")
+check "$(echo "$id1" | grep -cE '^[0-9a-f]{32}$')" "1" "32 hex digits on the card"
+check "$(cat "$T/mid/run")" "$id1" "...and the copy /etc/machine-id points at"
+rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(cat "$T/mid/card") $(cat "$T/mid/run")" "$id1 $id1" "the next boot: the same id"
+machine_id "$T/mid/card2" "$T/mid/run2"
+check "$([ "$(cat "$T/mid/card2")" != "$id1" ] && echo other)" "other" "another card: another id"
+echo "not an id" > "$T/mid/card"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "a file that isn't an id is made again"
+
+echo "run-bananads: a zipped game is only kept when it unpacked whole"
+fn "$L/run-bananads" unpack
+# a stand-in for unzip: writes the game (cut short and failing with UNZIP_FAIL set, as on a full card)
+mkdir -p "$T/bin" "$T/unz"
+cat > "$T/bin/unzip" <<'EOF'
+#!/bin/sh
+while [ $# -gt 0 ]; do case $1 in -d) d=$2; shift ;; -*) ;; *) z=$1 ;; esac; shift; done
+mkdir -p "$d/folder"
+[ -n "$UNZIP_NOGAME" ] && { echo readme > "$d/folder/readme.txt"; exit 0; }
+[ -n "$UNZIP_FAIL" ] && { head -c 100 "$z" > "$d/folder/Game.nds"; echo "unzip: write error" >&2; exit 1; }
+cat "$z" > "$d/folder/Game.nds"
+EOF
+chmod +x "$T/bin/unzip"
+head -c 4096 /dev/zero | tr '\0' 'g' > "$T/unz/Game.zip"
+un() { (PATH=$T/bin:$PATH; unpack "$T/unz/Game.zip" "$T/unz/cache" "$T/unz/cache/Game.nds" 2>/dev/null; echo "$? $(wc -c 2>/dev/null < "$T/unz/cache/Game.nds" | tr -d ' ') $(ls -A "$T/unz/cache" | tr '\n' ' ')"); }
+mkdir -p "$T/unz/cache"; echo old > "$T/unz/cache/Other.nds"
+check "$(un)" "0 4096 Game.nds " "unpacked whole: the game, the one unpacked before gone, nothing else left"
+check "$(UNZIP_FAIL=1 un)" "2  " "unzip failed (a full card, a damaged zip): no cut-short game kept, 2"
+check "$(UNZIP_NOGAME=1 un)" "1  " "a zip with no game in it: 1"
+check "$(un)" "0 4096 Game.nds " "...and unpacked again once there is room"
+
+echo "run-retroarch, run-bananafront: a GBA save left in saves/ (the Save Mover's, a copy by hand) is the game's when no other system has a game of that name"
+fn "$L/run-retroarch" flat_gba_save
+G=$T/gbacard; mkdir -p "$G/saves" "$G/roms/gba/hacks" "$G/roms/gb" "$G/run/sd2" "$G/sd2/roms/gbc" "$G/sd2/roms/gba"
+fg() { (BANANA_ROOT=$G BANANA_RUN=$G/run; flat_gba_save "$1" "$2"); }
+: > "$G/roms/gba/Emerald (USA).gba"; echo save > "$G/saves/Emerald (USA).srm"
+check "$(fg 'Emerald (USA)' "$G/roms/gba/Emerald (USA).gba")" "$G/saves/Emerald (USA).srm" "the save in saves/, only a GBA game of that name: it"
+: > "$G/roms/gba/Emerald (USA).zip"; : > "$G/roms/gba/hacks/Emerald (USA).gba"
+check "$(fg 'Emerald (USA)' "$G/roms/gba/hacks/Emerald (USA).gba")" "$G/saves/Emerald (USA).srm" "...also zipped, and one folder down in the GBA's folder"
+check "[$(fg 'Fusion' "$G/roms/gba/Fusion.gba")]" "[]" "no save in saves/: nothing"
+: > "$G/saves/Empty.srm"; : > "$G/roms/gba/Empty.gba"
+check "[$(fg 'Empty' "$G/roms/gba/Empty.gba")]" "[]" "an empty file: nothing"
+: > "$G/roms/gba/Tetris.gba"; : > "$G/roms/gb/Tetris.gb"; echo save > "$G/saves/Tetris.srm"
+check "[$(fg 'Tetris' "$G/roms/gba/Tetris.gba")]" "[]" "a Game Boy game of that name too: its save may be the Game Boy's, left alone"
+: > "$G/roms/gba/Mario [!].gba"; : > "$G/roms/gb/Mario [x].gb"; echo save > "$G/saves/Mario [!].srm"
+check "$(fg 'Mario [!]' "$G/roms/gba/Mario [!].gba")" "$G/saves/Mario [!].srm" "brackets in a name are the name's, not a pattern"
+echo "$G/sd2/roms" > "$G/run/sd2/roms"; : > "$G/roms/gba/Zelda.gba"; : > "$G/sd2/roms/gbc/Zelda.gbc"; echo save > "$G/saves/Zelda.srm"
+check "[$(fg 'Zelda' "$G/roms/gba/Zelda.gba")]" "[]" "a game of that name on the second card, in another system: left alone"
+: > "$G/sd2/roms/gba/Golden Sun.gba"; echo save > "$G/saves/Golden Sun.srm"
+check "$(fg 'Golden Sun' "$G/sd2/roms/gba/Golden Sun.gba")" "$G/saves/Golden Sun.srm" "a GBA game on the second card: its save in saves/"
+fn "$L/run-bananafront" flat_gba_save
+check "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-bananafront" | cksum)" "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-retroarch" | cksum)" "run-bananafront's flat_gba_save is run-retroarch's"
+check "$(grep -c 'f=$(flat_gba_save "$n" ' "$L/run-retroarch" "$L/run-bananafront" | tr '\n' ' ')" "$L/run-retroarch:1 $L/run-bananafront:1 " "both launchers look there for a GBA game with no save yet"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

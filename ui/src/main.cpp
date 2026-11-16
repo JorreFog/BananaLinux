@@ -927,6 +927,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				ui.systemIndex() >= 0 && ui.systemIndex() < lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id.c_str() : "-");
 			lastLaunch = -1;
 		}
+		// ended <game>: the program started from the open shelf has ended (what the handheld's loop does then)
+		else if (op == "ended") { int g = 0; cs >> g; backFromGame(lib, ui, g); logf("ended: view %d sys %d", (int)ui.view(), ui.systemIndex()); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
@@ -957,8 +959,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			// (as the handheld's own loop: no search and no settings while a game is being started, and X only on a game
+			// that is there - a search with no result has none; a script that did either crashed the test run)
+			if (!settings.isOpen() && ui.view() == rnds::UI::LAUNCH && (it->second == Key::SELECT || it->second == Key::START)) { logf("press %s: ignored (launching)", b.c_str()); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
-			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && ui.gameIndex() < lib.gameCount())
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
@@ -966,6 +971,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped,
 					lib.systemOf(ui.gameIndex()).id);
 				logf("press x: game page for %s", path.c_str());
+				logf("game page title: %s", lib.gameAt(ui.gameIndex()).title.c_str());
 				continue;
 			}
 			if (!settings.isOpen() && (it->second == Key::A || it->second == Key::X) && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
@@ -1500,6 +1506,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
+		if (lib.pendingLaunch() >= 0 && lib.pendingLaunch() >= lib.gameCount()) lib.clearLaunch();	// (the shelf changed under it)
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();

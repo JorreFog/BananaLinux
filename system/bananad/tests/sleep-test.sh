@@ -491,6 +491,8 @@ tev 3 57 -1  0 0 0                                          # its lift
 sleep 0.5
 : > /run/banana/keyboard
 tev 3 57 2  3 53 300  3 54 50  0 0 0;  tev 3 57 -1  0 0 0  # a touch while typing
+ev $EV_KEY 308 1; ev $EV_KEY 308 0; ev $EV_KEY 544 1; ev $EV_KEY 544 0   # buttons while typing (Y, the d-pad's up: a letter chosen)
+ev $EV_KEY 115 1; ev $EV_KEY 115 0                             # ...and volume up, which types nothing
 sleep 0.5; rm -f /run/banana/keyboard
 ev $EV_KEY 314 1; ev $EV_KEY 314 0; sleep 0.3                  # a quick Select: no marker
 grep -q "MARK" "$F" 2>/dev/null && bad "a marker from a quick press" || ok "a quick Select: no marker"
@@ -511,6 +513,9 @@ grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui
 grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
 grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
+# (the keyboard is typed on with the buttons too: their names would read back as the password)
+[ "$(grep -c "button .*keyboard open: which not recorded" "$F")" = 4 ] && ! grep -q "button .*y down\|button .* up down" "$F" && ok "the buttons while typing, without which" || bad "buttons while typing: $(grep button "$F" | tr '\n' '|')"
+grep -q "button .*volume-up down" "$F" && ok "...the volume key by its name all the same" || bad "volume key while typing: $(grep button "$F" | tr '\n' '|')"
 echo 0 > /run/test/lid; wake; sleep 0.3
 python3 -c "
 import socket; socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'menu\trestart (Settings)', '/run/banana/recorder.sock')"

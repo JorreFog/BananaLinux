@@ -262,7 +262,9 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
     [ $((t1 - t0)) -le 3 ] || bad "http to the TLS port took $((t1 - t0)) s"
     # a bare address: Romhost's 8092 first, https (443) when nothing answers on the http ports. 443 needs its own network
     # namespace (root in there, nobody's port 443 out here)
-    if unshare -rn true 2>/dev/null; then
+    # (and ip, to bring the namespace's loopback up: without it nothing in there connects, and the two probes below
+    # failed as if banana-sync had found no server)
+    if unshare -rn true 2>/dev/null && command -v ip >/dev/null; then
         export BIN OUT HERE TLS L
         unshare -rn sh -c '
             ip link set lo up
@@ -278,7 +280,7 @@ if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout 
         [ "$(cat "$OUT/tls-443.txt")" = "romm https://127.0.0.1 RomM 5.4.1" ] || bad "a bare address didn't find https on 443: $(cat "$OUT/tls-443.txt")"
         [ "$(cat "$OUT/tls-8092.txt")" = "romm http://127.0.0.1:8092 RomM 5.4.1" ] || bad "a bare address didn't try 8092 first: $(cat "$OUT/tls-8092.txt")"
     else
-        echo "SKIP sync: a bare address on 443 (no unshare -rn here)"
+        echo "SKIP sync: a bare address on 443 (no unshare -rn, or no ip, here)"
     fi
 else
     echo "SKIP sync: https (no openssl)"

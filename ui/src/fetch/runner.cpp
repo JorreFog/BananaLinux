@@ -126,10 +126,11 @@ namespace banana
 
 			// where a job may write and read (banana-fetch runs as root, and the job is a file on the card): the cards (the
 			// data card, BANANA_DATA's parent; the second SD card, BANANA_SD2 or /run/sd2), never Banana's own folder
-			// (banana/: the servers, the settings, the jobs themselves)
+			// (banana/: the servers, the settings, the jobs themselves), however its name is written: on the cards "Banana"
+			// and "banana." are banana, and a server's folder of that name, taken to the card's root, went into it
 			bool onCards(const Paths& p, const std::string& path)
 			{
-				if (under(path, p.data)) return false;
+				if (insideFolder(path, p.data)) return false;
 				const char* sd2 = getenv("BANANA_SD2");
 				return under(path, dirName(p.data)) || under(path, sd2 && *sd2 ? sd2 : "/run/sd2");
 			}
@@ -373,6 +374,7 @@ namespace banana
 					o.password = password;
 					o.unwrap = j.unwrap;
 					o.tempRoot = j.tempRoot;
+					o.keepOut = p.data;
 					o.ignoreMemory = j.ignoreMemory;
 					o.stop = &stopping;
 					o.progress = [&](double f) { s.percent = (int)(f * 100); sf.write(s, false); };

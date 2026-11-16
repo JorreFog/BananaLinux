@@ -254,8 +254,8 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
         <tbody>
           <tr><td><code>DraStic/backup/Game.dsv</code></td><td>DS save, DraStic</td><td><code>saves/nds/Game.sav</code> (footer cut off)</td></tr>
           <tr><td><code>…/Game.sav</code> from melonDS</td><td>DS save, raw</td><td><code>saves/nds/Game.sav</code></td></tr>
-          <tr><td><code>RetroArch/saves/Game.srm</code></td><td>GBA, GB, SNES, NES, Mega Drive, N64, PS1 in RetroArch</td><td><code>saves/Game.srm</code></td></tr>
-          <tr><td><code>Game.sav</code> from mGBA, Pizza Boy…</td><td>GBA / GB save, raw</td><td><code>saves/Game.srm</code></td></tr>
+          <tr><td><code>RetroArch/saves/Game.srm</code></td><td>GBA, GB, SNES, NES, Mega Drive, N64, PS1 in RetroArch</td><td><code>saves/Game.srm</code> (a GBA game's: <code>saves/gba/Game.srm</code>)</td></tr>
+          <tr><td><code>Game.sav</code> from mGBA, Pizza Boy…</td><td>GBA / GB save, raw</td><td><code>saves/gba/Game.srm</code> for a GBA game, <code>saves/Game.srm</code> for a Game Boy one</td></tr>
           <tr><td><code>Game_1.mcd</code> from DuckStation</td><td>PS1 memory card</td><td><code>saves/Game.srm</code></td></tr>
           <tr><td><code>.dss .state .ss1 .mst</code></td><td>Save states</td><td>Left out: they don't load in another emulator</td></tr>
           <tr><td><code>.eep .sra .fla .mpk</code></td><td>N64 saves from a standalone emulator</td><td>Left out: these need a manual conversion</td></tr>
@@ -386,12 +386,15 @@ select.sys { font: 14px var(--body); background: var(--screen); color: var(--tex
     if (it.forced) { kind = it.forced; it.notes = it.notes.filter((n) => !n[1].startsWith("Could be")); }
     if (kind === "nds" && it.bytes && hasDesmumeFooter(it.bytes)) it.notes.push(["ok", "DeSmuME footer found: cut off (122 bytes)."]);
     if (kind === "ra" && ext === "sav") it.notes.push(["ok", "Renamed to .srm for RetroArch."]);
+    // a Game Boy Advance game (the ROM folder says so): BananaOS keeps every GBA core's saves in saves/gba, and a save
+    // left in saves/ was never found by the game
+    it.gba = kind === "ra" && !!rom && rom.system === "gba";
     it.kind = kind; it.outBase = safeName(base);
     return it;
   }
   function skip(it, why) { it.kind = "skip"; it.outBase = ""; it.notes = [["bad", why]]; it.include = false; return it; }
 
-  const outPath = (it) => it.kind === "nds" ? "saves/nds/" + it.outBase + ".sav" : it.kind === "ra" ? "saves/" + it.outBase + ".srm" : "";
+  const outPath = (it) => it.kind === "nds" ? "saves/nds/" + it.outBase + ".sav" : it.kind === "ra" ? (it.gba ? "saves/gba/" : "saves/") + it.outBase + ".srm" : "";
 
   function convert(it) {
     if (it.kind === "nds" && hasDesmumeFooter(it.bytes)) return it.bytes.subarray(0, it.bytes.length - 122);

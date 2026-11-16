@@ -661,6 +661,11 @@ namespace banana
 			add(PS, "picture", "VSync", "Whether frames wait for the screen's refresh.",
 				menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Nothing tears.", "Games run as fast as they can. The screen can show a half-drawn frame." };
+			// (#219: RetroArch's own key, which BananaFront follows too - its in-game switch is forgotten at the next
+			// start, and nothing in the menu set it; Screen border has the picture's size to itself while it is on)
+			add(PS, "picture", "Integer scaling", "Whether the picture is a whole multiple of the game's size.",
+				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
+			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -929,7 +934,7 @@ namespace banana
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
+			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
@@ -2619,9 +2624,10 @@ namespace banana
 		nextStatus = now + 1500;
 	}
 
-	void Settings::markNetworks()
+	// selected: the network the cursor is on, when the list has just been replaced (a new scan's)
+	void Settings::markNetworks(const std::string* selected)
 	{
-		std::string selName = nsel < (int)nets.size() ? nets[nsel].ssid : "";
+		std::string selName = selected ? *selected : nsel < (int)nets.size() ? nets[nsel].ssid : "";
 		auto saved = wifi::savedNames(wifiConf);
 		for (auto& n : nets)
 		{
@@ -2715,10 +2721,13 @@ namespace banana
 		std::string out;
 		if (scanJob.take(out))
 		{
+			// (the cursor's network from the list as it was: taken after the new scan's list was in, it was whichever
+			// network had that row now, and the next Y forgot, or A joined, another network than the one selected)
+			std::string selName = nsel >= 0 && nsel < (int)nets.size() ? nets[nsel].ssid : "";
 			nets = wifi::parseScan(out);
 			scanning = false;
 			scannedOnce = true;
-			markNetworks();
+			markNetworks(&selName);
 			changed = true;
 		}
 		if (artJob.take(out))
@@ -2860,6 +2869,10 @@ namespace banana
 			else if (net.current && wizard) { page = SETUP; message.clear(); startTest(); }	// (the setup: tested)
 			else if (net.current)
 				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
+			else if (!net.secured && net.saved && wifi::savedWithPassword(wifiConf, net.ssid))
+				// (only a network without a password by that name in reach: joining it would write an open network over
+				// the saved password, and the handheld would join any network of that name from then on)
+				message = net.ssid + " is saved with a password, and the one in reach has none: it may not be yours. Not joined; Y forgets the saved one first.";
 			else if (!net.secured || (net.saved && net.ssid != failed))
 			{
 				join(net, "");	// open, or saved: no password to type
@@ -5439,6 +5452,20 @@ namespace banana
 	static const float MIC_BANANADS[] = { 0, 0.15f, 0.05f, 0.02f, 0 }, MIC_SUPERDRASTIC[] = { 0, 0.3f, 0.15f, 0.03f, 0 };
 
 	// ---- Delete game ----
+	// a path (in lower case) with a folder of that name on its way ("bios", ".."). Its folders, not its letters: a
+	// game called "Wait... What.gba" or "Biosphere.gba" had no Delete row
+	static bool hasFolder(const std::string& low, const char* name)
+	{
+		for (size_t a = 0; a < low.size();)
+		{
+			size_t b = low.find('/', a);
+			if (b == std::string::npos) break;		// (the last part is the file's own name)
+			std::string part = low.substr(a, b - a);
+			if (part == name) return true;
+			a = b + 1;
+		}
+		return false;
+	}
 	// a file the game page may delete: a regular file in a roms folder (either card), never in a BIOS folder, and
 	// not PortMaster's own entry
 	static bool deletableRom(const std::string& path)
@@ -5447,18 +5474,49 @@ namespace banana
 		if (path.empty() || stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) return false;
 		std::string low = path;
 		for (auto& c : low) c = (char)tolower((unsigned char)c);
-		if (low.find("/roms/") == std::string::npos || low.find("/bios") != std::string::npos || low.find("..") != std::string::npos) return false;
+		if (low.find("/roms/") == std::string::npos || hasFolder(low, "bios") || hasFolder(low, "..")) return false;
 		return path.substr(path.rfind('/') + 1) != "PortMaster.sh";
 	}
 	static std::string baseOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
+
+	// the names of the games in the other systems' folders of a roms folder (each system's folder and one folder down,
+	// as the library reads them): what tells whether a save in a folder every system shares is this game's alone
+	static void otherSystemsGames(const std::string& roms, const std::string& mine, std::set<std::string>& names)
+	{
+		std::vector<std::string> folders;
+		if (DIR* r = opendir(roms.c_str()))
+		{
+			while (dirent* e = readdir(r)) if (e->d_name[0] != '.' && strcasecmp(e->d_name, mine.c_str()) != 0) folders.push_back(roms + "/" + e->d_name);
+			closedir(r);
+		}
+		for (size_t i = 0, top = folders.size(); i < folders.size(); i++)
+		{
+			DIR* d = opendir(folders[i].c_str());
+			if (!d) continue;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] == '.') continue;
+				struct stat st;
+				std::string p = folders[i] + "/" + e->d_name;
+				if (stat(p.c_str(), &st) != 0) continue;
+				if (S_ISREG(st.st_mode)) names.insert(baseOf(e->d_name));
+				else if (S_ISDIR(st.st_mode) && i < top) folders.push_back(p);
+			}
+			closedir(d);
+		}
+	}
 
 	// the ROM, and with all its saves, states and art: in the saves and states folders (RetroArch's, the DS
 	// emulators' and DraStic's), beside the game, in its folder's media/* and artwork/ (Game & Watch: its MAME artwork
 	// zip), and its own folder of saves where an emulator keeps one (MAME's saves/<system>/<game>/, the Game & Watch
 	// high scores); a file belongs to the game when its
 	// name is the game's name and a dot ("Peel Quest.sav", "Peel Quest.state1", "Peel Quest.resume.dss"), and not to
-	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay)
-	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all)
+	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay).
+	// The folders every system shares (saves/ and states/ themselves: every RetroArch system's but the GBA's) are only
+	// looked in when no other system has a game of that name, on either card: deleting the GBA's "Donkey Kong Country"
+	// took the Super Nintendo game's save with it. DraStic's folders are a DS game's alone (nds): deleting another
+	// system's game of a DS game's name took the DS game's newest save.
+	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all, bool nds)
 	{
 		std::vector<std::string> gone;
 		if (!deletableRom(rom)) return gone;
@@ -5473,8 +5531,19 @@ namespace banana
 			while (dirent* e = readdir(d)) { std::string b = baseOf(e->d_name); if (e->d_name[0] != '.' && b != base && b.compare(0, base.size() + 1, base + ".") == 0) others.push_back(b); }
 			closedir(d);
 		}
-		std::vector<std::string> dirs = { root + "/saves", root + "/saves/" + sys, root + "/states", root + "/states/" + sys,
-			root + "/drastic/backup", root + "/drastic/savestates", dir, dir + "/artwork" };
+		// the other systems' games: this card's roms folder (the game's own), the data card's and the second card's
+		std::set<std::string> elsewhere;
+		{
+			std::string low = rom;
+			for (auto& c : low) c = (char)tolower((unsigned char)c);
+			size_t at = low.find("/roms/");		// (there: deletableRom)
+			std::string roms = rom.substr(0, at + 5), mine = rom.substr(at + 6, rom.find('/', at + 6) - at - 6);
+			for (const std::string& r : { roms, root + "/roms", std::string("/run/sd2/roms") }) otherSystemsGames(r, mine, elsewhere);
+		}
+		for (auto& n : elsewhere) if (n != base && n.compare(0, base.size() + 1, base + ".") == 0) others.push_back(n);
+		std::vector<std::string> dirs = { root + "/saves/" + sys, root + "/states/" + sys, dir, dir + "/artwork" };
+		if (!elsewhere.count(base)) { dirs.push_back(root + "/saves"); dirs.push_back(root + "/states"); }
+		if (nds) { dirs.push_back(root + "/drastic/backup"); dirs.push_back(root + "/drastic/savestates"); }
 		// a folder of saves named after the game (MAME's NVRAM): its files, then the folder
 		for (const std::string& sd : { root + "/saves/" + sys + "/" + base, root + "/states/" + sys + "/" + base })
 		{
@@ -5520,7 +5589,7 @@ namespace banana
 				for (auto& o : others) if (n.compare(0, o.size() + 1, o + ".") == 0) other = true;
 				std::string low = (dd + "/" + n);
 				for (auto& c : low) c = (char)tolower((unsigned char)c);
-				if (!other && low.find("/bios") == std::string::npos) mine.push_back(dd + "/" + n);
+				if (!other && !hasFolder(low, "bios")) mine.push_back(dd + "/" + n);
 			}
 			closedir(d);
 			for (auto& m : mine)
@@ -5670,7 +5739,7 @@ namespace banana
 				// two steps: the first A asks, the second deletes (any other key in between takes the question back)
 				if (!pgDelArmed) { pgDelArmed = true; return MOVED; }
 				pgDelArmed = false;
-				deletedFiles = deleteGameFiles(data, pgPath, pgDelAll);
+				deletedFiles = deleteGameFiles(data, pgPath, pgDelAll, pgNds);
 				if (deletedFiles.empty()) { message = "The game couldn't be deleted: the card may be read-only."; return MOVED; }
 				close();
 				return DELETED;

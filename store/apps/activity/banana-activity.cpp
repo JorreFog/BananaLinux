@@ -1061,6 +1061,7 @@ struct Data {
 	std::map<std::string, int> gameIndex;
 	std::vector<Session> sessions;
 	std::map<std::string, Snap> snapshot;
+	bool hadSnapshot = false;	// a snapshot.tsv of ours was there: not the first run
 	std::vector<std::string> systems;
 
 	bool load(std::string &why);
@@ -1219,6 +1220,7 @@ bool Data::load(std::string &why)
 			break;
 		}
 		if (ours) {
+			hadSnapshot = true;
 			nf.clear();
 			nf.seekg(0);
 			while (std::getline(nf, line)) {
@@ -1270,16 +1272,26 @@ void Data::saveSnapshot()
 void Data::sync()
 {
 	bool seeded = false, snapChanged = false, sessChanged = false;
+	// the first run (no snapshot yet): what was played before it is no history, only where the counting starts. The
+	// snapshot is written then even with no game in it, so the first game played afterwards isn't a first run again
+	const bool firstRun = !hadSnapshot;
+	if (firstRun) { seeded = true; snapChanged = true; hadSnapshot = true; }
 	for (auto &g : games) {
 		std::string key = g.sys + "/" + g.rel;
 		auto it = snapshot.find(key);
 		if (it == snapshot.end()) {
+			// a game the snapshot doesn't know, after the first run: one played for the first time since. All of its
+			// plays are new (it was taken for another first run and seeded: its first sessions never reached the
+			// history, the week's total or the timeline)
+			if (!firstRun && (g.plays > 0 || g.secs > 0)) {
+				addSessions(g, g.plays, g.secs);
+				sessChanged = true;
+			}
 			Snap s;
 			s.plays = g.plays;
 			s.secs = g.secs;
 			s.last = g.last;
 			snapshot[key] = s;
-			seeded = true;
 			snapChanged = true;
 			continue;
 		}

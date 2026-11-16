@@ -33,7 +33,7 @@ The companion idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lido
 
 ## The definition format (schema 1)
 Schema 1 (the first one the companion data was written in). Check every def with `python3 tools/companions/validate.py`
-(no args: all of `defs/`; or give files). A def that fails validation is not installed.
+(no args: every definition the image ships, `system/rootfs/usr/share/banana/companions/*.json`; or give files). A def that fails validation is not installed.
 
 The companion idea is PokeDaisy's (Lidor Itzhari). The Pokémon games (header codes AXVE AXPE BPEE BPRE BPGE and hacks
 built on them) keep the Pokémon companion: the engine never uses a definition for them.
