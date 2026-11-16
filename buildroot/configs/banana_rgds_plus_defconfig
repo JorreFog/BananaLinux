@@ -10,6 +10,11 @@ BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_BANANA_PATH)/patches"
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN_AARCH64_GLIBC_STABLE=y
+# file sharing (#252): ksmbd.mountd turns the names in its answers to Windows (the share list, the user's name) between
+# UTF-8 and UTF-16 with iconv, and glibc's converter for UTF-16 is one of its gconv modules: without them every such
+# answer failed ("Can't convert string"), which Windows Explorer takes its time over
+BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY=y
+BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_LIST="UTF-16 UNICODE"
 BR2_CCACHE=y
 BR2_CCACHE_INITIAL_SETUP="--max-size=3G"
 # BR2_DOWNLOAD_FORCE_CHECK_HASHES is not set

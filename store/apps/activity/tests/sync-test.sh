@@ -35,5 +35,8 @@ printf 'gba/First Ever.gba\t1\t900\t%s\n' $((now - 300)) > "$E/banana/playstats.
 run "$E"
 [ "$(sessions "$E" 'First Ever')" = 1 ] || bad "the first game on an empty card: $(sessions "$E" 'First Ever') sessions, not 1"
 
+# the Library's bubble on the 1024x768 panels (#251): an accented title drawn whole, a long one kept inside the bubble
+python3 -I "$HERE/tools/test-bubble.py" "$T/activity" > "$T/bubble.log" 2>&1 || bad "the Library bubble: $(tail -n 3 "$T/bubble.log" | tr '\n' ' ')"
+
 [ $fail = 0 ] && echo "activity sync-test: all passed"
 exit $fail
