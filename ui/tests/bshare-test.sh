@@ -188,6 +188,28 @@ os.remove(T + "/run/bshare-receiving")
 os.makedirs(T + "/data/bananads", exist_ok=True)
 open(T + "/data/bananads/bananads.conf", "w").write("firmware.nickname = Swou\n")
 with urllib.request.urlopen(base + "info", timeout=5) as r: check(json.loads(r.read())["alias"] == "Swou", "the DS's name shown, at once")
+print("bshare 4c. a request whose length is no length: refused, and the receiver still there for the next one")
+def rawreq(head, body=b""):
+    s = socket.create_connection(("127.0.0.1", 53391), timeout=10)
+    try:
+        s.sendall(head.encode() + body)
+        return s.recv(4096).split(b"\r\n")[0].decode(errors="replace")
+    except OSError: return ""
+    finally: s.close()
+reg = json.dumps(dict(info, fingerprint="odd-length-fp")).encode()
+for what, head, body in (
+        ("a negative Content-Length", "POST /api/localsend/v2/register HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: -1\r\n\r\n", reg),
+        ("a negative chunk size", "POST /api/localsend/v2/register HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n", b"-5\r\n" + reg + b"\r\n0\r\n\r\n"),
+        ("a chunk past the limit", "POST /api/localsend/v2/register HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n", b"7fffffff\r\n" + reg),
+        ("a chunk size line with no end", "POST /api/localsend/v2/register HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n", b"1" * 200)):
+    line = rawreq(head, body)
+    time.sleep(0.2)
+    try:
+        with urllib.request.urlopen(base + "info", timeout=5) as r: alive = r.status == 200
+    except Exception: alive = False
+    check(alive and "odd-length-fp" not in open(T + "/run/bshare-peers").read(), "%s: its body not taken, the receiver still answers" % what)
+s, b = post("register", info)
+check(s == 200, "...and a proper register after them: 200")
 print("bshare (receiving): %d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
 EOF

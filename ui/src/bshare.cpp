@@ -520,18 +520,25 @@ namespace
 			for (;;)
 			{
 				size_t e;
-				while ((e = b.find("\r\n")) == std::string::npos) if (!more(b)) return -1;
+				// (a size line is a few hex digits: one that doesn't end was read into memory for as long as it came)
+				while ((e = b.find("\r\n")) == std::string::npos) if (b.size() > 64 || !more(b)) return -1;
 				long long n = strtoll(b.substr(0, e).c_str(), nullptr, 16);
 				b.erase(0, e + 2);
 				if (n == 0) return got;
+				// (a size below nothing, or past what is left of the limit, before any of the chunk is taken in: a
+				// negative one became a length of nearly 2^64 for the sink, and the limit was only looked at once the
+				// whole chunk was in memory)
+				if (n < 0 || n > limit - got) return -1;
 				while ((long long)b.size() < n + 2) if (!more(b)) return -1;
-				if (got + n > limit || !sink(b.data(), (size_t)n)) return -1;
+				if (!sink(b.data(), (size_t)n)) return -1;
 				got += n;
 				b.erase(0, (size_t)n + 2);
 			}
 		}
 		long long want = r.head.count("content-length") ? atoll(r.head["content-length"].c_str()) : 0;
-		if (want > limit) return -1;
+		// ("Content-Length: -1": as a size it was nearly 2^64 bytes to append below - an exception nothing catches on a
+		// connection's own thread, and the receiver was gone for everyone)
+		if (want < 0 || want > limit) return -1;
 		if (!r.buf.empty())
 		{
 			size_t n = (size_t)std::min<long long>(want, (long long)r.buf.size());
