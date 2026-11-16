@@ -86,7 +86,7 @@ namespace banana
 	}
 #define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
 	// gameField's names by number
-	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId", "color", "tool" };
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId", "color", "tool", "genre", "year", "developer", "publisher", "players", "esrb" };
 	static int gameFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
@@ -582,6 +582,13 @@ namespace banana
 			else if (fId == GAMEF("icon")) out = EV(g.icon);
 			else if (fId == GAMEF("color")) out = EV(hex(g.accent));
 			else if (fId == GAMEF("tool")) out = EV(g.tool ? 1.0 : 0.0);
+			// its details, "" when unknown (gamelist.xml: Scrape artworks fills them from libretro's metadat)
+			else if (fId == GAMEF("genre")) out = EV(g.genre);
+			else if (fId == GAMEF("year")) out = EV(g.year);
+			else if (fId == GAMEF("developer")) out = EV(g.developer);
+			else if (fId == GAMEF("publisher")) out = EV(g.publisher);
+			else if (fId == GAMEF("players")) out = EV(g.players);
+			else if (fId == GAMEF("esrb")) out = EV(g.esrb);
 			else if (fId == GAMEF("achA") || fId == GAMEF("achievements")) out = EV((double)g.achA);
 			else if (fId == GAMEF("achB") || fId == GAMEF("achievementsTotal")) out = EV((double)g.achB);
 			else if (fId == GAMEF("achLabel")) out = EV(g.achLabel);

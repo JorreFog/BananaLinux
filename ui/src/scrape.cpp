@@ -190,12 +190,13 @@ namespace
 		}
 		return out;
 	}
-	// a metadat DAT's games: name -> the field's value (genre "Role-Playing", releaseyear "2009")
+	// a metadat DAT's games: name -> the field's value (genre "Role-Playing", releaseyear "2009"; maxusers' users 2,
+	// unquoted)
 	std::map<std::string, std::string> datField(const std::string& dat, const char* field)
 	{
 		std::map<std::string, std::string> out;
 		std::istringstream in(dat);
-		std::string ln, name, key = std::string(field) + " \"";
+		std::string ln, name, key = std::string(field) + " \"", bare = std::string(field) + " ";
 		while (std::getline(in, ln))
 		{
 			size_t a = ln.find_first_not_of(" \t");
@@ -207,6 +208,12 @@ namespace
 			{
 				size_t e = ln.find('"', a + key.size());
 				if (e != std::string::npos) { std::string v = ln.substr(a + key.size(), e - a - key.size()); out.emplace(norm(name), v); out.emplace(words(name), v); }
+			}
+			else if (!ln.compare(a, bare.size(), bare) && !name.empty())
+			{
+				size_t b = a + bare.size(), e = ln.find_first_of(" \t\r)", b);
+				std::string v = ln.substr(b, e == std::string::npos ? std::string::npos : e - b);
+				if (!v.empty()) { out.emplace(norm(name), v); out.emplace(words(name), v); }
 			}
 			else if (ln[a] == ')') name.clear();
 		}
@@ -591,7 +598,10 @@ int main(int argc, char** argv)
 
 	struct Job { System sys; std::string dir, rel, stem, box, title, logo, name, year; };	// (name, year: an arcade set's)
 	std::vector<Job> jobs;
-	std::map<std::string, std::map<std::string, std::string>> genres, years;	// per system: norm name -> value
+	// the games' details, per system: norm name -> value (the field's own metadat folder; a system it has none for: none)
+	static const std::vector<std::pair<const char*, const char*>> DETAILS = { { "genre", "genre" }, { "releaseyear", "releaseyear" },
+		{ "developer", "developer" }, { "publisher", "publisher" }, { "maxusers", "users" }, { "esrb", "esrb_rating" } };
+	std::map<std::string, std::map<std::string, std::map<std::string, std::string>>> details;	// system -> folder -> name -> value
 	int total = 0;
 	// the card's roms folder, and the second card's while it's in (the RG DS Plus: the folder bananad's sd2 script
 	// offers in /run/banana/sd2/roms, as the library reads it); its art goes on that card, beside its games
@@ -635,8 +645,7 @@ int main(int argc, char** argv)
 		for (auto& n : titles) { byTitle[norm(n)].push_back(n); byTitleW[words(n)].push_back(n); }
 		for (auto& n : logos) { byLogo[norm(n)].push_back(n); byLogoW[words(n)].push_back(n); }
 		std::string meta = "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/";
-		genres[sys.id] = datField(get(meta + "genre/" + esc(lr->second) + ".dat"), "genre");
-		years[sys.id] = datField(get(meta + "releaseyear/" + esc(lr->second) + ".dat"), "releaseyear");
+		for (auto& [folder, field] : DETAILS) details[sys.id][folder] = datField(get(meta + folder + "/" + esc(lr->second) + ".dat"), field);
 		std::map<std::string, Set> sets;
 		if (ARCADE.count(sys.id)) sets = setNames(get(meta + "fbneo-split/" + esc(lr->second) + ".dat"));
 		auto best = [](const std::vector<std::string>& c, const std::string& stem)
@@ -762,34 +771,58 @@ int main(int argc, char** argv)
 		for (auto& m : misses) f << m << "\n";
 	}
 
-	// genres and years into each folder's gamelist.xml (new entries only)
+	// the games' details into each folder's gamelist.xml: a new entry for a game it hasn't, and in a game's entry the
+	// details it lacks (an entry from before: genre and year only, then). What an entry has is never changed: the
+	// user's own, another tool's, a game page's
 	std::map<std::string, std::vector<const Job*>> byDir;
 	for (auto& j : jobs) byDir[j.dir].push_back(&j);
 	for (auto& kv : byDir)
 	{
 		std::string path = kv.first + "/gamelist.xml", x;
 		{ std::ifstream f(path); std::stringstream ss; ss << f.rdbuf(); x = ss.str(); }
+		const std::string orig = x;
 		std::string add;
 		for (const Job* j : kv.second)
 		{
-			if (x.find("<path>./" + xmlEsc(j->rel) + "</path>") != std::string::npos || x.find("<path>" + xmlEsc(j->rel) + "</path>") != std::string::npos) continue;
 			const std::string& key = j->name.empty() ? j->stem : j->name;
-			std::string k = norm(key), kw = words(key), g, y;
-			auto& G = genres[j->sys.id];
-			auto& Y = years[j->sys.id];
-			auto gi = G.find(k); if (gi == G.end()) gi = G.find(kw); if (gi != G.end()) g = gi->second;
-			auto yi = Y.find(k); if (yi == Y.end()) yi = Y.find(kw); if (yi != Y.end()) y = yi->second;
-			if (!j->year.empty()) y = j->year;
+			std::string k = norm(key), kw = words(key);
+			auto& D = details[j->sys.id];
+			auto look = [&](const char* folder)
+			{
+				auto& m = D[folder];
+				auto i = m.find(k); if (i == m.end()) i = m.find(kw);
+				return i == m.end() ? std::string() : i->second;
+			};
+			std::string y = !j->year.empty() ? j->year : look("releaseyear");
+			// the tags this game's entry gets, each with its value ("" none)
+			std::vector<std::pair<std::string, std::string>> tags = {
+				{ "genre", look("genre") }, { "releasedate", y.size() == 4 ? y + "0101T000000" : "" },
+				{ "developer", look("developer") }, { "publisher", look("publisher") },
+				{ "players", look("maxusers") }, { "esrb", look("esrb") } };
+			size_t at = x.find("<path>./" + xmlEsc(j->rel) + "</path>");
+			if (at == std::string::npos) at = x.find("<path>" + xmlEsc(j->rel) + "</path>");
+			if (at != std::string::npos)
+			{
+				// its entry: the details it lacks, before its </game>
+				size_t open = x.rfind("<game", at), close = x.find("</game>", at);
+				if (open == std::string::npos || close == std::string::npos) continue;
+				std::string entry = x.substr(open, close - open), more;
+				for (auto& [t, v] : tags)
+					if (!v.empty() && entry.find("<" + t + ">") == std::string::npos) more += "\t\t<" + t + ">" + xmlEsc(v) + "</" + t + ">\n";
+				if (!more.empty()) x.insert(close, more.substr(1) + "\t");
+				continue;
+			}
 			// an arcade game's name, its (tags) left out: "Street Fighter II: The World Warrior", not "sf2"
 			std::string name = j->name.substr(0, j->name.find(" ("));
-			if (g.empty() && y.empty() && name.empty()) continue;
+			bool any = !name.empty();
+			for (auto& tv : tags) any |= !tv.second.empty();
+			if (!any) continue;
 			add += "\t<game>\n\t\t<path>./" + xmlEsc(j->rel) + "</path>\n";
 			if (!name.empty()) add += "\t\t<name>" + xmlEsc(name) + "</name>\n";
-			if (!g.empty()) add += "\t\t<genre>" + xmlEsc(g) + "</genre>\n";
-			if (y.size() == 4) add += "\t\t<releasedate>" + y + "0101T000000</releasedate>\n";
+			for (auto& [t, v] : tags) if (!v.empty()) add += "\t\t<" + t + ">" + xmlEsc(v) + "</" + t + ">\n";
 			add += "\t</game>\n";
 		}
-		if (add.empty()) continue;
+		if (add.empty() && x == orig) continue;
 		size_t end = x.rfind("</gameList>");
 		// a list that is there but has no end we know (another tool's, cut short, unreadable): left as it is, not
 		// replaced by one with only these games (the user's own entries would be lost)

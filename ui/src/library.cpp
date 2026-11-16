@@ -101,7 +101,7 @@ namespace banana
 	// the order a list is in: the sort title where there is one, else the title, without case
 	static std::string sortKey(const Game& g) { return lower(g.sort.empty() ? g.title : g.sort); }
 
-	struct GlEntry { std::string name, sortname, genre, date, image, thumb, cart, boxback, marquee; };
+	struct GlEntry { std::string name, sortname, genre, date, image, thumb, cart, boxback, marquee, developer, publisher, players, esrb; };
 
 	static std::string xmlText(const std::string& block, const char* tag)
 	{
@@ -153,6 +153,7 @@ namespace banana
 			e.name = xmlText(b, "name"); e.sortname = xmlText(b, "sortname"); e.genre = xmlText(b, "genre"); e.date = xmlText(b, "releasedate");
 			e.image = rel(xmlText(b, "image")); e.thumb = rel(xmlText(b, "thumbnail"));
 			e.cart = rel(xmlText(b, "cartridge")); e.boxback = rel(xmlText(b, "boxback")); e.marquee = rel(xmlText(b, "marquee"));
+			e.developer = xmlText(b, "developer"); e.publisher = xmlText(b, "publisher"); e.players = xmlText(b, "players"); e.esrb = xmlText(b, "esrb");
 			out[path] = e;
 		}
 		return out;
@@ -689,6 +690,9 @@ namespace banana
 						g.genre = trim(cut == std::string::npos ? genre : genre.substr(0, cut));
 						const std::string& d = it->second.date;
 						if (d.size() >= 4 && d.compare(0, 4, "0000") && std::all_of(d.begin(), d.begin() + 4, ::isdigit)) g.year = d.substr(0, 4);
+						g.developer = trim(it->second.developer); g.publisher = trim(it->second.publisher);
+						g.players = trim(it->second.players); g.esrb = trim(it->second.esrb);
+						if (g.esrb == "NOT RATED" || g.esrb == "RP") g.esrb.clear();	// (no rating to show)
 						g.box = exists(it->second.thumb) ? it->second.thumb : (exists(it->second.image) ? it->second.image : "");
 						if (exists(it->second.cart)) g.cart = it->second.cart;
 						if (exists(it->second.boxback)) g.label = it->second.boxback;
@@ -1013,6 +1017,8 @@ namespace banana
 		const Game& g = shelves[lib].games[i];
 		r.title = g.title;
 		r.sub = !g.genre.empty() && !g.year.empty() ? g.genre + " · " + g.year : (!g.genre.empty() ? g.genre : (!g.year.empty() ? g.year : systemOf(i).name));
+		r.genre = g.genre; r.year = g.year;
+		r.developer = g.developer; r.publisher = g.publisher; r.players = g.players; r.esrb = g.esrb;
 		r.plays = std::to_string(g.plays);
 		r.last = relDay(g.last);
 		r.time = fmtTime(g.seconds);

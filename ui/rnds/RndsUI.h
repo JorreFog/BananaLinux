@@ -41,6 +41,8 @@ namespace rnds
 	{
 		std::string title;
 		std::string sub;		// bubble subtitle: "Role-playing · 2009"
+		std::string genre, year;	// its details (gamelist.xml: the scrape's, the user's): "Sports", "2005"; "" unknown
+		std::string developer, publisher, players, esrb;	// "Vicarious Visions", "Activision", "2", "E"
 		std::string plays;		// top screen stats: "14", "Yesterday", "22h 10m"
 		std::string last;
 		std::string time;
