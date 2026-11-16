@@ -501,4 +501,13 @@ sed "s|^folder = /data/store/tiles|folder = $SAFX/tiles|" "$HERE/../system/rootf
 ux_run raopen "home nds; press start; row Other systems ra_open; press a"
 grep -q "launch: /usr/share/banana/apps/retroarch/RetroArch.app" "$OUT/$size-raopen.log" ||
     { echo "FAIL $size: Open RetroArch didn't start RetroArch's entry"; fail=1; }
+# the Apps shelf's RetroArch tile: RetroArch's own icon (its dark square), not the gamepad glyph
+RAFX=$OUT/ux-ra-$size; rm -rf "$RAFX"; mkdir -p "$RAFX/ra"; : > "$RAFX/ra/RetroArch.app"
+sed "s#/usr/share/banana/apps/retroarch#$RAFX/ra#" "$HERE/../system/rootfs/etc/banana/systems.conf" > "$RAFX/systems.conf"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$RAFX/systems.conf" --roms "$UXFX/roms" --data "$UXFX/data" --script "homeid retroarch; wait 2400; shot ux-ra-tile" 2> "$OUT/$size-ra-tile.log" ||
+    { echo "FAIL $size: banana-ui (RetroArch tile) exited $?"; fail=1; }
+ux_check ra-tile "homeid retroarch: app"
+ra_c=$(convert "$OUT/$size-ux-ra-tile-top.png" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 20 * k, 20 * k, 70 * k, 165 * k }')" -format '%[fx:mean]' info: 2>/dev/null)
+ux_lt "${ra_c:-1}" 0.3 || { echo "FAIL $size: the RetroArch tile isn't RetroArch's dark icon (mean $ra_c)"; fail=1; }
 
