@@ -35,6 +35,11 @@ COLOURS = {
     'storeapps': '#2eae62', 'rocknixdsstore': '#2ea0d8', 'activity': '#e8a33d', 'favorites': '#e23d52',
     'recently-played': '#3d8ec4', 'search': '#5c86e0', 'together': '#9b6cff', 'files': '#d9a03f',
     'downloads': '#34b0a0',
+    # Settings' groups and signs (by the names Settings asks for: "phone" is Network's)
+    'gamepad': '#e25a5a', 'picture': '#e8a33d', 'phone': '#2ea0d8', 'moon': '#6a5ad8', 'gear': '#7a8090',
+    'music': '#e0457b', 'level-volume': '#3d8ec4', 'level-mute': '#7a8090', 'level-brightness': '#e8a33d',
+    'bshare-receive': '#34b0a0', 'bshare-send': '#2eae62', 'bshare-phone': '#5c86e0', 'bshare-computer': '#4a5a78',
+    'bshare-handheld': '#3d9e9a', 'bshare-accept': '#34c26a', 'bshare-decline': '#e8505b',
 }
 
 # our own shapes (64 x 64, white; even-odd cut-outs)
@@ -68,6 +73,41 @@ OURS = {
 }
 
 
+SPEAKER = '<path d="M8 25h9l13-11v36L17 39H8z"/>'
+SETTINGS_SHAPES = {
+    # Other systems: a controller, its d-pad and buttons cut out
+    'gamepad': '<path fill-rule="evenodd" d="M18 16h28c9 0 14 7 15 17l1.5 12c.7 6-3 9-7.5 9-4 0-6-3-8.5-7H17.5C15 51 13 54 9 54c-4.5 0-8.2-3-7.5-9L3 33C4 23 9 16 18 16z'
+               'M15 26v5h-5v6h5v5h6v-5h5v-6h-5v-5zM45 26a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7zM51 34a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7z"/>',
+    # Look & sound: a picture, a hill and the sun
+    'picture': '<path fill-rule="evenodd" d="M12 10h40a6 6 0 0 1 6 6v32a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z'
+               'M13 17v22l10-10 9 9 7-7 12 12V17zM41 21a5 5 0 1 0 0 10a5 5 0 1 0 0-10z"/>',
+    # Network: Wi-Fi
+    'phone': '<path fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" d="M7 25a35 35 0 0 1 50 0M16 35a22 22 0 0 1 32 0"/>'
+             '<circle cx="32" cy="47" r="6.5"/>',
+    # Sleep & power: the moon and a star
+    'moon': '<path d="M38 8A24 24 0 1 0 56 42 20 20 0 0 1 38 8z"/><path d="M50 8l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>',
+    # System: a cog
+    'gear': None,
+    # Volume, menu sounds: two notes
+    'music': '<path d="M24 12l30-6v36a8 8 0 1 1-6-7.7V18l-18 3.6V48a8 8 0 1 1-6-7.7z"/>',
+    # the volume's and brightness's signs
+    'level-volume': SPEAKER + '<path fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" d="M38 24a11 11 0 0 1 0 16M45 17a21 21 0 0 1 0 30"/>',
+    'level-mute': SPEAKER + '<path fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" d="M39 25l14 14M53 25L39 39"/>',
+    'level-brightness': '<circle cx="32" cy="32" r="11"/><path fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" '
+                        'd="M32 6v6M32 52v6M6 32h6M52 32h6M13.6 13.6l4.2 4.2M46.2 46.2l4.2 4.2M13.6 50.4l4.2-4.2M46.2 17.8l4.2-4.2"/>',
+    # Bshare and Play together
+    'bshare-receive': '<path d="M28 6h8v22h9L32 42 19 28h9z"/><path d="M8 40h7v8h34v-8h7v10a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5z"/>',
+    'bshare-send': '<path d="M28 42h8V20h9L32 6 19 20h9z"/><path d="M8 40h7v8h34v-8h7v10a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5z"/>',
+    'bshare-phone': '<path fill-rule="evenodd" d="M22 4h20a6 6 0 0 1 6 6v44a6 6 0 0 1-6 6H22a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6zM22 11v38h20V11z"/>'
+                    '',
+    'bshare-computer': '<path fill-rule="evenodd" d="M13 12h38a4 4 0 0 1 4 4v26H9V16a4 4 0 0 1 4-4zM15 18v18h34V18z"/><path d="M3 45h58v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/>',
+    'bshare-handheld': '<path fill-rule="evenodd" d="M14 4h36a4 4 0 0 1 4 4v20H10V8a4 4 0 0 1 4-4zM17 10v13h30V10z"/>'
+                       '<path fill-rule="evenodd" d="M10 32h44v24a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4zM17 37v4h-4v5h4v4h5v-4h4v-5h-4v-4zM46 39a3 3 0 1 0 0 6a3 3 0 1 0 0-6zM40 46a3 3 0 1 0 0 6a3 3 0 1 0 0-6z"/>',
+    'bshare-accept': '<path fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" d="M12 33l13 13 27-28"/>',
+    'bshare-decline': '<path fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" d="M16 16l32 32M48 16L16 48"/>',
+}
+
+
 def gear_path():
     """a cog: 8 teeth, a hole in the middle (64 x 64)"""
     pts = []
@@ -77,6 +117,10 @@ def gear_path():
         r = 27 if tooth else 21
         pts.append('%.2f %.2f' % (32 + r * math.cos(a), 32 + r * math.sin(a)))
     return ('<path fill-rule="evenodd" d="M%s z M32 22a10 10 0 1 0 0 20a10 10 0 1 0 0-20z"/>' % ' L'.join(pts))
+
+
+SETTINGS_SHAPES['gear'] = gear_path()
+OURS.update(SETTINGS_SHAPES)
 
 
 # the buttons' little white shapes (tinted by the theme)

@@ -42,7 +42,16 @@
     "pico-8": "plaza/icons/pico-8.png",
     "storeapps": "plaza/icons/storeapps.png", "rocknixdsstore": "plaza/icons/rocknixdsstore.png", "activity": "plaza/icons/activity.png",
     "favorites": "plaza/icons/favorites.png", "recently-played": "plaza/icons/recently-played.png", "search": "plaza/icons/search.png",
-    "together": "plaza/icons/together.png", "files": "plaza/icons/files.png", "downloads": "plaza/icons/downloads.png"
+    "together": "plaza/icons/together.png", "files": "plaza/icons/files.png", "downloads": "plaza/icons/downloads.png",
+    // Settings' groups and signs, by the names Settings asks for ("phone": Network's; "picture": Look & sound's)
+    "gamepad": "plaza/icons/gamepad.png", "picture": "plaza/icons/picture.png", "phone": "plaza/icons/phone.png",
+    "moon": "plaza/icons/moon.png", "gear": "plaza/icons/gear.png", "music": "plaza/icons/music.png",
+    "level-volume": "plaza/icons/level-volume.png", "level-mute": "plaza/icons/level-mute.png",
+    "level-brightness": "plaza/icons/level-brightness.png",
+    "bshare-receive": "plaza/icons/bshare-receive.png", "bshare-send": "plaza/icons/bshare-send.png",
+    "bshare-phone": "plaza/icons/bshare-phone.png", "bshare-computer": "plaza/icons/bshare-computer.png",
+    "bshare-handheld": "plaza/icons/bshare-handheld.png", "bshare-accept": "plaza/icons/bshare-accept.png",
+    "bshare-decline": "plaza/icons/bshare-decline.png"
   },
 
   "vars": {
@@ -76,10 +85,14 @@
     "slide": "=motion ? dir * 18 * (1 - easeOut(progress(moved, 260))) : 0",
     "breathe": "=motion ? (0.5 - 0.5 * cos(moved * 0.0042)) * (1 - progress(moved, 3000)) : 0",   // the frame, 3 s after a move
     "rise": "=motion && view != 'launch' ? 18 * (1 - easeOut(progress(entered, 320))) : 0",
-    "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0"
+    "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0",
+    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), a ring
+    // going out from the middle of the bottom screen (Motion off: the card, still)
+    "land": "=view != 'launch' ? 0 : motion ? easeOut(progress(launch.t - 220, 480)) : 1",
+    "ripple": "=motion && view == 'launch' ? progress(launch.t - 120, 760) : 0"
   },
 
-  "behavior": { "launchMs": 700, "scrollMs": 160, "settleMs": 3000, "wrap": false, "cues": { "insert": 40 },
+  "behavior": { "launchMs": 1000, "scrollMs": 160, "settleMs": 3000, "wrap": false, "cues": { "insert": 40 },
                 "zoom": { "steps": 3, "start": 1 } },
 
   "input": {
@@ -128,12 +141,13 @@
             { "type": "text", "w": 20, "y": 1, "align": "center", "text": "R", "font": "nunito-black", "size": 12, "color": "=chipInk" } ] } ] }
       ]
     },
-    // the top screen's bar: the date and time on the left; the play time left (Parental controls), Wi-Fi and the
-    // battery on the right
+    // the top screen's bar: the date on the left, the time in the middle; the play time left (Parental controls),
+    // Wi-Fi and the battery on the right
     "status": {
       "type": "group", "x": 0, "y": 0, "w": 640, "h": 36,
       "children": [
-        { "type": "text", "x": 18, "y": 9, "text": "{date}   {clock}", "font": "nunito-extrabold", "size": 15, "color": "=sub" },
+        { "type": "text", "x": 18, "y": 9, "text": "{date}", "font": "nunito-extrabold", "size": 15, "color": "=sub" },
+        { "type": "text", "x": 0, "y": 7, "w": 640, "align": "center", "text": "{clock}", "font": "nunito-black", "size": 17, "color": "=ink" },
         { "type": "group", "x": 622, "y": 7, "anchor": "top right", "layout": "row", "gap": 10, "align": "center", "h": 22,
           "children": [
             { "type": "group", "layout": "row", "padding": 8, "h": 22, "radius": 11, "visible": "=timeLeft >= 0",
@@ -263,8 +277,8 @@
         { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
         { "type": "group", "x": "=slide", "opacity": "=motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1", "visible": "=!empty", "children": [
           // the game's box or logo on a tile
-          { "type": "group", "x": 40, "y": 62, "w": 214, "h": 214, "radius": 28, "fill": "=tile", "border": 1, "borderColor": "=edge",
-            "shadow": { "y": 6, "blur": 18, "color": "=shade" },
+          { "type": "group", "x": "=40 + 173 * land", "y": "=62 + 22 * land", "w": 214, "h": 214, "radius": 28, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": "=6 + 6 * land", "blur": "=18 + 14 * land", "color": "=shade" },
             "children": [
               { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
                 "x": 14, "y": 14, "w": 186, "h": 186, "radius": 14 },
@@ -272,9 +286,9 @@
                 "visible": "=game.fav", "outline": { "width": 3, "color": "=tile" } }
             ] },
           { "type": "text", "x": 40, "y": 292, "w": 214, "align": "center", "text": "{cursor + 1} of {count}", "font": "nunito-extrabold",
-            "size": 14, "color": "=sub" },
+            "size": 14, "color": "=sub", "opacity": "=1 - land" },
           // its name, its system, its numbers
-          { "type": "group", "x": 282, "y": 66, "w": 330, "layout": "column", "gap": 6, "children": [
+          { "type": "group", "x": "=282 + 40 * land", "y": 66, "w": 330, "layout": "column", "gap": 6, "opacity": "=1 - min(1, land * 1.6)", "children": [
             { "type": "text", "w": 330, "text": "{game.title}", "font": "nunito-black", "size": 26, "color": "=ink", "wrap": true, "maxLines": 3, "lineHeight": 31 },
             { "type": "text", "w": 330, "text": "{sys.name}", "font": "nunito-extrabold", "size": 16, "color": "=sub" },
             { "type": "rect", "w": 330, "h": 8 },
@@ -289,9 +303,34 @@
               { "type": "group", "w": 90, "h": 54, "children": [
                 { "type": "text", "y": 8, "w": 90, "text": "=either(game.time, '0m')", "font": "nunito-black", "size": 21, "color": "=ink" },
                 { "type": "text", "y": 36, "text": "Time", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] }
-            ] },
-            { "type": "text", "w": 330, "text": "{game.achLabel}", "font": "nunito-extrabold", "size": 15, "color": "=hi", "visible": "=game.achB > 0" }
-          ] }
+            ] }
+          ] },
+          // under them: its genre and year, its achievements (else whether it's a favourite), its system's tile
+          { "type": "group", "x": 40, "y": "=332 + 30 * land", "w": 560, "h": 104, "radius": 24, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 3, "blur": 10, "color": "=shade" }, "opacity": "=1 - min(1, land * 1.6)",
+            "children": [
+              { "type": "text", "x": 24, "y": 18, "w": 360, "text": "{upper(game.sub)}", "font": "nunito-black", "size": 12, "spacing": 1, "color": "=hi" },
+              { "type": "group", "visible": "=game.achB > 0", "children": [
+                { "type": "text", "x": 24, "y": 38, "w": 360, "text": "{game.achLabel}", "font": "nunito-black", "size": 19, "color": "=ink" },
+                { "type": "rect", "x": 24, "y": 72, "w": 340, "h": 10, "radius": 5, "fill": "=well" },
+                { "type": "rect", "x": 24, "y": 72, "w": "=max(10, 340 * game.achProgress)", "h": 10, "radius": 5, "fill": "=accent" } ] },
+              { "type": "group", "x": 0, "y": 30, "w": 400, "h": 64, "visible": "=game.achB <= 0 && !sys.apps", "onTap": "y", "children": [
+                { "type": "image", "src": "plaza/ui/star.png", "x": 24, "y": 9, "w": 20, "h": 20, "fit": "contain", "tint": "=game.fav ? accent : edge" },
+                { "type": "text", "x": 52, "y": 8, "w": 330, "text": "=game.fav ? 'One of your favourites' : 'Add it to your favourites'",
+                  "font": "nunito-black", "size": 19, "color": "=ink" },
+                { "type": "text", "x": 24, "y": 36, "w": 360, "text": "=game.fav ? 'Y takes it out' : 'Y adds it'",
+                  "font": "nunito-extrabold", "size": 14, "color": "=sub" } ] },
+              { "type": "image", "src": "{sys.icon}", "x": 470, "y": 18, "w": 68, "h": 68, "fit": "contain" }
+            ] }
+        ] },
+        // a game starting: its name under the box, and "Starting" with a bar filling
+        { "type": "group", "visible": "=view == 'launch' && !empty", "opacity": "=land", "children": [
+          { "type": "text", "x": 40, "y": "=330 + 14 * (1 - land)", "w": 560, "align": "center", "text": "{game.title}", "font": "nunito-black",
+            "size": 26, "color": "=ink", "wrap": true, "maxLines": 2, "lineHeight": 31 },
+          { "type": "text", "x": 40, "y": 404, "w": 560, "align": "center", "text": "STARTING", "font": "nunito-black", "size": 12,
+            "spacing": 2, "color": "=hi" },
+          { "type": "rect", "x": 260, "y": 428, "w": 120, "h": 6, "radius": 3, "fill": "=well" },
+          { "type": "rect", "x": 260, "y": 428, "w": "=max(6, 120 * launch.progress)", "h": 6, "radius": 3, "fill": "=accent" }
         ] },
         { "type": "group", "visible": "=empty", "children": [
           { "type": "group", "x": 320, "y": 170, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
@@ -343,7 +382,17 @@
               "font": "nunito-extrabold", "size": 14, "color": "=ink", "visible": "=names" }
           ] } },
         { "use": "dots" },
-        { "use": "bar" }
+        { "use": "bar" },
+        { "type": "group", "visible": "=view == 'launch'", "children": [
+          { "type": "group", "opacity": "=land", "children": [ { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } } ] },
+          { "type": "rect", "x": 320, "y": 240, "w": "=110 + 420 * easeOut(ripple)", "h": "=110 + 420 * easeOut(ripple)", "anchor": "center",
+            "radius": "50%", "fill": "#00000000", "border": "=6 * (1 - ripple) + 1", "borderColor": "=accent", "opacity": "=(1 - ripple) * 0.8" },
+          { "type": "group", "x": 320, "y": 240, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" }, "opacity": "=land",
+            "scale": "=motion ? 0.7 + 0.3 * easeOutBack(progress(launch.t - 220, 520)) : 1",
+            "children": [ { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
+                            "x": 10, "y": 10, "w": 100, "h": 100, "radius": 10 } ] }
+        ] }
       ]
     }
   }
