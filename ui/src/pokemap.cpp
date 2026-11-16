@@ -266,7 +266,7 @@ namespace banana::pkmn
 			return;
 		}
 		Kanto k;
-		bool ok = kn && kantoPool(rom, n, kn->a, k);
+		bool ok = kn && (size_t)kn->a + 4 <= n && kantoPool(rom, n, kn->a, k);	// (a ROM shorter than the known place)
 		how = ok ? "known place" : "found";
 		// the literal pool anywhere: a word pointing to a tiles blob with tilemaps named after it
 		for (size_t a = 0x200; !ok && a + 4 <= n; a += 4)

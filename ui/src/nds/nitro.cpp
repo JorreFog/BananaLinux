@@ -193,7 +193,9 @@ namespace banana::nds::nitro
 		uint8_t c[12];
 		if (!rom.readPart(id_, p, 12, c) || memcmp(c, "BTAF", 4) != 0) return false;
 		const uint32_t btafLen = rd32(c + 4), count = rd32(c + 8);
-		if (btafLen < 12 || count > (btafLen - 12) / 8) return false;
+		// (the table is read whole: no bigger than the tables read elsewhere - a count gone wrong in the file asked for
+		// up to 4 GB here, more than the handheld has, before the read could say the file doesn't hold it)
+		if (btafLen < 12 || count > (btafLen - 12) / 8 || (size_t)count * 8 > MAX_TABLE) return false;
 		Bytes fat((size_t)count * 8);
 		if (count && !rom.readPart(id_, p + 12, fat.size(), fat.data())) return false;
 		p += btafLen;
@@ -219,7 +221,9 @@ namespace banana::nds::nitro
 		auto it = read_.find(i);
 		if (it == read_.end())
 		{
-			Bytes b(fat_[i].second - fat_[i].first);
+			// (a member as large as anything unpacked here may be, no more: its size is the file's word for it)
+			Bytes b;
+			if (fat_[i].second - fat_[i].first <= MAX_UNPACKED) b.resize(fat_[i].second - fat_[i].first);
 			if (!b.empty() && !rom_->readPart(id_, img_ + fat_[i].first, b.size(), b.data())) b.clear();
 			it = read_.emplace(i, std::move(b)).first;
 		}
