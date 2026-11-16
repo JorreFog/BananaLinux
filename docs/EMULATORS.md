@@ -11,6 +11,21 @@ id. The commands are the launchers in `/usr/libexec/banana/`: one per emulator (
 `run-retroarch`), and `run-nds`, which picks the DS emulator chosen in Settings > Nintendo DS > Emulator
 (`nds_emulator` in `banana/settings.conf`) or whichever is installed.
 
+A system can also have a `pick` command, for a program that plays only some of its games: banana-ui runs it just
+before the game starts, with `%ROM%` and `%SYSTEM%` filled in as for `run` (and `BANANA_ROM`, `BANANA_SYSTEM` set).
+If it exits 0 having printed a line, that line is this game's run command, and everything decided from the run
+command (the game panel beside a RetroArch game, the recorder's launcher name) goes by it. Otherwise (nothing
+printed, another exit code, or no answer in 3 seconds, when it is stopped) the system's own `run` is used, as if
+there were no `pick`. A line naming one of the menu's own pages (`banana:...`) isn't taken. So an app can take the
+games it supports and leave the rest exactly as they were, with one key in the card's `banana/systems.conf`:
+
+```
+[gba]
+pick = bash '/data/store/apps/gbads/banana-play.sh' --pick %ROM%
+```
+
+The pick should answer quickly (it runs while the menu waits) and print nothing for a game it doesn't take.
+
 Before the launcher runs, banana-ui has:
 
 - closed its display (it is no longer DRM master; both panels are free), closed the input devices and the sound
