@@ -5,7 +5,7 @@
 namespace banana
 {
 	// Themes made by users: a .json in /data/banana/themes (or one of the image's in /usr/share/banana/themes), picked
-	// in Settings > Display & sound > Theme as "user:<file name without .json>". A theme starts from Banana's dark or
+	// in Settings > Look & sound > Theme as "user:<file name without .json>". A theme starts from Banana's dark or
 	// light palette ("base") and replaces any of its colours by name ("colors") and the accent ("accent"); see
 	// /usr/share/banana/themes/README.txt.
 

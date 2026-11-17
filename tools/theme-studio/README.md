@@ -49,7 +49,7 @@ script). The engine's complaints are under **Problems**, in the status bar.
 
 Install a finished theme by putting `my-theme.json` (and its folder of pictures, kept beside it) into
 `banana/themes/` on the card, over file sharing or with the card in a computer, then pick it in
-**Settings > Display & sound > Theme**.
+**Settings > Look & sound > Theme**.
 
 ## Where your themes live
 

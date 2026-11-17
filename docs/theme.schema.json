@@ -8,7 +8,7 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "The theme's name, shown in Settings > Display & sound > Theme. Falls back to the file name."
+      "description": "The theme's name, shown in Settings > Look & sound > Theme. Falls back to the file name."
     },
     "author": {
       "type": "string",

@@ -50,11 +50,13 @@ namespace banana
 		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list (headless runs: row)
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
+		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
 		void openFiles();
@@ -219,6 +221,8 @@ namespace banana
 		{
 			std::string section, icon, label, help;
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
+			std::string inherit;					// a system's own (Other systems > the system): the general row's key,
+													// whose value its first choice, "Same as all", follows (no line kept)
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
@@ -282,7 +286,7 @@ namespace banana
 		void renderCredits();
 		// the credits list's lines: a section's heading, then its names (index into credits; -1 - section for a heading)
 		std::vector<int> crLines;
-		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
+		// Look & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
 		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
 		std::vector<std::string> thNames, thValues;
 		int thSel = 0, thTop = 0;
@@ -302,7 +306,12 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH, PG_RA = 32 };
+		// another system's game (X on it): its system page's rows for this game only (PG_RA + the index), each "Same as
+		// system" first: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>" (run-retroarch's pg)
+		struct PgRa { std::string label, head, help, file; std::vector<std::string> names, values; int at = 0; };
+		std::vector<PgRa> pgRa;
+		std::string pgRaKey;
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)

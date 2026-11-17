@@ -1,5 +1,5 @@
 #pragma once
-// The speaker EQ's settings (Settings > Display & sound > Speaker EQ), and the profile the ALSA plugin plays.
+// The speaker EQ's settings (Settings > Look & sound > Speaker EQ), and the profile the ALSA plugin plays.
 //
 // The plugin (eq/pcm_banana_eq.c, in the speakers' route that bananad writes) follows one file,
 // /run/banana/speaker-eq: Equalizer APO's parametric text. banana-ui writes it from settings.conf when it starts and
