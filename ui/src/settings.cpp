@@ -504,6 +504,8 @@ namespace banana
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
+		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
+		items.back().hints = { "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." };
 		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -930,7 +932,7 @@ namespace banana
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
 			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
-			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
+			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "LED while asleep", "Waking up" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
@@ -1465,7 +1467,7 @@ namespace banana
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
 				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep", "on" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))

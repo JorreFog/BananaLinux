@@ -74,6 +74,7 @@ static struct {
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
+	int led_sleep;			/* the upper LED lit while asleep (the device tree's retain-state-suspended keeps it) */
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
@@ -82,11 +83,12 @@ static struct {
 	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
 	double poweroff_after_min;	/* asleep this long on the battery: the game saved, then a clean shutdown (0: never) */
 	int recorder;			/* the flight recorder (Developer options): everything bananad sees, written to banana/logs/sessions */
-} cfg = { "auto", 5, 8, 10, 1, 0, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12, 0, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 0, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
-static int amber_last, leds_asleep;	/* (leds_update's, below: suspend_now sets the charging light asleep) */
+extern int leds_last;
+static int amber_last, leds_asleep;	/* (leds_update's, below: suspend_now sets the LEDs asleep) */
 static void audio_route(void);
 static pid_t sound_child;	/* (the sound's setup at start, sound_start) */
 static void undim(void);
@@ -157,6 +159,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
+		else if (!strcmp(k, "led_sleep")) cfg.led_sleep = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
@@ -856,7 +859,7 @@ static void suspend_now(const char *why)
 	const char *woke = "?";
 	/* the charging light at full while asleep: a PWM LED keeps shining through a suspend only at 100% (its
 	 * retain-state-suspended, 2-linux-0029), so it stays lit on the charger as a phone's does */
-	leds_asleep = 1; amber_last = -2; leds_update();
+	leds_asleep = 1; leds_last = -2; amber_last = -2; leds_update();	/* (led_sleep: the upper LED too) */
 	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
 	 * before each suspend, below */
 	int by_lid = !strncmp(why, "lid", 3);
@@ -966,7 +969,7 @@ static void suspend_now(const char *why)
 	/* a sleep the menu asked for half a second before this one began (Power > Sleep, then the lid shut at once) is
 	 * this sleep: left pending, it put the handheld back to sleep the moment the lid opened */
 	menu_sleep_at = 0;
-	leds_asleep = 0; amber_last = -2; leds_update();	/* (the charging light back at the user's level) */
+	leds_asleep = 0; leds_last = -2; amber_last = -2; leds_update();	/* (both back at the user's level) */
 	if (headphones_in() != headphones) { headphones = !headphones; if (!sound_child) audio_route(); }	/* (else sound_poll routes) */
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
@@ -1928,7 +1931,8 @@ static int charge_mode(void)
 
 int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
 static int amber_last = -2;	/* the charging LED's, the same way */
-static int leds_asleep;		/* suspend_now's: the charging light at full (asleep, a PWM LED stays lit only at 100%) */
+static int leds_asleep;		/* suspend_now's: asleep, the charging light at full and the upper LED as led_sleep says (a
+				 * PWM LED stays lit through a suspend only at 100%) */
 static void leds_update(void)
 {
 	static char green[300], red[300], amber[300];
@@ -1946,15 +1950,18 @@ static void leds_update(void)
 	int plugged = charger_online();
 	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
-	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
-	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
+	/* the upper LED: green, red when low, blinking red when critical (not while charging). Asleep, with led_sleep on:
+	 * full (a PWM at 100% holds its pin high even if the SoC's sleep stops its clock; the LED core leaves it lit, the
+	 * device tree's retain-state-suspended), so the handheld shows it is asleep, not off; with it off, dark */
+	int upper = !leds_asleep ? level : level > 0 && cfg.led_sleep ? 255 : 0;
+	int state = upper <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
 		leds_last = state;
-		led_set(green, state == 1 ? "on" : "off", level);
-		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
+		led_set(green, state == 1 ? "on" : "off", upper);
+		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", upper);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
 		static const char *const looks[] = { "off", "green", "red", "red blinking" };
-		rec("led", "upper %s%s (battery %d%%%s)", looks[state], "", pct, charging ? ", charging" : "");
+		rec("led", "upper %s%s (battery %d%%%s)", looks[state], leds_asleep ? ", asleep" : "", pct, charging ? ", charging" : "");
 	}
 	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
 	int amber_on = level > 0 && plugged && (pct < 0 || pct < 100);

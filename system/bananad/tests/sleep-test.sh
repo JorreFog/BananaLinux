@@ -403,6 +403,23 @@ asleep && ok "asleep once the job is over" || bad "no idle sleep after the job"
 wake
 kill $JOB 2>/dev/null || true
 stop
+echo "22. the upper LED lit while asleep (led_sleep on: full, the kernel keeps it), back at its level after; off: dark"
+G=/sys/class/leds/green:power/brightness
+start
+[ "$(cat $G)" = 128 ] && ok "awake: 128" || bad "awake: $(cat $G)"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat $G)" = 255 ] && ok "asleep: lit (255)" || bad "asleep: $(cat $G)"
+echo 0 > /run/test/lid; wake
+[ "$(cat $G)" = 128 ] && ok "back to 128 after the wake" || bad "after the wake: $(cat $G)"
+stop
+start "led_sleep = off"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat $G)" = 0 ] && ok "asleep with led_sleep off: dark" || bad "asleep: $(cat $G)"
+echo 0 > /run/test/lid; wake
+stop
+
 # more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
 for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
 

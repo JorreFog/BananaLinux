@@ -259,6 +259,7 @@
 		compatible = "pwm-leds";
 
 		green_led: led-0 {
+			retain-state-suspended;	/* lit while asleep, led_sleep on (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_GREEN>;
 			/* as U-Boot left it (lit for a power-button start, off for charging, uboot-patches/004) until bananad
 			 * sets the LEDs: on, green lit at the driver's probe, so a start for charging flashed green first */
@@ -286,6 +287,7 @@
 		pinctrl-names = "default";
 
 		red_led: led-2 {
+			retain-state-suspended;	/* lit while asleep, led_sleep on (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_RED>;
 			default-state = "off";
 			function = LED_FUNCTION_STATUS;
