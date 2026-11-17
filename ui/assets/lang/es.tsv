@@ -1,6 +1,6 @@
 # BananaOS translation: Español
 # Translated by Pixelado Dev.
-# Made for BananaOS 0.5.3.4 from the full lang-extract catalog (reviewed). Columns: part, context, English, translation.
+# Made for BananaOS 0.5.3.6 from the full lang-extract catalog (reviewed). Columns: part, context, English, translation.
 #: language = Español
 #: language-en = Spanish
 #: translated-by = Pixelado Dev
@@ -359,6 +359,7 @@ settings		Joined {network}, but it gave the handheld no address.	Te uniste a {ne
 settings		Couldn't join {network}. If the password was wrong, A on it types it again.	No se pudo unir a {network}. Si la contraseña era incorrecta, A en ella la escribe de nuevo.
 settings		Joining {network}...	Uniéndose a {network}...
 settings		Connected to {network}	Conectado a {network}
+settings		{network} is saved with a password, and the one in reach has none: it may not be yours. Not joined; Y forgets the saved one first.	{network} está guardada con contraseña, y la que está al alcance no tiene: puede que no sea la tuya. No se unió; Y olvida primero la guardada.
 settings		Shift	Mayús
 settings		Space	Espacio
 settings		Del	Borr
@@ -465,6 +466,7 @@ settings		Menu	Menú
 settings		Quit	Salir
 settings		F + START	F + START
 settings		Latest achievements	Últimos logros
+settings		All achievements	Todos los logros
 settings		None unlocked yet. Good luck!	Aún no hay ninguno. ¡Buena suerte!
 settings		just now	ahora mismo
 settings		%lld min ago	hace %lld min
@@ -524,6 +526,7 @@ settings		the package has no {file}	el paquete no tiene {file}
 settings		the package has no device tree	el paquete no tiene árbol de dispositivos
 settings		that is a package for the {package's handheld}, this is the {this handheld}	ese paquete es para el {package's handheld}, este es el {this handheld}
 settings		{file} is damaged (its hash is wrong)	{file} está dañado (su hash es incorrecto)
+settings		the package's sha256sums doesn't list {file}: download it again	el sha256sums del paquete no lista {file}: descárgalo de nuevo
 settings		no partition for slot {slot} ({partition})	no hay partición para la ranura {slot} ({partition})
 settings		the system ({size} bytes) doesn't fit the slot ({limit} bytes)	el sistema ({size} bytes) no cabe en la ranura ({limit} bytes)
 settings		writing {percent}%	escribiendo {percent}%
@@ -823,6 +826,7 @@ settings		Power	Apagado
 settings		Sleep	Suspender
 settings		Delete game...	Borrar juego...
 settings		Delete this game	Borrar este juego
+settings		This game's achievements	Logros de este juego
 settings		Keep its saves and art	Dejar sus partidas y arte
 settings		With its saves, states and art	Con sus partidas, estados y arte
 settings		A again: the game (saves kept)	A otra vez: el juego (partidas se quedan)
@@ -830,6 +834,7 @@ settings		A again: the game, saves and art	A otra vez: el juego, partidas y arte
 settings		Delete...	Borrar...
 settings		The game couldn't be deleted: the card may be read-only.	No se pudo borrar el juego: la tarjeta puede estar de solo lectura.
 settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Quita el archivo de este juego de la tarjeta: %s. Izquierda y derecha eligen si sus partidas, estados y carátula también se van, o se quedan (vuelven si copias el juego otra vez). No se toca nada más: ni otro juego, ni BIOS. A pregunta primero; A otra vez borra.
+settings		Every achievement of this game on RetroAchievements: which are unlocked (when, and softcore or hardcore) and which are still locked, with their points and what each asks for. A shows the list. It is read from the site with the account in Settings > System > First-time setup, and kept on the card for when there is no connection.	Todos los logros de este juego en RetroAchievements: cuáles están desbloqueados (cuándo, y si en softcore o hardcore) y cuáles siguen bloqueados, con sus puntos y lo que pide cada uno. A muestra la lista. Se lee del sitio con la cuenta de Ajustes > Sistema > Configuración inicial, y se guarda en la tarjeta para cuando no hay conexión.
 settings		Shown systems	Sistemas mostrados
 settings		Which systems are on the home row. A opens the list.	Qué sistemas aparecen en la fila de inicio. A abre la lista.
 settings		With games	Con juegos
@@ -1076,6 +1081,10 @@ settings		The safest: no crackle, a little more delay.	La más segura: sin chasq
 settings		Whether frames wait for the screen's refresh.	Si los fotogramas esperan al refresco de la pantalla.
 settings		Nothing tears.	La imagen no se corta.
 settings		Games run as fast as they can. The screen can show a half-drawn frame.	Los juegos van lo más rápido que pueden. La pantalla puede mostrar un fotograma a medio dibujar.
+settings		Integer scaling	Escalado entero
+settings		Whether the picture is a whole multiple of the game's size.	Si la imagen es un múltiplo exacto del tamaño del juego.
+settings		The picture as large as the screen takes.	La imagen tan grande como permite la pantalla.
+settings		Sharp pixels at a whole multiple, black around it.	Píxeles nítidos a un múltiplo exacto, con negro alrededor.
 settings		The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	El emulador de juegos GBA. gpSP: el más rápido. mGBA: el más preciso, y el que RetroAchievements acepta para hardcore. Los núcleos bajados con Core Downloader de RetroArch (su Online Updater) también aparecen aquí.
 settings		RetroArch hotkeys	Atajos de RetroArch
 settings		Reset RetroArch	Restablecer RetroArch
@@ -1314,6 +1323,7 @@ settings		Unpaired. The games and saves stay on the card.	Desemparejado. Los jue
 settings		OVERFLOW	OVERFLOW
 settings		Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds	Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds
 settings		Game page > {value}	Página del juego > {value}
+settings		Game page > Achievements	Página del juego > Logros
 settings		wrong password	contraseña incorrecta
 settings		no answer	sin respuesta
 settings		{n} old packages removed from banana/updates.	{n} paquetes antiguos quitados de banana/updates.
@@ -1428,6 +1438,26 @@ settings		Status	Estado
 settings		Detail	Detalle
 settings		Collect	Colección
 settings		Progress	Progreso
+settings		1 point	1 punto
+settings		{n} points	{n} puntos
+settings		{n} of {m} unlocked	{n} de {m} desbloqueados
+settings		{n} of {m} points	{n} de {m} puntos
+settings		Locked	Bloqueado
+settings		Unlocked	Desbloqueado
+settings		Unlocked {date}	Desbloqueado el {date}
+settings		Offline: the list saved on the card	Sin conexión: la lista guardada en la tarjeta
+settings		Offline: as of {date}	Sin conexión: lista del {date}
+settings		Loading the list from RetroAchievements...	Cargando la lista de RetroAchievements...
+settings		Identifying the game: reading its file once. A big game takes a while.	Identificando el juego: se lee su archivo una vez. Un juego grande tarda un rato.
+settings		No RetroAchievements account on this handheld. Add one in Settings > System > First-time setup, at its RetroAchievements step.	No hay una cuenta de RetroAchievements en esta consola. Añade una en Ajustes > Sistema > Configuración inicial, en su paso de RetroAchievements.
+settings		No connection to RetroAchievements, and no list saved for this game yet. Check Wi-Fi and open the page again.	Sin conexión a RetroAchievements, y aún no hay una lista guardada para este juego. Revisa el Wi-Fi y abre la página otra vez.
+settings		No achievements for this system.	No hay logros para este sistema.
+settings		RetroAchievements has no achievements for this game, or doesn't know this version of it.	RetroAchievements no tiene logros para este juego, o no conoce esta versión.
+settings		This game's file couldn't be read to identify it.	No se pudo leer el archivo de este juego para identificarlo.
+settings		The RetroAchievements login failed: check the account in Settings > System > First-time setup.	Falló el inicio de sesión de RetroAchievements: revisa la cuenta en Ajustes > Sistema > Configuración inicial.
+settings		Page	Página
+settings		No list	Sin lista
+settings		No description.	Sin descripción.
 settings		ROXANNE	ROXANNE
 settings		BRAWLY	BRAWLY
 settings		WATTSON	WATTSON
@@ -1803,6 +1833,8 @@ menu		Sent 1 file to {who}	Enviado 1 archivo a {who}
 settings		This game's timing	Temporización de este juego
 settings		This game's DS CPU speed	Velocidad de CPU del DS de este juego
 settings		Fast, DSi CPU	Rápido, DSi CPU
+settings		Show the list	Mostrar la lista
+settings		None for this system	Ninguno para este sistema
 settings		FXAA	FXAA
 settings		Bluetooth	Bluetooth
 settings		Controllers, headphones and speakers.	Controles, auriculares y altavoces.
@@ -2044,6 +2076,7 @@ settings		INS	INS
 settings		CTRL	CTRL
 settings		Tap it again to load	Tócalo otra vez para cargar
 settings		Tap a slot twice to load it	Toca una ranura dos veces para cargarla
+settings		Back to the game	Volver al juego
 settings		Empty	Vacía
 settings		Tap a key: the game hears it on the other screen	Toca una tecla: el juego la oye en la otra pantalla
 settings		DONE	LISTO
