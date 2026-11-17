@@ -48,7 +48,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint", "zoom", "zoom.steps", "zoomed", "letter", "page", "pages" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint", "zoom", "zoom.steps", "zoomed", "timeLeft", "letter", "page", "pages" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -639,6 +639,14 @@ namespace banana
 			if (nId == HOOK("zoom")) { out = EV((double)zoomNow()); return true; }
 			if (nId == HOOK("zoom.steps")) { out = EV((double)zoomSteps); return true; }
 			if (nId == HOOK("zoomed")) { out = EV(now - zoomedAt); return true; }
+			// Parental controls' play time left today in minutes (rounded up), -1 with no limit
+			if (nId == HOOK("timeLeft"))
+			{
+				Library* lib = dynamic_cast<Library*>(m->src);
+				long left = lib ? lib->playLeft() : -1;
+				out = EV(left < 0 ? -1.0 : (double)((left + 59) / 60));
+				return true;
+			}
 			// a "pages" grid's page (the theme's "columns" x "rows" a page) and how many there are
 			if (nId == HOOK("page") || nId == HOOK("pages"))
 			{

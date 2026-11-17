@@ -1044,6 +1044,16 @@ namespace banana
 		return ts.tv_sec + ts.tv_nsec / 1e9;
 	}
 
+	// read again at most every 2 s: the top screen asks on every frame it draws (a directory and five files a frame
+	// while the shelf scrolls)
+	long Library::playLeft()
+	{
+		double now = monoSec();
+		if (now - playLeftAt < 20) return playLeftSeen;
+		playLeftAt = now;
+		return playLeftSeen = parental::playLeft(dataDir);
+	}
+
 	int Library::zoom(const std::string& view)
 	{
 		if (!zoomsRead)
