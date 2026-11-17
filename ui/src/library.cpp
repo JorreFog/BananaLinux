@@ -625,7 +625,7 @@ namespace banana
 		return r;
 	}
 
-	// Settings > Display & sound > Shown systems: settings.conf's shelf.<id> = auto (on the home row when it has
+	// Settings > Look & sound > Shown systems: settings.conf's shelf.<id> = auto (on the home row when it has
 	// something to start), hide or show (always, with nothing in it too)
 	std::map<std::string, std::string> Library::shelfModes() const
 	{

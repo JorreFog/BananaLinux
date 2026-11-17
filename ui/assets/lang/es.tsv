@@ -100,7 +100,7 @@ settings		New York, Toronto	Nueva York, Toronto
 settings		Halifax	Halifax
 settings		Santiago	Santiago
 settings		Sao Paulo, Buenos Aires	São Paulo, Buenos Aires
-settings		Display & sound	Pantalla y sonido
+settings		Look & sound	Pantalla y sonido
 settings		Theme	Tema
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; or Carts (experimental): your games as cartridges on a shelf, in a clean typeface.	Las dos paletas de ROCKNIXDS Pixel, oscura o clara para el día; o Carts (experimental): tus juegos como cartuchos en un estante, con tipografía limpia.
 settings	Pokémon types	Dark	Siniestro
@@ -799,7 +799,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	Teclas de volumen
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	En todas partes, también en juegos: los altavoces, o los auriculares mientras están puestos.
 settings		F + volume	F + volumen
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	En todas partes, también en juegos: la luz de ambas pantallas juntas. La de cada una: Ajustes > Pantalla y sonido.
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	En todas partes, también en juegos: la luz de ambas pantallas juntas. La de cada una: Ajustes > Pantalla y sonido.
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	En todas partes: una pulsación suspende (un juego se pausa donde está), otra despierta. Cerrar la tapa hace lo mismo.
 settings		Hold power	Mantener encendido
 settings		Everywhere: held for 2 seconds. A game running saves first.	En todas partes: mantenido 2 segundos. Si hay un juego, guarda primero.

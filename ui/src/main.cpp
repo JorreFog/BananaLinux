@@ -718,7 +718,7 @@ static std::pair<int, int> artCount(Host& lib)
 	return { (int)have.size(), (int)all.size() };
 }
 
-// the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
+// the systems for Settings > Look & sound > Shown systems (id, name), from systems.conf
 static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
 {
 	std::vector<std::pair<std::string, std::string>> r;
@@ -1013,6 +1013,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			bool used = ui.press(btn);
 			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
+		}
+		else if (op == "row")
+		{
+			// row <section> <key>: Settings open on that row of that list ("row System about"; the section may have
+			// spaces: the key is the last word)
+			std::string rest, sec, key;
+			std::getline(cs >> std::ws, rest);
+			size_t sp = rest.find_last_of(' ');
+			if (sp != std::string::npos) { sec = rest.substr(0, sp); key = rest.substr(sp + 1); } else sec = rest;
+			if (!settings.isOpen()) settings.open();
+			settings.openSection(sec);
+			settings.toRow(key);
+			logf("row %s %s", sec.c_str(), key.c_str());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
@@ -2204,7 +2217,7 @@ int main(int argc, char** argv)
 	SoftBackend be(disp.width(), disp.height());
 	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
-	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
+	// the screen colours (Settings > Look & sound > Screen colours): the one colour table, on the screen it corrects
 	auto applyColors = [&](const char* when)
 	{
 		ScreenColors c = ScreenColors::load(o.data + "/screen-colors.conf");
@@ -2213,7 +2226,7 @@ int main(int argc, char** argv)
 		else if (!c.neutral()) logf("screen colours (%s): the %s screen corrected", when, c.screen == 0 ? "top" : "bottom");
 	};
 	applyColors("start");
-	// the speaker EQ (Settings > Display & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
+	// the speaker EQ (Settings > Look & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
 	// settings.conf, before any game starts (/run is empty after a boot)
 	if (!speakereq::applySaved(o.data, speakereq::shareDir(o.assets)))
 		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());

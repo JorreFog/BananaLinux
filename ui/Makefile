@@ -76,7 +76,7 @@ CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -shared -fPIC -o $@ $< -ldl
 
-# the speaker EQ (Settings > Display & sound > Speaker EQ): an ALSA filter plugin, in alsa-lib's plugin folder where
+# the speaker EQ (Settings > Look & sound > Speaker EQ): an ALSA filter plugin, in alsa-lib's plugin folder where
 # bananad's `type banana_eq` finds it. -DPIC: alsa-lib's plugin macros only skip their static-build symbol with it
 libasound_module_pcm_banana_eq.so: src/eq/pcm_banana_eq.c src/eq/eq.h
 	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -shared -fPIC -DPIC \

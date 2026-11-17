@@ -119,7 +119,7 @@ settings		New York, Toronto	New York, Toronto
 settings		Halifax	Halifax
 settings		Santiago	Santiago
 settings		Buenos Aires, Sao Paulo	Buenos Aires, São Paulo
-settings		Display & sound	Näyttö ja ääni
+settings		Look & sound	Näyttö ja ääni
 settings		Theme	Teema
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	ROCKNIXDS Pixelin kaksi väripalettia, tumma tai vaalea; Kasetit (kokeellinen): pelisi kasetteina hyllyllä, selkeällä kirjasimella; tai oma teema: .json-tiedosto kortin kansiossa banana/themes (banana/themes/README.txt kertoo miten).
 settings		Dark	Tumma
@@ -550,7 +550,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	Äänenvoimakkuuden näppäimet
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Kaikkialla, myös peleissä: kaiuttimet tai kuulokkeet, kun ne on kytketty.
 settings		F + volume	F + äänenvoimakkuus
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Kaikkialla, myös peleissä: molempien näyttöjen taustavalot yhdessä. Kunkin näytön oma: Asetukset > Kuva ja ääni.
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Kaikkialla, myös peleissä: molempien näyttöjen taustavalot yhdessä. Kunkin näytön oma: Asetukset > Kuva ja ääni.
 settings		Power	Virta
 settings		Sleep	Lepotila
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Kaikkialla: painallus siirtää laitteen lepotilaan (peli pysähtyy siihen missä on), painallus herättää. Kannen sulkeminen tekee saman.

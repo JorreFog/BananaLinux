@@ -2,7 +2,7 @@ BANANA THEMES
 =============
 
 A theme is one text file in JSON, in banana/themes on the card (file sharing, or the card in a computer):
-for example banana/themes/my-theme.json. Pick it in Settings > Display & sound > Theme, where it shows under its
+for example banana/themes/my-theme.json. Pick it in Settings > Look & sound > Theme, where it shows under its
 "name". To start, copy one of the examples (ocean.json, sakura.json, terminal.json: they are in the system's
 /usr/share/banana/themes, and copies are in banana/themes on a new card) and change it. A file on the card with an
 example's file name replaces that example.

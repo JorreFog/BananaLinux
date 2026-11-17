@@ -65,7 +65,7 @@ namespace banana
 		std::string tmp = path + ".new";
 		FILE* f = fopen(tmp.c_str(), "w");
 		if (!f) return false;
-		fprintf(f, "# Settings > Display & sound > Screen colours: one screen corrected towards the other (the handheld has one\n"
+		fprintf(f, "# Settings > Look & sound > Screen colours: one screen corrected towards the other (the handheld has one\n"
 			"# colour table). Per channel out = black + (1 - black) * gain * brightness * in^gamma.\n"
 			"screen = %s\nred = %.2f\ngreen = %.2f\nblue = %.2f\ngamma = %.2f\nbrightness = %.2f\nblack = %.3f\n",
 			screen == 0 ? "top" : screen == 1 ? "bottom" : "none", red, green, blue, gamma, bright, black);
