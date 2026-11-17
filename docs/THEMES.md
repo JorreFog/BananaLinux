@@ -94,7 +94,6 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `empty`, `empty.title`, `empty.hint` | a library with no games, and what to say about it |
 | `zoom`, `zoom.steps`, `zoomed` | with `behavior.zoom`: the view's zoom, 0 to steps - 1 (its start until changed), kept for home and each system apart; ms since it last changed |
 | `page`, `pages` | a `pages` list's page with the selection, and how many there are (by the theme's `columns` and `rows` vars) |
-| `timeLeft` | Parental controls' play time left today, in minutes; -1 without a limit |
 | `letter` | the selected game's first letter (`#` for a digit or anything else): the A-Z button's |
 | `systems.count`, `games.count` | |
 | `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index` |

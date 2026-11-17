@@ -95,11 +95,6 @@ namespace banana
 		double powerAt = 0, onlineAt = 0;
 		bool onlineSeen = false;
 
-		// Parental controls' daily play time (parental::playLeft): the seconds left today, -1 with no limit. Read at most
-		// every 20 s (a layout theme's status bar asks each frame)
-		long playLeft();
-		double playLeftAt = -1e9;
-		long playLeftSeen = -1;
 		// a layout theme's zoom (its "behavior.zoom"), kept per view: "home", or a system's id. -1: none yet. In
 		// banana/zoom.txt, "<view> <level>" a line
 		int zoom(const std::string& view);

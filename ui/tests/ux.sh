@@ -384,5 +384,5 @@ grep -q "gba 1" "$PZFX/data/zoom.txt" 2>/dev/null || { echo "FAIL $size: Plaza's
 ux_check plaza "touch 560 31: used"                                    # A-Z: Berry 10, the first B
 ux_check plaza "touch 300 450: used"
 ux_check plaza "touch: key x"
-grep "theme:" "$OUT/$size-plaza.log" && { echo "FAIL $size: Plaza's theme has errors"; fail=1; }
+if grep "theme:" "$OUT/$size-plaza.log"; then echo "FAIL $size: Plaza's theme has errors"; fail=1; fi
 

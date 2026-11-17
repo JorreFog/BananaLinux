@@ -922,7 +922,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			ui.setHome(at);
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
-		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		else if (op == "lib")
+		{
+			// lib <system index or id> <game>
+			std::string sys; int s = 0, g = 0; cs >> sys >> g;
+			if (!sys.empty() && isdigit((unsigned char)sys[0])) s = atoi(sys.c_str());
+			else { s = -1; for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == sys) s = i; }
+			if (s < 0 || s >= lib.systemCount()) { logf("lib %s: not on the shelf", sys.c_str()); return 2; }
+			lib.openLibrary(s); ui.setLibrary(s, g);
+		}
 		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
 		else if (op == "gameend")
 		{
