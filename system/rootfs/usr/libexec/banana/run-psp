@@ -1,0 +1,121 @@
+#!/bin/sh
+# PSP: PPSSPP, its own program (as ROCKNIX runs it on the RK3566), on one panel (SDL's KMSDRM display 0:
+# SDL_KMSDRM_FIRST, Banana's SDL patch): the top one, or the bottom one as Settings says (below); the other stays dark.
+# Its memory stick is saves/ppsspp/PSP: SAVEDATA the games' saves, PPSSPP_STATE the states, SYSTEM its settings
+# (ppsspp.ini and controls.ini: Banana's the first time, what is changed in its menu kept). The buttons as in
+# RetroArch: F + Start quits, F + X its menu, F + L / F + R load / save the state, R2 fast-forwards.
+#   run-psp <game>
+S=/data/saves/ppsspp/PSP/SYSTEM
+INI=$S/ppsspp.ini
+mkdir -p $S
+for f in ppsspp.ini controls.ini; do [ -f $S/$f ] || cp /usr/share/banana/ppsspp/$f $S/$f; done
+export HOME=/data/home XDG_CONFIG_HOME=/data/saves XDG_RUNTIME_DIR=/run
+export SDL_AUDIODRIVER=alsa
+# setting <key>: the card's value, else the image's template (as run-retroarch's)
+setting() {
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
+    printf '%s' "$v"
+}
+racfg() { sed -n "/^$1 = \"\\(.*\\)\"\$/{s//\\1/;h};\${x;p}" /data/retroarch/retroarch.cfg 2>/dev/null; }
+# ini_set <section> <key> <value>: one line of ppsspp.ini, its section made when it has none
+ini_set() {
+    awk -v s="[$1]" -v k="$2" -v v="$3" '
+        $0 == s { in_s = 1; seen = 1; print; next }
+        /^\[/ { if (in_s && !done) { print k " = " v; done = 1 } in_s = 0 }
+        in_s && index($0, k " =") == 1 { if (!done) print k " = " v; done = 1; next }
+        { print }
+        END { if (!seen) print s; if (!done) print k " = " v }' $INI > $INI.new && mv $INI.new $INI
+}
+
+# controls_key <hotkey> <mapping>: a mapping added to one of controls.ini's lines (PPSSPP keeps a list, comma-separated)
+CTL=$S/controls.ini
+controls_key() {
+    awk -v k="$1" -v m="$2" '
+        index($0, k " = ") == 1 { done = 1; if (index("," substr($0, length(k) + 4) ",", "," m ",")) print; else print $0 "," m; next }
+        { print }
+        END { if (!done) print k " = " m }' $CTL > $CTL.new && mv $CTL.new $CTL
+}
+
+# the screen its games play on: this game's own (X on it: banana/ra-per-game-screen.conf), else the PSP's (Settings >
+# Other systems > Per system configurations > Sony - PlayStation Portable: ra_screen.psp), else the general Screen
+# (Other systems > Screen: RetroArch's video_monitor_index, 1 the bottom)
+SCREEN=
+G=/data/banana/ra-per-game-screen.conf
+[ -f $G ] && SCREEN=$(awk -v k="psp/${1##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' $G)
+[ -n "$SCREEN" ] || SCREEN=$(setting ra_screen.psp)
+[ -n "$SCREEN" ] || { [ "$(racfg video_monitor_index)" = 1 ] && SCREEN=bottom || SCREEN=top; }
+case $SCREEN in
+bottom) export SDL_KMSDRM_FIRST=${BANANA_BOTTOM:-DSI-1} ;;
+*) SCREEN=top; export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} ;;
+esac
+echo "run-psp: on the $SCREEN screen ($SDL_KMSDRM_FIRST)" >&2
+
+# RetroAchievements: the account from the setup (banana/accounts.conf), as RetroArch's, for PPSSPP's own client.
+# PPSSPP keeps the account's name in ppsspp.ini and its login token beside it (ppsspp_retroachievements.dat); the token
+# is there only while the game runs (file sharing shows the memory stick, it hides accounts.conf). The token: PPSSPP's
+# last one, else RetroArch's, else one asked for with the password. Softcore or Hardcore as for the other systems
+# (Other systems > RetroAchievements).
+A=/data/banana/accounts.conf
+TOK=$S/ppsspp_retroachievements.dat
+acct() { sed -n "s/^$1=//p" $A 2>/dev/null | head -n 1; }
+acct_set() { [ -f $A ] && sed -i "/^$1=/d" $A; printf '%s=%s\n' "$1" "$2" >> $A; }
+u=$(acct ra_user)
+t=
+if [ -n "$u" ]; then
+    t=$(acct ra_ppsspp_token); [ -n "$t" ] || t=$(acct ra_retroarch_token)
+    if [ -z "$t" ] && [ -n "$(acct ra_password)" ]; then
+        # (the password through stdin, not on curl's command line)
+        t=$(acct ra_password | tr -d '\n' | curl -s -m 8 -A "BananaOS rcheevos" --data-urlencode r=login2 \
+            --data-urlencode "u=$u" --data-urlencode "p@-" https://retroachievements.org/dorequest.php 2>/dev/null |
+            sed -n 's/.*"Token":"\([^"]*\)".*/\1/p')
+        [ -n "$t" ] && acct_set ra_ppsspp_token "$t"
+    fi
+    ini_set Achievements AchievementsEnable True
+    ini_set Achievements AchievementsUserName "$u"
+    [ "$(racfg cheevos_hardcore_mode_enable)" = true ] && hc=True || hc=False
+    ini_set Achievements AchievementsChallengeMode $hc
+    if [ -n "$t" ]; then (umask 077; printf '%s' "$t" > $TOK); else rm -f $TOK; fi
+    [ -n "$t" ] && l="logged in" || l="no token: not logged in"	# (never the token itself: the logs go on the card)
+    echo "run-psp: RetroAchievements as $u ($l, hardcore $hc)" >&2
+fi	# (no account in the setup: PPSSPP's as it is, a login in its own menu kept)
+
+# the pad: PPSSPP's own database line for it (assets/gamecontrollerdb.txt), with F (button 10) as the guide button
+# the hotkeys are made with
+export SDL_GAMECONTROLLERCONFIG="190000004b4800000111000000010000,RetroGame Joypad,a:b1,b:b0,back:b8,guide:b10,dpdown:b14,dpleft:b15,dpright:b16,dpup:b13,leftshoulder:b4,leftstick:b11,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b2,y:b3,platform:Linux,"
+mkdir -p $HOME
+if [ -n "$BANANA_DRM_LEASE_FD" ]; then
+    # the game panel (Settings > Other systems > Second screen, banana-ui keeps the other panel): PPSSPP draws on the
+    # panel it was lent (a DRM lease, through banana-leaseshim.so: the screen chosen above is banana-ui's choice too),
+    # logs what its RetroAchievements client does for the panel to show, and takes the panel's tiles as keys from its
+    # virtual keyboard ("Banana game panel keys": keyboard device 1 in controls.ini; Android's key codes)
+    controls_key "Save State" 1-132        # F2
+    controls_key "Load State" 1-134        # F4
+    controls_key "Pause" 1-111             # Escape: its menu
+    controls_key "Fast-forward" 1-139      # F9, held while the tile is on
+    controls_key "Exit App" 1-140          # F10
+    rm -f /run/banana/ppsspp.log
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so /usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit \
+        --log=/run/banana/ppsspp.log "$1" &
+    P=$!
+    SCREEN=
+else
+    . /usr/libexec/banana/one-panel
+    one_panel_dark $SCREEN
+    # (its pause menu's "Exit to menu" quits, as F + Start does: PPSSPP's own game list isn't Banana's way back)
+    /usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit "$1" &
+    P=$!
+fi
+trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+wait $P; R=$?
+while kill -0 $P 2>/dev/null; do wait $P; R=$?; done
+[ -n "$SCREEN" ] && one_panel_restore
+# the token back out of the memory stick: a new one (a login in PPSSPP's own menu) kept in accounts.conf; none left
+# (PPSSPP drops an expired one) forgets PPSSPP's
+if [ -n "$u" ]; then
+    n=$(cat $TOK 2>/dev/null)
+    if [ -n "$n" ]; then [ "$n" != "$t" ] && acct_set ra_ppsspp_token "$n"
+    elif [ -n "$t" ] && [ -f $A ]; then sed -i '/^ra_ppsspp_token=/d' $A; fi
+    rm -f $TOK
+fi
+exit $R

@@ -1,0 +1,11 @@
+config BR2_PACKAGE_PPSSPP
+	bool "ppsspp"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	depends on BR2_INSTALL_LIBSTDCPP
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_SDL2_TTF
+	select BR2_PACKAGE_ZLIB
+	help
+	  PPSSPP, the PSP emulator: its own SDL2 program (as ROCKNIX runs it on the RK3566), on the top panel through
+	  SDL's KMSDRM and GLES. Its launcher is /usr/libexec/banana/run-psp;
+	  it is installed in /usr/share/ppsspp, beside its assets.

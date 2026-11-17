@@ -117,7 +117,7 @@ settings		New York, Toronto	Нью-Йорк, Торонто
 settings		Halifax	Галифакс
 settings		Santiago	Сантьяго
 settings		Buenos Aires, Sao Paulo	Буэнос-Айрес, Сан-Паулу
-settings		Display & sound	Экран и звук
+settings		Look & sound	Экран и звук
 settings		Theme	Тема
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	Две палитры ROCKNIXDS Pixel: тёмная или светлая (для дня); Картриджи (эксперим.): ваши игры в виде картриджей на полке с аккуратным шрифтом; или ваша тема: файл .json в banana/themes на карте (см. README.txt).
 settings		Dark	Тёмная
@@ -545,7 +545,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	Кнопки громкости
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Везде, включая игры: громкость динамиков (или наушников при их подключении).
 settings		F + volume	F + громкость
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Везде, включая игры: регулировка подсветки обоих экранов одновременно. Раздельно для каждого экрана: «Настройки > Экран и звук».
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Везде, включая игры: регулировка подсветки обоих экранов одновременно. Раздельно для каждого экрана: «Настройки > Экран и звук».
 settings		Power	Кнопка питания
 settings		Sleep	Сон
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Везде: нажатие переводит в сон (игра ставится на паузу), повторное нажатие пробуждает. Закрытие крышки делает то же самое.
@@ -1539,3 +1539,65 @@ bananads		or press L3	или нажмите L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение выше красной линии (чувствительность: %s).
 bananads		Edge marking	Контуры
 bananads		Fog	Туман
+# Other systems: each system's own page (my own translations; corrections welcome)
+settings		Same as all	Как для всех
+settings		As set for all systems, in brackets.	Как задано для всех систем (в скобках).
+settings		Which screen this system's games play on.	На каком экране идут игры этой системы.
+settings		Its games play on the top screen.	Игры идут на верхнем экране.
+settings		Its games play on the bottom screen.	Игры идут на нижнем экране.
+settings		What the other screen shows while this system's games play.	Что показывает другой экран во время игр этой системы.
+settings		A look for this system's games.	Вид игр этой системы.
+settings		What fills the space around this system's picture.	Чем заполнено место вокруг изображения этой системы.
+settings		This system's own settings: its emulator, screen, look and buttons.	Собственные настройки системы: эмулятор, экран, вид и кнопки.
+settings		Swap A/B and X/Y	Поменять A/B и X/Y
+settings		Per system configurations	Настройки систем
+settings		Each system's own settings: its emulator, screen, look and buttons.	Собственные настройки каждой системы: эмулятор, экран, вид и кнопки.
+settings		This system's own settings: its emulator, screen, look and buttons. No games on the card yet.	Собственные настройки системы: эмулятор, экран, вид и кнопки. Игр на карте пока нет.
+settings		Picture size	Размер изображения
+settings		How big other systems' games are drawn.	Насколько крупно показываются игры других систем.
+settings		How big this system's games are drawn.	Насколько крупно показываются игры этой системы.
+settings		Default	По умолчанию
+settings		Fit	Вписать
+settings		Pixel perfect	Чёткие пиксели
+settings		Full screen	Весь экран
+settings		As RetroArch has it.	Как настроено в RetroArch.
+settings		The game's shape, as large as fits.	Пропорции игры, как можно крупнее.
+settings		Sharp, even pixels at a whole-number size, with a black margin.	Чёткие ровные пиксели в целое число раз, с чёрными полями.
+settings		The whole screen. Some games look stretched.	Весь экран. Некоторые игры выглядят растянутыми.
+settings		Colour correction	Коррекция цвета
+settings		Colours as the handheld's own screen showed them.	Цвета, как их показывал экран самой консоли.
+settings		Emulator's own	Как в эмуляторе
+settings		As the emulator has it.	Как настроено в эмуляторе.
+settings		Softer colours, as on the real screen the games were made for.	Мягкие цвета, как на настоящем экране, для которого делались игры.
+settings		The colours as the game stores them: brighter and stronger.	Цвета, как они записаны в игре: ярче и насыщеннее.
+settings		Game Boy palette	Палитра Game Boy
+settings		The colours of Game Boy games.	Цвета игр Game Boy.
+settings		Grey	Серая
+settings		Pocket	Pocket
+settings		Super Game Boy	Super Game Boy
+settings		Shades of grey.	Оттенки серого.
+settings		The original Game Boy's green.	Зелёный, как у первого Game Boy.
+settings		The Game Boy Pocket's paler screen.	Более светлый экран Game Boy Pocket.
+settings		The colours a Game Boy Color gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Game Boy Color. Только Gambatte и mGBA.
+settings		The colours a Super Game Boy gave the game. Gambatte and mGBA only.	Цвета, которые игре давал Super Game Boy. Только Gambatte и mGBA.
+settings		Emulator configurations	Настройки эмуляторов
+settings		Each DS emulator's own settings: picture, speed, sound and hotkeys.	Собственные настройки каждого эмулятора DS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic's settings: picture, speed, sound and hotkeys.	Настройки DraStic: изображение, скорость, звук и горячие клавиши.
+settings		BananaDS's settings: picture, speed, sound and hotkeys.	Настройки BananaDS: изображение, скорость, звук и горячие клавиши.
+settings		DraStic: the fastest. Its own settings are in Emulator configurations.	DraStic: самый быстрый. Его настройки — в «Настройках эмуляторов».
+settings		Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations.	Собственный эмулятор Banana на основе melonDS: самый точный. Его настройки — в «Настройках эмуляторов».
+settings		Same as system	Как для системы
+settings		This game's screen	Экран этой игры
+settings		This game's second screen	Второй экран этой игры
+settings		This game's screen border	Рамка этой игры
+settings		This game's picture size	Размер изображения этой игры
+settings		This game's colours	Цвета этой игры
+settings		This game's palette	Палитра этой игры
+settings		The emulator for this game.	Эмулятор для этой игры.
+settings		Which screen this game plays on.	На каком экране идёт эта игра.
+settings		What the other screen shows while this game plays.	Что показывает другой экран во время этой игры.
+settings		A look for this game.	Вид этой игры.
+settings		What fills the space around this game's picture.	Чем заполнено место вокруг изображения этой игры.
+settings		How big this game is drawn.	Насколько крупно показывается эта игра.
+settings		The colours of this Game Boy game.	Цвета этой игры Game Boy.
+settings		Same as system: as on its page in Other systems > Per system configurations.	«Как для системы»: как на странице системы в «Другие системы > Настройки систем».

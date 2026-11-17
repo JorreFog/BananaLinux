@@ -28,6 +28,7 @@ namespace banana
 		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
+		std::string marquee;	// the game's logo (media/marquee, gamelist.xml's <marquee>)
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;
@@ -94,6 +95,13 @@ namespace banana
 		double powerAt = 0, onlineAt = 0;
 		bool onlineSeen = false;
 
+		// a layout theme's zoom (its "behavior.zoom"), kept per view: "home", or a system's id. -1: none yet. In
+		// banana/zoom.txt, "<view> <level>" a line
+		int zoom(const std::string& view);
+		void setZoom(const std::string& view, int level);
+		std::map<std::string, int> zooms;
+		bool zoomsRead = false;
+
 		// rnds::Source
 		int systemCount() override { return (int)shelves.size(); }
 		rnds::SysInfo system(int i) override;
@@ -123,7 +131,7 @@ namespace banana
 		std::string gameKey(int game);
 		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
 		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
-		// Settings > Display & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// Settings > Look & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
 

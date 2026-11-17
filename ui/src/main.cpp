@@ -718,7 +718,7 @@ static std::pair<int, int> artCount(Host& lib)
 	return { (int)have.size(), (int)all.size() };
 }
 
-// the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
+// the systems for Settings > Look & sound > Shown systems (id, name), from systems.conf
 static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
 {
 	std::vector<std::pair<std::string, std::string>> r;
@@ -878,6 +878,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setFontDir(o.banana + "/fonts");
+	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -891,9 +893,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	std::string levelLabel;	// (level <Volume|Brightness> <percent>: the keys' bubble, until "level off")
+	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
-		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		if (screen == 0 && !levelLabel.empty()) settings.level(levelLabel, levelPercent);
+		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
@@ -906,6 +911,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
 			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
@@ -916,7 +922,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			ui.setHome(at);
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
-		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		else if (op == "lib")
+		{
+			// lib <system index or id> <game>
+			std::string sys; int s = 0, g = 0; cs >> sys >> g;
+			if (!sys.empty() && isdigit((unsigned char)sys[0])) s = atoi(sys.c_str());
+			else { s = -1; for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == sys) s = i; }
+			if (s < 0 || s >= lib.systemCount()) { logf("lib %s: not on the shelf", sys.c_str()); return 2; }
+			lib.openLibrary(s); ui.setLibrary(s, g);
+		}
 		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
 		else if (op == "gameend")
 		{
@@ -1013,6 +1027,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			bool used = ui.press(btn);
 			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
+		}
+		else if (op == "row")
+		{
+			// row <section> <key>: Settings open on that row of that list ("row System about"; the section may have
+			// spaces: the key is the last word)
+			std::string rest, sec, key;
+			std::getline(cs >> std::ws, rest);
+			size_t sp = rest.find_last_of(' ');
+			if (sp != std::string::npos) { sec = rest.substr(0, sp); key = rest.substr(sp + 1); } else sec = rest;
+			if (!settings.isOpen()) settings.open();
+			settings.openSection(sec);
+			settings.toRow(key);
+			logf("row %s %s", sec.c_str(), key.c_str());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
@@ -1138,6 +1165,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				ui.touch(scr, x * k, y * k, true);
 				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
+				// a layout theme's X, START or SELECT tapped (the device presses them: handleAgain)
+				std::string tk = ui.takeTapKey();
+				if (!tk.empty()) logf("touch: key %s", tk.c_str());
+				if (tk == "select") settings.openSearch(lib.searchQuery());
+				else if (tk == "start") settings.open();
 			}
 		}
 		else if (op == "gamepanel")
@@ -1162,6 +1194,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
+			settings.gamePpsspp(getenv("BANANA_TEST_PSP") != nullptr);	// (tests: a PSP game's panel)
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
 			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
@@ -1410,19 +1443,28 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "swipe")
 		{
-			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the settings' bottom panel
+			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the bottom panel (the settings',
+			// else the menu's)
 			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 			cs >> x1 >> y1 >> x2 >> y2;
 			float k = o.h / 480.0f;
-			if (!settings.isOpen()) { logf("swipe: the settings aren't open"); return 2; }
+			if (!settings.isOpen())
+			{
+				ui.touch(1, x1 * k, y1 * k, true);
+				logf("swipe %.0f %.0f -> %.0f %.0f: %s", x1, y1, x2, y2, ui.touch(1, x2 * k, y2 * k, false) ? "used" : "unused");
+				continue;
+			}
 			settings.touch(x1 * k, y1 * k, true);
 			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
 		}
-		else if (op == "shot")
+		else if (op == "shot" || op == "snap")
 		{
+			// snap: the menu as one frame on the device shows it, its pictures' loads finished once (a shot settles
+			// twice: a picture the cache dropped meanwhile is back)
 			std::string name; cs >> name;
 			double t0 = 0, t1 = 0;
-			if (settings.isOpen())
+			if (op == "snap") { settle(); t0 = nowMs(); ui.render(); t1 = nowMs(); }
+			else if (settings.isOpen())
 			{
 				settings.update(now);	// what came back since the last command (a press skips the update below)
 				settings.update(now);
@@ -1603,7 +1645,7 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 		while (!ready) usleep(2000);
 		return;
 	}
-	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
+	gSplash.onCue = [&sound](const std::string& n) { sound.playBase(n); };	// (the intro: the menu's own sounds)
 	double t0 = nowMs();
 	for (;;)
 	{
@@ -1783,7 +1825,7 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 	a.setStart(be.pixels(0), be.pixels(1));
 	sv.renderCard("Welcome to", "", 174, 26);
 	a.setCaption(be.pixels(0));
-	a.onCue = [&sound](const std::string& c) { sound.play(c == "burst" ? "ready" : "fav"); };
+	a.onCue = [&sound](const std::string& c) { sound.playBase(c == "burst" ? "ready" : "fav"); };
 	const double t0 = nowMs();
 	const int flips0 = disp.failedFlips, sets0 = disp.failedSets, unsent0 = gUnsent;
 	double last = -1, drawSum = 0, drawWorst = 0, gapWorst = 0;
@@ -1872,7 +1914,7 @@ static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv
 	usleep(250000);
 	sv.renderCard("Welcome", sv.ownerName(), 196, 30);
 	grab(be, card);
-	sound.play("ready");
+	sound.playBase("ready");
 	fadeSteps(disp, be, card, 0, 4, 400);
 	const double hold = nowMs() + 1400;
 	// the menu's first frame drawn meanwhile (as irisToMenu does), the card put back
@@ -1893,7 +1935,7 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 {
 	Splash sp;
 	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
-	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
+	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.playBase("back"); };	// (the outro: the menu's own)
 	Iris iris(disp, be);
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
@@ -2204,7 +2246,7 @@ int main(int argc, char** argv)
 	SoftBackend be(disp.width(), disp.height());
 	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
-	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
+	// the screen colours (Settings > Look & sound > Screen colours): the one colour table, on the screen it corrects
 	auto applyColors = [&](const char* when)
 	{
 		ScreenColors c = ScreenColors::load(o.data + "/screen-colors.conf");
@@ -2213,7 +2255,7 @@ int main(int argc, char** argv)
 		else if (!c.neutral()) logf("screen colours (%s): the %s screen corrected", when, c.screen == 0 ? "top" : "bottom");
 	};
 	applyColors("start");
-	// the speaker EQ (Settings > Display & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
+	// the speaker EQ (Settings > Look & sound > Speaker EQ): the profile the speakers' ALSA plugin plays, from
 	// settings.conf, before any game starts (/run is empty after a boot)
 	if (!speakereq::applySaved(o.data, speakereq::shareDir(o.assets)))
 		logf("speaker EQ: %s can't be written", speakereq::livePath().c_str());
@@ -2437,6 +2479,7 @@ int main(int argc, char** argv)
 			ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 			worker.attach(uiPtr);
 			ui->setHome(sys);
+			sound.reload(o.assets + "/sounds");	// the new theme's sounds (a theme's own are only for that theme)
 			sound.play("select");
 			break;
 		}
@@ -2482,6 +2525,7 @@ int main(int argc, char** argv)
 	};
 
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
+	std::function<void(const InputEvent&)> handleAgain;	// (handle, for a tapped button the menu hands back)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
@@ -2562,7 +2606,15 @@ int main(int argc, char** argv)
 		}
 		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, true); return; }
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
-		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
+		if (ev.type == InputEvent::TOUCH_UP)
+		{
+			std::string k;
+			{ std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); k = ui->takeTapKey(); }
+			// a layout theme's X, START or SELECT button tapped: as if pressed
+			Key key = k == "x" ? Key::X : k == "start" ? Key::START : k == "select" ? Key::SELECT : Key::NONE;
+			if (key != Key::NONE && handleAgain) { InputEvent p; p.type = InputEvent::PRESS; p.key = key; p.t = ev.t; handleAgain(p); }
+			return;
+		}
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
 		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
 		{
@@ -2599,6 +2651,8 @@ int main(int argc, char** argv)
 			rep.key = ev.key; rep.since = rep.last = now;
 		}
 	};
+	handleAgain = handle;
+
 
 	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and tiles drawn when they
 	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one
@@ -2609,6 +2663,9 @@ int main(int argc, char** argv)
 	// starts so the emulator sees it as a keyboard plugged in, gone when the game ends (vkbd.h)
 	VirtualKeyboard vkbd;
 	bool keysOn = false;
+	// a PSP game's panel (PPSSPP, run-psp): the tiles press keys on that keyboard, which run-psp binds to PPSSPP's
+	// hotkeys (controls.ini: Save State F2, Load State F4, Pause Escape, Fast-forward F9 while held, Exit App F10)
+	bool pspGame = false, pspFast = false;
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
@@ -2629,11 +2686,34 @@ int main(int argc, char** argv)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameSystem(gameSysId);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
+			settingsView.gamePpsspp(pspGame);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
 		}
 		be.invalidate();
 		bool want = true;
+		pspFast = false;
+		// a tile's command: RetroArch's (its stdin), or PPSSPP's hotkey on the panel's keyboard
+		auto command = [&](Settings::GameAction a, const char* via)
+		{
+			if (pspGame)
+			{
+				const char* what = a == Settings::G_SAVE ? "save state" : a == Settings::G_LOAD ? "load state" : a == Settings::G_MENU ? "menu" :
+					a == Settings::G_FFWD ? (pspFast ? "fast-forward off" : "fast-forward on") : a == Settings::G_QUIT ? "quit" : nullptr;
+				if (!what) return;
+				logf("game panel: PPSSPP %s%s", what, via);
+				if (a == Settings::G_FFWD) { pspFast = !pspFast; vkbd.hold(KEY_F9, pspFast); return; }
+				vkbd.tap(a == Settings::G_SAVE ? KEY_F2 : a == Settings::G_LOAD ? KEY_F4 : a == Settings::G_MENU ? KEY_ESC : KEY_F10);
+				return;
+			}
+			char slotCmd[32];
+			snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
+			const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
+				a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+			if (!c) return;
+			logf("game panel: %.*s%s", (int)strlen(c) - 1, c, via);
+			if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c);
+		};
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
@@ -2699,11 +2779,7 @@ int main(int argc, char** argv)
 					settingsView.gameTouch(tx * k, ty * k, true);
 					// (the tap's command goes to the emulator as a finger's would: a slot loaded from the States view...)
 					Settings::GameAction a = settingsView.gameTouch(tx * k, ty * k, false);
-					char slotCmd[32];
-					snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
-					const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-						a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
-					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c); }
+					command(a, " (panel-tap)");
 				}
 				want = true;
 				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
@@ -2765,16 +2841,7 @@ int main(int argc, char** argv)
 							a = settingsView.gameTouch(ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN);
 						}
 						want = true;
-						char slotCmd[32];
-						snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
-						const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" :
-							a == Settings::G_QUIT ? "QUIT\n" : nullptr;
-						if (c)
-						{
-							logf("game panel: %.*s", (int)strlen(c) - 1, c);
-							if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c);
-						}
+						command(a, "");
 					});
 		}
 		if (pidFd >= 0) ::close(pidFd);
@@ -2822,10 +2889,29 @@ int main(int argc, char** argv)
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
 		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
-		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
+		// PPSSPP (run-psp) takes the lease too, its tiles through a virtual keyboard (pspGame)
+		pspGame = sd.run.find("run-psp") != std::string::npos;
+		bool ra = pspGame || sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
+		// this game's own value (X on it: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>", as
+		// run-retroarch's pg), else the system's (Settings > Other systems > the system: <key>.<system>), else the general one
+		auto own = [&](const std::string& key) -> std::string
+		{
+			{
+				const std::string name = key == "retroarch_panel" ? "panel" : key.rfind("ra_", 0) == 0 ? key.substr(3) : key;
+				const std::string want = sd.id + "/" + rom.substr(rom.rfind('/') + 1) + " = ";
+				std::ifstream f(o.data + "/ra-per-game-" + name + ".conf");
+				std::string ln, v;
+				while (std::getline(f, ln)) if (ln.compare(0, want.size(), want) == 0) v = ln.substr(want.size());
+				if (!v.empty()) return v;
+			}
+			auto i = settings.find(key + "." + sd.id);
+			if (i != settings.end() && !i->second.empty()) return i->second;
+			i = settings.find(key);
+			return i == settings.end() ? "" : i->second;
+		};
+		bool panel = ra && own("retroarch_panel") != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
 		const char* OUT = "/run/banana/retroarch.out";	// RetroArch's stdout, for the Pokémon companion
 		if (panel)
@@ -2833,9 +2919,13 @@ int main(int argc, char** argv)
 			// the panel RetroArch is set to use (Settings > Other systems > Screen: video_monitor_index 2 the top, 1 the
 			// bottom)
 			gameScreen = getConfValue("/data/retroarch/retroarch.cfg", "video_monitor_index", "2") == "1" ? 1 : 0;
+			// (or the system's own screen: ra_screen.<system>, top or bottom)
+			const std::string screen = own("ra_screen");
+			if (screen == "top") gameScreen = 0; else if (screen == "bottom") gameScreen = 1;
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)
+			unlink("/run/banana/ppsspp.log");
 			if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			if (leaseFd >= 0 && mkfifo(FIFO, 0600) == 0) cmdFd = ::open(FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);	// (read too: RetroArch never sees an end)
 			if (leaseFd < 0 || cmdFd < 0)
@@ -2867,6 +2957,13 @@ int main(int argc, char** argv)
 				if (keysOn) logf("on-screen keyboard: the game panel's Keys tile (a virtual keyboard on /dev/uinput)");
 				else logf("on-screen keyboard: no virtual keyboard: %s", strerror(errno ? errno : EINVAL));
 			}
+		}
+		// a PSP game's panel: its tiles' keyboard, made before the fork (SDL finds its keyboards as PPSSPP starts)
+		if (panel && pspGame)
+		{
+			errno = 0;
+			if (vkbd.open("Banana game panel keys")) logf("game panel: PPSSPP's hotkeys through a virtual keyboard");
+			else logf("game panel: no virtual keyboard for PPSSPP's hotkeys: %s", strerror(errno ? errno : EINVAL));
 		}
 		// Settings > Other systems > Second screen > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
 		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch
