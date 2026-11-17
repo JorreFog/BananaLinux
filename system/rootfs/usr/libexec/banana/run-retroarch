@@ -99,6 +99,20 @@ if [ ! -f $M ]; then
     grep -q '^video_max_swapchain_images = ' $OV 2>/dev/null || echo 'video_max_swapchain_images = "3"' >> $OV
     touch $M
 fi
+# VICE (Commodore 64) core options for a handheld, once (a change in RetroArch's Core Options afterwards is kept):
+# ReSID's fast sampling instead of its interpolating one, the drive's motor/head noise off, and warp while a disk or
+# tape autostarts (loading was the slow part: a real 1541 loads at ~300 bytes/s). x64sc stays the core.
+M=/data/retroarch/.banana-defaults-c64-1
+if [ ! -f $M ]; then
+    O="/data/retroarch/config/VICE x64sc/VICE x64sc.opt"
+    mkdir -p "${O%/*}"
+    for kv in 'vice_resid_sampling|fast' 'vice_drive_sound_emulation|disabled' 'vice_autoloadwarp|enabled'; do
+        k=${kv%%|*}; v=${kv#*|}
+        sed -i "/^$k = /d" "$O" 2>/dev/null
+        echo "$k = \"$v\"" >> "$O"
+    done
+    touch $M
+fi
 # Shaders: Shaders > Load Preset opens the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl), read
 # where they are: copied to the card they took 238 MB (a few thousand small files in exFAT's large clusters) and a long
 # first start. The Online Updater is shown (the core downloader since .banana-assets-1, below).
