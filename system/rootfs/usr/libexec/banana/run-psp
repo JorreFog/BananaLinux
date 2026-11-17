@@ -11,6 +11,12 @@ mkdir -p $S
 for f in ppsspp.ini controls.ini; do [ -f $S/$f ] || cp /usr/share/banana/ppsspp/$f $S/$f; done
 export HOME=/data/home XDG_CONFIG_HOME=/data/saves XDG_RUNTIME_DIR=/run
 export SDL_AUDIODRIVER=alsa
+# setting <key>: the card's value, else the image's template (as run-retroarch's)
+setting() {
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
+    printf '%s' "$v"
+}
 racfg() { sed -n "/^$1 = \"\\(.*\\)\"\$/{s//\\1/;h};\${x;p}" /data/retroarch/retroarch.cfg 2>/dev/null; }
 # ini_set <section> <key> <value>: one line of ppsspp.ini, its section made when it has none
 ini_set() {
@@ -22,9 +28,14 @@ ini_set() {
         END { if (!seen) print s; if (!done) print k " = " v }' $INI > $INI.new && mv $INI.new $INI
 }
 
-# the screen its games play on: Settings > Other systems > Screen, as RetroArch's games (its video_monitor_index, 1 the
-# bottom)
-[ "$(racfg video_monitor_index)" = 1 ] && SCREEN=bottom || SCREEN=top
+# the screen its games play on: this game's own (X on it: banana/ra-per-game-screen.conf), else the PSP's (Settings >
+# Other systems > Per system configurations > Sony - PlayStation Portable: ra_screen.psp), else the general Screen
+# (Other systems > Screen: RetroArch's video_monitor_index, 1 the bottom)
+SCREEN=
+G=/data/banana/ra-per-game-screen.conf
+[ -f $G ] && SCREEN=$(awk -v k="psp/${1##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' $G)
+[ -n "$SCREEN" ] || SCREEN=$(setting ra_screen.psp)
+[ -n "$SCREEN" ] || { [ "$(racfg video_monitor_index)" = 1 ] && SCREEN=bottom || SCREEN=top; }
 case $SCREEN in
 bottom) export SDL_KMSDRM_FIRST=${BANANA_BOTTOM:-DSI-1} ;;
 *) SCREEN=top; export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} ;;

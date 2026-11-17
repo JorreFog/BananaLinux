@@ -447,7 +447,7 @@ namespace banana
 			{ "sega32x", { "Sega", "32X" } }, { "gamegear", { "Sega", "Game Gear" } }, { "mastersystem", { "Sega", "Master System" } },
 			{ "megacd", { "Sega", "Mega CD" } }, { "megadrive", { "Sega", "Mega Drive" } }, { "sg-1000", { "Sega", "SG-1000" } },
 			{ "neogeo", { "SNK", "Neo Geo" } }, { "ngp", { "SNK", "Neo Geo Pocket" } }, { "ngpc", { "SNK", "Neo Geo Pocket Color" } },
-			{ "psx", { "Sony", "PlayStation" } },
+			{ "psx", { "Sony", "PlayStation" } }, { "psp", { "Sony", "PlayStation Portable" } },
 		};
 		auto it = MAKER.find(id);
 		if (it == MAKER.end()) return "";
@@ -826,6 +826,15 @@ namespace banana
 				add(S, "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
 					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
+		}
+		// the PSP's page: PPSSPP is its own program (run-psp), so only the screen its games play on, as the others' Screen
+		// row (ra_screen.psp; "Same as all": Other systems > Screen)
+		{
+			const char* S = "PlayStation Portable";
+			add(S, "gamepad", "Screen", "Which screen PSP games play on.", menu, "ra_screen.psp",
+				{ "Same as all", "Top", "Bottom" }, { "", "top", "bottom" });
+			items.back().hints = { "As set for all systems, in brackets.", "Its games play on the top screen.", "Its games play on the bottom screen." };
+			items.back().inherit = "video_monitor_index";
 		}
 		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
 			"", "ra_systems", {}, {}, Item::PAGE);
@@ -1422,6 +1431,7 @@ namespace banana
 			};
 			// each system's page (Other systems > Per system configurations), its row showing its emulator
 			for (const auto& sys : RA_SYSTEMS) v.push_back({ std::string("ra_sys.") + sys.id, sys.label, std::string("core.") + sys.id });
+			v.push_back({ "ra_sys.psp", "PlayStation Portable", "ra_screen.psp" });	// (PPSSPP: its screen)
 			return v;
 		}();
 		return all;
@@ -1784,6 +1794,14 @@ namespace banana
 			it.section = "Per system configurations";
 			it.icon = "gamepad"; it.label = label.empty() ? sys.label : label; it.key = std::string("ra_sys.") + sys.id; it.kind = Item::PAGE;
 			it.help = "This system's own settings: its emulator, screen, look and buttons.";
+			rows.push_back(it);
+		}
+		{
+			// the PSP (PPSSPP, not RetroArch): its page has its screen only
+			Item it;
+			it.section = "Per system configurations";
+			it.icon = "gamepad"; it.label = systemRowLabel("psp"); it.key = "ra_sys.psp"; it.kind = Item::PAGE;
+			it.help = gameSystems.count("psp") ? "The screen PSP games play on." : "The screen PSP games play on. No games on the card yet.";
 			rows.push_back(it);
 		}
 		auto key = [](const std::string& l) { std::string k = l; for (auto& c : k) c = (char)std::tolower((unsigned char)c); return k; };
