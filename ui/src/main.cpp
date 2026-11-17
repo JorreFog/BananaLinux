@@ -1623,7 +1623,7 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 		while (!ready) usleep(2000);
 		return;
 	}
-	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
+	gSplash.onCue = [&sound](const std::string& n) { sound.playBase(n); };	// (the intro: the menu's own sounds)
 	double t0 = nowMs();
 	for (;;)
 	{
@@ -1803,7 +1803,7 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 	a.setStart(be.pixels(0), be.pixels(1));
 	sv.renderCard("Welcome to", "", 174, 26);
 	a.setCaption(be.pixels(0));
-	a.onCue = [&sound](const std::string& c) { sound.play(c == "burst" ? "ready" : "fav"); };
+	a.onCue = [&sound](const std::string& c) { sound.playBase(c == "burst" ? "ready" : "fav"); };
 	const double t0 = nowMs();
 	const int flips0 = disp.failedFlips, sets0 = disp.failedSets, unsent0 = gUnsent;
 	double last = -1, drawSum = 0, drawWorst = 0, gapWorst = 0;
@@ -1892,7 +1892,7 @@ static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv
 	usleep(250000);
 	sv.renderCard("Welcome", sv.ownerName(), 196, 30);
 	grab(be, card);
-	sound.play("ready");
+	sound.playBase("ready");
 	fadeSteps(disp, be, card, 0, 4, 400);
 	const double hold = nowMs() + 1400;
 	// the menu's first frame drawn meanwhile (as irisToMenu does), the card put back
@@ -1913,7 +1913,7 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 {
 	Splash sp;
 	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
-	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
+	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.playBase("back"); };	// (the outro: the menu's own)
 	Iris iris(disp, be);
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
@@ -2457,6 +2457,7 @@ int main(int argc, char** argv)
 			ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 			worker.attach(uiPtr);
 			ui->setHome(sys);
+			sound.reload(o.assets + "/sounds");	// the new theme's sounds (a theme's own are only for that theme)
 			sound.play("select");
 			break;
 		}
