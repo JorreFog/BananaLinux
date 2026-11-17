@@ -1543,6 +1543,13 @@ settings		Looking... Open LocalSend on the other device.	Etsitään... Avaa Loca
 settings		An empty folder.	Tyhjä kansio.
 settings		Games go into their system's folder, everything else into banana/received.	Pelit menevät järjestelmänsä kansioon, kaikki muu kansioon banana/received.
 menu		Open Bshare to accept.	Avaa Bshare hyväksyäksesi.
+menu		Flight recorder on	Lentotallennin päällä
+menu		Hold Select for 2 seconds to mark a moment.	Merkitse hetki pitämällä Selectiä 2 sekuntia.
+menu		Wi-Fi connected	Wi-Fi yhdistetty
+menu		Bluetooth headphones connected	Bluetooth-kuulokkeet yhdistetty
+menu		The sound plays through them.	Ääni kuuluu niistä.
+menu		Bluetooth headphones disconnected	Bluetooth-kuulokkeet irrotettu
+menu		The sound is back on the speakers.	Ääni kuuluu taas kaiuttimista.
 menu		In banana/received.	Kansiossa banana/received.
 menu		Games went into their system's folder.	Pelit menivät järjestelmänsä kansioon.
 menu		Nothing was sent.	Mitään ei lähetetty.

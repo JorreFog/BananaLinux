@@ -1543,6 +1543,13 @@ settings		Looking... Open LocalSend on the other device.	Ricerca... Apri LocalSe
 settings		An empty folder.	Una cartella vuota.
 settings		Games go into their system's folder, everything else into banana/received.	I giochi vanno nella cartella del loro sistema, tutto il resto in banana/received.
 menu		Open Bshare to accept.	Apri Bshare per accettare.
+menu		Flight recorder on	Registratore di volo attivo
+menu		Hold Select for 2 seconds to mark a moment.	Tieni premuto Select per 2 secondi per segnare un momento.
+menu		Wi-Fi connected	Wi-Fi connesso
+menu		Bluetooth headphones connected	Cuffie Bluetooth connesse
+menu		The sound plays through them.	L'audio passa dalle cuffie.
+menu		Bluetooth headphones disconnected	Cuffie Bluetooth disconnesse
+menu		The sound is back on the speakers.	L'audio torna agli altoparlanti.
 menu		In banana/received.	In banana/received.
 menu		Games went into their system's folder.	I giochi sono andati nella cartella del loro sistema.
 menu		Nothing was sent.	Non è stato inviato nulla.
