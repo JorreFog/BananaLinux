@@ -90,8 +90,9 @@ def main(cli):
         check("exec " in text and app + "/eReaderDS.sh" in text and "swaymsg" not in text,
               "the Apps shelf's entry starts the app's own script, no sway")
         gl = open(root + "/data/store/tiles/gamelist.xml").read() if os.path.exists(root + "/data/store/tiles/gamelist.xml") else ""
-        check("<path>./eReaderDS.sh</path>" in gl and "<image>./images/icon.png</image>" in gl,
-              "its line and picture in the shelf's gamelist.xml")
+        check("<path>./eReaderDS.sh</path>" in gl and "<image>./images/ereaderds-icon.png</image>" in gl
+              and os.path.isfile(root + "/data/store/tiles/images/ereaderds-icon.png"),
+              "its line and picture (named for the app) in the shelf's gamelist.xml")
         check(open(root + "/data/roms/ports/eReaderDS.sh").read() == "the user's own port\n", "the user's port untouched")
         check(not os.path.exists(root + "/storage"), "nothing under /storage")
         o = run("list")
@@ -117,6 +118,7 @@ def main(cli):
                 zf.writestr("gba-ds/gba-ds", "elf %s\n" % v)
                 zf.writestr("gba-ds/launch.sh", "#!/bin/bash\necho gba\n")
                 zf.writestr("gba-ds/banana-play.sh", "#!/bin/bash\necho play\n")
+                zf.writestr("gba-ds/images/icon.png", "gba ds icon\n")
                 zf.writestr("gba-ds/gba-ds.cfg", "rom_dir = /storage/roms/gba\nshow_all = 0\n")
                 zf.writestr("gba-ds/cheats/README.txt", "cheats\n")
                 zf.writestr("gba-ds/licenses/README.txt", "GBA DS %s is free software under the GNU General Public "
@@ -141,7 +143,9 @@ def main(cli):
         entry = root + "/data/store/tiles/GBADS.sh"
         text = open(entry).read() if os.path.exists(entry) else ""
         check("exec '%s/launch.sh'" % gb in text, "the Apps shelf's entry starts its launch.sh")
-        check("<path>./GBADS.sh</path>" in open(root + "/data/store/tiles/gamelist.xml").read(), "its line in the shelf's list")
+        gl = open(root + "/data/store/tiles/gamelist.xml").read()
+        check("<path>./GBADS.sh</path>" in gl and "<image>./images/gbads-icon.png</image>" in gl,
+              "its line and picture (named for the app) in the shelf's list")
         r = row("gbads")
         check(r[5:8] == ["1.4.6", "1.4.7", "update"], "list: 1.4.6 installed, 1.4.7 offered: %s" % r[5:8])
         # the player's states and settings, then an update
@@ -159,9 +163,45 @@ def main(cli):
         with open(gb + "/licenses/README.txt", "w") as f:
             f.write("GBA DS 1.4.8 is free software under the GNU General Public License, version 3 only.\n")
         check(row("gbads")[5:8] == ["1.4.8", "1.4.7", "installed"], "updated by itself: 1.4.8 installed, nothing offered")
+        # GBA DS and eReaderDS together (#239): both packages' pictures are icon.png, and the shelf keeps every app's
+        # pictures in one images/ folder: each tile shows its own
+        env["RNDS_STORE_DEVICE"] = "rgds-plus"
+        imgs = root + "/data/store/tiles/images/"
+        o = run("install", "ereaderds")
+        check(o.strip().splitlines()[-1].startswith("DONE"), "install eReaderDS beside GBA DS: " + o.strip().splitlines()[-1])
+        ereader_icon = open(os.path.join(HERE, "apps/ereaderds/icon.png"), "rb").read()
+
+        def pictures_right(what):
+            gl = open(root + "/data/store/tiles/gamelist.xml").read()
+            check("<image>./images/gbads-icon.png</image>" in gl and "<image>./images/ereaderds-icon.png</image>" in gl
+                  and os.path.isfile(imgs + "gbads-icon.png") and open(imgs + "gbads-icon.png").read() == "gba ds icon\n"
+                  and os.path.isfile(imgs + "ereaderds-icon.png") and open(imgs + "ereaderds-icon.png", "rb").read() == ereader_icon,
+                  what)
+        pictures_right("GBA DS and eReaderDS each with its own picture")
+        # as an older Store left them: both lines on images/icon.png, which holds the picture installed last; a
+        # refresh (the Store opening) lists them again, each with its own, and the shared file goes
+        for n in ("gbads-icon.png", "ereaderds-icon.png"):
+            if os.path.exists(imgs + n):
+                os.remove(imgs + n)
+        with open(imgs + "icon.png", "w") as f:
+            f.write("gba ds icon\n")
+        gl = open(root + "/data/store/tiles/gamelist.xml").read()
+        with open(root + "/data/store/tiles/gamelist.xml", "w") as f:
+            f.write(gl.replace("./images/gbads-icon.png", "./images/icon.png").replace("./images/ereaderds-icon.png", "./images/icon.png"))
+        o = run("refresh")
+        check(o.strip().endswith("OK"), "refresh over an older Store's shelf: " + o.strip())
+        pictures_right("after the refresh: each tile's own picture again")
+        check(not os.path.exists(imgs + "icon.png"), "the shared icon.png no line shows any more is gone")
+        o = run("remove", "ereaderds")
+        check(o.strip().endswith("DONE") and not os.path.exists(imgs + "ereaderds-icon.png")
+              and open(imgs + "gbads-icon.png").read() == "gba ds icon\n"
+              and "<image>./images/gbads-icon.png</image>" in open(root + "/data/store/tiles/gamelist.xml").read(),
+              "remove eReaderDS: its picture goes, GBA DS's stays")
+        env["RNDS_STORE_DEVICE"] = "rgds"
         o = run("remove", "gbads")
         check(o.strip().endswith("DONE") and not os.path.exists(entry) and not os.path.exists(gb + "/gba-ds"),
               "remove GBA DS: its tile and program gone")
+        check(not os.listdir(imgs), "and its picture: the shelf's images/ empty")
         check(os.path.isfile(gb + "/states/Game.auto.state") and os.path.isfile(gb + "/gba-ds.cfg"),
               "its states and settings stay")
         check(row("gbads")[7:8] == ["install"], "list: GBA DS to install again")
