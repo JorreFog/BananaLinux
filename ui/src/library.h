@@ -28,6 +28,7 @@ namespace banana
 		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
+		std::string marquee;	// the game's logo (media/marquee, gamelist.xml's <marquee>)
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;

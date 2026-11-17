@@ -50,6 +50,7 @@ namespace rnds
 								// Settings > Display & sound > DS cartridges): before the art above on the shelf
 		std::string rom;		// a DS ROM (.nds, .zip) whose own icon goes on the bottom screen's cartridge instead
 								// of the art above (the host's opt-in setting; the art when the ROM has no icon)
+		std::string marquee;	// the game's logo, or a DS game's own icon (a layout theme's "marquee"); "" without one
 		std::string icon;		// what a cartridge with none of the art above shows on a plain label instead of
 								// staying empty: a 32x32 pixel icon, its system's (a tool, an app, a game nobody scraped)
 		int achA = 0, achB = 0;	// unlocked / total
