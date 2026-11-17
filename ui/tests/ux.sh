@@ -240,9 +240,9 @@ ux_run langyes "home 0; press start; press r; press r; press r; press r; press r
 grep -q '^language = fi' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
-# System > Credits (after About, before Hotkeys: up two from the first row) opens the credits from credits.txt; with no
+# System > Credits (after About, before Hotkeys: seven down from the first row, past Parental controls) opens the credits from credits.txt; with no
 # names in it, no row (up two is then About, which A leaves as it is)
-ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
+ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-credits-bot.png" "$OUT/$size-ux-credits-row-bot.png")" || { echo "FAIL $size: Credits didn't open"; fail=1; }
 grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo "FAIL: credits.txt lost Majirefy's credit"; fail=1; }
 
@@ -336,3 +336,79 @@ ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png
 # English: nothing too long on the home screen, so no marquee wakes the menu
 ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
 grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
+
+# System > Parental controls (parental.h): only the allowed games on the row, X's game page off, Settings behind the
+# PIN (1234 here: a wrong one first, then the right one on the keypad), and Allowed games' Select all saved
+PCFX=$UXFX/data
+cp "$PCFX/settings.conf" "$PCFX/settings.conf.pc"
+echo "parental = on" >> "$PCFX/settings.conf"
+printf 'salt = ab\npin = %s\n' "$(printf 'ab1234' | sha256sum | cut -d' ' -f1)" > "$PCFX/parental.conf"
+printf 'nds/Peel Quest.nds\ngba/Orchard Tactics.gba\n' > "$PCFX/parental-games.txt"
+ux_run pc "home 0; wait 2400; shot ux-pc-home; press left; press right; press a; wait 2400; shot ux-pc-lib; press x; press b; \
+press start; shot ux-pc-pin; press a; press a; press a; press a; press down; press down; press down; press right; press right; press a; shot ux-pc-wrong; \
+press up; press up; press up; press left; press left; press a; press right; press a; press right; press a; press down; press left; press left; press a; \
+press down; press down; press right; press right; press a; shot ux-pc-unlocked; press start; \
+row Parental controls parental_games; press a; shot ux-pc-games; press down; press down; press a; shot ux-pc-system; press b; press up; press up; press a; press b; wait 2400; shot ux-pc-after"
+ux_check pc "press left: used, view 0 sys 1"                    # (two systems: the DS's and the GBA's allowed games)
+ux_check pc "press x: parental controls, no game page"
+ux_check pc "press start: settings open (locked: the PIN first)"
+[ "$(wc -l < "$PCFX/parental-games.txt" | tr -d ' ')" -ge 8 ] || { echo "FAIL $size: Select all didn't allow every game: $(cat "$PCFX/parental-games.txt")"; fail=1; }
+# the daily play time used up (30 min, bananad's count for today): no game starts
+echo "parental_minutes = 30" >> "$PCFX/settings.conf"
+echo "$(date +%F) 1800" > "$PCFX/playtime.txt"
+ux_run pc-up "lib 0 0; press a; wait 3000; shot ux-pc-up; wait 500; shot ux-pc-up-banner"
+ux_check pc-up "launch refused: today's play time is up"
+echo "$(date +%F) 600" > "$PCFX/playtime.txt"
+ux_run pc-left "lib 0 0; press a; wait 3000; shot ux-pc-left"
+grep -q "launch refused" "$OUT/$size-pc-left.log" && { echo "FAIL $size: a launch refused with 20 minutes left"; fail=1; }
+mv "$PCFX/settings.conf.pc" "$PCFX/settings.conf"; rm -f "$PCFX/parental.conf" "$PCFX/parental-games.txt" "$PCFX/playtime.txt"
+
+# Glass while scrolling through many games: the wallpaper stays. The theme's picture cache dropped the first made
+# (the wallpaper) once full, not the least recently drawn, and the screens went plain black (white in Glass light)
+# until it was made again: 200 games with box art, a frame after each step right (snap: as the device draws it), and
+# the top screen's corner (wallpaper only) as in the first shot in every one
+GLFX=$OUT/ux-glass-fixture-$size
+rm -rf "$GLFX"; "$HERE/tests/fixture.sh" "$GLFX" >/dev/null
+mkdir -p "$GLFX/roms/gba/media/box"
+convert -size 300x200 "gradient:#c04080-#203060" "$OUT/glass-box.png"
+for i in $(seq 100 299); do : > "$GLFX/roms/gba/Glass $i.gba"; cp "$OUT/glass-box.png" "$GLFX/roms/gba/media/box/Glass $i.png"; done
+rm -f "$OUT/$size"-ux-glass-*
+gl_script="lib gba 0; wait 2400; shot ux-glass-first"
+for i in $(seq 200); do gl_script="$gl_script; press right; wait 40; snap ux-glass-$i"; done
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$GLFX/roms" --data "$GLFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-dark.json" \
+    --script "$gl_script" 2> "$OUT/$size-glass.log" || { echo "FAIL $size: banana-ui (glass) exited $?"; fail=1; }
+gl_corner() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 60 * k, 30 * k, 0, 440 * k }')" -format '%[fx:int(255*mean)]' info: 2>/dev/null; }
+a=$(gl_corner "$OUT/$size-ux-glass-first-top.png"); gl_bad=0
+for i in $(seq 200); do [ "$(gl_corner "$OUT/$size-ux-glass-$i-top.png")" = "$a" ] || gl_bad=$((gl_bad + 1)); done
+[ -n "$a" ] && [ $gl_bad = 0 ] || { echo "FAIL $size: Glass's wallpaper gone in $gl_bad of 200 frames scrolling"; fail=1; }
+rm -f "$OUT/$size"-ux-glass-[0-9]*
+
+# Plaza: the games in pages side by side (5 x 3 at its start). Right at a row's end goes on to the next page's same
+# row, a swipe turns the page, up stays on the page; R and L zoom (kept per system in zoom.txt); the A-Z button
+# (tapped) goes to the next letter's first game; a tapped X is the host's (the game's page)
+PZFX=$OUT/ux-plaza-fixture-$size
+rm -rf "$PZFX"; "$HERE/tests/fixture.sh" "$PZFX" >/dev/null
+rm -f "$PZFX"/roms/gba/*.gba
+for i in $(seq 10 29); do : > "$PZFX/roms/gba/Apple $i.gba"; done
+for i in $(seq 10 19); do : > "$PZFX/roms/gba/Berry $i.gba"; done
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$PZFX/roms" --data "$PZFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/plaza-light.json" \
+    --script "lib gba 0; wait 1500; shot ux-plaza; press right; press right; press right; press right; press right; press up; swipe 100 240 500 240; swipe 500 240 100 240; press down; press r; press r; press l; touch 1 560 31; touch 1 300 450" \
+    2> "$OUT/$size-plaza.log" || { echo "FAIL $size: banana-ui (plaza) exited $?"; fail=1; }
+ux_check plaza "press right: used, view 1 sys [0-9]* game 4"
+ux_check plaza "press right: used, view 1 sys [0-9]* game 15"          # the next page, the same (first) row
+ux_check plaza "press up: unused, view 1 sys [0-9]* game 15"           # (the page's top row)
+ux_check plaza "swipe 100 240 -> 500 240: used"                         # back a page: 0, the same place
+ux_check plaza "swipe 500 240 -> 100 240: used"                         # on again: 15
+ux_check plaza "press down: used, view 1 sys [0-9]* game 20"
+ux_check plaza "press r: used"
+ux_check plaza "press r: unused"                                       # (the biggest already)
+grep -q "gba 1" "$PZFX/data/zoom.txt" 2>/dev/null || { echo "FAIL $size: Plaza's zoom isn't kept for the system ($(cat "$PZFX/data/zoom.txt" 2>/dev/null))"; fail=1; }
+ux_check plaza "touch 560 31: used"                                    # A-Z: Berry 10, the first B
+ux_check plaza "touch 300 450: used"
+ux_check plaza "touch: key x"
+if grep "theme:" "$OUT/$size-plaza.log"; then echo "FAIL $size: Plaza's theme has errors"; fail=1; fi
+

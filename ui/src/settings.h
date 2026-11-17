@@ -1,5 +1,6 @@
 #pragma once
 #include "complink.h"
+#include "parental.h"
 // banana-ui: the settings screen (Start in the menu), drawn in ROCKNIXDS Pixel's look with the engine's own pieces
 // (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
 // row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
@@ -51,6 +52,7 @@ namespace banana
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
@@ -180,7 +182,11 @@ namespace banana
 		std::function<std::string(const ScreenColors&)> setColors;	// "" when it took, else why not
 		bool colorsOpen() const { return mOpen && page == COLORS; }
 		std::string searchText;
-		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
+		std::function<int(const std::string&)> searchCount;
+		// Parental controls: every game on the card, whatever the controls hide (the host's library), for Allowed games
+		std::function<std::vector<parental::GameRef>()> allGames;
+		// the menu with Parental controls on: Settings opens on the PIN's keypad, the rest only once it's right
+		void openLocked() { open(); openPin(PIN_UNLOCK); }	// the games the text typed so far finds (the host's library)
 		// wakes the host's loop from another thread (a Files job finished: update() takes it); unset, the pages look
 		// for it on their own wake instead
 		std::function<void()> wakeHost;
@@ -254,7 +260,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, ACHIEVEMENTS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, ACHIEVEMENTS, PIN, KIDGAMES } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -270,6 +276,29 @@ namespace banana
 		void savePickGames();
 		std::vector<int> pickList() const;		// the games of the system open (indices into pickGames)
 		void stopSync();
+		// System > Parental controls (settings_parental.cpp, parental.h): the PIN's keypad, to unlock Settings, or to
+		// choose a new PIN (typed twice); and the Allowed games, a system at a time, ticked
+		enum PinMode { PIN_UNLOCK, PIN_NEW, PIN_AGAIN } pinMode = PIN_UNLOCK;
+		std::string pinTyped, pinFirst, pinNote;	// pinNote: the line under the prompt (a wrong PIN, two that differ)
+		int pinSel = 0, pinFails = 0;
+		double pinWaitUntil = 0;					// after 5 wrong PINs: none taken until then (wall clock, s)
+		bool pinThenOn = false;						// the PIN chosen on the way to turning the controls on
+		void openPin(PinMode m);
+		Result pressPin(Key k);
+		Result touchPin(float cx, float cy);
+		Result pinKey(int key);						// 0-9 a digit, 10 delete, 11 OK
+		void renderPin();
+		struct KidGame { std::string sys, key, title; bool on = false; };
+		std::vector<KidGame> kidGames;
+		std::vector<std::string> kidSys;			// the systems, in the library's order
+		int kidLevel = 0, kidSysSel = 0, kidRow = 0, kidSysRow = 0, kidTop = 0;
+		bool kidDirty = false;
+		void openKidGames();
+		std::vector<int> kidList() const;
+		Result kidSet(bool on);						// Select all (true) or Deselect all: every game, or the system's
+		Result pressKidGames(Key k);
+		Result touchKidGames(float cx, float cy);
+		void renderKidGames();
 		// System > Credits: the people who made this version, from the image's /etc/banana/credits.txt ("[Section]",
 		// then "Name = Title" lines; BANANA_CREDITS another file, the host's tests). Never the card's: they belong to the
 		// build. No file, or nothing in it: no row
@@ -801,6 +830,10 @@ namespace banana
 		void hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb = 0);
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
+		bool glassBox(const std::string& kind, bool on, float x, float y, float w, float h);
+		// the screen being drawn (a Glass theme's panels show their screen's picture)
+		int scr = 0;
+		void beginScreen(int n) { scr = n; be->beginScreen(n); }
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
@@ -823,8 +856,14 @@ namespace banana
 		std::string helpOf(int item);
 		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
+		bool pictureIcon(const std::string& name, float x, float y, int scale, bool centred);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
+		// a theme's "switches": an off/on row's switch (its state 0 or 1; -1 not such a row), Brightness and Volume's slider
+		int switchOf(const Item& it) const;
+		void pill(float x, float y, float w, float h, const rnds::Color& c);
+		void drawSwitch(float x, float y, bool state, bool picked);
+		void drawSlider(float x, float y, float w, float frac, bool picked);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the

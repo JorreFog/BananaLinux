@@ -45,3 +45,7 @@ melonDS = The DS emulator core behind BananaDS
 Retro Game Corps = For showing BananaOS to a lot of people
 forthenext = For showing BananaOS to a lot of people
 GammaOS = for all the inspiration
+
+[Artwork]
+libretro = Plaza theme: the system icons (retroarch-assets, CC BY 4.0)
+The Nunito Project Authors = Plaza theme: the Nunito typeface (SIL OFL 1.1)
