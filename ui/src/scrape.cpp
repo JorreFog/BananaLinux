@@ -2,7 +2,8 @@
 // collections (no account): libretro-thumbnails (thumbnails.libretro.com: <System>/Named_Boxarts and Named_Titles,
 // PNGs named after the No-Intro/Redump names) and libretro-database's metadat (genre and releaseyear DATs). Written
 // where the menu's library looks (library.cpp): <system folder>/media/box/<rom name>.jpg (the cover),
-// media/label/<rom name>.jpg (the title screen, the cartridge label's art), and the genre and year as a game entry in
+// media/label/<rom name>.jpg (the title screen, the cartridge label's art), media/marquee/<rom name>.png (the game's
+// logo, from Named_Logos, for the layout themes' "marquee"; not for DS games, which have their own icon), and the genre and year as a game entry in
 // the folder's gamelist.xml (added to one that is there; entries already in it are left alone).
 //   banana-scrape [--force]     --force fetches again what is already there
 // Progress in /run/banana/scrape.status, one line: "running <done> <total> <system name>|<game>", then
@@ -210,8 +211,9 @@ namespace
 		return out;
 	}
 
-	// ---- pictures: decoded, made no larger than max x max (area average), written as PNG ---------------------------
-	bool savePicture(const std::string& data, const std::string& path, int max)
+	// ---- pictures: decoded, made no larger than max x max (area average), written as JPEG (png: as PNG, its
+	// transparency kept: a game's logo, drawn over the theme's own colour) -------------------------------------------
+	bool savePicture(const std::string& data, const std::string& path, int max, bool png = false)
 	{
 		int w, h, n;
 		unsigned char* px = stbi_load_from_memory((const unsigned char*)data.data(), (int)data.size(), &w, &h, &n, 4);
@@ -233,6 +235,12 @@ namespace
 			}
 		}
 		stbi_image_free(px);
+		if (png)
+		{
+			std::string tmp = path + ".part";
+			bool ok = stbi_write_png(tmp.c_str(), ow, oh, 4, out.data(), ow * 4) != 0;
+			return ok && rename(tmp.c_str(), path.c_str()) == 0;
+		}
 		// JPEG (quality 90, over black where the picture had transparency): a PNG's compression took most of a second
 		// a picture on these cores, and the JPEG is a third of the size on the card
 		for (size_t i = 0; i < out.size(); i += 4) { unsigned a = out[i + 3]; for (int c = 0; c < 3; c++) out[i + c] = (unsigned char)(out[i + c] * a / 255); }
@@ -472,6 +480,12 @@ int main(int argc, char** argv)
 			mkdir((dir + "/media/label").c_str(), 0755);
 			if (savePicture(title, dir + "/media/label/" + stem + ".jpg", 320)) unlink((dir + "/media/label/" + stem + ".png").c_str());
 		}
+		std::string logo = std::string(argv[2]) == "nds" ? std::string() : get(base + "Named_Logos/" + esc(name) + ".png");
+		if (!logo.empty())
+		{
+			mkdir((dir + "/media/marquee").c_str(), 0755);
+			savePicture(logo, dir + "/media/marquee/" + stem + ".png", 320, true);
+		}
 		// remembered, so a scrape with --force keeps it (the game's line replaced)
 		std::string key = std::string(argv[2]) + "/" + stem, out, ln;
 		{
@@ -497,7 +511,7 @@ int main(int argc, char** argv)
 		for (std::string ln; std::getline(f, ln);) { size_t t = ln.find('\t'); if (t != std::string::npos) matches[ln.substr(0, t)] = ln.substr(t + 1); }
 	}
 
-	struct Job { System sys; std::string dir, rel, stem, box, title; };
+	struct Job { System sys; std::string dir, rel, stem, box, title, logo; };
 	std::vector<Job> jobs;
 	std::map<std::string, std::map<std::string, std::string>> genres, years;	// per system: norm name -> value
 	int total = 0;
@@ -534,9 +548,12 @@ int main(int argc, char** argv)
 		// the collection's names, to match ours against
 		std::string base = "https://thumbnails.libretro.com/" + esc(lr->second) + "/";
 		std::vector<std::string> boxes = indexNames(get(base + "Named_Boxarts/")), titles = indexNames(get(base + "Named_Titles/"));
-		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW;
+		// the games' logos (a layout theme's "marquee"; a DS game shows its own icon instead)
+		std::vector<std::string> logos = sys.id == "nds" ? std::vector<std::string>() : indexNames(get(base + "Named_Logos/"));
+		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW, byLogo, byLogoW;
 		for (auto& n : boxes) { byBox[norm(n)].push_back(n); byBoxW[words(n)].push_back(n); }
 		for (auto& n : titles) { byTitle[norm(n)].push_back(n); byTitleW[words(n)].push_back(n); }
+		for (auto& n : logos) { byLogo[norm(n)].push_back(n); byLogoW[words(n)].push_back(n); }
 		std::string meta = "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/";
 		genres[sys.id] = datField(get(meta + "genre/" + esc(lr->second) + ".dat"), "genre");
 		years[sys.id] = datField(get(meta + "releaseyear/" + esc(lr->second) + ".dat"), "releaseyear");
@@ -559,6 +576,7 @@ int main(int argc, char** argv)
 			{
 				j.box = base + "Named_Boxarts/" + esc(mi->second) + ".png";
 				j.title = base + "Named_Titles/" + esc(mi->second) + ".png";
+				if (!logos.empty()) j.logo = base + "Named_Logos/" + esc(mi->second) + ".png";
 				jobs.push_back(j);
 				continue;
 			}
@@ -587,6 +605,7 @@ int main(int argc, char** argv)
 			};
 			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, j.stem)) + ".png";
 			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, j.stem)) + ".png";
+			if (auto v = find(byLogo, byLogoW)) j.logo = base + "Named_Logos/" + esc(best(*v, j.stem)) + ".png";
 			jobs.push_back(j);
 		}
 		total += count;
@@ -631,6 +650,14 @@ int main(int argc, char** argv)
 				mkdir((j.dir + "/media/label").c_str(), 0755);
 				std::string d = get(j.title);
 				if (!d.empty()) savePicture(d, labelPath, 320);
+			}
+			std::string logoPath = j.dir + "/media/marquee/" + j.stem + ".png";
+			if (!j.logo.empty() && (force || access(logoPath.c_str(), F_OK) != 0))
+			{
+				mkdir((j.dir + "/media").c_str(), 0755);
+				mkdir((j.dir + "/media/marquee").c_str(), 0755);
+				std::string d = get(j.logo);
+				if (!d.empty()) savePicture(d, logoPath, 320, true);
 			}
 			if (got) found++;
 			int n = ++done;
