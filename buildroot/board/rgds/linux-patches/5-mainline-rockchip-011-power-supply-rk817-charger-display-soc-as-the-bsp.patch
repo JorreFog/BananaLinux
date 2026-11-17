@@ -1,0 +1,204 @@
+From: swouapiy <swouapiy@users.noreply.github.com>
+Subject: [PATCH] power: supply: rk817-charger: a displayed soc, smoothed as the BSP's
+
+The driver reports the gauge's soc as it is, so every correction shows at
+once: on an RG DS Plus the rested voltage after a 15 minute sleep moved the
+counter from 21% to 43%, and the battery percentage jumped by that much
+(and down again elsewhere). Rockchip's BSP driver keeps a displayed soc
+(dsoc) beside the gauge's (rsoc) and only moves the displayed one with the
+charge that flows, scaled so the two meet at the end they are heading for
+(its smooth algorithm, with a remainder kept between readings), brings it
+to 100% a percent at a time once the charge finishes, and to 0% at its
+power-off voltage (3.4 V on the stock RG DS, the 0% of its OCV table).
+
+Do the same: dsoc moves with the counter's change since the last reading,
+times dsoc / soc while discharging and (100 - dsoc) / (100 - soc) while
+charging; a correction that rewrites the counter (a rested voltage, a
+finished charge, the drift fix, a charge credited across sleep) is not
+taken for charge that flowed. The capacity property reports dsoc; the
+counter, soc and what is saved in the PMIC's NVRAM stay the gauge's.
+
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
+index ce90ab9..ea68153 100644
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -78,6 +78,20 @@ struct rk817_charger {
+ 	 */
+ 	int soc;
+ 
++	/*
++	 * dsoc - the displayed state of charge (the BSP's dsoc), in the same
++	 * thousandths, -1 until the first reading. It moves only with the
++	 * charge that really flowed through the counter (dsoc_uah: the counter
++	 * it last moved from), scaled so it meets soc at the end both are
++	 * heading for; a correction that rewrites the counter (a rested
++	 * voltage, a finished charge) moves soc at once and the display over
++	 * the charge that follows, instead of jumping by it.
++	 */
++	int dsoc;
++	int dsoc_uah;
++	s64 dsoc_rem;	/* what the last steps left over (BSP: delta_cap_remainder) */
++	bool dsoc_rebased;
++
+ 	/*
+ 	 * Capacity of battery when fully charged, equal or less than design
+ 	 * capacity depending upon wear. BSP kernel saves to nvram in mAh,
+@@ -222,6 +236,77 @@ static void rk817_bat_calib_cur(struct rk817_charger *charger)
+  * note that only the fcc_mah is really used by this driver, the other values
+  * are to ensure we can remain backwards compatible with the BSP kernel.
+  */
++/* a counter rewritten to charge_uah: a correction, not charge that flowed */
++static void rk817_dsoc_rebase(struct rk817_charger *charger, int charge_uah)
++{
++	charger->dsoc_uah = charge_uah;
++	charger->dsoc_rebased = true;
++}
++
++/*
++ * The displayed soc, as the BSP's smooth algorithm: the charge that flowed
++ * since the last reading, as a share of the full charge, scaled by how far
++ * the display is from the gauge - discharging, by dsoc / soc so both reach
++ * empty together; charging, by (full - dsoc) / (full - soc) so both reach
++ * full together. A finished charge brings it to 100% a percent a reading
++ * (the BSP's finish algorithm), and the battery at the BSP's power-off
++ * voltage to 0% the same way, so the system turns off at 0% rather than at
++ * whatever the display still said - with the cell's reserve kept, as a
++ * phone's.
++ */
++/* the stock RG DS's power_off_thresd (its rk817 battery node), the 0% of its OCV table */
++#define RK817_PWROFF_UV	3400000
++
++static void rk817_update_dsoc(struct rk817_charger *charger)
++{
++	int now = charger->charge_now_uah, moved, before;
++	s64 num, den, step;
++
++	if (charger->dsoc < 0 || charger->dsoc_rebased) {
++		if (charger->dsoc < 0)
++			charger->dsoc = charger->soc;
++		charger->dsoc_uah = now;
++		charger->dsoc_rem = 0;
++		charger->dsoc_rebased = false;
++		return;
++	}
++
++	moved = now - charger->dsoc_uah;
++	charger->dsoc_uah = now;
++	if (moved) {
++		/*
++		 * thousandths of a percent: uAh * 100 / mAh, times the scale,
++		 * with the remainder kept: a light load moves less than one a
++		 * reading (8 s at 30 mA is 1.7)
++		 */
++		before = charger->soc - (int)div_s64((s64)moved * 100, charger->fcc_mah);
++		num = (s64)moved * 100;
++		den = charger->fcc_mah;
++		if (moved < 0 && before > 0) {
++			num *= charger->dsoc;
++			den *= before;
++		} else if (moved > 0 && before < 100000) {
++			num *= 100000 - charger->dsoc;
++			den *= 100000 - before;
++		}
++		/* (a change of direction starts the remainder again) */
++		if ((charger->dsoc_rem < 0) != (num < 0))
++			charger->dsoc_rem = 0;
++		num += charger->dsoc_rem;
++		step = div64_s64(num, den);
++		charger->dsoc_rem = num - step * den;
++		charger->dsoc += (int)step;
++	}
++
++	if (charger->charge_status == CHARGE_FINISH && charger->dsoc < 100000)
++		charger->dsoc = min(100000, charger->dsoc + 1000);
++	if (charger->cur_avg_ua < 0 && charger->volt_avg_uv > 2700000 &&
++	    charger->volt_avg_uv <= RK817_PWROFF_UV)
++		charger->dsoc = max(0, charger->dsoc - 1000);
++
++	charger->dsoc = clamp(charger->dsoc, 0, 100000);
++}
++
+ static int rk817_record_battery_nvram_values(struct rk817_charger *charger)
+ {
+ 	u8 bulk_reg[3];
+@@ -305,6 +390,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
+ 		put_unaligned_be32(charge_now_adc, bulk_reg);
+ 		regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
+ 				  bulk_reg, 4);
++		rk817_dsoc_rebase(charger, charger->fcc_mah * 1000);
+ 
+ 		charger->soc_cal = 1;
+ 		dev_dbg(charger->dev,
+@@ -343,6 +429,7 @@ static int rk817_bat_calib_cap(struct rk817_charger *charger)
+ 			regmap_bulk_write(rk808->regmap,
+ 					  RK817_GAS_GAUGE_Q_INIT_H3,
+ 					  bulk_reg, 4);
++			rk817_dsoc_rebase(charger, charger->fcc_mah * 1000);
+ 		}
+ 	}
+ 
+@@ -492,6 +579,8 @@ static void rk817_read_props(struct rk817_charger *charger)
+ 
+ 	/* Calibrate battery capacity and soc. */
+ 	rk817_bat_calib_cap(charger);
++
++	rk817_update_dsoc(charger);
+ }
+ 
+ static int rk817_bat_get_prop(struct power_supply *ps,
+@@ -566,8 +655,11 @@ static int rk817_bat_get_prop(struct power_supply *ps,
+ 		val->intval = charger->bat_voltage_min_design_uv;
+ 		break;
+ 	case POWER_SUPPLY_PROP_CAPACITY:
+-		/* Add 500 so that values like 99999 are 100% not 99%. */
+-		val->intval = (charger->soc + 500) / 1000;
++		/*
++		 * The displayed soc (the gauge's own before the first reading).
++		 * Add 500 so that values like 99999 are 100% not 99%.
++		 */
++		val->intval = ((charger->dsoc >= 0 ? charger->dsoc : charger->soc) + 500) / 1000;
+ 		if (val->intval > 100)
+ 			val->intval = 100;
+ 		if (val->intval < 0)
+@@ -848,6 +940,7 @@ static void rk817_bat_ocv_recalibrate(struct rk817_charger *charger)
+ 	put_unaligned_be32(charge_now_adc, bulk_reg);
+ 	regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
+ 			  bulk_reg, 4);
++	rk817_dsoc_rebase(charger, ocv_soc * charger->fcc_mah / 100);
+ 	rk817_record_battery_nvram_values(charger);
+ }
+ 
+@@ -969,6 +1062,7 @@ rk817_read_or_set_full_charge_on_boot(struct rk817_charger *charger,
+ 			  bulk_reg, 4);
+ 	if (ret < 0)
+ 		return ret;
++	charger->dsoc = -1;	/* (the display starts from the boot's soc) */
+ 
+ 	/* Set QMAX value to max design capacity. */
+ 	tmp = CHARGE_TO_ADC((charger->bat_charge_full_design_uah / 1000),
+@@ -1215,6 +1309,7 @@ static int rk817_charger_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	charger->rk808 = rk808;
++	charger->dsoc = -1;	/* (set from the gauge at its first reading) */
+ 
+ 	charger->dev = &pdev->dev;
+ 	platform_set_drvdata(pdev, charger);
+@@ -1386,6 +1481,9 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
+ 	if (charge_uah > charger->fcc_mah * 1000)
+ 		charge_uah = charger->fcc_mah * 1000;
+ 	charger->soc = div_s64((s64)charge_uah * 100, charger->fcc_mah);
++	/* the display follows the charge the sleep used, before any correction */
++	charger->charge_now_uah = charge_uah;
++	rk817_update_dsoc(charger);
+ 
+ 	/* Flags were cleared at suspend: any pair now is from this sleep. */
+ 	charger->relax_voltage_uv = rk817_bat_relax_voltage_uv(charger, false);
+@@ -1428,6 +1526,7 @@ static void rk817_bat_sleep_adjust(struct rk817_charger *charger)
+ 	put_unaligned_be32(tmp, bulk_reg);
+ 	regmap_bulk_write(rk808->regmap, RK817_GAS_GAUGE_Q_INIT_H3,
+ 			  bulk_reg, 4);
++	rk817_dsoc_rebase(charger, charge_uah);
+ 	rk817_record_battery_nvram_values(charger);
+ }
+ 

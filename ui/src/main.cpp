@@ -628,7 +628,7 @@ struct FetchNotice
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
-		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "3")).c_str());
+		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "0")).c_str());
 }
 
 // a game in the library by its path, launched as A on it in its own system's shelf would (false: not in the library)

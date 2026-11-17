@@ -67,7 +67,8 @@ static struct {
 	double autosleep_min;	/* idle minutes in the menu before sleeping; 0 = never */
 	int lid_sleep;			/* closing the lid sleeps */
 	int power_long_ms;		/* holding power this long shuts down */
-	int battery_off_pct;	/* at or under this, discharging: shut down */
+	int battery_off_pct;	/* at or under this, discharging: shut down (0, a phone's: the gauge's 0% is 3.4 V, the cell's
+							 * reserve kept, rk817 patch 011) *
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
