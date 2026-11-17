@@ -118,6 +118,9 @@ namespace banana
 		// the game's system id (systems.conf's [id], before gameOpen): the Achievements list's console when the game panel
 		// has no game id from the emulator yet
 		void gameSystem(const std::string& id) { gSysId = id; }
+		// PPSSPP's game (before gameOpen, after gameRom): its log for the achievements (run-psp's --log), the account
+		// from the setup, its own hotkeys' names on the tiles, and no States view (its states aren't RetroArch's)
+		void gamePpsspp(bool on) { gPsp = on; }
 		int gameSlot() const { return gSlotPick; }	// G_LOADSLOT's slot
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
@@ -732,6 +735,7 @@ namespace banana
 		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
+		bool gPsp = false;	// (gamePpsspp)
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		// the States view (universal companion tier 0): slots 0-9 with their thumbnails; a slot tapped twice loads it
 		bool gStates = false;

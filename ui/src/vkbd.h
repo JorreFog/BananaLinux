@@ -27,6 +27,8 @@ namespace banana
 		// one key, by its Linux key code (KEY_A, KEY_1, KEY_ENTER...); shift holds the left shift around it. The
 		// press goes out at once, the release KEY_HOLD_MS later (on the keyboard's own thread)
 		void tap(int code, bool shift = false);
+		// one key held down (true) or let go (false), by itself: PPSSPP's fast-forward lasts while its key is held
+		void hold(int code, bool down);
 		void close();
 		static constexpr int KEY_HOLD_MS = 50;	// (constexpr: an -O0 or sanitizer build didn't link; three frames at 60 Hz, two and a half at 50: every core sees it)
 	private:

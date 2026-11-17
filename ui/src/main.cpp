@@ -1194,6 +1194,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
 			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
+			settings.gamePpsspp(getenv("BANANA_TEST_PSP") != nullptr);	// (tests: a PSP game's panel)
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
 			settings.gbaAttach(host.get());
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
@@ -2662,6 +2663,9 @@ int main(int argc, char** argv)
 	// starts so the emulator sees it as a keyboard plugged in, gone when the game ends (vkbd.h)
 	VirtualKeyboard vkbd;
 	bool keysOn = false;
+	// a PSP game's panel (PPSSPP, run-psp): the tiles press keys on that keyboard, which run-psp binds to PPSSPP's
+	// hotkeys (controls.ini: Save State F2, Load State F4, Pause Escape, Fast-forward F9 while held, Exit App F10)
+	bool pspGame = false, pspFast = false;
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
@@ -2682,11 +2686,34 @@ int main(int argc, char** argv)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameSystem(gameSysId);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
+			settingsView.gamePpsspp(pspGame);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
 		}
 		be.invalidate();
 		bool want = true;
+		pspFast = false;
+		// a tile's command: RetroArch's (its stdin), or PPSSPP's hotkey on the panel's keyboard
+		auto command = [&](Settings::GameAction a, const char* via)
+		{
+			if (pspGame)
+			{
+				const char* what = a == Settings::G_SAVE ? "save state" : a == Settings::G_LOAD ? "load state" : a == Settings::G_MENU ? "menu" :
+					a == Settings::G_FFWD ? (pspFast ? "fast-forward off" : "fast-forward on") : a == Settings::G_QUIT ? "quit" : nullptr;
+				if (!what) return;
+				logf("game panel: PPSSPP %s%s", what, via);
+				if (a == Settings::G_FFWD) { pspFast = !pspFast; vkbd.hold(KEY_F9, pspFast); return; }
+				vkbd.tap(a == Settings::G_SAVE ? KEY_F2 : a == Settings::G_LOAD ? KEY_F4 : a == Settings::G_MENU ? KEY_ESC : KEY_F10);
+				return;
+			}
+			char slotCmd[32];
+			snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
+			const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
+				a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+			if (!c) return;
+			logf("game panel: %.*s%s", (int)strlen(c) - 1, c, via);
+			if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c);
+		};
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
@@ -2752,11 +2779,7 @@ int main(int argc, char** argv)
 					settingsView.gameTouch(tx * k, ty * k, true);
 					// (the tap's command goes to the emulator as a finger's would: a slot loaded from the States view...)
 					Settings::GameAction a = settingsView.gameTouch(tx * k, ty * k, false);
-					char slotCmd[32];
-					snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
-					const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-						a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
-					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c); }
+					command(a, " (panel-tap)");
 				}
 				want = true;
 				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
@@ -2818,16 +2841,7 @@ int main(int argc, char** argv)
 							a = settingsView.gameTouch(ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN);
 						}
 						want = true;
-						char slotCmd[32];
-						snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
-						const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" :
-							a == Settings::G_QUIT ? "QUIT\n" : nullptr;
-						if (c)
-						{
-							logf("game panel: %.*s", (int)strlen(c) - 1, c);
-							if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c);
-						}
+						command(a, "");
 					});
 		}
 		if (pidFd >= 0) ::close(pidFd);
@@ -2875,7 +2889,9 @@ int main(int argc, char** argv)
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
 		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
-		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
+		// PPSSPP (run-psp) takes the lease too, its tiles through a virtual keyboard (pspGame)
+		pspGame = sd.run.find("run-psp") != std::string::npos;
+		bool ra = pspGame || sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		// this game's own value (X on it: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>", as
@@ -2909,6 +2925,7 @@ int main(int argc, char** argv)
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)
+			unlink("/run/banana/ppsspp.log");
 			if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			if (leaseFd >= 0 && mkfifo(FIFO, 0600) == 0) cmdFd = ::open(FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);	// (read too: RetroArch never sees an end)
 			if (leaseFd < 0 || cmdFd < 0)
@@ -2940,6 +2957,13 @@ int main(int argc, char** argv)
 				if (keysOn) logf("on-screen keyboard: the game panel's Keys tile (a virtual keyboard on /dev/uinput)");
 				else logf("on-screen keyboard: no virtual keyboard: %s", strerror(errno ? errno : EINVAL));
 			}
+		}
+		// a PSP game's panel: its tiles' keyboard, made before the fork (SDL finds its keyboards as PPSSPP starts)
+		if (panel && pspGame)
+		{
+			errno = 0;
+			if (vkbd.open("Banana game panel keys")) logf("game panel: PPSSPP's hotkeys through a virtual keyboard");
+			else logf("game panel: no virtual keyboard for PPSSPP's hotkeys: %s", strerror(errno ? errno : EINVAL));
 		}
 		// Settings > Other systems > Second screen > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
 		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch

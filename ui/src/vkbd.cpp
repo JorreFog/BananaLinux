@@ -109,6 +109,13 @@ namespace banana
 		cv.notify_all();
 	}
 
+	void VirtualKeyboard::hold(int code, bool down)
+	{
+		if (fd < 0 || code == 0) return;
+		emit(code, down ? 1 : 0);
+		sync();
+	}
+
 	void VirtualKeyboard::worker()
 	{
 		std::unique_lock<std::mutex> l(mu);

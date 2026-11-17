@@ -28,6 +28,15 @@ ini_set() {
         END { if (!seen) print s; if (!done) print k " = " v }' $INI > $INI.new && mv $INI.new $INI
 }
 
+# controls_key <hotkey> <mapping>: a mapping added to one of controls.ini's lines (PPSSPP keeps a list, comma-separated)
+CTL=$S/controls.ini
+controls_key() {
+    awk -v k="$1" -v m="$2" '
+        index($0, k " = ") == 1 { done = 1; if (index("," substr($0, length(k) + 4) ",", "," m ",")) print; else print $0 "," m; next }
+        { print }
+        END { if (!done) print k " = " m }' $CTL > $CTL.new && mv $CTL.new $CTL
+}
+
 # the screen its games play on: this game's own (X on it: banana/ra-per-game-screen.conf), else the PSP's (Settings >
 # Other systems > Per system configurations > Sony - PlayStation Portable: ra_screen.psp), else the general Screen
 # (Other systems > Screen: RetroArch's video_monitor_index, 1 the bottom)
@@ -75,15 +84,32 @@ fi	# (no account in the setup: PPSSPP's as it is, a login in its own menu kept)
 # the hotkeys are made with
 export SDL_GAMECONTROLLERCONFIG="190000004b4800000111000000010000,RetroGame Joypad,a:b1,b:b0,back:b8,guide:b10,dpdown:b14,dpleft:b15,dpright:b16,dpup:b13,leftshoulder:b4,leftstick:b11,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b2,y:b3,platform:Linux,"
 mkdir -p $HOME
-. /usr/libexec/banana/one-panel
-one_panel_dark $SCREEN
-# (its pause menu's "Exit to menu" quits, as F + Start does: PPSSPP's own game list isn't Banana's way back)
-/usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit "$1" &
-P=$!
+if [ -n "$BANANA_DRM_LEASE_FD" ]; then
+    # the game panel (Settings > Other systems > Second screen, banana-ui keeps the other panel): PPSSPP draws on the
+    # panel it was lent (a DRM lease, through banana-leaseshim.so: the screen chosen above is banana-ui's choice too),
+    # logs what its RetroAchievements client does for the panel to show, and takes the panel's tiles as keys from its
+    # virtual keyboard ("Banana game panel keys": keyboard device 1 in controls.ini; Android's key codes)
+    controls_key "Save State" 1-132        # F2
+    controls_key "Load State" 1-134        # F4
+    controls_key "Pause" 1-111             # Escape: its menu
+    controls_key "Fast-forward" 1-139      # F9, held while the tile is on
+    controls_key "Exit App" 1-140          # F10
+    rm -f /run/banana/ppsspp.log
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so /usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit \
+        --log=/run/banana/ppsspp.log "$1" &
+    P=$!
+    SCREEN=
+else
+    . /usr/libexec/banana/one-panel
+    one_panel_dark $SCREEN
+    # (its pause menu's "Exit to menu" quits, as F + Start does: PPSSPP's own game list isn't Banana's way back)
+    /usr/share/ppsspp/PPSSPPSDL --fullscreen --pause-menu-exit "$1" &
+    P=$!
+fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; R=$?
 while kill -0 $P 2>/dev/null; do wait $P; R=$?; done
-one_panel_restore
+[ -n "$SCREEN" ] && one_panel_restore
 # the token back out of the memory stick: a new one (a login in PPSSPP's own menu) kept in accounts.conf; none left
 # (PPSSPP drops an expired one) forgets PPSSPP's
 if [ -n "$u" ]; then

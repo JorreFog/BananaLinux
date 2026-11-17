@@ -827,14 +827,19 @@ namespace banana
 					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
 		}
-		// the PSP's page: PPSSPP is its own program (run-psp), so only the screen its games play on, as the others' Screen
-		// row (ra_screen.psp; "Same as all": Other systems > Screen)
+		// the PSP's page: PPSSPP is its own program (run-psp), so the screen its games play on and what the other one
+		// shows, as the others' Screen and Second screen rows (ra_screen.psp, retroarch_panel.psp; "Same as all": Other
+		// systems' own rows)
 		{
 			const char* S = "PlayStation Portable";
 			add(S, "gamepad", "Screen", "Which screen PSP games play on.", menu, "ra_screen.psp",
 				{ "Same as all", "Top", "Bottom" }, { "", "top", "bottom" });
 			items.back().hints = { "As set for all systems, in brackets.", "Its games play on the top screen.", "Its games play on the bottom screen." };
 			items.back().inherit = "video_monitor_index";
+			add(S, "gamepad", "Second screen", "What the other screen shows while PSP games play.", menu, "retroarch_panel.psp",
+				{ "Same as all", "Game panel", "Off" }, { "", "panel", "off" });
+			items.back().hints = { "As set for all systems, in brackets.", "Achievements and tiles to save, load, open PPSSPP's menu, fast-forward and quit.", "The other screen stays dark." };
+			items.back().inherit = "retroarch_panel";
 		}
 		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
 			"", "ra_systems", {}, {}, Item::PAGE);
@@ -1801,7 +1806,7 @@ namespace banana
 			Item it;
 			it.section = "Per system configurations";
 			it.icon = "gamepad"; it.label = systemRowLabel("psp"); it.key = "ra_sys.psp"; it.kind = Item::PAGE;
-			it.help = gameSystems.count("psp") ? "The screen PSP games play on." : "The screen PSP games play on. No games on the card yet.";
+			it.help = "The screens PSP games play on.";
 			rows.push_back(it);
 		}
 		auto key = [](const std::string& l) { std::string k = l; for (auto& c : k) c = (char)std::tolower((unsigned char)c); return k; };
