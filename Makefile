@@ -44,6 +44,8 @@ ui:
 	else echo "banana-fetch not built (libcurl's, libssh2's and OpenSSL's dev packages): Files' servers' tests are skipped"; fi
 
 test: ui
+	sh system/tests/charging-test.sh
+	sh ui/tests/charging-test.sh
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi

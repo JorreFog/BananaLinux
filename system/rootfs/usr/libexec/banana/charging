@@ -1,0 +1,70 @@
+#!/bin/sh
+# Only changes the current connection. No persistent preference or boot hook: the
+# kernel restores 1.5 A on unplug, suspend and shutdown. Unsupported kernels do
+# not have a writable input_current_limit and are left alone.
+SUPPLIES=${BANANA_POWER_SUPPLY_ROOT:-/sys/class/power_supply}
+BOARD=${BANANA_BOARD:-$(cat /etc/banana/board 2>/dev/null)}
+# Universal cards get the detected board from U-Boot, as panel-tune does.
+if [ "$BOARD" = universal ]; then
+    BOARD=$(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' "${BANANA_CMDLINE_FILE:-/proc/cmdline}" 2>/dev/null)
+fi
+CHARGER=$SUPPLIES/charger
+BATTERY=$SUPPLIES/battery
+fail() { echo "$*" >&2; exit 1; }
+read_value() { cat "$1" 2>/dev/null; }
+number() { case $1 in ''|*[!0-9]*) return 1;; esac; [ "${#1}" -le 9 ]; }
+
+case ${1:-} in
+status|normal) [ "$#" = 1 ] || exit 2 ;;
+higher) [ "$#" = 2 ] && [ "$2" = --confirm-5v-3a ] || {
+    echo "Use charging higher --confirm-5v-3a only with a 5 V / 3 A rated supply and cable." >&2
+    exit 2
+} ;;
+*) echo "charging status | normal | higher --confirm-5v-3a" >&2; exit 2 ;;
+esac
+
+[ "$BOARD" = rgds-plus ] || fail "This charging profile is for the RG DS Plus."
+[ "$(read_value "$CHARGER/type")" = USB ] || fail "The RK817 charger is unavailable."
+[ -f "$CHARGER/input_current_limit" ] && [ -r "$CHARGER/input_current_limit" ] &&
+    [ -w "$CHARGER/input_current_limit" ] || fail "This kernel does not support charging profiles."
+current=$(read_value "$CHARGER/input_current_limit")
+number "$current" || fail "Could not read the input current limit."
+if [ "$1" = status ]; then
+    printf 'Input current limit: %s microamps.\n' "$current"
+    exit 0
+fi
+
+# The kernel rejects writes while disconnected and resets on every plug-in.
+# Treat normal as already selected without attempting a sysfs write then.
+if [ "$1" = normal ] && [ "$(read_value "$CHARGER/online")" = 0 ]; then
+    echo "No charger connected. Normal charging applies on connection."
+    exit 0
+fi
+
+target=1500000
+if [ "$1" = higher ]; then
+    [ "$(read_value "$CHARGER/online")" = 1 ] || fail "Connect the rated charger first."
+    # An older or replacement device tree must not leave the inherited 3.5 A
+    # battery ceiling in effect when the input limit is raised.
+    cell_current=$(read_value "$BATTERY/constant_charge_current_max")
+    cell_voltage=$(read_value "$BATTERY/constant_charge_voltage_max")
+    number "$cell_current" && number "$cell_voltage" || fail "Could not verify the battery limits."
+    [ "$cell_current" -gt 0 ] && [ "$cell_current" -le 2000000 ] &&
+        [ "$cell_voltage" -gt 0 ] && [ "$cell_voltage" -le 4350000 ] ||
+        fail "The battery limits do not support this charging profile."
+    target=2000000
+fi
+
+if ! printf '%s\n' "$target" 2>/dev/null > "$CHARGER/input_current_limit"; then
+    fail "The kernel rejected the charging limit."
+fi
+if [ "$(read_value "$CHARGER/input_current_limit")" != "$target" ]; then
+    # A concurrent disconnect or a failed read must not be reported as success.
+    printf '1500000\n' 2>/dev/null > "$CHARGER/input_current_limit" || :
+    fail "The charging limit could not be confirmed; select it again after connecting."
+fi
+if [ "$target" = 2000000 ]; then
+    echo "Higher input limit selected for this connection. Unplugging or sleeping restores normal charging."
+else
+    echo "Normal charging selected."
+fi
