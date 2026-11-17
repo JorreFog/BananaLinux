@@ -28,6 +28,7 @@ namespace banana
 		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
+		std::string marquee;	// the game's logo (media/marquee, gamelist.xml's <marquee>)
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;
@@ -93,6 +94,13 @@ namespace banana
 		Power powerSeen;	// the last reading of /sys and when (power(), online(): at most every 2 s)
 		double powerAt = 0, onlineAt = 0;
 		bool onlineSeen = false;
+
+		// a layout theme's zoom (its "behavior.zoom"), kept per view: "home", or a system's id. -1: none yet. In
+		// banana/zoom.txt, "<view> <level>" a line
+		int zoom(const std::string& view);
+		void setZoom(const std::string& view, int level);
+		std::map<std::string, int> zooms;
+		bool zoomsRead = false;
 
 		// rnds::Source
 		int systemCount() override { return (int)shelves.size(); }

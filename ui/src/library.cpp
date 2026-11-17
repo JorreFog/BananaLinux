@@ -100,7 +100,7 @@ namespace banana
 	// the order a list is in: the sort title where there is one, else the title, without case
 	static std::string sortKey(const Game& g) { return lower(g.sort.empty() ? g.title : g.sort); }
 
-	struct GlEntry { std::string name, sortname, genre, date, image, thumb, cart, boxback; };
+	struct GlEntry { std::string name, sortname, genre, date, image, thumb, cart, boxback, marquee; };
 
 	static std::string xmlText(const std::string& block, const char* tag)
 	{
@@ -151,7 +151,7 @@ namespace banana
 			GlEntry e;
 			e.name = xmlText(b, "name"); e.sortname = xmlText(b, "sortname"); e.genre = xmlText(b, "genre"); e.date = xmlText(b, "releasedate");
 			e.image = rel(xmlText(b, "image")); e.thumb = rel(xmlText(b, "thumbnail"));
-			e.cart = rel(xmlText(b, "cartridge")); e.boxback = rel(xmlText(b, "boxback"));
+			e.cart = rel(xmlText(b, "cartridge")); e.boxback = rel(xmlText(b, "boxback")); e.marquee = rel(xmlText(b, "marquee"));
 			out[path] = e;
 		}
 		return out;
@@ -567,7 +567,7 @@ namespace banana
 				std::string dir = folderPath(root, d.folder);
 				r.push_back(dir);
 				r.push_back(dir + "/media");
-				for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
+				for (const char* m : { "box", "cart", "label", "marquee" }) r.push_back(dir + "/media/" + m);
 				// the folders games are found in too (listRoms looks 2 deep); a system with a "changed" command, its
 				// folders' files too (Game & Watch's artwork zips, in artwork/)
 				if (!d.flat || !d.changed.empty()) gameDirs(dir, 0, r);
@@ -685,16 +685,19 @@ namespace banana
 						g.box = exists(it->second.thumb) ? it->second.thumb : (exists(it->second.image) ? it->second.image : "");
 						if (exists(it->second.cart)) g.cart = it->second.cart;
 						if (exists(it->second.boxback)) g.label = it->second.boxback;
+						if (exists(it->second.marquee)) g.marquee = it->second.marquee;
 					}
 					if (matched.count(def.id + "/" + stem))
 					{
 						std::string b = media.find(dir, "box", stem), l = media.find(dir, "label", stem);
 						if (!b.empty()) g.box = b;
 						if (!l.empty()) g.label = l;
+						if (std::string mq = media.find(dir, "marquee", stem); !mq.empty()) g.marquee = mq;
 					}
 					if (g.box.empty()) g.box = media.find(dir, "box", stem);
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
+					if (g.marquee.empty()) g.marquee = media.find(dir, "marquee", stem);
 					std::string key = def.id + "/" + g.rel;
 					if (it != gl.end()) g.sort = it->second.sortname;
 					g.scraped = g.title;
@@ -986,6 +989,9 @@ namespace banana
 		r.time = fmtTime(g.seconds);
 		r.box = g.box; r.cart = g.cart; r.label = g.label;
 		if (r.box.empty() && isDsRom(g.path, systemOf(i).id)) r.box = romIconCover(dataDir, g.path);	// its own icon
+		// the card's picture (the Glass themes'), by Settings' DS cartridges: Game icon, a game's logo (a DS game its own
+		// icon), the box art where it has none; Box art, the box art for every game
+		r.marquee = !dsCartIcons ? "" : isDsRom(g.path, systemOf(i).id) ? romIconCover(dataDir, g.path) : g.marquee;
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
 		// the DS ROM's own icon on the cartridge: when there is no art (from inside a .zip too), or on every one when the
 		// owner picked the icons (DS cartridges: Game icon)
@@ -1033,8 +1039,29 @@ namespace banana
 		return ts.tv_sec + ts.tv_nsec / 1e9;
 	}
 
-	// read again at most every 2 s: the top screen asks on every frame it draws (a directory and five files a frame
-	// while the shelf scrolls)
+	int Library::zoom(const std::string& view)
+	{
+		if (!zoomsRead)
+		{
+			zoomsRead = true;
+			std::ifstream f(dataDir + "/zoom.txt");
+			std::string k;
+			int v;
+			while (f >> k >> v) zooms[k] = v;
+		}
+		auto it = zooms.find(view);
+		return it == zooms.end() ? -1 : it->second;
+	}
+
+	void Library::setZoom(const std::string& view, int level)
+	{
+		zoom(view);	// (the file read first: its other views kept)
+		zooms[view] = level;
+		std::string a;
+		for (auto& e : zooms) a += e.first + " " + std::to_string(e.second) + "\n";
+		writeAtomic(dataDir + "/zoom.txt", a);
+	}
+
 	Library::Power Library::power()
 	{
 		if (testPower.percent >= 0) return testPower;

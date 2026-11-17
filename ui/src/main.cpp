@@ -878,6 +878,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setFontDir(o.banana + "/fonts");
+	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -891,9 +893,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	std::string levelLabel;	// (level <Volume|Brightness> <percent>: the keys' bubble, until "level off")
+	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
-		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		if (screen == 0 && !levelLabel.empty()) settings.level(levelLabel, levelPercent);
+		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
@@ -906,6 +911,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
 			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
@@ -916,7 +922,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			ui.setHome(at);
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
-		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		else if (op == "lib")
+		{
+			// lib <system index or id> <game>
+			std::string sys; int s = 0, g = 0; cs >> sys >> g;
+			if (!sys.empty() && isdigit((unsigned char)sys[0])) s = atoi(sys.c_str());
+			else { s = -1; for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == sys) s = i; }
+			if (s < 0 || s >= lib.systemCount()) { logf("lib %s: not on the shelf", sys.c_str()); return 2; }
+			lib.openLibrary(s); ui.setLibrary(s, g);
+		}
 		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
 		else if (op == "gameend")
 		{
@@ -1151,6 +1165,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				ui.touch(scr, x * k, y * k, true);
 				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
+				// a layout theme's X, START or SELECT tapped (the device presses them: handleAgain)
+				std::string tk = ui.takeTapKey();
+				if (!tk.empty()) logf("touch: key %s", tk.c_str());
+				if (tk == "select") settings.openSearch(lib.searchQuery());
+				else if (tk == "start") settings.open();
 			}
 		}
 		else if (op == "gamepanel")
@@ -1423,19 +1442,28 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "swipe")
 		{
-			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the settings' bottom panel
+			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the bottom panel (the settings',
+			// else the menu's)
 			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 			cs >> x1 >> y1 >> x2 >> y2;
 			float k = o.h / 480.0f;
-			if (!settings.isOpen()) { logf("swipe: the settings aren't open"); return 2; }
+			if (!settings.isOpen())
+			{
+				ui.touch(1, x1 * k, y1 * k, true);
+				logf("swipe %.0f %.0f -> %.0f %.0f: %s", x1, y1, x2, y2, ui.touch(1, x2 * k, y2 * k, false) ? "used" : "unused");
+				continue;
+			}
 			settings.touch(x1 * k, y1 * k, true);
 			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
 		}
-		else if (op == "shot")
+		else if (op == "shot" || op == "snap")
 		{
+			// snap: the menu as one frame on the device shows it, its pictures' loads finished once (a shot settles
+			// twice: a picture the cache dropped meanwhile is back)
 			std::string name; cs >> name;
 			double t0 = 0, t1 = 0;
-			if (settings.isOpen())
+			if (op == "snap") { settle(); t0 = nowMs(); ui.render(); t1 = nowMs(); }
+			else if (settings.isOpen())
 			{
 				settings.update(now);	// what came back since the last command (a press skips the update below)
 				settings.update(now);
@@ -1616,7 +1644,7 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 		while (!ready) usleep(2000);
 		return;
 	}
-	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
+	gSplash.onCue = [&sound](const std::string& n) { sound.playBase(n); };	// (the intro: the menu's own sounds)
 	double t0 = nowMs();
 	for (;;)
 	{
@@ -1796,7 +1824,7 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 	a.setStart(be.pixels(0), be.pixels(1));
 	sv.renderCard("Welcome to", "", 174, 26);
 	a.setCaption(be.pixels(0));
-	a.onCue = [&sound](const std::string& c) { sound.play(c == "burst" ? "ready" : "fav"); };
+	a.onCue = [&sound](const std::string& c) { sound.playBase(c == "burst" ? "ready" : "fav"); };
 	const double t0 = nowMs();
 	const int flips0 = disp.failedFlips, sets0 = disp.failedSets, unsent0 = gUnsent;
 	double last = -1, drawSum = 0, drawWorst = 0, gapWorst = 0;
@@ -1885,7 +1913,7 @@ static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv
 	usleep(250000);
 	sv.renderCard("Welcome", sv.ownerName(), 196, 30);
 	grab(be, card);
-	sound.play("ready");
+	sound.playBase("ready");
 	fadeSteps(disp, be, card, 0, 4, 400);
 	const double hold = nowMs() + 1400;
 	// the menu's first frame drawn meanwhile (as irisToMenu does), the card put back
@@ -1906,7 +1934,7 @@ static void playOutro(Display& disp, SoftBackend& be, const Options& o, const st
 {
 	Splash sp;
 	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
-	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
+	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.playBase("back"); };	// (the outro: the menu's own)
 	Iris iris(disp, be);
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
 	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
@@ -2450,6 +2478,7 @@ int main(int argc, char** argv)
 			ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 			worker.attach(uiPtr);
 			ui->setHome(sys);
+			sound.reload(o.assets + "/sounds");	// the new theme's sounds (a theme's own are only for that theme)
 			sound.play("select");
 			break;
 		}
@@ -2495,6 +2524,7 @@ int main(int argc, char** argv)
 	};
 
 	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
+	std::function<void(const InputEvent&)> handleAgain;	// (handle, for a tapped button the menu hands back)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
@@ -2575,7 +2605,15 @@ int main(int argc, char** argv)
 		}
 		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, true); return; }
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
-		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
+		if (ev.type == InputEvent::TOUCH_UP)
+		{
+			std::string k;
+			{ std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); k = ui->takeTapKey(); }
+			// a layout theme's X, START or SELECT button tapped: as if pressed
+			Key key = k == "x" ? Key::X : k == "start" ? Key::START : k == "select" ? Key::SELECT : Key::NONE;
+			if (key != Key::NONE && handleAgain) { InputEvent p; p.type = InputEvent::PRESS; p.key = key; p.t = ev.t; handleAgain(p); }
+			return;
+		}
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
 		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
 		{
@@ -2612,6 +2650,8 @@ int main(int argc, char** argv)
 			rep.key = ev.key; rep.since = rep.last = now;
 		}
 	};
+	handleAgain = handle;
+
 
 	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and tiles drawn when they
 	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one

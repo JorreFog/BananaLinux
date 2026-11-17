@@ -11,14 +11,22 @@ Ten more come with the system (0.5.0), made with the Banana Theme Studio, which 
 layout: comic-panel, coral-reef, felt-table, neon-arcade, oak-bookshelf, orbital-hud, paper-notebook,
 phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio to make your own from it.
 
+Plaza light and Plaza dark (plaza-light.json, plaza-dark.json) draw the systems and games as tiles in pages side by
+side: L and R zoom (7, 5 or 3 across, kept for each system), a swipe turns the page, every button is on the bottom
+screen. Their icons are RetroArch's system shapes (libretro's retroarch-assets, CC BY 4.0) on Plaza's tiles, their
+typeface Nunito (SIL OFL). tools/plaza-theme/make.py makes their pictures, icons and sounds.
+
     {
       "name": "My theme",          the name shown in Settings (else the file name)
       "author": "you",             (shown nowhere yet)
       "base": "dark",              the palette it starts from: "dark" or "light"
       "accent": "#3cc6e8",         the selection, the logo, the boot banana: one colour (its lighter and darker
-                                   shades are worked out), one of Banana's names ("yellow", "blue", "red",
-                                   "green", "purple", "pink"), or all five: { "base": "#...", "light": "#...",
+                                   shades are worked out), one of Banana's names ("yellow", "orange", "blue",
+                                   "red", "green", "purple", "pink"), or all five: { "base": "#...", "light": "#...",
                                    "dark": "#...", "band": "#...", "low": "#..." }
+      "accents": { "green": "#30d158", "blue": "#0a84ff" }
+                                   the theme's own shade of some of Banana's accent names: Settings' Accent colour
+                                   then picks among these (an accent picked that isn't here: "accent" above)
       "colors": {                  any of the colours below; the ones not named keep the base palette's
         "screenBg": "#0b1d2a",
         "ink": "#e4f6ff"
@@ -35,12 +43,23 @@ phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio t
       "logo": "mine/logo.png",     the logo at the top of the bottom screen (fitted into its box)
       "icons": {                   a system's icon (PNG, about 128 x 128), by the system's id: nds, gba, gbc,
         "nds": "mine/ds.png",      gb, snes, nes, megadrive, n64, psx, pico-8, ports, ... (the folder names
-        "gba": "mine/gba.png"      in roms/, and banana/systems.conf.default lists them all)
-      },
+        "gba": "mine/gba.png"      in roms/, and banana/systems.conf.default lists them all); Settings' icons
+      },                           too, by their names: picture, music, moon, nds, gamepad, phone, gear,
+                                   bshare-receive, bshare-send, bshare-accept, bshare-decline, bshare-phone,
+                                   bshare-computer, bshare-handheld; the volume and brightness keys' bubble:
+                                   level-volume, level-mute, level-brightness (any size: fitted, smooth)
       "sounds": {                  the menu's sounds (WAV): scroll, select, back, fav, ready, insert; "off"
         "scroll": "mine/tick.wav", for none (they change at the next start of the menu)
         "fav": "off"
-      }
+      },
+      "settings": {                Settings' panels as frosted glass over the "background" pictures (blurred
+        "glass": 14,               once, by this many units), tinted "pane" with a hairline "edge", in Inter;
+        "pane": "#14161e6b",       only with a background
+        "edge": "#ffffff30",
+        "frost": { "top": "...", "bottom": "..." }   optional: the pictures already blurred (faster: the
+      },                                             handheld blurs nothing; Glass's bake.py makes them)
+      "switches": true             Settings: a switch on the off/on rows, a slider on Brightness and Volume (left
+                                   and right change them as before); without it, the value between arrows
     }
 
 File names are relative to the theme's .json (keep a theme's files in a folder of their own next to it), or full

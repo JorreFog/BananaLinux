@@ -810,6 +810,10 @@ namespace banana
 		void hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb = 0);
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
+		bool glassBox(const std::string& kind, bool on, float x, float y, float w, float h);
+		// the screen being drawn (a Glass theme's panels show their screen's picture)
+		int scr = 0;
+		void beginScreen(int n) { scr = n; be->beginScreen(n); }
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
@@ -832,8 +836,14 @@ namespace banana
 		std::string helpOf(int item);
 		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
+		bool pictureIcon(const std::string& name, float x, float y, int scale, bool centred);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
+		// a theme's "switches": an off/on row's switch (its state 0 or 1; -1 not such a row), Brightness and Volume's slider
+		int switchOf(const Item& it) const;
+		void pill(float x, float y, float w, float h, const rnds::Color& c);
+		void drawSwitch(float x, float y, bool state, bool picked);
+		void drawSlider(float x, float y, float w, float frac, bool picked);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
