@@ -234,27 +234,36 @@ echo $GAME > /run/banana/game.pid; sleep 2
 rm -f /run/banana/game.pid
 stop
 
-echo "8. charging: the lid shut keeps it awake and dark (the charging light stays on); unplugged, it sleeps"
+echo "8. charging: it sleeps as a phone does, the charging light lit at full, a look every 10 min"
 mkdir -p /sys/class/power_supply/charger
 echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
 echo $GAME > /run/banana/game.pid
 start
-echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
-asleep 2>/dev/null && bad "it suspended while charging" || ok "no suspend while charging"
-[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
-a=$(cat /sys/class/leds/amber:charging/brightness)
-[ -n "$a" ] && [ "$a" != 0 ] && ok "charging light on ($a)" || bad "charging light off ('$a')"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep on the charger (the lid)" || bad "no sleep on the charger"
 [ "$(gstate)" = T ] && ok "game paused" || bad "game not paused ($(gstate))"
-echo 0 > /run/test/lid; sleep 1
-[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
-[ "$(gstate)" != T ] && ok "game running again" || bad "game still paused"
-grep -q 'dark while charging for' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
-echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
-echo 0 > /sys/class/power_supply/charger/online
-asleep && ok "asleep once the charger is pulled out" || bad "no sleep after unplugging"
+[ "$(cat /sys/class/leds/amber:charging/brightness)" = 255 ] && ok "charging light lit at full while asleep" || bad "charging light '$(cat /sys/class/leds/amber:charging/brightness)'"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +600 ] && ok "a look in 10 min (+600)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+echo 100 > /sys/class/power_supply/battery/capacity
+: > /sys/class/rtc/rtc0/wakealarm; wake      # the look: the battery full meanwhile
+asleep && ok "back to sleep after the look" || bad "awake after the look"
+[ "$(cat /sys/class/leds/amber:charging/brightness)" = 0 ] && ok "charging light out once full" || bad "charging light '$(cat /sys/class/leds/amber:charging/brightness)'"
+echo 50 > /sys/class/power_supply/battery/capacity
 echo 0 > /run/test/lid; wake
+[ "$(gstate)" != T ] && ok "game running again" || bad "game still paused"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
+grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "woke: the lid" || bad "woke: $(grep -o 'awake ([^)]*)' /data/banana/logs/sleep.log | tail -n1)"
 rm -rf /sys/class/power_supply/charger
 rm -f /run/banana/game.pid
+stop
+
+echo "8b. charging and idle in the menu: it sleeps (it used to stay up, dimmed)"
+mkdir -p /sys/class/power_supply/charger
+echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
+start "autosleep_minutes = 0.02"
+asleep && ok "asleep when idle on the charger" || bad "stayed awake on the charger"
+wake
+rm -rf /sys/class/power_supply/charger
 stop
 
 # Power off after sleeping: a game as banana-ui starts one (sh -c in a session of its own, BANANA_ROM set), the
@@ -362,16 +371,19 @@ kill -0 $GAME 2>/dev/null && bad "the game wasn't stopped" || ok "the game got S
 [ ! -e /data/banana/resume-boot ] && ok "no resume-boot (nothing to resume)" || bad "resume-boot written"
 stop; POWEROFF=0; echo 0 > /run/test/lid
 
-echo "13. on the charger the deadline doesn't count; unplugged, it starts at the real sleep; opening the lid first wins"
+echo "13. asleep on the charger the deadline doesn't count; unplugged, it starts from there; opening the lid first wins"
 mkdir -p /sys/class/power_supply/charger
 echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 start "poweroff_after_sleep_minutes = 0.05"     # 3 s
-echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 4
-[ $POWEROFF = 0 ] && kill -0 $GAME 2>/dev/null && ok "dark on the charger past the deadline: no shutdown" || bad "shut down on the charger"
-echo 0 > /sys/class/power_supply/charger/online
-asleep && ok "asleep once unplugged" || bad "no sleep after unplugging"
-[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +3 ] && ok "the deadline from the real sleep (+3)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep on the charger" || bad "no sleep on the charger"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +600 ] && ok "no deadline on the charger: a look in 10 min (+600)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+sleep 4
+[ $POWEROFF = 0 ] && kill -0 $GAME 2>/dev/null && ok "past the deadline on the charger: no shutdown" || bad "shut down on the charger"
+echo 0 > /sys/class/power_supply/charger/online; wake     # the cable out wakes it (the RK817's interrupt)
+asleep && ok "asleep again once unplugged" || bad "no sleep after unplugging"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +3 ] && ok "the deadline from the unplugging (+3)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
 echo 0 > /run/test/lid; wake       # the lid opened before the alarm
 [ $POWEROFF = 0 ] && [ "$(gstate)" != T ] && ok "awake and playing, no shutdown" || bad "shut down or still paused after the lid opened"
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "a normal wake" || bad "no wake logged"

@@ -7,3 +7,13 @@ CONFIG_DISPLAY_CPUINFO=n
 # only the SD card is a boot target (the RG DS's eMMC holds Android)
 CONFIG_ENV_IS_NOWHERE=y
 CONFIG_ENV_IS_IN_MMC=n
+# a charger plugged into the handheld while it is off starts the whole boot, and rcS's "bananad --charge" charges
+# with only the LEDs on, as a phone does (this option turned it straight off again: "Power Off due to plug-in event")
+# CONFIG_ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON is not set
+# the LEDs lit from U-Boot as it starts (uboot-patches/004): green for the power button, amber with a charger in,
+# within a second of the press instead of when bananad starts
+CONFIG_LED=y
+CONFIG_LED_PWM=y
+# the lid read for the power LED (a start with the lid shut stays dark: bananad turns it off again)
+CONFIG_BUTTON=y
+CONFIG_BUTTON_GPIO=y

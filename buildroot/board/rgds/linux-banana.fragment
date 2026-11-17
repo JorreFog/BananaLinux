@@ -188,3 +188,7 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_RANDOMIZE_BASE is not set
 # the name before init sets it (ROCKNIX fills its @DEVICENAME@ in at build time; Banana is "banana")
 CONFIG_DEFAULT_HOSTNAME="banana"
+# no firmware helper in userspace (no udev, no mdev): a request made before the root is mounted (cfg80211's
+# regulatory.db, at 0.6 s) waited 60 s for one, and a suspend meanwhile (charging while off sleeps at once) waited
+# with it, then failed busy: the charge mode's 61 s with the power button and the lights dead
+# CONFIG_FW_LOADER_USER_HELPER is not set
