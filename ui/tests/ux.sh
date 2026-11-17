@@ -336,3 +336,25 @@ ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png
 # English: nothing too long on the home screen, so no marquee wakes the menu
 ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
 grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
+
+# Glass while scrolling through many games: the wallpaper stays. The theme's picture cache dropped the first made
+# (the wallpaper) once full, not the least recently drawn, and the screens went plain black (white in Glass light)
+# until it was made again: 200 games with box art, a frame after each step right (snap: as the device draws it), and
+# the top screen's corner (wallpaper only) as in the first shot in every one
+GLFX=$OUT/ux-glass-fixture-$size
+rm -rf "$GLFX"; "$HERE/tests/fixture.sh" "$GLFX" >/dev/null
+mkdir -p "$GLFX/roms/gba/media/box"
+convert -size 300x200 "gradient:#c04080-#203060" "$OUT/glass-box.png"
+for i in $(seq 100 299); do : > "$GLFX/roms/gba/Glass $i.gba"; cp "$OUT/glass-box.png" "$GLFX/roms/gba/media/box/Glass $i.png"; done
+rm -f "$OUT/$size"-ux-glass-*
+gl_script="lib gba 0; wait 2400; shot ux-glass-first"
+for i in $(seq 200); do gl_script="$gl_script; press right; wait 40; snap ux-glass-$i"; done
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$GLFX/roms" --data "$GLFX/data" \
+    --theme "$HERE/../system/rootfs/usr/share/banana/themes/glass-dark.json" \
+    --script "$gl_script" 2> "$OUT/$size-glass.log" || { echo "FAIL $size: banana-ui (glass) exited $?"; fail=1; }
+gl_corner() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 60 * k, 30 * k, 0, 440 * k }')" -format '%[fx:int(255*mean)]' info: 2>/dev/null; }
+a=$(gl_corner "$OUT/$size-ux-glass-first-top.png"); gl_bad=0
+for i in $(seq 200); do [ "$(gl_corner "$OUT/$size-ux-glass-$i-top.png")" = "$a" ] || gl_bad=$((gl_bad + 1)); done
+[ -n "$a" ] && [ $gl_bad = 0 ] || { echo "FAIL $size: Glass's wallpaper gone in $gl_bad of 200 frames scrolling"; fail=1; }
+rm -f "$OUT/$size"-ux-glass-[0-9]*

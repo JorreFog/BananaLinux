@@ -48,7 +48,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -86,7 +86,7 @@ namespace banana
 	}
 #define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
 	// gameField's names by number
-	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
 	static int gameFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
@@ -148,6 +148,7 @@ namespace banana
 		std::vector<State> states;			// overrides while their condition holds (the last one wins)
 		std::vector<std::pair<std::string, Prop>> with;	// a component's parameters, set in its children's scope
 		std::map<std::string, double, std::less<>> smooth;	// property -> time constant (ms): the value eases towards its target
+		bool bounce = false;	// "ease": "bounce": smooth's numbers are durations, each move overshooting a little and settling (RndsUI's)
 		int serial = 0;
 		PropIndex idx;	// (props and the states' made once they're complete: index()
 		void index() { idx.build(props); for (auto& st : states) st.idx.build(st.props); }
@@ -168,6 +169,8 @@ namespace banana
 		std::map<std::string, std::vector<std::pair<std::string, std::string>>> hintSets;
 		bool extraHints = true;
 		double launchMs = 900, settleMs = 600, scrollMs = 70, fps = 30;
+		bool scrollBounce = false;	// behavior.scrollEase "bounce": scrollMs the move's length, past the target and back (RndsUI's)
+		float scrollFrom = 0, scrollTo = 0; double scrollT0 = -1e9;
 		std::vector<std::pair<std::string, double>> cues;
 		bool wrap = false, debug = false;
 		int serials = 0;
@@ -189,10 +192,16 @@ namespace banana
 		int launchGame = -1;
 		size_t cuesDone = 0;
 		mutable bool usedTime = false;	// the last frame read "time": it moves by itself
+		// "glint": a shine across a picture, as Banana's own themes' covers: 560 ms every 5 s from the last move, its
+		// progress 0..1 meanwhile, else -1. Read: the menu wakes for the sweeps only (not a redraw all the time as "time")
+		static constexpr double GLINT_PERIOD = 5000, GLINT_SWEEP = 560;
+		mutable bool usedGlint = false;
+		double glintPhase() const { return std::fmod(std::max(0.0, now - std::max(movedAt, enteredAt)), GLINT_PERIOD); }
+		std::map<int, rnds::TexPtr> glints;	// the band, by height (device px)
 		double lastFrame = 0;
 
 		// per element state: eased values and lists' first visible rows
-		struct Smoothed { double v = 0, target = 0; bool set = false; double at = 0; };
+		struct Smoothed { double v = 0, target = 0; bool set = false; double at = 0, from = 0, t0 = 0; };
 		std::map<std::string, Smoothed> smoothed;
 		bool smoothMoving = false;
 
@@ -227,10 +236,10 @@ namespace banana
 		}
 		static size_t cacheBytes(const ShapeTex& t) { return t.bytes; }
 		static size_t cacheBytes(const TextTex&) { return 0; }
-		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
+		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; uint64_t used = 0; };	// placed in the box (device px)
+		static size_t cacheBytes(const ImgTex&) { return 0; }
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
-		std::deque<std::string> imageOrder;
 		struct Job { std::string key, src, fit, crop; int w, h; float radius; };
 		std::deque<Job> jobs;
 		std::set<std::string> pending, pendingSrc, failed;
@@ -353,6 +362,7 @@ namespace banana
 					}
 					continue;
 				}
+				if (k == "ease") { n->bounce = e.second->isStr() && e.second->s == "bounce"; continue; }
 				if (k == "smooth")
 				{
 					if (e.second->isObj()) for (auto& se : e.second->obj) n->smooth[se.first] = se.second->isNum() ? se.second->n : 150;
@@ -409,6 +419,7 @@ namespace banana
 				launchMs = b->num("launchMs", launchMs);
 				settleMs = b->num("settleMs", settleMs);
 				scrollMs = b->num("scrollMs", scrollMs);
+				if (const JVal* e = b->get("scrollEase")) scrollBounce = e->isStr() && e->s == "bounce";
 				fps = std::max(1.0, std::min(60.0, b->num("fps", fps)));
 				wrap = b->flag("wrap", wrap);
 				extraHints = b->flag("extraHints", extraHints);
@@ -502,6 +513,7 @@ namespace banana
 			else if (fId == GAMEF("box")) out = EV(g.box);
 			else if (fId == GAMEF("cart")) out = EV(g.cart);
 			else if (fId == GAMEF("label")) out = EV(g.label);
+			else if (fId == GAMEF("marquee")) out = EV(g.marquee);
 			else if (fId == GAMEF("art")) out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
 			else if (fId == GAMEF("rom")) out = EV(g.rom);
 			else if (fId == GAMEF("romIcon")) out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
@@ -529,6 +541,7 @@ namespace banana
 			auto pre = [&](const char* p, std::string& rest) { size_t l = strlen(p); if (n.compare(0, l, p) != 0) return false; rest = n.substr(l); return true; };
 			std::string rest;
 			if (nId == HOOK("time")) { usedTime = true; out = EV(now - start); return true; }
+			if (nId == HOOK("glint")) { usedGlint = true; double g = glintPhase(); out = EV(g < GLINT_SWEEP ? g / GLINT_SWEEP : -1.0); return true; }
 			if (nId == HOOK("view")) { out = EV(viewName()); return true; }
 			if (nId == HOOK("W")) { out = EV((double)W); return true; }
 			if (nId == HOOK("H")) { out = EV((double)H); return true; }
@@ -639,6 +652,18 @@ namespace banana
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
 			Smoothed& st = smoothed[*c.key + "." + std::string(k.name)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
+			if (c.n->bounce)
+			{
+				// a timed move from where it is, on Banana's own themes' curve (cubic-bezier(0.2, 1.4, 0.32, 1)): past
+				// the target a little, then back
+				if (target != st.target) { st.from = st.v; st.target = target; st.t0 = now; }
+				st.at = now;
+				double p = (now - st.t0) / sm->second;
+				if (p >= 1) { st.v = target; return target; }
+				st.v = st.from + (target - st.from) * rnds::cubicBezier(0.2f, 1.4f, 0.32f, 1, (float)p);
+				smoothMoving = true;
+				return st.v;
+			}
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
 			st.at = now;
@@ -1075,14 +1100,48 @@ namespace banana
 					if (m->mQueued) m->mQueued();
 				}
 				if (it == images.end()) { drawPlaceholder(c, x, y, w, h, f); return; }
-				const ImgTex& im = it->second;
+				ImgTex& im = it->second;
+				im.used = ++useTick;
 				if (!im.tex) return;
 				float kx = iw / std::max(1.0f, im.w + 2 * im.ox), ky = ih / std::max(1.0f, im.h + 2 * im.oy);
 				m->be->draw(im.tex, std::round(x * s) + im.ox * kx, std::round(y * s) + im.oy * ky, im.w * kx, im.h * ky, tint);
 				return;
 			}
-			const ImgTex& im = it->second;
-			if (im.tex) m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
+			ImgTex& im = it->second;
+			im.used = ++useTick;
+			if (!im.tex) return;
+			m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
+			drawGlint(c, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, f);
+		}
+		// an image's "glint" (0..1, the "glint" hook): a slanted band of "glintColor" crossing the picture as drawn
+		void drawGlint(const Ctx& c, float px, float py, float pw, float ph, const Frame& f)
+		{
+			if (!has(c, K("glint"))) return;
+			double g = num(c, K("glint"), -1);
+			if (g < 0 || g >= 1 || pw < 1 || ph < 1) return;
+			int dh = (int)std::lround(ph);
+			if (!glints.count(dh) && glints.size() >= 8) glints.clear();	// (another few heights: the old ones go)
+			rnds::TexPtr& t = glints[dh];
+			if (!t)
+			{
+				int band = (int)std::lround(22 * s), slant = (int)std::lround(dh * 0.45f);
+				rnds::Bitmap b;
+				b.w = band + slant; b.h = dh; b.alpha = true;
+				b.px.assign((size_t)b.w * b.h, 0);
+				for (int y = 0; y < dh; y++)
+				{
+					int x0 = slant - (int)std::lround((float)y * slant / std::max(1, dh));
+					for (int x = x0; x < x0 + band && x < b.w; x++) b.px[(size_t)y * b.w + x] = (x - x0) < band / 3 ? 150 : 255;
+				}
+				t = m->be->upload(b, true);
+			}
+			if (!t) return;
+			uint32_t gc = 0x48ffffff;
+			color(c, K("glintColor"), gc);
+			float gw = (float)t->w, gx = px - gw + (pw + gw) * (float)g;
+			m->be->pushClip(px, py, pw, ph);
+			m->be->draw(t, std::round(gx), py, gw, (float)t->h, colorFrom(gc, f.opacity));
+			m->be->popClip();
 		}
 		void drawPlaceholder(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
@@ -1429,6 +1488,7 @@ namespace banana
 		{
 			hits.clear();
 			usedTime = false;
+			usedGlint = false;
 			smoothMoving = false;
 			Scope root;
 			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
@@ -1534,16 +1594,14 @@ namespace banana
 				if (cut != std::string::npos) src = dn.first.substr(0, cut);
 				pendingSrc.erase(src);
 				if (!dn.second.tex) continue;
-				images[dn.first] = dn.second;
+				ImgTex& im = images[dn.first] = dn.second;
+				im.used = ++useTick;
 				latest[src] = dn.first;
-				imageOrder.push_back(dn.first);
 			}
 			done.clear();
-			while (images.size() > 160 && !imageOrder.empty())
-			{
-				images.erase(imageOrder.front());
-				imageOrder.pop_front();
-			}
+			// the least recently drawn go, not the first made: scrolling through games (their boxes, logos and the
+			// bounce's sizes) dropped the wallpaper, made first, and the screens went plain white or black meanwhile
+			if (images.size() > 160) evictOldest(images, 120);
 		}
 	};
 
@@ -1594,6 +1652,7 @@ namespace banana
 		d->shapeKeys.clear();
 		d->textKeys.clear();
 		d->texts.clear();
+		d->glints.clear();
 	}
 
 	void LayoutMenu::dataChanged()
@@ -1724,7 +1783,11 @@ namespace banana
 		if (down) { mDown = true; downX = x; downY = y; downScreen = screen; return false; }
 		if (!mDown) return false;
 		mDown = false;
-		if (screen != downScreen || std::fabs(x - downX) > 24 * d->s || std::fabs(y - downY) > 24 * d->s) return false;
+		// a swipe across the bottom screen: one step the other way, as Banana's own themes (the games, or the systems)
+		float dx = x - downX, dy = y - downY;
+		if (screen == 1 && downScreen == 1 && x >= 0 && std::fabs(dx) > 56 * d->s && std::fabs(dx) > std::fabs(dy) * 1.2f)
+			return press(dx < 0 ? rnds::UI::RIGHT : rnds::UI::LEFT);
+		if (screen != downScreen || std::fabs(dx) > 24 * d->s || std::fabs(dy) > 24 * d->s) return false;
 		// the topmost thing under the finger: the last drawn
 		for (auto it = d->hits.rbegin(); it != d->hits.rend(); ++it)
 		{
@@ -1767,9 +1830,18 @@ namespace banana
 		d->clock = src->clockText();
 		d->date = src->dateText();
 		float to = (float)d->cursor();
-		float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));
-		d->scroll += (to - d->scroll) * k;
-		if (std::fabs(to - d->scroll) < 0.002f) d->scroll = to;
+		if (d->scrollBounce)
+		{
+			if (to != d->scrollTo) { d->scrollFrom = d->scroll; d->scrollTo = to; d->scrollT0 = t; }
+			double p = (t - d->scrollT0) / std::max(1.0, d->scrollMs);
+			d->scroll = p >= 1 ? to : d->scrollFrom + (to - d->scrollFrom) * rnds::cubicBezier(0.2f, 1.4f, 0.32f, 1, (float)p);
+		}
+		else
+		{
+			float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));
+			d->scroll += (to - d->scroll) * k;
+			if (std::fabs(to - d->scroll) < 0.002f) d->scroll = to;
+		}
 		if (d->launchAt >= 0)
 		{
 			while (d->cuesDone < d->cues.size() && t - d->launchAt >= d->cues[d->cuesDone].second) src->cue(d->cues[d->cuesDone++].first);
@@ -1787,6 +1859,7 @@ namespace banana
 	bool LayoutMenu::animating() const
 	{
 		return std::fabs(d->scroll - (float)d->cursor()) > 0.002f || d->launchAt >= 0 || d->smoothMoving ||
+			(d->scrollBounce && d->now - d->scrollT0 < d->scrollMs) || (d->usedGlint && d->glintPhase() < Impl::GLINT_SWEEP) ||
 			d->now - std::max(d->movedAt, d->enteredAt) < d->settleMs;
 	}
 
@@ -1798,6 +1871,7 @@ namespace banana
 			if (!d->done.empty()) return 0;
 		}
 		if (d->usedTime) return std::max(0, (int)(d->lastFrame + 1000.0 / d->fps - monoMs()));
+		if (d->usedGlint) return std::max(0, (int)(Impl::GLINT_PERIOD - d->glintPhase()));	// (the next sweep)
 		return -1;
 	}
 

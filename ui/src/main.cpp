@@ -878,6 +878,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setFontDir(o.banana + "/fonts");
+	settings.setVariant(theme);	// (as the handheld: a theme's look and fonts, Carts' and Glass' Inter)
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -891,9 +893,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	FetchNotice fetchNotice;
 	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	std::string levelLabel;	// (level <Volume|Brightness> <percent>: the keys' bubble, until "level off")
+	int levelPercent = 0;
 	be.overlay = [&](int screen)
 	{
-		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		if (screen == 0 && !levelLabel.empty()) settings.level(levelLabel, levelPercent);
+		else if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
@@ -906,6 +911,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "level") { std::string l; int p = 0; cs >> l >> p; levelLabel = l == "off" ? "" : l; levelPercent = p; }
 		else if (op == "homeid")
 		{
 			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
@@ -1410,19 +1416,28 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "swipe")
 		{
-			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the settings' bottom panel
+			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the bottom panel (the settings',
+			// else the menu's)
 			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 			cs >> x1 >> y1 >> x2 >> y2;
 			float k = o.h / 480.0f;
-			if (!settings.isOpen()) { logf("swipe: the settings aren't open"); return 2; }
+			if (!settings.isOpen())
+			{
+				ui.touch(1, x1 * k, y1 * k, true);
+				logf("swipe %.0f %.0f -> %.0f %.0f: %s", x1, y1, x2, y2, ui.touch(1, x2 * k, y2 * k, false) ? "used" : "unused");
+				continue;
+			}
 			settings.touch(x1 * k, y1 * k, true);
 			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
 		}
-		else if (op == "shot")
+		else if (op == "shot" || op == "snap")
 		{
+			// snap: the menu as one frame on the device shows it, its pictures' loads finished once (a shot settles
+			// twice: a picture the cache dropped meanwhile is back)
 			std::string name; cs >> name;
 			double t0 = 0, t1 = 0;
-			if (settings.isOpen())
+			if (op == "snap") { settle(); t0 = nowMs(); ui.render(); t1 = nowMs(); }
+			else if (settings.isOpen())
 			{
 				settings.update(now);	// what came back since the last command (a press skips the update below)
 				settings.update(now);
