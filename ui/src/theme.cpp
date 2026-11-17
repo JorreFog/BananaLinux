@@ -281,6 +281,9 @@ namespace banana
 			uint32_t gc;
 			if (parseColor(kv["settings.pane"], gc)) glassLook.pane = gc;
 			if (parseColor(kv["settings.edge"], gc)) glassLook.edge = gc;
+			if (!kv["settings.round"].empty()) glassLook.round = std::max(0.5f, std::min(3.0f, (float)atof(kv["settings.round"].c_str())));
+			if (parseColor(kv["settings.shadow"], gc)) glassLook.shadow = gc;
+			glassLook.pills = kv["settings.pills"] == "true";
 			glassLook.frostTop = themeImage(dir, kv["settings.frost.top"]);
 			glassLook.frostBottom = themeImage(dir, kv["settings.frost.bottom"]);
 		}

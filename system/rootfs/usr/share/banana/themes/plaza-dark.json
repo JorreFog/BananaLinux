@@ -19,7 +19,7 @@
   "font": "nunito-semibold",
   "switches": true,
   // Settings, a game's panel and the companions: Plaza's tiles (solid: the "glass" over the pictures fully tinted)
-  "settings": { "glass": 14, "pane": "#353b43f2", "edge": "#4a515b",
+  "settings": { "glass": 14, "pane": "#353b43f2", "edge": "#4a515b", "round": 1.4, "shadow": "#00000066", "pills": true,
     "frost": { "top": "plaza/dark-top-frost.jpg", "bottom": "plaza/dark-bottom-frost.jpg" } },
   "background": { "top": "plaza/dark-top.jpg", "bottom": "plaza/dark-bottom.jpg", "dither": false },
   "sounds": { "scroll": "plaza/sounds/tick.wav", "select": "plaza/sounds/pop.wav", "back": "plaza/sounds/back.wav",

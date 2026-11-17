@@ -477,8 +477,10 @@ namespace banana::nds
 													// scrolled list's move each frame: dropped once not drawn)
 		bool glassBox(const std::string& kind, float x, float y, float w, float h, uint32_t tint)
 		{
-			const bool scr = kind == "screen", plate = kind == "pick" || kind == "back", well = kind == "well", stage = kind == "stage";
-			const float radius = kind == "bubble" ? 12 : kind == "hero" || kind == "best" ? 14 : kind == "slot" ? 10 : 0;
+			// (the dock's panel and its tab: the bubble and the pick, as pills under a theme's "settings.pills": Plaza's)
+			const bool pill = glassLook.pills && (kind == "dock" || kind == "tab" || kind == "back");
+			const bool scr = kind == "screen", plate = kind == "pick" || kind == "tab" || kind == "back", well = kind == "well", stage = kind == "stage";
+			const float radius = (pill && kind == "dock") ? h / 2 : (kind == "bubble" || kind == "dock" ? 12 : kind == "hero" || kind == "best" ? 14 : kind == "slot" ? 10 : 0) * glassLook.round;
 			if (!scr && !plate && !well && !stage && radius <= 0) return false;
 			const float dx = std::round(X(x)), dy = std::round(X(y));
 			const int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
@@ -499,6 +501,23 @@ namespace banana::nds
 				if (it->second.tex) be->draw(it->second.tex, 0, 0, (float)it->second.tex->w, (float)it->second.tex->h, Color(1, 1, 1, 1));
 				else be->fill(0, 0, (float)W, (float)H, p.screenBg);
 				return true;
+			}
+			if (radius > 0 && glassLook.shadow >> 24)
+			{
+				// its soft shadow (a theme's "settings.shadow": Plaza's)
+				std::string sk = "glass:shadow:" + std::to_string(dw) + "x" + std::to_string(dh) + ":" + std::to_string((int)radius);
+				auto it = cache.find(sk);
+				if (it == cache.end())
+				{
+					int pad = 0;
+					rnds::Bitmap b = softShadow(dw, dh, X(radius), X(10), pad);
+					Cached c;
+					if (!b.empty()) c.tex = be->upload(b, true);
+					c.ox = c.oy = pad;
+					it = cache.emplace(sk, c).first;
+				}
+				it->second.used = frame;
+				if (it->second.tex) be->draw(it->second.tex, dx - it->second.ox, dy - it->second.oy + std::round(X(3)), (float)it->second.tex->w, (float)it->second.tex->h, colour(glassLook.shadow));
 			}
 			if (radius > 0)
 			{
@@ -526,13 +545,13 @@ namespace banana::nds
 			{
 				rnds::BoxStyle st;
 				const float hair = std::max(1.0f, std::round(s)), b2 = std::max(1.0f, std::round(2 * s));
-				if (plate) { st.radius = X(kind == "back" ? 14 : 10); st.bg = p.pick; }
+				if (plate) { st.radius = pill ? dh / 2.0f : X((kind == "back" ? 14 : 10) * glassLook.round); st.bg = p.pick; }
 				else if (well) { st.radius = X(8); st.bg = light ? Color(1, 1, 1, 0.35f) : Color(0, 0, 0, 0.28f); st.border = hair; st.borderColor = colour(glassLook.edge); }
 				else if (stage) { st.radius = X(10); st.bg = Color::hex(tint, light ? 0.30f : 0.26f); }
 				else
 				{
 					st.radius = X(radius); st.bg = colour(glassLook.pane);
-					st.border = kind == "best" ? b2 : hair;
+					st.border = kind == "best" ? b2 : glassLook.shadow >> 24 ? 0.0f : hair;
 					st.borderColor = kind == "best" ? p.accent : colour(glassLook.edge);
 				}
 				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
@@ -550,6 +569,8 @@ namespace banana::nds
 		{
 			if (!visible(y - 6, h + 12)) return;
 			if (glassLook.blur > 0 && glassBox(kind, x, y, w, h, tint)) return;
+			if (kind == "dock") { box("bubble", x, y, w, h, tint); return; }	// (the dock's and its tab's own kinds: glass themes)
+			if (kind == "tab") { box("pick", x, y, w, h, tint); return; }
 			int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 			std::string key = "box:" + kind + ":" + std::to_string(tint) + ":" + std::to_string(dw) + "x" + std::to_string(dh);
 			auto it = cache.find(key);
@@ -1248,7 +1269,7 @@ namespace banana::nds
 		const float dockEnd = backTop() ? 628 : bx0 - 8;
 		bool usable = !dt.reading && dt.rom && dt.live && dt.live->valid;
 		// (a ROM hack not supported: no tabs, Back to game alone)
-		if (!dt.unsupported) box("bubble", 12, 424, dockEnd - 12, 48);
+		if (!dt.unsupported) box("dock", 12, 424, dockEnd - 12, 48);
 		int n = dt.unsupported ? 0 : (int)Page::COUNT;
 		float cell = (dockEnd - 12 - 12) / n;
 		for (int i = 0; i < n; i++)
@@ -1258,7 +1279,7 @@ namespace banana::nds
 			bool on = usable && pg == o.cur;
 			bool dim = !usable || (pg == Page::BATTLE && !inBattle());
 			std::string label = tr(pageName(pg));
-			if (on) box("pick", tx + 1, 430, cell - 2, 36);
+			if (on) box("tab", tx + 1, 430, cell - 2, 36);
 			float lw = measure(label, true, 14, true);
 			text(label, true, 14, tx + cell / 2 - lw / 2, 439, on ? p.onPick : dim ? p.line : p.ink, true, cell - 6);
 			int cnt = usable ? noticeCount(pg) : 0;

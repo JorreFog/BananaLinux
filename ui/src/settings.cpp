@@ -1913,6 +1913,7 @@ namespace banana
 		bool screen = kind == "screen", pick = kind == "pick", key = kind == "kbd";
 		float radius = kind == "hero" ? 18 : kind == "slot" ? 14 : kind == "bubble" ? 16 : kind == "face" ? 20 : 0;
 		if (!screen && !pick && !key && radius <= 0) return false;
+		radius *= glassLook.round;	// (Plaza's rounder corners)
 		int sw = (int)std::lround(X(640)), sh = (int)std::lround(X(480));
 		int dx = (int)std::lround(X(x)), dy = (int)std::lround(X(y)), dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		if (dw <= 0 || dh <= 0) return true;
@@ -1944,7 +1945,7 @@ namespace banana
 			if (it == cache.end())
 			{
 				rnds::BoxStyle st;
-				st.radius = X(key ? 10 : 14); st.bg = key ? pal(light).ink : pal(light).pick;
+				st.radius = X(key ? 10 : 14 * glassLook.round); st.bg = key ? pal(light).ink : pal(light).pick;
 				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
 				Cached c;
 				c.tex = be->upload(pb.bmp, true);
@@ -1955,7 +1956,24 @@ namespace banana
 			be->draw(c.tex, dx - c.ox, dy - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
 			return true;
 		}
-		// a panel: the blurred picture under it (by where it is), then its tint and edge (by its size)
+		// a panel: its soft shadow (a theme's "settings.shadow": Plaza's), the blurred picture under it (by where it is),
+		// then its tint and edge (by its size)
+		if (glassLook.shadow >> 24)
+		{
+			snprintf(kb, sizeof kb, "glass:shadow:%dx%d:%g", dw, dh, (double)radius);
+			auto sit = cache.find(kb);
+			if (sit == cache.end())
+			{
+				int pad = 0;
+				rnds::Bitmap b = softShadow(dw, dh, X(radius), X(10), pad);
+				Cached c;
+				if (!b.empty()) c.tex = be->upload(b, true);
+				c.ox = c.oy = pad;
+				sit = put(kb, c, b);
+			}
+			const Cached& sh = keep(sit);
+			if (sh.tex) be->draw(sh.tex, dx - sh.ox, dy - sh.oy + std::round(X(3)), (float)sh.tex->w, (float)sh.tex->h, colour(glassLook.shadow));
+		}
 		int r = (int)std::lround(X(glassLook.blur));
 		float rad[4] = { X(radius), X(radius), X(radius), X(radius) };
 		snprintf(kb, sizeof kb, "glass:piece%d:%d,%d:%dx%d:%g", scr, dx, dy, dw, dh, (double)radius);
@@ -1977,7 +1995,7 @@ namespace banana
 			rnds::BoxStyle st;
 			st.radius = X(radius);
 			st.bg = colour(glassLook.pane);
-			st.border = on ? std::max(2.0f, std::round(2 * s)) : std::max(1.0f, std::round(s));
+			st.border = on ? std::max(2.0f, std::round(2 * s)) : glassLook.shadow >> 24 ? 0.0f : std::max(1.0f, std::round(s));
 			st.borderColor = on ? Color::hex(rnds::accent.base) : colour(glassLook.edge);
 			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
 			Cached c;

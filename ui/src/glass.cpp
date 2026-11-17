@@ -106,6 +106,25 @@ namespace banana
 		}).detach();
 	}
 
+	rnds::Bitmap softShadow(int w, int h, float radius, float blur, int& pad)
+	{
+		rnds::Bitmap b;
+		pad = std::max(1, (int)std::ceil(blur));
+		if (w <= 0 || h <= 0 || (size_t)(w + 2 * pad) * (h + 2 * pad) > 4096u * 4096u) return b;
+		b.w = w + 2 * pad; b.h = h + 2 * pad; b.alpha = true;
+		b.px.assign((size_t)b.w * b.h, 0);
+		const float hw = w / 2.0f, hh = h / 2.0f, rad[4] = { radius, radius, radius, radius };
+		for (int j = 0; j < b.h; j++)
+			for (int i = 0; i < b.w; i++)
+			{
+				float d = boxDistance(i + 0.5f - pad - hw, j + 0.5f - pad - hh, hw, hh, rad, 0);
+				if (d < -1 || d >= blur) continue;
+				float t = 1 - std::max(0.0f, d) / blur;	// (1 at the edge, 0 at blur px out: a soft fall)
+				b.px[(size_t)j * b.w + i] = (uint8_t)std::lround(255 * t * t * std::min(1.0f, d + 1));
+			}
+		return b;
+	}
+
 	rnds::Bitmap glassPiece(const rnds::Bitmap& bd, int x, int y, int w, int h, const float rad[4])
 	{
 		rnds::Bitmap b;

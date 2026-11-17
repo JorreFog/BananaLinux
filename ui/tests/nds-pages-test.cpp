@@ -559,6 +559,11 @@ int main(int argc, char** argv)
 	renderAll(c, 640, 480, "glass-dark", v == "light", false);
 	v = applyTheme("file:" + c.themes + "/glass-light.json", "yellow");
 	renderAll(c, 1024, 768, "glass-light", v == "light", false);
+	// Plaza: its Settings' white (or slate) panels, in Nunito
+	v = applyTheme("file:" + c.themes + "/plaza-light.json", "yellow");
+	renderAll(c, 640, 480, "plaza-light", v == "light", false);
+	v = applyTheme("file:" + c.themes + "/plaza-dark.json", "yellow");
+	renderAll(c, 640, 480, "plaza-dark", v == "light", false);
 	v = applyTheme("dark", "pink");
 	renderAll(c, 640, 480, "pink", false, false);
 	fprintf(stderr, "%s: %d failed\n", fails ? "FAIL" : "ok", fails);

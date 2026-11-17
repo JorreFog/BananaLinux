@@ -21,6 +21,10 @@ namespace banana
 	// waited for them (two pictures read, filled and blurred, ~half a second on the RG DS)
 	void glassPrewarm(int w, int h, int r);
 
+	// a panel's soft shadow (the theme's "settings.shadow"): A8 coverage around a rounded box w x h (device px), fading
+	// out over blur px, none under the box itself; the box's top left is at (pad, pad) in it
+	rnds::Bitmap softShadow(int w, int h, float radius, float blur, int& pad);
+
 	// a box's piece of a blurred picture: the part under it (at x, y device px, w x h), its corners rounded
 	rnds::Bitmap glassPiece(const rnds::Bitmap& backdrop, int x, int y, int w, int h, const float rad[4]);
 }

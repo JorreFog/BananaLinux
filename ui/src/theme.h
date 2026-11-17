@@ -37,6 +37,12 @@ namespace banana
 	// a theme's "settings": { "glass": 14, "pane": "#14161e6b", "edge": "#ffffff30" }: Settings' panels frosted glass
 	// over the theme's pictures (glass.h), with that tint and hairline edge (ARGB), in Inter. blur 0: as before.
 	// "frost": { "top": ..., "bottom": ... }: those pictures already blurred (no blur on the handheld then)
-	struct GlassLook { float blur = 0; uint32_t pane = 0x6b14161e, edge = 0x30ffffff; std::string frostTop, frostBottom; };
+	// "round": the panels' corners that many times rounder; "shadow": a soft shadow under each panel in that colour
+	// (ARGB) instead of the hairline edge; "pills": the companion's tabs and Back to game as pills (Plaza's)
+	struct GlassLook
+	{
+		float blur = 0; uint32_t pane = 0x6b14161e, edge = 0x30ffffff; std::string frostTop, frostBottom;
+		float round = 1; uint32_t shadow = 0; bool pills = false;
+	};
 	extern GlassLook glassLook;
 }
