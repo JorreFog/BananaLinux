@@ -385,6 +385,11 @@ namespace banana
 		{ "zxspectrum", "ZX Spectrum", { { "fuse", "Fuse" } } },
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
+		{ "arcade", "Arcade", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "mame2010", "MAME 2010" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "neogeo", "Neo Geo", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps1", "CPS-1", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps2", "CPS-2", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps3", "CPS-3", { { "fbneo", "FinalBurn Neo" }, { "fbalpha2012", "FB Alpha 2012" } } },
 	};
 	static bool coreInstalled(const std::string& core)
 	{

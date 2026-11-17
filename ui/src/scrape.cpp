@@ -258,7 +258,88 @@ namespace
 		{ "gb", "Nintendo - Game Boy" }, { "nes", "Nintendo - Nintendo Entertainment System" },
 		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
 		{ "c64", "Commodore - 64" }, { "zxspectrum", "Sinclair - ZX Spectrum" },
-		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
+		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" }, { "psp", "Sony - PlayStation Portable" },
+		{ "arcade", "FBNeo - Arcade Games" }, { "neogeo", "FBNeo - Arcade Games" }, { "cps1", "FBNeo - Arcade Games" },
+		{ "cps2", "FBNeo - Arcade Games" }, { "cps3", "FBNeo - Arcade Games" } };
+	// the arcade systems: their games' files are the sets' short names (sf2.zip), the collection's pictures are named
+	// after the games ("Street Fighter II_ The World Warrior (World 910522)"); FBNeo's DAT in libretro-database's
+	// metadat (fbneo-split) gives one from the other, and the year
+	const std::set<std::string> ARCADE = { "arcade", "neogeo", "cps1", "cps2", "cps3" };
+	// a DAT's sets: short name -> the game's name and year ("sf2" -> "Street Fighter II: The World Warrior (World
+	// 910522)", "1991"; the set's own, not another release's of the same name)
+	struct Set { std::string name, year; };
+	std::map<std::string, Set> setNames(const std::string& dat)
+	{
+		std::map<std::string, Set> out;
+		std::istringstream in(dat);
+		std::string ln, name, year;
+		while (std::getline(in, ln))
+		{
+			size_t a = ln.find_first_not_of(" \t");
+			if (a == std::string::npos) continue;
+			if (!ln.compare(a, 6, "name \"")) { size_t e = ln.find('"', a + 6); if (e != std::string::npos) name = ln.substr(a + 6, e - a - 6); }
+			else if (!ln.compare(a, 13, "releaseyear \"")) year = ln.substr(a + 13, 4);
+			else if (!ln.compare(a, 11, "rom ( name ") && !name.empty())
+			{
+				size_t b = a + 11, e = ln.find(' ', b);
+				std::string f = ln.substr(b, e == std::string::npos ? std::string::npos : e - b);
+				out.emplace(f.substr(0, f.rfind('.')), Set{ name, year });
+			}
+			else if (ln[a] == ')') { name.clear(); year.clear(); }
+		}
+		return out;
+	}
+	// the logos libretro's thumbnails have none of (PSP, arcade): LaunchBox's games database's, by the list of its
+	// names and logo files the image carries (tools/launchbox-logos.py makes it), one logo fetched a game
+	const std::map<std::string, std::vector<std::string>> LAUNCHBOX = {
+		{ "psp", { "Sony PSP", "Sony PSP Minis" } }, { "arcade", { "Arcade" } }, { "cps1", { "Arcade" } },
+		{ "cps2", { "Arcade" } }, { "cps3", { "Arcade" } }, { "neogeo", { "SNK Neo Geo MVS", "SNK Neo Geo AES", "Arcade" } } };
+	struct Logos { std::map<std::string, std::string> byNorm, byWords; };	// norm() / words() of a name -> its file
+	Logos launchboxLogos(const std::string& sysId)
+	{
+		Logos x;
+		auto p = LAUNCHBOX.find(sysId);
+		if (p == LAUNCHBOX.end()) return x;
+		std::ifstream f(getenv("BANANA_LAUNCHBOX") ? getenv("BANANA_LAUNCHBOX") : "/usr/share/banana/launchbox-logos.tsv");
+		// (the platforms in their order: a Neo Geo game's own logo before the arcade's)
+		std::map<std::string, std::vector<std::pair<std::string, std::string>>> rows;
+		for (std::string ln; std::getline(f, ln);)
+		{
+			size_t a = ln.find('\t'), b = a == std::string::npos ? a : ln.find('\t', a + 1);
+			if (b == std::string::npos) continue;
+			rows[ln.substr(0, a)].push_back({ ln.substr(a + 1, b - a - 1), ln.substr(b + 1) });
+		}
+		for (auto& plat : p->second)
+			for (auto& [name, file] : rows[plat]) { x.byNorm.emplace(norm(name), file); x.byWords.emplace(words(name), file); }
+		return x;
+	}
+	// a game's logo there: the same name, the same words in another order, else one name the start of the other (at
+	// least 8 letters, the closest in length); its URL, or ""
+	std::string launchboxLogo(const Logos& x, const std::string& name)
+	{
+		std::string k = norm(name), file;
+		if (auto a = x.byNorm.find(k); a != x.byNorm.end()) file = a->second;
+		else if (auto w = x.byWords.find(words(name)); w != x.byWords.end()) file = w->second;
+		else if (k.size() >= 8)
+		{
+			size_t bestD = 1000;
+			for (auto it = x.byNorm.lower_bound(k.substr(0, 8)); it != x.byNorm.end() && it->first.compare(0, 8, k, 0, 8) == 0; ++it)
+			{
+				const std::string& c = it->first;
+				size_t n = std::min(c.size(), k.size());
+				if (c.compare(0, n, k, 0, n) != 0) continue;
+				size_t d = c.size() > k.size() ? c.size() - k.size() : k.size() - c.size();
+				if (d < bestD) { bestD = d; file = it->second; }
+			}
+		}
+		return file.empty() ? "" : "https://images.launchbox-app.com/" + esc(file);
+	}
+	// a name as the collection's files write it (libretro's thumbnails put _ for &*/:`<>?\\|)
+	std::string thumbName(std::string s)
+	{
+		for (auto& c : s) if (strchr("&*/:`<>?\\|", c)) c = '_';
+		return s;
+	}
 	std::vector<System> systems(const std::string& conf)
 	{
 		std::vector<System> out;
@@ -481,6 +562,8 @@ int main(int argc, char** argv)
 			if (savePicture(title, dir + "/media/label/" + stem + ".jpg", 320)) unlink((dir + "/media/label/" + stem + ".png").c_str());
 		}
 		std::string logo = std::string(argv[2]) == "nds" ? std::string() : get(base + "Named_Logos/" + esc(name) + ".png");
+		if (logo.empty())	// (PSP, arcade: LaunchBox's)
+			if (std::string u = launchboxLogo(launchboxLogos(argv[2]), name); !u.empty()) logo = get(u);
 		if (!logo.empty())
 		{
 			mkdir((dir + "/media/marquee").c_str(), 0755);
@@ -511,7 +594,7 @@ int main(int argc, char** argv)
 		for (std::string ln; std::getline(f, ln);) { size_t t = ln.find('\t'); if (t != std::string::npos) matches[ln.substr(0, t)] = ln.substr(t + 1); }
 	}
 
-	struct Job { System sys; std::string dir, rel, stem, box, title, logo; };
+	struct Job { System sys; std::string dir, rel, stem, box, title, logo, name, year; };	// (name, year: an arcade set's)
 	std::vector<Job> jobs;
 	std::map<std::string, std::map<std::string, std::string>> genres, years;	// per system: norm name -> value
 	int total = 0;
@@ -550,6 +633,7 @@ int main(int argc, char** argv)
 		std::vector<std::string> boxes = indexNames(get(base + "Named_Boxarts/")), titles = indexNames(get(base + "Named_Titles/"));
 		// the games' logos (a layout theme's "marquee"; a DS game shows its own icon instead)
 		std::vector<std::string> logos = sys.id == "nds" ? std::vector<std::string>() : indexNames(get(base + "Named_Logos/"));
+		Logos lb = logos.empty() ? launchboxLogos(sys.id) : Logos();	// (PSP, arcade: none there)
 		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW, byLogo, byLogoW;
 		for (auto& n : boxes) { byBox[norm(n)].push_back(n); byBoxW[words(n)].push_back(n); }
 		for (auto& n : titles) { byTitle[norm(n)].push_back(n); byTitleW[words(n)].push_back(n); }
@@ -557,8 +641,11 @@ int main(int argc, char** argv)
 		std::string meta = "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/";
 		genres[sys.id] = datField(get(meta + "genre/" + esc(lr->second) + ".dat"), "genre");
 		years[sys.id] = datField(get(meta + "releaseyear/" + esc(lr->second) + ".dat"), "releaseyear");
+		std::map<std::string, Set> sets;
+		if (ARCADE.count(sys.id)) sets = setNames(get(meta + "fbneo-split/" + esc(lr->second) + ".dat"));
 		auto best = [](const std::vector<std::string>& c, const std::string& stem)
 		{
+			if (std::find(c.begin(), c.end(), stem) != c.end()) return stem;	// the very name
 			std::string b;
 			int bs = -1000;
 			for (auto& n : c) { int s = score(n, stem); if (s > bs) { bs = s; b = n; } }
@@ -577,10 +664,14 @@ int main(int argc, char** argv)
 				j.box = base + "Named_Boxarts/" + esc(mi->second) + ".png";
 				j.title = base + "Named_Titles/" + esc(mi->second) + ".png";
 				if (!logos.empty()) j.logo = base + "Named_Logos/" + esc(mi->second) + ".png";
+				else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, mi->second);
 				jobs.push_back(j);
 				continue;
 			}
-			std::string k = norm(j.stem), kw = words(j.stem);
+			auto si = sets.find(j.stem);
+			if (si != sets.end()) { j.name = si->second.name; j.year = si->second.year; }
+			std::string key = j.name.empty() ? j.stem : thumbName(j.name);
+			std::string k = norm(key), kw = words(key);
 			// the same name; the same words in another order; then, as a last try, one name the start of the other
 			// ("Aero the Acro-Bat" and "Aero the Acro-Bat - Rascal Rival Revenge", "Rayman 3 - Hoodlum Havoc" and
 			// "Rayman 3"), at least 8 letters, the closest in length
@@ -603,9 +694,10 @@ int main(int argc, char** argv)
 				}
 				return bestV;
 			};
-			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, j.stem)) + ".png";
-			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, j.stem)) + ".png";
-			if (auto v = find(byLogo, byLogoW)) j.logo = base + "Named_Logos/" + esc(best(*v, j.stem)) + ".png";
+			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, key)) + ".png";
+			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, key)) + ".png";
+			if (auto v = find(byLogo, byLogoW)) j.logo = base + "Named_Logos/" + esc(best(*v, key)) + ".png";
+			else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, key);
 			jobs.push_back(j);
 		}
 		total += count;
@@ -685,13 +777,18 @@ int main(int argc, char** argv)
 		for (const Job* j : kv.second)
 		{
 			if (x.find("<path>./" + xmlEsc(j->rel) + "</path>") != std::string::npos || x.find("<path>" + xmlEsc(j->rel) + "</path>") != std::string::npos) continue;
-			std::string k = norm(j->stem), kw = words(j->stem), g, y;
+			const std::string& key = j->name.empty() ? j->stem : j->name;
+			std::string k = norm(key), kw = words(key), g, y;
 			auto& G = genres[j->sys.id];
 			auto& Y = years[j->sys.id];
 			auto gi = G.find(k); if (gi == G.end()) gi = G.find(kw); if (gi != G.end()) g = gi->second;
 			auto yi = Y.find(k); if (yi == Y.end()) yi = Y.find(kw); if (yi != Y.end()) y = yi->second;
-			if (g.empty() && y.empty()) continue;
+			if (!j->year.empty()) y = j->year;
+			// an arcade game's name, its (tags) left out: "Street Fighter II: The World Warrior", not "sf2"
+			std::string name = j->name.substr(0, j->name.find(" ("));
+			if (g.empty() && y.empty() && name.empty()) continue;
 			add += "\t<game>\n\t\t<path>./" + xmlEsc(j->rel) + "</path>\n";
+			if (!name.empty()) add += "\t\t<name>" + xmlEsc(name) + "</name>\n";
 			if (!g.empty()) add += "\t\t<genre>" + xmlEsc(g) + "</genre>\n";
 			if (y.size() == 4) add += "\t\t<releasedate>" + y + "0101T000000</releasedate>\n";
 			add += "\t</game>\n";
