@@ -16,7 +16,7 @@ menu, only when you pick it. Start by changing a colour in it; stop there if tha
 handheld into a computer. The handheld's files are easy to get at over the network: open `\\<address>\banana` in
 Windows' File Explorer, or `smb://<address>/banana` on a Mac.
 
-**You cannot break anything.** Pick **Dark** in **Settings ▸ Display & sound ▸ Theme** and you are straight back to
+**You cannot break anything.** Pick **Dark** in **Settings ▸ Look & sound ▸ Theme** and you are straight back to
 the normal look. If a theme file cannot be read, the menu quietly uses Dark and writes down why in
 `banana/logs/banana-ui.log`.
 
@@ -25,7 +25,7 @@ the normal look. If a theme file cannot be read, the menu quietly uses Dark and 
 `/usr/share/banana/themes` on the handheld. Copy one, rename it, and edit that. A file on the card with an
 example's name replaces that example.
 
-**Picking it up.** **Settings ▸ Display & sound ▸ Theme** lists every theme by its `name`. If you change a file
+**Picking it up.** **Settings ▸ Look & sound ▸ Theme** lists every theme by its `name`. If you change a file
 the menu is already using, pick the theme again to reload it.
 
 ## 1. The quick one: change the colours
@@ -194,7 +194,7 @@ the component and every copy follows.
 ## 5. Trying it on the handheld
 
 Copy your `.json` (and its folder, if it has one) into `banana/themes/` on the card, then pick it in
-**Settings ▸ Display & sound ▸ Theme**. If you changed a file the menu is already showing, pick the theme again.
+**Settings ▸ Look & sound ▸ Theme**. If you changed a file the menu is already showing, pick the theme again.
 
 To work on a theme without unplugging anything, turn on **Settings ▸ Network ▸ File sharing**: the card appears on
 your Wi-Fi as a network folder, so you can copy your files straight in — or let the editor's **Send to handheld**

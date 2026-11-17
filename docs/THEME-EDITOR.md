@@ -100,7 +100,7 @@ name; the message says where (`screens.home.bottom[2](list).x: ...`). Check in t
 (`"src": "my-theme/wallpaper.png"`). Export a zip holding both.
 
 **Installing.** Unzip into `banana/themes/` on the card (over the network with Settings > Network > File sharing, or
-with the card in a computer), then pick the theme in Settings > Display & sound > Theme, where it shows under its
+with the card in a computer), then pick the theme in Settings > Look & sound > Theme, where it shows under its
 `name`.
 
 **Reloading.** The handheld reads a theme when it is picked in Settings, so a later "send to the handheld" button can

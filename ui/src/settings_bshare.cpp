@@ -412,8 +412,8 @@ namespace banana
 			case RECEIVE:
 				if (!reqId.empty())
 				{
-					add("Accept", "", K_ACCEPT).icon = "bshare-receive";
-					add("Decline", "", K_DECLINE);
+					add("Accept", "", K_ACCEPT).icon = "bshare-accept";		// (a green tick)
+					add("Decline", "", K_DECLINE).icon = "bshare-decline";	// (a red cross)
 				}
 				add("Location", location.empty() ? "Usual places" : shown(location), K_LOCATION);
 				break;
@@ -858,7 +858,7 @@ namespace banana
 			std::vector<Row> r = rows();
 			Top t = topPanel(r);
 			rnds::Backend* be = ui->be;
-			be->beginScreen(0);
+			ui->beginScreen(0);
 			ui->box("screen", false, 0, 0, 640, 480);
 			ui->box("hero", false, 18, 20, 604, 436);
 			ui->icon("bshare", 50, 56, 3);
@@ -874,7 +874,7 @@ namespace banana
 			}
 			be->endScreen();
 
-			be->beginScreen(1);
+			ui->beginScreen(1);
 			ui->box("screen", false, 0, 0, 640, 480);
 			ui->box("bubble", false, 18, 14, 604, 54);
 			std::string count = r.empty() ? "" : std::to_string(sel[sub] + 1) + " / " + std::to_string(r.size());

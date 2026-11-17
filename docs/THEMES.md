@@ -37,7 +37,9 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
   "input": { "library": { "down": "next", "up": "prev" } },  // what the buttons do (below)
   "hints": { "home": [["A", "Open"], ["Y", "Favorite"]] }, // the "hints" list's buttons per view
   "behavior": { "launchMs": 900, "scrollMs": 70, "settleMs": 600, "fps": 30, "wrap": false,
-                "extraHints": true, "cues": { "insert": 560 } },
+                "extraHints": true, "cues": { "insert": 560 },
+                "scrollEase": "bounce",                           // optional: scrollMs is then the move's length, past and back
+                "zoom": { "steps": 3, "start": 1 } },             // optional: the "zoom" hook, changed by zoomIn / zoomOut
   "screens": {
     "home":    { "top": [ ...elements... ], "bottom": [ ... ] },
     "library": { "top": [ ... ], "bottom": [ ... ] },
@@ -80,23 +82,28 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `view` | `"home"`, `"library"` or `"launch"` |
 | `W`, `H`, `screen` | the screen's size in units (640 x 480), 0 for the top screen and 1 for the bottom one |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
+| `glint` | a shine's sweep for an image's `glint`: 0..1 for 560 ms every 5 s from the last move, else -1. The menu wakes only for the sweeps |
 | `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
 | `online`, `motion`, `brand` | Wi-Fi up, Settings' motion, `"Alpha 0.4.1"` |
-| `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's) |
+| `accent`, `accent.light/.dark/.band/.low` | the accent colours (Settings' accent, or the theme's; a theme's `"accents": { "green": "#30d158", ... }` gives its own shade of each name Settings offers) |
 | `palette.<name>` | a colour of the palette (`palette.ink`, ...) |
 | `cursor`, `count`, `scroll` | the selection's index and the count in the current list (systems at home, games in a library); `scroll` is the selection's eased position, a fraction while it moves |
 | `moved`, `entered`, `dir` | ms since the selection last moved, ms since the view changed, the last move's direction (1 / -1) |
 | `launch.progress`, `launch.t` | 0..1 and ms through the launch view |
 | `empty`, `empty.title`, `empty.hint` | a library with no games, and what to say about it |
+| `zoom`, `zoom.steps`, `zoomed` | with `behavior.zoom`: the view's zoom, 0 to steps - 1 (its start until changed), kept for home and each system apart; ms since it last changed |
+| `page`, `pages` | a `pages` list's page with the selection, and how many there are (by the theme's `columns` and `rows` vars) |
+| `letter` | the selected game's first letter (`#` for a digit or anything else): the A-Z button's |
 | `systems.count`, `games.count` | |
 | `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index` |
-| `game.*` | the selected game (library and launch): `title sub plays last time art box cart label icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
+| `game.*` | the selected game (library and launch): `title sub plays last time art box cart label marquee icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
 | `item.*`, `i`, `n`, `sel`, `rel`, `pos`, `first`, `last`, `ix`, `iy` | inside a list item: its own system's or game's fields (as above; `key label` for hints), its index, the count, whether it is selected, its distance from the selection (`rel` whole, `pos` eased), and where the list put it |
 | your `vars`, a component's `with` | |
 
 Pictures from hooks (`sys.icon`, `game.art`...) are full paths. A theme's own files are relative to its JSON file.
-`game.romIcon` is a DS game's own icon from its ROM.
+`game.romIcon` is a DS game's own icon from its ROM. `marquee` is the game's logo (`media/marquee/<rom name>.png`, which a box-art fetch
+downloads from libretro, or gamelist.xml's `<marquee>`), and a DS game's own icon; "" without one.
 
 ## Elements
 
@@ -117,6 +124,7 @@ An array of elements is a group of them.
 | `clip` | children cut to the element's box |
 | `states` | `[{ "when": "=sel", "fill": "#fff", "scale": 1.1 }, ...]`: properties that replace the others while `when` holds (the last one wins) |
 | `smooth` | `{ "x": 120, "scale": 90 }` (time constants in ms), or one number for x, y, w, h, opacity and scale. The property eases towards its value instead of jumping |
+| `ease` | `"bounce"`: `smooth`'s numbers are durations instead, each move going a little past its value and back (Banana's own themes' curve) |
 | `onTap` | a button the element acts as when tapped: `"a"`, `"b"`, `"left"`... |
 | `use`, `with` | a component, with the element's own properties over the component's; `with: { "label": "Play" }` sets names for its expressions |
 
@@ -140,7 +148,8 @@ Fonts are named in the theme's `fonts` (`"title": "mine/Title.ttf"`) or are buil
 `src`, `fallback` (another source when `src` is empty or doesn't load), `fit` (`cover`, `contain`, `fill`, `coverTop`,
 `pixel` stretched without smoothing, `pixelContain` whole multiples of its pixels), `radius`, `tint` (multiplied),
 `crop` (`cardLabel`: a real DS card scan's artwork, `noStrip`: a DS box without its white strip), `placeholder` (a
-colour shown while it loads or when there is nothing). Pictures are decoded and fitted off the main thread.
+colour shown while it loads or when there is nothing), `glint` (`"=glint"`: a slanted band crossing the picture as
+drawn) in `glintColor` (`#ffffff48`). Pictures are decoded and fitted off the main thread.
 
 ### group
 
@@ -156,7 +165,7 @@ buttons of `hints` plus Banana's own, such as SELECT Search), or `range` (`count
 
 | | |
 |---|---|
-| `direction` | `row`, `column`, `grid` (`columns`), or `free`: the item places itself from `pos`/`rel` (a carousel, a wheel, a fan: `"x": "=320 + pos * 140", "scale": "=1 - abs(pos) * 0.1"`) |
+| `direction` | `row`, `column`, `grid` (`columns`), `pages` (`columns` x `rows` a page, the pages side by side `pageW` apart, the list's width by default; the selection's page slides into view), or `free`: the item places itself from `pos`/`rel` (a carousel, a wheel, a fan: `"x": "=320 + pos * 140", "scale": "=1 - abs(pos) * 0.1"`) |
 | `itemW`, `itemH`, `gap`, `stepX`, `stepY` | the items' size and spacing |
 | `scrollMode` | `center` (the selection stays in the middle), `edge` (scrolls when it would leave the box), `none` |
 | `loop` | the list wraps around (with `behavior.wrap` for the buttons) |
@@ -171,7 +180,13 @@ selects it, and tapping the selected one again opens it.
 
 `input.<view>.<button>` (`home` and `library`; buttons `left right up down a b x y l r`) is one of: `prev`, `next`
 (`prev:5` moves 5: a grid's rows), `first`, `last`, `open` (home: the system, or starts an app; library: the game),
-`back`, `fav`, `resume` (home: the system's last game), `prevSystem`, `nextSystem`, `none`. START (Settings) and
+`back`, `fav`, `resume` (home: the system's last game), `prevSystem`, `nextSystem`, `prevRow`, `nextRow` (as many as the
+theme's `columns` var), `gridLeft`, `gridRight`, `gridUp`, `gridDown`, `prevPage`, `nextPage` (a `pages` list: left and right
+go on to the page beside at a row's end, up and down stay on the page), `zoomIn`, `zoomOut` (`behavior.zoom`),
+`nextLetter`, `prevLetter` (the library: the first game of the next or the previous letter), `none`. `swipeLeft` and
+`swipeRight` are the bottom screen's swipes (a step the other way without them). An element's `onTap` is a button
+(`"a"`, `"l"`...; `"x"`, `"start"` and `"select"` do what the buttons do: a game's page, Settings, Search) or
+`"do:<action>"`. START (Settings) and
 SELECT (search) stay Banana's. The defaults are the Carts theme's: home left/right/up/down/L/R move, A opens, X
 resumes, Y stars; library left/right move, up/down move 10, L/R change system, A plays, B goes back, Y stars.
 

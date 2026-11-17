@@ -463,7 +463,7 @@ both directions of `default` to S16 stereo 48 kHz (the rate the DS emulators alr
 resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48 kHz playback the capture's
 `hw_params` was refused, and the microphone never started whatever the gains were.
 
-**Speaker EQ** (Settings > Display & sound > Speaker EQ). On the speakers only, bananad's playback slave is
+**Speaker EQ** (Settings > Look & sound > Speaker EQ). On the speakers only, bananad's playback slave is
 `{ type banana_eq slave.pcm "hw:N" }` inside the `plug`: banana_eq is an ALSA extplug (`ui/src/eq/pcm_banana_eq.c`,
 installed as `/usr/lib/alsa-lib/libasound_module_pcm_banana_eq.so`) that runs RBJ biquads on the S16 48 kHz stream in
 each program's own audio thread (1.6% of one A55 core for 9 filters). It follows `/run/banana/speaker-eq`, Equalizer

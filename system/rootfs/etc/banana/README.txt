@@ -2,7 +2,8 @@
 BANANA
 ======
 Games go in roms/<system>: roms/nds for Nintendo DS (.nds or .zip), roms/gba, roms/snes, ...
-BIOS files go in bios/.
+BIOS files go in bios/ (the Neo Geo's neogeo.zip). Arcade games are FinalBurn Neo's sets, as their short names
+(sf2.zip): a box-art fetch (Settings > System > Box art) names them.
 Box art (optional): roms/<system>/media/box/<game file name>.png  (also media/cart, media/label),
 or an EmulationStation gamelist.xml with its images, as scrapers write them.
 
@@ -33,7 +34,7 @@ Bluetooth: Settings > Network > Bluetooth switches it on (off at first: it costs
 finds controllers, headphones and speakers in pairing mode and pairs them (A). While Bluetooth headphones are
 connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
 
-Speaker EQ: Settings > Display & sound > Speaker EQ evens out the speakers (never the headphones): a profile
+Speaker EQ: Settings > Look & sound > Speaker EQ evens out the speakers (never the headphones): a profile
 measured for this handheld, or one of your own, and seven sliders to adjust it by ear. Your own: a .txt in banana/speaker-eq in
 Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", "Filter 1: ON PK Fc 1000 Hz Gain -4 dB
 Q 1.2"), picked in Profile.
@@ -41,7 +42,9 @@ Q 1.2"), picked in Profile.
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
 
-RetroArch (the systems other than the DS): F + a button in a game, F + X its menu, F + Start quits.
+RetroArch (the systems other than the DS and the PSP): F + a button in a game, F + X its menu, F + Start quits.
+PSP (PPSSPP, roms/psp): the same, F + L / F + R load / save the state, R2 fast-forwards; its saves, states and
+settings are in saves/ppsspp/PSP.
 A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.

@@ -2,7 +2,8 @@
 // collections (no account): libretro-thumbnails (thumbnails.libretro.com: <System>/Named_Boxarts and Named_Titles,
 // PNGs named after the No-Intro/Redump names) and libretro-database's metadat (genre and releaseyear DATs). Written
 // where the menu's library looks (library.cpp): <system folder>/media/box/<rom name>.jpg (the cover),
-// media/label/<rom name>.jpg (the title screen, the cartridge label's art), and the genre and year as a game entry in
+// media/label/<rom name>.jpg (the title screen, the cartridge label's art), media/marquee/<rom name>.png (the game's
+// logo, from Named_Logos, for the layout themes' "marquee"; not for DS games, which have their own icon), and the genre and year as a game entry in
 // the folder's gamelist.xml (added to one that is there; entries already in it are left alone).
 //   banana-scrape [--force]     --force fetches again what is already there
 // Progress in /run/banana/scrape.status, one line: "running <done> <total> <system name>|<game>", then
@@ -37,6 +38,8 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+
+#include "artsystems.h"
 
 namespace
 {
@@ -210,8 +213,9 @@ namespace
 		return out;
 	}
 
-	// ---- pictures: decoded, made no larger than max x max (area average), written as PNG ---------------------------
-	bool savePicture(const std::string& data, const std::string& path, int max)
+	// ---- pictures: decoded, made no larger than max x max (area average), written as JPEG (png: as PNG, its
+	// transparency kept: a game's logo, drawn over the theme's own colour) -------------------------------------------
+	bool savePicture(const std::string& data, const std::string& path, int max, bool png = false)
 	{
 		int w, h, n;
 		unsigned char* px = stbi_load_from_memory((const unsigned char*)data.data(), (int)data.size(), &w, &h, &n, 4);
@@ -233,6 +237,12 @@ namespace
 			}
 		}
 		stbi_image_free(px);
+		if (png)
+		{
+			std::string tmp = path + ".part";
+			bool ok = stbi_write_png(tmp.c_str(), ow, oh, 4, out.data(), ow * 4) != 0;
+			return ok && rename(tmp.c_str(), path.c_str()) == 0;
+		}
 		// JPEG (quality 90, over black where the picture had transparency): a PNG's compression took most of a second
 		// a picture on these cores, and the JPEG is a third of the size on the card
 		for (size_t i = 0; i < out.size(); i += 4) { unsigned a = out[i + 3]; for (int c = 0; c < 3; c++) out[i + c] = (unsigned char)(out[i + c] * a / 255); }
@@ -245,12 +255,86 @@ namespace
 
 	// ---- the card ---------------------------------------------------------------------------------------------------
 	struct System { std::string id, name, folder; std::vector<std::string> exts; };
-	const std::map<std::string, std::string> LIBRETRO = {
-		{ "nds", "Nintendo - Nintendo DS" }, { "gba", "Nintendo - Game Boy Advance" }, { "gbc", "Nintendo - Game Boy Color" },
-		{ "gb", "Nintendo - Game Boy" }, { "nes", "Nintendo - Nintendo Entertainment System" },
-		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
-		{ "c64", "Commodore - 64" }, { "zxspectrum", "Sinclair - ZX Spectrum" },
-		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
+	const std::map<std::string, std::string>& LIBRETRO = banana::artCollections();	// (artsystems.h)
+	// the arcade systems: their games' files are the sets' short names (sf2.zip), the collection's pictures are named
+	// after the games ("Street Fighter II_ The World Warrior (World 910522)"); FBNeo's DAT in libretro-database's
+	// metadat (fbneo-split) gives one from the other, and the year
+	const std::set<std::string> ARCADE = { "arcade", "neogeo", "cps1", "cps2", "cps3" };
+	// a DAT's sets: short name -> the game's name and year ("sf2" -> "Street Fighter II: The World Warrior (World
+	// 910522)", "1991"; the set's own, not another release's of the same name)
+	struct Set { std::string name, year; };
+	std::map<std::string, Set> setNames(const std::string& dat)
+	{
+		std::map<std::string, Set> out;
+		std::istringstream in(dat);
+		std::string ln, name, year;
+		while (std::getline(in, ln))
+		{
+			size_t a = ln.find_first_not_of(" \t");
+			if (a == std::string::npos) continue;
+			if (!ln.compare(a, 6, "name \"")) { size_t e = ln.find('"', a + 6); if (e != std::string::npos) name = ln.substr(a + 6, e - a - 6); }
+			else if (!ln.compare(a, 13, "releaseyear \"")) year = ln.substr(a + 13, 4);
+			else if (!ln.compare(a, 11, "rom ( name ") && !name.empty())
+			{
+				size_t b = a + 11, e = ln.find(' ', b);
+				std::string f = ln.substr(b, e == std::string::npos ? std::string::npos : e - b);
+				out.emplace(f.substr(0, f.rfind('.')), Set{ name, year });
+			}
+			else if (ln[a] == ')') { name.clear(); year.clear(); }
+		}
+		return out;
+	}
+	// the logos libretro's thumbnails have none of (PSP, arcade): LaunchBox's games database's, by the list of its
+	// names and logo files the image carries (tools/launchbox-logos.py makes it), one logo fetched a game
+	const std::map<std::string, std::vector<std::string>> LAUNCHBOX = {
+		{ "psp", { "Sony PSP", "Sony PSP Minis" } }, { "arcade", { "Arcade" } }, { "cps1", { "Arcade" } },
+		{ "cps2", { "Arcade" } }, { "cps3", { "Arcade" } }, { "neogeo", { "SNK Neo Geo MVS", "SNK Neo Geo AES", "Arcade" } } };
+	struct Logos { std::map<std::string, std::string> byNorm, byWords; };	// norm() / words() of a name -> its file
+	Logos launchboxLogos(const std::string& sysId)
+	{
+		Logos x;
+		auto p = LAUNCHBOX.find(sysId);
+		if (p == LAUNCHBOX.end()) return x;
+		std::ifstream f(getenv("BANANA_LAUNCHBOX") ? getenv("BANANA_LAUNCHBOX") : "/usr/share/banana/launchbox-logos.tsv");
+		// (the platforms in their order: a Neo Geo game's own logo before the arcade's)
+		std::map<std::string, std::vector<std::pair<std::string, std::string>>> rows;
+		for (std::string ln; std::getline(f, ln);)
+		{
+			size_t a = ln.find('\t'), b = a == std::string::npos ? a : ln.find('\t', a + 1);
+			if (b == std::string::npos) continue;
+			rows[ln.substr(0, a)].push_back({ ln.substr(a + 1, b - a - 1), ln.substr(b + 1) });
+		}
+		for (auto& plat : p->second)
+			for (auto& [name, file] : rows[plat]) { x.byNorm.emplace(norm(name), file); x.byWords.emplace(words(name), file); }
+		return x;
+	}
+	// a game's logo there: the same name, the same words in another order, else one name the start of the other (at
+	// least 8 letters, the closest in length); its URL, or ""
+	std::string launchboxLogo(const Logos& x, const std::string& name)
+	{
+		std::string k = norm(name), file;
+		if (auto a = x.byNorm.find(k); a != x.byNorm.end()) file = a->second;
+		else if (auto w = x.byWords.find(words(name)); w != x.byWords.end()) file = w->second;
+		else if (k.size() >= 8)
+		{
+			size_t bestD = 1000;
+			for (auto it = x.byNorm.lower_bound(k.substr(0, 8)); it != x.byNorm.end() && it->first.compare(0, 8, k, 0, 8) == 0; ++it)
+			{
+				const std::string& c = it->first;
+				size_t n = std::min(c.size(), k.size());
+				if (c.compare(0, n, k, 0, n) != 0) continue;
+				size_t d = c.size() > k.size() ? c.size() - k.size() : k.size() - c.size();
+				if (d < bestD) { bestD = d; file = it->second; }
+			}
+		}
+		return file.empty() ? "" : "https://images.launchbox-app.com/" + esc(file);
+	}
+	// a name as the collection's files write it (libretro's thumbnails put _ for &*/:`<>?\\|)
+	std::string thumbName(std::string s)
+	{
+		for (auto& c : s) if (strchr("&*/:`<>?\\|", c)) c = '_';
+		return s;
+	}
 	std::vector<System> systems(const std::string& conf)
 	{
 		std::vector<System> out;
@@ -472,6 +556,14 @@ int main(int argc, char** argv)
 			mkdir((dir + "/media/label").c_str(), 0755);
 			if (savePicture(title, dir + "/media/label/" + stem + ".jpg", 320)) unlink((dir + "/media/label/" + stem + ".png").c_str());
 		}
+		std::string logo = std::string(argv[2]) == "nds" ? std::string() : get(base + "Named_Logos/" + esc(name) + ".png");
+		if (logo.empty())	// (PSP, arcade: LaunchBox's)
+			if (std::string u = launchboxLogo(launchboxLogos(argv[2]), name); !u.empty()) logo = get(u);
+		if (!logo.empty())
+		{
+			mkdir((dir + "/media/marquee").c_str(), 0755);
+			savePicture(logo, dir + "/media/marquee/" + stem + ".png", 320, true);
+		}
 		// remembered, so a scrape with --force keeps it (the game's line replaced)
 		std::string key = std::string(argv[2]) + "/" + stem, out, ln;
 		{
@@ -497,7 +589,7 @@ int main(int argc, char** argv)
 		for (std::string ln; std::getline(f, ln);) { size_t t = ln.find('\t'); if (t != std::string::npos) matches[ln.substr(0, t)] = ln.substr(t + 1); }
 	}
 
-	struct Job { System sys; std::string dir, rel, stem, box, title; };
+	struct Job { System sys; std::string dir, rel, stem, box, title, logo, name, year; };	// (name, year: an arcade set's)
 	std::vector<Job> jobs;
 	std::map<std::string, std::map<std::string, std::string>> genres, years;	// per system: norm name -> value
 	int total = 0;
@@ -518,6 +610,7 @@ int main(int argc, char** argv)
 	{
 		auto lr = LIBRETRO.find(sys.id);
 		if (lr == LIBRETRO.end()) continue;
+		if (setting(("art." + sys.id).c_str(), "on") == "off") continue;	// (Scrape artworks > Systems: Skip)
 		std::vector<std::pair<std::string, std::vector<std::string>>> places;	// a folder and the games in it
 		int count = 0;
 		for (size_t ri = 0; ri < roots.size(); ri++)
@@ -534,14 +627,21 @@ int main(int argc, char** argv)
 		// the collection's names, to match ours against
 		std::string base = "https://thumbnails.libretro.com/" + esc(lr->second) + "/";
 		std::vector<std::string> boxes = indexNames(get(base + "Named_Boxarts/")), titles = indexNames(get(base + "Named_Titles/"));
-		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW;
+		// the games' logos (a layout theme's "marquee"; a DS game shows its own icon instead)
+		std::vector<std::string> logos = sys.id == "nds" ? std::vector<std::string>() : indexNames(get(base + "Named_Logos/"));
+		Logos lb = logos.empty() ? launchboxLogos(sys.id) : Logos();	// (PSP, arcade: none there)
+		std::map<std::string, std::vector<std::string>> byBox, byTitle, byBoxW, byTitleW, byLogo, byLogoW;
 		for (auto& n : boxes) { byBox[norm(n)].push_back(n); byBoxW[words(n)].push_back(n); }
 		for (auto& n : titles) { byTitle[norm(n)].push_back(n); byTitleW[words(n)].push_back(n); }
+		for (auto& n : logos) { byLogo[norm(n)].push_back(n); byLogoW[words(n)].push_back(n); }
 		std::string meta = "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/";
 		genres[sys.id] = datField(get(meta + "genre/" + esc(lr->second) + ".dat"), "genre");
 		years[sys.id] = datField(get(meta + "releaseyear/" + esc(lr->second) + ".dat"), "releaseyear");
+		std::map<std::string, Set> sets;
+		if (ARCADE.count(sys.id)) sets = setNames(get(meta + "fbneo-split/" + esc(lr->second) + ".dat"));
 		auto best = [](const std::vector<std::string>& c, const std::string& stem)
 		{
+			if (std::find(c.begin(), c.end(), stem) != c.end()) return stem;	// the very name
 			std::string b;
 			int bs = -1000;
 			for (auto& n : c) { int s = score(n, stem); if (s > bs) { bs = s; b = n; } }
@@ -559,10 +659,15 @@ int main(int argc, char** argv)
 			{
 				j.box = base + "Named_Boxarts/" + esc(mi->second) + ".png";
 				j.title = base + "Named_Titles/" + esc(mi->second) + ".png";
+				if (!logos.empty()) j.logo = base + "Named_Logos/" + esc(mi->second) + ".png";
+				else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, mi->second);
 				jobs.push_back(j);
 				continue;
 			}
-			std::string k = norm(j.stem), kw = words(j.stem);
+			auto si = sets.find(j.stem);
+			if (si != sets.end()) { j.name = si->second.name; j.year = si->second.year; }
+			std::string key = j.name.empty() ? j.stem : thumbName(j.name);
+			std::string k = norm(key), kw = words(key);
 			// the same name; the same words in another order; then, as a last try, one name the start of the other
 			// ("Aero the Acro-Bat" and "Aero the Acro-Bat - Rascal Rival Revenge", "Rayman 3 - Hoodlum Havoc" and
 			// "Rayman 3"), at least 8 letters, the closest in length
@@ -585,8 +690,10 @@ int main(int argc, char** argv)
 				}
 				return bestV;
 			};
-			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, j.stem)) + ".png";
-			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, j.stem)) + ".png";
+			if (auto v = find(byBox, byBoxW)) j.box = base + "Named_Boxarts/" + esc(best(*v, key)) + ".png";
+			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, key)) + ".png";
+			if (auto v = find(byLogo, byLogoW)) j.logo = base + "Named_Logos/" + esc(best(*v, key)) + ".png";
+			else if (!lb.byNorm.empty()) j.logo = launchboxLogo(lb, key);
 			jobs.push_back(j);
 		}
 		total += count;
@@ -632,6 +739,14 @@ int main(int argc, char** argv)
 				std::string d = get(j.title);
 				if (!d.empty()) savePicture(d, labelPath, 320);
 			}
+			std::string logoPath = j.dir + "/media/marquee/" + j.stem + ".png";
+			if (!j.logo.empty() && (force || access(logoPath.c_str(), F_OK) != 0))
+			{
+				mkdir((j.dir + "/media").c_str(), 0755);
+				mkdir((j.dir + "/media/marquee").c_str(), 0755);
+				std::string d = get(j.logo);
+				if (!d.empty()) savePicture(d, logoPath, 320, true);
+			}
 			if (got) found++;
 			int n = ++done;
 			status("running " + std::to_string(n) + " " + std::to_string(total) + " " + j.sys.name + "|" + j.stem);
@@ -658,13 +773,18 @@ int main(int argc, char** argv)
 		for (const Job* j : kv.second)
 		{
 			if (x.find("<path>./" + xmlEsc(j->rel) + "</path>") != std::string::npos || x.find("<path>" + xmlEsc(j->rel) + "</path>") != std::string::npos) continue;
-			std::string k = norm(j->stem), kw = words(j->stem), g, y;
+			const std::string& key = j->name.empty() ? j->stem : j->name;
+			std::string k = norm(key), kw = words(key), g, y;
 			auto& G = genres[j->sys.id];
 			auto& Y = years[j->sys.id];
 			auto gi = G.find(k); if (gi == G.end()) gi = G.find(kw); if (gi != G.end()) g = gi->second;
 			auto yi = Y.find(k); if (yi == Y.end()) yi = Y.find(kw); if (yi != Y.end()) y = yi->second;
-			if (g.empty() && y.empty()) continue;
+			if (!j->year.empty()) y = j->year;
+			// an arcade game's name, its (tags) left out: "Street Fighter II: The World Warrior", not "sf2"
+			std::string name = j->name.substr(0, j->name.find(" ("));
+			if (g.empty() && y.empty() && name.empty()) continue;
 			add += "\t<game>\n\t\t<path>./" + xmlEsc(j->rel) + "</path>\n";
+			if (!name.empty()) add += "\t\t<name>" + xmlEsc(name) + "</name>\n";
 			if (!g.empty()) add += "\t\t<genre>" + xmlEsc(g) + "</genre>\n";
 			if (y.size() == 4) add += "\t\t<releasedate>" + y + "0101T000000</releasedate>\n";
 			add += "\t</game>\n";

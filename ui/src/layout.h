@@ -37,6 +37,7 @@ namespace banana
 		bool touch(int screen, float x, float y, bool down) override;
 		bool touchMove(int screen, float x, float y) override;
 		void touchCancel() override { mDown = false; }
+		std::string takeTapKey() override;
 		void update(double nowMs) override;
 		void render() override;
 		int nextWake() const override;
@@ -52,6 +53,7 @@ namespace banana
 		struct Node;
 		struct Impl;
 	private:
+		bool runAction(const std::string& action);
 		std::unique_ptr<Impl> d;
 		rnds::Source* src;
 		rnds::Backend* be;

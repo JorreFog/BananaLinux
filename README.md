@@ -92,7 +92,7 @@ The full list: the [0.5.3.4 release notes](https://github.com/JorreFog/BananaLin
 
 - **Three new languages:** Spanish (Español) by Pixelado Dev, Italian (Italiano) by Olympicus and Finnish (Suomi) by HANHITSI. Thank you! The language is picked from a list (Settings › System › Language), and the Pokémon companions read the Spanish releases.
 - **GBA Pokémon companion:** the DS companion's pages (Battle, Party, Team, Here, Map, Guide, Pokédex, journey log) for Ruby, Sapphire, Emerald, FireRed, LeafGreen and the hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass, SoulGold and Unbound, with a Nuzlocke-style **Challenge mode**: Settings › Other systems › Second screen.
-- **Speaker EQ:** a tuned profile for the RG DS Plus speakers, seven sliders, or your own Equalizer APO profile (Settings › Display & sound). Speakers only.
+- **Speaker EQ:** a tuned profile for the RG DS Plus speakers, seven sliders, or your own Equalizer APO profile (Settings › Look & sound). Speakers only.
 - **Game & Watch** on both screens, through MAME, and **Commodore 64** and **ZX Spectrum** (basic support).
 - **Activity** on the home row: play time, a timeline and trends, and what to play next.
 - **Clearer Settings:** one plain sentence per row, and a line under each choice saying what it does.
@@ -149,7 +149,7 @@ The full list, with every fix: the [0.5.0 release notes](https://github.com/Jorr
 
 **Look and feel**
 
-- **Ten layout themes, built in:** a theme file can now draw the whole menu, and [ten come with the system](#themes), made with the Banana Theme Studio. Pick one in Settings › Display & sound › Theme. The theme engine got 2–4x faster on the RG DS without changing a pixel.
+- **Ten layout themes, built in:** a theme file can now draw the whole menu, and [ten come with the system](#themes), made with the Banana Theme Studio. Pick one in Settings › Look & sound › Theme. The theme engine got 2–4x faster on the RG DS without changing a pixel.
 - **A new first boot:** an arrival animation, then a step-by-step setup (language, Wi-Fi with a connection test, time zone, the DS's name, RetroAchievements, box art). Run it again from Settings › System › First-time setup.
 - **Credits** (Settings › System › Credits), and the UX team's review: brightness kept across restarts, box art in a fixed frame, accent colours, L/R page jumps, stick navigation, a Power menu, Shown systems and a Hotkeys page.
 
@@ -218,7 +218,7 @@ A look around BananaOS, captured on an RG DS Plus running 0.4.2. For 0.5.0's lay
     <td align="center"><img src="docs/img/readme/shot-store.png" alt="The App Store: eReaderDS with an update from 1.27.3 to 1.27.4 and its notes on the top panel; the Apps tab with eReaderDS and Bank & Trade on the bottom"><br><sub>App Store: install and update apps from the menu.</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/img/readme/shot-settings.png" alt="Settings: six groups as tiles (Display & sound, Sleep & power, Nintendo DS, Other systems, Network, System); the selected group's contents on the top panel"><br><sub>Settings: six groups, with help on the top screen.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-settings.png" alt="Settings: six groups as tiles (Look & sound, Sleep & power, Nintendo DS, Other systems, Network, System); the selected group's contents on the top panel"><br><sub>Settings: six groups, with help on the top screen.</sub></td>
     <td align="center"><img src="docs/img/readme/shot-light.png" alt="The light theme: the home screen in warm paper tones"><br><sub>Light theme: the same interface in a lighter palette.</sub></td>
     <td align="center"><img src="docs/img/readme/shot-carts.png" alt="The Carts theme: the DS games as 3D cartridges on a shelf, Mario Kart DS selected, its stats on the top panel"><br><sub>Carts: browse your games on a 3D shelf. Experimental.</sub></td>
   </tr>
@@ -292,7 +292,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 
 ## Themes
 
-In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten layout themes come built in: pick one in **Settings › Display & sound › Theme** (A opens a gallery with previews). They were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
+In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten layout themes come built in: pick one in **Settings › Look & sound › Theme** (A opens a gallery with previews). They were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
 
 <p align="center">
   <img src="docs/img/readme/themes.png" width="100%" alt="The ten layout themes on the home screen: Comic Panel, Coral Reef, Felt Table, Neon Arcade, Oak Bookshelf, Orbital HUD, Paper Notebook, Phosphor Terminal, Swiss Poster and Vinyl Lounge">
@@ -309,7 +309,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 ## Built for two screens and a lid
 
 - Suspend and resume: close the lid and the game pauses, the card is flushed and the handheld sleeps. Open it and the game carries on. Woken in a bag, it goes back to sleep. With Power off after sleeping, a long sleep on the battery saves the game and turns the handheld off; press power and you are back in it.
-- Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream. A speaker EQ (Settings › Display & sound) has a tuned profile for the RG DS Plus speakers.
+- Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream. A speaker EQ (Settings › Look & sound) has a tuned profile for the RG DS Plus speakers.
 - Battery care: while asleep it checks the battery and shuts down cleanly before it runs flat. The LEDs work as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging.
 
 <details>

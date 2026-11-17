@@ -1,5 +1,7 @@
 #include <ctime>
 #include "settings.h"
+
+#include "artsystems.h"
 #include "settings_draw.h"
 #include "settings_curl.h"
 #include "recorder.h"
@@ -7,6 +9,7 @@
 #include "settings_defaults.h"
 #include "theme.h"
 #include "vkbd.h"
+#include "glass.h"
 #include "json.h"
 #include "gba/host.h"
 #include "nds/pages.h"
@@ -111,6 +114,30 @@ namespace banana
 		FILE* w = fopen(tmp.c_str(), "w");
 		if (!w) return;
 		// (a full card: the short copy is dropped and the old file kept, RetroArch's whole retroarch.cfg among them)
+		bool ok = fwrite(out.data(), 1, out.size(), w) == out.size();
+		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
+		ok &= fclose(w) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
+	}
+
+	// the key's lines taken out of a key = value file (a system's own value set back to Same as all): written beside
+	// and renamed over, only when it had one; an unreadable file left alone
+	static void dropConfValue(const std::string& path, const std::string& key)
+	{
+		std::ifstream f(path);
+		if (!f) return;
+		std::string ln, out;
+		bool had = false;
+		while (std::getline(f, ln))
+		{
+			size_t eq = ln.find('=');
+			if (!ln.empty() && ln[0] != '#' && eq != std::string::npos && trim(ln.substr(0, eq)) == key) { had = true; continue; }
+			out += ln + "\n";
+		}
+		if (!had) return;
+		std::string tmp = path + ".new";
+		FILE* w = fopen(tmp.c_str(), "w");
+		if (!w) return;
 		bool ok = fwrite(out.data(), 1, out.size(), w) == out.size();
 		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
 		ok &= fclose(w) == 0;
@@ -244,15 +271,24 @@ namespace banana
 			for (uint32_t c : { a.base, a.light, a.dark, a.band, a.low }) look += "|" + std::to_string(c);
 			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
 			const rnds::ThemeFiles& f = rnds::themeFiles;
-			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-") + (f.switches ? "|s" : "|-");
+			look += "|g" + std::to_string(glassLook.blur) + "," + std::to_string(glassLook.pane) + "," + std::to_string(glassLook.edge) + "," + glassLook.frostTop + "," + glassLook.frostBottom;
 			struct stat st;
 			std::string tp = themePath(value);
 			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
 		}
 		// (and now and then anyway: texts that came and went, a clock's minutes, a scan's networks, would pile up)
-		if (look != drawnLook || cache.size() > 1000) { cache.clear(); cacheBytes = 0; drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
-		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
-		bool clean = v == "carts" && !fontDir.empty();
+		if (look != drawnLook || cache.size() > 1000)	// (also for a new accent: the boxes are drawn again)
+		{
+			// a Glass theme new here (the boot, or just picked): its frosted pictures made now, beside the menu
+			if (look != drawnLook && glassLook.blur > 0)
+				glassPrewarm((int)std::lround(X(640)), (int)std::lround(X(480)), (int)std::lround(X(glassLook.blur)));
+			cache.clear(); cacheBytes = 0; drawnLook = look;
+		}
+		// the Carts and Glass themes write in Inter (a clean typeface), the others in the theme's Pixelify Sans. A theme
+		// with panels ("settings.glass") and fonts of its own (Plaza's Nunito) writes in those
+		bool clean = (v == "carts" || glassLook.blur > 0) && !fontDir.empty() &&
+			!(glassLook.blur > 0 && !rnds::themeFiles.fontRegular.empty() && !rnds::themeFiles.fontMedium.empty());
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
 		if (clean != cleanFonts || !R || fonts != fontsLoaded)
 		{
@@ -373,6 +409,9 @@ namespace banana
 	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
+	// Picture size's choices (Other systems > Picture & sound, and each system's page): ra_scale
+	static const std::vector<std::string> SCALE_HINTS = { "As RetroArch has it.", "The game's shape, as large as fits.",
+		"Sharp, even pixels at a whole-number size, with a black margin.", "The whole screen. Some games look stretched." };
 	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
 		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
@@ -385,7 +424,37 @@ namespace banana
 		{ "zxspectrum", "ZX Spectrum", { { "fuse", "Fuse" } } },
 		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
 		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
+		{ "arcade", "Arcade", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "mame2010", "MAME 2010" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "neogeo", "Neo Geo", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps1", "CPS-1", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps2", "CPS-2", { { "fbneo", "FinalBurn Neo" }, { "mame2003_plus", "MAME 2003-Plus" }, { "fbalpha2012", "FB Alpha 2012" } } },
+		{ "cps3", "CPS-3", { { "fbneo", "FinalBurn Neo" }, { "fbalpha2012", "FB Alpha 2012" } } },
 	};
+	// Per system configurations' rows: "Manufacturer - System", listed by manufacturer then system (arcade boards with no
+	// one maker: the name alone)
+	static std::string systemRowLabel(const std::string& id)
+	{
+		static const std::map<std::string, std::pair<const char*, const char*>> MAKER = {
+			{ "atari2600", { "Atari", "2600" } }, { "atari7800", { "Atari", "7800" } }, { "atarilynx", { "Atari", "Lynx" } },
+			{ "wonderswan", { "Bandai", "WonderSwan" } }, { "wonderswancolor", { "Bandai", "WonderSwan Color" } },
+			{ "cps1", { "Capcom", "CPS-1" } }, { "cps2", { "Capcom", "CPS-2" } }, { "cps3", { "Capcom", "CPS-3" } },
+			{ "colecovision", { "Coleco", "ColecoVision" } }, { "vectrex", { "GCE", "Vectrex" } },
+			{ "c64", { "Commodore", "64" } }, { "zxspectrum", { "Sinclair", "ZX Spectrum" } },
+			{ "odyssey2", { "Magnavox", "Odyssey 2" } }, { "intellivision", { "Mattel", "Intellivision" } },
+			{ "pcengine", { "NEC", "PC Engine" } }, { "pcenginecd", { "NEC", "PC Engine CD" } },
+			{ "fds", { "Nintendo", "Famicom Disk System" } }, { "gameandwatch", { "Nintendo", "Game & Watch" } },
+			{ "gb", { "Nintendo", "Game Boy" } }, { "gba", { "Nintendo", "Game Boy Advance" } }, { "gbc", { "Nintendo", "Game Boy Color" } },
+			{ "nes", { "Nintendo", "NES" } }, { "n64", { "Nintendo", "Nintendo 64" } }, { "pokemini", { "Nintendo", "Pokémon mini" } },
+			{ "snes", { "Nintendo", "Super Nintendo" } }, { "virtualboy", { "Nintendo", "Virtual Boy" } },
+			{ "sega32x", { "Sega", "32X" } }, { "gamegear", { "Sega", "Game Gear" } }, { "mastersystem", { "Sega", "Master System" } },
+			{ "megacd", { "Sega", "Mega CD" } }, { "megadrive", { "Sega", "Mega Drive" } }, { "sg-1000", { "Sega", "SG-1000" } },
+			{ "neogeo", { "SNK", "Neo Geo" } }, { "ngp", { "SNK", "Neo Geo Pocket" } }, { "ngpc", { "SNK", "Neo Geo Pocket Color" } },
+			{ "psx", { "Sony", "PlayStation" } },
+		};
+		auto it = MAKER.find(id);
+		if (it == MAKER.end()) return "";
+		return std::string(it->second.first) + " - " + it->second.second;
+	}
 	static bool coreInstalled(const std::string& core)
 	{
 		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
@@ -397,9 +466,6 @@ namespace banana
 		for (const auto& c : sys.cores)
 			if (coreInstalled(c.first)) { names.push_back(c.second); values.push_back(c.first); }
 	}
-	// a RetroArch system's own buttons page (Other systems > Buttons > the system): its row's key, its section
-	static std::string raButtonsKey(const RaSystem& sys) { return std::string("ra_buttons.") + sys.id; }
-	static std::string raButtonsSection(const RaSystem& sys) { return std::string(sys.label) + " buttons"; }
 	// which cores are installed, for every system: Settings builds its rows again when a download changed it
 	static std::string coreSignature()
 	{
@@ -449,7 +515,9 @@ namespace banana
 				if (kind == Item::INFO) items.back().mirror = key;
 			}
 		};
-		const char* D = "Display & sound";
+		// each row: what it is, in a sentence (help); then what the chosen option does, short and plain (hint)
+		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
+		const char* D = "Look & sound";
 		{
 			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
 			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
@@ -457,38 +525,63 @@ namespace banana
 			add(D, "picture", "Theme", "How the menu looks. Your own themes go in banana/themes on the card.",
 				menu, "theme", names, values);
 		}
-		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
-			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
-			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
-		items.back().hints = { "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." };
-		// each panel its own backlight (N2); F + volume steps both
-		add(D, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens anywhere, in games too.", "", "top",
-			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens anywhere, in games too.", "", "bottom",
-			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
-		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
-		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
-			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
-		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds", { "On", "Off" }, { "on", "off" });
-		items.back().hints = { "The menu plays its sounds.", "The menu is silent. Games keep their sound." };
-		add(D, "music", "Speaker EQ", "", "", "speaker_eq_page", {}, {}, Item::PAGE);
-		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
-		add(D, "picture", "Menu look", "The top screen's motion, battery and clock, the boot animation, and the DS cartridges.", "", "menu_look", {}, {}, Item::PAGE);
-		// the Menu look page (Display & sound > Menu look)
+		add(D, "picture", "Theme options", "The theme's colours, its game pictures and its motion.", "", "theme_options", {}, {}, Item::PAGE);
+		// the Theme options page (Look & sound > Theme options): what the theme chosen above does
 		{
-			const char* ML = "Menu look";
-			add(ML, "picture", "Motion", "The top screen's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
-			items.back().hints = { "The top screen moves and shines.", "The top screen holds still, and saves a little battery." };
-			add(ML, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
-			items.back().hints = { "Just the battery icon.", "The icon, and how full it is in percent." };
-			add(ML, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
-			items.back().hints = { "Like 14:30.", "Like 2:30 PM." };
-			add(ML, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
-			items.back().hints = { "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." };
-			add(ML, "picture", "DS cartridges", "What the DS cartridges on the bottom screen show. The top screen keeps the box art.", menu, "ds_cart_art", { "Box art", "Game icon" }, { "box", "icon" });
-			items.back().hints = { "The covers Box art fetched. A game without one shows its own icon.", "Each game's own icon, as the DSi menu shows it." };
+			const char* TO = "Theme options";
+			add(TO, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
+				{ "Yellow", "Orange", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "orange", "blue", "red", "green", "purple", "pink" });
+			add(TO, "picture", "Text on accent", "The colour of the text on the selection.", menu, "accent_text",
+				{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
+			hint({ "Dark or light, whichever reads better on the accent colour.", "Always dark text.", "Always light text." });
+			add(TO, "picture", "Game pictures", "What the games show: the cartridges, Glass's cards, Plaza's tiles.", menu, "ds_cart_art",
+				{ "Box art", "Game icon" }, { "box", "icon" });
+			hint({ "The covers Scrape artworks fetched. A game without one shows its own icon.",
+				"A DS game's own icon, as the DSi menu shows it. Other games show their logo, or their box art without one." });
+			add(TO, "picture", "Motion", "The menu's gentle movement and shine.", menu, "motion", { "On", "Off" }, { "on", "off" });
+			hint({ "The menu moves and shines.", "The menu holds still, and saves a little battery." });
+			add(TO, "picture", "Reset theme options", "The accent, its text, the game pictures and motion as they first were. Press A twice.",
+				"", "theme_reset", { "" }, { "" }, Item::ACTION);
 		}
+		add(D, "picture", "Screens", "Each screen's brightness, and its colours.", "", "screens_page", {}, {}, Item::PAGE);
+		// the Screens page (Look & sound > Screens): each panel its own backlight (N2); F + volume steps both
+		{
+			const char* SC = "Screens";
+			add(SC, "picture", "Top brightness", "How bright the top screen is. F + volume changes both screens, in games too.", "", "top",
+				{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+			add(SC, "picture", "Bottom brightness", "How bright the bottom screen is. F + volume changes both screens, in games too.", "", "bottom",
+				{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+			add(SC, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
+		}
+		add(D, "music", "Sound", "The volume, the menu's sounds and the speakers' EQ.", "", "sound_page", {}, {}, Item::PAGE);
+		// the Sound page (Look & sound > Sound)
+		{
+			const char* SO = "Sound";
+			add(SO, "music", "Volume", "The speakers or headphones. The volume keys change it anywhere.", "", "",
+				{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
+			add(SO, "music", "Menu sounds", "The menu's clicks, and the cartridge sound when a game starts.", menu, "sounds",
+				{ "Normal", "Quiet", "Off" }, { "on", "quiet", "off" });
+			hint({ "The menu plays its sounds.", "The menu's sounds, softer than the games.", "The menu is silent. Games keep their sound." });
+			add(SO, "music", "Speaker EQ", "Evens out the speakers. Headphones stay as they are.", "", "speaker_eq_page", {}, {}, Item::PAGE);
+		}
+		add(D, "picture", "Shown systems", "Which systems are on the home row. A opens the list.", "", "shelves", {}, {}, Item::PAGE);
+		add(D, "picture", "Clock", "How the time shows on the top screen.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
+		hint({ "Like 14:30.", "Like 2:30 PM." });
+		{
+			// the date's formats, each shown with today's date
+			time_t now = time(nullptr);
+			struct tm t;
+			localtime_r(&now, &t);
+			std::vector<std::string> names, values;
+			for (int i = 0; lang::DATE_FORMATS[i]; i++) { values.push_back(lang::DATE_FORMATS[i]); names.push_back(lang::date(lang::DATE_FORMATS[i], t)); }
+			add(D, "picture", "Date", "How the date shows on the top screen, in the themes that show it.", menu, "date_format", names, values);
+			hint({ "Month, then day.", "Day, then month.", "Day, then month, with dots.", "Year, month, day.", "The month's name, then the day.",
+				"The day, then the month's name.", "The weekday, the month's name, the day.", "The weekday, the day, the month's name." });
+		}
+		add(D, "picture", "Battery", "How the battery shows on the top screen.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
+		hint({ "Just the battery icon.", "The icon, and how full it is in percent." });
+		add(D, "picture", "Boot animation", "The bananas and the cartridge as the handheld starts.", menu, "splash", { "On", "Off" }, { "on", "off" });
+		hint({ "Plays as it starts, and backwards as it shuts down.", "Goes straight to the menu, and straight to black." });
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
@@ -504,13 +597,13 @@ namespace banana
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
-		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
-		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
-		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
+		// Nintendo DS: what both emulators share first (the emulator, the buttons, quick resume, the DS's language and
+		// name), then Emulator configurations: a page for each emulator's own settings, in that emulator's files, both
+		// whichever is chosen (to set one up before switching to it), as Other systems' Per system configurations. Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
 		add(N, "nds", "Emulator", "Which emulator plays DS games. X on a game in the library picks one for that game alone.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		items.back().hints = { "DraStic: the fastest. Its own settings are on its page below.", "Banana's own, built on melonDS: the most accurate. Its own settings are on its page below." };
+		items.back().hints = { "DraStic: the fastest. Its own settings are in Emulator configurations.", "Banana's own, built on melonDS: the most accurate. Its own settings are in Emulator configurations." };
 		add(N, "nds", "Quick resume", "What quitting a game does.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		items.back().hints = { "Quitting ends the game. Next time it starts from its title screen.", "Quitting keeps your place, even through a shutdown. Next time the game carries on from there." };
@@ -522,8 +615,13 @@ namespace banana
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
 		add(N, "nds", "DS name", "The name the DS itself is set to: what games call you. 10 characters at most.",
 			"", "ds_name", {}, {}, Item::PAGE);
-		add(N, "nds", "SuperDrastic", "SuperDrastic's own settings: picture, speed, sound and its hotkeys.", "", "nds_superdrastic", {}, {}, Item::PAGE);
-		add(N, "nds", "BananaDS", "BananaDS's own settings: picture, speed, sound and its hotkeys.", "", "nds_bananads", {}, {}, Item::PAGE);
+		// each emulator's own page, the one in use marked
+		add(N, "nds", "Emulator configurations", "Each DS emulator's own settings: picture, speed, sound and hotkeys.", "", "nds_emus", {}, {}, Item::PAGE);
+		{
+			const char* EC = "Emulator configurations";
+			add(EC, "nds", "SuperDrastic", "DraStic's settings: picture, speed, sound and hotkeys.", "", "nds_emu_sd", {}, {}, Item::PAGE);
+			add(EC, "nds", "BananaDS", "BananaDS's settings: picture, speed, sound and hotkeys.", "", "nds_emu_bds", {}, {}, Item::PAGE);
+		}
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).";
@@ -610,8 +708,9 @@ namespace banana
 			add(SD, "nds", "Reset DraStic", "Puts all of DraStic's settings back to Banana's. Saves, states and cheats stay. Press A twice.",
 				"", "nds-reset-drastic", { "" }, { "" }, Item::ACTION);
 		}
-		// Other systems (RetroArch): what every game shares, then pages: Second screen (the game panel and its companions),
-		// Picture & sound, Emulators (each system's core, when it has a choice) and Buttons (a page for each system)
+		// Other systems (RetroArch and BananaFront): first what every system's games share (Second screen and Picture &
+		// sound as pages), then Per system configurations: a page for each system (addSystemRows) with its emulator,
+		// its own values over the shared ones and its buttons; Reset RetroArch last
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which screen other systems' games play on.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
@@ -649,12 +748,15 @@ namespace banana
 		}
 		{
 			const char* PS = "Picture & sound";
-			add(PS, "picture", "Shader", "A look for RetroArch's games.",
+			add(PS, "picture", "Shader", "A look for other systems' games.",
 				menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
 			items.back().hints = { "The picture as it is.", "A handheld's LCD grid.", "A CRT's scanlines.", "Sharp pixels at any size." };
 			add(PS, "picture", "Screen border", "What fills the space around a game's picture.",
 				menu, "ra_border", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." };
+			add(PS, "picture", "Picture size", "How big other systems' games are drawn.",
+				menu, "ra_scale", { "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" });
+			items.back().hints = SCALE_HINTS;
 			add(PS, "music", "Audio latency", "How soon the sound follows the game.",
 				menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 			items.back().hints = { "The quickest. A busy game can crackle.", "The usual balance.", "The safest: no crackle, a little more delay." };
@@ -667,27 +769,92 @@ namespace banana
 				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
 			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
 		}
-		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
+		// each system's page (Other systems > Per system configurations > the system; its row: addSystemRows): its emulator, then its own screen, second
+		// screen, shader and border, each "Same as all" at first (no line in settings.conf: the general
+		// value, which the choice shows in brackets), then its buttons. Read by run-retroarch, run-bananafront and the
+		// game's start in banana-ui (the screen and the second screen)
 		{
-			const char* EM = "Emulators";
-			const size_t before = items.size();
-			// each system's emulator, among the cores installed for it (a row once there are two to choose from)
 			coreSig = coreSignature();
+			const std::vector<std::string> btnNames = { "Game's own", "Fast-forward", "Save state", "Load state", "Menu", "Pause", "Screenshot", "Nothing" };
+			const std::vector<std::string> btnValues = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none" };
+			const char* btnHelp = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
 			for (const auto& sys : RA_SYSTEMS)
 			{
+				const std::string sec = sys.label, id = sys.id;
+				const char* S = sec.c_str();
+				// its emulator among the cores installed for it (the image's, then those RetroArch's Core Downloader got)
 				std::vector<std::string> names, values;
 				coreChoices(sys, names, values);
-				if (names.size() < 2) continue;
-				const char* help = std::string(sys.id) == "gba"
-					? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
-					: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
-				add(EM, "gamepad", sys.label, help, menu, (std::string("core.") + sys.id).c_str(), names, values);
+				if (!names.empty())
+				{
+					const char* help = id == "gba"
+						? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
+						: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
+					add(S, "gamepad", "Emulator", help, menu, ("core." + id).c_str(), names, values);
+				}
+				// a value of its own, or the general one (general: that row's key)
+				auto own = [&](const char* icon, const char* label, const char* help, const char* key, const char* general,
+					std::vector<std::string> names, std::vector<std::string> values, std::vector<std::string> hints)
+				{
+					names.insert(names.begin(), "Same as all"); values.insert(values.begin(), "");
+					hints.insert(hints.begin(), "As set for all systems, in brackets.");
+					add(S, icon, label, help, menu, (std::string(key) + "." + id).c_str(), names, values);
+					items.back().hints = hints;
+					items.back().inherit = general;
+				};
+				own("gamepad", "Screen", "Which screen this system's games play on.", "ra_screen", "video_monitor_index",
+					{ "Top", "Bottom" }, { "top", "bottom" }, { "Its games play on the top screen.", "Its games play on the bottom screen." });
+				own("gamepad", "Second screen", "What the other screen shows while this system's games play.", "retroarch_panel", "retroarch_panel",
+					{ "Game panel", "Off" }, { "panel", "off" },
+					{ "Achievements and tiles to save, load, open the menu, fast-forward and quit.", "The other screen stays dark." });
+				own("picture", "Shader", "A look for this system's games.", "ra_shader", "ra_shader",
+					{ "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" },
+					{ "The picture as it is.", "A handheld's LCD grid.", "A CRT's scanlines.", "Sharp pixels at any size." });
+				own("picture", "Screen border", "What fills the space around this system's picture.", "ra_border", "ra_border",
+					{ "Off", "On" }, { "off", "on" },
+					{ "Black around the picture.", "A quiet border in the menu's colours, the picture at a sharp size." });
+				own("picture", "Picture size", "How big this system's games are drawn.", "ra_scale", "ra_scale",
+					{ "Default", "Fit", "Pixel perfect", "Full screen" }, { "default", "fit", "integer", "full" }, SCALE_HINTS);
+				// the emulator's own options (ra-coreopts writes them into its options file): no line, the emulator's own
+				if (id == "gba" || id == "gbc")
+				{
+					add(S, "picture", "Colour correction", "Colours as the handheld's own screen showed them.",
+						menu, ("ra_colour." + id).c_str(), { "Emulator's own", "On", "Off" }, { "", "on", "off" });
+					items.back().hints = { "As the emulator has it.", "Softer colours, as on the real screen the games were made for.",
+						"The colours as the game stores them: brighter and stronger." };
+				}
+				if (id == "gb")
+				{
+					add(S, "picture", "Game Boy palette", "The colours of Game Boy games.",
+						menu, "ra_gb_palette.gb", { "Emulator's own", "Grey", "Green", "Pocket", "Game Boy Color", "Super Game Boy" },
+						{ "", "grey", "green", "pocket", "gbc", "sgb" });
+					items.back().hints = { "As the emulator has it.", "Shades of grey.", "The original Game Boy's green.",
+						"The Game Boy Pocket's paler screen.", "The colours a Game Boy Color gave the game. Gambatte and mGBA only.",
+						"The colours a Super Game Boy gave the game. Gambatte and mGBA only." };
+				}
+				// L2, R2, L3 and R3 alone, and A/B and X/Y swapped (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch).
+				// No line: the image's template (R2 fast-forwards in the 2D systems' games), else the game's own
+				if (id == "gba")
+				{
+					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
+					// button does; Back, beside F, by default)
+					std::vector<std::string> n = btnNames, v = btnValues;
+					n.insert(n.end() - 1, "Companion");
+					v.insert(v.end() - 1, "companion");
+					buttonRows(S, "gamepad", std::string(btnHelp) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
+						menu, "ra_btn_", "." + id, n, v);
+					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
+					add(S, "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
+						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
+				}
+				else
+					buttonRows(S, "gamepad", btnHelp, menu, "ra_btn_", "." + id, btnNames, btnValues);
+				add(S, "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
+					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
 			}
-			if (items.size() > before)
-				add(O, "gamepad", "Emulators", "Which emulator each system uses, where there is more than one.", "", "ra_cores", {}, {}, Item::PAGE);
 		}
-		// L2, R2, L3 and R3 alone in RetroArch's games (the page below; run-retroarch, bananad)
-		add(O, "gamepad", "Buttons", "Each system's buttons: what L2, R2, L3 and R3 do, and A/B and X/Y swapped.", "", "ra_buttons", {}, {}, Item::PAGE);
+		add(O, "gamepad", "Per system configurations", "Each system's own settings: its emulator, screen, look and buttons.",
+			"", "ra_systems", {}, {}, Item::PAGE);
 		add(O, "gamepad", "Reset RetroArch", "Puts RetroArch's settings back to Banana's. Saves, states and your account stay. Press A twice.",
 			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
@@ -748,7 +915,7 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
-		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games: fetching them, and where they come from.", "", "sys_boxart", {}, {}, Item::PAGE);
+		add(D, "picture", "Scrape artworks", "Covers, logos and title screens: fetch them, for the systems you pick.", "", "sys_boxart", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
@@ -761,12 +928,13 @@ namespace banana
 			items.back().hints = { "Only when you choose Check for updates.", "Also once a day, when Wi-Fi connects." };
 			add(UP, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		}
-		// the Box art page (System > Box art)
+		// the Scrape artworks page (Look & sound > Scrape artworks); its Systems page's rows are addShelfRows()
 		{
-			const char* BA = "Box art";
-			add(BA, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro. Wi-Fi needed.",
+			const char* BA = "Scrape artworks";
+			add(BA, "picture", "Fetch artworks", "Covers, logos, title screens, genres and years for the systems picked. Needs Wi-Fi.",
 				"", "scrape", {}, {}, Item::PAGE);
-			add(BA, "picture", "Box art from", "Where covers come from.",
+			add(BA, "picture", "Systems", "Which systems' games get artworks.", "", "art_systems", {}, {}, Item::PAGE);
+			add(BA, "picture", "Artworks from", "Where covers come from.",
 				menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 			items.back().hints = { "libretro's collections.", "libretro, then TwilightBoxart for the covers it lacks.", "TwilightBoxart first, where it has them." };
 		}
@@ -774,10 +942,15 @@ namespace banana
 		add(S, "gear", "Second SD card", "Games on the card in the second slot.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		items.back().hints = { "Its games show with the others while it's in. exFAT or FAT32.", "Its games stay hidden." };
 		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time.", "", "setup", {}, {}, Item::PAGE);
-		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.",
-			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
-			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
+		add(S, "gear", "Reset options", "Settings back to how they came. Games and saves stay.", "", "sys_reset", {}, {}, Item::PAGE);
+		// the Reset options page (System > Reset options), as Android's
+		{
+			const char* RS = "Reset options";
+			add(RS, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back. Games and saves stay. Press A twice.",
+				"", "reset_system", { "" }, { "" }, Item::ACTION);
+			add(RS, "gear", "Reset emulator settings", "Puts every emulator setting back to its default. Your games and saves are untouched. Press A twice.",
+				"", "reset_emulator", { "" }, { "" }, Item::ACTION);
+		}
 		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
@@ -804,7 +977,7 @@ namespace banana
 			};
 			rows("Hotkeys", "gear", {
 				{ "Volume keys", "Volume", "Everywhere, in games too: the speakers, or the headphones while they are in." },
-				{ "F + volume", "Brightness", "Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound." },
+				{ "F + volume", "Brightness", "Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound." },
 				{ "Power", "Sleep", "Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same." },
 				{ "Hold power", "Shut down", "Everywhere: held for 2 seconds. A game running saves first." },
 				{ "Menu: START", "Settings", "In the menu: Settings. Y there: Sleep, Restart and Shut down." },
@@ -847,39 +1020,6 @@ namespace banana
 			add(DB, "nds", "Reset buttons", "Puts L2, R2, L3 and R3 back to Banana's, A, B, X and Y as printed. Press A twice.",
 				"", "nds-reset-ds-buttons", { "" }, { "" }, Item::ACTION);
 		}
-		// the other systems' buttons (Other systems > Buttons): a page for each system, its L2, R2, L3 and R3's jobs and
-		// Swap A/B and X/Y in banana/settings.conf (ra_btn_l2.<system>... ra_swap_ab.<system>; run-retroarch). No line:
-		// the image's template (R2 fast-forwards in the 2D systems' games), else the game's own and as printed
-		{
-			const char* RB = "Other systems buttons";
-			for (const auto& sys : RA_SYSTEMS)
-				add(RB, "gamepad", sys.label, "This system's buttons: what L2, R2, L3 and R3 do alone in its games, and A/B and X/Y swapped or not.",
-					"", raButtonsKey(sys).c_str(), {}, {}, Item::PAGE);
-			const std::vector<std::string> names = { "Game's own", "Fast-forward", "Save state", "Load state", "Menu", "Pause", "Screenshot", "Nothing" };
-			const std::vector<std::string> values = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none" };
-			for (const auto& sys : RA_SYSTEMS)
-			{
-				const std::string sec = raButtonsSection(sys), id = sys.id;
-				const char* help = "Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey.";
-				if (id == "gba")
-				{
-					// (the Pokémon and game companions' switch: the second screen's menu or the companion, as the corner
-					// button does; Back, beside F, by default)
-					std::vector<std::string> n = names, v = values;
-					n.insert(n.end() - 1, "Companion");
-					v.insert(v.end() - 1, "companion");
-					buttonRows(sec.c_str(), "gamepad", std::string(help) + " Companion: the second screen switches between its menu and the Pokémon or Game companion (F always shows the menu).",
-						menu, "ra_btn_", "." + id, n, v);
-					// the back button beside F: no RetroPad button of the game's, so Companion or nothing (banana-ui's)
-					add(sec.c_str(), "gamepad", "Back", "The button beside F, in this system's games. Companion: the second screen switches between its menu and the Pokémon or Game companion, as the button in its top-right corner does (F always shows the menu).",
-						menu, "ra_btn_back.gba", { "Companion", "Nothing" }, { "companion", "none" });
-				}
-				else
-					buttonRows(sec.c_str(), "gamepad", help, menu, "ra_btn_", "." + id, names, values);
-				add(sec.c_str(), "gamepad", "Swap A/B and X/Y", "On: A and B swap places, and X and Y, in this system's games and in RetroArch's own menu while one runs: for hands used to the other layout. F + a button stays as printed.",
-					menu, ("ra_swap_ab." + id).c_str(), { "Off", "On" }, { "off", "on" });
-			}
-		}
 		const char* PW = "Power";
 		add(PW, "moon", "Sleep", "Puts the handheld to sleep, as a press of the power button does. Your game pauses. Press A twice.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
@@ -920,22 +1060,28 @@ namespace banana
 			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
 		}
 		addShelfRows();
+		addSystemRows();
 		// the sections in the order they first come, those with a tile first (the grid is the first groups) and each
 		// section's rows together: a subpage's rows are added beside the row that opens it, wherever that is
 		// The grid's tiles and each page's rows most used first (ORDER, by section and label); what ORDER doesn't name keeps
 		// the order it was added in, after what it does name
 		static const std::vector<std::pair<std::string, std::vector<std::string>>> ORDER = {
-			{ "", { "Nintendo DS", "Other systems", "Display & sound", "Network", "Sleep & power", "System" } },	// the tiles
-			{ "Nintendo DS", { "Emulator", "Buttons", "SuperDrastic", "BananaDS", "Quick resume", "DS language", "DS name" } },
-			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
-			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
-			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
-			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "", { "Nintendo DS", "Other systems", "Look & sound", "Network", "Sleep & power", "System" } },	// the tiles
+			// (what runs the games first, as in Other systems)
+			{ "Nintendo DS", { "Emulator", "Buttons", "Quick resume", "DS language", "DS name", "Emulator configurations" } },
+			{ "Emulator configurations", { "SuperDrastic", "BananaDS" } },
+			{ "Other systems", { "Frontend", "Screen", "Second screen", "Picture & sound", "Quick resume", "RetroAchievements", "Per system configurations", "Reset RetroArch" } },
+			// (the menu's own look first, then the screens and the sound)
+			{ "Look & sound", { "Theme", "Theme options", "Shown systems", "Scrape artworks", "Screens", "Sound", "Clock", "Date", "Battery", "Boot animation" } },
+			{ "Theme options", { "Accent colour", "Text on accent", "Game pictures", "Motion", "Reset theme options" } },
+			{ "Screens", { "Top brightness", "Bottom brightness", "Screen colours" } },
+			{ "Sound", { "Volume", "Menu sounds", "Speaker EQ" } },
+			{ "Network", { "Wi-Fi", "Bluetooth", "File sharing", "Home server", "Network" } },
+			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "Waking up", "LEDs" } },
+			{ "System", { "Language", "Time zone", "Updates", "Second SD card", "Hotkeys", "First-time setup", "Reset options", "About", "Credits", "Developer options" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
-			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
+			{ "Picture & sound", { "Shader", "Screen border", "Picture size", "Integer scaling", "VSync", "Audio latency" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
 		{
@@ -982,11 +1128,14 @@ namespace banana
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
 			// changes: the Theme row loads it again)
-			static const std::vector<std::string> NAMES = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" },
-				VALUES = { "yellow", "blue", "red", "green", "purple", "pink" };
-			bool own = themeSetsAccent(getConfValue(data + "/settings.conf", "theme", "dark"));
-			it.names = own ? std::vector<std::string>{ "From the theme" } : NAMES;
-			it.values = own ? std::vector<std::string>{ getConfValue(it.file, "accent", "yellow") } : VALUES;
+			// a theme with its own shades of some ("accents"): those
+			std::string theme = getConfValue(data + "/settings.conf", "theme", "dark");
+			bool own = themeSetsAccent(theme);
+			std::vector<AccentName> list = themeAccents(theme);
+			if (list.empty()) list = ACCENT_NAMES;
+			it.names.clear(); it.values.clear();
+			for (auto& a : list) { it.names.push_back(a.name); it.values.push_back(a.value); }
+			if (own) { it.names = { "From the theme" }; it.values = { getConfValue(it.file, "accent", "yellow") }; }
 			it.help = own ? "This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here."
 				: "The colour of the selection, the logo and the boot animation's banana.";
 		}
@@ -1034,6 +1183,15 @@ namespace banana
 		bool goneShader = (it.key == "DSFLIP_SHADER" || it.key == "kms.shader") && access(("/usr/lib/superdrastic/shaders/" + v + ".frag").c_str(), F_OK) != 0;
 		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme" && !goneShader) { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
 		if (it.at < 0) it.at = 0;
+		// a system's own: "Same as all" says what that is now (the general row's value)
+		if (!it.inherit.empty())
+			if (const Item* g = itemByKey(it.inherit))
+			{
+				Item c = *g;
+				load(c);
+				// (made of translated parts: the whole line is in no language's file)
+				if (c.at >= 0 && c.at < (int)c.names.size()) it.names[0] = lang::tr("Same as all") + " (" + lang::tr(c.names[c.at]) + ")";
+			}
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
 		{
@@ -1094,6 +1252,13 @@ namespace banana
 		std::string ra = readLine("/usr/share/retroarch/version");
 		if (!ra.empty()) a << " RetroArch " << ra << ", updated with BananaOS.";
 		about = a.str();
+	}
+
+	void Settings::toRow(const std::string& key)
+	{
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == key) sel = i;
+		top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+		armed = -1;
 	}
 
 	int Settings::groupOf(int item) const
@@ -1204,6 +1369,8 @@ namespace banana
 			std::ofstream(data + "/backlight") << (i == 0 ? pm : other) << " " << (i == 0 ? other : pm) << "\n";
 			return;
 		}
+		// a system's own value set back to Same as all: its line taken out (the launchers then read the general one)
+		if (!it.inherit.empty() && v.empty()) { dropConfValue(it.file, it.key); return; }
 		if (it.kind == Item::VOLUME)
 		{
 			if (system(("/usr/libexec/banana/volume set " + std::to_string(atoi(v.c_str())) + " 2>/dev/null").c_str()) != 0) {}
@@ -1263,25 +1430,30 @@ namespace banana
 			std::vector<Subpage> v = {
 				{ "shelves", "Shown systems" },
 				{ "hotkeys", "Hotkeys" },
-				{ "nds_superdrastic", "SuperDrastic" },
-				{ "nds_bananads", "BananaDS" },
+				{ "nds_emus", "Emulator configurations" },
+				{ "nds_emu_sd", "SuperDrastic" },
+				{ "nds_emu_bds", "BananaDS" },
 				{ "hotkeys_sd", "SuperDrastic hotkeys" },
 				{ "hotkeys_bds", "BananaDS hotkeys" },
 					{ "ra_second", "Second screen", "retroarch_panel" },
 				{ "ra_picture", "Picture & sound" },	// (a submenu: its shader's "Off" is not the page's state)
-				{ "ra_cores", "Emulators" },
+				{ "ra_systems", "Per system configurations" },
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
 				{ "sys_updates", "Updates" },
-				{ "sys_boxart", "Box art" },
-				{ "menu_look", "Menu look" },
+				{ "sys_boxart", "Scrape artworks" },
+				{ "art_systems", "Artwork systems" },
+				{ "sys_reset", "Reset options" },
+				{ "theme_options", "Theme options", "accent" },
+				{ "screens_page", "Screens" },
+				{ "sound_page", "Sound", "sounds" },
 				{ "ds_buttons", "DS buttons" },
-				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
 				{ "developer", "Developer options" },	// (PR #94: System's last row, once unlocked)
 			};
-			for (const auto& sys : RA_SYSTEMS) v.push_back({ raButtonsKey(sys), raButtonsSection(sys) });
+			// each system's page (Other systems > Per system configurations), its row showing its emulator
+			for (const auto& sys : RA_SYSTEMS) v.push_back({ std::string("ra_sys.") + sys.id, sys.label, std::string("core.") + sys.id });
 			return v;
 		}();
 		return all;
@@ -1409,6 +1581,22 @@ namespace banana
 			{
 				armed = -1;
 				return resetApply(it.key == "reset_emulator");
+			}
+			if (it.key == "theme_reset")
+			{
+				// Theme options as they first were (the template's values); an accent the theme owns ("From the theme") stays
+				armed = -1;
+				for (const char* k : { "accent", "accent_text", "ds_cart_art", "motion" })
+					for (auto& x : items)
+						if (x.key == k && x.kind == Item::CHOICE)
+						{
+							auto at = std::find(x.values.begin(), x.values.end(), settingDefault(k));
+							if (at != x.values.end() && at - x.values.begin() != x.at) { x.at = (int)(at - x.values.begin()); save(x); }
+						}
+				rnds::accentTextMode = rnds::accentTextModeOf(settingDefault("accent_text"));
+				setVariant(getConfValue(data + "/settings.conf", "theme", "dark"));
+				toast("Theme options reset", "The accent, its text, the game pictures and motion as they first were.", 0x6ad07a, 1, 4000);
+				return THEME;
 			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
@@ -1621,17 +1809,39 @@ namespace banana
 				page = LIST;
 			}
 	}
-	void Settings::setSystems(const std::vector<std::pair<std::string, std::string>>& systems)
+	void Settings::setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames)
 	{
 		shelfSystems = systems;
+		gameSystems = withGames;
 		addShelfRows();
+		addSystemRows();
 		groups.clear();
 		for (auto& it : items) if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
 		if (sel >= (int)items.size()) sel = 0;
 	}
+	void Settings::addSystemRows()
+	{
+		// Other systems > Per system configurations: a row for each system (A opens its page), "Manufacturer - System"
+		// (systemRowLabel) in alphabetical order, manufacturer first
+		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.key.rfind("ra_sys.", 0) == 0; }),
+			items.end());
+		std::vector<Item> rows;
+		for (const auto& sys : RA_SYSTEMS)
+		{
+			Item it;
+			const std::string label = systemRowLabel(sys.id);
+			it.section = "Per system configurations";
+			it.icon = "gamepad"; it.label = label.empty() ? sys.label : label; it.key = std::string("ra_sys.") + sys.id; it.kind = Item::PAGE;
+			it.help = "This system's own settings: its emulator, screen, look and buttons.";
+			rows.push_back(it);
+		}
+		auto key = [](const std::string& l) { std::string k = l; for (auto& c : k) c = (char)std::tolower((unsigned char)c); return k; };
+		std::stable_sort(rows.begin(), rows.end(), [&](const Item& a, const Item& b) { return key(a.label) < key(b.label); });
+		items.insert(items.end(), rows.begin(), rows.end());
+	}
 	void Settings::addShelfRows()
 	{
-		// one row a system, after everything else (its own section, opened from Display & sound's Shown systems)
+		// one row a system, after everything else (its own section, opened from Look & sound's Shown systems)
 		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Shown systems"; }), items.end());
 		for (auto& sy : shelfSystems)
 		{
@@ -1639,6 +1849,21 @@ namespace banana
 			it.section = "Shown systems"; it.icon = "picture"; it.label = sy.second; it.file = data + "/settings.conf"; it.key = "shelf." + sy.first;
 			it.help = "With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).";
 			it.names = { "With games", "Hidden", "Always" }; it.values = { "auto", "hide", "show" };
+			items.push_back(it);
+			load(items.back());
+		}
+		// Scrape artworks > Systems: a row each system artworks can be fetched for (artsystems.h) with games on the card (or
+		// set to Skip, to be set back), Fetch or Skip
+		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Artwork systems"; }), items.end());
+		for (auto& sy : shelfSystems)
+		{
+			if (!banana::artCollections().count(sy.first)) continue;
+			if (!gameSystems.empty() && !gameSystems.count(sy.first) && getConfValue(data + "/settings.conf", "art." + sy.first, "on") != "off") continue;
+			Item it;
+			it.section = "Artwork systems"; it.icon = "picture"; it.label = sy.second; it.file = data + "/settings.conf"; it.key = "art." + sy.first;
+			it.help = "Whether Fetch artworks gets this system's covers, logos and title screens.";
+			it.names = { "Fetch", "Skip" }; it.values = { "on", "off" };
+			it.hints = { "Its games get artworks.", "Left as they are: what they have stays." };
 			items.push_back(it);
 			load(items.back());
 		}
@@ -1834,8 +2059,164 @@ namespace banana
 		return st;
 	}
 
+	int Settings::switchOf(const Item& it) const
+	{
+		if (it.kind != Item::CHOICE || it.values.size() != 2) return -1;
+		static const std::pair<const char*, const char*> PAIRS[] = { { "off", "on" }, { "no", "yes" }, { "false", "true" } };
+		for (auto& pr : PAIRS)
+		{
+			if (it.values[0] == pr.first && it.values[1] == pr.second) return it.at == 1 ? 1 : 0;
+			if (it.values[0] == pr.second && it.values[1] == pr.first) return it.at == 0 ? 1 : 0;
+		}
+		return -1;
+	}
+
+	// a rounded bar or a circle (h each side: radius h/2) in one colour
+	void Settings::pill(float x, float y, float w, float h, const Color& c)
+	{
+		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
+		if (dw <= 0 || dh <= 0) return;
+		std::string key = "pill:" + std::to_string(dw) + "x" + std::to_string(dh);
+		auto it = cache.find(key);
+		if (it == cache.end())
+		{
+			rnds::Bitmap m = rnds::paintMask(dw, dh, dh / 2.0f);
+			Cached cc;
+			cc.tex = be->upload(m, true);
+			it = put(key, cc, m);
+		}
+		const Cached& cc = keep(it);
+		be->draw(cc.tex, std::round(X(x)), std::round(X(y)), (float)cc.tex->w, (float)cc.tex->h, c);
+	}
+
+	// iOS's switch: green when on, grey when off, its white knob at that side (52 x 30)
+	void Settings::drawSwitch(float x, float y, bool state, bool picked)
+	{
+		Color off = picked ? Color(0, 0, 0, 0.22f) : Color(0.47f, 0.47f, 0.5f, light ? 0.45f : 0.55f);
+		pill(x, y, 52, 30, state ? Color::hex(0x34c759) : off);
+		float kx = state ? x + 24 : x + 2;
+		pill(kx, y + 3, 26, 26, Color(0, 0, 0, 0.18f));	// (its shadow)
+		pill(kx, y + 2, 26, 26, Color(1, 1, 1, 1));
+	}
+
+	// iOS's slider: a thin track, filled to frac in the accent (the picked row's text colour on the accent), a knob
+	void Settings::drawSlider(float x, float y, float w, float frac, bool picked)
+	{
+		SPal p = pal(light);
+		frac = std::max(0.0f, std::min(1.0f, frac));
+		pill(x, y - 3, w, 6, picked ? Color(0, 0, 0, 0.2f) : Color(0.47f, 0.47f, 0.5f, 0.5f));
+		if (frac > 0) pill(x, y - 3, std::max(6.0f, w * frac), 6, picked ? p.onPick : p.pick);
+		float kx = x + w * frac - 12;
+		pill(kx, y - 11, 24, 24, Color(0, 0, 0, 0.18f));
+		pill(kx, y - 12, 24, 24, Color(1, 1, 1, 1));
+	}
+
+	// a Glass theme's box (theme.h's glassLook): the screen its picture, a panel frosted glass (glass.h) with the
+	// theme's tint and a hairline edge (the accent's when on), the picked row the accent. False: not one of those (the
+	// pop-up cards, "osd", keep the theme's own look: they show over games too)
+	bool Settings::glassBox(const std::string& kind, bool on, float x, float y, float w, float h)
+	{
+		bool screen = kind == "screen", pick = kind == "pick", key = kind == "kbd";
+		float radius = kind == "hero" ? 18 : kind == "slot" ? 14 : kind == "bubble" ? 16 : kind == "face" ? 20 : 0;
+		if (!screen && !pick && !key && radius <= 0) return false;
+		radius *= glassLook.round;	// (Plaza's rounder corners)
+		int sw = (int)std::lround(X(640)), sh = (int)std::lround(X(480));
+		int dx = (int)std::lround(X(x)), dy = (int)std::lround(X(y)), dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
+		if (dw <= 0 || dh <= 0) return true;
+		auto colour = [](uint32_t argb) { return Color::hex(argb & 0xffffff, ((argb >> 24) & 255) / 255.0f); };
+		char kb[128];
+		if (screen)
+		{
+			// the picture itself, filled to the screen (none: the theme's background colour)
+			snprintf(kb, sizeof kb, "glass:wall%d:%dx%d", scr, sw, sh);
+			auto it = cache.find(kb);
+			if (it == cache.end())
+			{
+				auto wall = glassBackdrop(scr, sw, sh, 0);
+				Cached c;
+				if (wall) c.tex = be->upload(*wall, false);
+				it = put(kb, c, wall ? *wall : rnds::Bitmap());
+			}
+			const Cached& c = keep(it);
+			if (c.tex) be->draw(c.tex, 0, 0, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+			else be->fill(0, 0, (float)sw, (float)sh, pal(light).screenBg);
+			return true;
+		}
+		if (pick || key)
+		{
+			// the selection: the accent, flat, rounded as the rows are; a button's key: a chip in the text's colour (as
+			// the menu's)
+			snprintf(kb, sizeof kb, "glass:%s:%dx%d", key ? "kbd" : "pick", dw, dh);
+			auto it = cache.find(kb);
+			if (it == cache.end())
+			{
+				rnds::BoxStyle st;
+				st.radius = X(key ? 10 : 14 * glassLook.round); st.bg = key ? pal(light).ink : pal(light).pick;
+				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+				Cached c;
+				c.tex = be->upload(pb.bmp, true);
+				c.ox = pb.originX; c.oy = pb.originY;
+				it = put(kb, c, pb.bmp);
+			}
+			const Cached& c = keep(it);
+			be->draw(c.tex, dx - c.ox, dy - c.oy, (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+			return true;
+		}
+		// a panel: its soft shadow (a theme's "settings.shadow": Plaza's), the blurred picture under it (by where it is),
+		// then its tint and edge (by its size)
+		if (glassLook.shadow >> 24)
+		{
+			snprintf(kb, sizeof kb, "glass:shadow:%dx%d:%g", dw, dh, (double)radius);
+			auto sit = cache.find(kb);
+			if (sit == cache.end())
+			{
+				int pad = 0;
+				rnds::Bitmap b = softShadow(dw, dh, X(radius), X(10), pad);
+				Cached c;
+				if (!b.empty()) c.tex = be->upload(b, true);
+				c.ox = c.oy = pad;
+				sit = put(kb, c, b);
+			}
+			const Cached& sh = keep(sit);
+			if (sh.tex) be->draw(sh.tex, dx - sh.ox, dy - sh.oy + std::round(X(3)), (float)sh.tex->w, (float)sh.tex->h, colour(glassLook.shadow));
+		}
+		int r = (int)std::lround(X(glassLook.blur));
+		float rad[4] = { X(radius), X(radius), X(radius), X(radius) };
+		snprintf(kb, sizeof kb, "glass:piece%d:%d,%d:%dx%d:%g", scr, dx, dy, dw, dh, (double)radius);
+		auto it = cache.find(kb);
+		if (it == cache.end())
+		{
+			auto bd = glassBackdrop(scr, sw, sh, r);
+			rnds::Bitmap b = bd ? glassPiece(*bd, dx, dy, dw, dh, rad) : rnds::Bitmap();
+			Cached c;
+			if (!b.empty()) c.tex = be->upload(b, false);
+			it = put(kb, c, b);
+		}
+		const Cached& piece = keep(it);
+		if (piece.tex) be->draw(piece.tex, dx, dy, (float)piece.tex->w, (float)piece.tex->h, Color(1, 1, 1, 1));
+		snprintf(kb, sizeof kb, "glass:tint:%s%d:%dx%d", kind.c_str(), on ? 1 : 0, dw, dh);
+		it = cache.find(kb);
+		if (it == cache.end())
+		{
+			rnds::BoxStyle st;
+			st.radius = X(radius);
+			st.bg = colour(glassLook.pane);
+			st.border = on ? std::max(2.0f, std::round(2 * s)) : glassLook.shadow >> 24 ? 0.0f : std::max(1.0f, std::round(s));
+			st.borderColor = on ? Color::hex(rnds::accent.base) : colour(glassLook.edge);
+			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+			Cached c;
+			c.tex = be->upload(pb.bmp, true);
+			c.ox = pb.originX; c.oy = pb.originY;
+			it = put(kb, c, pb.bmp);
+		}
+		const Cached& tint = keep(it);
+		be->draw(tint.tex, dx - tint.ox, dy - tint.oy, (float)tint.tex->w, (float)tint.tex->h, Color(1, 1, 1, 1));
+		return true;
+	}
+
 	void Settings::box(const std::string& kind, bool on, float x, float y, float w, float h)
 	{
+		if (glassLook.blur > 0 && glassBox(kind, on, x, y, w, h)) return;
 		SPal p = pal(light);
 		int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 		std::string key = "box:" + kind + (on ? "1" : "0") + ":" + std::to_string(dw) + "x" + std::to_string(dh);
@@ -1971,9 +2352,46 @@ namespace banana
 		for (size_t i = 0; i < lines.size(); i++) text(toUtf8(lines[i].text), false, size, x, top + i * lh, c);
 	}
 
+	// a theme's own picture for an icon (its "icons" by the icon's name, as the shelf's systems by id): smooth, fitted
+	// in the pixel icon's box (its size at that scale: 32 px, Bshare's rows' 16), at x (or centred on it). False: the
+	// theme has none
+	bool Settings::pictureIcon(const std::string& name, float x, float y, int scale, bool centred)
+	{
+		auto f = rnds::themeFiles.icons.find(name);
+		if (f == rnds::themeFiles.icons.end()) return false;
+		static std::map<std::string, int> pixelSize;
+		auto ps = pixelSize.find(name);
+		if (ps == pixelSize.end())
+		{
+			rnds::Bitmap b = rnds::decodeFile(assets + "/icons/" + name + ".png");
+			ps = pixelSize.emplace(name, b.empty() ? 32 : std::max(b.w, b.h)).first;
+		}
+		int box = (int)std::lround(ps->second * scale * s);
+		std::string key = "picon:" + name + ":" + std::to_string(box);
+		auto it = cache.find(key);
+		if (it == cache.end())
+		{
+			rnds::Bitmap b = rnds::decodeFile(f->second);
+			Cached c;
+			if (!b.empty() && !b.alpha && box > 0)
+			{
+				float k = (float)box / std::max(b.w, b.h);
+				b = rnds::resize(b, std::max(1, (int)std::lround(b.w * k)), std::max(1, (int)std::lround(b.h * k)));
+				c.tex = be->upload(b, false);
+			}
+			it = put(key, c, b);
+		}
+		const Cached& c = keep(it);
+		if (!c.tex) return false;
+		float dx = centred ? X(x) - c.tex->w / 2.0f : X(x) + (box - c.tex->w) / 2.0f;
+		be->draw(c.tex, std::round(dx), std::round(X(y) + (box - c.tex->h) / 2.0f), (float)c.tex->w, (float)c.tex->h, Color(1, 1, 1, 1));
+		return true;
+	}
+
 	// an icon centred on cx (its own width: the icons aren't all the same size)
 	void Settings::iconCentred(const std::string& name, float cx, float y, int scale)
 	{
+		if (pictureIcon(name, cx, y, scale, true)) return;
 		icon(name, -10000, -10000, scale);	// (loads it into the cache; off screen)
 		auto it = cache.find("icon:" + name);
 		if (it == cache.end() || !it->second.tex) return;
@@ -1984,6 +2402,7 @@ namespace banana
 
 	void Settings::icon(const std::string& name, float x, float y, int scale)
 	{
+		if (x > -10000 && pictureIcon(name, x, y, scale, false)) return;	// (-10000: iconCentred loading the pixel one)
 		std::string key = "icon:" + name;
 		auto it = cache.find(key);
 		if (it == cache.end())
@@ -2038,7 +2457,8 @@ namespace banana
 		box("face", false, x, 422, w, 40);
 		float kw = 12 + text(key, true, 16, 0, 0, p.ink, false, 0, true);
 		box("kbd", false, x + 15, 430.5f, kw, 23);
-		text(key, true, 16, x + 21, 432.5f, p.kbdInk);
+		// (a Glass theme's chip is the text's colour: its letter the screen's)
+		text(key, true, 16, x + 21, 432.5f, glassLook.blur > 0 ? (light ? Color::hex(0xffffff) : Color::hex(0x1e1e24)) : p.kbdInk);
 		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
@@ -2160,6 +2580,20 @@ namespace banana
 		const Color light = Color::hex(0xf1ede2), bar = Color::hex(0xffe68a), off = Color::hex(0x3a3540), red = Color::hex(0xff8a96);
 		const float w = 310, h = 42, x0 = (640 - w) / 2, y0 = 4, x1 = x0 + w, cy = y0 + h / 2;
 		box("osd", false, x0, y0, w, h);
+		if (glassLook.blur > 0)
+		{
+			// a Glass theme: its own icon (a speaker, crossed out at 0, or a sun), a smooth bar as its sliders', the percent
+			const char* name = sun ? "level-brightness" : percent <= 0 ? "level-mute" : "level-volume";
+			bool drawn = pictureIcon(name, x0 + 10, y0 + 5, 1, false);
+			char pt[8];
+			snprintf(pt, sizeof pt, "%d%%", percent);
+			float ptw = text(pt, true, 19, 0, 0, light, false, 0, true);
+			text(pt, true, 19, x1 - 16 - ptw, y0 + 11, light);
+			float gx0 = x0 + (drawn ? 54 : 16), gx1 = x1 - 16 - text("100%", true, 19, 0, 0, light, false, 0, true) - 12;
+			pill(gx0, cy - 3, gx1 - gx0, 6, Color(1, 1, 1, 0.22f));
+			if (percent > 0) pill(gx0, cy - 3, std::max(6.0f, (gx1 - gx0) * percent / 100.0f), 6, Color(1, 1, 1, 1));
+			return;
+		}
 		int k = std::max(2, (int)std::lround(2 * s));	// device px per icon pixel
 		const char* const* ic = sun ? SUN : percent <= 0 ? MUTE : VOL;
 		float ix = std::round(X(x0 + 14)), iy = std::round(X(cy)) - 6 * k;
@@ -2243,7 +2677,7 @@ namespace banana
 		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
 		const Item& first = items[groupStart(g0)];
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(groupIcon[first.section], 50, 56, 3);
@@ -2252,12 +2686,27 @@ namespace banana
 		char n[32];
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
 		text(n, true, 22, 170, 130, p.accent);
-		std::string all;
-		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		// what the group is for, in a line, as Android's settings list says it (its rows' names, all of them, read as a
+		// wall of text: the user, 2026-10-28)
+		static const std::pair<const char*, const char*> ABOUT[] = {
+			{ "Look & sound", "Which systems show, the theme, games artworks, brightness, volume and sounds." },
+			{ "Sleep & power", "When the handheld dims, sleeps and turns off, the lid and the LEDs." },
+			{ "Nintendo DS", "The DS emulator, and how DS games look, sound and run." },
+			{ "Other systems", "RetroArch's games: the game panel, achievements, shaders and sound." },
+			{ "Network", "Wi-Fi, Bluetooth, file sharing and your home server." },
+			{ "System", "Language, time zone, updates, the second card, hotkeys and resets." },
+		};
+		std::string about;
+		for (auto& a : ABOUT) if (groups[g0] == a.first) about = a.second;
+		if (about.empty())	// (a group without a line: its rows' names)
+		{
+			for (int i = groupStart(g0); i < groupEnd(g0); i++) about += (about.empty() ? "" : ", ") + lang::tr(items[i].label);
+			about += ".";
+		}
+		wrapped(about, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Settings", true, 22, 38, 28, p.ink);
@@ -2462,7 +2911,7 @@ namespace banana
 		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
 
 		// ---- top: what the selected setting is ----
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		// the header (icon, section, name, value) kept tight so the help under it has ten lines (user feedback 2026-10-25: the
@@ -2493,7 +2942,7 @@ namespace banana
 		be->endScreen();
 
 		// ---- bottom: the list ----
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		// the count only when the group has more rows than the five in view (it is the only sign of the others)
@@ -2546,22 +2995,57 @@ namespace banana
 			}
 			else if (it.kind == Item::INFO) v = it.key == "hk" && !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does)
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
-			else if (it.kind == Item::PAGE && (it.key == "nds_superdrastic" || it.key == "nds_bananads"))	// the DS emulator chosen
+			else if (it.kind == Item::PAGE && it.key == "art_systems")	// how many systems get artworks
+			{
+				int on = 0, all = 0;
+				for (const Item& s : items) if (s.section == "Artwork systems") { all++; if (s.at == 0) on++; }
+				v = on == all ? "All" : std::to_string(on) + " of " + std::to_string(all);
+			}
+			else if (it.kind == Item::PAGE && it.key == "nds_emus")	// the DS emulator in use
 			{
 				const Item* e = itemByKey("nds_emulator");
-				if (e && e->at < (int)e->values.size() && "nds_" + e->values[e->at] == it.key) v = "In use";
+				if (e && e->at < (int)e->names.size()) v = e->names[e->at];
+			}
+			else if (it.kind == Item::PAGE && (it.key == "nds_emu_sd" || it.key == "nds_emu_bds"))	// the one in use
+			{
+				const Item* e = itemByKey("nds_emulator");
+				bool bds = e && e->at < (int)e->values.size() && e->values[e->at] == "bananads";
+				if (bds == (it.key == "nds_emu_bds")) v = "In use";
 			}
 			else if (it.kind == Item::PAGE && it.key == "network") { AsNamed named(*this, wstat.connected); v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : ""); nameValue = wstat.connected; }
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
-			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
+			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
+			else if (it.kind == Item::PAGE && it.key == "sys_boxart") v = artShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
 			{
 				if (const Item* r = itemByKey(s->summary); r && r->kind == Item::CHOICE && r->at < (int)r->names.size()) v = r->names[r->at];
+			}
+			// a theme with "switches": a switch or a slider in place of the value and its arrows (left and right as before)
+			if (rnds::themeFiles.switches)
+			{
+				int sw = switchOf(it);
+				bool level = (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.names.size() > 1;
+				if (sw >= 0)
+				{
+					textFit(it.label, true, 20, 38, y + 16, 586 - 52 - 16 - 38, on ? p.onPick : p.muted, on);
+					drawSwitch(586 - 52, y + 13, sw == 1, on);
+					continue;
+				}
+				if (level)
+				{
+					Color vc = on ? p.onPick : p.muted;
+					float vw = text(v, true, 19, 0, 0, vc, false, 0, true);
+					text(v, true, 19, 586 - vw, y + 17, vc);
+					float tw = 150, tx = 586 - 58 - 14 - tw;
+					textFit(it.label, true, 20, 38, y + 16, tx - 16 - 38, on ? p.onPick : p.muted, on);
+					drawSlider(tx, y + 28, tw, (float)it.at / (it.names.size() - 1), on);
+					continue;
+				}
 			}
 			// the name on the left and the value on the right, each in its own box: a long one (a translation) ends in
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
@@ -3097,7 +3581,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		const wifi::Network* cur = nsel < (int)nets.size() ? &nets[nsel] : nullptr;
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
@@ -3113,7 +3597,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Networks", true, 22, 38, 28, p.ink);
@@ -3316,7 +3800,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		const bt::Device* cur = bsel < (int)btDevs.size() ? &btDevs[bsel] : nullptr;
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
@@ -3335,7 +3819,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Devices", true, 22, 38, 28, p.ink);
@@ -3377,7 +3861,7 @@ namespace banana
 	void Settings::renderKeyboard()
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME || entry == ENTRY_SERVER ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
@@ -3415,7 +3899,7 @@ namespace banana
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		// the text being typed, here too, so the keys and what they make are seen together
 		box("slot", true, 18, 12, 604, 56);
@@ -3982,7 +4466,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		// the top screen: the pattern, its name on a strip at the top
-		be->beginScreen(0);
+		beginScreen(0);
 		colorsPattern(0, 0, 480);
 		be->fill(0, 0, X(640), X(30), Color::hex(0x101014));
 		text(std::string("Screen colours  ·  ") + COL_PATTERNS[colPattern] + "  ·  L / R: another pattern", true, 15, 12, 7, Color::hex(0xd0d0d0));
@@ -3991,7 +4475,7 @@ namespace banana
 		text(fit(hint, true, 14, 616), true, 14, 12, 457, Color::hex(0xd0d0d0));
 		be->endScreen();
 		// the bottom screen: the same pattern above, the values below
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		colorsPattern(1, 0, 196);
 		be->fill(0, X(196), X(640), X(2), p.line);
@@ -4020,7 +4504,7 @@ namespace banana
 	}
 
 	// ---- Speaker EQ ------------------------------------------------------------------------------------------------
-	// Display & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
+	// Look & sound > Speaker EQ: on or off, the profile, and seven sliders that adjust it. Each slider shows the
 	// curve's level at its frequency, the profile's to begin with (Tuned's 1 kHz starts at -10 dB), and a step moves
 	// the curve there by 1 dB: what is kept is the change (settings.conf's speaker_eq_bands, a peak filter an octave
 	// wide at each slider's frequency, after the profile's own filters), so a profile's narrow cuts stay as they are.
@@ -4162,7 +4646,7 @@ namespace banana
 		for (auto& c : eqChoices) if (c.value == eqEdit.profile) profileName = c.name;
 
 		// the top screen: the curve the speakers play through now, 100 Hz to 20 kHz, -20 to +20 dB
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		text("Speaker EQ", true, 20, 24, 18, p.ink, true, 1.2f);
 		std::string state = eqEdit.on ? profileName : "Off";
@@ -4204,7 +4688,7 @@ namespace banana
 		be->endScreen();
 
 		// the bottom screen: the rows, the sliders as bars from their 0 dB
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		for (int r = 0; r < EQ_ROWS; r++)
 		{
@@ -4306,7 +4790,7 @@ namespace banana
 	{
 		SPal p = pal(light);
 		bool busy = artJob.running();
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("picture", 50, 56, 3);
@@ -4319,7 +4803,7 @@ namespace banana
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Box art", true, 22, 38, 28, p.ink);
@@ -4437,7 +4921,7 @@ namespace banana
 		const std::string& bd = board.empty() ? online.board : board;	// (/etc/banana/board, or the check's)
 		const std::string handheld = bd == "rgds-plus" ? "RG DS Plus" : bd == "rgds" ? "RG DS" : "handheld";
 		auto mb = [](long long b) { return std::to_string((b + 524288) / 1048576); };
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("gear", 50, 56, 3);
@@ -4504,7 +4988,7 @@ namespace banana
 		if (!notes.empty()) wrapped(notes, 18, 50, hy + 4 * 28 + 6, 540, 4, p.ink);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Update packages", true, 22, 38, 28, p.ink);
@@ -4633,7 +5117,7 @@ namespace banana
 		SPal p = pal(light);
 		const int VIS = 8;
 		const std::string ver = readLine("/etc/banana/version");
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("gear", 50, 56, 3);
@@ -4649,7 +5133,7 @@ namespace banana
 		}
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		for (int r = 0; r < VIS && crTop + r < (int)crLines.size(); r++)
 		{
@@ -4807,7 +5291,7 @@ namespace banana
 			auto it = N.find(f); return it == N.end() ? f : it->second; };
 		long long chosenBytes = 0; int chosenN = 0;
 		for (auto& g : pickGames) if (g.on) { chosenBytes += g.bytes; chosenN++; }
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
@@ -4830,7 +5314,7 @@ namespace banana
 		}
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		std::string head = pickLevel == 0 ? std::string("Systems") : sysName(pickSys[pickSysSel]);
@@ -5008,7 +5492,7 @@ namespace banana
 		int cur = -1;
 		for (auto& it : items) if (it.key == "theme") cur = it.at;
 		const std::string& v = thValues.empty() ? std::string() : thValues[thSel];
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("picture", 50, 56, 3);
@@ -5025,7 +5509,7 @@ namespace banana
 		}
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		for (int i = thTop; i < thTop + 6 && i < (int)thValues.size(); i++)
 		{
@@ -5136,7 +5620,7 @@ namespace banana
 			return w;
 		};
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("gear", 50, 56, 3);
@@ -5147,7 +5631,7 @@ namespace banana
 		wrapped("The language of the menu and the settings. Lines not yet translated stay in English.", 20, 50, 250, 540, 4, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		for (int r = 0; r < LANG_VIS && langTop + r < (int)langList.size(); r++)
 		{
@@ -5222,7 +5706,7 @@ namespace banana
 		};
 		const std::string Q = "Change the menu's language?", N = "No, keep it", Y = "Yes, change it";
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		centred(here(Q), true, 26, 120, p.ink);
@@ -5246,7 +5730,7 @@ namespace banana
 			text(t, medium, size, std::round(320 - w / 2), top, c);
 			rawText = false;
 		};
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		centred(title, true, 22, 92, p.muted);
 		for (int b = 0; b < 2; b++)
@@ -5306,7 +5790,7 @@ namespace banana
 	void Settings::renderHotAsk()
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("nds", 50, 56, 3);
@@ -5343,13 +5827,13 @@ namespace banana
 			text(t, medium, size, std::round(320 - w / 2), top, c);
 		};
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		centred(title, true, 30, 196, p.ink);
 		centred(applying ? "Don't turn the handheld off" : ver, true, 20, 244, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		centred(ver, true, 30, 92, p.ink);
 		centred(step, true, 22, 142, failed ? p.accent : p.muted);
@@ -5637,6 +6121,46 @@ namespace banana
 			else if (ach::readId(achCacheDir(), ach::romKey(path), h, id) && id && ach::readList(achCacheDir(), id, l) && !l.items.empty())
 				pgAchValue = std::to_string(l.unlocked()) + " / " + std::to_string(l.items.size());
 		}
+		// another system's game: its system page's rows, for this game only (a row its page hasn't, it hasn't either)
+		pgRa.clear();
+		pgRaKey = system + "/" + romName;
+		if (!nds && !system.empty() && itemByKey("ra_screen." + system))
+		{
+			struct Spec { const char* label; const char* head; const char* help; const char* file; std::string key; };
+			const Spec specs[] = {
+				{ "Emulator", "This game's emulator", "The emulator for this game.", "core", "core." + system },
+				{ "Screen", "This game's screen", "Which screen this game plays on.", "screen", "ra_screen." + system },
+				{ "Second screen", "This game's second screen", "What the other screen shows while this game plays.", "panel", "retroarch_panel." + system },
+				{ "Shader", "This game's shader", "A look for this game.", "shader", "ra_shader." + system },
+				{ "Screen border", "This game's screen border", "What fills the space around this game's picture.", "border", "ra_border." + system },
+				{ "Picture size", "This game's picture size", "How big this game is drawn.", "scale", "ra_scale." + system },
+				{ "Colour correction", "This game's colours", "Colours as the handheld's own screen showed them.", "colour", "ra_colour." + system },
+				{ "Game Boy palette", "This game's palette", "The colours of this Game Boy game.", "gb_palette", "ra_gb_palette." + system },
+			};
+			for (const Spec& sp : specs)
+			{
+				const Item* si = itemByKey(sp.key);
+				if (!si) continue;
+				PgRa r;
+				r.label = sp.label; r.head = sp.head; r.file = std::string("ra-per-game-") + sp.file + ".conf";
+				r.help = joinTr(sp.help, "Same as system: as on its page in Other systems > Per system configurations.");
+				// what the system has now: its own choice, else (Same as all) the general one
+				Item c = *si;
+				load(c);
+				std::string now = c.at >= 0 && c.at < (int)c.names.size() ? c.names[c.at] : "";
+				if (c.at >= 0 && c.at < (int)c.values.size() && c.values[c.at].empty() && !c.inherit.empty())
+					if (const Item* g = itemByKey(c.inherit)) { Item gc = *g; load(gc); if (gc.at >= 0 && gc.at < (int)gc.names.size()) now = gc.names[gc.at]; }
+				// (made of translated parts, as "Same as all" is)
+				r.names = { lang::tr("Same as system") + (now.empty() ? "" : " (" + lang::tr(now) + ")") }; r.values = { "" };
+				for (size_t i = 0; i < si->values.size() && i < si->names.size(); i++)
+					if (!si->values[i].empty()) { r.names.push_back(si->names[i]); r.values.push_back(si->values[i]); }
+				const std::string cur = perGame(r.file, pgRaKey);
+				for (size_t i = 1; i < r.values.size(); i++) if (r.values[i] == cur) r.at = (int)i;
+				if (!cur.empty() && r.at == 0) { r.names.push_back(cur); r.values.push_back(cur); r.at = (int)r.values.size() - 1; }
+				pgRows.push_back((PgRow)(PG_RA + (int)pgRa.size()));
+				pgRa.push_back(r);
+			}
+		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
 		if (nds && !path.empty()) pgRows.push_back(PG_ACH);
@@ -5695,6 +6219,16 @@ namespace banana
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
+			if (row >= PG_RA && row - PG_RA < (int)pgRa.size())
+			{
+				// kept at once, in the game's line of its row's file
+				PgRa& r = pgRa[row - PG_RA];
+				const int nv = (int)r.values.size();
+				r.at = (r.at + d + nv) % nv;
+				setPerGame(r.file, pgRaKey, r.values[r.at]);
+				pgChanged = true;
+				return MOVED;
+			}
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
 			else if (row == PG_RES)
@@ -5780,6 +6314,7 @@ namespace banana
 	std::string Settings::gameHelpOf(int row)
 	{
 		const bool plus = board_() == "rgds-plus";
+		if (row >= PG_RA && row - PG_RA < (int)pgRa.size()) return pgRa[row - PG_RA].help;
 		return row == PG_EMU
 				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
@@ -5850,18 +6385,18 @@ namespace banana
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
+		auto label = [&](PgRow r) -> std::string { if (r >= PG_RA) return pgRa[r - PG_RA].label; return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
 			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
+		auto value = [&](PgRow r) -> std::string { if (r >= PG_RA) return pgRa[r - PG_RA].names[pgRa[r - PG_RA].at]; return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
 			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
+		text(row >= PG_RA ? pgRa[row - PG_RA].head : row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5869,7 +6404,7 @@ namespace banana
 		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("This game", true, 22, 38, 28, p.ink);
@@ -6651,7 +7186,7 @@ namespace banana
 				if (have > 0) status = std::to_string(have) + " of " + std::to_string(all) + " games have art";
 			}
 			help = scraping() ? "Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes."
-				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.";
+				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > Look & sound > Scrape artworks runs it again for new games.";
 			break;
 		case SL_DONE:
 			help = "Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.";
@@ -6659,7 +7194,7 @@ namespace banana
 		}
 
 		// ---- top panel: the step, its title and state, what it is for, the result ----
-		be->beginScreen(0);
+		beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(icons[sl], 50, 52, 3);
@@ -6690,7 +7225,7 @@ namespace banana
 				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
 			auto art = artCount ? artCount() : std::pair<int, int>(0, 0);
 			bool artBefore = scrapeLine.empty() && art.first > 0;	// (fetched before: an update, the setup again)
-			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
+			row("Scrape artworks", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
 				artBefore ? std::to_string(art.first) + " of " + std::to_string(art.second) + " games have art" : skipped(SL_ART) ? "Skipped" : "Not fetched",
 				scraping() || scrapeLine.compare(0, 4, "done") == 0 || artBefore ? 1 : -1);
 			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
@@ -6730,7 +7265,7 @@ namespace banana
 		be->endScreen();
 
 		// ---- bottom panel: the step's progress, the choices, B and A ----
-		be->beginScreen(1);
+		beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text(titles[sl], true, 22, 38, 28, p.ink);
@@ -6790,7 +7325,7 @@ namespace banana
 	void Settings::renderCard(const std::string& l1, const std::string& l2, float y, float size)
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
+		beginScreen(0);
 		be->fill(0, 0, X(640), X(480), Color::hex(0x000000));
 		float w = text(l1, true, size, 0, 0, p.ink, false, 0, true);
 		text(l1, true, size, std::round(320 - w / 2), y, Color::hex(0xf1ede2));
@@ -6800,7 +7335,7 @@ namespace banana
 			text(l2, false, 20, std::round(320 - w2 / 2), y + size * 1.6f, Color::hex(0xa39d8e));
 		}
 		be->endScreen();
-		be->beginScreen(1);
+		beginScreen(1);
 		be->fill(0, 0, X(640), X(480), Color::hex(0x000000));
 		be->endScreen();
 	}
@@ -6841,6 +7376,26 @@ namespace banana
 		scrapeNext = 0;
 		const char* prog = getenv("BANANA_SCRAPE");	// (another build of it, for testing)
 		spawn(prog && *prog ? prog : "/usr/bin/banana-scrape", nullptr);
+	}
+
+	bool Settings::artForNewGames()
+	{
+		if (scraping() || !wifiOn()) return false;
+		startScrape();
+		return true;
+	}
+
+	// Look & sound's Scrape artworks row: the games with a cover (never "Not yet"), else what a fetch is doing
+	std::string Settings::artShort() const
+	{
+		if (scraping() || scrapeLine.compare(0, 5, "error") == 0) return scrapeShort();
+		if (artCount)
+		{
+			auto [have, all] = artCount();
+			if (all > 0) return have > 0 ? std::to_string(have) + " of " + std::to_string(all) + " games" : "None yet";
+		}
+		std::string v = scrapeShort();
+		return v == "Not yet" ? "" : v;
 	}
 
 	std::string Settings::scrapeShort() const

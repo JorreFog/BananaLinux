@@ -159,7 +159,7 @@ namespace banana
 			if (!p.n && p.preamp == 0) return "";
 			static const char* const TYPE[] = { "PK", "LSC", "HSC", "LPQ", "HPQ" };
 			char ln[160];
-			snprintf(ln, sizeof ln, "# banana-ui: Settings > Display & sound > Speaker EQ (%s)\nPreamp: %.2f dB\n",
+			snprintf(ln, sizeof ln, "# banana-ui: Settings > Look & sound > Speaker EQ (%s)\nPreamp: %.2f dB\n",
 				s.profile == "tuned" ? tunedName().c_str() : s.profile == "none" ? "no profile" : s.profile.c_str(), p.preamp);
 			std::string out = ln;
 			for (int i = 0; i < p.n; i++)

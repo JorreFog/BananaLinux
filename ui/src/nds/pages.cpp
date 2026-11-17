@@ -2,6 +2,8 @@
 #include "logic.h"
 #include "../settings_draw.h"
 #include "../lang.h"
+#include "../glass.h"
+#include "../theme.h"
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
@@ -419,6 +421,14 @@ namespace banana::nds
 		void loadFonts()
 		{
 			const auto& f = rnds::themeFiles;
+			// a Glass theme: Inter, as its Settings (banana's fonts, beside the rnds assets); one that doesn't load: the theme's
+			// (a theme with fonts of its own, Plaza's Nunito: those)
+			if (glassLook.blur > 0 && (f.fontRegular.empty() || f.fontMedium.empty()))
+			{
+				R = rnds::Font::load(assets + "/../banana/fonts/Inter-Regular.ttf");
+				M = rnds::Font::load(assets + "/../banana/fonts/Inter-Medium.ttf");
+				if (R && M) return;
+			}
 			R = rnds::Font::load(f.fontRegular.empty() ? assets + "/fonts/PixelifySans-Regular.ttf" : f.fontRegular);
 			M = rnds::Font::load(f.fontMedium.empty() ? assets + "/fonts/PixelifySans-Medium.ttf" : f.fontMedium);
 		}
@@ -460,9 +470,107 @@ namespace banana::nds
 					}
 		}
 
+		// a Glass theme's box (theme.h's glassLook, as Settings' panels): the screen its picture, a panel frosted glass
+		// (glass.h) with the theme's tint and hairline edge, the selection and Back to game the accent, flat. False: a
+		// kind that keeps its own look (a type's chip)
+		std::map<std::string, Cached> glassCache;	// the panels' pieces of the frosted picture, by where they are (a
+													// scrolled list's move each frame: dropped once not drawn)
+		bool glassBox(const std::string& kind, float x, float y, float w, float h, uint32_t tint)
+		{
+			// (the dock's panel and its tab: the bubble and the pick, as pills under a theme's "settings.pills": Plaza's)
+			const bool pill = glassLook.pills && (kind == "dock" || kind == "tab" || kind == "back");
+			const bool scr = kind == "screen", plate = kind == "pick" || kind == "tab" || kind == "back", well = kind == "well", stage = kind == "stage";
+			const float radius = (pill && kind == "dock") ? h / 2 : (kind == "bubble" || kind == "dock" ? 12 : kind == "hero" || kind == "best" ? 14 : kind == "slot" ? 10 : 0) * glassLook.round;
+			if (!scr && !plate && !well && !stage && radius <= 0) return false;
+			const float dx = std::round(X(x)), dy = std::round(X(y));
+			const int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
+			if (dw <= 0 || dh <= 0) return true;
+			auto colour = [](uint32_t argb) { return Color::hex(argb & 0xffffff, ((argb >> 24) & 255) / 255.0f); };
+			if (scr)
+			{
+				// the picture itself, filled to the screen (none: the theme's background colour)
+				auto it = cache.find("glass:wall");
+				if (it == cache.end())
+				{
+					auto wall = glassBackdrop(screen, W, H, 0);
+					Cached c;
+					if (wall) c.tex = be->upload(*wall, false);
+					it = cache.emplace("glass:wall", c).first;
+				}
+				it->second.used = frame;
+				if (it->second.tex) be->draw(it->second.tex, 0, 0, (float)it->second.tex->w, (float)it->second.tex->h, Color(1, 1, 1, 1));
+				else be->fill(0, 0, (float)W, (float)H, p.screenBg);
+				return true;
+			}
+			if (radius > 0 && glassLook.shadow >> 24)
+			{
+				// its soft shadow (a theme's "settings.shadow": Plaza's)
+				std::string sk = "glass:shadow:" + std::to_string(dw) + "x" + std::to_string(dh) + ":" + std::to_string((int)radius);
+				auto it = cache.find(sk);
+				if (it == cache.end())
+				{
+					int pad = 0;
+					rnds::Bitmap b = softShadow(dw, dh, X(radius), X(10), pad);
+					Cached c;
+					if (!b.empty()) c.tex = be->upload(b, true);
+					c.ox = c.oy = pad;
+					it = cache.emplace(sk, c).first;
+				}
+				it->second.used = frame;
+				if (it->second.tex) be->draw(it->second.tex, dx - it->second.ox, dy - it->second.oy + std::round(X(3)), (float)it->second.tex->w, (float)it->second.tex->h, colour(glassLook.shadow));
+			}
+			if (radius > 0)
+			{
+				// a panel: the blurred picture under it (by where it is)
+				char kb[96];
+				snprintf(kb, sizeof kb, "%g,%g:%dx%d:%g", (double)dx, (double)dy, dw, dh, (double)radius);
+				auto it = glassCache.find(kb);
+				if (it == glassCache.end())
+				{
+					float rad[4] = { X(radius), X(radius), X(radius), X(radius) };
+					auto bd = glassBackdrop(screen, W, H, (int)std::lround(X(glassLook.blur)));
+					rnds::Bitmap b = bd ? glassPiece(*bd, (int)dx, (int)dy, dw, dh, rad) : rnds::Bitmap();
+					Cached c;
+					if (!b.empty()) c.tex = be->upload(b, false);
+					it = glassCache.emplace(kb, c).first;
+				}
+				it->second.used = frame;
+				if (it->second.tex) be->draw(it->second.tex, dx, dy, (float)it->second.tex->w, (float)it->second.tex->h, Color(1, 1, 1, 1));
+			}
+			// its tint and edge (by its size): the theme's pane; the best of several the accent's edge; a well a shade
+			// deeper; where a Pokémon stands its type's colour through the glass
+			std::string key = "glass:" + kind + ":" + std::to_string(tint) + ":" + std::to_string(dw) + "x" + std::to_string(dh);
+			auto it = cache.find(key);
+			if (it == cache.end())
+			{
+				rnds::BoxStyle st;
+				const float hair = std::max(1.0f, std::round(s)), b2 = std::max(1.0f, std::round(2 * s));
+				if (plate) { st.radius = pill ? dh / 2.0f : X((kind == "back" ? 14 : 10) * glassLook.round); st.bg = p.pick; }
+				else if (well) { st.radius = X(8); st.bg = light ? Color(1, 1, 1, 0.35f) : Color(0, 0, 0, 0.28f); st.border = hair; st.borderColor = colour(glassLook.edge); }
+				else if (stage) { st.radius = X(10); st.bg = Color::hex(tint, light ? 0.30f : 0.26f); }
+				else
+				{
+					st.radius = X(radius); st.bg = colour(glassLook.pane);
+					st.border = kind == "best" ? b2 : glassLook.shadow >> 24 ? 0.0f : hair;
+					st.borderColor = kind == "best" ? p.accent : colour(glassLook.edge);
+				}
+				rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
+				Cached c;
+				c.tex = be->upload(pb.bmp, true);
+				c.ox = pb.originX; c.oy = pb.originY;
+				it = cache.emplace(key, c).first;
+			}
+			it->second.used = frame;
+			be->draw(it->second.tex, dx - it->second.ox, dy - it->second.oy, (float)it->second.tex->w, (float)it->second.tex->h, Color(1, 1, 1, 1));
+			return true;
+		}
+
 		void box(const std::string& kind, float x, float y, float w, float h, uint32_t tint = 0)
 		{
 			if (!visible(y - 6, h + 12)) return;
+			if (glassLook.blur > 0 && glassBox(kind, x, y, w, h, tint)) return;
+			if (kind == "dock") { box("bubble", x, y, w, h, tint); return; }	// (the dock's and its tab's own kinds: glass themes)
+			if (kind == "tab") { box("pick", x, y, w, h, tint); return; }
 			int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 			std::string key = "box:" + kind + ":" + std::to_string(tint) + ":" + std::to_string(dw) + "x" + std::to_string(dh);
 			auto it = cache.find(key);
@@ -1072,6 +1180,7 @@ namespace banana::nds
 	void Pages::Impl::render(bool own)
 	{
 		frame++;
+		for (auto it = glassCache.begin(); it != glassCache.end();) it = it->second.used + 2 < frame ? glassCache.erase(it) : std::next(it);
 		hits.clear();
 		animNext = -1;
 		for (auto& sc : scrolls) sc.second.shown = false;
@@ -1160,7 +1269,7 @@ namespace banana::nds
 		const float dockEnd = backTop() ? 628 : bx0 - 8;
 		bool usable = !dt.reading && dt.rom && dt.live && dt.live->valid;
 		// (a ROM hack not supported: no tabs, Back to game alone)
-		if (!dt.unsupported) box("bubble", 12, 424, dockEnd - 12, 48);
+		if (!dt.unsupported) box("dock", 12, 424, dockEnd - 12, 48);
 		int n = dt.unsupported ? 0 : (int)Page::COUNT;
 		float cell = (dockEnd - 12 - 12) / n;
 		for (int i = 0; i < n; i++)
@@ -1170,7 +1279,7 @@ namespace banana::nds
 			bool on = usable && pg == o.cur;
 			bool dim = !usable || (pg == Page::BATTLE && !inBattle());
 			std::string label = tr(pageName(pg));
-			if (on) box("pick", tx + 1, 430, cell - 2, 36);
+			if (on) box("tab", tx + 1, 430, cell - 2, 36);
 			float lw = measure(label, true, 14, true);
 			text(label, true, 14, tx + cell / 2 - lw / 2, 439, on ? p.onPick : dim ? p.line : p.ink, true, cell - 6);
 			int cnt = usable ? noticeCount(pg) : 0;
@@ -2746,7 +2855,7 @@ namespace banana::nds
 	{
 		d->light = light;
 		d->p = pal(light);
-		d->cache.clear(); d->wrapLines.clear(); d->sprites.clear();
+		d->cache.clear(); d->glassCache.clear(); d->wrapLines.clear(); d->sprites.clear();
 		std::fill(std::begin(d->warmed), std::end(d->warmed), false);
 		d->loadFonts();
 	}

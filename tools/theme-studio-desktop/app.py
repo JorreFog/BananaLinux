@@ -2470,7 +2470,7 @@ class Studio(QMainWindow):
             for rel in sorted(self.referenced_files(base)):
                 z.write(os.path.join(base, rel), rel)
         QMessageBox.information(self, 'Exported', 'Unzip %s into banana/themes/ on the card (or over Settings > Network > File sharing), '
-                                'then pick "%s" in Settings > Display & sound > Theme.' % (os.path.basename(f), self.doc.get('name', stem)))
+                                'then pick "%s" in Settings > Look & sound > Theme.' % (os.path.basename(f), self.doc.get('name', stem)))
 
     # ---- the JSON tab --------------------------------------------------------------------------------------------------
     def fill_code(self):
