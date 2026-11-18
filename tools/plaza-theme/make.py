@@ -224,24 +224,6 @@ def backgrounds(v):
         im.filter(ImageFilter.GaussianBlur(14 * K / 2)).save(os.path.join(OUT, '%s-%s-frost.jpg' % (v, name)), quality=88)
 
 
-def glow():
-    """a game starting: a round light, white (the theme tints it the accent), full in the middle and fading out
-    towards its edge, so the edge reads as it grows; the GPU scales it up to both screens, so it's made once and small"""
-    S = 256
-    a = Image.new('L', (S, S), 0)
-    px = a.load()
-    for y in range(S):
-        for x in range(S):
-            r = math.hypot(x - S / 2 + 0.5, y - S / 2 + 0.5) / (S / 2)
-            px[x, y] = int(255 * (1 - r * r) ** 2) if r < 1 else 0
-    im = Image.new('RGBA', (S, S), (255, 255, 255, 0))
-    im.putalpha(a)
-    return im
-
-
-RATE = 44100
-
-
 def tone(parts, gain=0.5):
     """parts: (start s, length s, frequency from, to, decay rate) -> 16-bit mono samples"""
     n = int(RATE * max(p[0] + p[1] for p in parts)) + 1
@@ -281,6 +263,8 @@ def dark_json():
     swap = {
         '"name": "Plaza light"': '"name": "Plaza dark"', '"base": "light"': '"base": "dark"',
         '"plaza/light-': '"plaza/dark-', '"pics": "plaza/light-"': '"pics": "plaza/dark-"',
+        # Settings' and the companions' panels: a deeper shadow on the dark background
+        '"shadow": "#28374630", "pills"': '"shadow": "#00000066", "pills"',
     }
     for a, b in swap.items():
         src = src.replace(a, b)
@@ -305,7 +289,6 @@ if __name__ == '__main__':
     for name, body in UI.items():
         g = svg_png('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="#ffffff">%s</svg>' % body, 96)
         g.save(os.path.join(OUT, 'ui', name + '.png'), optimize=True)
-    glow().save(os.path.join(OUT, 'glow.png'), optimize=True)
     for v in VARIANTS:
         backgrounds(v)
     sounds()

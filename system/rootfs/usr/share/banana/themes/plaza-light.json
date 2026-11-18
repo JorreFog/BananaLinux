@@ -86,16 +86,16 @@
     "breathe": "=motion ? (0.5 - 0.5 * cos(moved * 0.0042)) * (1 - progress(moved, 3000)) : 0",   // the frame, 3 s after a move
     "rise": "=motion && view != 'launch' ? 18 * (1 - easeOut(progress(entered, 320))) : 0",
     "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0",
-    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), and a glow in
-    // the accent goes out from the game's tile, up into the top screen too (Motion off: the card, still, no glow)
+    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), and the game's
+    // tile flies to the middle and opens into the screen (Motion off: the card, still)
     "land": "=view != 'launch' ? 0 : motion ? easeOut(progress(launch.t - 220, 480)) : 1",
-    // the game's tile flies from its place in the grid to the middle, the glow going out from it as it goes
+    // the game's tile flies from its place in the grid to the middle, then opens: it grows to fill the bottom screen,
+    // its corners squaring off, as the top card slides up and away; both screens fade to black at the end
     "cell0": "=mod(max(0, cursor), columns * rows)",
     "tileX": "=lerp(gx + mod(cell0, columns) * step + step / 2, 320, land)",
     "tileY": "=lerp(62 + floor(cell0 / columns) * stepY + gap / 2 + size / 2, 240, land)",
-    "spread": "=motion && view == 'launch' ? pow(progress(launch.t - 150, 550), 2) : 0",
-    "glowSize": "=140 + 900 * spread",
-    "glowA": "=motion && view == 'launch' ? min(1, max(0, launch.t - 150) / 120) * (0.9 - 0.3 * spread) : 0"
+    "open": "=motion && view == 'launch' ? easeInOut(progress(launch.t - 380, 420)) : 0",
+    "blackout": "=motion && view == 'launch' ? progress(launch.t - 800, 200) : 0"
   },
 
   "behavior": { "launchMs": 1000, "scrollMs": 160, "settleMs": 3000, "wrap": false, "cues": { "insert": 40 },
@@ -280,10 +280,7 @@
     "library": {
       "top": [
         { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
-        // a game starting: the bottom screen's glow coming up into this one (its middle where the game's tile is, below)
-        { "type": "image", "src": "plaza/glow.png", "x": "=tileX", "y": "=tileY + 480", "w": "=glowSize", "h": "=glowSize", "anchor": "center",
-          "fit": "fill", "tint": "=accent", "opacity": "=glowA", "visible": "=view == 'launch'" },
-        { "type": "group", "x": "=slide", "opacity": "=motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1", "visible": "=!empty", "children": [
+        { "type": "group", "x": "=slide", "y": "=-260 * open", "opacity": "=(motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1) * (1 - open)", "visible": "=!empty", "children": [
           // the game's box or logo on a tile
           { "type": "group", "x": "=40 + 173 * land", "y": "=62 + 22 * land", "w": 214, "h": 214, "radius": 28, "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": "=6 + 6 * land", "blur": "=18 + 14 * land", "color": "=shade" },
@@ -339,7 +336,7 @@
             ] }
         ] },
         // a game starting: its name under the box, and "Starting" with a bar filling
-        { "type": "group", "visible": "=view == 'launch' && !empty", "opacity": "=land", "children": [
+        { "type": "group", "visible": "=view == 'launch' && !empty", "y": "=-260 * open", "opacity": "=land * (1 - open)", "children": [
           { "type": "text", "x": 40, "y": "=330 + 14 * (1 - land)", "w": 560, "align": "center", "text": "{game.title}", "font": "nunito-black",
             "size": 26, "color": "=ink", "wrap": true, "maxLines": 2, "lineHeight": 31 },
           { "type": "text", "x": 40, "y": 404, "w": 560, "align": "center", "text": "STARTING", "font": "nunito-black", "size": 12,
@@ -347,6 +344,8 @@
           { "type": "rect", "x": 260, "y": 428, "w": 120, "h": 6, "radius": 3, "fill": "=well" },
           { "type": "rect", "x": 260, "y": 428, "w": "=max(6, 120 * launch.progress)", "h": 6, "radius": 3, "fill": "=accent" }
         ] },
+        // (both screens to black as the game takes them)
+        { "type": "rect", "x": 0, "y": 0, "w": 640, "h": 480, "fill": "#000000", "opacity": "=blackout", "visible": "=view == 'launch'" },
         { "type": "group", "visible": "=empty", "children": [
           { "type": "group", "x": 320, "y": 170, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
@@ -400,13 +399,14 @@
         { "use": "bar" },
         { "type": "group", "visible": "=view == 'launch'", "children": [
           { "type": "group", "opacity": "=land", "children": [ { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } } ] },
-          { "type": "image", "src": "plaza/glow.png", "x": "=tileX", "y": "=tileY", "w": "=glowSize", "h": "=glowSize", "anchor": "center",
-            "fit": "fill", "tint": "=accent", "opacity": "=glowA" },
-          { "type": "group", "x": "=tileX", "y": "=tileY", "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
+          { "type": "group", "x": "=lerp(tileX, 320, open)", "y": "=lerp(tileY, 240, open)", "w": "=lerp(120, 640, open)",
+            "h": "=lerp(120, 480, open)", "anchor": "center", "radius": "=30 * (1 - open)", "fill": "=tile", "border": 1,
             "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
             "scale": "=motion ? lerp(size * 1.07 / 120, 1, easeOutBack(progress(launch.t - 220, 520))) : 1",
             "children": [ { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
-                            "x": 10, "y": 10, "w": 100, "h": 100, "radius": 10 } ] }
+                            "x": "=(lerp(120, 640, open) - lerp(100, 240, open)) / 2", "y": "=(lerp(120, 480, open) - lerp(100, 240, open)) / 2",
+                            "w": "=lerp(100, 240, open)", "h": "=lerp(100, 240, open)", "radius": 10 } ] },
+          { "type": "rect", "x": 0, "y": 0, "w": 640, "h": 480, "fill": "#000000", "opacity": "=blackout" }
         ] }
       ]
     }
