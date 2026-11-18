@@ -37,6 +37,7 @@ if [ -z "$card" ]; then
     rm -f $S/roms
     exit 0
 fi
+share_restart=
 if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
     [ -n "$mounted" ] && { umount $M 2>/dev/null || umount -l $M; }
     # the menu says the card is being read while this runs (a large card's mount, and its games coming after the
@@ -51,7 +52,7 @@ if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
         mount -t vfat -o rw,noatime,fmask=0000,dmask=0000,utf8 $part $M 2>/dev/null ||
         { rm -f $S/roms; logger -t sd2 "the card in the second slot ($part) can't be read: exFAT or FAT32 only"; exit 1; }
     logger -t sd2 "the second slot's card ($part) is at $M"
-    /usr/libexec/banana/share restart        # (file sharing on: the card as \\<address>\sd2 too)
+    share_restart=1
 fi
 on=$(sed -n 's/^sd2_roms *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
 [ -n "$on" ] || on=$(sed -n 's/^sd2_roms *= *//p' /etc/banana/settings.conf 2>/dev/null | tail -n 1)
@@ -60,3 +61,8 @@ if [ "$on" != off ] && [ -d $M/roms ]; then
 else
     rm -f $S/roms
 fi
+# file sharing with the card in (\\<address>\sd2), once the games are named: ksmbd's start can take a second or more,
+# and the menu reads /run/banana/sd2 as it starts and watches it from then on. With the share restarted first, a slow
+# start put the card's games after that read, and the boot had none until the card was put back in (#65)
+[ -n "$share_restart" ] && /usr/libexec/banana/share restart
+exit 0

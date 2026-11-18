@@ -63,6 +63,10 @@ namespace banana
 		// the folders with system folders in them: romRoot, then the second SD card's roms folder while it's in and
 		// Settings lets it be read (bananad's sd2 script names it in /run/banana/sd2/roms); its games' rel is "@sd2/..."
 		std::vector<std::string> roots() const;
+		// true when the second card's roms folder is named now but wasn't among the roots the last scan read: the card
+		// was mounted while the library was being read. The menu's watches are installed before that read, so the
+		// folder's coming is a change they hear; this is for a read that ran before the card came (main.cpp).
+		bool sd2RootAppeared() const;
 		// a favourite was starred or unstarred since the shelf was arranged: arrange() puts the Favorites collection
 		// and the favourite systems right (from memory; the host calls it when the shelf is showing)
 		bool favouritesChanged() const { return changed; }
@@ -142,6 +146,7 @@ namespace banana
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;
 		std::string query;
+		std::vector<std::string> scannedRoots;	// roots() as the last scan read them (the second card can mount beside it)
 
 		void loadDefs();
 		void loadLooks();

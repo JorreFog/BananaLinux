@@ -2225,7 +2225,6 @@ int main(int argc, char** argv)
 	// (a library's cue is a launch animation's: its sound the last before the game, so the device closes once it has played)
 	lib.onCue = [&sound](const std::string& n) { sound.play(n, true); };
 
-	// the library and the menu are made on another thread while the boot animation plays
 	std::shared_ptr<Menu> uiPtr;
 	// the theme's menu: Carts (Banana's own), else ROCKNIXDS Pixel's engine in the dark or light palette
 	auto makeMenu = [&](const std::string& theme, float sc) -> Menu*
@@ -2235,6 +2234,15 @@ int main(int argc, char** argv)
 		if (isLayoutTheme(layout)) { applyTheme(theme, settings["accent"]); return new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts"); }
 		return new RndsMenu(&lib, &be, o.assets, sc, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
 	};
+	// the ROM folders and the second card's folder, watched before the library is read: bananad's sd2 scan mounts the
+	// card beside the boot and names its roms folder in /run/banana/sd2, often while this menu is starting. With the
+	// watches installed after the read (they were, after the boot animation) a folder appearing between the two was no
+	// change anyone heard: the card's games stayed missing until it was put back in or Settings ran a scan (issue #65's
+	// report on 0.5.3.4, a card in at boot). From here on whatever comes or goes is a change, and the games are read
+	// again once the copying has been quiet for 2 s.
+	RomWatch roms;
+	roms.watch(lib.watchDirs());
+	// the library and the menu are made on another thread while the boot animation plays
 	std::atomic<bool> ready{ false };
 	std::thread loader([&]
 	{
@@ -2361,8 +2369,15 @@ int main(int argc, char** argv)
 	// it would hold the sleep (bananad) and the queue until a reboot
 	nas::pauseRunner(fetch::Paths::fromEnv(o.data), false);
 	bool batteryDue = true;
-	RomWatch roms;
-	roms.watch(lib.watchDirs());
+	// (the ROM folders were watched before the library's first read, above: a card that came in after that read is a
+	// change this loop hears. If the card named its folder between the read and the watches after all, read again —
+	// the first read had no games from it, and no change would come for a folder written before a watch existed.)
+	if (lib.sd2RootAppeared())
+	{
+		logf("the second card came in while the library was read: the games again in 2 s");
+		roms.changed.insert("/run/banana/sd2");	// (as the change would have said: the card's folders are new to it)
+		roms.due = nowMs() + 2000;
+	}
 	// the systems' "changed" commands once at the start, now that the folders are watched: what was copied while the
 	// menu wasn't running, and the second card when it was mounted before this (one mounted after is a change)
 	roms.run(lib.changedCommands(), "the menu started");
