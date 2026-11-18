@@ -525,13 +525,28 @@ namespace banana
 		return (cut == std::string::npos ? std::string(".") : dataDir.substr(0, cut)) + "/store";
 	}
 
+	// the second SD card's ROM folder, as bananad's sd2 script names it in /run/banana/sd2/roms ("" when the card
+	// isn't in, or when Settings > System > Second SD card is off)
+	static std::string sd2RomsPath()
+	{
+		std::ifstream f("/run/banana/sd2/roms");
+		std::string ln;
+		if (!f || !std::getline(f, ln)) return "";
+		return trim(ln);
+	}
+
 	std::vector<std::string> Library::roots() const
 	{
 		std::vector<std::string> r = { romRoot };
-		std::ifstream f("/run/banana/sd2/roms");
-		std::string ln;
-		if (f && std::getline(f, ln) && !trim(ln).empty() && trim(ln) != romRoot) r.push_back(trim(ln));
+		std::string sd2 = sd2RomsPath();
+		if (!sd2.empty() && sd2 != romRoot) r.push_back(sd2);
 		return r;
+	}
+
+	bool Library::sd2RootAppeared() const
+	{
+		std::string sd2 = sd2RomsPath();
+		return !sd2.empty() && sd2 != romRoot && std::find(scannedRoots.begin(), scannedRoots.end(), sd2) == scannedRoots.end();
 	}
 
 	// the folders under a system's folder that listRoms looks into (not art's or ES's own), to watch them as well: a game
@@ -649,6 +664,11 @@ namespace banana
 		shelves.clear();
 		MediaIndex media;
 		std::map<std::string, std::string> modes = shelfModes();
+		// the roots once for the whole read: the second card's roms folder is named while its mount is being made, and
+		// read per system it gave a library with some systems from the card and some not. A card that comes in after
+		// this is a change the menu hears (its watches are installed before this read), or sd2RootAppeared() names it.
+		std::vector<std::string> rootList = roots();
+		scannedRoots = rootList;
 		for (auto& def : defs)
 		{
 			if (hidden.count(def.id)) continue;
@@ -657,7 +677,6 @@ namespace banana
 			Shelf sh;
 			sh.def = def;
 			sh.order = (int)(&def - &defs[0]);
-			auto rootList = roots();
 			for (size_t ri = 0; ri < rootList.size(); ri++)
 			{
 				if (ri > 0 && !def.folder.empty() && def.folder[0] == '/') continue;	// an absolute folder: one place
