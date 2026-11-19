@@ -1,5 +1,10 @@
-Subject: [PATCH] power: supply: rk817: bound idle charging to a connection and a renewable timeout
+Subject: [PATCH 3/3] power: supply: rk817: limit idle charging to an armed connection
 
+Use a connection generation to reject stale requests after an unplug or suspend.
+Require a periodic renewal so userspace cannot leave the input limit raised if
+the idle policy owner dies. Expose the idle policy only on the RG DS Plus.
+---
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
 --- a/drivers/power/supply/rk817_charger.c
 +++ b/drivers/power/supply/rk817_charger.c
 @@ -59,6 +59,10 @@
