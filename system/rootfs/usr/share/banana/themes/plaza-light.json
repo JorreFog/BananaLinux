@@ -1,0 +1,414 @@
+{
+  // Plaza light: bright tiles on soft stripes and dots, the systems in a grid you zoom with L and R, every button on
+  // the bottom screen. Plaza dark is the same in the evening's colours: tools/plaza-theme/make.py writes it from this
+  // file (change this one, then run it), and makes the icons (RetroArch's system shapes, libretro, CC BY 4.0), the
+  // pictures and the sounds. Font: Nunito (SIL Open Font License, plaza/fonts/OFL.txt).
+  "name": "Plaza light",
+  "author": "BananaOS",
+  "base": "light",
+  "accent": "#1fb4e6",
+  // Settings > Look & sound > Accent colour picks one of these; the one above for any other
+  "accents": { "blue": "#1fb4e6", "yellow": "#f2b51c", "orange": "#ff8a3d", "red": "#e8505b", "green": "#34c26a",
+               "purple": "#9b6cff", "pink": "#e0457b" },
+  "colors": { "screenBg": "#f3f5f8", "ink": "#2f343a", "muted": "#5f6770" },
+  "fonts": {
+    "regular": "plaza/fonts/Nunito-SemiBold.ttf", "medium": "plaza/fonts/Nunito-ExtraBold.ttf",
+    "nunito": "plaza/fonts/Nunito-Regular.ttf", "nunito-semibold": "plaza/fonts/Nunito-SemiBold.ttf",
+    "nunito-extrabold": "plaza/fonts/Nunito-ExtraBold.ttf", "nunito-black": "plaza/fonts/Nunito-Black.ttf"
+  },
+  "font": "nunito-semibold",
+  "switches": true,
+  // Settings, a game's panel and the companions: Plaza's tiles (solid: the "glass" over the pictures fully tinted)
+  "settings": { "glass": 14, "pane": "#fffffff2", "edge": "#dfe4ea", "round": 1.4, "shadow": "#28374630", "pills": true,
+    "frost": { "top": "plaza/light-top-frost.jpg", "bottom": "plaza/light-bottom-frost.jpg" } },
+  "background": { "top": "plaza/light-top.jpg", "bottom": "plaza/light-bottom.jpg", "dither": false },
+  "sounds": { "scroll": "plaza/sounds/tick.wav", "select": "plaza/sounds/pop.wav", "back": "plaza/sounds/back.wav",
+              "fav": "plaza/sounds/star.wav", "ready": "plaza/sounds/pop.wav", "insert": "plaza/sounds/chime.wav" },
+  // the systems RetroArch has a shape for, and our own tiles; the apps with a logo of their own (PortMaster, Bshare,
+  // Poketool, RetroArch...) keep it
+  "icons": {
+    "nds": "plaza/icons/nds.png", "gba": "plaza/icons/gba.png", "gbc": "plaza/icons/gbc.png", "gb": "plaza/icons/gb.png",
+    "nes": "plaza/icons/nes.png", "fds": "plaza/icons/fds.png", "snes": "plaza/icons/snes.png", "n64": "plaza/icons/n64.png",
+    "virtualboy": "plaza/icons/virtualboy.png", "pokemini": "plaza/icons/pokemini.png", "gameandwatch": "plaza/icons/gameandwatch.png",
+    "megadrive": "plaza/icons/megadrive.png", "mastersystem": "plaza/icons/mastersystem.png", "gamegear": "plaza/icons/gamegear.png",
+    "sg-1000": "plaza/icons/sg-1000.png", "megacd": "plaza/icons/megacd.png", "sega32x": "plaza/icons/sega32x.png",
+    "psx": "plaza/icons/psx.png", "psp": "plaza/icons/psp.png", "c64": "plaza/icons/c64.png", "zxspectrum": "plaza/icons/zxspectrum.png",
+    "ngp": "plaza/icons/ngp.png", "ngpc": "plaza/icons/ngpc.png", "neogeo": "plaza/icons/neogeo.png",
+    "wonderswan": "plaza/icons/wonderswan.png", "wonderswancolor": "plaza/icons/wonderswancolor.png",
+    "atarilynx": "plaza/icons/atarilynx.png", "atari2600": "plaza/icons/atari2600.png", "atari7800": "plaza/icons/atari7800.png",
+    "pcengine": "plaza/icons/pcengine.png", "pcenginecd": "plaza/icons/pcenginecd.png", "colecovision": "plaza/icons/colecovision.png",
+    "intellivision": "plaza/icons/intellivision.png", "vectrex": "plaza/icons/vectrex.png", "odyssey2": "plaza/icons/odyssey2.png",
+    "arcade": "plaza/icons/arcade.png", "cps1": "plaza/icons/cps1.png", "cps2": "plaza/icons/cps2.png", "cps3": "plaza/icons/cps3.png",
+    "pico-8": "plaza/icons/pico-8.png",
+    "storeapps": "plaza/icons/storeapps.png", "rocknixdsstore": "plaza/icons/rocknixdsstore.png", "activity": "plaza/icons/activity.png",
+    "favorites": "plaza/icons/favorites.png", "recently-played": "plaza/icons/recently-played.png", "search": "plaza/icons/search.png",
+    "together": "plaza/icons/together.png", "files": "plaza/icons/files.png", "downloads": "plaza/icons/downloads.png",
+    // Settings' groups and signs, by the names Settings asks for ("phone": Network's; "picture": Look & sound's)
+    "gamepad": "plaza/icons/gamepad.png", "picture": "plaza/icons/picture.png", "phone": "plaza/icons/phone.png",
+    "moon": "plaza/icons/moon.png", "gear": "plaza/icons/gear.png", "music": "plaza/icons/music.png",
+    "level-volume": "plaza/icons/level-volume.png", "level-mute": "plaza/icons/level-mute.png",
+    "level-brightness": "plaza/icons/level-brightness.png",
+    "bshare-receive": "plaza/icons/bshare-receive.png", "bshare-send": "plaza/icons/bshare-send.png",
+    "bshare-phone": "plaza/icons/bshare-phone.png", "bshare-computer": "plaza/icons/bshare-computer.png",
+    "bshare-handheld": "plaza/icons/bshare-handheld.png", "bshare-accept": "plaza/icons/bshare-accept.png",
+    "bshare-decline": "plaza/icons/bshare-decline.png"
+  },
+
+  "vars": {
+    "pics": "plaza/light-",     // the screens' pictures: <pics>top.jpg, <pics>bottom.jpg
+    "bg": "#f3f5f8",            // shown while a picture loads
+    "ink": "#2f343a",
+    "sub": "#5f6770",
+    "tile": "#ffffff",
+    "edge": "#dfe4ea",
+    "well": "#e3e8ee",          // the zoom's other steps
+    "chip": "#2f343a",          // a button's key
+    "chipInk": "#ffffff",
+    "shade": "#28374626",
+    "quit": "#c8303c",          // little time left
+    "hiMix": "#000000",
+    "hi": "=mix(accent, hiMix, 0.3)",    // the accent as text: darker on light, lighter on dark
+    // the grid at its zoom: pages of 7 x 4, 5 x 3 or 3 x 2 (names under the tiles at the biggest), side by side as
+    // the Wii U's: "columns" and "rows" are also what the buttons and the "page" hooks go by
+    "columns": "=pick(zoom, 7, 5, 3)",
+    "rows": "=pick(zoom, 4, 3, 2)",
+    "size": "=pick(zoom, 64, 92, 120)",
+    "gap": "=pick(zoom, 14, 20, 26)",
+    "names": "=zoom >= 2",
+    "step": "=size + gap",
+    "stepY": "=size + gap + (names ? 26 : 0)",
+    "gw": "=columns * step",
+    "gx": "=(640 - gw) / 2",
+    "r": "=size * 0.24",
+    // motion, started by a press so it plays and stops (Motion off in Settings: none)
+    "lit": "=motion ? 1 - easeOut(progress(moved, 420)) : 0",
+    "slide": "=motion ? dir * 18 * (1 - easeOut(progress(moved, 260))) : 0",
+    "breathe": "=motion ? (0.5 - 0.5 * cos(moved * 0.0042)) * (1 - progress(moved, 3000)) : 0",   // the frame, 3 s after a move
+    "rise": "=motion && view != 'launch' ? 18 * (1 - easeOut(progress(entered, 320))) : 0",
+    "go": "=motion && view == 'launch' ? easeInOut(launch.progress) : 0",
+    // a game starting: the grid gives way to its title card (the box in the middle, its name, "Starting"), and the game's
+    // tile flies to the middle and opens into the screen (Motion off: the card, still)
+    "land": "=view != 'launch' ? 0 : motion ? easeOut(progress(launch.t - 220, 480)) : 1",
+    // the game's tile flies from its place in the grid to the middle, then opens: it grows to fill the bottom screen,
+    // its corners squaring off, as the top card slides up and away; both screens fade to black at the end
+    "cell0": "=mod(max(0, cursor), columns * rows)",
+    "tileX": "=lerp(gx + mod(cell0, columns) * step + step / 2, 320, land)",
+    "tileY": "=lerp(62 + floor(cell0 / columns) * stepY + gap / 2 + size / 2, 240, land)",
+    "open": "=motion && view == 'launch' ? easeInOut(progress(launch.t - 380, 420)) : 0",
+    "blackout": "=motion && view == 'launch' ? progress(launch.t - 800, 200) : 0"
+  },
+
+  "behavior": { "launchMs": 1000, "scrollMs": 160, "settleMs": 3000, "wrap": false, "cues": { "insert": 40 },
+                "zoom": { "steps": 3, "start": 1 } },
+
+  "input": {
+    "home": { "left": "gridLeft", "right": "gridRight", "up": "gridUp", "down": "gridDown", "l": "zoomOut", "r": "zoomIn",
+              "swipeLeft": "nextPage", "swipeRight": "prevPage", "l2": "prevPage", "r2": "nextPage", "a": "open", "x": "resume", "y": "fav" },
+    "library": { "left": "gridLeft", "right": "gridRight", "up": "gridUp", "down": "gridDown", "l": "zoomOut", "r": "zoomIn",
+                 "swipeLeft": "nextPage", "swipeRight": "prevPage", "l2": "prevPage", "r2": "nextPage", "a": "open", "b": "back", "y": "fav" }
+  },
+
+  "components": {
+    "backdrop": { "type": "image", "src": "=pic", "fit": "fill", "w": 640, "h": 480, "placeholder": "=bg" },
+    // a button: its key and what it does, on a white tile (A in the accent); tapping it presses the button
+    "pill": {
+      "type": "group", "layout": "row", "gap": 8, "align": "center", "padding": 7, "h": 42, "radius": 21,
+      "fill": "=hot ? accent : tile", "border": "=hot ? 0 : 1", "borderColor": "=edge",
+      "shadow": { "y": 2, "blur": 6, "color": "=shade" }, "onTap": "=tap",
+      "children": [
+        { "type": "group", "layout": "row", "padding": 7, "h": 26, "radius": 13, "fill": "=hot ? accent.ink : chip",
+          "children": [ { "type": "text", "text": "=key", "font": "nunito-black", "size": 13, "color": "=hot ? accent : chipInk", "y": -1 } ] },
+        { "type": "text", "text": "=label", "font": "nunito-extrabold", "size": 16, "color": "=hot ? accent.ink : ink", "y": -1 },
+        { "type": "rect", "w": 3, "h": 2 }
+      ]
+    },
+    // a round button with a little shape on it (search, Settings)
+    "round": {
+      "type": "group", "w": 42, "h": 42, "radius": 21, "fill": "=tile", "border": 1, "borderColor": "=edge",
+      "shadow": { "y": 2, "blur": 6, "color": "=shade" }, "onTap": "=tap",
+      "children": [ { "type": "image", "src": "=pic", "x": 11, "y": 11, "w": 20, "h": 20, "fit": "contain", "tint": "=ink" } ]
+    },
+    // the zoom in the middle at the top of the bottom screen: L − (the steps) + R
+    "zoom": {
+      "type": "group", "x": 320, "y": 10, "anchor": "top center", "layout": "row", "gap": 2, "align": "center", "padding": 1,
+      "h": 42, "radius": 21, "fill": "=tile", "border": 1, "borderColor": "=edge", "shadow": { "y": 2, "blur": 6, "color": "=shade" },
+      "children": [
+        { "type": "group", "w": 56, "h": 40, "onTap": "l", "children": [
+          { "type": "group", "x": 8, "y": 10, "w": 20, "h": 20, "radius": 10, "fill": "=chip", "children": [
+            { "type": "text", "w": 20, "y": 1, "align": "center", "text": "L", "font": "nunito-black", "size": 12, "color": "=chipInk" } ] },
+          { "type": "text", "x": 32, "y": 4, "text": "−", "font": "nunito-black", "size": 24, "color": "=zoom > 0 ? ink : edge" } ] },
+        { "type": "group", "layout": "row", "gap": 7, "align": "center", "children": [
+          { "type": "rect", "w": "=zoom == 0 ? 10 : 8", "h": "=zoom == 0 ? 10 : 8", "radius": "50%", "fill": "=zoom == 0 ? accent : well" },
+          { "type": "rect", "w": "=zoom == 1 ? 10 : 8", "h": "=zoom == 1 ? 10 : 8", "radius": "50%", "fill": "=zoom == 1 ? accent : well" },
+          { "type": "rect", "w": "=zoom == 2 ? 10 : 8", "h": "=zoom == 2 ? 10 : 8", "radius": "50%", "fill": "=zoom == 2 ? accent : well" } ] },
+        { "type": "group", "w": 56, "h": 40, "onTap": "r", "children": [
+          { "type": "text", "x": 9, "y": 4, "text": "+", "font": "nunito-black", "size": 24, "color": "=zoom < 2 ? ink : edge" },
+          { "type": "group", "x": 28, "y": 10, "w": 20, "h": 20, "radius": 10, "fill": "=chip", "children": [
+            { "type": "text", "w": 20, "y": 1, "align": "center", "text": "R", "font": "nunito-black", "size": 12, "color": "=chipInk" } ] } ] }
+      ]
+    },
+    // the top screen's bar: the date on the left, the time in the middle; the play time left (Parental controls),
+    // Wi-Fi and the battery on the right
+    "status": {
+      "type": "group", "x": 0, "y": 0, "w": 640, "h": 36,
+      "children": [
+        { "type": "text", "x": 18, "y": 9, "text": "{date}", "font": "nunito-extrabold", "size": 15, "color": "=sub" },
+        { "type": "text", "x": 0, "y": 7, "w": 640, "align": "center", "text": "{clock}", "font": "nunito-black", "size": 17, "color": "=ink" },
+        { "type": "group", "x": 622, "y": 7, "anchor": "top right", "layout": "row", "gap": 10, "align": "center", "h": 22,
+          "children": [
+            { "type": "image", "src": "plaza/ui/wifi.png", "w": 18, "h": 18, "fit": "contain", "tint": "=sub", "opacity": "=online ? 1 : 0.35" },
+            { "type": "group", "w": 56, "h": 22, "visible": "=battery >= 0", "children": [
+              { "type": "rect", "x": 0, "y": 5, "w": 25, "h": 13, "radius": 3.5, "border": 1.6, "borderColor": "=sub" },
+              { "type": "rect", "x": 2.5, "y": 7.5, "w": "=20 * battery / 100", "h": 8, "radius": 1.5,
+                "fill": "=charging ? '#ffb340' : battery < 20 ? quit : sub" },
+              { "type": "rect", "x": 26, "y": 9, "w": 2, "h": 5, "radius": 1, "fill": "=sub" },
+              // on the charger: the level in the charging LED's amber, a bolt over it (edged in the screen's colour)
+              { "type": "image", "src": "plaza/ui/bolt.png", "x": 6.5, "y": 1.5, "w": 12, "h": 20, "fit": "contain", "tint": "=bg", "visible": "=charging" },
+              { "type": "image", "src": "plaza/ui/bolt.png", "x": 7.5, "y": 3, "w": 10, "h": 17, "fit": "contain", "tint": "=ink", "visible": "=charging" },
+              { "type": "text", "x": 32, "y": 3, "w": 24, "align": "right", "text": "=battery", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] }
+          ] }
+      ]
+    },
+    // the bottom bar's buttons: B (or START) on the left, A on the right, the others in the middle; a missing left
+    // or right one leaves an invisible copy of the other in its place, so the middle stays in the middle
+    "bar": {
+      "type": "group", "x": 14, "y": 428, "w": 612, "h": 42, "layout": "row", "justify": "between", "align": "center",
+      "children": [
+        { "use": "pill", "visible": "=view == 'home'", "with": { "key": "START", "label": "Settings", "tap": "start", "hot": 0 } },
+        { "use": "pill", "visible": "=view != 'home'", "with": { "key": "B", "label": "Back", "tap": "b", "hot": 0 } },
+        { "type": "group", "layout": "row", "gap": 10, "align": "center", "children": [
+          { "use": "pill", "visible": "=view != 'home' && !empty && !sys.apps", "with": { "key": "X", "label": "Options", "tap": "x", "hot": 0 } },
+          { "use": "pill", "visible": "=view != 'home' && !empty && !sys.apps", "with": { "key": "Y", "label": "Favourite", "tap": "y", "hot": 0 } } ] },
+        { "use": "pill", "visible": "=view == 'home' || !empty",
+          "with": { "key": "A", "label": "=view == 'home' || sys.apps || game.tool ? 'Open' : 'Play'", "tap": "a", "hot": 1 } },
+        { "use": "pill", "opacity": 0, "visible": "=view != 'home' && empty", "with": { "key": "B", "label": "Back", "tap": "", "hot": 0 } }
+      ]
+    },
+    // one dot a page, under the grid, when there's more than one
+    "dots": {
+      "type": "list", "source": "range", "count": "=pages", "direction": "free", "x": 0, "y": 412, "w": 640, "h": 12,
+      "visible": "=pages > 1 && pages <= 30", "range": 40,
+      "item": { "type": "rect", "x": "=320 + (i - (n - 1) / 2) * 16", "y": 6, "w": "=i == page ? 10 : 7", "h": "=i == page ? 10 : 7",
+                "anchor": "center", "radius": "50%", "fill": "=i == page ? accent : edge" }
+    },
+    // a tile in the grid, the selection raised with the accent's frame round it (breathing a little after a move)
+    "cell": {
+      "type": "group", "x": "=step / 2", "y": "=gap / 2 + size / 2", "w": "=size * (sel ? 1.07 + 0.3 * go : 1)",
+      "h": "=size * (sel ? 1.07 + 0.3 * go : 1)", "anchor": "center", "smooth": { "w": 360, "h": 360 }, "ease": "bounce",
+      "opacity": "=sel ? (view == 'launch' ? 0 : 1) : 1 - go",
+      "children": [
+        { "type": "rect", "x": -6, "y": -6, "right": -6, "bottom": -6, "radius": "=r + 6", "fill": "#00000000",
+          "border": 4, "borderColor": "=accent", "visible": "=sel", "opacity": "=1 - 0.6 * breathe",
+          "shadow": { "blur": "=10 + 14 * lit", "color": "=alpha(accent, 0.25 + 0.35 * lit)" } },
+        { "type": "rect", "radius": "=r", "fill": "=tile", "border": 1, "borderColor": "=edge", "shadow": { "y": 3, "blur": 8, "color": "=shade" } }
+      ]
+    },
+    // what's on a tile: as "cell" (moving with it), its own children given where it's used
+    "face": {
+      "type": "group", "x": "=step / 2", "y": "=gap / 2 + size / 2", "w": "=size * (sel ? 1.07 + 0.3 * go : 1)",
+      "h": "=size * (sel ? 1.07 + 0.3 * go : 1)", "anchor": "center", "smooth": { "w": 360, "h": 360 }, "ease": "bounce",
+      "opacity": "=sel ? (view == 'launch' ? 0 : 1) : 1 - go"
+    },
+    "star": { "type": "text", "right": -4, "y": -7, "text": "★", "font": "inter-bold", "size": "=max(13, size * 0.18)", "color": "=accent",
+              "visible": "=item.fav", "outline": { "width": 2, "color": "=tile" } }
+  },
+
+  "screens": {
+    "all": { "top": { "use": "status" } },
+
+    "home": {
+      "top": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
+        { "type": "group", "x": "=slide", "opacity": "=motion ? 0.4 + 0.6 * easeOut(progress(moved, 220)) : 1", "children": [
+          // the system, big: its tile, its name, its numbers
+          { "type": "group", "x": 138, "y": 162, "w": 168, "h": 168, "anchor": "center",
+            "scale": "=motion ? 0.94 + 0.06 * easeOutBack(progress(moved, 320)) : 1",
+            "radius": 40, "fill": "=tile", "border": 1, "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
+            "children": [ { "type": "image", "src": "{sys.icon}", "x": 16, "y": 16, "w": 136, "h": 136, "fit": "contain" } ] },
+          { "type": "group", "x": 252, "y": 84, "w": 360, "layout": "column", "gap": 4, "children": [
+            { "type": "text", "w": 360, "text": "{sys.name}", "font": "nunito-black", "size": 30, "color": "=ink", "wrap": true, "maxLines": 2, "lineHeight": 35 },
+            { "type": "text", "w": 360, "text": "=sys.app ? 'App' : sys.maker", "font": "nunito-extrabold", "size": 16, "color": "=sub" },
+            { "type": "rect", "w": 360, "h": 14 },
+            { "type": "group", "w": 330, "h": 54, "layout": "row", "justify": "between", "children": [
+              { "type": "group", "w": 100, "h": 54, "children": [
+                { "type": "text", "text": "=sys.app ? '—' : sys.games", "font": "nunito-black", "size": 26, "color": "=ink" },
+                { "type": "text", "y": 33, "text": "=sys.apps ? (sys.games == 1 ? 'App' : 'Apps') : sys.games == 1 ? 'Game' : 'Games'",
+                  "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] },
+              { "type": "group", "w": 100, "h": 54, "children": [
+                { "type": "text", "text": "=either(sys.played, '0')", "font": "nunito-black", "size": 26, "color": "=ink" },
+                { "type": "text", "y": 33, "text": "Played", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] },
+              { "type": "group", "w": 100, "h": 54, "children": [
+                { "type": "text", "text": "=either(sys.time, '0m')", "font": "nunito-black", "size": 26, "color": "=ink" },
+                { "type": "text", "y": 33, "text": "Time", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] }
+            ] }
+          ] },
+          // the last game: Continue (X)
+          { "type": "group", "x": 40, "y": 300, "w": 560, "h": 92, "radius": 24, "fill": "=tile", "border": 1, "borderColor": "=edge",
+            "shadow": { "y": 3, "blur": 10, "color": "=shade" }, "visible": "=sys.hasResume", "onTap": "x",
+            "children": [
+              { "type": "image", "src": "{sys.resumeArt}", "fallback": "{sys.icon}", "fit": "cover", "x": 14, "y": 14, "w": 64, "h": 64,
+                "radius": 14, "placeholder": "=well" },
+              { "type": "text", "x": 94, "y": 18, "text": "{upper(either(sys.resumeEyebrow, 'Continue'))}", "font": "nunito-black",
+                "size": 12, "spacing": 1, "color": "=hi" },
+              { "type": "text", "x": 94, "y": 38, "w": 380, "text": "{sys.resumeTitle}", "font": "nunito-black", "size": 21, "color": "=ink" },
+              { "type": "group", "x": 498, "y": 25, "w": 42, "h": 42, "radius": 21, "fill": "=chip", "children": [
+                { "type": "text", "w": 42, "y": 9, "align": "center", "text": "X", "font": "nunito-black", "size": 17, "color": "=chipInk" } ] }
+            ] }
+        ] }
+      ],
+      "bottom": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } },
+        { "use": "zoom" },
+        { "type": "group", "x": 626, "y": 10, "anchor": "top right", "layout": "row", "gap": 8, "children": [
+          { "use": "round", "with": { "pic": "plaza/ui/search.png", "tap": "select" } },
+          { "use": "round", "with": { "pic": "plaza/ui/gear.png", "tap": "start" } } ] },
+        { "type": "list", "source": "systems", "direction": "pages", "columns": "=columns", "rows": "=rows", "x": 0, "y": "=62 + rise",
+          "w": 640, "h": 352, "itemW": "=step", "itemH": "=stepY", "stepX": "=step", "stepY": "=stepY", "clip": true,
+          "item": { "type": "group", "x": "=gx", "w": "=step", "h": "=stepY", "children": [
+            { "use": "cell" },
+            { "use": "face", "children": [
+              { "type": "image", "src": "{item.icon}", "x": "10%", "y": "10%", "w": "80%", "h": "80%", "fit": "contain" },
+              { "use": "star" } ] },
+            { "type": "text", "x": 0, "y": "=gap / 2 + size + 8", "w": "=step", "align": "center", "text": "{item.name}",
+              "font": "nunito-extrabold", "size": 14, "color": "=ink", "visible": "=names" }
+          ] } },
+        { "use": "dots" },
+        { "use": "bar" }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'top.jpg'" } },
+        { "type": "group", "x": "=slide", "y": "=-260 * open", "opacity": "=(motion ? 0.4 + 0.6 * easeOut(progress(moved, 200)) : 1) * (1 - open)", "visible": "=!empty", "children": [
+          // the game's box or logo on a tile
+          { "type": "group", "x": "=40 + 173 * land", "y": "=62 + 22 * land", "w": 214, "h": 214, "radius": 28, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": "=6 + 6 * land", "blur": "=18 + 14 * land", "color": "=shade" },
+            "children": [
+              { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
+                "x": 14, "y": 14, "w": 186, "h": 186, "radius": 14 }
+            ] },
+          { "type": "text", "x": 40, "y": 292, "w": 214, "align": "center", "text": "{cursor + 1} of {count}", "font": "nunito-extrabold",
+            "size": 14, "color": "=sub", "opacity": "=1 - land" },
+          // its name, its system and players; its details: the favourite's star (gold, else grey), the year, the genre, the
+          // age rating, then who made it (each left out when Scrape artworks found none)
+          { "type": "group", "x": "=282 + 40 * land", "y": 66, "w": 330, "layout": "column", "gap": 6, "opacity": "=1 - min(1, land * 1.6)", "children": [
+            { "type": "text", "w": 330, "text": "{game.title}", "font": "nunito-black", "size": 26, "color": "=ink", "wrap": true, "maxLines": 3, "lineHeight": 31 },
+            { "type": "text", "w": 330, "text": "=sys.name + (game.players == '' || sys.apps ? '' : game.players == '1' ? ' · 1 player' : ' · 1–' + game.players + ' players')",
+              "font": "nunito-extrabold", "size": 16, "color": "=sub" },
+            { "type": "rect", "w": 330, "h": 8 },
+            { "type": "rect", "w": 330, "h": 1.5, "fill": "=edge" },
+            { "type": "rect", "w": 330, "h": 4 },
+            { "type": "group", "w": 330, "h": 30, "layout": "row", "gap": 6, "align": "center", "visible": "=!sys.apps", "children": [
+              { "type": "image", "src": "plaza/ui/star.png", "w": 24, "h": 24, "fit": "contain", "tint": "=game.fav ? accent : edge" },
+              { "type": "rect", "w": 2, "h": 2 },
+              { "type": "group", "layout": "row", "padding": 9, "h": 28, "radius": 14, "fill": "=tile", "border": 1, "borderColor": "=edge", "visible": "=game.year != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.year}", "font": "nunito-black", "size": 14, "color": "=ink" } ] },
+              { "type": "group", "layout": "row", "padding": 9, "h": 28, "radius": 14, "fill": "=tile", "border": 1, "borderColor": "=edge", "visible": "=game.genre != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.genre}", "font": "nunito-black", "size": 14, "color": "=ink" } ] },
+              { "type": "group", "layout": "row", "padding": 7, "h": 28, "radius": 7, "fill": "=chip", "visible": "=game.esrb != ''", "children": [
+                { "type": "text", "y": -1, "text": "{game.esrb}", "font": "nunito-black", "size": 14, "color": "=chipInk" } ] }
+            ] },
+            { "type": "text", "w": 330, "font": "nunito-extrabold", "size": 14, "color": "=sub", "visible": "=game.publisher != '' || game.developer != ''",
+              "text": "=game.publisher == '' ? game.developer : game.developer == '' || game.developer == game.publisher ? game.publisher : game.publisher + ' · ' + game.developer" }
+          ] },
+          // under them, your own numbers: plays, when, how long, and the achievements' bar (a game with achievements);
+          // its system's tile
+          { "type": "group", "x": 40, "y": "=332 + 30 * land", "w": 560, "h": 104, "radius": 24, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 3, "blur": 10, "color": "=shade" }, "opacity": "=1 - min(1, land * 1.6)",
+            "children": [
+              { "type": "group", "x": 26, "y": "=game.achB > 0 ? 12 : 24", "w": 400, "h": 54, "layout": "row", "children": [
+                { "type": "group", "w": 110, "h": 54, "children": [
+                  { "type": "text", "text": "=either(game.plays, '0')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Plays", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
+                { "type": "group", "w": 160, "h": 54, "children": [
+                  { "type": "text", "w": 150, "text": "=either(game.last, 'Never')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Last played", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] },
+                { "type": "group", "w": 130, "h": 54, "children": [
+                  { "type": "text", "w": 130, "text": "=either(game.time, '0m')", "font": "nunito-black", "size": 22, "color": "=ink" },
+                  { "type": "text", "y": 30, "text": "Time", "font": "nunito-extrabold", "size": 12, "color": "=sub" } ] }
+              ] },
+              { "type": "group", "visible": "=game.achB > 0", "children": [
+                { "type": "rect", "x": 26, "y": 78, "w": 250, "h": 9, "radius": 4.5, "fill": "=well" },
+                { "type": "rect", "x": 26, "y": 78, "w": "=max(9, 250 * game.achProgress)", "h": 9, "radius": 4.5, "fill": "=accent" },
+                { "type": "text", "x": 288, "y": 73, "w": 170, "text": "{game.achLabel}", "font": "nunito-extrabold", "size": 13, "color": "=sub" } ] },
+              { "type": "image", "src": "{sys.icon}", "x": 470, "y": 18, "w": 68, "h": 68, "fit": "contain" }
+            ] }
+        ] },
+        // a game starting: its name under the box, and "Starting" with a bar filling
+        { "type": "group", "visible": "=view == 'launch' && !empty", "y": "=-260 * open", "opacity": "=land * (1 - open)", "children": [
+          { "type": "text", "x": 40, "y": "=330 + 14 * (1 - land)", "w": 560, "align": "center", "text": "{game.title}", "font": "nunito-black",
+            "size": 26, "color": "=ink", "wrap": true, "maxLines": 2, "lineHeight": 31 },
+          { "type": "text", "x": 40, "y": 404, "w": 560, "align": "center", "text": "STARTING", "font": "nunito-black", "size": 12,
+            "spacing": 2, "color": "=hi" },
+          { "type": "rect", "x": 260, "y": 428, "w": 120, "h": 6, "radius": 3, "fill": "=well" },
+          { "type": "rect", "x": 260, "y": 428, "w": "=max(6, 120 * launch.progress)", "h": 6, "radius": 3, "fill": "=accent" }
+        ] },
+        // (both screens to black as the game takes them)
+        { "type": "rect", "x": 0, "y": 0, "w": 640, "h": 480, "fill": "#000000", "opacity": "=blackout", "visible": "=view == 'launch'" },
+        { "type": "group", "visible": "=empty", "children": [
+          { "type": "group", "x": 320, "y": 170, "w": 120, "h": 120, "anchor": "center", "radius": 30, "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
+            "children": [ { "type": "image", "src": "{sys.icon}", "x": 12, "y": 12, "w": 96, "h": 96, "fit": "contain" } ] },
+          { "type": "text", "x": 40, "y": 252, "w": 560, "align": "center", "text": "{empty.title}", "font": "nunito-black", "size": 24, "color": "=ink" },
+          { "type": "text", "x": 60, "y": 290, "w": 520, "align": "center", "text": "{empty.hint}", "font": "nunito-extrabold", "size": 15,
+            "color": "=sub", "wrap": true, "maxLines": 3 }
+        ] }
+      ],
+      "bottom": [
+        { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } },
+        // back to the systems
+        { "type": "group", "x": 14, "y": 10, "layout": "row", "gap": 6, "align": "center", "padding": 8, "h": 42, "radius": 21,
+          "fill": "=tile", "border": 1, "borderColor": "=edge", "shadow": { "y": 2, "blur": 6, "color": "=shade" }, "onTap": "b",
+          "children": [
+            { "type": "text", "text": "‹", "font": "nunito-black", "size": 24, "color": "=ink", "y": -4 },
+            { "type": "text", "text": "Systems", "font": "nunito-extrabold", "size": 16, "color": "=ink", "y": -1 },
+            { "type": "rect", "w": 4, "h": 2 } ] },
+        { "use": "zoom" },
+        // A-Z: the next letter's first game; search
+        { "type": "group", "x": 626, "y": 10, "anchor": "top right", "layout": "row", "gap": 8, "children": [
+          { "type": "group", "layout": "row", "gap": 6, "align": "center", "padding": 8, "h": 42, "radius": 21, "fill": "=tile",
+            "border": 1, "borderColor": "=edge", "shadow": { "y": 2, "blur": 6, "color": "=shade" }, "onTap": "do:nextLetter",
+            "visible": "=!empty && !sys.apps",
+            "children": [
+              { "type": "text", "text": "A–Z", "font": "nunito-black", "size": 15, "color": "=ink", "y": -1 },
+              { "type": "group", "w": 24, "h": 24, "radius": 12, "fill": "=accent", "children": [
+                { "type": "text", "w": 24, "y": 2, "align": "center", "text": "{letter}", "font": "nunito-black", "size": 13, "color": "=accent.ink" } ] } ] },
+          { "use": "round", "with": { "pic": "plaza/ui/search.png", "tap": "select" } } ] },
+        { "type": "list", "source": "games", "direction": "pages", "columns": "=columns", "rows": "=rows", "x": 0, "y": "=62 + rise",
+          "w": 640, "h": 352, "itemW": "=step", "itemH": "=stepY", "stepX": "=step", "stepY": "=stepY", "clip": true,
+          "item": { "type": "group", "x": "=gx", "w": "=step", "h": "=stepY", "children": [
+            { "use": "cell" },
+            { "use": "face", "children": [
+              // a game: its logo (a DS game: its own icon), else its box art filling the tile, else its name
+              { "type": "image", "src": "{item.marquee}", "fit": "contain", "x": "10%", "y": "10%", "w": "80%", "h": "80%",
+                "visible": "=!sys.apps && !item.tool && item.marquee != ''" },
+              { "type": "image", "src": "{item.art}", "fit": "cover", "w": "100%", "h": "100%", "radius": "=r",
+                "visible": "=!sys.apps && !item.tool && item.marquee == '' && item.art != ''" },
+              { "type": "text", "x": 6, "y": 6, "right": 6, "bottom": 6, "align": "center", "valign": "middle", "text": "{item.title}",
+                "font": "nunito-extrabold", "size": "=max(10, size * 0.13)", "color": "=sub", "wrap": true, "maxLines": 3,
+                "visible": "=!sys.apps && !item.tool && item.marquee == '' && item.art == ''" },
+              // an app, or a tool among the games (PICO-8's Splore): its icon
+              { "type": "image", "src": "{item.icon}", "x": "10%", "y": "10%", "w": "80%", "h": "80%",
+                "fit": "contain", "visible": "=sys.apps || item.tool" },
+              { "use": "star" } ] },
+            { "type": "text", "x": 0, "y": "=gap / 2 + size + 8", "w": "=step", "align": "center", "text": "{item.title}",
+              "font": "nunito-extrabold", "size": 14, "color": "=ink", "visible": "=names" }
+          ] } },
+        { "use": "dots" },
+        { "use": "bar" },
+        { "type": "group", "visible": "=view == 'launch'", "children": [
+          { "type": "group", "opacity": "=land", "children": [ { "use": "backdrop", "with": { "pic": "=pics + 'bottom.jpg'" } } ] },
+          { "type": "group", "x": "=lerp(tileX, 320, open)", "y": "=lerp(tileY, 240, open)", "w": "=lerp(120, 640, open)",
+            "h": "=lerp(120, 480, open)", "anchor": "center", "radius": "=30 * (1 - open)", "fill": "=tile", "border": 1,
+            "borderColor": "=edge", "shadow": { "y": 6, "blur": 18, "color": "=shade" },
+            "scale": "=motion ? lerp(size * 1.07 / 120, 1, easeOutBack(progress(launch.t - 220, 520))) : 1",
+            "children": [ { "type": "image", "src": "{game.art}", "fallback": "{either(game.marquee, sys.icon)}", "fit": "contain",
+                            "x": "=(lerp(120, 640, open) - lerp(100, 240, open)) / 2", "y": "=(lerp(120, 480, open) - lerp(100, 240, open)) / 2",
+                            "w": "=lerp(100, 240, open)", "h": "=lerp(100, 240, open)", "radius": 10 } ] },
+          { "type": "rect", "x": 0, "y": 0, "w": 640, "h": 480, "fill": "#000000", "opacity": "=blackout" }
+        ] }
+      ]
+    }
+  }
+}

@@ -962,7 +962,7 @@ namespace banana
 			if (rows.size() > (nearList.empty() ? 2u : 1u)) rows.resize(nearList.empty() ? 2 : 1);
 			for (auto& r : rows) raw->wantBadge(raw, r.badge);
 		}
-		be->beginScreen(gScreen);
+		beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
 		if (gKeysOpen) { gameKeysFrame(p); be->endScreen(); return; }	// (the panel is the keyboard while it is open)
 		if (gAchOpen) { gameAchFrame(p); be->endScreen(); return; }	// (and the achievements list while it is)
@@ -1106,7 +1106,7 @@ namespace banana
 			float x = 18 + i * tstep, y = 300;
 			bool on = gFlash == i;
 			box(on ? "pick" : "slot", on, x, y, tw, 120);
-			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
+			Color fg = on ? p.onPick : (i == 4 ? Color::hex(light ? 0xc8303c : 0xff8a96) : p.ink);	// (Quit: a red that reads on either)
 			int k = std::max(1, (int)std::lround(3 * s));
 			float ix = std::round(X(x + tw / 2) - 6 * k), iy = std::round(X(y + 16));
 			for (int r = 0; r < 12; r++)
@@ -1591,7 +1591,7 @@ namespace banana
 		for (int i = 0; i < gcomp::NUM_PAGES; i++)
 		{
 			gcView = i; gcScreen = 0; gcList = gcRow = -1;
-			be->beginScreen(gScreen);
+			beginScreen(gScreen);
 			gcRender(p);
 			gcTabs(p);
 			be->endScreen();
