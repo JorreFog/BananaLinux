@@ -2,7 +2,11 @@
 BANANA
 ======
 Games go in roms/<system>: roms/nds for Nintendo DS (.nds or .zip), roms/gba, roms/snes, ...
-BIOS files go in bios/.
+BIOS files go in bios/: Mega CD needs bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin (the games' region), the
+Famicom Disk System disksys.rom, the Lynx lynxboot.img, the PC Engine CD syscard3.pce, the ColecoVision
+colecovision.rom, the Intellivision exec.bin and grom.bin, the Odyssey 2 o2rom.bin,
+the Neo Geo neogeo.zip. Arcade games are FinalBurn Neo's sets, as their short names (sf2.zip): a box-art fetch
+(Settings > System > Box art) names them.
 Box art (optional): roms/<system>/media/box/<game file name>.png  (also media/cart, media/label),
 or an EmulationStation gamelist.xml with its images, as scrapers write them.
 
@@ -41,7 +45,9 @@ Q 1.2"), picked in Profile.
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
 
-RetroArch (the systems other than the DS): F + a button in a game, F + X its menu, F + Start quits.
+RetroArch (the systems other than the DS and the PSP): F + a button in a game, F + X its menu, F + Start quits.
+PSP (PPSSPP, roms/psp): the same, F + L / F + R load / save the state, R2 fast-forwards; its saves, states and
+settings are in saves/ppsspp/PSP.
 A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.

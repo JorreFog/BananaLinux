@@ -3,8 +3,10 @@
 CONFIG_LOCALVERSION="-banana"
 # no initramfs: root=PARTLABEL=banana-root, mounted by the kernel itself
 CONFIG_INITRAMFS_SOURCE=""
-# root on squashfs, LZ4 (the fastest to decompress)
+# root on squashfs, zstd (a quarter smaller than LZ4, room for the emulators; still read faster than the card gives
+# it); LZ4 too, for a system from before 0.5.2.2 left in the other slot
 CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_ZSTD=y
 CONFIG_SQUASHFS_LZ4=y
 CONFIG_SQUASHFS_FILE_DIRECT=y
 CONFIG_SQUASHFS_COMPILE_DECOMP_MULTI_PERCPU=y

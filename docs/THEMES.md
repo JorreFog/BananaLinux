@@ -91,12 +91,13 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | `empty`, `empty.title`, `empty.hint` | a library with no games, and what to say about it |
 | `systems.count`, `games.count` | |
 | `sys.*` | the selected system: `id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index` |
-| `game.*` | the selected game (library and launch): `title sub plays last time art box cart label icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
+| `game.*` | the selected game (library and launch): `title sub plays last time art box cart label marquee icon rom romIcon achA achB achLabel achProgress fav index systemId systemName` |
 | `item.*`, `i`, `n`, `sel`, `rel`, `pos`, `first`, `last`, `ix`, `iy` | inside a list item: its own system's or game's fields (as above; `key label` for hints), its index, the count, whether it is selected, its distance from the selection (`rel` whole, `pos` eased), and where the list put it |
 | your `vars`, a component's `with` | |
 
 Pictures from hooks (`sys.icon`, `game.art`...) are full paths. A theme's own files are relative to its JSON file.
-`game.romIcon` is a DS game's own icon from its ROM.
+`game.romIcon` is a DS game's own icon from its ROM. `marquee` is the game's logo (`media/marquee/<rom name>.png`, which a box-art fetch
+downloads from libretro, or gamelist.xml's `<marquee>`), and a DS game's own icon; "" without one.
 
 ## Elements
 
