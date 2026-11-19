@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "Lives": "Vidas",
+  "Smart bombs": "Bombas inteligentes",
+  "Controls": "Controles",
+  "A shoot, B switch weapon. Side-on/over-the-shoulder shooter.": "A disparar, B cambiar arma. Shooter lateral/de hombro.",
+  "Weapons": "Armas",
+  "Up to several weapon types, each with upgrade levels.": "Hasta varios tipos de arma, cada uno con niveles de mejora.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Learn boss attack waves; use the strongest weapon on their weak points.": "Aprende las oleadas de ataque de los jefes; usa el arma más fuerte en sus puntos débiles.",
+  "Stages": "Escenarios",
+  "Area": "Área",
+  "Structure": "Estructura",
+  "Stages plus a gallery/unlocks menu.": "Escenarios más un menú de galería/desbloqueos.",
+  "Power-ups": "Potenciadores",
+  "Items": "Objetos",
+  "Coloured power-ups change weapon or upgrade the current one.": "Los potenciadores de color cambian el arma o mejoran la actual.",
+  "Gallery": "Galería",
+  "Collect": "Coleccionar",
+  "Unlockable gallery images and cheats from scores.": "Imágenes de galería y trucos desbloqueables con las puntuaciones.",
+  "Goal": "Objetivo",
+  "Clear every stage; harder modes unlock.": "Completa cada escenario; se desbloquean modos más difíciles."
+ }
+}

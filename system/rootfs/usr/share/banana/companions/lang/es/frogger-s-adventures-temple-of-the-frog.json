@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Coins": "Monedas",
+  "Elements": "Elementos",
+  "Controls": "Controles",
+  "Hop one tile": "Salta una casilla",
+  "Jump / long hop": "Salto / salto largo",
+  "Tongue / action": "Lengua / acción",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Hop on logs and lily pads, avoid cars and enemies; coins add lives (every 100) and gold frogs unlock extras.": "Salta sobre troncos y nenúfares, evita coches y enemigos; las monedas dan vidas (cada 100) y las ranas doradas desbloquean extras.",
+  "Bosses": "Jefes",
+  "Sky boss: your gems": "Jefe del cielo: tus gemas",
+  "Sky boss: its gems": "Jefe del cielo: sus gemas",
+  "Tips": "Consejos",
+  "Bosses (Mr. D, rattlesnake, goblin, sky boss) each want a different trick: race the sky boss to the blue gems, lure the snake into the hazards, and stay off the goblin's line.": "Cada jefe (Mr. D, la serpiente, el duende, el jefe del cielo) pide un truco distinto: corre contra el jefe del cielo hasta las gemas azules, atrae a la serpiente hacia los peligros y sal de la línea de tiro del duende.",
+  "Level": "Nivel",
+  "Scene id": "ID de escena",
+  "Checkpoint": "Punto de control",
+  "Five worlds of 2 levels + a boss: Frog Temple, Ancient Ruins, Goblin Caverns, Sky City, Mr. D's domain.": "Cinco mundos de 2 niveles + un jefe: Templo de la Rana, Ruinas Antiguas, Cavernas de Duendes, Ciudad Celeste y el dominio de Mr. D.",
+  "Element flags": "Banderas de elementos",
+  "Levels": "Niveles",
+  "Levels complete": "Niveles completados",
+  "Progress": "Progreso"
+ }
+}

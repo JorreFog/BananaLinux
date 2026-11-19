@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Coins": "Monedas",
+  "Gold treasures": "Tesoros de oro",
+  "Play time": "Tiempo jugado",
+  "Health; lives": "Salud; vidas",
+  "Creatures": "Criaturas",
+  "Detail": "Detalle",
+  "Creatures captured help solve puzzles (e.g. throw, carry, blow)": "Las criaturas capturadas ayudan a resolver puzles (p. ej. lanzar, cargar, soplar)",
+  "Battle": "Batalla",
+  "Avoid Sabre Wulf; steal the amulet pieces back\nCreatures you capture (e.g. ones that throw, blow or carry) solve the puzzles that guard each world's exit": "Evita a Sabre Wulf; recupera las piezas del amuleto\nLas criaturas que capturas (las que lanzan, soplan o cargan) resuelven los puzles que guardan la salida de cada mundo",
+  "Areas": "Áreas",
+  "Worlds": "Mundos",
+  "Levels across the jungle": "Niveles por toda la jungla",
+  "Items": "Objetos",
+  "Gold, creatures": "Oro, criaturas",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Amulet pieces\nThe amulet pieces were stolen by Sabre Wulf; each world returns some of them": "Piezas del amuleto\nSabre Wulf robó las piezas del amuleto; cada mundo recupera algunas",
+  "Progress": "Progreso",
+  "Areas cleared": "Áreas completadas",
+  "Challenge mode keeps best times per world": "El modo desafío guarda los mejores tiempos por mundo"
+ }
+}

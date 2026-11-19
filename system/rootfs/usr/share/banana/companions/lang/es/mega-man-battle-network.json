@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Buster attack": "Ataque de Buster",
+  "Buster rapid": "Buster rápido",
+  "Buster charge": "Buster cargado",
+  "How it plays": "Cómo se juega",
+  "Lan jacks MegaMan.EXE into the Net; battles on a 3x6 grid with chips.": "Lan conecta a MegaMan.EXE a la Red; los combates son en una cuadrícula de 3x6 con chips.",
+  "Controls": "Controles",
+  "A use chip, B buster (hold to charge), L/R select/custom screen.": "A usa chip, B buster (mantén pulsado para cargar), L/R seleccionan / pantalla personalizada.",
+  "MegaMan": "Mega Man",
+  "Stats": "Estadísticas",
+  "HP up through HP Memory. Folder: 30 chips.": "La HP sube con HP Memory. Carpeta: 30 chips.",
+  "Virus battle": "Batalla de virus",
+  "Enemy 1": "Enemigo 1",
+  "Enemy 2": "Enemigo 2",
+  "Enemy 3": "Enemigo 3",
+  "Tips": "Consejos",
+  "Chip codes: pick chips with the same code or same name to send more each turn. Program Advances: combine specific chips. Break stage panels for advantage.": "Códigos de chip: elige chips con el mismo código o el mismo nombre para enviar más cada turno. Program Advances: combina chips concretos. Rompe los paneles del escenario para marcar ventaja.",
+  "Net": "Red",
+  "Areas": "Áreas",
+  "ACDC Town, Internet areas, school, Water works, Undernet.": "Ciudad ACDC, áreas de Internet, escuela, Planta de agua, Undernet.",
+  "Items": "Objetos",
+  "Battle chips, Zenny, PowerUps.": "Chips de batalla, Zenny, Potenciadores.",
+  "Library": "Biblioteca",
+  "Collect": "Coleccionar",
+  "Chip Library.": "Biblioteca de chips.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat the WWW and Life Virus.": "Derrota a WWW y al Life Virus."
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Ability id": "ID de habilidad",
+  "Controls": "Controles",
+  "A jump (again to float), B inhale / use ability, down+A slide, Select drop ability.": "A saltar (otra vez para flotar), B inhalar / usar habilidad, abajo+A deslizar, Select soltar habilidad.",
+  "Copy": "Copiar",
+  "Swallow an enemy to copy its ability.": "Traga a un enemigo para copiar su habilidad.",
+  "Abilities": "Habilidades",
+  "Copy abilities": "Habilidades copiadas",
+  "e.g. Beam, Fire, Ice, Cutter, Sword, Hammer, Spark, Stone, Parasol, Needle, Wheel, Laser, Tornado, Ball, Throw, Backdrop, Fireball, Crash, Mike, Sleep, Light...": "p. ej. Rayo, Fuego, Hielo, Tijera, Espada, Martillo, Chispa, Piedra, Parasol, Aguja, Rueda, Láser, Tornado, Bola, Lanzar, Telón, Bola de fuego, Crash, Mike, Sueño, Luz...",
+  "Boss": "Jefe",
+  "Boss health": "Salud del jefe",
+  "Tips": "Consejos",
+  "Inhale the stars bosses throw and spit them back. Hammer and Sword are strong boss abilities.": "Inhala las estrellas que lanzan los jefes y devuélvelas. Martillo y Espada son habilidades muy fuertes contra los jefes.",
+  "Map": "Mapa",
+  "Level code": "Código de nivel",
+  "Levels": "Niveles",
+  "Vegetable Valley, Ice Cream Island, Butter Building, Grape Garden, Yogurt Yard, Orange Ocean, Rainbow Resort, then Fountain of Dreams.": "Valle Vegetal, Isla del Helado, Edificio de Mantequilla, Jardín de Uvas, Patio de Yogur, Océano de Naranjas, Resort Arcoíris y luego Fuente de los Sueños.",
+  "Items": "Objetos",
+  "Food restores health; Maxim Tomato restores all; 1-Up; Invincibility Candy.": "La comida restaura la salud; Maxim Tomato la restaura toda; 1-Up; Caramelo de invencibilidad.",
+  "Switches": "Interruptores",
+  "Collect": "Coleccionar",
+  "Hidden switches open the Museum and Arena rooms; complete the switches for 100%.": "Los interruptores ocultos abren las salas del Museo y la Arena; completa los interruptores para llegar al 100%.",
+  "Bosses": "Jefes",
+  "Order": "Orden"
+ }
+}

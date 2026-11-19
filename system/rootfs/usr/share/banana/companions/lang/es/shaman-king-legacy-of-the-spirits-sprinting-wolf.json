@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Yoh, Ren, Horohoro and friends; HP, spirits\nYoh and friends; party of spirits with their own HP; Shaman Level and Shaman ID on the status screen\nSpirits can be powered up or changed in type (menu options in the game)": "Yoh, Ren, Horohoro y amigos; HP, espíritus\nYoh y sus amigos; grupo de espíritus con su propio HP; Shaman Level y Shaman ID en la pantalla de estado\nLos espíritus se pueden potenciar o cambiar de tipo (opciones de menú en el juego)",
+  "Spirits": "Espíritus",
+  "Detail": "Detalle",
+  "Spirits collected in this version differ from Soaring Hawk\nSpirits found in this version include e.g. Thug Spirit, Cavalry Statue, Yellow Dragon, Son Goku, Cortez the Matador, Pai-Long Dragon, Yamatano Orochi, Great Oni and many more\nParting with a spirit is permanent; the game asks before letting one go\nA party can't be made of mobile spirits only": "Los espíritus coleccionados en esta versión difieren de Soaring Hawk\nEntre los espíritus de esta versión están Thug Spirit, Cavalry Statue, Yellow Dragon, Son Goku, Cortez the Matador, Pai-Long Dragon, Yamatano Orochi, Great Oni y muchos más\nDesprenderte de un espíritu es permanente; el juego pregunta antes de soltarlo\nUn grupo no puede estar hecho solo de espíritus móviles",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Spirit choice changes the attack element\nIf every spirit in your party is at 0 HP you can't continue the fight: heal between battles\nLate bosses include the Joto fighters and the Grand Tao King / Grand Tao Dragon": "El espíritu elegido cambia el elemento del ataque\nSi todos los espíritus de tu grupo están en 0 HP no puedes continuar el combate: cura entre batallas\nLos jefes finales incluyen a los luchadores de Joto y el Grand Tao King / Grand Tao Dragon",
+  "World": "Mundo",
+  "Story through the Shaman Fight": "Historia hasta el Shaman Fight",
+  "Places": "Lugares",
+  "Further": "Más",
+  "Items": "Objetos",
+  "Items and spirit cards\nItems bought in shops (\"How many will you buy?\"); money from fights": "Objetos y cartas de espíritu\nObjetos comprados en tiendas (\"¿Cuántos quieres comprar?\"); dinero de los combates",
+  "Collect": "Coleccionar",
+  "Spirit collection; trade with Soaring Hawk\nSpirit collection; the Soaring Hawk version has a different spirit list": "Colección de espíritus; cambia con Soaring Hawk\nColección de espíritus; la versión Soaring Hawk tiene una lista distinta",
+  "Progress": "Progreso",
+  "Story chapters\nStory through the locations above to the Underground Temple": "Capítulos de historia\nHistoria por las ubicaciones anteriores hasta el Underground Temple"
+ }
+}

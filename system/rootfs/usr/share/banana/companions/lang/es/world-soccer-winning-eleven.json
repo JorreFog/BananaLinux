@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Match": "Partido",
+  "Match clock (minute)": "Reloj del partido (minuto)",
+  "Score, time, possession per match\nKonami's football game (the GBA Winning Eleven, Japanese release with an English patch)\nMatch clock, score and stamina of your players": "Puntuación, tiempo, posesión por partido\nEl juego de fútbol de Konami (el Winning Eleven de GBA, versión japonesa con parche en inglés)\nReloj del partido, marcador y energía de tus jugadores",
+  "Team": "Equipo",
+  "Players with stats; formations and strategies\nShort pass, long pass, shoot and sprint; switch the controlled player near the ball\nFormations and strategies in the team menu change how the CPU teammates play": "Jugadores con estadísticas; formaciones y estrategias\nPase corto, pase largo, disparo y carrera; cambia al jugador controlado cerca del balón\nLas formaciones y estrategias del menú de equipo cambian cómo juegan tus compañeros de la CPU",
+  "Match tips": "Consejos de partido",
+  "Battle": "Batalla",
+  "Pass and through-ball (with direction) to open defenses\nPass around the defence rather than dribbling into it; through balls split two defenders\nShoot from inside the box; power shots from distance rarely score": "Pase y pase entre líneas (con dirección) para abrir la defensa\nPasa alrededor de la defensa en vez de regatear hacia ella; los pases entre líneas separan a dos defensores\nDispara desde dentro del área; los tiros potentosos desde lejos rara vez anotan",
+  "Competitions": "Competiciones",
+  "Map": "Mapa",
+  "Exhibition, League, Cup\nModes include exhibition, league and a round-robin CPU match mode (from the menu text)": "Exhibición, Liga, Copa\nLos modos incluyen exhibición, liga y un modo de partido round-robin contra la CPU (según el texto del menú)",
+  "Formation": "Formación",
+  "Bag": "Bolsa",
+  "Formation and tactics editor": "Editor de formación y tácticas",
+  "Team edit": "Editar equipo",
+  "formation, starting eleven and substitutes": "formación, once titular y suplentes",
+  "Teams": "Equipos",
+  "National and club teams\nNational teams with real-style rosters of the era": "Equipos nacionales y de club\nEquipos nacionales con plantillas al estilo de la época",
+  "Progress": "Progreso",
+  "League/cup progress\nLeague standings and cup progress\nRound-robin mode plays every team once\nEnglish translation in the Translations folder; version 0.99 (from the file name)": "Progreso de liga/copa\nPosiciones de liga y progreso de la copa\nEl modo round-robin juega cada equipo una vez\nTraducción al inglés en la carpeta Translations; versión 0.99 (según el nombre del archivo)"
+ }
+}

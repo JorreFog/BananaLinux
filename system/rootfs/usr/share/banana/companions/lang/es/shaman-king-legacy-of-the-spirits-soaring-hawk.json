@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Yoh, Ren, Horohoro and friends; HP, spirits\nSame game as Sprinting Wolf with a different set of spirits to find\nParty of spirits with HP; Shaman Level and Shaman ID on the status screen": "Yoh, Ren, Horohoro y amigos; HP, espíritus\nMismo juego que Sprinting Wolf con un conjunto distinto de espíritus por encontrar\nGrupo de espíritus con HP; Shaman Level y Shaman ID en la pantalla de estado",
+  "Spirits": "Espíritus",
+  "Detail": "Detalle",
+  "Spirits collected in this version differ from Sprinting Wolf\nSpirits can be powered up or changed in type; parting with one is permanent": "Los espíritus coleccionados en esta versión difieren de Sprinting Wolf\nLos espíritus se pueden potenciar o cambiar de tipo; desprenderte de uno es permanente",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Spirit choice changes the attack element\nIf all spirits in the party reach 0 HP the fight is lost: heal between battles": "El espíritu elegido cambia el elemento del ataque\nSi todos los espíritus del grupo llegan a 0 HP se pierde el combate: cura entre batallas",
+  "World": "Mundo",
+  "Story through the Shaman Fight": "Historia hasta el Shaman Fight",
+  "Places": "Lugares",
+  "Items": "Objetos",
+  "Items and spirit cards\nShop items bought with money from fights": "Objetos y cartas de espíritu\nObjetos de tienda comprados con el dinero de los combates",
+  "Collect": "Coleccionar",
+  "Spirit collection; trade with Sprinting Wolf\nSpirits differ from Sprinting Wolf; both versions share the story": "Colección de espíritus; cambia con Sprinting Wolf\nLos espíritus difieren de Sprinting Wolf; ambas versiones comparten la historia",
+  "Progress": "Progreso",
+  "Story chapters\nStory through the Underground Temple\nThe spirit list is the main difference between the two versions": "Capítulos de historia\nHistoria hasta el Underground Temple\nLa lista de espíritus es la principal diferencia entre las dos versiones"
+ }
+}

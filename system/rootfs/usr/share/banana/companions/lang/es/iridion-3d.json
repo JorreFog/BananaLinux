@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Ship": "Nave",
+  "Controls": "Controles",
+  "A shoot, B switch weapon / special. Into-the-screen shooter.": "A disparar, B cambiar arma / especial. Shooter con vista de frente.",
+  "Weapons": "Armas",
+  "Several weapon types upgrade by collecting the matching power-ups.": "Varios tipos de arma se mejoran al recoger los potenciadores correspondientes.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Bosses fill the screen: keep moving in arcs around their attack patterns.": "Los jefes llenan la pantalla: muévete en arcos alrededor de sus patrones de ataque.",
+  "Stages": "Escenarios",
+  "Structure": "Estructura",
+  "Stages across planets and space; password saves.": "Escenarios en distintos planetas y el espacio; guardado con contraseña.",
+  "Power-ups": "Potenciadores",
+  "Items": "Objetos",
+  "Weapon power-ups, shield refills.": "Potenciadores de arma y recargas de escudo.",
+  "Score": "Puntuación",
+  "Collect": "Coleccionar",
+  "Score and stage records.": "Récords de puntuación y de escenarios.",
+  "Goal": "Objetivo",
+  "Clear all stages to defeat the Iridion empire.": "Completa todos los escenarios para derrotar al imperio Iridion."
+ }
+}

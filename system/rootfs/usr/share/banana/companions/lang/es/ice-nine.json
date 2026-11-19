@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Agent": "Agente",
+  "Controls": "Controles",
+  "A shoot, B action/jump, R strafe, L switch weapon. First-person missions as a CIA agent.": "A dispara, B acción/salto, R desplazamiento lateral, L cambiar arma. Misiones en primera persona como agente de la CIA.",
+  "Health": "Salud",
+  "Health and armour; medkits and armour vests refill them.": "Salud y armadura; los botiquines y los chalecos antibalas los reponen.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Strafe around corners; head-height aim deals more damage. Watch for snipers in open areas.": "Desplázate lateralmente al rodear las esquinas; apuntar a la altura de la cabeza hace más daño. Cuidado con los tiradores en zonas abiertas.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Story missions in sequence, each with objectives (reach, destroy, rescue).": "Misiones de historia en secuencia, cada una con objetivos (llegar, destruir, rescatar).",
+  "Weapons": "Armas",
+  "Pistol, SMG, shotgun, rifle and explosives found in missions; ammo from fallen enemies.": "Pistola, subfusil, escopeta, rifle y explosivos hallados en las misiones; munición de los enemigos caídos.",
+  "Intel": "Inteligencia",
+  "Collect": "Coleccionar",
+  "Objectives and intel items per mission.": "Objetivos y elementos de inteligencia por misión.",
+  "Goal": "Objetivo",
+  "Complete every mission to stop the Ice-9 conspiracy.": "Completa todas las misiones para detener la conspiración del Ice-9."
+ }
+}

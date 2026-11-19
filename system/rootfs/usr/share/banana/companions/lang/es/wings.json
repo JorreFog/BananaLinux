@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Pilot": "Piloto",
+  "Biplane, health\nWWI flying game based on Cinemaware's Wings: campaign as a pilot in the Great War": "Biplano, salud\nJuego de aviación de la Primera Guerra basado en Wings de Cinemaware: campaña como piloto en la Gran Guerra",
+  "Pilot skills": "Habilidades de piloto",
+  "Flying ability, Shooting ability and Mech aptitude; points to allocate after missions": "Habilidad de vuelo, de tiro y aptitud mecánica; puntos para repartir tras las misiones",
+  "Missions": "Misiones",
+  "Detail": "Detalle",
+  "Dogfights, strafing, bombing\nCombat record per pilot; pilots can be lost, so keep your best ones alive": "Combates aéreos, bombardeo rasante, bombardeo\nHistorial de combate por piloto; los pilotos se pueden perder, así que mantén vivos a los mejores",
+  "Mission types": "Tipos de misión",
+  "dogfights, strafing ground targets, bombing runs": "combates aéreos, bombardeo rasante a objetivos terrestres, misiones de bombardeo",
+  "Tips": "Consejos",
+  "Dogfight from behind": "Combate aéreo por detrás",
+  "Dogfights": "Combates aéreos",
+  "get on the enemy's tail and fire short bursts": "ponte a la cola del enemigo y dispara ráfagas cortas",
+  "Bombing": "Bombardeo",
+  "release over the target from a steady height": "suelta las bombas sobre el objetivo desde una altura estable",
+  "Campaign": "Campaña",
+  "Map": "Mapa",
+  "WWI campaign\nCampaign mode follows the war; multiplayer modes: Battle Royale, Team Deathmatch, Balloon Battle (Allies vs Central Powers)": "Campaña de la Primera Guerra\nEl modo campaña sigue la guerra; modos multijugador: Battle Royale, Team Deathmatch, Balloon Battle (Aliados vs Potencias Centrales)",
+  "Gear": "Equipo",
+  "Bombs and guns\nMachine guns and bombs depending on the mission": "Bombas y cañones\nAmetralladoras y bombas según la misión",
+  "Medals": "Medallas",
+  "Medals\nMedals and the pilot's combat record\nPilot skills improve with points after missions": "Medallas\nMedallas y el historial de combate del piloto\nLas habilidades del piloto mejoran con puntos tras las misiones",
+  "Progress": "Progreso",
+  "Missions flown\nMissions flown in the campaign\nCampaign missions flown; multiplayer battles are separate": "Misiones pilotadas\nMisiones pilotadas en la campaña\nMisiones de campaña pilotadas; las batallas multijugador van aparte"
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Watch three resources in the game HUD: armor (lost to hits), fuel (runs down all the time) and ammo for each weapon. Fuel drums and armor/ammo crates refill them.": "Vigila tres recursos en el HUD: blindaje (se pierde con los impactos), combustible (se consume siempre) y munición de cada arma. Los toneles de combustible y las cajas de blindaje/munición los rellenan.",
+  "Weapons": "Armas",
+  "Chain gun": "Cañón gatling",
+  "Unlimited-ish, weak: soldiers and light vehicles": "Casi ilimitada, débil: soldados y vehículos ligeros",
+  "Hydra rockets": "Cohetes Hydra",
+  "Medium: trucks, AA guns, jeeps": "Media: camiones, cañones antiaéreo, jeeps",
+  "Hellfire missiles": "Misiles Hellfire",
+  "Heavy: tanks, radar, buildings; save them": "Pesada: tanques, radar, edificios; guárdalos",
+  "Winch": "Cabrestante",
+  "Hover over people and crates to pick them up": "Sobrevuela a personas y cajas para recogerlas",
+  "Threats": "Amenazas",
+  "Tips": "Consejos",
+  "Kill anti-aircraft guns and missile launchers first; circle-strafe tanks so their turrets can't track you. Never hover in place near enemy fire.": "Elimina primero los cañones antiaéreo y los lanzamisiles; rodea los tanques en círculo para que sus torretas no te sigan. Nunca te quedes quieto cerca del fuego enemigo.",
+  "Campaign": "Campaña",
+  "Each campaign is a set of numbered objectives on a big map (radar, power plants, POWs, enemy commanders). Do them in order; the map screen shows the next one.": "Cada campaña es un conjunto de objetivos numerados en un mapa grande (radar, centrales eléctricas, prisioneros, comandantes enemigos). Hazlos en orden; la pantalla de mapa muestra el siguiente.",
+  "Pickups": "Recogibles",
+  "Fuel drums, ammo crates and armor repair crates sit on the map; landing zones refill and drop off rescued people.": "En el mapa hay toneles de combustible, cajas de munición y cajas de reparación de blindaje; las zonas de aterrizaje recargan y dejan a la gente rescatada.",
+  "Rescues": "Rescates",
+  "POWs and MIAs give bonus points and sometimes extra lives when delivered to a landing zone.": "Los prisioneros y desaparecidos dan puntos extra y a veces vidas extra al llevarlos a una zona de aterrizaje.",
+  "Progress": "Progreso",
+  "Campaigns end with a passcode screen; write it down to continue later.": "Las campañas terminan con una pantalla de código; anótalo para continuar después."
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Controls": "Controles",
+  "A pass, B shoot, R dash, L tactics. Hold B longer for a harder shot.": "A pasar, B disparar, R sprint, L tácticas. Mantén B más tiempo para un tiro más potente.",
+  "Players": "Jugadores",
+  "Edit lineup and formation; stamina drops through the match.": "Edita la alineación y la formación; el aguante baja a lo largo del partido.",
+  "Match": "Partido",
+  "Tips": "Consejos",
+  "Cross from the wings, head in at the far post. Slide tackles from behind give fouls.": "Centro desde las bandas, remate al poste contrario. Las barridas por detrás dan faltas.",
+  "Modes": "Modos",
+  "Exhibition, League, Cup, Scenario and penalties.": "Exhibición, Liga, Copa, Escenario y penaltis.",
+  "Tactics": "Tácticas",
+  "Formations": "Formaciones",
+  "Change shape at half-time to protect a lead.": "Cambia la formación en el descanso para proteger la ventaja.",
+  "Teams": "Equipos",
+  "Collect": "Coleccionar",
+  "National sides; unlock extras by winning cups.": "Equipos nacionales; desbloquea extras ganando copas.",
+  "Cup": "Copa",
+  "Goal": "Objetivo",
+  "Win the cups and leagues on harder difficulties.": "Gana las copas y las ligas en dificultades más altas."
+ }
+}

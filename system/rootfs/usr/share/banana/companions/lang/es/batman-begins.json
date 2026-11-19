@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Prologue": "Prólogo",
+  "Monastery 1": "Monasterio 1",
+  "Monastery 2": "Monasterio 2",
+  "Monastery 3": "Monasterio 3",
+  "Docks 1": "Muelles 1",
+  "Docks 2": "Muelles 2",
+  "Docks 3": "Muelles 3",
+  "Wayne Manor": "Mansión Wayne",
+  "Finale 1": "Final 1",
+  "Finale 2": "Final 2",
+  "Health": "Salud",
+  "Stage": "Escenario",
+  "Checkpoint": "Punto de control",
+  "Fear tactics": "Tácticas de miedo",
+  "Stealth takedowns from behind and fear attacks (gadgets that scare a group) make thugs drop their guard. Fear takedowns are worth more than brawling.": "Eliminaciones furtivas por la espalda y ataques de miedo (aparatos que asustan a un grupo) hacen bajar la guardia a los matones. Las eliminaciones con miedo valen más que pelear a puñetazos.",
+  "Bosses": "Jefes",
+  "Ra's al Ghul health": "Salud de Ra's al Ghul",
+  "Scarecrow: avoid the gas, close in and combo. Ra's al Ghul on the train: block his sword string, then counter.": "Scarecrow: evita el gas, acércate y encadena golpes. Ra's al Ghul en el tren: bloquea su combo de espada y luego contraataca.",
+  "Acts: Prologue, Monastery (training), the Docks, Gotham City, Arkham Asylum, Wayne Manor, Finale.": "Actos: Prólogo, Monasterio (entrenamiento), los Muelles, Ciudad Gotham, Manicomio Arkham, Mansión Wayne, Final.",
+  "Gadgets": "Aparatos",
+  "Flashbang": "Bengala",
+  "Smoke grenade": "Granada de humo",
+  "Bats": "Murciélagos",
+  "Bat symbols": "Símbolos de murciélago",
+  "Progress": "Progreso",
+  "Stages cleared": "Etapas superadas",
+  "Hard mode": "Modo difícil",
+  "Unlocked": "Desbloqueado"
+ }
+}

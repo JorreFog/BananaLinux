@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Coins / minigame score": "Monedas / puntuación del minijuego",
+  "Shrek, Donkey, Puss in Boots, Fiona; health": "Shrek, Donkey, Puss in Boots, Fiona; salud",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Switch characters": "Cambiar de personaje",
+  "each has unique abilities": "cada uno tiene habilidades únicas",
+  "Shrek is strong, Donkey kicks, Puss in Boots fights with his sword, Fiona uses martial arts": "Shrek es fuerte, Donkey da patadas, Puss in Boots pelea con su espada, Fiona usa artes marciales",
+  "Bosses": "Jefes",
+  "Fairy Godmother and others\nThe Fairy Godmother is the main villain; her guards and knights fight in between": "Fairy Godmother y los demás\nLa Fairy Godmother es la villana principal; sus guardias y caballeros pelean en medio",
+  "Levels": "Niveles",
+  "Current chapter": "Capítulo actual",
+  "Map id": "ID de mapa",
+  "Far Far Away and the swamp": "Far Far Away y el pantano",
+  "Items": "Objetos",
+  "Health, coins\nCoins and health pickups; minigames give extra coins": "Salud, monedas\nMonedas y recogibles de salud; los minijuegos dan monedas extra",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nLevels are grouped in books and chapters (5 x 5); coins per level are recorded": "Objetos ocultos\nLos escenarios se agrupan en libros y capítulos (5 x 5); se registran las monedas por escenario",
+  "Progress": "Progreso",
+  "Levels passed (save slot 1)": "Escenarios superados (ranura de guardado 1)"
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "How it plays": "Cómo se juega",
+  "A bouncing gem-ball style game: keep the hero bouncing and smash every gem block in the room.": "Un juego al estilo de la bola de gemas que rebota: mantén al héroe botando y rompe cada bloque de gemas de la sala.",
+  "Blocks": "Bloques",
+  "Block types": "Tipos de bloque",
+  "Plain gems break in one hit, tougher blocks need several, some only break with power-ups.": "Las gemas simples rompen de un golpe, los bloques más duros necesitan varios y algunos solo rompen con potenciadores.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Boss rooms end each world: hit the weak spot during the opening.": "Cada mundo termina en una sala de jefe: golpea el punto débil durante la apertura.",
+  "Worlds": "Mundos",
+  "Structure": "Estructura",
+  "Themed worlds of short rooms, with a boss at the end.": "Mundos con temática de salas cortas, con un jefe al final.",
+  "Power-ups": "Potenciadores",
+  "Power-ups change the bounce or the smash strength for a while.": "Los potenciadores cambian el rebote o la fuerza del golpe por un tiempo.",
+  "Gems": "Gemas",
+  "Collect": "Coleccionar",
+  "Collect the gems in every room to complete a world.": "Recoge las gemas de cada sala para completar un mundo.",
+  "Goal": "Objetivo",
+  "Clear every world's rooms and boss.": "Completa las salas y el jefe de cada mundo."
+ }
+}

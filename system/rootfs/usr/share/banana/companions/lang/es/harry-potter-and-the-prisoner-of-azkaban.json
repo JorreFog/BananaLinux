@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Harry Potter and the Prisoner of Azkaban": "Harry Potter y el Prisionero de Azkaban",
+  "Trio": "Trío",
+  "Harry level": "Nivel de Harry",
+  "Hermione level": "Nivel de Hermione",
+  "Ron level": "Nivel de Ron",
+  "Characters": "Personajes",
+  "Play as Harry, Ron and Hermione; each has their own skill and spell use.\nSwitch characters to solve puzzles.": "Juega como Harry, Ron y Hermione; cada uno tiene su habilidad y su hechizo.\nCambia de personaje para resolver puzles.",
+  "Experience": "Experiencia",
+  "Harry: exp to next level": "Harry: exp para el siguiente nivel",
+  "Hermione: exp to next": "Hermione: exp para el siguiente",
+  "Ron: exp to next": "Ron: exp para el siguiente",
+  "Who does what": "Quién hace qué",
+  "Harry: Expecto Patronum and flying.\nRon: finds secret passages.\nHermione: reads/uses books and spells others can't.": "Harry: Expecto Patronum y vuelo.\nRon: encuentra passages secretos.\nHermione: lee y usa libros y hechizos que otros no pueden.",
+  "Creatures": "Criaturas",
+  "Tips": "Consejos",
+  "Dementors: cast Expecto Patronum.\nBoggarts: Riddikulus.\nUse the character whose spell fits the obstacle.": "Dementors: lanza Expecto Patronum.\nBoggarts: Riddikulus.\nUsa al personaje cuyo hechizo encaja con el obstáculo.",
+  "Places": "Lugares",
+  "Hogwarts, Hogsmeade, the Forbidden Forest, the Shrieking Shack.": "Hogwarts, Hogsmeade, el Bosque Prohibido, la Casita de los Gritos.",
+  "Items": "Objetos",
+  "Beans buy items; chocolate frogs heal; cards hidden around.": "Las judías compran objetos; las ranas de chocolate curan; hay cartas escondidas.",
+  "Cards": "Cartas",
+  "Collect": "Coleccionar",
+  "Wizard cards and secret items scattered through the levels.": "Cartas de magos y objetos secretos esparcidos por los niveles.",
+  "Year": "Año",
+  "Goal": "Objetivo",
+  "Rescue Buckbeak and Sirius by the end of the year.": "Rescata a Buckbeak y a Sirius antes de que termine el año."
+ }
+}

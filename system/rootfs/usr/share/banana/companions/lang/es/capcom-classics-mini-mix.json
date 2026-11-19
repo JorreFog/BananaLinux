@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Games": "Juegos",
+  "Ninja action; Hiryu's cypher slash, climb any wall": "Acción ninja; tajo cifrado de Hiryu, sube por cualquier pared",
+  "No jumping: swing with the bionic arm": "Sin saltar: balancéate con el brazo biónico",
+  "Chibi beat-'em-up with levelling fighters": "Beat-'em-up chibi con luchadores que suben de nivel",
+  "Controls": "Controles",
+  "B slash, A jump, Up+A climb": "B tajo, A salto, Arriba+A trepar",
+  "B shoot, A arm (aim up/diagonal), swing to cross gaps": "B disparar, A brazo (apunta arriba/diagonal), balancéate para cruzar huecos",
+  "B attack, A jump, A+B special (costs health)": "B atacar, A salto, A+B especial (cuesta salud)",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Strider: the Ouroboros and the Grandmaster need constant slashing at close range.\nBionic Commando: shoot the reactor core in the final area before the timer.\nMighty Final Fight: grab-throw bosses into the walls; level-ups add combo hits.": "Strider: el Ouroboros y el Grandmaster necesitan tajazos constantes a corta distancia.\nBionic Commando: dispara al núcleo del reactor en la zona final antes de que se acabe el tiempo.\nMighty Final Fight: agarra y lanza a los jefes contra las paredes; los niveles extraen golpes combos.",
+  "Stages": "Escenarios",
+  "Strider: Kazakh, Siberia, Amazon, Balrog, Third Moon.\nBionic Commando: numbered areas on an overhead map; neutral zones have shops and intel.\nMighty Final Fight: 5 rounds through Metro City.": "Strider: Kazakh, Siberia, Amazon, Balrog, Third Moon.\nBionic Commando: zonas numeradas en un mapa cenital; las zonas neutrales tienen tiendas e información.\nMighty Final Fight: 5 rondas por Metro City.",
+  "Items": "Objetos",
+  "Bionic Commando: communicator, flares, pills and weapons (rocket launcher for the final boss). Strider: option robots and power-ups. Final Fight: food heals.": "Bionic Commando: comunicador, bengalas, pastillas y armas (lanzacohetes para el jefe final). Strider: robots opcionales y potenciadores. Final Fight: la comida cura.",
+  "All three are ports of the NES versions, picked from the cart's main menu.": "Las tres son versiones adaptadas de NES, elegidas desde el menú principal del cartucho.",
+  "Progress": "Progreso",
+  "Each game saves separately from the main menu.": "Cada juego se guarda por separado desde el menú principal."
+ }
+}

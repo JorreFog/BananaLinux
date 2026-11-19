@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Character id": "ID de personaje",
+  "Lap": "Vuelta",
+  "Cup points": "Puntos de copa",
+  "Driving": "Conducción",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Accelerate": "Acelerar",
+  "Brake / reverse": "Frenar / marcha atrás",
+  "Jump / drift": "Saltar / derrapar",
+  "Use item": "Usar objeto",
+  "Collect D-Spirits to evolve mid-race": "Recoge D-Spirits para evolucionar en mitad de la carrera",
+  "Boss races": "Carreras contra jefes",
+  "Boss value": "Valor del jefe",
+  "Boss races are one-on-one: use items when the boss is close behind, stay on the racing line.": "Las carreras contra jefes son uno contra uno: usa objetos cuando el jefe vaya justo detrás y quédate en la trazada.",
+  "Cup": "Copa",
+  "Races run": "Carreras jugadas",
+  "Difficulty": "Dificultad",
+  "Items": "Objetos",
+  "Item boxes give attacks and boosts; holding one for defence is often better than firing it at once.": "Las cajas de objetos dan ataques y turbos; guardar uno para defenderse suele ser mejor que dispararlo enseguida.",
+  "Unlocks": "Desbloqueos",
+  "Winning cups unlocks Guilmon, Veemon, Agunimon and more racers.": "Ganar copas desbloquea a Guilmon, Veemon, Agunimon y más pilotos.",
+  "Progress": "Progreso",
+  "Races": "Carreras"
+ }
+}

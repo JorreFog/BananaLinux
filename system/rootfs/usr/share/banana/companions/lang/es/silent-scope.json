@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Sniper": "Tirador",
+  "Countdown": "Cuenta regresiva",
+  "Total time: minutes": "Tiempo total: minutos",
+  "Total time: seconds": "Tiempo total: segundos",
+  "Health, time, score\nPort of Konami's sniper arcade game: you look through a scope to shoot terrorists\nLife drops when enemies shoot you; the timer adds pressure between targets": "Salud, tiempo, puntuación\nPuerto del juego arcade de tiradores de Konami: miras por la mira para disparar a los terroristas\nLa vida baja cuando los enemigos te disparan; el cronómetro añade presión entre objetivos",
+  "Scope": "Mira",
+  "Zoom the scope; time shots carefully\nScope view zooms in; the wide view shows where targets are\nQuick headshots score more and save time": "Acerca la mira; calcula bien el momento de disparar\nLa vista de la lupa acerca; la vista amplia muestra dónde están los objetivos\nLos tiros a la cabeza rápidos dan más puntos y ahorran tiempo",
+  "Targets": "Objetivos",
+  "Battle": "Batalla",
+  "Terrorist bosses at stage ends\nEach stage ends with a boss terrorist who moves around: lead your shots\nHostages appear in some scenes: shooting them costs you": "Jefes terroristas al final de los escenarios\nCada escenario termina con un jefe terrorista que se mueve: apunta por adelantado\nEn algunas escenas hay rehenes: dispararles te cuesta puntos",
+  "Stages": "Escenarios",
+  "Stages with hostage scenarios\nStages follow the rescue of the President's daughter from terrorists (arcade storyline)\nRoute choices appear between some stages": "Escenarios con rehenes\nLos escenarios siguen el rescate de la hija del Presidente a manos de terroristas (historia del arcade)\nEntre algunos escenarios aparecen elecciones de ruta",
+  "Ammo": "Munición",
+  "Ammo and reload\nUnlimited ammo with reloads; accuracy matters more than speed": "Munición y recarga\nMunición ilimitada con recargas; la puntería importa más que la velocidad",
+  "Bonuses": "Bonos",
+  "Collect": "Coleccionar",
+  "Bonus targets\nBonus targets (marked) give extra points and time": "Objetivos bonus\nLos objetivos bonus (marcados) dan puntos y tiempo extra",
+  "Progress": "Progreso",
+  "Stages cleared\nHigh scores; harder settings make enemies faster": "Escenarios completados\nRécords; los ajustes más difíciles hacen más rápidos a los enemigos"
+ }
+}

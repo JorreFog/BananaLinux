@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Level": "Nivel",
+  "Falling Uno cards; score\nPuzzle game on Uno cards: falling cards are matched by color or number\nSet up name, icon and AI players; special modes in the menu": "Cartas de Uno que caen; puntuación\nJuego de puzle con cartas de Uno: las cartas que caen se emparejan por color o número\nConfigura nombre, ícono y jugadores de IA; modos especiales en el menú",
+  "Rules": "Reglas",
+  "Match colors or numbers\nMatch falling cards to the column below by color or number; Wild cards match anything\nChains of matches score more": "Empareja colores o números\nEmpareja las cartas que caen con la columna de abajo por color o número; las Wildcards sirven para cualquier cosa\nLas cadenas de coincidencias dan más puntos",
+  "Tips": "Consejos",
+  "Chain matches for bonus points": "Encadena coincidencias para puntos extra",
+  "Keep columns low": "Mantén las columnas bajas",
+  "the board fills from the bottom": "el tablero se llena desde abajo",
+  "Save Wild cards for crowded moments": "Guarda las Wildcards para los momentos con muchas cartas",
+  "Modes": "Modos",
+  "Free Fall and Uno\nFree Fall mode and classic Uno from the main menu (developed by Black Lantern Studios)": "Free Fall y Uno\nModo Free Fall y Uno clásico desde el menú principal (desarrollado por Black Lantern Studios)",
+  "Cards": "Cartas",
+  "Next cards\nNext card preview\nThe next card is shown before it drops; Wild cards are rare": "Siguientes cartas\nVista previa de la siguiente carta\nLa siguiente carta se muestra antes de caer; las Wildcards son raras",
+  "Games": "Juegos",
+  "Modes\nHigh scores per mode\nHigh scores per mode are saved\nPlayer names and icons are saved for the score tables": "Modos\nRécords por modo\nLos récords por modo se guardan\nLos nombres e iconos de los jugadores se guardan en las tablas de puntuaciones",
+  "Progress": "Progreso",
+  "High scores\nScore targets per level\nLevels speed up as you clear cards": "Récords\nObjetivos de puntuación por nivel\nLos niveles se aceleran según limpias cartas"
+ }
+}

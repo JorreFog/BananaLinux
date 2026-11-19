@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Zoids (mechs) with HP, parts; pilot": "Zoids (mechas) con HP, piezas; piloto",
+  "Zoids RPG": "RPG de Zoids",
+  "your Zoids fight in turn-based battles; a Zoid at 0 HP can't fight": "tus Zoids lutran en combates por turnos; un Zoid con 0 HP no puede pelear",
+  "Each Zoid has energy: weapons that need energy use it up; energy recovers a set amount each turn": "Cada Zoid tiene energía: las armas que la necesitan la consumen; la energía se recupera una cantidad fija cada turno",
+  "Customize Zoids with parts\nStats from the game's help text: speed (turn order and evasion), sensor (accuracy), defense, armor weight limit and relative size (affects formation and hit rate)": "Personaliza los Zoids con piezas\nEstadísticas de la ayuda del juego: velocidad (orden de turno y evasión), sensor (precisión), defensa, límite de peso de armadura y tamaño relativo (afecta a la formación y al índice de aciertos)",
+  "Pilot level matters": "El nivel del piloto importa",
+  "a low-level pilot can't use a Zoid's full ability; training level rises with use": "un piloto de bajo nivel no puede usar toda la capacidad de un Zoid; el nivel de entrenamiento sube con el uso",
+  "Battle tips": "Consejos de batalla",
+  "Battle": "Batalla",
+  "Turn-based fights; upgrade weapons\nArmored Zoids are easy to hit directly but hard to damage; fast Zoids dodge more": "Combates por turnos; mejora las armas\nLos Zoids blindados son fáciles de alcanzar directamente pero difíciles de dañar; los Zoids rápidos esquivan más",
+  "Watch energy": "Vigila la energía",
+  "a Zoid out of energy is left with only weak attacks": "un Zoid sin energía se queda solo con ataques débiles",
+  "World": "Mundo",
+  "Story areas\nStory areas visited in order; Zoid cores found across the map": "Áreas de historia\nÁreas de historia visitadas en orden; núcleos de Zoid repartidos por el mapa",
+  "Parts": "Partes",
+  "Weapons and parts\nWeapons and parts upgrade each Zoid's slots (each slot can be upgraded)": "Armas y piezas\nLas armas y piezas mejoran las ranuras de cada Zoid (cada ranura se puede mejorar)",
+  "Zoids collected": "Zoids coleccionados",
+  "Zoid cores": "Núcleos de Zoid",
+  "every core found is counted per type": "cada núcleo encontrado se cuenta por tipo",
+  "Zoid cores are counted per type; each Zoid's weapon slots can be upgraded": "Los núcleos de Zoid se cuentan por tipo; las ranuras de arma de cada Zoid se pueden mejorar",
+  "Progress": "Progreso",
+  "Story chapters\nStory chapters\nStory chapters on the map\nZoids and pilots grow stronger with battles; train both": "Capítulos de historia\nCapítulos de historia\nCapítulos de historia en el mapa\nLos Zoids y los pilotos se fortalecen con los combates; entrena ambos"
+ }
+}

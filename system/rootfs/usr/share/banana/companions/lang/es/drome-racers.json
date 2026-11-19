@@ -1,0 +1,16 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Speed": "Velocidad",
+  "Lap": "Vuelta",
+  "Credits": "Créditos",
+  "Car": "Auto",
+  "LEGO Racers cars: boost pads and power-ups decide races more than top speed. Upgrade parts with credits between races.": "En LEGO Racers los aceleradores y los potenciadores deciden las carreras más que la velocidad máxima. Mejora las piezas con créditos entre carreras.",
+  "Race": "Carrera",
+  "Race time": "Tiempo de carrera",
+  "Mode": "Modo",
+  "Tracks": "Pistas",
+  "New tracks and cars unlock as you win championships; time attack records are kept per track.": "Los circuitos y carros nuevos se desbloquean al ganar campeonatos; los récords de contrarreloj se guardan por circuito.",
+  "Progress": "Progreso"
+ }
+}

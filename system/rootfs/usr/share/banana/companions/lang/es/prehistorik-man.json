@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump, B club.": "A salta, B garrote.",
+  "Moves": "Movimientos",
+  "Club.": "Garrote.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Club bosses in their open moments; collect food to stay healthy.": "Golpea a los jefes con el garrote cuando estén al aire; recoge comida para mantenerte sano.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Levels.": "Niveles.",
+  "Food": "Comida",
+  "Items": "Objetos",
+  "Food (health, points).": "Comida (salud, puntos).",
+  "Collect": "Coleccionar",
+  "Food items per level.": "Objetos de comida por nivel.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Finish.": "Termina."
+ }
+}

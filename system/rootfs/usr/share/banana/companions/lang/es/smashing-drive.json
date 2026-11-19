@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Cab": "Taxi",
+  "Time, fares, damage\nArcade taxi racing through New York (a port of the arcade game)\nBeat the rival cab to the destination before the clock runs out": "Tiempo, pasajes, daño\nCarreras de taxi arcade por Nueva York (un port del juego de arcade)\nLlega al destino antes de que se agote el reloj y gana al taxi rival",
+  "Taxi with shortcuts and power-ups\nShortcuts go through buildings, subways and rooftops: take them when the arrow points\nPower-ups picked up on the road give a short advantage; grab them on the racing line": "Taxi con atajos y potenciadores\nLos atajos atraviesan edificios, el metro y las azoteas: tómalos cuando apunte la flecha\nLos potenciadores que recoges en la ruta dan una ventaja breve; agárralos en la línea de carrera",
+  "Goal": "Objetivo",
+  "Beat the time to the destination\nYour rival is another cab racing the same fare; ram it and use shortcuts to stay ahead\nHitting traffic slows you down but rarely stops you": "Gana el tiempo hasta el destino\nTu rival es otro taxi compitiendo por el mismo pasaje; embístelo y usa atajos para ir delante\nChocar con el tráfico te frena pero rara vez te detiene",
+  "Routes": "Rutas",
+  "New York routes, day and night\nRoutes in New York, at day, dusk and night; each route is a sequence of fares\nModes on the menu: Arcade, Survival and Head to Head": "Rutas de Nueva York, de día y de noche\nRutas en Nueva York, de día, al atardecer y de noche; cada ruta es una secuencia de pasajes\nModos del menú: Arcade, Survival y Head to Head",
+  "Power-ups": "Potenciadores",
+  "Bag": "Bolsa",
+  "Power-ups picked up on the road\nTime bonus per fare; power-ups are used once": "Potenciadores recogidos en la ruta\nBono de tiempo por pasaje; los potenciadores se usan una vez",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Shortcuts found\nHidden shortcuts per route\nEach route has several shortcuts; find them for a faster time": "Atajos encontrados\nAtajos ocultos por ruta\nCada ruta tiene varios atajos; encuéntralos para hacer mejor tiempo",
+  "Progress": "Progreso",
+  "Routes cleared\nRoutes cleared; best times\nDay, dusk and night versions of the routes": "Rutas completadas\nRutas completadas; mejores tiempos\nVersiones de día, atardecer y noche de las rutas"
+ }
+}

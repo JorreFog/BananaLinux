@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Orbs (50 = extra life)": "Orbes (50 = vida extra)",
+  "Health; Juju power": "Salud; poder de juju",
+  "Moves": "Movimientos",
+  "Club attacks; Juju spells": "Ataques de garrote; hechizos de juju",
+  "Orbs": "Orbes",
+  "50 give an extra life; juju powers come from the spirits": "50 dan una vida extra; los poderes de juju vienen de los espíritus",
+  "Bosses": "Jefes",
+  "Tlaloc and story bosses\nTlaloc and story bosses; chicken eggs and sheep are part of level goals": "Tlaloc y jefes de la historia\nTlaloc y los jefes de la historia; los huevos de gallina y las ovejas son parte de los objetivos de nivel",
+  "Areas": "Áreas",
+  "Pupununu village and its surroundings\nLevels around Pupununu village, grouped in worlds": "Aldea Pupununu y sus alrededores\nNiveles alrededor de la aldea Pupununu, agrupados en mundos",
+  "Items": "Objetos",
+  "Chicken eggs": "Huevos de gallina",
+  "Feathers and Juju items": "Plumas y objetos de juju",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Sheep (this level)": "Ovejas (este nivel)",
+  "Sheep (this world)": "Ovejas (este mundo)",
+  "Hidden collectibles": "Coleccionables ocultos",
+  "Progress": "Progreso",
+  "Areas cleared\nSheep collected per level and per world are counted": "Áreas superadas\nLas ovejas recogidas por nivel y por mundo se cuentan"
+ }
+}

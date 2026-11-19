@@ -1,0 +1,25 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Shoot bubbles; match 3 to pop them\nTaito's Puzzle Bobble: fire bubbles from the launcher; 3 or more of a color pop\nBubbles no longer connected to the ceiling fall and score extra": "Dispara burbujas; junta 3 para hacerlas explotar\nPuzzle Bobble de Taito: dispara burbujas desde el lanzador; 3 o más del mismo color explotan\nLas burbujas que ya no están unidas al techo caen y dan puntos extra",
+  "Detail": "Detalle",
+  "Unconnected bubbles fall; the ceiling lowers over time\nTwo rule sets in the ROM: \"Super Puzzle Bobble\" mode and \"Puzzle Bobble Classic\" mode\nThe ceiling drops after a number of shots: clear space before it does": "Las burbujas sueltas caen; el techo baja con el tiempo\nDos conjuntos de reglas en la ROM: modo \"Super Puzzle Bobble\" y modo \"Puzzle Bobble Classic\"\nEl techo baja tras varios disparos: despeja espacio antes de que ocurra",
+  "Tips": "Consejos",
+  "Bank shots off walls; drop big groups for points": "Haz rebotes en las paredes; suelta grupos grandes para sumar puntos",
+  "Versus play": "Modo versus",
+  "big drops send garbage bubbles to the opponent": "las sueltas grandes envían burbujas basura al rival",
+  "Bank shots off the side walls reach bubbles hidden behind others": "Los rebotes en las paredes laterales alcanzan burbujas escondidas detrás de otras",
+  "Modes": "Modos",
+  "Puzzle, VS, Challenge\nStory mode is a journey: places like the edge of space, the God of Luck and a city of golden colour\nNext-round screen between stages; mode select on the title screen": "Puzzle, VS, Challenge\nEl modo historia es un recorrido: lugares como el borde del espacio, el Dios de la Suerte y una ciudad de color dorado\nPantalla de siguiente ronda entre escenarios; selección de modo en la pantalla de título",
+  "Specials": "Especiales",
+  "Bag": "Bolsa",
+  "Special bubbles": "Burbujas especiales",
+  "Next bubble preview": "Vista previa de la siguiente burbuja",
+  "plan two shots ahead": "planifica dos disparos",
+  "Special bubbles (e.g. rainbow, star) appear in later stages": "Las burbujas especiales (p. ej., arcoíris, estrella) aparecen en los escenarios finales",
+  "Levels": "Niveles",
+  "Levels cleared\nStages cleared on the journey; endings vary with the route": "Niveles superados\nEscenarios superados en el recorrido; los finales varían según la ruta",
+  "Progress": "Progreso",
+  "Stages\nRounds cleared per mode; the journey ends back at home": "Escenarios\nRondas superadas por modo; el recorrido termina de vuelta en casa"
+ }
+}

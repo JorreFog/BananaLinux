@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Level timer": "Temporizador de nivel",
+  "Weapon durability": "Durabilidad del arma",
+  "Costume": "Traje",
+  "Difficulty": "Dificultad",
+  "Moves": "Movimientos",
+  "Punch": "Golpe",
+  "Kick": "Patada",
+  "Block": "Bloquear",
+  "Down+B/A": "Abajo+B/A",
+  "Low strikes": "Golpes bajos",
+  "Back+B": "Atrás+B",
+  "Throw": "Lanzar",
+  "Use/drop weapon": "Usar/soltar arma",
+  "Fights": "Combates",
+  "Block, then counter: the game rewards counters with chi. Thugs with weapons drop them: nunchaku and staffs break after a while. Bosses telegraph a big combo: jump or roll past it.": "Bloquea y contraataca: el juego premia los contraataques con chi. Los matones con armas las sueltan: los nunchacos y los bastones se rompen con el uso. Los jefes avisan de un combo grande: salta o rueda para esquivarlo.",
+  "Levels": "Niveles",
+  "Hong Kong streets and docks, San Francisco's Chinatown, the triad hideouts and the final temple; each level has a timer.": "Calles y muelles de Hong Kong, el Chinatown de San Francisco, los escondites de las tríadas y el templo final; cada nivel tiene temporizador.",
+  "Weapons": "Armas",
+  "Pick up weapons by walking over them.": "Recoge armas pasando por encima.",
+  "Costumes": "Trajes",
+  "Costumes unlock by finding hidden items.": "Los trajes se desbloquean encontrando objetos ocultos.",
+  "Progress": "Progreso"
+ }
+}

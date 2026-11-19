@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Vehicle HP": "HP del vehículo",
+  "Lives (vehicle levels)": "Vidas (niveles de vehículo)",
+  "Health, Force": "Salud, Fuerza",
+  "Moves": "Movimientos",
+  "Lightsaber combos, Force jump; speeder levels\nPlay as Obi-Wan, Anakin and Mace Windu in different levels; vehicle levels in between": "Combos de sable de luz, salto con la Fuerza; niveles de speeder\nJuega como Obi-Wan, Anakin y Mace Windu en distintos niveles; niveles de vehículo intercalados",
+  "Bosses": "Jefes",
+  "Count Dooku HP (level 11)": "HP de Count Dooku (nivel 11)",
+  "Levels": "Niveles",
+  "Level": "Nivel",
+  "Coruscant chase, Kamino, Geonosis": "Persecución en Coruscant, Kamino, Geonosis",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Health, Force\nHealth and Force refills from pickups; vehicle levels have their own lives": "Salud, Fuerza\nLas recargas de Salud y Fuerza vienen de los recogibles; los niveles de vehículo tienen sus propias vidas",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nExtra lives hidden in levels (e.g. in levels 2 and 5)": "Objetos ocultos\nVidas extra escondidas en los niveles (p. ej., en los niveles 2 y 5)",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels in film order up to the duel with Count Dooku": "Niveles superados\nNiveles en orden de la película hasta el duelo con Count Dooku"
+ }
+}

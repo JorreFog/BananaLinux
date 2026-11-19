@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Party": "Grupo",
+  "Alex HP": "HP de Alex",
+  "Characters": "Personajes",
+  "Alex (hero), Luna (singer), Nall (flying cat), Ramus, Nash, Mia, Jessica, Kyle.": "Alex (héroe), Luna (cantante), Nall (gato volador), Ramus, Nash, Mia, Jessica, Kyle.",
+  "Stats": "Estadísticas",
+  "Levels; equip weapons and armour.": "Niveles; equipa armas y armaduras.",
+  "Battle": "Batalla",
+  "Enemy 1": "Enemigo 1",
+  "Enemy 2 HP": "HP enemigo 2",
+  "Enemy 3 HP": "HP del enemigo 3",
+  "Enemy 4 HP": "HP enemigo 4",
+  "Tips": "Consejos",
+  "Turn-based; magic users heal.": "Por turnos; los magos curan.",
+  "World": "Mundo",
+  "Route": "Ruta",
+  "Burg -> Saith -> Meribia -> Vane -> Dragon trials.": "Burg -> Saith -> Meribia -> Vane -> pruebas de dragón.",
+  "Items": "Objetos",
+  "Herbs, equipment.": "Hierbas, equipamiento.",
+  "Dragons": "Dragones",
+  "Collect": "Coleccionar",
+  "Dragon trials of the four dragons.": "Pruebas de dragón de los cuatro dragones.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Become Dragonmaster and stop the Magic Emperor.": "Conviértete en Maestro Dragón y detiene al Emperador Mágico."
+ }
+}

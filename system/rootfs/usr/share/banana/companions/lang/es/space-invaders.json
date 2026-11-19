@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Cannon": "Cañón",
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Lives, score\nClassic Taito arcade shooter: one cannon, 3 lives, 4 bunkers\nExtra life at a score threshold (set in the options in many versions)": "Vidas, puntuación\nShooter de arcade clásico de Taito: un cañón, 3 vidas, 4 bunkers\nVida extra al alcanzar una puntuación (configurable en las opciones en muchas versiones)",
+  "Invaders": "Invasores",
+  "Detail": "Detalle",
+  "Rows of invaders; UFO bonus": "Filas de invasores; bonus de OVNI",
+  "5 rows x 11; the top row is worth the most points": "5 filas x 11; la fila superior vale más puntos",
+  "The march speeds up as fewer invaders remain\nThe mystery UFO crosses the top: shoot it for bonus points": "La marcha se acelera cuanto quedan menos invasores\nEl OVNI misterioso cruza la parte superior: dispárale para ganar puntos extra",
+  "Tips": "Consejos",
+  "Shoot UFOs for bonus; use shields\nClear columns from the sides to slow how fast the formation reaches the edges\nShoot through your own bunker only when you must: it shields you from bombs\nGame over when invaders reach the bottom": "Dispara a los OVNI para sumar; usa los escudos\nDespeja columnas desde los lados para frenar a la formación\nAtraviesa tu propio bunker solo si es necesario: te protege de las bombas\nFin del juego cuando los invasores llegan abajo",
+  "Waves": "Oleadas",
+  "Waves descend faster each time\nEach wave starts lower than the last": "Las oleadas bajan más rápido cada vez\nCada oleada empieza más abajo que la anterior",
+  "Modes": "Modos",
+  "Classic and new modes\nOne shot on screen at a time: time shots, don't spam": "Modos clásico y nuevo\nSolo un disparo en pantalla a la vez: apunta bien, no dispares en ráfaga",
+  "High scores\nHigh score table\nYour best score is kept in the high score table": "Récords\nTabla de récords\nTu mejor puntuación se guarda en la tabla de récords",
+  "Progress": "Progreso",
+  "Waves cleared\nWaves cleared; score\nEach new wave starts lower; survive as many waves as you can": "Oleadas superadas\nOleadas superadas; puntuación\nCada oleada nueva empieza más abajo; sobrevive tantas oleadas como puedas"
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Team": "Equipo",
+  "Ammo (active operative)": "Munición (operativo activo)",
+  "Operator 1 health": "Salud del operador 1",
+  "Health per operative; ammo": "Salud por operativo; munición",
+  "Operatives": "Operativos",
+  "Detail": "Detalle",
+  "Pick and equip operatives before missions\nOperatives have their own weapons and health; losing operatives weakens later missions": "Elige y equipa operativos antes de las misiones\nCada operativo tiene sus propias armas y salud; perder operativos debilita las misiones posteriores",
+  "Tips": "Consejos",
+  "Clear rooms carefully; protect hostages\nHostages die if terrorists are alerted: move slowly and take shots from cover": "Despeja las salas con cuidado; protege a los rehenes\nLos rehenes mueren si los terroristas se alertan: muévete despacio y dispara desde cobertura",
+  "Missions": "Misiones",
+  "Map": "Mapa",
+  "Counter-terrorist missions\nMissions in order (RA notes mention missions up to 14, with snipers in mission 13)": "Misiones antiterroristas\nMisiones en orden (las notas de RA mencionan hasta la 14, con tiradores en la misión 13)",
+  "Gear": "Equipo",
+  "Weapons and gear per operative": "Armas y equipo por operativo",
+  "Collect": "Coleccionar",
+  "Roster\nYour operative roster; keep the experienced ones alive": "Plantilla\nTu plantilla de operativos; mantén vivos a los más experimentados",
+  "Progress": "Progreso",
+  "Missions completed\nMissions completed in the campaign\nEach mission has its own map and objectives": "Misiones completadas\nMisiones completadas en la campaña\nCada misión tiene su propio mapa y objetivos"
+ }
+}

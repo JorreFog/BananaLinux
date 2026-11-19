@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Controls": "Controles",
+  "A jump/glide, B attack, R breath, L switch breath.": "A saltar/deslizar, B atacar, R aliento, L cambiar aliento.",
+  "Breaths": "Alientos",
+  "Elements": "Elementos",
+  "Fire, Electricity, Ice, Earth: each learned from a Guardian.": "Fuego, Electricidad, Hielo, Tierra: cada uno se aprende de un Guardián.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Use the element the boss is weak to; dodge charges.": "Usa el elemento débil del jefe; esquiva sus cargas.",
+  "Realms": "Reinos",
+  "Structure": "Estructura",
+  "Realms of the Dragon Temple story, freeing the Guardians.": "Reinos de la historia del Templo del Dragón, liberando a los Guardianes.",
+  "Gems": "Gemas",
+  "Items": "Objetos",
+  "Red gems (health), green (mana), blue (experience).": "Gemas rojas (salud), verdes (maná), azules (experiencia).",
+  "Collect": "Coleccionar",
+  "Gems upgrade breaths.": "Las gemas mejoran los aliento.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Free the four Guardians and defeat Cynder.": "Libera a los cuatro Guardianes y derrota a Cynder."
+ }
+}

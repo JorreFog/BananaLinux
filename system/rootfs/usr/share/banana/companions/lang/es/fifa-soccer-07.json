@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Match": "Partido",
+  "Home goals": "Goles local",
+  "Away goals": "Goles visitante",
+  "Prestige points": "Puntos de prestigio",
+  "Controls": "Controles",
+  "Pass / tackle": "Pase / entrada",
+  "Shoot / slide tackle": "Disparo / barrida",
+  "Sprint": "Esprint",
+  "Switch player / lob": "Cambiar de jugador / globo",
+  "Through ball (attack)": "Pase en profundidad (ataque)",
+  "Tips": "Consejos",
+  "Pass more than you dribble, shoot from inside the box at an angle, and use sprint only in open space.": "Pasa más de lo que regateas, dispara desde dentro del área en ángulo y usa el esprint solo en campo libre.",
+  "Modes": "Modos",
+  "Friendly, Season, Tournament, Challenges (comebacks and classic XI) and the Situation Creator.": "Amistoso, Temporada, Torneo, Retos (re remontadas y el XI clásico) y el Creador de situaciones.",
+  "Prestige": "Prestigio",
+  "Prestige points unlock classic teams and extras in the store.": "Los puntos de prestigio desbloquean equipos clásicos y extras en la tienda.",
+  "Cups won": "Copas ganadas",
+  "Cups": "Copas",
+  "Progress": "Progreso",
+  "Difficulty": "Dificultad"
+ }
+}

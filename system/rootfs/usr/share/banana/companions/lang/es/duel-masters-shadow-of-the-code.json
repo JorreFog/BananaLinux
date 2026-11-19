@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Duelist": "Duelista",
+  "Wins": "Victorias",
+  "Losses": "Derrotas",
+  "Credits": "Créditos",
+  "Rules": "Reglas",
+  "Turn": "Turno",
+  "Draw, charge one card as mana, summon/cast, attack": "Roba, carga una carta como maná, invoca/lanza, ataca",
+  "Shields": "Escudos",
+  "Each player starts with 5 shields; broken shields go to your hand": "Cada jugador empieza con 5 escudos; los escudos rotos van a tu mano",
+  "Win": "Gana",
+  "Attack the opponent directly when they have no shields left": "Ataca directamente al rival cuando se quede sin escudos",
+  "Blockers": "Bloqueadores",
+  "Creatures with Blocker can stop an attack": "Las criaturas con Bloqueador pueden detener un ataque",
+  "Civilizations": "Civilizaciones",
+  "Light, Water, Darkness, Fire, Nature: mana must include the card's colour": "Luz, Agua, Oscuridad, Fuego, Naturaleza: el maná debe incluir el color de la carta",
+  "Duel": "Duelo",
+  "Your shields": "Tus escudos",
+  "Opponent shields": "Escudos del rival",
+  "Tip": "Consejo",
+  "Shield triggers can turn a broken shield into a free spell: count them when you plan an attack.": "Los disparadores de escudo pueden convertir un escudo roto en un hechizo gratis: cuéntalos al planear un ataque.",
+  "Where": "Dónde",
+  "Map id": "ID de mapa",
+  "Credits buy booster packs in the shop.": "Los créditos compran sobres de expansiones en la tienda.",
+  "Cards": "Cartas",
+  "Collection size": "Tamaño de la colección",
+  "Progress": "Progreso"
+ }
+}

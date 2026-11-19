@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Pilot": "Piloto",
+  "How it plays": "Cómo se juega",
+  "2D mobile suit fighting with boost and ranged weapons.": "Pelea 2D de mobile suits con impulso y armas a distancia.",
+  "Suits": "Mobile suits",
+  "Fight": "Pelea",
+  "P1 HP": "HP de J1",
+  "P2 HP": "HP de J2",
+  "Tips": "Consejos",
+  "Boost dashes; mix ranged and melee.": "Impulsos para embestir; combina distancia y cuerpo a cuerpo.",
+  "Modes": "Modos",
+  "Stage": "Escenario",
+  "Story, Versus.": "Historia, Versus.",
+  "Weapons": "Armas",
+  "Items": "Objetos",
+  "Ranged ammo.": "Munición a distancia.",
+  "Collect": "Coleccionar",
+  "Unlock suits.": "Desbloquea suits.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Clear Story mode.": "Completa el modo Historia."
+ }
+}

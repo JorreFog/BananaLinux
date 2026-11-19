@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Score": "Puntuación",
+  "Lives": "Vidas",
+  "Round": "Asalto",
+  "Bob (P2) score": "Puntuación de Bob (J2)",
+  "Stats": "Estadísticas",
+  "Jumps": "Saltos",
+  "Bubbles popped": "Burbujas reventadas",
+  "Lives lost": "Vidas perdidas",
+  "Fireballs left": "Bolas de fuego restantes",
+  "Many hidden items appear after counting actions (jumps, pops, distance walked); these counters drive them.": "Muchos objetos ocultos aparecen al contar acciones (saltos, burbujas, distancia recorrida); estos contadores los activan.",
+  "Power-ups": "Potenciadores",
+  "Pink candy": "Caramelo rosa",
+  "Blue candy": "Caramelo azul",
+  "Yellow candy": "Caramelo amarillo",
+  "Shoe": "Zapato",
+  "Trap enemies in bubbles, then pop them with your spikes; popping several at once drops bigger fruit. After 'Hurry Up' an invincible Skel-Monsta appears: finish fast. Round 100 is Super Drunk.": "Atrapa enemigos en burbujas y revéntalos con tus pinchos; reventar varios a la vez suelta frutas más grandes. Tras el 'Hurry Up' aparece una Skel-Monsta invencible: termínalo rápido. La ronda 100 es Super Drunk.",
+  "Version": "Versión",
+  "100 rounds per version; the secret rooms (rounds 20, 30, 40 with the right items) give hints for the true ending, reached with two players.": "100 rondas por versión; las salas secretas (rondas 20, 30 y 40 con los objetos correctos) dan pistas del final verdadero, que se alcanza con dos jugadores.",
+  "Items": "Objetos",
+  "Rings": "Anillos",
+  "Ruby": "Rubí",
+  "Crystal": "Cristal",
+  "Amethyst": "Ametista",
+  "Fireballs": "Bolas de fuego",
+  "Library": "Biblioteca",
+  "Library items": "Objetos de la biblioteca",
+  "Progress": "Progreso",
+  "Games cleared": "Partidas superadas"
+ }
+}

@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Guardians": "Guardianes",
+  "Ark HP": "HP del Arca",
+  "Ivy HP": "HP de Ivy",
+  "Controlled char": "Personaje controlado",
+  "Play time": "Tiempo jugado",
+  "Passengers' trust": "Confianza de los pasajeros",
+  "Trust rises when you lead a passenger safely and fight near them; high trust makes them follow orders and unlocks their side scenes.": "La confianza sube cuando llevas a un pasajero a salvo y peleas cerca de él; una confianza alta hace que te sigan y desbloquea sus escenas secundarias.",
+  "Boss": "Jefe",
+  "Boss fight": "Combate contra el jefe",
+  "Boss fight active": "Combate contra jefe activo",
+  "Tips": "Consejos",
+  "CIMA bosses guard the dungeon's last floor. Park the passengers in a safe corner (Line command) before engaging, swap to Ivy for ranged hits, and use the item 'Breaker' moves on shielded phases.": "Los jefes de CIMA custodian el último piso de la mazmorra. Estaciona a los pasajeros en una esquina segura (comando Line) antes de combatir, cambia a Ivy para los ataques a distancia y usa el objeto 'Breaker' en las fases con escudo.",
+  "Dungeon": "Mazmorra",
+  "Room id": "ID de sala",
+  "Deepest dungeon": "Mazmorra más profunda",
+  "Each dungeon is a set of floors: find the key to the exit gate on every floor while keeping all passengers alive; an exit gate needs every passenger standing next to it.": "Cada mazmorra es un conjunto de pisos: busca en cada piso la llave de la puerta de salida y mantén vivos a todos los pasajeros; la puerta de salida necesita que todos estén junto a ella.",
+  "Gear": "Equipo",
+  "Ark weapon level": "Nivel del arma del Arca",
+  "Ark armour level": "Nivel de armadura del Arca",
+  "Ivy weapon level": "Nivel del arma de Ivy",
+  "Ivy armour level": "Nivel de armadura de Ivy",
+  "Items: Herbs heal, Bandages heal passengers, Keys open gates, Rocks/bombs break walls; upgrade weapons with ore found in chests.": "Objetos: las hierbas curan, las vendas curan a los pasajeros, las llaves abren puertas, las rocas/bombas rompen muros; mejora las armas con el mineral de los cofres.",
+  "Dungeons": "Mazmorras",
+  "Boss chests opened": "Cofres de jefe abiertos",
+  "Progress": "Progreso",
+  "Dungeons cleared": "Mazmorras superadas",
+  "Route: Silver Snow -> Lost Forest -> Dragon's Dungeon -> Panic Factory -> Cold Snow -> Strange World -> Sky Garden -> Fire Dungeon -> Weakling Forest -> Air Garden -> Lonely Factory -> Twilight World -> Phantom Snow -> Hope Forest, then Night Trap and the final CIMA.": "Ruta: Silver Snow -> Lost Forest -> Dragon's Dungeon -> Panic Factory -> Cold Snow -> Strange World -> Sky Garden -> Fire Dungeon -> Weakling Forest -> Air Garden -> Lonely Factory -> Twilight World -> Phantom Snow -> Hope Forest, luego Night Trap y el CIMA final."
+ }
+}

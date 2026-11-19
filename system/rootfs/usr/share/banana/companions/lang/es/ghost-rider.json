@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Bike health": "Salud de la moto",
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A jump, B attack with the chain, R special\nHellfire powers come from the spirit meter": "A salta, B ataca con la cadena, R especial\nLos poderes de fuego infernal vienen del medidor de espíritu",
+  "Powers": "Poderes",
+  "Moves": "Movimientos",
+  "Chain combos and hellfire attacks; special moves use the spirit meter.": "Combos con la cadena y ataques de fuego infernal; los movimientos especiales usan el medidor de espíritu.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Keep distance with the chain's reach; use the spirit meter on bosses.": "Mantén la distancia del alcance de la cadena; usa el medidor de espíritu contra los jefes.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "On-foot brawling stages and motorcycle stages.": "Escenarios de peleas a pie y de motocicleta.",
+  "Upgrades": "Mejoras",
+  "Souls collected buy new combos and upgrades.": "Las almas recogidas compran nuevos combos y mejoras.",
+  "Souls": "Almas",
+  "Collect": "Coleccionar",
+  "Souls from defeated enemies are the currency for upgrades.": "Las almas de los enemigos derrotados son la moneda para las mejoras.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear all stages to defeat Blackheart.": "Completa todos los escenarios para derrotar a Blackheart."
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Rider": "Pasajero",
+  "Controls": "Controles",
+  "A accelerate, B brake, R nitro; tricks in the air.": "A acelera, B frena, R nitro; trucos en el aire.",
+  "Bikes": "Motos",
+  "Upgrades.": "Mejoras.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Land flat on both wheels to keep speed; save nitro for slopes and long jumps; tricks score in the air.": "Aterriza plano sobre las dos ruedas para conservar la velocidad; guarda el nitro para las pendientes y los saltos largos; los trucos puntúan en el aire.",
+  "Tracks": "Pistas",
+  "Side-scrolling tracks.": "Pistas de desplazamiento lateral.",
+  "Items": "Objetos",
+  "Nitro canisters on the track refill the boost.": "Los botes de nitro en la pista rellenan el impulso.",
+  "Collect": "Coleccionar",
+  "Unlocks.": "Desbloqueos.",
+  "Championship": "Campeonato",
+  "Goal": "Objetivo",
+  "Win.": "Gana."
+ }
+}

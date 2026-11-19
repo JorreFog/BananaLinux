@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "An action-adventure in the Dinotopia world: health and items are shown in the game's own HUD (no live data yet).": "Una aventura de acción en el mundo de Dinotopia: la salud y los objetos se ven en el HUD del propio juego (todavía sin datos en vivo).",
+  "Controls": "Controles",
+  "Move, attack and jump with the face buttons; talk to people and dinosaurs to get quests and hints.": "Muévete, ataca y salta con los botones de acción; habla con gente y dinosaurios para conseguir misiones y pistas.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "The Timestone Pirates and their beasts: hit, step back, hit again; dodge charges sideways.": "Los Piratas de las Piedras de Tiempo y sus bestias: golpea, retrocede, golpea otra vez; esquiva las cargas de lado.",
+  "World": "Mundo",
+  "Travel between Dinotopia's towns and wilds while chasing the stolen Timestones.": "Viaja entre las ciudades y tierras salvajes de Dinotopia mientras persigues las Piedras de Tiempo robadas.",
+  "Items": "Objetos",
+  "Collect timestones and quest items; healing pickups restore health.": "Recoge piedras de tiempo y objetos de misión; los recogibles curan salud.",
+  "Timestones": "Piedras de tiempo",
+  "The story is about recovering the Timestones the pirates took.": "La historia va de recuperar las Piedras de Tiempo que se llevaron los piratas.",
+  "Progress": "Progreso",
+  "Linear chapters; the game saves between them.": "Capítulos lineales; el juego guarda entre uno y otro."
+ }
+}

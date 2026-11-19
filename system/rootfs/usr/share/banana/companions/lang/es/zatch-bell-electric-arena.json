@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Fighter": "Combatiente",
+  "Status": "Estado",
+  "Your HP": "Tu HP",
+  "HP lost": "HP perdidos",
+  "Heart power": "Poder de corazón",
+  "Rounds won": "Rondas ganadas",
+  "Round": "Asalto",
+  "Timer": "Temporizador",
+  "Health, spell energy; partner and Mamodo": "Salud, energía de hechizo; compañero y Mamodo",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Zatch & Kiyo, Tia & Megumi, Kanchome & Folgore, Brago & Sherry and others": "Zatch & Kiyo, Tia & Megumi, Kanchome & Folgore, Brago & Sherry y otros",
+  "Fight tips": "Consejos de pelea",
+  "Battle": "Batalla",
+  "Opponent HP": "HP del rival",
+  "Opponent rounds won": "Rondas ganadas del rival",
+  "Opponent character id": "ID de personaje del rival",
+  "Spells use energy; chain spells after hits": "Los hechizos usan energía; encadena hechizos tras los impactos",
+  "Modes": "Modos",
+  "Story stage": "Etapa de historia",
+  "Story, VS, Arena": "Historia, VS, Arena",
+  "Spells": "Hechizos",
+  "Spell list per Mamodo\nSpells cost heart power; stronger spells need a fuller meter": "Lista de hechizos por Mamodo\nLos hechizos cuestan poder de corazón; los más fuertes necesitan el medidor más lleno",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Characters unlocked through story\nCharacters unlocked through story; settings for difficulty, time and rounds": "Personajes desbloqueados por la historia\nLos personajes se desbloquean con la historia; ajustes de dificultad, tiempo y rondas",
+  "Progress": "Progreso",
+  "Story fights won": "Combates de historia ganados"
+ }
+}

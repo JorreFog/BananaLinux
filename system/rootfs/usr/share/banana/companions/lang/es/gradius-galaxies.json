@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Score": "Puntuación",
+  "Lives": "Vidas",
+  "Stage": "Escenario",
+  "Power meter": "Medidor de poder",
+  "Collect red capsules to move the cursor along the meter, press the power-up button to buy:\nSpeed -> Missile -> Double/Laser -> Option -> ? (Force field / shield)": "Recoge cápsulas rojas para mover el cursor por el medidor y pulsa el botón de potenciador para comprar:\nSpeed -> Missile -> Double/Laser -> Option -> ? (campo de fuerza / escudo)",
+  "Controls": "Controles",
+  "A shoot, B power-up, L/R missile depending on settings": "A dispara, B potenciador, L/R misil según los ajustes",
+  "Weapons": "Armas",
+  "Loadouts": "Equipos",
+  "Choose a weapon type at the start: different missiles, doubles and lasers.\nUp to 4 Options copy your shots.": "Elige un tipo de arma al inicio: distintos misiles, dobles y láseres.\nHasta 4 Options copian tus disparos.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Core bosses: shoot the blue core through the shield walls.\nKeep 2 Speed-ups at most, too fast is deadly.\nAfter a death, rebuild Speed first.": "Jefes con núcleo: dispara al núcleo azul a través de los muros de escudo.\nMantén como máximo 2 de Speed-up, demasiado rápido es mortal.\nTras morir, reconstruye primero la velocidad.",
+  "Structure": "Estructura",
+  "A string of themed stages (volcanoes, Moai heads, high-speed corridors, a boss rush) ending in the enemy fortress.": "Una serie de escenarios con temática (volcanes, cabezas moai, pasillos de alta velocidad, una secuencia de jefes) que termina en la fortaleza enemiga.",
+  "Power-ups": "Potenciadores",
+  "Capsules": "Cápsulas",
+  "Red capsule = one step on the meter.\nBlue capsule = smart bomb on all on-screen enemies.": "Cápsula roja = un paso en el medidor.\nCápsula azul = bomba inteligente contra todos los enemigos en pantalla.",
+  "Options": "Opciones",
+  "Notes": "Notas",
+  "Options follow your path: lead them into position before boss fights.": "Los Options te siguen: llévalos a posición antes de los combates con jefes.",
+  "Loops": "Bucles",
+  "Goal": "Objetivo",
+  "Clear the final stage; the game then loops at a higher difficulty.": "Completa el escenario final; el juego vuelve a empezar con más dificultad."
+ }
+}

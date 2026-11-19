@@ -1,0 +1,32 @@
+{
+ "strings": {
+  "Weapon energy": "Energía del arma",
+  "Weapon slot": "Espacio de arma",
+  "Health; infection meter (rises over time; decontaminate at stations)": "Salud; medidor de infección (sube con el tiempo; descontamina en las estaciones)",
+  "Weapons": "Armas",
+  "Detail": "Detalle",
+  "Gun elements": "Elementos de arma",
+  "rock-paper-scissors weaknesses vs. enemies": "debilidades de piedra-papel-tijera contra los enemigos",
+  "Combustion, Bomb, E.M.P., Cryostasis, Adrenaline Rush and Dissipate (plus puzzle weapons)": "Combustion, Bomb, E.M.P., Cryostasis, Adrenaline Rush y Dissipate (más armas de puzle)",
+  "Bosses": "Jefes",
+  "Heimdall / Cerberus HP": "HP de Heimdall / Cerberus",
+  "Atlas HP": "HP de Atlas",
+  "Mandragora HP": "HP de Mandragora",
+  "Scylla HP": "HP de Scylla",
+  "Jormungand HP": "HP de Jormungand",
+  "Cyclops HP": "HP de Cyclops",
+  "Use the element the boss is weak to": "Usa el elemento débil del jefe",
+  "Areas": "Áreas",
+  "Interconnected station areas (Metroidvania)\nThe research station is split into areas; card keys open new sections": "Áreas interconectadas de la estación (Metroidvania)\nLa estación de investigación está dividida en áreas; las llaves de tarjeta abren nuevas secciones",
+  "Bag": "Bolsa",
+  "Bomb": "Bomba",
+  "Card key level": "Nivel de llave de tarjeta",
+  "Weapons with elemental damage": "Armas con daño elemental",
+  "Upgrades": "Mejoras",
+  "Collect": "Coleccionar",
+  "Health and weapon upgrades\nMax HP and weapon upgrades are hidden around the station": "Mejoras de salud y armas\nLas mejoras de HP máximo y de armas están escondidas por la estación",
+  "Progress": "Progreso",
+  "Bosses and areas": "Jefes y áreas",
+  "Heimdall, Cerberus, Atlas, Mandragora, Scylla, Jormungand and Cyclops; a boss rush is unlocked later": "Heimdall, Cerberus, Atlas, Mandragora, Scylla, Jormungand y Cyclops; más tarde se desbloquea una ráfaga de jefes"
+ }
+}

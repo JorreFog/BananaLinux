@@ -1,0 +1,19 @@
+{
+ "strings": {
+  "Health; Force meter; lives\nPick a Jedi from Episode I; each plays a little differently": "Salud; medidor de la Fuerza; vidas\nElige un Jedi del Episodio I; cada uno se juega algo distinto",
+  "Moves": "Movimientos",
+  "Saber combos, Force push, deflect blasters (block)\nJump attacks and combos; blocking deflects blaster bolts back at droids": "Combos de sable, empuje de la Fuerza, desviar blásteres (bloquear)\nAtaques en salto y combos; bloquear devuelve los disparos de bláster a los droides",
+  "Bosses": "Jefes",
+  "Darth Maul and droid bosses\nDarth Maul is the final fight; droidekas need blocks before you can close in": "Darth Maul y jefes droide\nDarth Maul es el combate final; los droidekas requieren bloqueos para acercarte",
+  "Levels": "Niveles",
+  "Episode I locations, from the Trade Federation ship to Naboo": "Lugares del Episodio I, desde la nave de la Federación de Comercio hasta Naboo",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Health, Force, extra lives\nHealth and Force refills from pickups; extra lives are rare": "Salud, Fuerza, vidas extra\nLas recargas de Salud y Fuerza vienen de los recogibles; las vidas extra son raras",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden pickups in side paths of each level\nExtra lives are hidden in side paths": "Objetos ocultos\nRecogibles ocultos en los caminos laterales de cada nivel\nLas vidas extra se esconden en los caminos laterales",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels in film order to the duel with Darth Maul": "Niveles superados\nNiveles en orden de la película hasta el duelo con Darth Maul"
+ }
+}

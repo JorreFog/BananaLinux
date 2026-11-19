@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Wrestler": "Luchador",
+  "Status": "Estado",
+  "Health, momentum\nNatsume's 2004 WWE wrestler game: health and momentum meters for each wrestler": "Salud, impulso\nEl juego de luchadores WWE de Natsume de 2004: medidores de salud e impulso para cada luchador",
+  "Moves": "Movimientos",
+  "Grapples, strikes, finisher\nGrapples, strikes, running attacks; finishers need a full momentum meter\nEach wrestler has a signature move and a finisher\nRoster on the select screen: Raw - Benoit, Triple H, Michaels, Kane, Edge, Jericho, Christian, Orton; SmackDown! - Eddie Guerrero, Undertaker, Kurt Angle, Booker T, RVD, Cena, Rey Mysterio, Chavo Guerrero": "Agarres, golpes, remate\nAgarres, golpes, ataques en carrera; los remates necesitan el medidor de impulso lleno\nCada luchador tiene un movimiento especial y un remate\nPlantilla en la pantalla de selección: Raw - Benoit, Triple H, Michaels, Kane, Edge, Jericho, Christian, Orton; SmackDown! - Eddie Guerrero, Undertaker, Kurt Angle, Booker T, RVD, Cena, Rey Mysterio, Chavo Guerrero",
+  "Match tips": "Consejos de partido",
+  "Battle": "Batalla",
+  "Reversals at the right time\nReverse grapples with the right timing; pin after a finisher, not before": "Reversiones en el momento justo\nRevierte los agarres con el timing correcto; haz el pin después de un remate, no antes",
+  "Elimination matches": "Partidos de eliminación",
+  "last wrestler standing wins (the Survivor Series format)": "gana el último luchador en pie (el formato de Survivor Series)",
+  "Modes": "Modos",
+  "Story and exhibition\nStory mode and exhibition matches: singles, tag and elimination": "Historia y exhibición\nModo historia y partidos de exhibición: individuales, por parejas y eliminación",
+  "Move set per wrestler\nMove sets per wrestler; customise in the options when available": "Juego de movimientos por luchador\nJuegos de movimientos por luchador; personalízalos en las opciones cuando esté disponible",
+  "Roster": "Plantilla",
+  "Wrestlers\nWrestlers and arenas unlocked through story mode\nUnlock wrestlers and arenas by winning story matches": "Luchadores\nLuchadores y arenas desbloqueados mediante el modo historia\nDesbloquea luchadores y arenas ganando partidos de historia",
+  "Progress": "Progreso",
+  "Story matches\nStory matches won\nStory matches won; elimination matches end the story": "Partidos de historia\nPartidos de historia ganados\nPartidos de historia ganados; los partidos de eliminación terminan la historia"
+ }
+}

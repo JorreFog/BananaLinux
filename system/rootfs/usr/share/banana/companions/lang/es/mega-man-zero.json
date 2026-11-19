@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Damage taken this stage": "Daño recibido este escenario",
+  "Controls": "Controles",
+  "A jump, B main weapon, R sub weapon, L dash (config).": "A salta, B arma principal, R subarma, L dash (config).",
+  "Weapons": "Armas",
+  "Z-Saber combos, Buster charge shots.": "Combos de Z-Saber, disparos cargados de Buster.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Element chips (fire, ice, thunder) on charged attacks exploit boss weaknesses.": "Los chips elementales (fuego, hielo, trueno) en los ataques cargados explotan las debilidades de los jefes.",
+  "Missions": "Misiones",
+  "Mission id": "ID de misión",
+  "Structure": "Estructura",
+  "Missions from the Resistance Base.": "Misiones desde la Base de la Resistencia.",
+  "Items": "Objetos",
+  "Cyber-elves (permanent or one-use boosts); E-Crystals feed them.": "Cyber-elfas (mejoras permanentes o de un solo uso); los E-Crystals las alimentan.",
+  "Elves": "Elfos",
+  "Collect": "Coleccionar",
+  "Cyber-elves.": "Cyber-elfos.",
+  "Goal": "Objetivo",
+  "Stop Copy X.": "Detén a Copy X."
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Score": "Puntuación",
+  "Play time": "Tiempo jugado",
+  "Controls": "Controles",
+  "A jump, B attack, R gadget. Ron helps.": "A saltar, B atacar, R aparato. Ron ayuda.",
+  "Gadgets": "Aparatos",
+  "Grapple, laser and new gadgets unlocked by missions.": "Gancho, láser y nuevos aparatos se desbloquean con las misiones.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Drakken and Shego: dodge, then attack.": "Drakken y Shego: esquiva y luego ataca.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Missions across many locations.": "Misiones en muchas ubicaciones.",
+  "Items": "Objetos",
+  "Gadgets and health.": "Aparatos y salud.",
+  "Collectables": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden items unlock outfits.": "Los objetos ocultos desbloquean vestuarios.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat Drakken.": "Derrota a Drakken."
+ }
+}

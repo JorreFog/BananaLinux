@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Stunt": "Acrobacia",
+  "Speed (km/h)": "Velocidad (km/h)",
+  "Timer": "Temporizador",
+  "Stunt 1 state": "Estado de la acrobacia 1",
+  "Stunt 2 state": "Estado de la acrobacia 2",
+  "Stunt 3 state": "Estado de la acrobacia 3",
+  "Stunt 4 state": "Estado de la acrobacia 4",
+  "Stunt list, time; damage": "Lista de acrobacias, tiempo; daño",
+  "Car": "Auto",
+  "Movie cars per film\nEach film has its own cars and scenes; speed is shown in km/h": "Autos de cine por película\nCada película tiene sus autos y escenas; la velocidad se muestra en km/h",
+  "Take": "Toma",
+  "Hit every stunt marker on time; the director judges\nStunt states are tracked one by one on Status": "Acierta cada marca de acrobacia a tiempo; el director evalúa\nLos estados de acrobacia se registran uno a uno en Estado",
+  "Films": "Películas",
+  "Career level": "Nivel de carrera",
+  "Film productions with scenes": "Producciones cinematográficas con escenas",
+  "Gear": "Equipo",
+  "Cars unlocked\nCars and film trailers unlock by finishing productions": "Autos desbloqueados\nLos autos y los tráileres de cine se desbloquean al terminar producciones",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Cars and trailers\nScene cash high scores and percentages are kept": "Autos y tráileres\nSe guardan los récords de dinero por escena y los porcentajes",
+  "Progress": "Progreso",
+  "Last scene score (%)": "Puntuación de la última escena (%)",
+  "Money earned last scene": "Dinero ganado en la última escena",
+  "Scene cash high score": "Récord de dinero en la escena",
+  "Films finished": "Películas terminadas",
+  "Career levels": "Niveles de carrera",
+  "finish every scene of a film to move on": "termina todas las escenas de una película para avanzar"
+ }
+}

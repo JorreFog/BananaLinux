@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "HP stock (lives)": "Reserva de HP (vidas)",
+  "Health; Captain Gundam, Zero, Bakunetsumaru\nPlay as the Gundam Force heroes against the Dark Axis\nHealth bar per hero; switching heroes mid-stage lets you use the right attack for each enemy": "Salud; Captain Gundam, Zero, Bakunetsumaru\nJuega como los héroes del Gundam Force contra el Dark Axis\nBarra de salud por héroe; cambiar de héroe a mitad de escenario te permite usar el ataque adecuado para cada enemigo",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Switch between the three heroes": "Cambia entre los tres héroes",
+  "ranged beam shots; Zero: flying knight with a sword; Bakunetsumaru: samurai with twin blades": "disparos de rayo a distancia; Zero: caballero volador con espada; Bakunetsumaru: samurái con hojas dobles",
+  "Combo attacks chain hits; the max-combo counter is tracked by the game": "Los ataques en combo encadenan golpes; el juego lleva el contador de combo máximo",
+  "Bosses": "Jefes",
+  "Stage-end bosses\nStage bosses are Dark Axis commanders; hit them between attack patterns\nUse the hero whose range fits the boss: flyers for air targets, melee for armored ones": "Jefes al final del escenario\nLos jefes de escenario son comandantes del Dark Axis; golpéalos entre sus patrones de ataque\nUsa el héroe cuyo alcance encaje con el jefe: los voladores para objetivos aéreos, cuerpo a cuerpo para los blindados",
+  "Stages": "Escenarios",
+  "Story stages\nStages from the ROM's menus include the Construction Site and the Dark Axis Tower, plus an Extra stage": "Escenarios de historia\nLos escenarios de los menús del ROM incluyen el Construction Site y la Dark Axis Tower, más un escenario Extra",
+  "Challenge modes": "Modos desafío",
+  "Max Combo, Speed, Survival and Boss attack": "Combo máximo, Velocidad, Supervivencia y ataque al jefe",
+  "Items": "Objetos",
+  "Power-ups\nPower-ups dropped by enemies restore health or boost attacks for a while": "Potenciadores\nLos potenciadores que sueltan los enemigos recuperan salud o potencian los ataques por un tiempo",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Unlocks\nChallenge modes keep their own records (combo, time, survival, boss)\nThe Extra stage opens after the main story": "Desbloqueos\nLos modos desafío guardan sus propios récords (combo, tiempo, supervivencia, jefe)\nEl escenario Extra se abre tras la historia principal",
+  "Progress": "Progreso",
+  "Stages cleared\nClear the story stages to the Dark Axis Tower, then the challenge modes for records": "Escenarios completados\nCompleta los escenarios de historia hasta la Dark Axis Tower y luego los modos desafío para los récords"
+ }
+}

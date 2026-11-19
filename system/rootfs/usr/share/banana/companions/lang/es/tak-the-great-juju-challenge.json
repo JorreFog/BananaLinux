@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Tak and Lok; health\nTak and Lok compete in the Juju challenge courses; both are controlled as a team\nDifficulty is picked per save: \"good for beginners\", \"a great challenge\" or \"seasoned players only\"": "Tak y Lok; salud\nTak y Lok compiten en los circuitos del reto de juju; ambos se controlan como equipo\nLa dificultad se elige por partida: \"bueno para principiantes\", \"un gran reto\" o \"solo para jugadores expertos\"",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Team-up moves with Lok\nLok and Tak have different abilities: Lok is strong (pushing, breaking), Tak uses juju magic\nTeam moves (throwing a partner, bouncing) reach higher routes": "Movimientos en equipo con Lok\nLok y Tak tienen habilidades distintas: Lok es fuerte (empujar, romper), Tak usa la magia de juju\nLos movimientos en equipo (lanzar al compañero, rebotar) llegan a rutas más altas",
+  "Challenges": "Retos",
+  "Battle": "Batalla",
+  "Juju challenge events\nChallenge types named in the game include: Run! Run! Run!, Bounce to the Top!, Take 'Em Out!, Reach for the Stars!, Get Skunked!, Fly, Tak Fly! and a lock-picking \"Lok the Locksmith\" round\nEach challenge has its own goal shown at the start: read it, the goal changes the scoring": "Eventos del reto de juju\nLos tipos de reto que menciona el juego incluyen: ¡Corre! ¡Corre! ¡Corre!, ¡Rebota hasta arriba!, ¡Derriba a todos!, ¡Alcanza las estrellas!, ¡Apest!, Vuela, ¡Tak vuela! y una ronda de forzar cerraduras \"Lok el cerrajero\"\nCada reto tiene su propio objetivo, que se muestra al inicio: léelo, el objetivo cambia la puntuación",
+  "Levels": "Niveles",
+  "Challenge courses\nCourses are grouped by challenge type; finishing them opens the next set": "Circuitos de retos\nLos circuitos se agrupan por tipo de reto; completarlos abre el siguiente grupo",
+  "Items": "Objetos",
+  "Juju items\nJuju blessings are awarded for races and challenges": "Objetos de juju\nLas bendiciones de juju se otorgan por carreras y retos",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Hidden collectibles": "Coleccionables ocultos",
+  "Rankings per course": "Clasificaciones por circuito",
+  "SUN and MOON rankings are shown at the end of a challenge": "Las clasificaciones SOL y LUNA se muestran al final de un reto",
+  "Progress": "Progreso",
+  "Challenges won\nEarn rankings on every course; harder difficulty asks for faster times": "Retos ganados\nGana clasificaciones en cada circuito; la dificultad más alta exige tiempos más rápidos"
+ }
+}

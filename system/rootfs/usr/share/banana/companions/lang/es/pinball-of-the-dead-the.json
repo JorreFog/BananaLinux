@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Ball": "Bola",
+  "Controls": "Controles",
+  "L/R flippers. Zombies on the table.": "Flipper L/R. Zombis en la mesa.",
+  "Tables": "Mesas",
+  "Three tables.": "Tres mesas.",
+  "Bosses": "Jefes",
+  "Boss HP": "HP del jefe",
+  "Tips": "Consejos",
+  "Hit the zombies and bosses with the ball; light missions on each table to reach the boss.": "Golpea zombis y jefes con la bola; completa las misiones de cada mesa para llegar al jefe.",
+  "Structure": "Estructura",
+  "Tables.": "Mesas.",
+  "Table": "Mesa",
+  "Items": "Objetos",
+  "No items: missions and bonuses on the tables.": "Sin objetos: misiones y bonos en las mesas.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat the bosses.": "Derrota a los jefes."
+ }
+}

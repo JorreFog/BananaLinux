@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Hits this level": "Golpes en este nivel",
+  "Controls": "Controles",
+  "B Wind Bullet to grab, A jump/double jump with an enemy held.": "B Bala de viento para agarrar, A saltar/saltar doble con un enemigo sujeto.",
+  "Moves": "Movimientos",
+  "Use": "Usar",
+  "Grab, throw and double jump to solve stages.": "Agarra, lanza y haz salto doble para resolver los escenarios.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Throw grabbed objects back at bosses.": "Lanza los objetos agarrados contra los jefes.",
+  "Tournament": "Torneo",
+  "Structure": "Estructura",
+  "Stages in the Dream Champ Tournament, including board stages.": "Escenarios del Dream Champ Tournament, incluidos los escenarios de tablero.",
+  "Items": "Objetos",
+  "Dream stones, hearts, keys.": "Piedras de sueño, corazones, llaves.",
+  "Stones": "Piedras",
+  "Collect": "Coleccionar",
+  "Find all stones per stage.": "Encuentra todas las piedras en cada escenario.",
+  "Goal": "Objetivo",
+  "Win the Dream Champ Tournament.": "Gana el Dream Champ Tournament."
+ }
+}

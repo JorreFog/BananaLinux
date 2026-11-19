@@ -1,0 +1,20 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Games": "Juegos",
+  "Defender, Joust, Robotron 2084, Sinistar, Spy Hunter (ports of the arcade classics).": "Defender, Joust, Robotron 2084, Sinistar, Spy Hunter (versiones de los clásicos de recreativa).",
+  "Notes": "Notas",
+  "Joust: land above enemies. Robotron: rescue humans while shooting. Defender: protect humanoids.": "Joust: aterriza sobre los enemigos. Robotron: rescata humanos mientras disparas. Defender: protege a los humanoides.",
+  "Tips": "Consejos",
+  "Sinistar: mine Sinibombs before Sinistar is built.": "Sinistar: extrae Sinibombas antes de que se construya Sinistar.",
+  "Menu": "Menú",
+  "Pick a game from the menu.": "Elige un juego del menú.",
+  "Items": "Objetos",
+  "Smart bombs in Defender, Sinibombs in Sinistar.": "Bombas inteligentes en Defender, Sinibombas en Sinistar.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Goal": "Objetivo",
+  "Beat high scores.": "Supera los récords."
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "strings": {
+  "Health, Force\nLuke Skywalker, between A New Hope and Empire, stops a new droid army\nHealth bar and Force meter; Force powers are learned as you go": "Salud, Fuerza\nLuke Skywalker, entre Una Nueva Esperanza y El Imperio, detiene a un nuevo ejército droide\nBarra de salud y medidor de la Fuerza; los poderes de la Fuerza se aprenden sobre la marcha",
+  "Powers": "Poderes",
+  "Force powers learned through the game; lightsaber\nLightsaber combos and blocking; Force powers include push, jump and others gained by story\nUse the Force meter for special moves; it refills over time": "Poderes de la Fuerza aprendidos en el juego; sable de luz\nCombos de sable de luz y bloqueo; los poderes de la Fuerza incluyen empuje, salto y otros que se ganan con la historia\nUsa el medidor de la Fuerza para los movimientos especiales; se recarga con el tiempo",
+  "Bosses": "Jefes",
+  "Droid army forces\nDroids dominate the enemy roster; blasters are deflected by blocking with the saber\nBosses close each area; learn their attack patterns, then counter": "Fuerzas del ejército droide\nLos droides dominan la lista de enemigos; los blásteres se desvían bloqueando con el sable\nLos jefes cierran cada área; aprende sus patrones de ataque y luego contrasta",
+  "Levels": "Niveles",
+  "Cloud City and other locations\nAreas from the ROM's level list include the processing plant, the Metellos outskirts and the factory core (several parts)": "Cloud City y otras ubicaciones\nLas áreas de la lista de niveles del ROM incluyen la planta procesadora, las afueras de Metellos y el núcleo de la fábrica (varias partes)",
+  "Items": "Objetos",
+  "Health\nHealth and Force refills from crates and defeated enemies": "Salud\nLas recargas de Salud y Fuerza vienen de las cajas y de los enemigos derrotados",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Hidden items\nHidden items in side passages of the factory and outskirts levels": "Objetos ocultos\nObjetos ocultos en los pasillos laterales de los niveles de la fábrica y las afueras",
+  "Progress": "Progreso",
+  "Missions\nStory missions in order up to the droid factory\nForce powers grow with the story": "Misiones\nMisiones de historia en orden hasta la fábrica de droides\nLos poderes de la Fuerza crecen con la historia"
+ }
+}

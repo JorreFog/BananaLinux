@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Status": "Estado",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "Points": "Puntos",
+  "Health bar, web fluid meter": "Barra de salud, medidor de fluido de telaraña",
+  "Moves": "Movimientos",
+  "Punch, kick, web shot, web swing, wall crawl\nWeb dome / impact webbing": "Puño, patada, disparo de telaraña, balanceo, trepar por paredes\nCúpula de telaraña / telaraña de impacto",
+  "Bosses": "Jefes",
+  "Shocker health": "Salud de Shocker",
+  "Kraven health": "Salud de Kraven",
+  "Green Goblin health": "Salud de Green Goblin",
+  "Bosses tracked in RAM include Shocker, Kraven and the Green Goblin\nClassic Spider-Man villains guard the end of each level": "Los jefes registrados en RAM incluyen Shocker, Kraven y Green Goblin\nLos villanos clásicos de Spider-Man aguardan al final de cada nivel",
+  "Levels": "Niveles",
+  "Level id": "ID de nivel",
+  "Bombs left": "Bombas restantes",
+  "Hostages rescued": "Rehenes rescatados",
+  "City rooftops, warehouses and labs": "Azoteas, almacenes y laboratorios de la ciudad",
+  "Pickups": "Recogibles",
+  "Bag": "Bolsa",
+  "Web cartridges, health\nBombs to defuse and hostages to rescue in some levels": "Cartuchos de telaraña, salud\nBombas que desactivar y rehenes que rescatar en algunos niveles",
+  "Collection": "Colección",
+  "Collect": "Coleccionar",
+  "Gold spiders": "Arañas doradas",
+  "Hidden comic covers": "Portadas ocultas de cómics",
+  "Progress": "Progreso",
+  "Levels and bosses cleared\nBosses tracked in RAM include Shocker, Kraven and the Green Goblin": "Niveles y jefes superados\nLos jefes registrados en RAM incluyen Shocker, Kraven y Green Goblin"
+ }
+}

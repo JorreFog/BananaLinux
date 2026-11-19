@@ -1,0 +1,28 @@
+{
+ "strings": {
+  "Wrestler": "Luchador",
+  "Status": "Estado",
+  "Your HP": "Tu HP",
+  "Your special": "Tu especial",
+  "Health and special meter": "Salud y medidor de especial",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Kid Muscle and the Muscle League\nKid Muscle, Terry Kenyon, Wally Tusket and other Muscle League fighters": "Kid Muscle y la Muscle League\nKid Muscle, Terry Kenyon, Wally Tusket y otros luchadores de la Muscle League",
+  "Match tips": "Consejos de partido",
+  "Battle": "Batalla",
+  "Opponent HP": "HP del rival",
+  "Opponent special": "Especial del rival",
+  "Build the meter for finishers": "Carga el medidor para los remates",
+  "Modes": "Modos",
+  "Story chapter": "Capítulo de historia",
+  "Story, Exhibition": "Historia, Exhibition",
+  "Moves": "Movimientos",
+  "Special moves per wrestler\nEach fighter has a special gauge for finishers": "Movimientos especiales por luchador\nCada combatiente tiene un medidor especial para los remates",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Characters unlocked (bits)": "Personajes desbloqueados (bits)",
+  "Wrestlers unlocked": "Luchadores desbloqueados",
+  "Progress": "Progreso",
+  "Story matches\nStory chapters; 3 vs 3 and survival modes\nCharacter unlocks are tracked as bit flags": "Combates de historia\nCapítulos de historia; modos de 3 vs 3 y supervivencia\nLos desbloqueos de personajes se registran como banderas de bits"
+ }
+}

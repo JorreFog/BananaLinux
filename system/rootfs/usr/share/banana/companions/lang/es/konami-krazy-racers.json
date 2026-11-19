@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Racer": "Piloto",
+  "Race time (raw)": "Tiempo de carrera (bruto)",
+  "Controls": "Controles",
+  "A accelerate, B brake/drift, R use item.": "A acelerar, B frenar/derrapar, R usar objeto.",
+  "Racers": "Pilotos",
+  "Characters": "Personajes",
+  "Konami mascots: Goemon, Dracula, Pentarou, Power Pro-kun, Ninja, Grey Fox and more.": "Mascots de Konami: Goemon, Dracula, Pentarou, Power Pro-kun, Ninja, Grey Fox y más.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Mini-turbos from drifts; items from bells (use with R).": "Miniturbos al derrapar; objetos de las campanas (usa R).",
+  "Cups": "Copas",
+  "Structure": "Estructura",
+  "Grand Prix cups of several courses.": "Copas de Grand Prix con varios circuitos.",
+  "Items": "Objetos",
+  "Missiles, shields, boosts, bells; money buys items in the shop.": "Misiles, escudos, turbos, campanas; el dinero compra objetos en la tienda.",
+  "Unlocks": "Desbloqueos",
+  "Collect": "Coleccionar",
+  "Unlock characters and cups.": "Desbloquea personajes y copas.",
+  "Goal": "Objetivo",
+  "Win all cups.": "Gana todas las copas."
+ }
+}

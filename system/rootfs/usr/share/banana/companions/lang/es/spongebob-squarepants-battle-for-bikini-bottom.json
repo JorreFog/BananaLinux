@@ -1,0 +1,31 @@
+{
+ "strings": {
+  "Heroes": "Héroes",
+  "Health": "Salud",
+  "Lives": "Vidas",
+  "SpongeBob, Patrick, Sandy; health and lives": "SpongeBob, Patrick, Sandy; salud y vidas",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "bubble bowl, bubble bash; Patrick: throw; Sandy: lasso": "burbuja, ráfaga de burbujas; Patrick: lanzar; Sandy: lazo",
+  "Switch characters at the right spots: each has abilities the others lack": "Cambia de personaje en los puntos correctos: cada uno tiene habilidades que los demás no tienen",
+  "Bosses": "Jefes",
+  "Robot bosses from Plankton's army\nRobot bosses built by Plankton; keys (gate, screw) open the way in some levels": "Jefes robóticos del ejército de Plankton\nJefes robóticos construidos por Plankton; las llaves (puerta, tornillo) abren el paso en algunos niveles",
+  "Areas": "Áreas",
+  "Chapter": "Capítulo",
+  "Level id": "ID de nivel",
+  "Bikini Bottom areas": "Áreas de Bikini Bottom",
+  "Items": "Objetos",
+  "Krabby Patties (this level)": "Krabby Patties (este nivel)",
+  "Gate key": "Llave de puerta",
+  "Screw key": "Llave de tornillo",
+  "Shiny objects (money)": "Objetos brillantes (dinero)",
+  "Collectibles": "Coleccionables",
+  "Collect": "Coleccionar",
+  "Golden Spatulas": "Espátulas doradas",
+  "Photos unlocked": "Fotos desbloqueadas",
+  "Golden spatulas and shiny objects": "Espátulas doradas y objetos brillantes",
+  "Progress": "Progreso",
+  "Levels unlocked": "Niveles desbloqueados",
+  "Spatulas collected": "Espátulas coleccionadas"
+ }
+}

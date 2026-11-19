@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Heroes": "Héroes",
+  "Balanced; strong combos": "Equilibrado; combos potentes",
+  "Fast, staff attacks": "Rápido, ataques con bastón",
+  "Agile escrima fighter": "Luchador de esgrima ágil",
+  "Quick kicks": "Patadas rápidas",
+  "Moves": "Movimientos",
+  "Attack (chain for combos)": "Ataque (encadena para combos)",
+  "Jump": "Saltar",
+  "Block / counter": "Bloquear / contraatacar",
+  "Gadget (batarang etc.)": "Aparato (batarang, etc.)",
+  "Down+B": "Abajo+B",
+  "Ground finisher": "Remate en el suelo",
+  "Bosses": "Jefes",
+  "Arkham escapees lead to Sin Tzu: Scarecrow, Bane, Clayface and Sin Tzu himself. Block until the boss finishes a combo, then counter; Bane's charges are dodged by jumping, Clayface splits into blobs you clear first.": "Los evadidos de Arkham llevan a Sin Tzu: Scarecrow, Bane, Clayface y el propio Sin Tzu. Bloquea hasta que el jefe termine el combo y contraataca; las embestidas de Bane se esquivan saltando, Clayface se divide en manchas que debes limpiar primero.",
+  "Chapters": "Capítulos",
+  "Gotham districts in sequence: the streets, Arkham Asylum, the docks, Gotham industrial areas, and Sin Tzu's stronghold.": "Distritos de Gotham en orden: las calles, el Manicomio Arkham, los muelles, las zonas industriales de Gotham y la fortaleza de Sin Tzu.",
+  "Upgrades": "Mejoras",
+  "Points from combos buy new moves and gadget upgrades between levels.": "Los puntos de los combos compran nuevos movimientos y mejoras de aparatos entre niveles.",
+  "Unlockables": "Desbloqueables",
+  "Clearing the story with each hero unlocks art and extra modes.": "Terminar la historia con cada héroe desbloquea arte y modos extra.",
+  "Progress": "Progreso",
+  "Each level grades your combo score; replay to buy every upgrade.": "Cada nivel califica tu puntuación de combo; repite para comprar todas las mejoras."
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Coins": "Monedas",
+  "Health; lives": "Salud; vidas",
+  "Moves": "Movimientos",
+  "Tilt the world to roll things and move Yoshi\nTilt the cartridge (gyro sensor; mapped to buttons in emulators) to roll Yoshi, boulders and platforms": "Inclina el mundo para rodar cosas y mover a Yoshi\nInclina el cartucho (sensor giroscópico; asignado a botones en emuladores) para rodar a Yoshi, rocas y plataformas",
+  "Bosses": "Jefes",
+  "Bosses at chapter ends\nBosses at the end of chapters; tilting moves them too": "Jefes al final de los capítulos\nJefes al final de los capítulos; inclinar también los mueve",
+  "Chapters": "Capítulos",
+  "Map": "Mapa",
+  "Level index (0 = 1-1)": "Índice de nivel (0 = 1-1)",
+  "Storybook chapters": "Capítulos de libro de cuentos",
+  "Items": "Objetos",
+  "Coins, fruit\nCoins and fruit; Egglings (Safari, Ref, Cocoa and others) appear in the game": "Monedas, frutas\nMonedas y frutas; los Egglings (Safari, Ref, Cocoa y otros) aparecen en el juego",
+  "Medals": "Medallas",
+  "Goals per chapter": "Objetivos por capítulo",
+  "gold medals": "medallas de oro",
+  "Each chapter has goals; medals for clearing them\nMedal goals are shown at the start of each chapter": "Cada capítulo tiene objetivos; medallas por completarlos\nLos objetivos de medalla se muestran al inicio de cada capítulo",
+  "Progress": "Progreso",
+  "Chapters cleared\nChapters in a storybook; minigames keep high scores (Shuffle, Pirate Battle, Big Jump, Time Attack)": "Capítulos superados\nCapítulos de un libro de cuentos; los minijuegos guardan récords (Shuffle, Pirate Battle, Big Jump, Time Attack)"
+ }
+}

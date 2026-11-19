@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Wrestler": "Luchador",
+  "Status": "Estado",
+  "Health, momentum": "Salud, impulso",
+  "Natsume's WWE game": "El juego de WWE de Natsume",
+  "health and momentum meters": "medidores de salud e impulso",
+  "Win matches to climb the card on the road to WrestleMania X8": "Gana partidos para subir en el cartel camino a WrestleMania X8",
+  "Moves": "Movimientos",
+  "Grapples, strikes, finisher\nGrapples, strikes and finishers; finishers need a full momentum meter": "Agarres, golpes, remate\nAgarres, golpes y remates; los remates necesitan el medidor de impulso lleno",
+  "Match tips": "Consejos de partido",
+  "Battle": "Batalla",
+  "Momentum full = finisher\nWear the opponent down before going for the pin; reversals cost the attacker momentum": "Impulso lleno = remate\nAgota al rival antes de buscar el pin; las reversiones le cuestan impulso al atacante",
+  "Modes": "Modos",
+  "Road to WrestleMania season\nRoad to WrestleMania season: a sequence of matches leading to WrestleMania X8": "Temporada Road to WrestleMania\nTemporada Road to WrestleMania: una secuencia de partidos que lleva a WrestleMania X8",
+  "Move set per wrestler\nMove sets per wrestler\nEach superstar's moves and finisher are fixed; learn the inputs in practice": "Juego de movimientos por luchador\nJuegos de movimientos por luchador\nLos movimientos y el remate de cada superstar son fijos; aprende los comandos en la práctica",
+  "Roster": "Plantilla",
+  "Wrestlers\nHidden wrestlers unlocked in the season\nSuperstars and arenas unlocked in the season": "Luchadores\nLuchadores ocultos desbloqueados en la temporada\nSuperstars y arenas desbloqueados en la temporada",
+  "Progress": "Progreso",
+  "Season\nSeason progress to WrestleMania\nSeason matches won up to the WrestleMania X8 card": "Temporada\nProgreso de la temporada hacia WrestleMania\nPartidos de temporada ganados hasta el cartel de WrestleMania X8"
+ }
+}

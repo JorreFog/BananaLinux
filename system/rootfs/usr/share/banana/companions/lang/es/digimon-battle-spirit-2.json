@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Match": "Partido",
+  "Your points": "Tus puntos",
+  "Rival points": "Puntos del rival",
+  "Diamonds": "Diamantes",
+  "Time": "Tiempo",
+  "Your Digimon": "Tu Digimon",
+  "Character id": "ID de personaje",
+  "Evolution bar": "Barra de evolución",
+  "Controls (approx.)": "Controles (aprox.)",
+  "Attack": "Ataque",
+  "Jump": "Saltar",
+  "Special / Digivolve when the bar is full": "Especial / Digivolve cuando la barra esté llena",
+  "Block": "Bloquear",
+  "Goal": "Objetivo",
+  "Collect more D-Spirit orbs than the rival before time runs out": "Recoge más orbes D-Spirit que el rival antes de que se acabe el tiempo",
+  "Rival id": "ID del rival",
+  "Final boss HP": "HP del jefe final",
+  "Tip": "Consejo",
+  "Points come from hitting the rival and catching what falls out; keep moving vertically.": "Los puntos salen de golpear al rival y coger lo que cae; muévete en vertical.",
+  "Stage": "Escenario",
+  "Difficulty": "Dificultad",
+  "Tamer tags": "Etiquetas de adiestrador",
+  "Tag bytes set": "Bytes de etiqueta activados",
+  "Tamer tags (Trainee up to Ancient) are earned by finishing the story with Digimon of each level.": "Las etiquetas de adiestrador (de Aprendiz a Ancestral) se ganan al terminar la historia con un Digimon de cada nivel.",
+  "Progress": "Progreso",
+  "Total points": "Puntos totales"
+ }
+}

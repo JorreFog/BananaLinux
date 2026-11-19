@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "Mario Toy Company": "Compañía de Juguetes Mario",
+  "Donkey Kong Jungle": "Jungla de Donkey Kong",
+  "Fire Mountain": "Montaña de Fuego",
+  "Spooky House": "Casa Espeluznante",
+  "Mystic Forest": "Bosque Místico",
+  "Twilight City": "Ciudad del Crepúsculo",
+  "Lives": "Vidas",
+  "World": "Mundo",
+  "Level slot": "Espacio de nivel",
+  "Plus levels": "Niveles extra",
+  "Controls": "Controles",
+  "A jump, B grab/throw, down crouch; handstand (A while crouching) blocks.": "A salta, B agarra/lanza, abajo agachar; la parada de manos (A mientras agachas) bloquea.",
+  "Moves": "Movimientos",
+  "Handstand, triple jump, wire walking.": "Parada de manos, triple salto, caminar sobre cables.",
+  "Tips": "Consejos",
+  "Each world ends with a DK battle.": "Cada mundo termina con una batalla contra DK.",
+  "Structure": "Estructura",
+  "6 worlds: Mario Toy Company and more; plus Expert levels.": "6 mundos: Compañía de Juguetes Mario y más; además, niveles Experto.",
+  "Items": "Objetos",
+  "Keys and Mini-Marios.": "Llaves y Mini-Marios.",
+  "Presents": "Regalos",
+  "Collect": "Coleccionar",
+  "Collect the 3 presents per level.": "Recoge los 3 regalos de cada nivel.",
+  "Worlds": "Mundos",
+  "Goal": "Objetivo",
+  "Rescue the Mini-Marios.": "Rescata a los Mini-Marios."
+ }
+}

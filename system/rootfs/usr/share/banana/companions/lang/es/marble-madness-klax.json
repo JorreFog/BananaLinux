@@ -1,0 +1,21 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Games": "Juegos",
+  "Marble Madness: roll a marble down isometric courses against the clock. Klax: catch tiles on the conveyor and stack 3 same colours.": "Marble Madness: rueda una canica por recorridos isométricos contra el reloj. Klax: atrapa fichas en la cinta y apila 3 del mismo color.",
+  "Marble": "Canica",
+  "Steep drops break the marble; momentum control is everything.": "Las caídas fuertes rompen la canica; el control de la inercia lo es todo.",
+  "Tips": "Consejos",
+  "Diagonal klaxes score most. Marble: time left carries to the next race.": "Los klax en diagonal puntúan más. Marble: el tiempo restante pasa a la siguiente carrera.",
+  "Courses": "Recorridos",
+  "Practice, Beginner, Intermediate, Aerial, Silly, Ultimate. Klax: waves of tiles.": "Práctica, Principiante, Intermedio, Aéreo, Tonto, Definitivo. Klax: oleadas de fichas.",
+  "Items": "Objetos",
+  "Time bonus on Marble; drop meter in Klax.": "Bonus de tiempo en Marble; medidor de caída en Klax.",
+  "Scores": "Puntuaciones",
+  "Collect": "Coleccionar",
+  "High scores.": "Récords.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Clear all courses / waves.": "Completa todos los recorridos / oleadas."
+ }
+}

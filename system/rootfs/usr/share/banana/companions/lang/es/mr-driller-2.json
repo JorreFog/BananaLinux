@@ -1,0 +1,30 @@
+{
+ "strings": {
+  "America": "América",
+  "Egypt": "Egipto",
+  "Driller": "Taladro",
+  "Lives": "Vidas",
+  "Mission score": "Puntuación de misión",
+  "Timer (s)": "Temporizador (s)",
+  "How it plays": "Cómo se juega",
+  "Drill down through coloured blocks; same-colour blocks connected disappear together.": "Perfora hacia abajo bloques de color; los bloques del mismo color conectados desaparecen juntos.",
+  "Air": "Aire",
+  "Air drops: collect capsules.": "Suministros aéreos: recoge cápsulas.",
+  "Characters": "Personajes",
+  "Drillers": "Taladros",
+  "Blocks": "Bloques",
+  "Tips": "Consejos",
+  "Avoid being crushed; X blocks cost air.": "Evita que te aplasten; los bloques X gastan aire.",
+  "Depths": "Profundidades",
+  "Mission": "Misión",
+  "Structure": "Estructura",
+  "Depths per mode.": "Profundidades por modo.",
+  "Items": "Objetos",
+  "Air capsules.": "Cápsulas de aire.",
+  "Records": "Récords",
+  "Collect": "Coleccionar",
+  "Best depths and times per course and driller.": "Mejores profundidades y tiempos por recorrido y taladro.",
+  "Goal": "Objetivo",
+  "Reach the bottom.": "Llega al fondo."
+ }
+}

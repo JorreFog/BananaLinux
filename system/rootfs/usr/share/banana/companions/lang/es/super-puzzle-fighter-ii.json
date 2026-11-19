@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Score": "Puntuación",
+  "High score": "Récord",
+  "Round": "Asalto",
+  "Drop gem pairs; crash gems break same-colored gems": "Suelta parejas de gemas; las gemas que chocan rompen las del mismo color",
+  "Characters": "Personajes",
+  "Detail": "Detalle",
+  "Ryu, Ken, Chun-Li, Sakura, Morrigan, Hsien-Ko, Felicia, Donovan + hidden": "Ryu, Ken, Chun-Li, Sakura, Morrigan, Hsien-Ko, Felicia, Donovan + oculto",
+  "Tips": "Consejos",
+  "Build big power gems (rectangles) for bigger attacks\nCounter gems turn into normal gems after a few turns": "Forma gemas de poder grandes (rectángulos) para ataques más fuertes\nLas gemas de contra se convierten en gemas normales tras varios turnos",
+  "Modes": "Modos",
+  "Arcade, VS and Street Puzzle (set challenges against characters)": "Arcade, VS y Street Puzzle (retos fijados contra personajes)",
+  "Gems": "Gemas",
+  "Diamond": "Diamante",
+  "clears all gems of one color": "elimina todas las gemas de un color",
+  "The diamond appears every 25 drops and clears all gems of the color it lands on": "El diamante aparece cada 25 tiradas y elimina todas las gemas del color en el que cae",
+  "Roster": "Plantilla",
+  "Hidden characters": "Personajes ocultos",
+  "Akuma, Dan and Devilot": "Akuma, Dan y Devilot",
+  "Each character drops a fixed counter-gem pattern on the opponent": "Cada personaje suelta un patrón fijo de gemas de contra sobre el rival",
+  "Progress": "Progreso",
+  "Arcade clears\nArcade clears with each character\nStreet Puzzle has set challenges against each character": "Superaciones de arcade\nSuperaciones de arcade con cada personaje\nStreet Puzzle tiene retos fijados contra cada personaje"
+ }
+}

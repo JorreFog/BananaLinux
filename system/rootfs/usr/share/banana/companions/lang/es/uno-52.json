@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Hand": "Mano",
+  "Cards in hand; score\nCard games built on Uno: classic Uno plus \"Uno 52\" variants played with the standard 52-card style deck\nSet up name, icon and AI players before the game": "Cartas en la mano; puntuación\nJuegos de cartas basados en Uno: Uno clásico más variantes de \"Uno 52\" jugadas con la baraja estándar de 52 cartas\nConfigura el nombre, el ícono y los jugadores IA antes de la partida",
+  "Rules": "Reglas",
+  "Match color or number; action cards: Skip, Reverse, Draw Two, Wild, Wild Draw Four": "Combina color o número; cartas de acción: Salta, Invierte, Roba Dos, Comodín, Comodín +4",
+  "Uno rules": "Reglas de Uno",
+  "match the top card by color or number; action cards Skip, Reverse, Draw Two; Wild and Wild Draw Four change color": "combina la carta superior por color o número; las cartas de acción Salta, Invierte y Roba Dos; el Comodín y el Comodín +4 cambian el color",
+  "Special Modes in the menu add variations": "Los modos especiales del menú añaden variantes",
+  "Tips": "Consejos",
+  "Say Uno with one card left\nKeep a Wild for the end of the hand; play Draw cards on the player close to winning\nRemember to call Uno when you have one card left": "Di Uno con una carta en la mano\nGuarda un comodín para el final de la mano; usa las cartas de Roba contra quien esté cerca de ganar\nRecuerda cantar Uno cuando te quede una carta",
+  "Modes": "Modos",
+  "Uno and other card games": "Uno y otros juegos de cartas",
+  "Main Menu": "Menú principal",
+  "Start Game, Special Modes, options (music, effects), credits": "Jugar, Modos especiales, opciones (música, efectos), créditos",
+  "Your hand\nYour hand; the discard pile shows the active color": "Tu mano\nTu mano; la pila de descarte muestra el color activo",
+  "Games": "Juegos",
+  "Games available\nPlayer icons and names\nChoose AI players and icons in the menu": "Juegos disponibles\nÍconos y nombres de jugadores\nElige los jugadores IA y sus íconos en el menú",
+  "Progress": "Progreso",
+  "Wins\nPoints from cards left in opponents' hands; first to the target score wins": "Victorias\nPuntos por las cartas que quedan en las manos de los rivales; gana el primero en alcanzar la puntuación objetivo"
+ }
+}

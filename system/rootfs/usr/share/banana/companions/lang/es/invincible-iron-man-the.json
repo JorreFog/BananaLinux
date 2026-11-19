@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Lives": "Vidas",
+  "Controls": "Controles",
+  "A jump/jet, B repulsor, R unibeam, L switch weapon.": "A saltar/impulsarse, B repulsor, R uni-rayo, L cambiar arma.",
+  "Armour": "Armadura",
+  "Weapons": "Armas",
+  "Repulsors, unibeam and missiles; armour energy powers them.": "Repulsores, uni-rayo y misiles; la energía de la armadura los potencia.",
+  "Bosses": "Jefes",
+  "Tips": "Consejos",
+  "Keep moving with jets; unibeam on bosses when energy is full.": "Sigue moviéndote con los impulsores; usa el uni-rayo contra los jefes cuando la energía esté llena.",
+  "Levels": "Niveles",
+  "Stage": "Escenario",
+  "Structure": "Estructura",
+  "Side-scrolling stages ending in villain fights.": "Escenarios de desplazamiento lateral que terminan en combates con villanos.",
+  "Pickups": "Recogibles",
+  "Items": "Objetos",
+  "Energy and armour repair pickups.": "Recogibles de energía y reparación de armadura.",
+  "Secrets": "Secretos",
+  "Collect": "Coleccionar",
+  "Hidden pickups and bonus items.": "Recogibles ocultos y objetos extra.",
+  "Story": "Historia",
+  "Goal": "Objetivo",
+  "Defeat the villains plotting against Stark.": "Derrota a los villanos que planean contra Stark."
+ }
+}

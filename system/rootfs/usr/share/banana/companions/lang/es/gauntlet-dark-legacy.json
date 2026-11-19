@@ -1,0 +1,29 @@
+{
+ "strings": {
+  "Hero": "Héroe",
+  "P1 health": "Salud P1",
+  "P1 gold": "Oro P1",
+  "P1 level": "Nivel P1",
+  "Classes": "Clases",
+  "Warrior (strong melee), Valkyrie (balanced), Wizard (magic), Archer (fast, ranged), and more unlockable": "Warrior (combate fuerte), Valkyrie (equilibrada), Wizard (magia), Archer (rápida, a distancia) y más desbloqueables",
+  "Health": "Salud",
+  "Health drains slowly over time, as in arcade Gauntlet.\nEat food to refill: do not shoot it!": "La salud baja lentamente con el tiempo, como en el Gauntlet de arcade.\nCome comida para recuperarla: ¡no le dispares!",
+  "Stats": "Estadísticas",
+  "Level up": "Subir de nivel",
+  "Gold buys stat boosts: strength, armour, magic, speed.\nThe hero levels up with experience.": "El oro compra mejoras de atributos: fuerza, armadura, magia, velocidad.\nEl héroe sube de nivel con la experiencia.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Destroy the monster generators first: they spawn endlessly.\nDeath himself drains health: use magic or avoid him.\nPotions clear the screen.": "Destruye primero los generadores de monstruos: generan sin parar.\nLa Muerte misma drena la salud: usa magia o evítala.\nLas pociones limpian la pantalla.",
+  "Realms": "Reinos",
+  "Structure": "Estructura",
+  "Several realms, each with a hub of levels and a boss.\nKeys open doors; exits lead deeper.": "Varios reinos, cada uno con un centro de niveles y un jefe.\nLas llaves abren puertas; las salidas llevan más adentro.",
+  "Items": "Objetos",
+  "Keys (doors), potions (screen-clearing magic), food (health), gold (stat shop).\nPower-ups: rapid fire, reflect shots, speed, invisibility.": "Llaves (puertas), pociones (magia que limpia la pantalla), comida (salud), oro (tienda de atributos).\nPotenciadores: fuego rápido, disparos reflejados, velocidad, invisibilidad.",
+  "Runestones": "Piedras rúnicas",
+  "Hidden": "Oculto",
+  "Runestones are hidden in the realms; collecting them opens the final area.": "Las piedras rúnicas están ocultas en los reinos; recogerlas abre el área final.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Defeat each realm's boss and collect the runestones to face the final enemy.": "Derrota al jefe de cada reino y recoge las piedras rúnicas para faced al enemigo final."
+ }
+}

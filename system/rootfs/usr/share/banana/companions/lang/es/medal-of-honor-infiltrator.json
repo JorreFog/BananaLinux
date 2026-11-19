@@ -1,0 +1,26 @@
+{
+ "strings": {
+  "Soldier": "Soldado",
+  "Lives": "Vidas",
+  "Health (first-person stages)": "Salud (escenarios en primera persona)",
+  "How it plays": "Cómo se juega",
+  "Top-down WWII shooter.": "Shooter cenital de la WWII.",
+  "Weapons": "Armas",
+  "Rifles, SMG, grenades.": "Rifles, subfusil, granadas.",
+  "Enemies": "Enemigos",
+  "Tips": "Consejos",
+  "Use cover.": "Usa las coberturas.",
+  "Missions": "Misiones",
+  "Structure": "Estructura",
+  "Missions.": "Misiones.",
+  "Items": "Objetos",
+  "Health and ammo.": "Salud y munición.",
+  "Medals": "Medallas",
+  "Gold medals (file 1)": "Medallas de oro (archivo 1)",
+  "Collect": "Coleccionar",
+  "Medals.": "Medallas.",
+  "Levels completed": "Niveles completados",
+  "Goal": "Objetivo",
+  "Complete missions.": "Completa las misiones."
+ }
+}

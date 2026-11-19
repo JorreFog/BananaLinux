@@ -1,0 +1,27 @@
+{
+ "strings": {
+  "Driver": "Piloto",
+  "Money": "Dinero",
+  "Controls": "Controles",
+  "A accelerate, B brake, R nitro.": "A acelera, B frena, R nitro.",
+  "Car": "Auto",
+  "Upgrades": "Mejoras",
+  "Engine, tyres, body.": "Motor, neumáticos, carrocería.",
+  "Race": "Carrera",
+  "Tips": "Consejos",
+  "Nitro on straights.": "Nitro en las rectas.",
+  "Modes": "Modos",
+  "Track": "Pista",
+  "Selected level": "Nivel seleccionado",
+  "Career races in Bayview.": "Carreras de campaña en Bayview.",
+  "Parts": "Partes",
+  "Items": "Objetos",
+  "Parts.": "Piezas.",
+  "Cars": "Autos",
+  "Collect": "Coleccionar",
+  "Unlock cars.": "Desbloquea autos.",
+  "Career": "Carrera",
+  "Goal": "Objetivo",
+  "Win career.": "Gana la campaña."
+ }
+}

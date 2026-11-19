@@ -1,0 +1,22 @@
+{
+ "strings": {
+  "Board": "Tablero",
+  "Score": "Puntuación",
+  "Lives": "Vidas",
+  "Level": "Nivel",
+  "Snoods fired (level)": "Snoods disparados (nivel)",
+  "Danger meter rises with every shot that doesn't clear Snoods\nScore; Snoods left": "El medidor de peligro sube con cada disparo que no elimina snoods\nPuntuación; snoods restantes",
+  "Match 3+ Snoods of a color to drop them; unconnected ones fall too": "Empareja 3+ snoods del mismo color para eliminarlos; los que quedan sueltos también caen",
+  "Tips": "Consejos",
+  "Bank shots off the walls; clear the danger meter by matching": "Tiros con rebote en las paredes; baja el medidor de peligro emparejando",
+  "Modes": "Modos",
+  "Specials": "Especiales",
+  "Bag": "Bolsa",
+  "Wildcard Snood matches any color\nWildcards match any color; the danger meter falls when you clear snoods": "El Snood comodín empareja cualquier color\nLos comodines emparejan cualquier color; el medidor de peligro baja cuando eliminas snoods",
+  "Puzzles": "Puzles",
+  "Collect": "Coleccionar",
+  "Puzzle levels\nJourney levels get harder; puzzle levels have fixed layouts": "Niveles de Puzzle\nLos niveles de Journey se endurecen; los de Puzzle tienen diseños fijos",
+  "Progress": "Progreso",
+  "Levels cleared\nLevels cleared and score per mode\nJourney mode difficulty rises as you go": "Niveles completados\nNiveles completados y puntuación por modo\nLa dificultad del modo Journey sube conforme avanzas"
+ }
+}

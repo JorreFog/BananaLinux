@@ -1,0 +1,23 @@
+{
+ "strings": {
+  "Rules": "Reglas",
+  "Two families guess the most popular answers to survey questions. The face-off winner can play or pass; three strikes hand the steal to the other family.": "Dos familias adivinan las respuestas más populares a preguntas de encuestas. El ganador del duelo puede jugar o pasar; tres fallos ceden el robo a la otra familia.",
+  "Controls": "Controles",
+  "Choose letters/answers": "Elige letras/respuestas",
+  "Confirm": "Confirmar",
+  "Delete": "Borrar",
+  "Start": "Iniciar",
+  "Pause": "Pausa",
+  "Face-off": "Duelo",
+  "Tips": "Consejos",
+  "Answer quickly in the face-off: the top answer wins control outright.": "Responde rápido en el duelo: la respuesta más votada gana el control directamente.",
+  "Rounds": "Rondas",
+  "Single, double and triple point rounds, then Fast Money: two players give five answers each against the clock; 200 points wins the jackpot.": "Rondas de uno, dos y tres puntos, luego Dinero Rápido: dos jugadores dan cinco respuestas cada uno contra el reloj; con 200 puntos se gana el bote.",
+  "Scoring": "Puntuación",
+  "Points equal the number of surveyed people who gave the answer.": "Los puntos equivalen al número de personas encuestadas que dieron esa respuesta.",
+  "Families": "Familias",
+  "Pick a family name and colour before the game; scores are not saved between sessions.": "Elige el nombre y el color de tu familia antes de la partida; las puntuaciones no se guardan entre sesiones.",
+  "Progress": "Progreso",
+  "The first family to 300 points goes to Fast Money.": "La primera familia en llegar a 300 puntos pasa a Dinero Rápido."
+ }
+}

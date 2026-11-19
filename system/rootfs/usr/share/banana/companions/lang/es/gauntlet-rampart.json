@@ -1,0 +1,24 @@
+{
+ "strings": {
+  "Player": "Jugador",
+  "Two games": "Dos juegos",
+  "Gauntlet: top-down dungeon crawler (arcade classic).\nRampart: build walls, place cannons, sink ships.": "Gauntlet: dungeon crawler cenital (clásico de arcade).\nRampart: construye murallas, coloca cañones y hunde barcos.",
+  "Health drains over time; food refills it.": "La salud baja con el tiempo; la comida la repone.",
+  "Phases": "Fases",
+  "1 Place cannons in your castle walls\n2 Battle: fire on ships\n3 Rebuild: patch walls with puzzle pieces\nA castle not enclosed at the end of rebuild is lost.": "1 Coloca cañones en los muros de tu castillo\n2 Batalla: dispara a los barcos\n3 Reconstrucción: repara los muros con piezas de puzle\nUn castillo sin cerrar al final de la reconstrucción se pierde.",
+  "Tips": "Consejos",
+  "Shoot the generators first.\nDo not shoot food and potions.": "Dispara primero a los generadores.\nNo dispares a la comida ni a las pociones.",
+  "Enclose extra castles to earn more cannons.": "Cierra castillos extra para ganar más cañones.",
+  "Levels": "Niveles",
+  "Structure": "Estructura",
+  "Gauntlet: endless maze levels with exits to later floors.\nRampart: rounds of build/battle/repair.": "Gauntlet: niveles de laberinto infinitos con salidas a pisos posteriores.\nRampart: rondas de construcción/batalla/reparación.",
+  "Items": "Objetos",
+  "Keys, potions, food, treasure.": "Llaves, pociones, comida, tesoros.",
+  "Scores": "Puntuaciones",
+  "High scores": "Récords",
+  "Both games keep score tables: aim for higher floors/rounds.": "Ambos juegos guardan tablas de puntos: busca pisos/rondas más altos.",
+  "Progress": "Progreso",
+  "Goal": "Objetivo",
+  "Gauntlet: reach deeper levels.\nRampart: survive the rounds without losing your castles.": "Gauntlet: llega a niveles más profundos.\nRampart: sobrevive las rondas sin perder tus castillos."
+ }
+}
