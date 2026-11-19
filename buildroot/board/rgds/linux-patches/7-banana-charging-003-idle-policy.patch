@@ -1,8 +1,9 @@
 Subject: [PATCH 3/3] power: supply: rk817: limit idle charging to an armed connection
 
-Use a connection generation to reject stale requests after an unplug or suspend.
-Require a periodic renewal so userspace cannot leave the input limit raised if
-the idle policy owner dies. Expose the idle policy only on the RG DS Plus.
+Reject stale requests after unplug or suspend. Require periodic renewal so
+userspace cannot leave the input limit raised if the policy owner dies.
+Restore normal and disarm on a rejected renewal; retry a failed reset.
+Expose the idle policy only on the RG DS Plus.
 ---
 diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
 --- a/drivers/power/supply/rk817_charger.c
@@ -47,7 +48,7 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
  
  	if (rk817_input_cur_ua[sel] >
  	    rk817_input_cur_ua[RK817_INPUT_CUR_DEFAULT_SEL]) {
-@@ -757,12 +765,71 @@
+@@ -757,12 +765,84 @@
  	return ret;
  }
  
@@ -58,8 +59,11 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
 +					       struct rk817_charger, policy_timeout);
 +
 +	guard(mutex)(&c->input_lock);
-+	if (c->policy_may_be_high && rk817_chg_write_default_input(c))
++	if (c->policy_may_be_high && rk817_chg_write_default_input(c)) {
++		c->policy_armed = false;
++		c->policy_epoch++;
 +		mod_delayed_work(system_percpu_wq, &c->policy_timeout, HZ);
++	}
 +}
 +
 +static ssize_t idle_charge_show(struct device *dev, struct device_attribute *attr,
@@ -85,6 +89,8 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
 +	if (!c->plugged_in || c->policy_epoch != epoch)
 +		return -ESTALE;
 +	if (!strcmp(cmd, "arm")) {
++		if (!c->policy_armed && c->policy_may_be_high)
++			return -EAGAIN;
 +		c->policy_armed = true;
 +		return count;
 +	}
@@ -93,11 +99,19 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
 +	if (!strcmp(cmd, "idle")) {
 +		c->policy_may_be_high = true;
 +		ret = rk817_chg_set_input_current(c, 2000000);
-+		mod_delayed_work(system_percpu_wq, &c->policy_timeout, 3 * HZ);
++		if (!ret)
++			mod_delayed_work(system_percpu_wq, &c->policy_timeout, 3 * HZ);
 +	} else if (!strcmp(cmd, "busy")) {
 +		ret = c->policy_may_be_high ? rk817_chg_write_default_input(c) : 0;
 +	} else {
 +		return -EINVAL;
++	}
++	/* A rejected renewal must never extend a previous higher lease. */
++	if (ret) {
++		c->policy_armed = false;
++		c->policy_epoch++;
++		if (c->policy_may_be_high && rk817_chg_write_default_input(c))
++			mod_delayed_work(system_percpu_wq, &c->policy_timeout, HZ);
 +	}
 +	return ret ? ret : count;
 +}
@@ -119,7 +133,7 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
  		/* Retry a failed unplug reset before exposing a new connection. */
  		rk817_chg_write_default_input(charger);
  		charger->plugged_in = 1;
-@@ -792,6 +859,8 @@
+@@ -792,6 +872,8 @@
  	 * default limits back, which also drops any raised input limit.
  	 */
  	scoped_guard(mutex, &charger->input_lock) {
@@ -128,7 +142,7 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
  		charger->plugged_in = 0;
  		rk817_chg_write_default_input(charger);
  	}
-@@ -814,7 +883,13 @@
+@@ -814,7 +896,13 @@
  
  	switch (prop) {
  	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
@@ -143,7 +157,7 @@ diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_c
  		if (!ret)
  			power_supply_changed(charger->chg_ps);
  		return ret;
-@@ -1510,6 +1585,19 @@
+@@ -1510,6 +1598,19 @@
  				     "plug_out_irq request failed!\n");
  	}
  

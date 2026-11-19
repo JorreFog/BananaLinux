@@ -45,6 +45,7 @@ ui:
 test: ui
 	sh system/tests/charging-test.sh
 	sh system/tests/idle-charge-test.sh
+	python3 system/tests/idle-charge-kernel-test.py
 	sh ui/tests/charging-test.sh
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
