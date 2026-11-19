@@ -89,12 +89,194 @@ config BR2_PACKAGE_LIBRETRO_FAKE08
 	help
 	  PICO-8 carts (.p8 and .p8.png), when the official PICO-8 isn't on the card.
 
+config BR2_PACKAGE_LIBRETRO_RACE
+	bool "libretro-race"
+	default y
+	help
+	  Neo Geo Pocket and Neo Geo Pocket Color.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_WSWAN
+	bool "libretro-beetle-wswan"
+	default y
+	help
+	  WonderSwan and WonderSwan Color (Mednafen's).
+
+config BR2_PACKAGE_LIBRETRO_HANDY
+	bool "libretro-handy"
+	default y
+	help
+	  Atari Lynx (its BIOS, lynxboot.img, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_VB
+	bool "libretro-beetle-vb"
+	default y
+	help
+	  Virtual Boy (Mednafen's).
+
+config BR2_PACKAGE_LIBRETRO_POKEMINI
+	bool "libretro-pokemini"
+	default y
+	help
+	  Pokémon mini.
+
+config BR2_PACKAGE_LIBRETRO_GW
+	bool "libretro-gw"
+	default y
+	help
+	  Game & Watch (and other LCD handhelds), from .mgw files.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_PCE_FAST
+	bool "libretro-beetle-pce-fast"
+	default y
+	help
+	  PC Engine and PC Engine CD (Mednafen's; the CD's BIOS,
+	  syscard3.pce, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_STELLA
+	bool "libretro-stella"
+	default y
+	help
+	  Atari 2600.
+
+config BR2_PACKAGE_LIBRETRO_PROSYSTEM
+	bool "libretro-prosystem"
+	default y
+	help
+	  Atari 7800.
+
+config BR2_PACKAGE_LIBRETRO_GEARCOLECO
+	bool "libretro-gearcoleco"
+	default y
+	help
+	  ColecoVision (its BIOS, colecovision.rom, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_FREEINTV
+	bool "libretro-freeintv"
+	default y
+	help
+	  Intellivision (its BIOS, exec.bin and grom.bin, in bios/).
+
+config BR2_PACKAGE_LIBRETRO_VECX
+	bool "libretro-vecx"
+	default y
+	help
+	  Vectrex (its BIOS built in).
+
+config BR2_PACKAGE_LIBRETRO_O2EM
+	bool "libretro-o2em"
+	default y
+	help
+	  Odyssey 2 / Videopac (its BIOS, o2rom.bin, in bios/).
+
 config BR2_PACKAGE_LIBRETRO_FBNEO
 	bool "libretro-fbneo"
 	default y
 	help
 	  FinalBurn Neo: arcade games, Neo Geo (its BIOS, neogeo.zip,
 	  in bios/) and Capcom's CPS-1, CPS-2 and CPS-3.
+
+config BR2_PACKAGE_LIBRETRO_VBAM
+	bool "libretro-vbam"
+	default y
+	help
+	  Game Boy Advance: VBA-M, a second choice to gpSP and mGBA.
+
+config BR2_PACKAGE_LIBRETRO_GEARBOY
+	bool "libretro-gearboy"
+	default y
+	help
+	  Game Boy and Game Boy Color: Gearboy.
+
+config BR2_PACKAGE_LIBRETRO_NESTOPIA
+	bool "libretro-nestopia"
+	default y
+	help
+	  NES and the Famicom Disk System: Nestopia UE.
+
+config BR2_PACKAGE_LIBRETRO_MESEN
+	bool "libretro-mesen"
+	default y
+	help
+	  NES and the Famicom Disk System: Mesen.
+
+config BR2_PACKAGE_LIBRETRO_SNES9X2010
+	bool "libretro-snes9x2010"
+	default y
+	help
+	  Super Nintendo: Snes9x 2010, lighter than Snes9x.
+
+config BR2_PACKAGE_LIBRETRO_GENESIS_PLUS_GX
+	bool "libretro-genesis-plus-gx"
+	default y
+	help
+	  Mega Drive, Master System, Game Gear, SG-1000 and Mega CD:
+	  Genesis Plus GX.
+
+config BR2_PACKAGE_LIBRETRO_GEARSYSTEM
+	bool "libretro-gearsystem"
+	default y
+	help
+	  Master System, Game Gear and SG-1000: Gearsystem.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_NGP
+	bool "libretro-beetle-ngp"
+	default y
+	help
+	  Neo Geo Pocket (and Color): Mednafen's NeoPop.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_LYNX
+	bool "libretro-beetle-lynx"
+	default y
+	help
+	  Atari Lynx: Mednafen's.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_PCE
+	bool "libretro-beetle-pce"
+	default y
+	help
+	  PC Engine, PC Engine CD and SuperGrafx: Mednafen's (accurate).
+
+config BR2_PACKAGE_LIBRETRO_GEARGRAFX
+	bool "libretro-geargrafx"
+	default y
+	help
+	  PC Engine and PC Engine CD: Geargrafx.
+
+config BR2_PACKAGE_LIBRETRO_STELLA2014
+	bool "libretro-stella2014"
+	default y
+	help
+	  Atari 2600: Stella 2014, lighter than Stella.
+
+config BR2_PACKAGE_LIBRETRO_MAME2003_PLUS
+	bool "libretro-mame2003-plus"
+	default y
+	help
+	  Arcade, Neo Geo and CPS-1/2: MAME 2003-Plus (MAME 0.78 sets).
+
+config BR2_PACKAGE_LIBRETRO_FBALPHA2012
+	bool "libretro-fbalpha2012"
+	default y
+	help
+	  Arcade, Neo Geo and CPS: FB Alpha 2012 (its 2012 sets).
+
+config BR2_PACKAGE_LIBRETRO_SWANSTATION
+	bool "libretro-swanstation"
+	default y
+	help
+	  PlayStation: SwanStation.
+
+config BR2_PACKAGE_LIBRETRO_BEETLE_PSX
+	bool "libretro-beetle-psx"
+	default y
+	help
+	  PlayStation: Mednafen's (accurate, software renderer).
+
+config BR2_PACKAGE_LIBRETRO_PARALLEL_N64
+	bool "libretro-parallel-n64"
+	default y
+	help
+	  Nintendo 64: ParaLLEl N64 (GLES).
 
 config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
 	bool "retroarch-glsl-shaders"
