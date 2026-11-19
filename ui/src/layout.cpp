@@ -1783,6 +1783,17 @@ namespace banana
 		return runAction(it->second);
 	}
 
+	// L2 and R2 (the host's: L and R when the theme doesn't map them)
+	bool LayoutMenu::pressNamed(const std::string& name, bool* used)
+	{
+		*used = false;
+		auto& map = d->input[mView == rnds::UI::HOME ? "home" : "library"];
+		auto it = map.find(name);
+		if (it == map.end()) return false;
+		*used = d->launchAt < 0 && runAction(it->second);	// ("none" does nothing: runAction's)
+		return true;
+	}
+
 	// one of input's actions ("next", "prev:10", "zoomIn"...): a button's, or a tap's "do:<action>"
 	bool LayoutMenu::runAction(const std::string& action)
 	{

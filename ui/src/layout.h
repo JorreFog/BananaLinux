@@ -34,6 +34,7 @@ namespace banana
 		int systemIndex() const override { return mSys; }
 		int gameIndex() const override { return mGame; }
 		bool press(Button b) override;
+		bool pressNamed(const std::string& name, bool* used) override;
 		bool touch(int screen, float x, float y, bool down) override;
 		bool touchMove(int screen, float x, float y) override;
 		void touchCancel() override { mDown = false; }

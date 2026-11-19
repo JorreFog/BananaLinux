@@ -970,6 +970,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			static const std::map<std::string, Key> keys = { { "left", Key::LEFT }, { "right", Key::RIGHT }, { "up", Key::UP }, { "down", Key::DOWN },
 				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R }, { "start", Key::START }, { "select", Key::SELECT } };
 			rnds::UI::Button btn;
+			// L2 and R2: the theme's own when it maps them, else L and R (as the handheld's buttons in handle)
+			bool namedUsed = false;
+			if ((b == "l2" || b == "r2") && !settings.isOpen() && ui.pressNamed(b, &namedUsed))
+			{
+				recordView(ui, lib);
+				logf("press %s: %s, view %d sys %d game %d", b.c_str(), namedUsed ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
+				continue;
+			}
+			if (b == "l2" || b == "r2") b.resize(1);
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
@@ -2515,7 +2524,15 @@ int main(int argc, char** argv)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
-		if (ev.key == Key::OTHER) return;	// (back, L3, R3: the game panel's Companion buttons; nothing in the menu)
+		// the back button: B in the menu and on every page (Settings, Files, Bshare...), in every theme
+		if (ev.key == Key::OTHER && ev.code == BTN_Z && (ev.type == InputEvent::PRESS || ev.type == InputEvent::RELEASE) && handleAgain)
+		{
+			InputEvent b = ev;
+			b.key = Key::B;
+			handleAgain(b);
+			return;
+		}
+		if (ev.key == Key::OTHER) return;	// (L3, R3: the game panel's Companion buttons; nothing in the menu)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
@@ -2618,6 +2635,19 @@ int main(int argc, char** argv)
 					dirty = true;
 					return;
 				}
+			}
+		}
+		// L2 and R2: a theme's own when it maps them ("l2", "r2": Plaza turns the page); otherwise L and R
+		if (ev.type == InputEvent::PRESS && (ev.code == BTN_TL2 || ev.code == BTN_TR2))
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			ui->update(nowMs());
+			bool used = false;
+			if (ui->pressNamed(ev.code == BTN_TL2 ? "l2" : "r2", &used))
+			{
+				rep.key = Key::NONE;
+				if (used) { dirty = true; sound.play("scroll"); }
+				return;
 			}
 		}
 		rnds::UI::Button b;

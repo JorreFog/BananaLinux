@@ -103,9 +103,9 @@
 
   "input": {
     "home": { "left": "gridLeft", "right": "gridRight", "up": "gridUp", "down": "gridDown", "l": "zoomOut", "r": "zoomIn",
-              "swipeLeft": "nextPage", "swipeRight": "prevPage", "a": "open", "x": "resume", "y": "fav" },
+              "swipeLeft": "nextPage", "swipeRight": "prevPage", "l2": "prevPage", "r2": "nextPage", "a": "open", "x": "resume", "y": "fav" },
     "library": { "left": "gridLeft", "right": "gridRight", "up": "gridUp", "down": "gridDown", "l": "zoomOut", "r": "zoomIn",
-                 "swipeLeft": "nextPage", "swipeRight": "prevPage", "a": "open", "b": "back", "y": "fav" }
+                 "swipeLeft": "nextPage", "swipeRight": "prevPage", "l2": "prevPage", "r2": "nextPage", "a": "open", "b": "back", "y": "fav" }
   },
 
   "components": {

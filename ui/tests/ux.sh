@@ -370,13 +370,16 @@ for i in $(seq 10 19); do : > "$PZFX/roms/gba/Berry $i.gba"; done
 "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
     --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$PZFX/roms" --data "$PZFX/data" \
     --theme "$HERE/../system/rootfs/usr/share/banana/themes/plaza-light.json" \
-    --script "lib gba 0; wait 1500; shot ux-plaza; press right; press right; press right; press right; press right; press up; swipe 100 240 500 240; swipe 500 240 100 240; press down; press r; press r; press l; touch 1 560 31; touch 1 300 450" \
+    --script "lib gba 0; wait 1500; shot ux-plaza; press right; press right; press right; press right; press right; press up; swipe 100 240 500 240; swipe 500 240 100 240; press l2; press r2; press r2; press down; press r; press r; press l; touch 1 560 31; touch 1 300 450" \
     2> "$OUT/$size-plaza.log" || { echo "FAIL $size: banana-ui (plaza) exited $?"; fail=1; }
 ux_check plaza "press right: used, view 1 sys [0-9]* game 4"
 ux_check plaza "press right: used, view 1 sys [0-9]* game 15"          # the next page, the same (first) row
 ux_check plaza "press up: unused, view 1 sys [0-9]* game 15"           # (the page's top row)
 ux_check plaza "swipe 100 240 -> 500 240: used"                         # back a page: 0, the same place
 ux_check plaza "swipe 500 240 -> 100 240: used"                         # on again: 15
+ux_check plaza "press l2: used, view 1 sys [0-9]* game 0"              # L2: back a page, the same place
+ux_check plaza "press r2: used, view 1 sys [0-9]* game 15"             # R2: on a page
+ux_check plaza "press r2: unused"                                      # (the last page already)
 ux_check plaza "press down: used, view 1 sys [0-9]* game 20"
 ux_check plaza "press r: used"
 ux_check plaza "press r: unused"                                       # (the biggest already)

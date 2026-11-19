@@ -178,7 +178,8 @@ selects it, and tapping the selected one again opens it.
 
 ## Buttons
 
-`input.<view>.<button>` (`home` and `library`; buttons `left right up down a b x y l r`) is one of: `prev`, `next`
+`input.<view>.<button>` (`home` and `library`; buttons `left right up down a b x y l r l2 r2`: L2 and R2 are L and R
+unless the theme maps them, and then only the theme's) is one of: `prev`, `next`
 (`prev:5` moves 5: a grid's rows), `first`, `last`, `open` (home: the system, or starts an app; library: the game),
 `back`, `fav`, `resume` (home: the system's last game), `prevSystem`, `nextSystem`, `prevRow`, `nextRow` (as many as the
 theme's `columns` var), `gridLeft`, `gridRight`, `gridUp`, `gridDown`, `prevPage`, `nextPage` (a `pages` list: left and right
@@ -187,7 +188,7 @@ go on to the page beside at a row's end, up and down stay on the page), `zoomIn`
 `swipeRight` are the bottom screen's swipes (a step the other way without them). An element's `onTap` is a button
 (`"a"`, `"l"`...; `"x"`, `"start"` and `"select"` do what the buttons do: a game's page, Settings, Search) or
 `"do:<action>"`. START (Settings) and
-SELECT (search) stay Banana's. The defaults are the Carts theme's: home left/right/up/down/L/R move, A opens, X
+SELECT (search) stay Banana's, and so does the back button: B, in every theme and on every page. The defaults are the Carts theme's: home left/right/up/down/L/R move, A opens, X
 resumes, Y stars; library left/right move, up/down move 10, L/R change system, A plays, B goes back, Y stars.
 
 A starts the `launch` view, which lasts `behavior.launchMs`. Its `cues` play the theme's sounds at those ms (`insert`).
