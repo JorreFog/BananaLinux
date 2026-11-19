@@ -1604,3 +1604,13 @@ settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting 
 settings		Fast, DSi CPU	快速，DSi CPU
 settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's 133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of the handheld's power. The others follow Settings > Nintendo DS > Timing.	仅限 BananaDS。快速：本游戏中 DS 的两颗 CPU 在同步间隔更长（在心金及其改版如起源心金中最多约快 10%）；精确：melonDS 自身的方式。快速可能会让游戏出错（黄金太阳：漆黑的黎明会丢失 3D 世界）：如果本游戏出问题，请改回来。“快速，DSi CPU”还会让游戏的主 CPU 以 DSi 的 133 MHz 运行：在 DS 上自身会变慢的游戏（起源心金的热闹城镇）可保持速度，但会多用掌机的性能。其他游戏遵循 设置 > Nintendo DS > 时序。
 settings		LED while asleep	休眠时的指示灯
+settings		Charge	电量
+settings		Time left	剩余时间
+settings		Power used	功耗
+settings		Voltage	电压
+settings		Capacity	容量
+settings		Charge cycles	充电循环
+settings		On the battery	使用电池
+settings		Until full	距充满
+settings		As made	出厂容量
+settings		How full it is, the time left, the power used and the battery's health.	电量、剩余时间、功耗和电池健康状况。

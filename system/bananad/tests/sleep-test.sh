@@ -221,7 +221,7 @@ echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight1/bl_power)" = 0 ] && ok "backlights on again" || bad "still off"
 stop
 
-echo "7. idle in the menu: the panels dim, and come back at the first press"
+echo "7. idle, in the menu and in a game: the panels dim, and come back at the first press"
 rm -f /run/banana/game.pid
 echo 200 > /sys/class/backlight/backlight0/brightness; echo 200 > /sys/class/backlight/backlight1/brightness
 start "dim_minutes = 0.02" "dim_percent = 30"      # 1.2 s
@@ -230,7 +230,8 @@ sleep 2.5
 ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3         # BTN_SOUTH: any button
 [ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "back to 200 at the press" || bad "still dim: $(cat /sys/class/backlight/backlight1/brightness)"
 echo $GAME > /run/banana/game.pid; sleep 2
-[ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "never dimmed while a game runs" || bad "dimmed during a game"
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 60 ] && ok "dimmed in an idle game too" || bad "not dimmed during an idle game: $(cat /sys/class/backlight/backlight1/brightness)"
+ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
 rm -f /run/banana/game.pid
 stop
 

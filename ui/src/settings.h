@@ -622,6 +622,7 @@ namespace banana
 		Result resetApply(bool emulator);	// the Reset rows: schema defaults written, live bits applied, rows reloaded
 		void save(const Item& it);
 		void refreshInfo();
+		void refreshBattery();	// Sleep & power > Battery's rows (refreshInfo calls it)
 
 		// drawing, in CSS px of a 640x480 panel
 		float X(float v) const { return v * s; }

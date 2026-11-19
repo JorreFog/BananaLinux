@@ -347,8 +347,8 @@ download on each protocol cut in the middle by a proxy and resumed.
 ## Sleep: bananad
 
 `bananad` reads every input device next to the menu and the games (evdev allows several readers; it grabs
-nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, or 10 idle minutes in the menu put
-the handheld to sleep:
+nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, or 10 idle minutes (in the menu or in a
+game, which pauses) put the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
@@ -405,8 +405,9 @@ What a wake costs is then the kernel's device resume: on the RG DS mostly the tw
 card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
-Two idle minutes in the menu dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press brings them
-back, and a game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery look once a
+Two idle minutes, in the menu or in a game, dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press
+brings them back. Settings > Sleep & power > Battery shows the gauge's facts and the charge cycles bananad adds up
+(`banana/battery-cycles`: the percent used on the battery, 100 a cycle). bananad itself sleeps in `poll()` until something is due (the battery look once a
 minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`

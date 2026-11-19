@@ -2284,6 +2284,32 @@ static void handle(const struct input_event *e)
 }
 
 /* percent, or -1 when there is no battery or it is charging */
+/* charge cycles (Settings > Sleep & power > Battery): the gauge has no count of its own, so the percent used on the
+ * battery is added up here, from the minute's look (pct: discharging, else -1), 100 of it a cycle, as a phone counts
+ * them. banana/battery-cycles: "<percent used> <since, epoch seconds>", written each 5% (a few lost at a power cut) */
+static void cycles_step(int pct)
+{
+	static const char *path = "/data/banana/battery-cycles";
+	static int last = -1, loaded;
+	static double used, unsaved;
+	static long long since;
+	if (!loaded) {
+		loaded = 1;
+		FILE *f = fopen(path, "r");
+		if (!f || fscanf(f, "%lf %lld", &used, &since) != 2 || used < 0) { used = 0; since = time(NULL); }
+		if (f) fclose(f);
+	}
+	if (pct < 0) { last = -1; return; }	/* on the charger: counted again from where it is unplugged */
+	if (last >= 0 && pct < last) unsaved += last - pct;
+	last = pct;
+	if (unsaved < 5) return;
+	used += unsaved; unsaved = 0;
+	FILE *f = fopen("/data/banana/battery-cycles.new", "w");
+	if (!f) return;
+	fprintf(f, "%.0f %lld\n", used, since);
+	if (fclose(f) == 0) rename("/data/banana/battery-cycles.new", path);
+}
+
 static int battery_discharging_pct(void)
 {
 	/* (the rk817's gauge says "Discharging" while a charger charges it, see charger_online: plugged in at 2% must not
@@ -2461,7 +2487,6 @@ int main(int argc, char **argv)
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
-		int game = pid_of("/run/banana/game.pid") != 0;
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
@@ -2470,7 +2495,8 @@ int main(int argc, char **argv)
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
 		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
-		if (!game) {
+		/* the idle timers: in the menu and in games alike */
+		{
 			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
@@ -2542,16 +2568,15 @@ int main(int argc, char **argv)
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
-		game = pid_of("/run/banana/game.pid") != 0;
+		/* idle, in the menu and in games: the panels dim, then it sleeps (a game pauses asleep, as with the lid) */
 		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
 		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
 		 * changed what it recorded); quiet_scan records them only while the recorder is on */
 		if (quiet_scan()) undim();
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
-		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		if (cfg.dim_min > 0 && !dimmed && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* on the charger too, as a phone sleeps on it (the charging light stays lit asleep) */
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 &&
+		if (cfg.autosleep_min > 0 && now - last_input >= cfg.autosleep_min * 60.0 &&
 		    !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid") && !transfer_hold())
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
@@ -2565,6 +2590,7 @@ int main(int argc, char **argv)
 			leds_update();	/* a capacity change has no uevent on every gauge */
 			rec_minute();
 			int pct = battery_discharging_pct();
+			cycles_step(pct);
 			low_count = pct >= 0 && pct <= cfg.battery_off_pct ? low_count + 1 : 0;
 			if (low_count >= 2) shutdown_now("battery empty");	/* two readings in a row: not a load spike */
 		}
