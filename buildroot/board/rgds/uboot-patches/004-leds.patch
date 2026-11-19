@@ -1,0 +1,146 @@
+From: swouapiy
+Subject: [PATCH] rockchip: the RG DS LEDs lit from U-Boot as it starts (power: green, charger: amber)
+
+diff -ruN a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi
+--- a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 09:29:34
++++ b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-27 13:33:00
+@@ -40,3 +40,55 @@
+ &vcc_sd_h {
+ 	bootph-pre-ram;
+ };
++
++/* Banana: the RG DS's LEDs (green on PWM5, amber on PWM6), lit by board.c as the handheld starts */
++&pwm5 {
++	status = "okay";
++};
++
++&pwm6 {
++	status = "okay";
++};
++
++/ {
++	banana-leds {
++		compatible = "pwm-leds";
++
++		banana-power {
++			label = "banana-power";
++			max-brightness = <255>;
++			/* the brightness "on" lights it at (U-Boot's led_pwm: 0, dark, without it) */
++			u-boot,default-brightness = <255>;
++			pwms = <&pwm5 0 25000 0>;
++		};
++
++		banana-charging {
++			label = "banana-charging";
++			max-brightness = <255>;
++			/* the brightness "on" lights it at (U-Boot's led_pwm: 0, dark, without it) */
++			u-boot,default-brightness = <255>;
++			pwms = <&pwm6 0 25000 0>;
++		};
++	};
++
++	/* the lid's hall sensor (low: shut), read by board.c: no power LED for a start with the lid shut */
++	banana-keys {
++		compatible = "gpio-keys";
++
++		banana-lid {
++			label = "banana-lid";
++			gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_LOW>;
++			linux,code = <0>;
++			pinctrl-0 = <&banana_hall_l>;
++			pinctrl-names = "default";
++		};
++	};
++};
++
++&pinctrl {
++	banana-hall {
++		banana_hall_l: banana-hall-l {
++			rockchip,pins = <0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++	};
++};
+diff -ruN a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
+--- a/arch/arm/mach-rockchip/board.c	2026-10-27 09:29:34
++++ b/arch/arm/mach-rockchip/board.c	2026-10-27 13:33:09
+@@ -25,6 +25,10 @@
+ #include <part.h>
+ #include <ram.h>
+ #include <syscon.h>
++#include <button.h>
++#include <led.h>
++#include <linux/delay.h>
++#include <power/pmic.h>
+ #include <u-boot/uuid.h>
+ #include <u-boot/crc.h>
+ #include <u-boot/sha256.h>
+@@ -184,13 +188,69 @@
+ }
+ #endif /* CONFIG_EFI_HAVE_CAPSULE_SUPPORT && CONFIG_EFI_PARTITION */
+ 
++/*
++ * Banana (RG DS, RG DS Plus): the LEDs lit as soon as U-Boot runs, so a press shows at once that the handheld is
++ * starting, as a phone's light does: the power LED (green, PWM5) when the power button started it, the charging
++ * light (amber, PWM6) with a charger in. Linux keeps them as left (default-state = "keep") until bananad sets them.
++ * Each is set off otherwise (no green for a start for charging, nor for rcK's restart into charging: the PMIC still
++ * says power button then; nor with the lid shut, as bananad turns it off again then), which also gives its PWM a
++ * period to read back.
++ */
++#define BANANA_RK817_SYS_STS		0xf0
++#define BANANA_RK817_PLUG_IN_STS	BIT(6)
++#define BANANA_RK817_ON_SOURCE		0xf5
++#define BANANA_RK817_ON_PWRON		BIT(7)
++
++/* (the boot mode flag before setup_boot_mode clears it: rcK sets BOOT_CHARGING to restart for charging) */
++static u32 banana_boot_mode;
++
++static void banana_led(const char *label, bool on)
++{
++	struct udevice *led;
++
++	if (!led_get_by_label(label, &led))
++		led_set_state(led, on ? LEDST_ON : LEDST_OFF);
++}
++
++/* the lid shut (the hall sensor, through its pull-up as Linux sets it); not known: open */
++static bool banana_lid_shut(void)
++{
++	struct udevice *lid;
++
++	if (!CONFIG_IS_ENABLED(BUTTON_GPIO) || button_get_by_label("banana-lid", &lid))
++		return false;
++	udelay(1000);	/* (the pull-up just set by its probe) */
++	return button_get_state(lid) == BUTTON_ON;
++}
++
++static void banana_leds(void)
++{
++	struct udevice *pmic;
++	int sts, on;
++
++	if (!CONFIG_IS_ENABLED(LED_PWM) || !CONFIG_IS_ENABLED(PMIC_RK8XX))
++		return;
++	if (uclass_get_device_by_driver(UCLASS_PMIC, DM_DRIVER_GET(rockchip_rk805), &pmic))
++		return;
++	sts = pmic_reg_read(pmic, BANANA_RK817_SYS_STS);
++	on = pmic_reg_read(pmic, BANANA_RK817_ON_SOURCE);
++	if (on >= 0)
++		banana_led("banana-power", (on & BANANA_RK817_ON_PWRON) && banana_boot_mode != BOOT_CHARGING &&
++			   !banana_lid_shut());
++	if (sts >= 0)
++		banana_led("banana-charging", sts & BANANA_RK817_PLUG_IN_STS);
++}
++
+ __weak int rk_board_late_init(void)
+ {
++	banana_leds();
+ 	return 0;
+ }
+ 
+ int board_late_init(void)
+ {
++	if (CONFIG_ROCKCHIP_BOOT_MODE_REG)
++		banana_boot_mode = readl((void *)CONFIG_ROCKCHIP_BOOT_MODE_REG);
+ 	setup_boot_mode();
+ 
+ #if IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT) && IS_ENABLED(CONFIG_EFI_PARTITION)

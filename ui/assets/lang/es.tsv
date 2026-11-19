@@ -2530,3 +2530,9 @@ menu		Last played: {sys.resumeTitle}	Último jugado: {sys.resumeTitle}
 settings		In a DS game, in both emulators. Swap screens: as F + SELECT. Fast-forward: on, and off again. Blow on the mic: the game hears a blow while it is held, the microphone on or off. Save and load state: as F + R and F + L. F + a button and HOME keep their own (the Hotkeys page). (The RG DS Plus has no R3.)	En un juego DS, en ambos emuladores. Intercambiar pantallas: como F + SELECT. Avance rápido: se activa, y se desactiva otra vez. Sopla en el mic: el juego oye un soplo mientras lo mantienes, con el micrófono encendido o apagado. Guardar y cargar estado: como F + R y F + L. F + un botón y HOME conservan los suyos (la página Atajos). (El RG DS Plus no tiene R3.)
 settings		Alone, in this system's games. Game's own: the game's button. Fast-forward: on, and off again (as F + R2). Save and load state: the current slot (as F + R and F + L). Menu: RetroArch's (as F + X). With F held, the button is RetroArch's hotkey. (The RG DS Plus has no R3.)	Solos, en los juegos de este sistema. Propio del juego: el botón del juego. Avance rápido: se activa, y se desactiva otra vez (como F + R2). Guardar y cargar estado: la ranura actual (como F + R y F + L). Menú: el de RetroArch (como F + X). Con F mantenido, el botón es el atajo de RetroArch. (El RG DS Plus no tiene R3.)
 settings		In a DS game, in both emulators, as Nintendo DS > Buttons has it now; that page gives it another job. (The RG DS Plus has no R3.)	En un juego DS, en ambos emuladores, según lo tiene ahora Nintendo DS > Botones; esa página le da otra función. (El RG DS Plus no tiene R3.)
+settings		Charge	Carga
+settings		Time left	Tiempo restante
+settings		Power used	Consumo
+settings		Voltage	Voltaje
+settings		Capacity	Capacidad
+settings		Charge cycles	Ciclos de carga

@@ -1548,3 +1548,9 @@ menu		Games went into their system's folder.	I giochi sono andati nella cartella
 menu		Nothing was sent.	Non è stato inviato nulla.
 bananads		or press L3	o premi L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Il gioco sente un soffio oltre la linea rossa (sensibilità: %s).
+settings		Charge	Carica
+settings		Time left	Tempo rimasto
+settings		Power used	Consumo
+settings		Voltage	Tensione
+settings		Capacity	Capacità
+settings		Charge cycles	Cicli di carica

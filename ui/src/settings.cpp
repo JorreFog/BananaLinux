@@ -504,6 +504,22 @@ namespace banana
 		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
+		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
+		items.back().hints = { "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." };
+		// the battery's own page: its facts, read by refreshInfo (each row's value in its names[0])
+		add(P, "moon", "Battery", "How full it is, the time left, the power used and the battery's health.", "", "pw_battery", {}, {}, Item::PAGE);
+		{
+			const char* BT = "Battery";
+			struct { const char* key; const char* label; const char* help; } rows[] = {
+				{ "bat_charge", "Charge", "How full the battery is, and whether it is charging." },
+				{ "bat_time", "Time left", "About how long it lasts at the power it uses now (or, charging, until it is full)." },
+				{ "bat_power", "Power used", "What the handheld uses now: more with a game, brighter screens and Wi-Fi." },
+				{ "bat_voltage", "Voltage", "The battery's voltage: about 4.2 V full, 3.4 V empty." },
+				{ "bat_capacity", "Capacity", "How much the battery holds, as the gauge has measured it, of what it was made to hold." },
+				{ "bat_cycles", "Charge cycles", "A full battery's worth used, counted by Banana. A battery keeps most of its capacity for hundreds." },
+			};
+			for (auto& r : rows) add(BT, "moon", r.label, r.help, "", r.key, { "" }, { "" }, Item::INFO);
+		}
 		// Nintendo DS: what both emulators share (the emulator, quick resume, the DS's language and name, the buttons),
 		// then a page for each emulator's own settings, in that emulator's files, both whichever is chosen (to set one up
 		// before switching to it). Both draw the DS's 3D with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -930,7 +946,9 @@ namespace banana
 			{ "Other systems", { "Buttons", "Picture & sound", "Quick resume", "Screen", "Second screen", "Emulators", "Frontend", "RetroAchievements", "Reset RetroArch" } },
 			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
-			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
+			// (the idle chain in the order it happens, then the lid, the lights, the battery; Waking up last, rarely changed)
+			{ "Sleep & power", { "Dim when idle", "Sleep when idle", "Power off after sleeping", "Closing the lid", "LEDs", "LED while asleep", "Battery", "Waking up" } },
+			{ "Battery", { "Charge", "Time left", "Power used", "Voltage", "Capacity", "Charge cycles" } },
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
@@ -1094,6 +1112,67 @@ namespace banana
 		std::string ra = readLine("/usr/share/retroarch/version");
 		if (!ra.empty()) a << " RetroArch " << ra << ", updated with BananaOS.";
 		about = a.str();
+		refreshBattery();
+	}
+
+	// Sleep & power > Battery: the rk817 gauge's own readings (micro units), the time left at the power used now, and
+	// bananad's count of charge cycles (its cycles_step: the percent used on the battery, 100 a cycle)
+	void Settings::refreshBattery()
+	{
+		std::string dir;
+		int battery = -1;
+		bool charging = false;
+		if (DIR* d = opendir("/sys/class/power_supply"))
+		{
+			while (dirent* e = readdir(d))
+			{
+				std::string b = std::string("/sys/class/power_supply/") + e->d_name;
+				if (readLine(b + "/type") == "Battery") { battery = atoi(readLine(b + "/capacity").c_str()); dir = b; }
+				else if (readLine(b + "/online") == "1") charging = true;	// (a charger: the rk817's gauge says Discharging)
+			}
+			closedir(d);
+		}
+		auto num = [&](const char* name) -> long long
+		{
+			std::string t = dir.empty() ? "" : readLine(dir + "/" + name);
+			return t.empty() ? -1 : std::llabs(atoll(t.c_str()));	// (the current's sign differs between gauges)
+		};
+		auto hm = [](double h)
+		{
+			int m = (int)(h * 60 + 0.5);
+			return m >= 60 ? std::to_string(m / 60) + " h " + std::to_string(m % 60) + " min" : std::to_string(m) + " min";
+		};
+		std::string charge = lang::tr("Unknown"), left = charge, power = charge, volt = charge, cap = charge, cycles;
+		char b[64];
+		bool full = charging && (battery >= 100 || readLine(dir + "/status") == "Full");
+		if (battery >= 0) charge = std::to_string(battery) + "% · " + lang::tr(full ? "Full" : charging ? "Charging" : "On the battery");
+		long long uv = num("voltage_avg"), ua = num("current_avg"), now = num("charge_now"), cf = num("charge_full"),
+			design = num("charge_full_design");
+		if (uv < 0) uv = num("voltage_now");
+		if (ua < 0) ua = num("current_now");
+		if (uv > 0) { snprintf(b, sizeof b, "%.2f V", uv / 1e6); volt = b; }
+		if (uv > 0 && ua >= 0) { snprintf(b, sizeof b, "%.1f W", uv / 1e6 * ua / 1e6); power = b; }
+		// (under 20 mA the time is a guess of days: a phone's "calculating" then)
+		if (full) left = lang::tr("Full");
+		else if (ua > 20000 && now >= 0)
+		{
+			if (!charging) left = hm((double)now / ua);
+			else if (cf > now) left = lang::tr("Until full") + ": " + hm((double)(cf - now) / ua);
+		}
+		if (cf > 0 && design > 0 && cf != design)
+		{
+			snprintf(b, sizeof b, "%lld of %lld mAh (%d%%)", cf / 1000, design / 1000, (int)(cf * 100 / design));
+			cap = b;
+		}
+		else if (design > 0 || cf > 0) cap = std::to_string((design > 0 ? design : cf) / 1000) + " mAh · " + lang::tr("As made");
+		double used = 0;
+		std::ifstream(data + "/battery-cycles") >> used;
+		snprintf(b, sizeof b, "%.1f", used / 100);
+		cycles = b;
+		const std::map<std::string, std::string> v = { { "bat_charge", charge }, { "bat_time", left }, { "bat_power", power },
+			{ "bat_voltage", volt }, { "bat_capacity", cap }, { "bat_cycles", cycles } };
+		for (Item& it : items)
+			if (auto f = v.find(it.key); f != v.end() && !it.names.empty()) it.names[0] = f->second;
 	}
 
 	int Settings::groupOf(int item) const
@@ -1279,7 +1358,8 @@ namespace banana
 				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
-				{ "developer", "Developer options" },	// (PR #94: System's last row, once unlocked)
+				{ "developer", "Developer options" },
+				{ "pw_battery", "Battery" },	// (PR #94: System's last row, once unlocked)
 			};
 			for (const auto& sys : RA_SYSTEMS) v.push_back({ raButtonsKey(sys), raButtonsSection(sys) });
 			return v;
@@ -1465,7 +1545,7 @@ namespace banana
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
 				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep", "on" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
@@ -2304,7 +2384,7 @@ namespace banana
 	{
 		const Item& cur = items[i];
 		std::string help = cur.help;
-		if (cur.kind == Item::INFO && cur.key != "hk") help = about;	// (Hotkeys' rows have their own)
+		if (cur.kind == Item::INFO && cur.key != "hk" && cur.key.compare(0, 4, "bat_") != 0) help = about;	// (Hotkeys' and the Battery page's rows have their own)
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
@@ -2544,7 +2624,13 @@ namespace banana
 			{
 				if (const Item* b = itemByKey(it.mirror); b && b->at < (int)b->names.size()) v = b->names[b->at];
 			}
+			// (Sleep & power > Battery: each fact on its row, read at the last refreshInfo, made in the language already)
+			else if (it.kind == Item::INFO && it.key.compare(0, 4, "bat_") == 0 && !it.names.empty()) { v = it.names[0]; nameValue = true; }
 			else if (it.kind == Item::INFO) v = it.key == "hk" && !it.names.empty() ? it.names[0] : "";	// (Hotkeys: what it does)
+			else if (it.kind == Item::PAGE && it.key == "pw_battery")	// how full it is, on the page's row
+			{
+				if (const Item* c = itemByKey("bat_charge"); c && !c->names.empty()) { v = c->names[0]; nameValue = true; }
+			}
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && (it.key == "nds_superdrastic" || it.key == "nds_bananads"))	// the DS emulator chosen
 			{

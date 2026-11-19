@@ -263,21 +263,29 @@
 		compatible = "pwm-leds";
 
 		green_led: led-0 {
+			retain-state-suspended;	/* lit while asleep, led_sleep on (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_GREEN>;
-			default-state = "on";
+			/* as U-Boot left it (lit for a power-button start, off for charging, uboot-patches/004) until bananad
+			 * sets the LEDs: on, green lit at the driver's probe, so a start for charging flashed green first */
+			default-state = "keep";
 			function = LED_FUNCTION_POWER;
 			max-brightness = <255>;
 			pwms = <&pwm5 0 25000 0>;
 		};
 
 		amber_led: led-1 {
+			retain-state-suspended;	/* lit while asleep on the charger (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_AMBER>;
+			/* as U-Boot left it (lit with a charger in, uboot-patches/004) until bananad sets the LEDs, so the
+			 * charging light stays on from the plug-in through the boot */
+			default-state = "keep";
 			function = LED_FUNCTION_CHARGING;
 			max-brightness = <255>;
 			pwms = <&pwm6 0 25000 0>;
 		};
 
 		red_led: led-2 {
+			retain-state-suspended;	/* lit while asleep, led_sleep on (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_RED>;
 			default-state = "off";
 			function = LED_FUNCTION_STATUS;

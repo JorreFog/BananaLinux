@@ -5,9 +5,6 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
-# both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
-# panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card
-banana-ui --panels-on </dev/null >/dev/null 2>&1 &
 mkdir -p /dev/pts /dev/shm
 mount -t devpts devpts /dev/pts
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
@@ -107,6 +104,19 @@ machine_id() {
 }
 machine_id /data/banana/machine-id /run/banana/machine-id
 mark "rcS: data partition ready"
+# started by a charger plugged in while it was off, or turned off with one in: charging, as a phone does while off,
+# until the power button is held (then the boot goes on) or the charger is pulled out (off again). Started with the
+# lid shut (the power button or reset, no charger): off again at once, the same way
+bananad --charge
+case $? in
+0) mark "rcS: charged, started" ;;
+3) # (as rcK: busy, read-only at least, which closes it too)
+   umount /data 2>/dev/null || mount -o remount,ro /data; sync; poweroff -f ;;
+esac
+# both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
+# panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card. (After
+# the charging decision above: a start for charging, or with the lid shut, keeps the panels dark, as a phone does)
+banana-ui --panels-on </dev/null >/dev/null 2>&1 &
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 

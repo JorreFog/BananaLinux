@@ -39,6 +39,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 #include <linux/input.h>
 #include <poll.h>
 #include <signal.h>
@@ -66,11 +68,13 @@ static struct {
 	int brightness_step;	/* percent of max */
 	double autosleep_min;	/* idle minutes in the menu before sleeping; 0 = never */
 	int lid_sleep;			/* closing the lid sleeps */
+	int lid_start;			/* the power button (or reset) starts it with the lid shut too; no: off again at once */
 	int power_long_ms;		/* holding power this long shuts down */
 	int battery_off_pct;	/* at or under this, discharging: shut down */
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
+	int led_sleep;			/* the upper LED lit while asleep (the device tree's retain-state-suspended keeps it) */
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
@@ -79,10 +83,12 @@ static struct {
 	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
 	double poweroff_after_min;	/* asleep this long on the battery: the game saved, then a clean shutdown (0: never) */
 	int recorder;			/* the flight recorder (Developer options): everything bananad sees, written to banana/logs/sessions */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12, 0, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 0, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 12, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
+extern int leds_last;
+static int amber_last, leds_asleep;	/* (leds_update's, below: suspend_now sets the LEDs asleep) */
 static void audio_route(void);
 static pid_t sound_child;	/* (the sound's setup at start, sound_start) */
 static void undim(void);
@@ -145,6 +151,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
 		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atof(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "lid_start")) cfg.lid_start = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "mic_gain")) cfg.mic_gain = atoi(v);
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
@@ -152,6 +159,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
+		else if (!strcmp(k, "led_sleep")) cfg.led_sleep = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
@@ -597,59 +605,6 @@ static void panel_off_again(void)
 }
 
 static int charger_online(void);
-/* dark and awake on the charger: waits up to ms for a press of the power button (on its release), the other
- * devices' events dropped (a key while dark wakes nothing, as in a sleep) */
-static int power_pressed(int ms)
-{
-	struct pollfd pf[MAXDEV];
-	for (int i = 0; i < ndev; i++) pf[i] = (struct pollfd){ devfd[i], POLLIN, 0 };
-	if (poll(pf, ndev, ms) <= 0) return 0;
-	int got = 0, readable = 0;
-	for (int i = 0; i < ndev; i++) {
-		if (!(pf[i].revents & POLLIN)) continue;
-		readable = 1;
-		struct input_event ev[32];
-		ssize_t r;
-		while ((r = read(devfd[i], ev, sizeof ev)) > 0)
-			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++)
-				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 0) got = 1;
-	}
-	/* only a device's hang-up or error (a USB pad pulled out while dark): wait the time out anyway, not a busy loop */
-	if (!readable) usleep(ms * 1000);
-	return got;
-}
-/* dark on the charger: the buttons and touchscreens grabbed for bananad alone, so a press there reaches neither the
- * menu nor a game (it looks asleep: A launched the game under the cursor, a tap hit RetroArch's game panel); the lid's
- * hall sensor stays shared, as BananaDS and SuperDrastic must see the lid open to wake the game they put to sleep */
-static void inputs_grab(int on)
-{
-	for (int i = 0; i < ndev; i++) {
-		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
-		ioctl(devfd[i], EVIOCGBIT(EV_SW, sizeof sw), sw);
-		if (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1) continue;
-		ioctl(devfd[i], EVIOCGRAB, on ? 1 : 0);
-	}
-}
-/* the battery's charge in percent whatever the charger says (-1: none): asleep dark on a charger too weak to keep up,
- * it still goes down */
-static int battery_capacity(void)
-{
-	DIR *d = opendir("/sys/class/power_supply");
-	if (!d) return -1;
-	struct dirent *e;
-	int r = -1;
-	while (r < 0 && (e = readdir(d))) {
-		if (e->d_name[0] == '.') continue;
-		char p[320], t[32];
-		snprintf(p, sizeof p, "/sys/class/power_supply/%s/type", e->d_name);
-		read_str(p, t, sizeof t);
-		if (strcmp(t, "Battery")) continue;
-		snprintf(p, sizeof p, "/sys/class/power_supply/%s/capacity", e->d_name);
-		r = read_int(p, -1);
-	}
-	closedir(d);
-	return r;
-}
 /* ---- Power off after sleeping (poweroff_after_sleep_minutes) -------------------------------------------------------
  * Asleep that long on the battery, the RTC wakes the handheld quietly (the panels stay dark, no hooks, nothing for the
  * menu), the game saves a resume state and quits, and it shuts down cleanly; /data/banana/resume-boot then names the
@@ -889,7 +844,7 @@ static void suspend_now(const char *why)
 	double t0 = mono();
 	/* the panels dark first: the pre-sleep hooks (Wi-Fi down and its driver unloaded, Bluetooth down) take ~2 s on the
 	 * RG DS Plus, and the panels stayed lit that long with the lid shut. The wake lights them again (below: the lid
-	 * open, or dark while charging) */
+	 * open) */
 	backlights_power(0);
 	lid_held = 0;
 	pid_t game = pid_of("/run/banana/game.pid");
@@ -899,60 +854,31 @@ static void suspend_now(const char *why)
 	sync();
 	if (sleep_fallback > 1) sleep_fallback = 1;	/* deep again (devices one at a time), see sleep_fallback */
 	sleep_mode();
-	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
-	double asleep = 0, dark_from = 0, led_at = 0;
-	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
+	int cycles = 0, rtc_wakes = 0, failures = 0;
+	double asleep = 0;
 	const char *woke = "?";
+	/* the charging light at full while asleep: a PWM LED keeps shining through a suspend only at 100% (its
+	 * retain-state-suspended, 2-linux-0029), so it stays lit on the charger as a phone's does */
+	leds_asleep = 1; leds_last = -2; amber_last = -2; leds_update();	/* (led_sleep: the upper LED too) */
 	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
 	 * before each suspend, below */
 	int by_lid = !strncmp(why, "lid", 3);
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
 	for (;;) {
-		/* a shutdown begun meanwhile (rcK, while dark on the charger or awake for the battery check): awake, so the
+		/* a shutdown begun meanwhile (rcK, while awake for a look or the battery check): awake, so the
 		 * game, paused, gets its SIGTERM and writes its saves */
 		if (powering_off()) { woke = "shutting down"; break; }
-		/* charging: no suspend, which turns the charging light off (it is a PWM LED, and the PWM stops in suspend).
-		 * Dark and awake instead, the game still paused, until the lid opens or the power button is pressed (back as
-		 * from a sleep), or the charger is pulled out (then a real sleep). Since 0.4.2 a power-button sleep too, not
-		 * only the lid's (#8: the light went out when the handheld was put to sleep on the charger). */
-		if (charger_online()) {
-			/* (no Power off after sleeping here: nothing drains, the charging light would go out, and the handheld is
-			 * picked up charged; unplugged, the deadline starts at the real sleep) */
-			off_at = 0;
-			if (!dark) {
-				dark = 1; dark_from = mono(); dark_lid = lid_closed; dark_cap = battery_capacity();
-				backlights_power(0);
-				inputs_grab(1);
-				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
-			}
-			if (mono() >= led_at) {
-				leds_update(); led_at = mono() + 10;	/* (it goes out when the battery is full) */
-				/* a charger too weak for the handheld: shut down cleanly before the battery is empty. Only once the
-				 * level has fallen since the dark state began: a low battery on a good charger (plugged in at 4%, the
-				 * lid shut) charges, and shutting down then cut the game and the charging light for nothing */
-				int cap = battery_capacity();
-				if (cap >= 0 && cap <= cfg.sleep_poweroff_pct && dark_cap >= 0 && cap < dark_cap) {
-					sleep_log("dark on the charger, but the battery is down to %d%%: shutting down", cap);
-					inputs_grab(0);
-					if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
-					shutdown_now("battery empty while charging");
-					return;
-				}
-			}
-			/* the power button wakes it, as from a sleep; with the lid shut it doesn't (a sleep goes back to
-			 * sleep then: a press in a bag mustn't run the game) */
-			if (power_pressed(500)) { read_lid(); if (!(lid_closed && cfg.lid_sleep)) { woke = "power button"; break; } }
-			read_lid();
-			if (dark_lid && !lid_closed) { woke = "lid opened"; break; }
-			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
-			continue;
-		}
+		/* the charging light as the cable is now, before each suspend: plugged in or pulled out while asleep woke it (the
+		 * RK817's interrupt), and the light follows at once; full, out at the 10-minute look */
+		leds_update();
 		/* the RTC alarm: the sooner of the battery check and the deadline (passed: woken for it, or anything else
 		 * after it with the lid shut, and the game is saved and the handheld shut down) */
-		if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
+		/* (on the charger: no Power off after sleeping, as a phone sleeps on while plugged in; unplugged, the deadline
+		 * starts at the next look) */
+		if (charger_online()) off_at = 0;
+		else if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
 		if (off_at && time(NULL) >= off_at) {
-			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
 		}
@@ -970,6 +896,9 @@ static void suspend_now(const char *why)
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
 		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
+		/* on the charger: a look every 10 minutes for the charging light (out once the battery is full) and the cable
+		 * (its coming out wakes the handheld too: the RK817's interrupt, 5-mainline-rockchip-010) */
+		if (charger_online()) secs = secs > 0 && secs < 600 ? secs : 600;
 		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
@@ -1022,10 +951,9 @@ static void suspend_now(const char *why)
 	}
 	/* awake: the game and the menu first */
 	double t_wake = mono();
-	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
-	 * power-button sleep (the lid-open event that would light them is drained below) */
-	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
-	if (dark || !lid_closed) backlights_power(!lid_closed);
+	/* the panels on when the lid is open (dark too from a lid shut with lid_sleep off before a power-button sleep:
+	 * the lid-open event that would light them is drained below) */
+	if (!lid_closed) backlights_power(1);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
@@ -1041,12 +969,11 @@ static void suspend_now(const char *why)
 	/* a sleep the menu asked for half a second before this one began (Power > Sleep, then the lid shut at once) is
 	 * this sleep: left pending, it put the handheld back to sleep the moment the lid opened */
 	menu_sleep_at = 0;
-	leds_update();
+	leds_asleep = 0; leds_last = -2; amber_last = -2; leds_update();	/* (both back at the user's level) */
 	if (headphones_in() != headphones) { headphones = !headphones; if (!sound_child) audio_route(); }	/* (else sound_poll routes) */
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
-	if (dark) sleep_log("dark while charging for %.0f s", t_wake - dark_from);
 	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
 		rtc_wakes ? ", battery checked" : "", cycles - rtc_wakes > 1 ? ", slept again with the lid shut" : "",
 		(t_back - t_wake) * 1000);
@@ -1065,6 +992,7 @@ static void shutdown_now(const char *why)
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
 	}
 	sync();
+	close(open("/run/banana/poweroff", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));	/* (rcK: off, not a restart) */
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */
 	if (kill(1, SIGUSR2)) reboot(RB_POWER_OFF);
 }
@@ -1589,8 +1517,422 @@ static int charger_online(void)
 	return on;
 }
 
+/* the kernel's side of a wake, as Android's wakeup reasons: the interrupt that woke it (/sys/power/pm_wakeup_irq,
+ * PM_SLEEP_DEBUG; named from /proc/interrupts) and the wakeup sources whose event count went up across the sleep.
+ * For sleep.log: a press that never woke it shows as no wake at all, one that woke it as the PMIC's interrupt */
+#define WSRC_MAX 48
+static struct { char dir[24], name[40]; int count; } wsrc[WSRC_MAX];
+static int nwsrc;
+static int wsrc_count(const char *dir, const char *what)
+{
+	char p[300];
+	snprintf(p, sizeof p, "/sys/class/wakeup/%s/%s", dir, what);
+	return read_int(p, -1);
+}
+static void wake_sources_snapshot(void)
+{
+	nwsrc = 0;
+	DIR *d = opendir("/sys/class/wakeup");
+	struct dirent *e;
+	while (d && nwsrc < WSRC_MAX && (e = readdir(d))) {
+		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof wsrc[0].dir) continue;
+		char p[300];
+		snprintf(wsrc[nwsrc].dir, sizeof wsrc[0].dir, "%s", e->d_name);
+		snprintf(p, sizeof p, "/sys/class/wakeup/%s/name", e->d_name);
+		read_str(p, wsrc[nwsrc].name, sizeof wsrc[0].name);
+		wsrc[nwsrc].count = wsrc_count(e->d_name, "event_count");
+		nwsrc++;
+	}
+	if (d) closedir(d);
+}
+static void wake_sources_fired(char *out, size_t n)
+{
+	size_t len = 0;
+	out[0] = 0;
+	int irq = read_int("/sys/power/pm_wakeup_irq", -1);
+	if (irq >= 0) {
+		char name[64] = "", ln[512], want[16];
+		snprintf(want, sizeof want, "%d:", irq);
+		FILE *f = fopen("/proc/interrupts", "r");
+		while (f && fgets(ln, sizeof ln, f)) {
+			char *t = ln + strspn(ln, " ");
+			if (strncmp(t, want, strlen(want))) continue;
+			ln[strcspn(ln, "\n")] = 0;
+			char *last = strrchr(ln, ' ');
+			snprintf(name, sizeof name, "%s", last ? last + 1 : "");
+			break;
+		}
+		if (f) fclose(f);
+		len += snprintf(out + len, n - len, "irq %d%s%s", irq, name[0] ? " " : "", name);
+	}
+	for (int i = 0; i < nwsrc && len < n; i++) {
+		int c = wsrc_count(wsrc[i].dir, "event_count");
+		if (c > wsrc[i].count && wsrc[i].count >= 0)
+			len += snprintf(out + len, n - len, "%s%s", len ? ", " : "", wsrc[i].name[0] ? wsrc[i].name : wsrc[i].dir);
+	}
+}
+
+/* ---- charging while off ---------------------------------------------------------------------------------------- */
+/* A charger plugged into the handheld while it is off starts the RK817, and so the whole boot (U-Boot no longer turns
+ * it straight off again: "Power Off due to plug-in event"); turned off with the charger in, rcK restarts it instead
+ * (banana/.charge-next). Either way rcS runs "bananad --charge" before anything else, and it charges as a phone does
+ * while off: the panels dark, one CPU at its lowest clock, the amber LED until the battery is full, then the green
+ * one. The power button held a second starts the handheld (exit 0: rcS goes on); the charger pulled out turns it off
+ * (exit 3). Not a charger's start: exit 1 at once. banana/logs/charging.log says what each one did. */
+#define RK817_ON_SOURCE 0xf5	/* why the RK817 started: bit 7 the power key, bit 6 a charger plugged in */
+
+/* a register of the PMIC (I2C address 0x20, its bus found in sysfs), -1 if it can't be read (QEMU: none) */
+static int pmic_read(unsigned char reg)
+{
+	int bus = -1;
+	DIR *d = opendir("/sys/bus/i2c/devices");
+	struct dirent *e;
+	while (d && (e = readdir(d))) {
+		int b;
+		char p[300], name[32];
+		if (sscanf(e->d_name, "%d-0020", &b) != 1 || !strstr(e->d_name, "-0020")) continue;
+		snprintf(p, sizeof p, "/sys/bus/i2c/devices/%s/name", e->d_name);
+		read_str(p, name, sizeof name);
+		if (!strncmp(name, "rk8", 3)) { bus = b; break; }
+	}
+	if (d) closedir(d);
+	if (bus < 0) return -1;
+	char dev[32];
+	snprintf(dev, sizeof dev, "/dev/i2c-%d", bus);
+	int fd = open(dev, O_RDWR | O_CLOEXEC);
+	if (fd < 0) return -1;
+	/* the register's number and its value in one transfer (the kernel's driver shares the bus) */
+	unsigned char v = 0;
+	struct i2c_msg m[2] = { { 0x20, 0, 1, &reg }, { 0x20, I2C_M_RD, 1, &v } };
+	struct i2c_rdwr_ioctl_data x = { m, 2 };
+	int r = ioctl(fd, I2C_RDWR, &x);
+	close(fd);
+	return r == 2 ? v : -1;
+}
+
+static void charge_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void charge_log(const char *fmt, ...)
+{
+	char line[256];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(line, sizeof line, fmt, ap);
+	va_end(ap);
+	say("%s", line);
+	FILE *f = fopen("/data/banana/logs/charging.log", "a");
+	if (!f) return;
+	time_t now = time(NULL);
+	char when[32];
+	strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	fprintf(f, "%s %s\n", when, line);
+	fclose(f);
+}
+
+static void cpus_low(int low)
+{
+	write_file("/sys/devices/system/cpu/cpufreq/policy0/scaling_governor", low ? "powersave" : "schedutil");
+	for (int c = 1; c < 8; c++) {
+		char p[64];
+		snprintf(p, sizeof p, "/sys/devices/system/cpu/cpu%d/online", c);
+		write_file(p, low ? "0" : "1");
+	}
+}
+
+/* the lid shut now, read at once from every input device that has it (charging while off has none open yet) */
+static int lid_shut_now(void)
+{
+	if (test_lid) return read_int(test_lid, 0);
+	int shut = 0;
+	DIR *d = opendir("/dev/input");
+	struct dirent *e;
+	while (d && !shut && (e = readdir(d))) {
+		if (strncmp(e->d_name, "event", 5)) continue;
+		char p[300];
+		snprintf(p, sizeof p, "/dev/input/%s", e->d_name);
+		int fd = open(p, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) continue;
+		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(fd, EVIOCGSW(sizeof sw), sw) >= 0 && (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1))
+			shut = 1;
+		close(fd);
+	}
+	if (d) closedir(d);
+	return shut;
+}
+
+/* ---- the start guard, a phone's (Android's charger mode, Rockchip's on the stock RG DS: uboot-low-power-voltage 3.6 V,
+ * uboot-exit-charge-level 6%, uboot-exit-charge-voltage 3.75 V): starting draws a burst of current, and a nearly empty
+ * battery sags under it and cuts out half way, a start-and-die loop that also wears the cell */
+#define START_MIN_UV	3600000	/* without a charger: under this, not started at all */
+#define START_CHG_PCT	6	/* from charging while off: at least this */
+#define START_CHG_UV	3750000	/* and this */
+
+/* the battery's voltage now (microvolts), -1 unknown */
+static int battery_uv(void)
+{
+	char bat[256] = "", p[320];
+	int pct = -1, charging = 0;
+	if (!battery_state(bat, sizeof bat, &pct, &charging)) return -1;
+	snprintf(p, sizeof p, "/sys/class/power_supply/%s/voltage_now", bat);
+	return read_int(p, -1);
+}
+
+/* the phone's "battery too low" picture, on the one light there is: the red LED blinks three times */
+static void blink_too_low(void)
+{
+	char red[300];
+	led_path("status", red, sizeof red);
+	if (!red[0]) return;
+	for (int i = 0; i < 3; i++) {
+		led_set(red, "on", 255);
+		usleep(250000);
+		led_set(red, "off", 255);
+		usleep(250000);
+	}
+}
+
+/* enough to start from charging: the percent and the voltage both (the gauge alone can be wrong after a long rest) */
+static int start_ok(int *pct_out, int *uv_out)
+{
+	char bat[256] = "";
+	int pct = -1, charging = 0;
+	battery_state(bat, sizeof bat, &pct, &charging);
+	int uv = battery_uv();
+	if (pct_out) *pct_out = pct;
+	if (uv_out) *uv_out = uv;
+	return (pct < 0 || pct >= START_CHG_PCT) && (uv < 0 || uv >= START_CHG_UV);
+}
+
+static int uevent_open(void);
+static int charge_mode(void)
+{
+	/* a restart (rcK's mark): the RK817 still says what started it the first time, a charger perhaps */
+	if (!unlink("/data/banana/.restart")) { unlink("/data/banana/.charge-next"); return 1; }
+	const char *why = !unlink("/data/banana/.charge-next") ? "turned off with the charger in" : NULL;
+	int on = pmic_read(RK817_ON_SOURCE);
+	if (!why && on >= 0 && (on & 0x40) && !(on & 0x80)) why = "the charger plugged in";
+	/* the power button (or reset) with the lid shut, in a bag perhaps: not meant, as a press with it shut doesn't wake
+	 * the handheld either. Off again (exit 3, as the charger pulled out), or charging if a charger is in; U-Boot left
+	 * the power LED dark. Opening the lid is what starts it; bananad.conf's lid_start = yes, as before */
+	int lid_start = !why && !cfg.lid_start && lid_shut_now();
+	if (lid_start && charger_online()) why = "started with the lid shut, the charger in";
+	if (lid_start && !why) { charge_log("started with the lid shut: turned off again"); return 3; }
+	/* the start guard: a press of the power button with the battery too low. Without a charger, under 3.6 V twice a
+	 * second apart (not a moment's sag): off again. With one in, under 6% or 3.75 V: charging while off, as the
+	 * stock system's charge mode */
+	if (!why) {
+		int uv = battery_uv();
+		if (!charger_online() && uv > 0 && uv < START_MIN_UV) {
+			sleep(1);
+			int uv2 = battery_uv();
+			if (uv2 > 0 && uv2 < START_MIN_UV) {
+				charge_log("the battery too low to start (%d mV): turned off again; charge it first", uv2 / 1000);
+				blink_too_low();
+				return 3;
+			}
+		}
+		int pct;
+		if (charger_online() && !start_ok(&pct, &uv)) why = "the battery too low to start, the charger in";
+	}
+	if (!why) return 1;
+	/* started by the cable, but no charger seen: the RK817's charger reads offline for the first seconds of a boot
+	 * with the cable in (sorting out what is plugged in: logs-test19, +1.5 A into the battery while "offline"), and
+	 * that start went on to the menu. Up to 6 s for it; none by then: the cable is out again (plugged in and straight
+	 * out), and it is off again, not the menu, as a phone off stays off */
+	if (!charger_online()) {
+		double w0 = mono();
+		while (!charger_online() && mono() - w0 < 6) usleep(250000);
+		if (!charger_online()) { charge_log("%s, but the charger out again already: turned off again", why); return 3; }
+		charge_log("(the charger seen %.1f s into charging while off)", mono() - w0);
+	}
+	char bat[256] = "";
+	int pct = -1, charging = 0;
+	battery_state(bat, sizeof bat, &pct, &charging);
+	char amb[300], bp[320];
+	led_path("charging", amb, sizeof amb);
+	snprintf(bp, sizeof bp, "%s/brightness", amb);
+	int lit = amb[0] ? read_int(bp, -1) : -1;	/* (U-Boot lights it with a charger in, uboot-patches/004) */
+	charge_log("charging while off (%s): battery %d%%, the charging light %s", why, pct,
+		lit > 0 ? "already on (U-Boot)" : lit == 0 ? "off until now" : "not found");
+	close(open("/run/banana/charging", O_WRONLY | O_CREAT | O_CLOEXEC, 0644));	/* (for a boot's own waits) */
+	backlights_power(0);
+	cpus_low(1);
+	char green[300], red[300], amber[300];
+	led_path("power", green, sizeof green);
+	led_path("status", red, sizeof red);
+	led_path("charging", amber, sizeof amber);
+	/* the LEDs are all it shows, and at full: asleep, a PWM LED stays lit only at 100% (retain-state-suspended) */
+	int level = 255;
+	led_set(red, "off", level);
+	/* the power button: every input device that has it */
+	struct pollfd pf[16];
+	int n = 0;
+	DIR *d = opendir("/dev/input");
+	struct dirent *e;
+	while (d && n < 16 && (e = readdir(d))) {
+		if (strncmp(e->d_name, "event", 5)) continue;
+		char p[300];
+		snprintf(p, sizeof p, "/dev/input/%s", e->d_name);
+		int fd = open(p, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd < 0) continue;
+		unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
+		int k = ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys) < 0 ||	/* (the test's FIFOs: can't say, kept) */
+			(keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long)))));
+		if (k) pf[n++] = (struct pollfd){ fd, POLLIN, 0 };
+		else close(fd);
+	}
+	if (d) closedir(d);
+	struct input_event ev;
+	for (int i = 0; i < n; i++) while (read(pf[i].fd, &ev, sizeof ev) > 0) {}	/* (what came before isn't for us) */
+	int keys_n = n;
+	/* the kernel's uevents (the battery's, the charger's): a look at once when one comes, so the lights follow the
+	 * cable while it is awake, not at the next look */
+	int uev = uevent_open();
+	if (uev >= 0 && n < 16) pf[n++] = (struct pollfd){ uev, POLLIN, 0 };
+	/* Android's charger mode (healthd_mode_charger): the cable pulled out turns the lights off at once and the handheld
+	 * off 10 s later (UNPLUGGED_SHUTDOWN_TIME), the cable back meanwhile calls that off; awake until then */
+	double t0 = mono(), held = 0, look = 0, unplugged = 0;
+	int full = -1, r = -1, slept = 0, cant_sleep = 0, wc_missed = 0, busy = 0;
+	/* the pre-sleep hooks (Wi-Fi and USB off) in a child, beside the loop: run in line they took a minute at times (the
+	 * Wi-Fi's module still coming up this early in the boot), and the power button and the cable went unheard meanwhile:
+	 * the charging light stayed on that long after the cable came out, and holding power to start did nothing. Android's
+	 * charger mode answers both at once, whatever else it does */
+	pid_t pre = 0;
+	int pre_done = 0;
+	double pre_t = 0;
+	/* how long the power button is held to start it: a second, half of one more when the press is what woke it (its
+	 * wake took about a second and a half already: Android's charger mode wants 2 s in all, POWER_ON_KEY_TIME) */
+	double need = 1.0;
+	char wc[32] = "", woke[200] = "";	/* (the wakeup count at the look; what woke the last sleep, for the log) */
+	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");	/* (the looks' alarm: before main() sets it) */
+	while (r < 0) {
+		poll(pf, n, held || pre > 0 ? 100 : look ? 2000 : 0);	/* (the first look at once) */
+		double now = mono();
+		if (pre > 0 && waitpid(pre, NULL, WNOHANG) == pre) {
+			pre = 0; pre_done = 1;
+			if (now - pre_t > 2) charge_log("the pre-sleep steps (Wi-Fi and USB off) took %.0f s", now - pre_t);
+			sleep_mode();
+			look = 0;	/* (asleep now: looked at once) */
+		}
+		for (int i = 0; i < keys_n; i++) {
+			while (read(pf[i].fd, &ev, sizeof ev) == (ssize_t)sizeof ev)
+				if (ev.type == EV_KEY && ev.code == KEY_POWER) {
+					held = ev.value ? (held ? held : now) : 0;
+					if (!ev.value) need = 1.0;	/* (let go: the next press is a new one) */
+				}
+		}
+		if (uev >= 0 && (pf[n - 1].revents & POLLIN)) {
+			char buf[2048];
+			while (recv(uev, buf, sizeof buf, MSG_DONTWAIT) > 0) {}
+			look = 0;	/* (the charger or the battery changed: looked at now) */
+		}
+		if (held && now - held >= need && !lid_shut_now()) {	/* (not with the lid shut: open it first) */
+			int sp, suv;
+			if (start_ok(&sp, &suv)) { r = 0; break; }
+			/* too low to start yet (6% and 3.75 V): the red light says so, and it charges on */
+			charge_log("the power button: the battery too low to start (%d%%, %d mV), charging on until %d%% and %.2f V",
+				sp, suv / 1000, START_CHG_PCT, START_CHG_UV / 1e6);
+			blink_too_low();
+			held = 0;
+		}
+		if (now < look) continue;
+		look = now + 2;
+		/* the kernel's wakeup count before the look, written back before the suspend: a cable pulled out between the
+		 * two (its event already in) calls the suspend off instead of being slept through (the kernel's way) */
+		read_str("/sys/power/wakeup_count", wc, sizeof wc);
+		if (!charger_online()) {
+			if (!unplugged) {
+				unplugged = now;
+				led_set(amber, "off", level);
+				led_set(green, "off", level);
+				full = -1;	/* (back: the lights set again) */
+				charge_log("the charger pulled out: off in 10 s unless it comes back");
+			} else if (now - unplugged >= 10) { r = 3; break; }
+			continue;	/* (awake until then, a look every 2 s) */
+		}
+		if (unplugged) { unplugged = 0; charge_log("the charger back: charging on"); }
+		char st[32] = "", p[320];
+		battery_state(bat, sizeof bat, &pct, &charging);
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/status", bat);
+		read_str(p, st, sizeof st);
+		int f = pct >= 100 || !strcmp(st, "Full");
+		if (f != full) {
+			full = f;
+			led_set(amber, f ? "off" : "on", level);
+			led_set(green, f ? "on" : "off", level);
+			if (f) charge_log("full after %.0f min", (now - t0) / 60);
+		}
+		/* nothing to wait for awake: asleep, as a phone charging while off, until the power button, the cable
+		 * coming out or the next look in 10 minutes (the LED amber or green). Not while the cable looks out (its
+		 * second look comes awake), nor after a suspend that failed (awake then, as before) */
+		if (held || cant_sleep) continue;
+		if (!pre_done) {
+			/* (USB and Wi-Fi off, as for a sleep: in a child; asleep once it is done) */
+			if (!pre) {
+				pre_t = now;
+				pre = fork();
+				if (pre == 0) { hooks_run("pre"); _exit(0); }
+				if (pre < 0) { pre = 0; hooks("pre", 0); pre_done = 1; sleep_mode(); }
+			}
+			if (!pre_done) continue;
+		}
+		if (wc[0] && write_file("/sys/power/wakeup_count", wc) && wc_missed++ < 3) { look = 0; continue; }
+		wc_missed = 0;
+		/* the next look in 20 s: the cable's going wakes it at once (the RK817's interrupt), but should that ever be
+		 * missed, the lights still go out within 20 s. On the charger the looks cost the battery nothing */
+		rtc_alarm(20);
+		wake_sources_snapshot();
+		int sr = write_file("/sys/power/state", "mem");
+		int err = errno;
+		rtc_alarm(0);
+		if (!sr) wake_sources_fired(woke, sizeof woke);
+		/* a sleep refused (busy: an event came as it went, the cable's perhaps): tried again at the next look; three in a
+		 * row, awake from then on */
+		if (sr) {
+			busy++;
+			if (busy >= 3) cant_sleep = 1;
+			charge_log("a sleep refused while charging (%s)%s", strerror(err), cant_sleep ? ": awake from now on" : ": again at the next look");
+		} else busy = 0;
+		slept++;
+		look = 0;	/* (the look at once after the wake) */
+		/* the power button held: the press that woke it may be over before its event is read, or still going */
+		for (int i = 0; i < keys_n; i++) {
+			unsigned long keys[KEY_MAX / (8 * sizeof(long)) + 1] = { 0 };
+			if (ioctl(pf[i].fd, EVIOCGKEY(sizeof keys), keys) >= 0 &&
+			    (keys[KEY_POWER / (8 * sizeof(long))] & (1UL << (KEY_POWER % (8 * sizeof(long))))) && !held)
+				{ held = mono(); need = 0.5; }
+		}
+	}
+	/* starting: USB and Wi-Fi back. Pre-sleep steps still at work (power pressed in the first moments): left to end on
+	 * their own, the post ones after them, in the background, so the start isn't held up */
+	if (pre > 0) {
+		if (!r) {
+			pid_t w = fork();
+			if (w == 0) {
+				/* (not this one's child: its end watched, a zombie counting as ended) */
+				char st;
+				while (kill(pre, 0) == 0 && (st = proc_state(pre)) != 'Z' && st != 0) usleep(100000);
+				hooks_run("post");
+				_exit(0);
+			}
+		}
+	} else if (pre_done && !r) hooks("post", 0);
+	for (int i = 0; i < n; i++) close(pf[i].fd);
+	unlink("/run/banana/charging");
+	battery_state(bat, sizeof bat, &pct, &charging);
+	charge_log("%s after %.0f min: battery %d%%%s%s%s", r ? "the charger pulled out: turning off" : "the power button: starting",
+		(mono() - t0) / 60, pct, r && slept ? " (the last wake: " : "", r && slept ? (woke[0] ? woke : "not known") : "",
+		r && slept ? ")" : "");
+	led_set(amber, "off", level);
+	led_set(green, r ? "off" : "on", level);
+	if (!r) cpus_low(0);	/* (the boot's banana-perf sets the governor it wants) */
+	return r;
+}
+
 int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
 static int amber_last = -2;	/* the charging LED's, the same way */
+static int leds_asleep;		/* suspend_now's: asleep, the charging light at full and the upper LED as led_sleep says (a
+				 * PWM LED stays lit through a suspend only at 100%) */
 static void leds_update(void)
 {
 	static char green[300], red[300], amber[300];
@@ -1608,21 +1950,24 @@ static void leds_update(void)
 	int plugged = charger_online();
 	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
-	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
-	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
+	/* the upper LED: green, red when low, blinking red when critical (not while charging). Asleep, with led_sleep on:
+	 * full (a PWM at 100% holds its pin high even if the SoC's sleep stops its clock; the LED core leaves it lit, the
+	 * device tree's retain-state-suspended), so the handheld shows it is asleep, not off; with it off, dark */
+	int upper = !leds_asleep ? level : level > 0 && cfg.led_sleep ? 255 : 0;
+	int state = upper <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
 		leds_last = state;
-		led_set(green, state == 1 ? "on" : "off", level);
-		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
+		led_set(green, state == 1 ? "on" : "off", upper);
+		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", upper);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
 		static const char *const looks[] = { "off", "green", "red", "red blinking" };
-		rec("led", "upper %s%s (battery %d%%%s)", looks[state], "", pct, charging ? ", charging" : "");
+		rec("led", "upper %s%s (battery %d%%%s)", looks[state], leds_asleep ? ", asleep" : "", pct, charging ? ", charging" : "");
 	}
 	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
 	int amber_on = level > 0 && plugged && (pct < 0 || pct < 100);
 	if (amber_on != amber_last || last == -2) {
 		amber_last = amber_on;
-		led_set(amber, amber_on ? "on" : "off", level);
+		led_set(amber, amber_on ? "on" : "off", leds_asleep ? 255 : level);
 		rec("led", "charging light %s", amber_on ? "on" : "off");
 	}
 }
@@ -1939,6 +2284,32 @@ static void handle(const struct input_event *e)
 }
 
 /* percent, or -1 when there is no battery or it is charging */
+/* charge cycles (Settings > Sleep & power > Battery): the gauge has no count of its own, so the percent used on the
+ * battery is added up here, from the minute's look (pct: discharging, else -1), 100 of it a cycle, as a phone counts
+ * them. banana/battery-cycles: "<percent used> <since, epoch seconds>", written each 5% (a few lost at a power cut) */
+static void cycles_step(int pct)
+{
+	static const char *path = "/data/banana/battery-cycles";
+	static int last = -1, loaded;
+	static double used, unsaved;
+	static long long since;
+	if (!loaded) {
+		loaded = 1;
+		FILE *f = fopen(path, "r");
+		if (!f || fscanf(f, "%lf %lld", &used, &since) != 2 || used < 0) { used = 0; since = time(NULL); }
+		if (f) fclose(f);
+	}
+	if (pct < 0) { last = -1; return; }	/* on the charger: counted again from where it is unplugged */
+	if (last >= 0 && pct < last) unsaved += last - pct;
+	last = pct;
+	if (unsaved < 5) return;
+	used += unsaved; unsaved = 0;
+	FILE *f = fopen("/data/banana/battery-cycles.new", "w");
+	if (!f) return;
+	fprintf(f, "%.0f %lld\n", used, since);
+	if (fclose(f) == 0) rename("/data/banana/battery-cycles.new", path);
+}
+
 static int battery_discharging_pct(void)
 {
 	/* (the rk817's gauge says "Discharging" while a charger charges it, see charger_online: plugged in at 2% must not
@@ -2047,9 +2418,14 @@ static void rec_minute(void)
 
 int main(int argc, char **argv)
 {
-	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	if (argc > 1 && !strcmp(argv[1], "--charge")) {	/* rcS's, before the menu: charging while off (charge_mode) */
+		load_conf("/etc/banana/bananad.conf");
+		load_conf("/data/banana/bananad.conf");
+		load_timezone();
+		return charge_mode();
+	}
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
@@ -2111,7 +2487,6 @@ int main(int argc, char **argv)
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
-		int game = pid_of("/run/banana/game.pid") != 0;
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
@@ -2120,7 +2495,8 @@ int main(int argc, char **argv)
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
 		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
-		if (!game) {
+		/* the idle timers: in the menu and in games alike */
+		{
 			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
@@ -2192,16 +2568,15 @@ int main(int argc, char **argv)
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
-		game = pid_of("/run/banana/game.pid") != 0;
+		/* idle, in the menu and in games: the panels dim, then it sleeps (a game pauses asleep, as with the lid) */
 		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
 		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
 		 * changed what it recorded); quiet_scan records them only while the recorder is on */
 		if (quiet_scan()) undim();
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
-		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
-		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
+		if (cfg.dim_min > 0 && !dimmed && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		/* on the charger too, as a phone sleeps on it (the charging light stays lit asleep) */
+		if (cfg.autosleep_min > 0 && now - last_input >= cfg.autosleep_min * 60.0 &&
 		    !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid") && !transfer_hold())
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
@@ -2215,6 +2590,7 @@ int main(int argc, char **argv)
 			leds_update();	/* a capacity change has no uevent on every gauge */
 			rec_minute();
 			int pct = battery_discharging_pct();
+			cycles_step(pct);
 			low_count = pct >= 0 && pct <= cfg.battery_off_pct ? low_count + 1 : 0;
 			if (low_count >= 2) shutdown_now("battery empty");	/* two readings in a row: not a load spike */
 		}

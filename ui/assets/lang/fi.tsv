@@ -1548,3 +1548,9 @@ menu		Games went into their system's folder.	Pelit menivät järjestelmänsä ka
 menu		Nothing was sent.	Mitään ei lähetetty.
 bananads		or press L3	tai paina L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Peli kuulee puhalluksen punaisen viivan yli (herkkyys: %s).
+settings		Charge	Varaus
+settings		Time left	Aikaa jäljellä
+settings		Power used	Virrankulutus
+settings		Voltage	Jännite
+settings		Capacity	Kapasiteetti
+settings		Charge cycles	Latauskerrat

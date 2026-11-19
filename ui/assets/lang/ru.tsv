@@ -1539,3 +1539,9 @@ bananads		or press L3	или нажмите L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение выше красной линии (чувствительность: %s).
 bananads		Edge marking	Контуры
 bananads		Fog	Туман
+settings		Charge	Заряд
+settings		Time left	Осталось
+settings		Power used	Потребление
+settings		Voltage	Напряжение
+settings		Capacity	Ёмкость
+settings		Charge cycles	Циклы зарядки

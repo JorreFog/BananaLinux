@@ -347,8 +347,8 @@ download on each protocol cut in the middle by a proxy and resumed.
 ## Sleep: bananad
 
 `bananad` reads every input device next to the menu and the games (evdev allows several readers; it grabs
-nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, or 10 idle minutes in the menu put
-the handheld to sleep:
+nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, or 10 idle minutes (in the menu or in a
+game, which pauses) put the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
@@ -386,8 +386,8 @@ emulator) for a game that saved, and shuts down cleanly. The lid can't switch it
 SoC's GPIO0_C3 (`gpio-keys-hall`), unpowered once the RK817 is off, and the RK817 starts only from its own power key
 (or a charger). At the next boot (power pressed) banana-ui takes `resume-boot` (deleted before the game starts, so a
 game that fails isn't started at every boot), names the ROM in `/run/banana/resume-once` and launches it; the
-launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
-count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
+launcher loads its resume state once, Quick resume on or off. Asleep on the charger the deadline doesn't
+count, as a phone sleeps on while plugged in; unplugged (the cable's coming out wakes it), it starts from there.
 
 A download or an unpacking of Files' (banana-fetch's runner, its pid in `/run/banana/transfer.pid`) with no game
 running holds the lid's sleep and the idle one: the lid shut makes the panels dark, the job goes on, and the handheld
@@ -405,8 +405,9 @@ What a wake costs is then the kernel's device resume: on the RG DS mostly the tw
 card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
-Two idle minutes in the menu dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press brings them
-back, and a game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery look once a
+Two idle minutes, in the menu or in a game, dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press
+brings them back. Settings > Sleep & power > Battery shows the gauge's facts and the charge cycles bananad adds up
+(`banana/battery-cycles`: the percent used on the battery, 100 a cycle). bananad itself sleeps in `poll()` until something is due (the battery look once a
 minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
@@ -448,6 +449,21 @@ host and put LLVM on the handheld. The module is loaded by rcS after the menu's 
 **LEDs.** `green:power`, `red:status` and `amber:charging` (pwm-leds). bananad sets them only when the battery's
 state changes, which the kernel announces as power_supply uevents (a netlink socket; there is no udev): the amber
 LED follows the charger's own LED trigger (`<battery>-charging`), the critical blink is the kernel's timer trigger.
+The amber LED has `retain-state-suspended` (honoured by leds-pwm with `2-linux-0029`): asleep on the charger bananad
+sets it at full, the one level a PWM LED keeps through a suspend, so the handheld sleeps as a phone does with its
+charging light lit; an RTC look every 10 minutes puts it out once the battery is full, and the RK817's plug-in and
+plug-out interrupts wake it (`5-mainline-rockchip-010`), so the light follows the cable at once.
+
+**Charging while off.** U-Boot no longer turns the handheld straight off when a charger is plugged in
+(`CONFIG_ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON` unset) and lights the LEDs itself as it starts
+(`uboot-patches/004`: amber with a charger in, green for the power button, within a second). rcS then runs
+`bananad --charge` before anything else: started by a charger (the RK817's `ON_SOURCE` register), or turned off with
+one in (rcK's `banana/.charge-next`, then a restart into charging), it charges as Android's charger mode does: the
+panels dark, one CPU at its lowest clock, the amber LED until full, then the green one, asleep between looks every
+20 s. The power button held about 2 s starts the handheld (rcS goes on to the menu); the cable pulled out turns it
+off 10 s later unless it comes back. A start guard as the stock firmware's (6% and 3.75 V from charging, 3.6 V
+without) keeps a nearly empty battery from a start-and-die loop; the power button with the lid shut turns it off
+again (`lid_start`). Each one is a line in `banana/logs/charging.log`.
 
 **Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. RG DS: the
 rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its

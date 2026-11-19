@@ -49,9 +49,20 @@ else
     [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
     [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight
 fi
+# turned off with the charger in: started again into charging (rcS, bananad --charge) as a phone does; a restart
+# leaves its own mark, so the RK817's memory of a charger that started it isn't taken for a new one
+CHARGE=
+if [ -f /run/banana/poweroff ]; then
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && CHARGE=1; done
+    [ -n "$CHARGE" ] && touch /data/banana/.charge-next
+else
+    touch /data/banana/.restart
+fi
 /usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync
 # the LEDs off: switched off, the handheld shows nothing (bananad stopped above, so it doesn't put them back)
 for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
+# (the boot mode flag says so to U-Boot, which then leaves the power LED off: the PMIC still says power button)
+[ -n "$CHARGE" ] && { devmem 0xfdc20200 32 0x5242C30B 2>/dev/null; reboot -f; }

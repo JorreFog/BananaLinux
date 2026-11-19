@@ -1,0 +1,67 @@
+From: swouapiy <swouapiy@users.noreply.github.com>
+Subject: [PATCH] power: supply: rk817-charger: wake on the cord plugged in or pulled out
+
+The plug in and plug out interrupts are requested but never armed for
+wakeup, so a cord pulled out while the system sleeps is only seen at the
+next timed wake. On an RG DS Plus charging while off (the system asleep
+between looks at the battery) the charging light stayed lit for up to
+20 s after the cord came out, until opening the lid woke it. The stock
+Android kernel (Rockchip's BSP) wakes on both.
+
+Arm both interrupts for wakeup across suspend, with the device's wakeup
+enabled at probe (devm, and switchable in power/wakeup as usual).
+
+diff --git a/drivers/power/supply/rk817_charger.c b/drivers/power/supply/rk817_charger.c
+index 5e417ad..ce90ab9 100644
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -54,6 +54,9 @@ struct rk817_charger {
+ 	struct power_supply *chg_ps;
+ 	bool plugged_in;
+ 	bool battery_present;
++	/* the charger's plug in and out interrupts: wakes from sleep, as the BSP's charger has them */
++	int plugin_irq;
++	int plugout_irq;
+ 
+ 	/*
+ 	 * voltage_k and voltage_b values are used to calibrate the ADC
+@@ -1338,6 +1341,12 @@ static int rk817_charger_probe(struct platform_device *pdev)
+ 				     "plug_out_irq request failed!\n");
+ 	}
+ 
++	charger->plugin_irq = plugin_irq;
++	charger->plugout_irq = plugout_irq;
++	ret = devm_device_init_wakeup(dev);
++	if (ret)
++		return dev_err_probe(dev, ret, "wakeup init failed!\n");
++
+ 	ret = devm_delayed_work_autocancel(&pdev->dev, &charger->work,
+ 					   rk817_charging_monitor);
+ 	if (ret)
+@@ -1439,6 +1448,14 @@ static int __maybe_unused rk817_suspend(struct device *dev)
+ 	regmap_write_bits(charger->rk808->regmap, RK817_GAS_GAUGE_GG_STS,
+ 			  RK817_RELAX_VOL_UPD, 0);
+ 
++	/* A cord plugged in or pulled out wakes the system, as on the BSP: a
++	 * charging light set at once, not at the next timed wake.
++	 */
++	if (device_may_wakeup(dev)) {
++		enable_irq_wake(charger->plugin_irq);
++		enable_irq_wake(charger->plugout_irq);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -1447,6 +1464,11 @@ static int __maybe_unused rk817_resume(struct device *dev)
+ 
+ 	struct rk817_charger *charger = dev_get_drvdata(dev);
+ 
++	if (device_may_wakeup(dev)) {
++		disable_irq_wake(charger->plugin_irq);
++		disable_irq_wake(charger->plugout_irq);
++	}
++
+ 	rk817_bat_sleep_adjust(charger);
+ 
+ 	/* force an immediate update */
