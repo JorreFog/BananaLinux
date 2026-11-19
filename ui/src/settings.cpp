@@ -519,7 +519,7 @@ namespace banana
 		items.back().hints = { "Full brightness.", "Softer lights.", "No lights." };
 		if (chargingPlus_())
 		{
-			add(P, "moon", "Higher charging limit", "For this connection only, with a 5 V / 3 A rated supply and cable. Unplugging or sleeping restores normal charging. Press A twice.",
+			add(P, "moon", "Higher charging limit", "Arm for this 5 V / 3 A supply and cable. Only while no game is running and the lid is closed or both screens are idle-dimmed. Press A twice.",
 				"", "charge_higher", { "" }, { "" }, Item::ACTION);
 			add(P, "moon", "Normal charging limit", "Restores the normal input current limit. Press A twice.",
 				"", "charge_normal", { "" }, { "" }, Item::ACTION);

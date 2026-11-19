@@ -1,0 +1,160 @@
+Subject: [PATCH] power: supply: rk817: bound idle charging to a connection and a renewable timeout
+
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -59,6 +59,10 @@
+ 
+ 	/* Serialises USB input limit writes against the default resets. */
+ 	struct mutex input_lock;
++	unsigned long policy_epoch;
++	bool policy_armed;
++	bool policy_may_be_high;
++	struct delayed_work policy_timeout;
+ 
+ 	/*
+ 	 * voltage_k and voltage_b values are used to calibrate the ADC
+@@ -690,7 +694,9 @@
+ 	int ret;
+ 
+ 	ret = rk817_chg_write_input(charger, RK817_INPUT_CUR_DEFAULT_SEL);
+-	if (ret)
++	if (!ret)
++		charger->policy_may_be_high = false;
++	else
+ 		dev_warn(charger->dev, "unable to set default input limits: %d\n",
+ 			 ret);
+ 
+@@ -705,6 +711,8 @@
+ {
+ 	guard(mutex)(&charger->input_lock);
+ 
++	charger->policy_epoch++;
++	charger->policy_armed = false;
+ 	return rk817_chg_write_default_input(charger);
+ }
+ 
+@@ -731,7 +739,7 @@
+ 	if (sel < 0)
+ 		return -EINVAL;
+ 
+-	guard(mutex)(&charger->input_lock);
++	lockdep_assert_held(&charger->input_lock);
+ 
+ 	if (rk817_input_cur_ua[sel] >
+ 	    rk817_input_cur_ua[RK817_INPUT_CUR_DEFAULT_SEL]) {
+@@ -757,12 +765,71 @@
+ 	return ret;
+ }
+ 
++/* A dead or stalled policy owner must not leave a raised input limit behind. */
++static void rk817_policy_timeout(struct work_struct *work)
++{
++	struct rk817_charger *c = container_of(to_delayed_work(work),
++					       struct rk817_charger, policy_timeout);
++
++	guard(mutex)(&c->input_lock);
++	if (c->policy_may_be_high && rk817_chg_write_default_input(c))
++		mod_delayed_work(system_percpu_wq, &c->policy_timeout, HZ);
++}
++
++static ssize_t idle_charge_show(struct device *dev, struct device_attribute *attr,
++				char *buf)
++{
++	struct rk817_charger *c = dev_get_drvdata(dev);
++
++	guard(mutex)(&c->input_lock);
++	return sysfs_emit(buf, "%lu %u\n", c->policy_epoch, c->policy_armed);
++}
++
++static ssize_t idle_charge_store(struct device *dev, struct device_attribute *attr,
++				 const char *buf, size_t count)
++{
++	struct rk817_charger *c = dev_get_drvdata(dev);
++	char cmd[8], extra;
++	unsigned long epoch;
++	int ret;
++
++	if (sscanf(buf, "%7s %lu %c", cmd, &epoch, &extra) != 2)
++		return -EINVAL;
++	guard(mutex)(&c->input_lock);
++	if (!c->plugged_in || c->policy_epoch != epoch)
++		return -ESTALE;
++	if (!strcmp(cmd, "arm")) {
++		c->policy_armed = true;
++		return count;
++	}
++	if (!c->policy_armed)
++		return -EPERM;
++	if (!strcmp(cmd, "idle")) {
++		c->policy_may_be_high = true;
++		ret = rk817_chg_set_input_current(c, 2000000);
++		mod_delayed_work(system_percpu_wq, &c->policy_timeout, 3 * HZ);
++	} else if (!strcmp(cmd, "busy")) {
++		ret = c->policy_may_be_high ? rk817_chg_write_default_input(c) : 0;
++	} else {
++		return -EINVAL;
++	}
++	return ret ? ret : count;
++}
++static DEVICE_ATTR_RW(idle_charge);
++
++static void rk817_remove_idle_charge(void *data)
++{
++	device_remove_file(data, &dev_attr_idle_charge);
++}
++
+ static irqreturn_t rk817_plug_in_isr(int irq, void *cg)
+ {
+ 	struct rk817_charger *charger;
+ 
+ 	charger = (struct rk817_charger *)cg;
+ 	scoped_guard(mutex, &charger->input_lock) {
++		charger->policy_epoch++;
++		charger->policy_armed = false;
+ 		/* Retry a failed unplug reset before exposing a new connection. */
+ 		rk817_chg_write_default_input(charger);
+ 		charger->plugged_in = 1;
+@@ -792,6 +859,8 @@
+ 	 * default limits back, which also drops any raised input limit.
+ 	 */
+ 	scoped_guard(mutex, &charger->input_lock) {
++		charger->policy_epoch++;
++		charger->policy_armed = false;
+ 		charger->plugged_in = 0;
+ 		rk817_chg_write_default_input(charger);
+ 	}
+@@ -814,7 +883,13 @@
+ 
+ 	switch (prop) {
+ 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+-		ret = rk817_chg_set_input_current(charger, val->intval);
++		if (val->intval > 1500000)
++			return -EPERM;
++		scoped_guard(mutex, &charger->input_lock) {
++			charger->policy_epoch++;
++			charger->policy_armed = false;
++			ret = rk817_chg_set_input_current(charger, val->intval);
++		}
+ 		if (!ret)
+ 			power_supply_changed(charger->chg_ps);
+ 		return ret;
+@@ -1510,6 +1585,19 @@
+ 				     "plug_out_irq request failed!\n");
+ 	}
+ 
++	ret = devm_delayed_work_autocancel(dev, &charger->policy_timeout,
++					   rk817_policy_timeout);
++	if (ret)
++		return ret;
++	if (of_machine_is_compatible("anbernic,rg-ds-plus")) {
++		ret = device_create_file(dev, &dev_attr_idle_charge);
++		if (ret)
++			return ret;
++		ret = devm_add_action_or_reset(dev, rk817_remove_idle_charge, dev);
++		if (ret)
++			return ret;
++	}
++
+ 	ret = devm_delayed_work_autocancel(&pdev->dev, &charger->work,
+ 					   rk817_charging_monitor);
+ 	if (ret)

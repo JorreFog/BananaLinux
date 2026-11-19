@@ -9,7 +9,8 @@ export BANANA_POWER_SUPPLY_ROOT=$T BANANA_BOARD=rgds-plus
 passed=0
 fixture() {
     rm -rf "$T/charger" "$T/battery"
-    mkdir "$T/charger" "$T/battery"
+    mkdir -p "$T/charger/device" "$T/battery"
+    echo "7 0" > "$T/charger/device/idle_charge"
     printf 'USB\n' > "$T/charger/type"
     printf '1\n' > "$T/charger/online"
     printf '1500000\n' > "$T/charger/input_current_limit"
@@ -34,8 +35,12 @@ run 2 higher --unconfirmed; limit 1500000
 run 2 higher --confirm-5v-3a extra; limit 1500000
 run 2 unknown; limit 1500000
 run 2 normal extra; limit 1500000
-run 0 higher --confirm-5v-3a; limit 2000000
-run 0 higher --confirm-5v-3a; limit 2000000
+run 0 higher --confirm-5v-3a; limit 1500000
+[ "$(cat "$T/charger/device/idle_charge")" = "arm 7" ]
+echo "7 1" > "$T/charger/device/idle_charge"
+run 0 higher --confirm-5v-3a; limit 1500000
+[ "$(cat "$T/charger/device/idle_charge")" = "arm 7" ]
+echo "7 1" > "$T/charger/device/idle_charge"
 run 0 normal; limit 1500000
 run 0 normal; limit 1500000
 before=$(sha256sum "$T/battery/"*)
@@ -55,8 +60,21 @@ rm "$T/charger/online"
 run 1 higher --confirm-5v-3a; limit 2000000
 
 fixture
+rm "$T/charger/device/idle_charge"
+run 1 higher --confirm-5v-3a; limit 1500000
+fixture
+run 0 game-start
+echo '7 1' > "$T/charger/device/idle_charge"
+run 0 game-start
+[ "$(cat "$T/charger/device/idle_charge")" = "busy 7" ]
+echo '7 1' > "$T/charger/device/idle_charge"
+echo 2000000 > "$T/charger/input_current_limit"
+run 1 game-start
+fixture
 printf 'quiet banana.board=rgds-plus root=/dev/mmcblk0p2\n' > "$T/cmdline"
-BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 0 higher --confirm-5v-3a; limit 2000000
+BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 0 higher --confirm-5v-3a; limit 1500000
+[ "$(cat "$T/charger/device/idle_charge")" = "arm 7" ]
+echo "7 1" > "$T/charger/device/idle_charge"
 fixture
 printf 'quiet banana.board=rgds\n' > "$T/cmdline"
 BANANA_BOARD=universal BANANA_CMDLINE_FILE="$T/cmdline" run 1 higher --confirm-5v-3a; limit 1500000

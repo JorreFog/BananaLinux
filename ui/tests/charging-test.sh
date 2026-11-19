@@ -12,7 +12,7 @@ cat > "$HELPER" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "$CHARGING_CALLS"
 case $CHARGING_RESULT in
-success) echo 'Higher input limit selected for this connection. Unplugging or sleeping restores normal charging.' ;;
+success) echo 'Idle charging armed for this connection.' ;;
 error) echo 'Connect the rated charger first.' >&2; exit 1 ;;
 normal) echo 'Normal charging selected.' ;;
 offline) echo 'No charger connected. Normal charging applies on connection.' ;;

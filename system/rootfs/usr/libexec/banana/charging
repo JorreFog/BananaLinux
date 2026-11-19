@@ -15,7 +15,7 @@ read_value() { cat "$1" 2>/dev/null; }
 number() { case $1 in ''|*[!0-9]*) return 1;; esac; [ "${#1}" -le 9 ]; }
 
 case ${1:-} in
-status|normal) [ "$#" = 1 ] || exit 2 ;;
+game-start|status|normal) [ "$#" = 1 ] || exit 2 ;;
 higher) [ "$#" = 2 ] && [ "$2" = --confirm-5v-3a ] || {
     echo "Use charging higher --confirm-5v-3a only with a 5 V / 3 A rated supply and cable." >&2
     exit 2
@@ -23,6 +23,16 @@ higher) [ "$#" = 2 ] && [ "$2" = --confirm-5v-3a ] || {
 *) echo "charging status | normal | higher --confirm-5v-3a" >&2; exit 2 ;;
 esac
 
+policy=$CHARGER/device/idle_charge
+if [ "$1" = game-start ]; then
+    # Caller holds the daemon's exclusive lock. The attribute is also present
+    # on other boards sharing this driver, even though they cannot arm via UI.
+    read -r epoch armed < "$policy" || exit 1
+    case "$armed" in 0) ;; 1) printf 'busy %s\n' "$epoch" > "$policy" || exit 1 ;; *) exit 1 ;; esac
+    limit=$(read_value "$CHARGER/input_current_limit")
+    number "$limit" && [ "$limit" -le 1500000 ] || exit 1
+    exit 0
+fi
 [ "$BOARD" = rgds-plus ] || fail "This charging profile is for the RG DS Plus."
 [ "$(read_value "$CHARGER/type")" = USB ] || fail "The RK817 charger is unavailable."
 [ -f "$CHARGER/input_current_limit" ] && [ -r "$CHARGER/input_current_limit" ] &&
@@ -31,6 +41,9 @@ current=$(read_value "$CHARGER/input_current_limit")
 number "$current" || fail "Could not read the input current limit."
 if [ "$1" = status ]; then
     printf 'Input current limit: %s microamps.\n' "$current"
+    if [ -r "$policy" ] && read -r epoch armed < "$policy"; then
+        case "$armed" in 1) echo "Idle charging armed." ;; 0) echo "Idle charging not armed." ;; esac
+    fi
     exit 0
 fi
 
@@ -52,7 +65,12 @@ if [ "$1" = higher ]; then
     [ "$cell_current" -gt 0 ] && [ "$cell_current" -le 2000000 ] &&
         [ "$cell_voltage" -gt 0 ] && [ "$cell_voltage" -le 4350000 ] ||
         fail "The battery limits do not support this charging profile."
-    target=2000000
+    [ -w "$policy" ] && read -r epoch armed < "$policy" || fail "Idle charging requires the updated kernel."
+    case "$epoch" in ''|*[!0-9]*) fail "Unknown charger connection." ;; esac
+    case "$armed" in 0|1) ;; *) fail "Unknown charger policy." ;; esac
+    printf 'arm %s\n' "$epoch" > "$policy" || fail "The charger changed. Arm it again."
+    echo "Idle charging armed for this connection."
+    exit 0
 fi
 
 if ! printf '%s\n' "$target" 2>/dev/null > "$CHARGER/input_current_limit"; then
@@ -63,8 +81,4 @@ if [ "$(read_value "$CHARGER/input_current_limit")" != "$target" ]; then
     printf '1500000\n' 2>/dev/null > "$CHARGER/input_current_limit" || :
     fail "The charging limit could not be confirmed; select it again after connecting."
 fi
-if [ "$target" = 2000000 ]; then
-    echo "Higher input limit selected for this connection. Unplugging or sleeping restores normal charging."
-else
-    echo "Normal charging selected."
-fi
+echo "Normal charging selected."

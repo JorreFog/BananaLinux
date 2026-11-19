@@ -52,6 +52,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <sys/file.h>
 #include <fstream>
 #include <functional>
 #include <future>
@@ -2728,6 +2729,16 @@ int main(int argc, char** argv)
 
 	auto runGame = [&](int game)
 	{
+		// Hold through launch, pause and exit. The daemon uses the same lock
+		// when raising the limit; never start a game on an unconfirmed limit.
+		struct ChargeGuard { int fd = -1; ~ChargeGuard() { if (fd >= 0) close(fd); } } charge;
+		if (access("/sys/class/power_supply/charger/device/idle_charge", F_OK) == 0)
+		{
+			charge.fd = open("/run/banana/idle-charge.lock", O_CREAT | O_RDWR | O_CLOEXEC, 0600);
+			if (charge.fd < 0 || flock(charge.fd, LOCK_EX) ||
+			    system("/usr/libexec/banana/charging game-start") != 0)
+			{ logf("game start held: could not confirm normal charging"); return; }
+		}
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;
@@ -2952,6 +2963,7 @@ int main(int argc, char** argv)
 				setenv(BOVL_ENV, ndsOverlay.file().c_str(), 1);
 				if (compLink.open()) setenv(BCOMP_ENV, BCOMP_DEFAULT_PATH, 1);
 			}
+			if (charge.fd >= 0 && fcntl(charge.fd, F_SETFD, 0) < 0) _exit(126);
 			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
 			_exit(127);
 		}
@@ -2962,6 +2974,7 @@ int main(int argc, char** argv)
 			f << pid;
 			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
 			f << "\n";
+			f.close();
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);

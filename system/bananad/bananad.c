@@ -39,6 +39,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #include <linux/input.h>
 #include <poll.h>
 #include <signal.h>
@@ -86,6 +87,8 @@ static void leds_update(void);
 static void audio_route(void);
 static pid_t sound_child;	/* (the sound's setup at start, sound_start) */
 static void undim(void);
+static int idle_charge(int eligible);
+static int charge_dimmed(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
 static int headphones;
@@ -316,15 +319,47 @@ static void osd(const char *what, int percent)
 
 /* the lid's state as the kernel has it now (EVIOCGSW), not from events: closed means closed on any device */
 static const char *test_lid;	/* tests (tests/sleep-test.sh): the lid's state from this file, not the kernel */
-static void read_lid(void)
+static int physical_lid_closed(void)
 {
-	if (test_lid) { lid_closed = read_int(test_lid, 0); return; }
-	lid_closed = 0;
+	if (test_lid) return read_int(test_lid, 0);
 	for (int i = 0; i < ndev; i++) {
 		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
 		if (ioctl(devfd[i], EVIOCGSW(sizeof sw), sw) >= 0 && (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1))
-			lid_closed = 1;
+			return 1;
 	}
+	return 0;
+}
+static void read_lid(void) { lid_closed = physical_lid_closed(); }
+
+/* Renew only the currently armed connection. Serialize the check and write
+ * with the UI's entire game lifetime, including its pre-exec window. */
+#ifndef CHARGE_POLICY
+#define CHARGE_POLICY "/sys/class/power_supply/charger/device/idle_charge"
+#define CHARGE_LOCK "/run/banana/idle-charge.lock"
+#define CHARGE_GAME "/run/banana/game.pid"
+#define CHARGE_BL "/sys/class/backlight"
+#endif
+static int idle_charge(int eligible)
+{
+	FILE *f = fopen(CHARGE_POLICY, "r");
+	if (!f) return 0;
+	unsigned long epoch;
+	int armed;
+	int ok = fscanf(f, "%lu %d", &epoch, &armed) == 2 && armed == 1;
+	fclose(f);
+	if (!ok) return 0;
+	int fd = open(CHARGE_LOCK, O_CREAT | O_RDWR | O_CLOEXEC, 0600);
+	if (fd < 0 || flock(fd, LOCK_EX | LOCK_NB)) {
+		if (fd >= 0) close(fd);
+		return 1; /* the launcher lowers the ceiling before it starts */
+	}
+	struct stat st;
+	int no_game = lstat(CHARGE_GAME, &st) < 0 && errno == ENOENT;
+	char cmd[64];
+	snprintf(cmd, sizeof cmd, "%s %lu", eligible && no_game ? "idle" : "busy", epoch);
+	write_file(CHARGE_POLICY, cmd); /* kernel timeout covers a lost owner */
+	close(fd);
+	return 1;
 }
 
 /* the headphone jack's state as the kernel has it (the codec's jack is an input device with a switch) */
@@ -944,6 +979,7 @@ static void suspend_now(const char *why)
 			 * sleep then: a press in a bag mustn't run the game) */
 			if (power_pressed(500)) { read_lid(); if (!(lid_closed && cfg.lid_sleep)) { woke = "power button"; break; } }
 			read_lid();
+			idle_charge(lid_closed);
 			if (dark_lid && !lid_closed) { woke = "lid opened"; break; }
 			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
 			continue;
@@ -1018,6 +1054,7 @@ static void suspend_now(const char *why)
 		break;
 	}
 	/* awake: the game and the menu first */
+	idle_charge(0);
 	double t_wake = mono();
 	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
 	 * power-button sleep (the lid-open event that would light them is drained below) */
@@ -1445,9 +1482,30 @@ static void dim(void)
 		}
 	}
 }
+/* A visible second panel left bright by bottom-ui, or a failed dim
+ * write, must not qualify the open handheld. Check both real backlights. */
+static int charge_dimmed(void)
+{
+	if (!dimmed) return 0;
+	for (int i = 0; i < 2; i++) {
+		char p[128];
+		snprintf(p, sizeof p, CHARGE_BL "/%s/bl_power", BL[i]);
+		int power = read_int(p, -1);
+		if (power == 4) continue;
+		if (power != 0) return 0;
+		snprintf(p, sizeof p, CHARGE_BL "/%s/brightness", BL[i]);
+		int level = read_int(p, -1), ok = 0;
+		for (int k = 0; k < dim_count; k++)
+			if (!strcmp(BL[i], dim_name[k]) && level >= 0 && level < dim_level[k] &&
+			    level <= (dim_level[k] * cfg.dim_pct / 100 > 1 ? dim_level[k] * cfg.dim_pct / 100 : 1)) ok = 1;
+		if (!ok) return 0;
+	}
+	return 1;
+}
 static void undim(void)
 {
 	if (!dimmed) return;
+	idle_charge(0);
 	for (int i = 0; i < dim_count; i++) {
 		char p[600], v[32];
 		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", dim_name[i]);
@@ -1879,6 +1937,7 @@ static void handle(const struct input_event *e)
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
+		if (!lid_closed) idle_charge(0);
 		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; lid_held = 0; }
 		/* a DS game: the panels dark now, the sleep 1.5 s later, so the game sees its lid close first (BananaDS and
 		 * SuperDrastic read the hall sensor too: its sleep mode, its lid sound); opened before that, no sleep */
@@ -2066,6 +2125,9 @@ int main(int argc, char **argv)
 	unlink("/run/banana/bananad-ready");
 	open_inputs();
 	headphones = headphones_in();
+	/* A restarted owner does not inherit a previous user's arming. */
+	if (!access(CHARGE_POLICY, F_OK))
+		write_file("/sys/class/power_supply/charger/input_current_limit", "1500000");
 	restore_settings();	/* the backlight */
 	audio_find_cards();	/* (the loop's own idea of the cards; the child writes the route) */
 	sound_start();		/* the volumes and the route, in a child (above) */
@@ -2095,6 +2157,7 @@ int main(int argc, char **argv)
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
 		int game = pid_of("/run/banana/game.pid") != 0;
+		if (idle_charge((lid_closed && physical_lid_closed()) || charge_dimmed()) && wait > 1) wait = 1;
 		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
 		 * job's: banana-ui's in /run/banana/files.pid; a download of Files': transfer_hold); looked at again every 5 s,
 		 * so the idle sleep, or the lid's, comes once it is over */
