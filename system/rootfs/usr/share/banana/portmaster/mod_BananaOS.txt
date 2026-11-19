@@ -29,3 +29,10 @@ GODOT2_OPTS="-r ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f"
 
 # Use for Godot 3+
 GODOT_OPTS="--resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f"
+
+# PortMaster's splash (a picture shown while a port loads) holds the panel (DRM master) for as long as it is told,
+# and ports start it in the background next to the game: `$ESUDO splash "splash.png" 10000 &`. The game's SDL then
+# couldn't set its mode ("Could not set videomode on CRTC", every flip -13) and never tried again: a black screen
+# (Dueling Dragons and the other GameMaker ports doing this). With no sudo here ($ESUDO empty) this function is what
+# `splash` runs: none, the game has the panel from the start.
+splash() { :; }

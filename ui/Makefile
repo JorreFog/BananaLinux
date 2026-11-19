@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp
+SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/glass.cpp src/speaker_eq.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp src/settings_gamepanel.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
 SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/panel.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
@@ -76,7 +76,7 @@ CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -shared -fPIC -o $@ $< -ldl
 
-# the speaker EQ (Settings > Display & sound > Speaker EQ): an ALSA filter plugin, in alsa-lib's plugin folder where
+# the speaker EQ (Settings > Look & sound > Speaker EQ): an ALSA filter plugin, in alsa-lib's plugin folder where
 # bananad's `type banana_eq` finds it. -DPIC: alsa-lib's plugin macros only skip their static-build symbol with it
 libasound_module_pcm_banana_eq.so: src/eq/pcm_banana_eq.c src/eq/eq.h
 	$(CC) $(CFLAGS) $(LDFLAGS) -O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -shared -fPIC -DPIC \
@@ -197,11 +197,11 @@ tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/guide-test.cpp src/nds/guide.cpp src/json.cpp
 # the DS Pokémon companion's pages on made-up games: every page as a PNG at both sizes, and the touches (tests/run.sh runs it)
 # the DS companion's pages on the five GBA games' ROMs (a look: tests/out/gba-pages; not in run.sh - needs the ROMs)
-GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/nds/nitro.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/logic.cpp src/nds/guide.cpp src/json.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/nds/nitro.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/logic.cpp src/nds/guide.cpp src/json.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp src/glass.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/gba-pages-test: $(GBA_PAGES_SRC) src/nds/pages.h src/nds/model.h src/gba/gen3rom.h src/gba/gen3live.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(GBA_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 
-NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp src/glass.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 

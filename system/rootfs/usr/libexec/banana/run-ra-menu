@@ -1,0 +1,5 @@
+#!/bin/sh
+# RetroArch on its own menu, no game (Settings > Other systems > Open RetroArch, the Apps shelf's RetroArch): run-retroarch
+# --menu, with Banana's settings and buttons as for a game. (Named apart from run-retroarch: the menu gives a game of
+# run-retroarch's the game panel, and RetroArch's menu wants both screens' buttons, not those)
+exec /usr/libexec/banana/run-retroarch --menu

@@ -1,6 +1,6 @@
 {
   // An example theme: copy it to banana/themes on the card (any name ending in .json), change it, and pick it in
-  // Settings > Display & sound > Theme. README.txt next to it lists every colour you can set.
+  // Settings > Look & sound > Theme. README.txt next to it lists every colour you can set.
   "name": "Ocean",
   "author": "BananaOS",
   "base": "dark",

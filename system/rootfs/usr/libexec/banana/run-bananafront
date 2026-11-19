@@ -12,14 +12,31 @@ setting() {
     [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
+PGROM=$2
+# pg <name>: this game's own value (X on the game in the library > its rows: banana/ra-per-game-<name>.conf, a line
+# "<system>/<ROM file name> = <value>", the last one for it counts), else nothing
+pg() {
+    [ -n "$BANANA_SYSTEM" ] && [ -f /data/banana/ra-per-game-$1.conf ] || return 0
+    awk -v k="$BANANA_SYSTEM/${PGROM##*/} = " 'substr($0, 1, length(k)) == k { v = substr($0, length(k) + 1) } END { printf "%s", v }' /data/banana/ra-per-game-$1.conf
+}
+# own <key>: this game's own value, else the system's (Settings > Other systems > the system: <key>.<system>), else the
+# general one
+own() {
+    o=$(pg "${1#ra_}")
+    [ -n "$o" ] || { [ -n "$BANANA_SYSTEM" ] && o=$(setting "$1.$BANANA_SYSTEM"); }
+    [ -n "$o" ] || o=$(setting "$1")
+    printf '%s' "$o"
+}
 # the core Settings > Other systems picked for the system (as run-retroarch: the image's, then the card's)
 if [ -n "$BANANA_SYSTEM" ] && [ "${1#/}" = "$1" ]; then
-    c=$(setting "core.$BANANA_SYSTEM")
+    c=$(pg core); [ -n "$c" ] || c=$(setting "core.$BANANA_SYSTEM")
     for d in /usr/lib/libretro /data/retroarch/cores; do
         [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
     done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+# the system page's looks that are the core's own options (Colour correction, Game Boy palette), as run-retroarch
+[ -n "$BANANA_SYSTEM" ] && [ -x /usr/libexec/banana/ra-coreopts ] && /usr/libexec/banana/ra-coreopts "$BANANA_SYSTEM" "$CORE" "$ROM"
 CFG=/data/retroarch/retroarch.cfg
 ra_cfg() { sed -n "/^$1 = \"\(.*\)\"/{s//\1/;h};\${x;p}" $CFG 2>/dev/null; }
 mkdir -p /data/saves /data/states /data/screenshots
@@ -84,12 +101,12 @@ if [ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/nul
 fi
 # Settings > Other systems > Shader (ra_shader): the same looks, as BananaOS's GLSL shaders (SuperDrastic's folder:
 # libretro's zfast-lcd, zfast-crt, sharp-bilinear converted), drawn by the GPU into the picture's place on the panel
-case $(setting ra_shader) in lcd) SH=zfast-lcd ;; crt) SH=zfast-crt ;; sharp) SH=sharp-bilinear ;; *) SH= ;; esac
+case $(own ra_shader) in lcd) SH=zfast-lcd ;; crt) SH=zfast-crt ;; sharp) SH=sharp-bilinear ;; *) SH= ;; esac
 SH=${BANANAFRONT_SHADER-$SH}    # (tests: another shader, or "" for none)
 [ -n "$SH" ] && [ -d /usr/lib/superdrastic/shaders ] && { export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders; set -- --shader $SH "$@"; }
 # Settings > Other systems > Screen border (ra_border): the same borders as run-retroarch (the theme's, else its base
 # palette's), on an overlay plane over the panel, the picture in the border's hole (borders.conf)
-if [ "${BANANAFRONT_BORDER:-$(setting ra_border)}" = on ] && [ -n "$BANANA_SYSTEM" ]; then    # (tests: BANANAFRONT_BORDER)
+if [ "${BANANAFRONT_BORDER:-$(own ra_border)}" = on ] && [ -n "$BANANA_SYSTEM" ]; then    # (tests: BANANAFRONT_BORDER)
     BD=/usr/share/banana/borders
     MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
     read BX BY BW BH <<EOF
@@ -108,8 +125,14 @@ EOF
     PNG=$BD/$MODE/$th/$BANANA_SYSTEM.png
     [ -n "$BH" ] && [ -f "$PNG" ] && set -- --border "$PNG" --border-rect "$BX,$BY,$BW,$BH" "$@"
 fi
-# the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
-[ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
+# the picture's size: Settings' Picture size (ra_scale, or the system's own ra_scale.<system>: fit, integer, full);
+# default: as RetroArch has it (Integer scale in its menu), else the core's aspect, as large as fits
+case $(own ra_scale) in
+fit) set -- --scale fit "$@" ;;
+integer) set -- --scale integer "$@" ;;
+full) set -- --scale stretch "$@" ;;
+*) [ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@" ;;
+esac
 # low latency: each frame started as late as it still makes its refresh (BananaFront measures its own frames), the
 # buttons read that much later: GBC 16.7 -> 7.5 ms from the read to the picture (bananafront_lowlat, on by default)
 [ "${BANANAFRONT_LOWLAT_SET:-$(setting bananafront_lowlat)}" != off ] && set -- --lowlat "$@"
@@ -136,6 +159,8 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     exec $BF "$@" < "${BANANA_RA_CMD:-/dev/null}" >&4 2>>$L/bananafront.log
 fi
 MON=$(ra_cfg video_monitor_index)
+# (or the system's own screen, ra_screen.<system>)
+case $BANANA_SYSTEM in ?*) case $(own ra_screen) in top) MON=2 ;; bottom) MON=1 ;; esac ;; esac
 . /usr/libexec/banana/one-panel
 case ${MON:-2} in 2) one_panel_dark top; S=top ;; *) one_panel_dark bottom; S=bottom ;; esac
 # commands on stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), as run-retroarch has them

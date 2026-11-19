@@ -50,11 +50,16 @@ namespace banana
 		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list (headless runs: row)
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
 		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
-		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
+		// the systems for Shown systems (id, name); withGames: the ids with games on the card (Scrape artworks > Systems
+		// lists those, and any set to Skip)
+		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems, const std::set<std::string>& withGames = {});
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
+		std::set<std::string> gameSystems;	// (setSystems' withGames)
 		void addShelfRows();
+		void addSystemRows();	// Other systems > Per system configurations: a row each system, by manufacturer then system
 		void close();
 		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
 		void openFiles();
@@ -158,7 +163,10 @@ namespace banana
 
 		// what the host has to do after an input (ACTED: a page did something that changes no setting, as Files' copy or
 		// rename: the select sound alone, not CHANGED's settings.conf read again and the menu's texts made again)
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED, LAUNCH };
+		// LAUNCH: an entry of the library to start (launchPath: Other systems > Open RetroArch; the Settings already closed)
+		std::string launchPath;
+		static constexpr const char* RA_MENU_ENTRY = "/usr/share/banana/apps/retroarch/RetroArch.app";
 		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)
@@ -219,6 +227,8 @@ namespace banana
 		{
 			std::string section, icon, label, help;
 			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
+			std::string inherit;					// a system's own (Other systems > the system): the general row's key,
+													// whose value its first choice, "Same as all", follows (no line kept)
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
@@ -282,7 +292,7 @@ namespace banana
 		void renderCredits();
 		// the credits list's lines: a section's heading, then its names (index into credits; -1 - section for a heading)
 		std::vector<int> crLines;
-		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
+		// Look & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
 		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
 		std::vector<std::string> thNames, thValues;
 		int thSel = 0, thTop = 0;
@@ -302,7 +312,12 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH, PG_RA = 32 };
+		// another system's game (X on it): its system page's rows for this game only (PG_RA + the index), each "Same as
+		// system" first: banana/ra-per-game-<name>.conf, "<system>/<ROM file name> = <value>" (run-retroarch's pg)
+		struct PgRa { std::string label, head, help, file; std::vector<std::string> names, values; int at = 0; };
+		std::vector<PgRa> pgRa;
+		std::string pgRaKey;
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
@@ -639,6 +654,14 @@ namespace banana
 		bool scraping() const { return scrapeLine.compare(0, 8, "running ") == 0; }
 		bool pollScrape(double nowMs);		// true when the line changed
 		void startScrape();
+	public:
+		// a download or unpacking brought files: box art for the new games (the ones without; Wi-Fi on, none running),
+		// so their covers and logos come by themselves. True when it started
+		bool artForNewGames();
+		// with Settings closed: that box art's run followed (the library read again once it's done: takeLibraryChanged)
+		void followArt(double nowMs) { if (scraping()) pollScrape(nowMs); }
+	private:
+		std::string artShort() const;		// Look & sound's row: "410 of 530 games", "None yet", "120 / 530"
 		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
 		// home server sync (Network > Home server): banana-sync runs on its own and says how far it got in
 		// /run/banana/sync.status; the pairing is in banana/romsync.json
@@ -801,6 +824,10 @@ namespace banana
 		void hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb = 0);
 		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
+		bool glassBox(const std::string& kind, bool on, float x, float y, float w, float h);
+		// the screen being drawn (a Glass theme's panels show their screen's picture)
+		int scr = 0;
+		void beginScreen(int n) { scr = n; be->beginScreen(n); }
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
@@ -823,8 +850,14 @@ namespace banana
 		std::string helpOf(int item);
 		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
+		bool pictureIcon(const std::string& name, float x, float y, int scale, bool centred);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
+		// a theme's "switches": an off/on row's switch (its state 0 or 1; -1 not such a row), Brightness and Volume's slider
+		int switchOf(const Item& it) const;
+		void pill(float x, float y, float w, float h, const rnds::Color& c);
+		void drawSwitch(float x, float y, bool state, bool picked);
+		void drawSlider(float x, float y, float w, float frac, bool picked);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the

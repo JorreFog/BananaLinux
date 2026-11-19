@@ -77,24 +77,37 @@ namespace banana
 
 	Sound::Sound(const std::string& dir)
 	{
+		reload(dir);
+		th = std::thread([this] { run(); });
+	}
+
+	void Sound::reload(const std::string& dir)
+	{
+		std::map<std::string, std::shared_ptr<const Clip>> got;
+		auto load = [&](const std::string& path, const std::string& key)
+		{
+			auto c = std::make_shared<Clip>();
+			if (!loadWav(path, c->pcm, c->rate, c->channels)) return false;
+#ifdef BANANA_ALSA
+			to48k(c->pcm, c->rate, c->channels);
+#endif
+			got[key] = c;
+			return true;
+		};
 		for (const char* n : { "scroll", "select", "back", "fav", "ready", "insert" })
 		{
-			// a user theme's own sound for it (rnds::themeFiles; "off": none), else the theme's (one that doesn't
-			// load: the theme's)
+			// the menu's own sound, for the intro and the outro ("base:"), whatever the theme
+			load(dir + "/" + n + ".wav", std::string("base:") + n);
+			// a theme's own sound for it (rnds::themeFiles; "off": none), else the menu's (one that doesn't load: the
+			// menu's)
 			auto own = rnds::themeFiles.sounds.find(n);
 			if (own != rnds::themeFiles.sounds.end() && own->second == "off") continue;
-			Clip c;
-			bool got = own != rnds::themeFiles.sounds.end() && loadWav(own->second, c.pcm, c.rate, c.channels);
-			if (!got) got = loadWav(dir + "/" + n + ".wav", c.pcm, c.rate, c.channels);
-			if (got)
-			{
-#ifdef BANANA_ALSA
-				to48k(c.pcm, c.rate, c.channels);
-#endif
-				clips[n] = std::move(c);
-			}
+			if (own != rnds::themeFiles.sounds.end() && load(own->second, n)) continue;
+			auto base = got.find(std::string("base:") + n);
+			if (base != got.end()) got[n] = base->second;
 		}
-		th = std::thread([this] { run(); });
+		std::lock_guard<std::mutex> l(m);
+		clips.swap(got);
 	}
 
 	Sound::~Sound()
@@ -109,9 +122,10 @@ namespace banana
 
 	void Sound::play(const std::string& name, bool closeAfter)
 	{
-		if (!enabled || !clips.count(name)) return;
+		if (!enabled) return;
 		{
 			std::lock_guard<std::mutex> l(m);
+			if (!clips.count(name)) return;
 			queued = name;
 			closeAfterQueued = closeAfter;
 		}
@@ -158,12 +172,12 @@ namespace banana
 		auto routeId = [] { struct stat st; return stat("/run/banana/asound.conf", &st) ? 0LL : (long long)st.st_ino * 1000003LL + st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec; };
 		long long routeLoaded = routeId();
 		int routeCheck = 0;
-		const Clip* cur = nullptr;
+		std::shared_ptr<const Clip> cur, next;	// (held: a reload doesn't free the one playing)
 		size_t at = 0;			// cur's next frame
 		// the sound cur cut in on, when cur is a launch's last cue (the cartridge's click): played on under it to its end
 		// instead of cut off. A starts the launch with the "ready" chime (0.46 s) and the click comes ~140 ms later since
 		// the insert plays 3x as fast (0.5.0): the chime was cut off after a third of it (QA #12)
-		const Clip* under = nullptr;
+		std::shared_ptr<const Clip> under;
 		size_t underAt = 0;
 		std::vector<int16_t> mixed;
 		bool closeAfter = false;	// cur was a launch's last cue: the device closes once it has played out
@@ -187,7 +201,12 @@ namespace banana
 				}
 				name = queued;
 				queued.clear();
-				if (!name.empty()) { closeAfter = closeAfterQueued; tail = -1; }
+				if (!name.empty())
+				{
+					auto it = clips.find(name);
+					if (it == clips.end()) name.clear();
+					else { next = it->second; closeAfter = closeAfterQueued; tail = -1; }
+				}
 			}
 			if (name.empty() && !cur && !under && tail == 0)
 			{
@@ -201,7 +220,7 @@ namespace banana
 			auto now = std::chrono::steady_clock::now();
 			if (!name.empty())
 			{
-				const Clip& c = clips[name];
+				const Clip& c = *next;
 				// (only a launch's cue plays over the sound before it; any other cuts it, as a held direction's scroll must)
 				bool keep = closeAfter && cur && pcm && openRate == c.rate && openCh == c.channels;
 				if (keep) { under = cur; underAt = at; }
@@ -218,7 +237,7 @@ namespace banana
 					openRate = c.rate; openCh = c.channels;
 					silence.assign((size_t)(openRate / 100) * openCh, 0);
 				}
-				cur = &c;
+				cur = std::move(next);
 				at = 0;
 				lastSound = now;
 			}
@@ -233,6 +252,12 @@ namespace banana
 				size_t total = cur->pcm.size() / openCh;
 				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
 				p = cur->pcm.data() + at * openCh;
+				if (float g = gain; g < 0.999f)	// (Quiet: the block scaled, the clip itself as it was loaded)
+				{
+					mixed.resize((size_t)frames * openCh);
+					for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)(p[i] * g);
+					p = mixed.data();
+				}
 				at += (size_t)frames;
 				if (at >= total) { cur = nullptr; lastSound = now; if (closeAfter || closing) tail = TAIL; }
 			}
@@ -241,7 +266,7 @@ namespace banana
 				// both: summed (clipped) over the longer of what is left of them in this block
 				std::vector<int32_t> acc(silence.size(), 0);
 				size_t n = 0;
-				auto add = [&](const Clip*& c, size_t& a)
+				auto add = [&](std::shared_ptr<const Clip>& c, size_t& a)
 				{
 					if (!c) return;
 					size_t total = c->pcm.size() / openCh, k = std::min<size_t>((size_t)frames, total - a);
@@ -252,7 +277,8 @@ namespace banana
 				add(cur, at);
 				add(under, underAt);
 				mixed.resize(n * openCh);
-				for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)std::min(32767, std::max(-32768, acc[i]));
+				const float g = gain;
+				for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)std::min(32767, std::max(-32768, (int32_t)(acc[i] * g)));
 				p = mixed.data();
 				frames = (snd_pcm_sframes_t)n;
 				if (!cur && !under) { lastSound = now; if (closeAfter || closing) tail = TAIL; }

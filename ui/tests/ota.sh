@@ -208,7 +208,7 @@ ui() {
         BANANA_UPDATE_FEED="$f" BANANA_UPDATE_BETA_FEED="$WEB/auth/beta/feed.json" BANANA_UPDATE_REUSE=0 BANANA_LANG_MISSING="$OUT/ui-$n/missing.txt" \
         "$HERE/banana-ui" --headless "$OUT/ui-$n-" --size 640x480 --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press r; press r; press r; press r; press a; press a; press a; $*" \
+        --script "home nds; press start; row System sys_updates; press a; press a; $*" \
         2> "$OUT/ui-$n.log" || bad "ui $n: banana-ui exited $?"
 }
 upstate() { grep -q "upstate: .*$2" "$OUT/ui-$1.log" || bad "ui $1: no '$2' in: $(grep upstate "$OUT/ui-$1.log" | tail -n 3)"; }

@@ -119,7 +119,7 @@ settings		New York, Toronto	New York, Toronto
 settings		Halifax	Halifax
 settings		Santiago	Santiago
 settings		Buenos Aires, Sao Paulo	Buenos Aires, San Paolo
-settings		Display & sound	Schermo e audio
+settings		Look & sound	Schermo e audio
 settings		Theme	Tema
 settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	Le due palette di ROCKNIXDS Pixel, scura o chiara per la luce del giorno; Carts (sperimentale): i tuoi giochi come cartucce su uno scaffale, con un carattere pulito; oppure un tema tuo: un .json in banana/themes sulla scheda (banana/themes/README.txt spiega come).
 settings		Dark	Scuro
@@ -549,7 +549,7 @@ settings		The buttons that do something everywhere, in the menu and in each emul
 settings		Volume keys	Tasti del volume
 settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Ovunque, anche nei giochi: gli altoparlanti, o le cuffie finché sono inserite.
 settings		F + volume	F + volume
-settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Ovunque, anche nei giochi: le retroilluminazioni di entrambi gli schermi insieme. Quella di ogni schermo: Impostazioni > Schermo e audio.
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Look & sound.	Ovunque, anche nei giochi: le retroilluminazioni di entrambi gli schermi insieme. Quella di ogni schermo: Impostazioni > Schermo e audio.
 settings		Power	Accensione
 settings		Sleep	Sospensione
 settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Ovunque: una pressione sospende (un gioco va in pausa dove si trova), una pressione riattiva. Anche chiudere il coperchio fa lo stesso.

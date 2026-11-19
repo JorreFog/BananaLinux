@@ -25,9 +25,12 @@ namespace banana
 	struct Game
 	{
 		std::string path, rel, title, genre, year;	// rel: the path under the system's folder
+		std::string developer, publisher, players, esrb;	// gamelist.xml's (the scrape's, from libretro's metadat)
 		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
+		std::string marquee;	// the game's logo (media/marquee, gamelist.xml's <marquee>)
+		std::string toolIcon;	// a tool among the games (PICO-8's Splore), not a game: its icon, shown as an app's
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;
@@ -41,6 +44,10 @@ namespace banana
 		bool favorites = false;		// the Favorites collection
 		bool recent = false;		// the Recently played collection (also favorites = true: copies, sysOf)
 		bool search = false;		// the Search collection (also favorites = true: a collection of copies, sysOf)
+		// the Apps tile: every app (Bshare, Files, Poketool, Döda Kvarter, the Store and what it installed), each entry
+		// with its own system in appDefs (how it starts, its icon); last on the row, never in the collections
+		bool apps = false;
+		std::vector<SystemDef> appDefs;
 		std::vector<Game> games;	// favourites: copies, with sysOf giving each one's own system
 		std::vector<int> sysOf;
 		int order = 0;				// its place in systems.conf
@@ -85,6 +92,8 @@ namespace banana
 		void recordPlay(int game, long seconds, int achA = -1, int achB = 0);
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
+		std::string dateFormat = "md";
+		bool appsTile = true;	// Settings > Look & sound > Home row > Apps: in one Apps tile, else each on the row as a system	// Settings > Look & sound > Date (lang::date's formats)
 
 		// the battery: percent (-1 unknown) and whether it is charging (or full on the charger)
 		struct Power { int percent = -1; bool charging = false; };
@@ -93,6 +102,13 @@ namespace banana
 		Power powerSeen;	// the last reading of /sys and when (power(), online(): at most every 2 s)
 		double powerAt = 0, onlineAt = 0;
 		bool onlineSeen = false;
+
+		// a layout theme's zoom (its "behavior.zoom"), kept per view: "home", or a system's id. -1: none yet. In
+		// banana/zoom.txt, "<view> <level>" a line
+		int zoom(const std::string& view);
+		void setZoom(const std::string& view, int level);
+		std::map<std::string, int> zooms;
+		bool zoomsRead = false;
 
 		// rnds::Source
 		int systemCount() override { return (int)shelves.size(); }
@@ -123,7 +139,7 @@ namespace banana
 		std::string gameKey(int game);
 		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
 		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
-		// Settings > Display & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// Settings > Look & sound > Theme options > Game pictures: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
 
@@ -150,6 +166,7 @@ namespace banana
 		void saveFavs();
 		void saveStats();
 		Look lookOf(const std::string& id) const;
+		rnds::Color accentOf(const SystemDef& d) const;	// a system's colour (its look's, its maker's, else blue)
 		int resumeIndex(const Shelf& s) const;
 		Game* sourceOf(int shelf, int game, int* sys = nullptr);
 	};
