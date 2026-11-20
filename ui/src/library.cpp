@@ -664,6 +664,20 @@ namespace banana
 				std::string dir = folderPath(rootList[ri], def.folder);
 				std::vector<std::string> rels;
 				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
+				
+				// Hide PICO-8 BBS carts from the library
+				if (def.id == "pico-8")
+				{
+    				rels.erase(
+        				std::remove_if(rels.begin(), rels.end(),
+            				[](const std::string& rel)
+           					{
+                				return lower(rel).compare(0, 10, "bbs/carts/") == 0;
+            				}),
+        				rels.end()
+    				);
+				}
+				
 				auto gl = readGamelist(dir);
 				for (auto& rel : rels)
 				{
