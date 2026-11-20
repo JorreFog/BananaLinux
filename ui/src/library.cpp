@@ -474,6 +474,14 @@ namespace banana
 			}
 			if (isDir)
 			{
+				// Do not scan downloaded PICO-8 BBS carts.
+				// Match the full directory path so this does not depend on the system ID.
+				const std::string excluded = "/pico-8/bbs/carts";
+				std::string fullLower = lower(full);
+				if (fullLower.size() >= excluded.size() &&
+					fullLower.compare(fullLower.size() - excluded.size(), excluded.size(), excluded) == 0)
+					continue;
+
 				// art and ES's own folders are not games
 				std::string ln = lower(name);
 				if (depth < maxDepth && ln != "media" && ln != "images" && ln != "videos" && ln != "manuals" && ln != "downloaded_images")
@@ -664,19 +672,6 @@ namespace banana
 				std::string dir = folderPath(rootList[ri], def.folder);
 				std::vector<std::string> rels;
 				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
-				
-				// Hide PICO-8 BBS carts from the library
-				if (def.id == "pico-8")
-				{
-    				rels.erase(
-        				std::remove_if(rels.begin(), rels.end(),
-            				[](const std::string& rel)
-           					{
-                				return lower(rel).compare(0, 10, "bbs/carts/") == 0;
-            				}),
-        				rels.end()
-    				);
-				}
 				
 				auto gl = readGamelist(dir);
 				for (auto& rel : rels)
