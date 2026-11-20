@@ -48,11 +48,15 @@ TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=u
 
 _build_lock = threading.Lock()
 _ready = {"engine": False, "fixture": False, "detail": ""}
+BUILD = True							# --no-build: never run make, at the start or for a request
+BOUND = ("127.0.0.1", 8777)					# --host, --port: what requests are checked against (local_request)
 
 
-def ensure_engine(build=True):
+def ensure_engine(build=None):
     if ENGINE.exists():
         return True
+    if build is None:						# (a request: as --no-build said, not make at every health poll)
+        build = BUILD
     if not build:
         _ready["detail"] = "ui/banana-ui isn't built (run `make -C ui host`)"
         return False
@@ -108,6 +112,8 @@ def write_assets(base, assets):
     """Write the editor's attached asset files beside the theme, at their relative paths."""
     written = []
     for a in assets or []:
+        if not isinstance(a, dict) or not isinstance(a.get("path", ""), str) or not isinstance(a.get("data", "") or "", str):
+            continue
         rel = safe_rel(a.get("path", ""))
         if not rel:
             continue
@@ -219,8 +225,27 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, code, obj):
         self._send(code, json.dumps(obj))
 
+    def _local_request(self, post):
+        """Whether the request is the editor's own. The server writes files (--themes, --themes-dir) and runs the
+        engine for whoever asks, and a browser will ask on behalf of any web page that is open in it: a form or a
+        fetch from another site (its Origin isn't ours; without application/json it needs no preflight), or a name
+        the other site points at 127.0.0.1 (DNS rebinding: its Host isn't ours). The editor's page sends neither."""
+        host = (self.headers.get("host") or "").strip().lower()
+        name = host.rsplit(":", 1)[0] if host.count(":") == 1 or host.startswith("[") else host
+        mine = {"localhost", "127.0.0.1", "[::1]", BOUND[0].lower(), "[%s]" % BOUND[0].lower()}
+        if BOUND[0] in ("127.0.0.1", "localhost", "::1") and name not in mine:
+            return False					# (bound elsewhere on purpose, --host: any name it is reached by)
+        origin = (self.headers.get("origin") or "").strip().lower()
+        if origin and origin.split("://", 1)[-1] != host:
+            return False
+        if post and (self.headers.get("content-type") or "").split(";")[0].strip().lower() != "application/json":
+            return False
+        return True
+
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/") and not self._local_request(False):
+            return self._json(403, {"error": "not a request from the editor's own page"})
         if path in ("/", "/index.html"):
             return self._file(HERE / "index.html")
         if path == "/api/health":
@@ -248,11 +273,19 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path not in ("/api/render", "/api/send", "/api/themes/save"):
             return self._send(404, "not found", "text/plain")
+        if not self._local_request(True):
+            return self._json(403, {"error": "not a request from the editor's own page (application/json, from this server's address)"})
         try:
             n = int(self.headers.get("content-length", "0"))
             req = json.loads(self.rfile.read(n) or b"{}")
         except Exception as e:					# noqa: BLE001
             return self._json(400, {"error": "bad request: %s" % e})
+        # (anything else than an object, or assets that aren't a list, was an exception in the handler: the
+        # connection closed with no answer at all)
+        if not isinstance(req, dict) or not isinstance(req.get("assets") or [], list):
+            return self._json(400, {"error": "bad request: an object with the theme, and assets as a list, is expected"})
+        if not isinstance(req.get("name") or "", str) or not isinstance(req.get("script") or "", str) or not isinstance(req.get("size") or "", str):
+            return self._json(400, {"error": "bad request: name, script and size are text"})
         theme = req.get("theme")
         if theme is None:
             return self._json(400, {"error": "no theme in the request"})
@@ -316,13 +349,15 @@ def main():
                          "themes and saves into it, so your themes never touch the repo or its example list")
     args = ap.parse_args()
 
-    global THEMES_DIR, LOCAL_THEMES
+    global THEMES_DIR, LOCAL_THEMES, BUILD, BOUND
+    BUILD = not args.no_build
+    BOUND = (args.host, args.port)
     if args.themes_dir:
         THEMES_DIR = Path(args.themes_dir).expanduser().resolve()
     if args.themes:
         LOCAL_THEMES = Path(args.themes).expanduser().resolve()
 
-    ensure_engine(build=not args.no_build)
+    ensure_engine()
     if ENGINE.exists():
         ensure_fixture()
 

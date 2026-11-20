@@ -28,7 +28,7 @@ namespace banana
 		// press goes out at once, the release KEY_HOLD_MS later (on the keyboard's own thread)
 		void tap(int code, bool shift = false);
 		void close();
-		static const int KEY_HOLD_MS = 50;	// (three frames at 60 Hz, two and a half at 50: every core sees it)
+		static constexpr int KEY_HOLD_MS = 50;	// (constexpr: an -O0 or sanitizer build didn't link; three frames at 60 Hz, two and a half at 50: every core sees it)
 	private:
 		struct Pending { int code; bool shift; };
 		void emit(int code, int value);

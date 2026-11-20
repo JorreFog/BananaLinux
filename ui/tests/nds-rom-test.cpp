@@ -84,13 +84,13 @@ static void testNarc()
 
 // ---- the cartridge's file system ---------------------------------------------------------------------------------
 // a small ROM: root has "top.txt" and dir "a" which has "x.bin" and dir "b" with "y"; arm9 is "ARM9" at 0x4000
-static Bytes makeRom(Bytes arm9 = bytes("ARM9DATA"), uint32_t ramAddr = 0x02000000)
+static Bytes makeRom(Bytes arm9 = bytes("ARM9DATA"), uint32_t ramAddr = 0x02000000, Bytes xbin = bytes("x contents"))
 {
 	Bytes rom(0x4000, 0);
 	memcpy(&rom[0], "POKEMON PL\0\0", 12);
 	memcpy(&rom[12], "CPUE", 4);
 	// files: 0 top.txt, 1 x.bin, 2 y
-	std::vector<Bytes> files = { bytes("top file"), bytes("x contents"), bytes("deep y") };
+	std::vector<Bytes> files = { bytes("top file"), xbin, bytes("deep y") };
 	put32(rom, 0x20, 0x4000); put32(rom, 0x28, ramAddr); put32(rom, 0x2c, (uint32_t)arm9.size());
 	rom.insert(rom.end(), arm9.begin(), arm9.end());
 	while (rom.size() % 0x200) rom.push_back(0xff);
@@ -152,6 +152,50 @@ static void testFileSystem()
 	Bytes hugeArm9 = makeRom(); put32(hugeArm9, 0x2c, 0xfffffff0);
 	CHECK(big.openMemory(hugeArm9));
 	CHECK(!big.arm9(b));
+}
+
+// a NARC read member by member from the ROM (the sprite archives): its table and its members are as large as the file
+// says, and a size gone wrong (a bad dump, a hack's tool) must be refused, not asked of the memory - 4 GB of it, on a
+// handheld with one. Under a 2 GB limit here, so asking for it fails this test where there is memory to spare
+static void testNarcFile()
+{
+	struct rlimit was, lim;
+	getrlimit(RLIMIT_AS, &was);
+	lim = was; lim.rlim_cur = (rlim_t)2 << 30;
+	setrlimit(RLIMIT_AS, &lim);
+	Bytes narc = makeNarc({ bytes("first"), bytes("the second member") });
+	{
+		nitro::Rom r; nitro::NarcFile f;
+		CHECK(r.openMemory(makeRom(bytes("ARM9DATA"), 0x02000000, narc)));
+		CHECK(f.open(r, "a/x.bin"));
+		EQ(f.size(), (size_t)2);
+		nitro::Span m = f[1];
+		EQ(std::string((const char*)m.p, m.n), std::string("the second member"));
+		EQ(f[2].n, (size_t)0);
+	}
+	{
+		// the member table's length and count far past the file
+		Bytes bad = narc; put32(bad, 20, 0xfffffff4); put32(bad, 24, 0x1ffffffc);
+		nitro::Rom r; nitro::NarcFile f;
+		CHECK(r.openMemory(makeRom(bytes("ARM9DATA"), 0x02000000, bad)));
+		bool threw = false, opened = true;
+		try { opened = f.open(r, "a/x.bin"); } catch (const std::bad_alloc&) { threw = true; }
+		CHECK(!threw);
+		CHECK(!opened);
+	}
+	{
+		// a member that says it ends 4 GB on
+		Bytes bad = narc; put32(bad, 28 + 8 + 4, 0xfffffff0);
+		nitro::Rom r; nitro::NarcFile f;
+		CHECK(r.openMemory(makeRom(bytes("ARM9DATA"), 0x02000000, bad)));
+		CHECK(f.open(r, "a/x.bin"));
+		bool threw = false; size_t n = 1;
+		try { n = f[1].n; } catch (const std::bad_alloc&) { threw = true; }
+		CHECK(!threw);
+		EQ(n, (size_t)0);
+		EQ(f[0].n, (size_t)5);
+	}
+	setrlimit(RLIMIT_AS, &was);
 }
 
 // ---- BLZ ---------------------------------------------------------------------------------------------------------
@@ -810,6 +854,7 @@ int main(int argc, char** argv)
 	testSha1();
 	testNarc();
 	testFileSystem();
+	testNarcFile();
 	testBlz();
 	testLz();
 	testGen4Text();

@@ -45,6 +45,29 @@ namespace banana
 			return s;
 		}
 
+		static std::vector<std::string> cardParts(const std::string& p)
+		{
+			std::vector<std::string> parts;
+			std::string cur;
+			for (size_t i = 0; i <= p.size(); i++)
+			{
+				char c = i < p.size() ? p[i] : '/';
+				if (c != '/') { cur += (char)tolower((unsigned char)c); continue; }
+				if (cur != "." && cur != "..") while (!cur.empty() && (cur.back() == '.' || cur.back() == ' ')) cur.pop_back();
+				if (!cur.empty() && cur != ".") parts.push_back(cur);
+				cur.clear();
+			}
+			return parts;
+		}
+
+		bool insideFolder(const std::string& path, const std::string& folder)
+		{
+			std::vector<std::string> a = cardParts(path), b = cardParts(folder);
+			if (b.empty() || a.size() < b.size()) return false;
+			for (size_t i = 0; i < b.size(); i++) if (a[i] != b[i]) return false;
+			return true;
+		}
+
 		std::string trim(const std::string& s)
 		{
 			size_t a = s.find_first_not_of(" \t\r\n"), b = s.find_last_not_of(" \t\r\n");

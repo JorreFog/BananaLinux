@@ -43,7 +43,11 @@ namespace banana
 				memcpy(pcm.data(), c, pcm.size() * 2);
 				return true;
 			}
-			at += 8 + len + (len & 1);
+			// (any other chunk: one that says more than the file holds ends it. Added as it was, a LIST chunk of
+			// 0xfffffff8 bytes wrapped the 32-bit sum back to where it stood: the menu read a theme's sounds for ever,
+			// before its first frame, at every start)
+			if (len > b.size() - at - 8) return false;
+			at += 8 + (size_t)len + (len & 1);
 		}
 		return false;
 	}

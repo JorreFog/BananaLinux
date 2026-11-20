@@ -3,6 +3,9 @@
 /ui/banana-ui
 /ui/banana-bshare
 /ui/banana-fetch
+/ui/banana-scrape
+/ui/banana-sync
+/ui/banana-leaseshim.so
 /ui/tests/servers/share/
 /ui/tests/servers/tls/
 /ui/tests/out/
@@ -38,3 +41,5 @@ ui/tests/nds-ram-test
 ui/tests/nds-romfile-test
 /ui/tests/eq-test
 /ui/libasound_module_pcm_banana_eq.so
+/ui/tests/ach-test
+/ui/rc-obj/

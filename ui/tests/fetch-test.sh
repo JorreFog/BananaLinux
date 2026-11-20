@@ -89,6 +89,25 @@ $F unpack "$OUT/game.zip" "$U/game" 2>/dev/null
 check "a zip of one folder unwrapped" '[ -f "$U/game/Zip Kart.nds" ]'
 r=$(BANANA_FETCH_TEST_FREE=1000 $F unpack "$OUT/game.zip" "$U/full" 2>&1 || true)
 check "a full card refused before writing" 'echo "$r" | grep -q "(no_space)" && [ ! -e "$U/full/Zip Kart.nds" ]'
+# sizes that aren't so: a member that unpacks to more than its directory entry says (the room on the card is counted
+# from that) is stopped there, not once it has all been written; a zip64 end record whose directory's place and size
+# wrap around is not a directory to make room for (1 GB of it: under a limit of memory here, as the handheld has)
+python3 - "$OUT" <<'PY'
+import struct, sys, zipfile
+w = sys.argv[1]
+z = zipfile.ZipFile(w + '/liar.zip', 'w', zipfile.ZIP_DEFLATED); z.writestr('big.bin', b'\0' * (8 << 20)); z.close()
+d = bytearray(open(w + '/liar.zip', 'rb').read())
+cd = d.rfind(b'PK\x01\x02'); d[cd + 24:cd + 28] = struct.pack('<I', 1000)     # the directory: 1000 bytes unpacked
+open(w + '/liar.zip', 'wb').write(d)
+r64 = struct.pack('<IQHHIIQQQQ', 0x06064b50, 44, 45, 45, 0, 0, 1, 1, 1 << 30, (1 << 64) - (1 << 30))
+loc = struct.pack('<IIQI', 0x07064b50, 0, 0, 1)
+end = struct.pack('<IHHHHIIH', 0x06054b50, 0, 0, 0xffff, 0xffff, 0xffffffff, 0xffffffff, 0)
+open(w + '/wrap.zip', 'wb').write(r64 + loc + end)
+PY
+r=$($F unpack "$OUT/liar.zip" "$U/liar" 2>&1 || true)
+check "a member bigger than its directory entry says: not unpacked, nothing left" '[ ! -e "$U/liar/big.bin" ] && [ ! -e "$U/liar/.banana-unpack" ] && ! echo "$r" | grep -q "^ok"'
+r=$( (ulimit -v 700000; $F inspect "$OUT/wrap.zip" 2>&1; echo "rc=$?") || true)
+check "a zip64 directory whose place and size wrap: refused without asking for its gigabyte ($(echo "$r" | tr '\n' ' '))" 'echo "$r" | grep -q "rc=1" && ! echo "$r" | grep -qi "bad_alloc\|terminate\|abort"'
 mkdir -p "$U/clash/saves"; echo kept > "$U/clash/saves/game.sav"; echo kept > "$U/clash/notes"
 $F unpack "$OUT/clash.zip" "$U/clash" 2>/dev/null
 check "a file never takes a folder's place, nor a folder a file's" \
@@ -326,6 +345,31 @@ job 95-out "$id" no no "get|1000|/Games/GBA/Peel.gba|$OUT/elsewhere/Peel.gba" "g
 $F run
 check "a file outside the job's card or in banana/ isn't written" \
     '[ ! -e "$OUT/elsewhere/Peel.gba" ] && [ ! -e "$BANANA_DATA/downloads/x.job" ] && [ "$(grep -c "Not a place on the cards" "$J/95-out.finished.done")" = 2 ] && grep -q "Not a place" "$J/96-banana.finished.done"'
+# ...nor into banana/ under another spelling of its name: the cards take "Data", "data." and a doubled slash for the same
+# folder (exFAT and FAT; this test's own file system doesn't, so the folders must not be made at all). $BANANA_DATA is
+# $OUT/data here
+own=$(basename "$BANANA_DATA"); OWN=$(echo "$own" | tr a-z A-Z)
+{ printf 'title = spelled\nserver = %s\ntemp_root = %s\n' "$id" "$OUT"
+  for l in "$OUT/$OWN/s1.gba" "$OUT//$own/s2.gba" "$OUT/$own./s3.gba" "$OUT/$OWN /sub/s4.gba"; do printf 'get\t1000\t/Games/GBA/Peel.gba\t%s\n' "$l"; done
+  printf 'get\t1000\t/Games/GBA/Peel.gba\t%s\n' "$OUT/${own}2/s5.gba"; } > "$J/96b-spelled.job"
+$F run
+check "banana/ under another spelling of its name isn't written either; a folder that only starts like it is" \
+    '[ ! -e "$OUT/$OWN" ] && [ ! -e "$BANANA_DATA/s2.gba" ] && [ ! -e "$OUT/$own." ] && [ ! -e "$OUT/$OWN " ] && [ "$(grep -c "Not a place on the cards" "$J/96b-spelled.finished.done")" = 4 ] && [ -f "$OUT/${own}2/s5.gba" ]'
+# ...nor by an archive unpacked at the card's root that has a banana/ folder in it: refused whole, nothing of it lands
+python3 - "$OUT" "$own" "$OWN" <<'PY'
+import sys, zipfile
+w, own, OWN = sys.argv[1:4]
+z = zipfile.ZipFile(w + '/own1.zip', 'w'); z.writestr('Game.gba', b'game'); z.writestr(own + '/own1.conf', b'x'); z.close()
+z = zipfile.ZipFile(w + '/own2.zip', 'w'); z.writestr('Game2.gba', b'game'); z.writestr(OWN + '/sub/own2.conf', b'x'); z.close()
+z = zipfile.ZipFile(w + '/own3.zip', 'w'); z.writestr('Game3.gba', b'game'); z.writestr('roms/' + own + '/fine.txt', b'x'); z.close()
+PY
+for n in 1 2 3; do
+    { printf 'title = own%s\nunpack = yes\nunwrap = yes\ntemp_root = %s\n' $n "$OUT"; printf 'extract\t%s\t%s\n' "$OUT/own$n.zip" "$OUT"; } > "$J/96c-own$n.job"
+done
+$F run
+check "an archive with a banana/ folder, unpacked at the card's root: refused whole" \
+    '[ ! -e "$BANANA_DATA/own1.conf" ] && [ ! -e "$OUT/Game.gba" ] && [ ! -e "$OUT/$OWN" ] && [ ! -e "$OUT/Game2.gba" ] && grep -q "unsafe" "$J/96c-own1.finished.done" && grep -q "unsafe" "$J/96c-own2.finished.done"'
+check "...and one whose folder of that name is further down, unpacked" '[ -f "$OUT/Game3.gba" ] && [ -f "$OUT/roms/$own/fine.txt" ]'
 # the card taken out: its file system isn't the one the job was written for. Stopped and kept, nothing written
 job 97-gone "$id" no no "get|1000|/Games/GBA/Peel.gba|$T/Gone.gba"
 echo "card_dev = 1" >> "$J/97-gone.job"

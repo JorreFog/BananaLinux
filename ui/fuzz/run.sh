@@ -24,7 +24,8 @@ mkdir -p "$OUT/obj"
 
 # ---- build: the menu's sources but main.cpp, once, then each target against them ----
 SAN="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
-FLAGS="-std=c++17 -O1 -g $SAN $(pkg-config --cflags freetype2 libdrm zlib)"
+# (-Isrc as the Makefile's UI_FLAGS: the sources include "nds/logic.h" and the like from src/; without it nothing built)
+FLAGS="-std=c++17 -O1 -g $SAN -I$HERE/src $(pkg-config --cflags freetype2 libdrm zlib)"
 LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread"
 OBJS=""
 for s in $(sed -n 's/^SRC +*= //p' "$HERE/Makefile") fuzz/stb.cpp; do	# (stb's code is in main.cpp)

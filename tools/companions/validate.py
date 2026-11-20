@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate game companion defs against SCHEMA.md (schema 1; schema 2 = any system by its systems/<id>.json map).
 
-  python3 validate.py              every defs/*.json
+  python3 validate.py              every definition the image ships (system/rootfs/usr/share/banana/companions/*.json)
   python3 validate.py a.json ...   those files
   -q                               only failures and the summary
   --json                           one JSON line per file (for scripts)
@@ -492,8 +492,9 @@ def main(argv):
     as_json = "--json" in argv
     files = [a for a in argv if not a.startswith("-")]
     if not files:
+        # (the shipped ones: there is no defs/ folder beside this tool, and with no arguments it ended in a traceback)
         here = os.path.dirname(os.path.abspath(__file__))
-        dd = os.path.join(here, "defs")
+        dd = os.path.join(here, "..", "..", "system", "rootfs", "usr", "share", "banana", "companions")
         files = sorted(os.path.join(dd, f) for f in os.listdir(dd) if f.endswith(".json"))
     bad = 0
     for f in files:

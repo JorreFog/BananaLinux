@@ -2073,7 +2073,7 @@ namespace banana::nds
 				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind, cond }); it = rows.end() - 1; }
 				it->lo = std::min(it->lo, e.minLevel); it->hi = std::max(it->hi, e.maxLevel);
 				if (e.time == TimeOfDay::ANY) for (int t = 1; t < 4; t++) it->pct[t] += e.percent;
-				else { it->pct[(int)e.time] += e.percent; it->timed = true; }
+				else if ((unsigned)e.time < 4) { it->pct[(int)e.time] += e.percent; it->timed = true; }
 			}
 		std::set<uint16_t> kinds;
 		int got = 0, total = 0;

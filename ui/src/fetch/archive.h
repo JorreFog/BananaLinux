@@ -27,6 +27,7 @@ namespace banana
 			std::string password;
 			bool unwrap = true;				// an archive of one folder: what is in the folder
 			std::string tempRoot;			// the card's root, where the unpacking folder goes ("": the target itself)
+			std::string keepOut;			// a folder nothing of the archive may land in (Banana's own, banana/); "": none
 			bool ignoreMemory = false;		// unpack even with a dictionary bigger than the memory free
 			std::atomic<bool>* stop = nullptr;
 			std::function<void(double)> progress;	// 0..1

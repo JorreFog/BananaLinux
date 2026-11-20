@@ -9,6 +9,10 @@ on:
         type: boolean
         default: false
 
+# (the jobs only read the repository and keep artifacts and caches: no more than that for the token)
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-24.04

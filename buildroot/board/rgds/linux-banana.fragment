@@ -54,7 +54,8 @@ CONFIG_SMB_SERVER=m
 # CONFIG_NET_MPLS_GSO is not set
 # CONFIG_NET_NSH is not set
 # CONFIG_WIREGUARD is not set
-# CONFIG_TUN is not set
+# (CONFIG_TUN stays ROCKNIX's module (#217): a VPN that runs as a program, Tailscale's, needs /dev/net/tun. Nothing
+# loads it by itself and it has no packet filtering under it: "modprobe tun" by whoever wants it)
 # CONFIG_VETH is not set
 # CONFIG_PPP is not set
 # Wi-Fi: the RTL8821CS on SDIO alone (rtw88_8821cs)

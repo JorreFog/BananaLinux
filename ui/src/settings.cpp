@@ -535,8 +535,9 @@ namespace banana
 			const std::string bds = "/data/bananads/bananads.conf";
 			add(BD, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
 			add(BD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.",
-				bds, "render.scale", { "2x", "1x", "3x (experimental)", "4x (experimental)" }, { "2", "1", "3", "4" });
-			items.back().hints = { "Twice the DS's size: sharper 3D.", "The DS's own size: the lightest.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
+				bds, "render.scale", { "1x", "2x", "3x (experimental)", "4x (experimental)" }, { "1", "2", "3", "4" });
+			items.back().def = "2";	// (#250: smallest to largest, left to right; 2x stays the default, as run-bananads writes it)
+			items.back().hints = { "The DS's own size: the lightest.", "Twice the DS's size: sharper 3D.", "Three times the DS's size. Experimental: a busy 3D scene can slow down.", "Four times, the Plus screens' own size: the sharpest. Experimental: a busy 3D scene can slow down." };
 			add(BD, "nds", "Edge marking", "The outlines some games draw around 3D models (Zelda, Kirby, many Pokémon battles).",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Outlines drawn, as on a DS.", "Outlines left out." };
@@ -583,8 +584,9 @@ namespace banana
 		{
 			const char* SD = "SuperDrastic";
 			add(SD, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
-			add(SD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-			items.back().hints = { "Twice the DS's size: sharper 3D, at full speed.", "The DS's own size: the lightest." };
+			add(SD, "nds", "3D resolution", "How sharp DS games' 3D is drawn.", dcfg, "hires_3d", { "1x", "2x" }, { "0", "1" });
+			items.back().def = "1";	// (#250: as BananaDS's row, 1x on the left; 2x stays the default, as DraStic's own drastic.cfg)
+			items.back().hints = { "The DS's own size: the lightest.", "Twice the DS's size: sharper 3D, at full speed." };
 			add(SD, "nds", "Threaded 3D", "How the DS's 3D is drawn alongside the game.",
 				dcfg, "threaded_3d", { "On", "Off" }, { "1", "0" });
 			items.back().hints = { "Drawn beside the game: the faster way.", "Drawn in step with the game. For a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games)." };
@@ -659,6 +661,11 @@ namespace banana
 			add(PS, "picture", "VSync", "Whether frames wait for the screen's refresh.",
 				menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
 			items.back().hints = { "Nothing tears.", "Games run as fast as they can. The screen can show a half-drawn frame." };
+			// (#219: RetroArch's own key, which BananaFront follows too - its in-game switch is forgotten at the next
+			// start, and nothing in the menu set it; Screen border has the picture's size to itself while it is on)
+			add(PS, "picture", "Integer scaling", "Whether the picture is a whole multiple of the game's size.",
+				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
+			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -927,7 +934,7 @@ namespace banana
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency" } },
+			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
@@ -1010,7 +1017,7 @@ namespace banana
 		if (it.kind != Item::CHOICE) return;
 		// the schema's default (settings_defaults.cpp), else the row's first choice
 		std::string def = settingDefault(it.key);
-		if (def.empty()) def = it.values[0];
+		if (def.empty()) def = it.def.empty() ? it.values[0] : it.def;
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
@@ -1127,6 +1134,9 @@ namespace banana
 		wizard = false;
 		closeBshare();
 		closeServers();	// (banana-fetch's session: its answers wake the loop through the worker's eventfd)
+		if (achLoader) achLoader->stop();	// (the Achievements page's threads end after what they are doing)
+		achLoader.reset();
+		achTex.clear();
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1511,6 +1521,7 @@ namespace banana
 		if (page == BLUETOOTH) return pressBluetooth(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == GAME) return pressGame(k);
+		if (page == ACHIEVEMENTS) return pressAch(k);
 		if (page == ARTPICK) return pressArt(k);
 		if (page == COLORS) return pressColors(k);
 		if (page == SPEAKEREQ) return pressEq(k);
@@ -1700,6 +1711,7 @@ namespace banana
 		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
+		if (page == ACHIEVEMENTS) return touchAch(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
 		if (page == SPEAKEREQ) return touchEq(cx, cy);
@@ -2410,6 +2422,7 @@ namespace banana
 		pgRom = "Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds";
 		static const char* const PG[] = { "Emulator", "Shader", "Threaded 3D", "Microphone", "Name", "Sort title", "Box art", "Delete" };
 		for (int r = PG_EMU; r <= PG_DELETE; r++) one(std::string("Game page > ") + PG[r], gameHelpOf(r));
+		one("Game page > Achievements", gameHelpOf(PG_ACH));
 		pgRom = rom;
 		return n;
 	}
@@ -2430,6 +2443,7 @@ namespace banana
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == GAME) { renderGame(); return; }
+		if (page == ACHIEVEMENTS) { renderAch(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
 		if (page == COLORS) { renderColors(); return; }
 		if (page == SPEAKEREQ) { renderEq(); return; }
@@ -2610,9 +2624,10 @@ namespace banana
 		nextStatus = now + 1500;
 	}
 
-	void Settings::markNetworks()
+	// selected: the network the cursor is on, when the list has just been replaced (a new scan's)
+	void Settings::markNetworks(const std::string* selected)
 	{
-		std::string selName = nsel < (int)nets.size() ? nets[nsel].ssid : "";
+		std::string selName = selected ? *selected : nsel < (int)nets.size() ? nets[nsel].ssid : "";
 		auto saved = wifi::savedNames(wifiConf);
 		for (auto& n : nets)
 		{
@@ -2687,6 +2702,7 @@ namespace banana
 		changed |= btUpdate();
 		if (fm && updateFiles(t)) changed = true;	// (a job's progress, its end)
 		if (bs && page == BSHARE && updateBshare(t)) changed = true;
+		if (page == ACHIEVEMENTS && achLoader && achLoader->gen() != achSeen) changed = true;	// (the list, a badge)
 		if (srv && updateServers(t)) changed = true;	// (also under the keyboard: a login answered; Files' row of the job)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
@@ -2705,10 +2721,13 @@ namespace banana
 		std::string out;
 		if (scanJob.take(out))
 		{
+			// (the cursor's network from the list as it was: taken after the new scan's list was in, it was whichever
+			// network had that row now, and the next Y forgot, or A joined, another network than the one selected)
+			std::string selName = nsel >= 0 && nsel < (int)nets.size() ? nets[nsel].ssid : "";
 			nets = wifi::parseScan(out);
 			scanning = false;
 			scannedOnce = true;
-			markNetworks();
+			markNetworks(&selName);
 			changed = true;
 		}
 		if (artJob.take(out))
@@ -2795,6 +2814,7 @@ namespace banana
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
+		if (page == ACHIEVEMENTS && achLoader && (achLoader->busy() || achLoader->fetchingBadges())) return 200;	// (the list, the badges as they come)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -2849,6 +2869,10 @@ namespace banana
 			else if (net.current && wizard) { page = SETUP; message.clear(); startTest(); }	// (the setup: tested)
 			else if (net.current)
 				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
+			else if (!net.secured && net.saved && wifi::savedWithPassword(wifiConf, net.ssid))
+				// (only a network without a password by that name in reach: joining it would write an open network over
+				// the saved password, and the handheld would join any network of that name from then on)
+				message = net.ssid + " is saved with a password, and the one in reach has none: it may not be yours. Not joined; Y forgets the saved one first.";
 			else if (!net.secured || (net.saved && net.ssid != failed))
 			{
 				join(net, "");	// open, or saved: no password to type
@@ -5428,6 +5452,20 @@ namespace banana
 	static const float MIC_BANANADS[] = { 0, 0.15f, 0.05f, 0.02f, 0 }, MIC_SUPERDRASTIC[] = { 0, 0.3f, 0.15f, 0.03f, 0 };
 
 	// ---- Delete game ----
+	// a path (in lower case) with a folder of that name on its way ("bios", ".."). Its folders, not its letters: a
+	// game called "Wait... What.gba" or "Biosphere.gba" had no Delete row
+	static bool hasFolder(const std::string& low, const char* name)
+	{
+		for (size_t a = 0; a < low.size();)
+		{
+			size_t b = low.find('/', a);
+			if (b == std::string::npos) break;		// (the last part is the file's own name)
+			std::string part = low.substr(a, b - a);
+			if (part == name) return true;
+			a = b + 1;
+		}
+		return false;
+	}
 	// a file the game page may delete: a regular file in a roms folder (either card), never in a BIOS folder, and
 	// not PortMaster's own entry
 	static bool deletableRom(const std::string& path)
@@ -5436,18 +5474,49 @@ namespace banana
 		if (path.empty() || stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) return false;
 		std::string low = path;
 		for (auto& c : low) c = (char)tolower((unsigned char)c);
-		if (low.find("/roms/") == std::string::npos || low.find("/bios") != std::string::npos || low.find("..") != std::string::npos) return false;
+		if (low.find("/roms/") == std::string::npos || hasFolder(low, "bios") || hasFolder(low, "..")) return false;
 		return path.substr(path.rfind('/') + 1) != "PortMaster.sh";
 	}
 	static std::string baseOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
+
+	// the names of the games in the other systems' folders of a roms folder (each system's folder and one folder down,
+	// as the library reads them): what tells whether a save in a folder every system shares is this game's alone
+	static void otherSystemsGames(const std::string& roms, const std::string& mine, std::set<std::string>& names)
+	{
+		std::vector<std::string> folders;
+		if (DIR* r = opendir(roms.c_str()))
+		{
+			while (dirent* e = readdir(r)) if (e->d_name[0] != '.' && strcasecmp(e->d_name, mine.c_str()) != 0) folders.push_back(roms + "/" + e->d_name);
+			closedir(r);
+		}
+		for (size_t i = 0, top = folders.size(); i < folders.size(); i++)
+		{
+			DIR* d = opendir(folders[i].c_str());
+			if (!d) continue;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] == '.') continue;
+				struct stat st;
+				std::string p = folders[i] + "/" + e->d_name;
+				if (stat(p.c_str(), &st) != 0) continue;
+				if (S_ISREG(st.st_mode)) names.insert(baseOf(e->d_name));
+				else if (S_ISDIR(st.st_mode) && i < top) folders.push_back(p);
+			}
+			closedir(d);
+		}
+	}
 
 	// the ROM, and with all its saves, states and art: in the saves and states folders (RetroArch's, the DS
 	// emulators' and DraStic's), beside the game, in its folder's media/* and artwork/ (Game & Watch: its MAME artwork
 	// zip), and its own folder of saves where an emulator keeps one (MAME's saves/<system>/<game>/, the Game & Watch
 	// high scores); a file belongs to the game when its
 	// name is the game's name and a dot ("Peel Quest.sav", "Peel Quest.state1", "Peel Quest.resume.dss"), and not to
-	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay)
-	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all)
+	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay).
+	// The folders every system shares (saves/ and states/ themselves: every RetroArch system's but the GBA's) are only
+	// looked in when no other system has a game of that name, on either card: deleting the GBA's "Donkey Kong Country"
+	// took the Super Nintendo game's save with it. DraStic's folders are a DS game's alone (nds): deleting another
+	// system's game of a DS game's name took the DS game's newest save.
+	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all, bool nds)
 	{
 		std::vector<std::string> gone;
 		if (!deletableRom(rom)) return gone;
@@ -5462,8 +5531,19 @@ namespace banana
 			while (dirent* e = readdir(d)) { std::string b = baseOf(e->d_name); if (e->d_name[0] != '.' && b != base && b.compare(0, base.size() + 1, base + ".") == 0) others.push_back(b); }
 			closedir(d);
 		}
-		std::vector<std::string> dirs = { root + "/saves", root + "/saves/" + sys, root + "/states", root + "/states/" + sys,
-			root + "/drastic/backup", root + "/drastic/savestates", dir, dir + "/artwork" };
+		// the other systems' games: this card's roms folder (the game's own), the data card's and the second card's
+		std::set<std::string> elsewhere;
+		{
+			std::string low = rom;
+			for (auto& c : low) c = (char)tolower((unsigned char)c);
+			size_t at = low.find("/roms/");		// (there: deletableRom)
+			std::string roms = rom.substr(0, at + 5), mine = rom.substr(at + 6, rom.find('/', at + 6) - at - 6);
+			for (const std::string& r : { roms, root + "/roms", std::string("/run/sd2/roms") }) otherSystemsGames(r, mine, elsewhere);
+		}
+		for (auto& n : elsewhere) if (n != base && n.compare(0, base.size() + 1, base + ".") == 0) others.push_back(n);
+		std::vector<std::string> dirs = { root + "/saves/" + sys, root + "/states/" + sys, dir, dir + "/artwork" };
+		if (!elsewhere.count(base)) { dirs.push_back(root + "/saves"); dirs.push_back(root + "/states"); }
+		if (nds) { dirs.push_back(root + "/drastic/backup"); dirs.push_back(root + "/drastic/savestates"); }
 		// a folder of saves named after the game (MAME's NVRAM): its files, then the folder
 		for (const std::string& sd : { root + "/saves/" + sys + "/" + base, root + "/states/" + sys + "/" + base })
 		{
@@ -5509,7 +5589,7 @@ namespace banana
 				for (auto& o : others) if (n.compare(0, o.size() + 1, o + ".") == 0) other = true;
 				std::string low = (dd + "/" + n);
 				for (auto& c : low) c = (char)tolower((unsigned char)c);
-				if (!other && low.find("/bios") == std::string::npos) mine.push_back(dd + "/" + n);
+				if (!other && !hasFolder(low, "bios")) mine.push_back(dd + "/" + n);
 			}
 			closedir(d);
 			for (auto& m : mine)
@@ -5525,11 +5605,12 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped, const std::string& system)
 	{
 		open();
 		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
+		pgSystem = system;
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
 		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_RES, PG_3D, PG_MIC, PG_TIMING, PG_CPU };
@@ -5544,8 +5625,21 @@ namespace banana
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
 		}
+		// Achievements (a game of the library): any other game's first row; a DS game's after its own rows (before Delete,
+		// below). Its value from the card's cache (the list last seen here or in the game panel), read once now, not at
+		// each frame
+		if (!path.empty())
+		{
+			if (!nds) pgRows.insert(pgRows.begin(), PG_ACH);
+			pgAchValue = lang::tr("Show the list");
+			std::string h; uint32_t id = 0; ach::List l;
+			if (!ach::consoleFor(system)) pgAchValue = lang::tr("None for this system");
+			else if (ach::readId(achCacheDir(), ach::romKey(path), h, id) && id && ach::readList(achCacheDir(), id, l) && !l.items.empty())
+				pgAchValue = std::to_string(l.unlocked()) + " / " + std::to_string(l.items.size());
+		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
+		if (nds && !path.empty()) pgRows.push_back(PG_ACH);
 		pgDelAll = pgDelArmed = pgChanged = false;
 		if (deletableRom(path)) pgRows.push_back(PG_DELETE);	// (last: never the row the page opens on)
 		std::string cur = gameEmulator(romName);
@@ -5645,12 +5739,13 @@ namespace banana
 				// two steps: the first A asks, the second deletes (any other key in between takes the question back)
 				if (!pgDelArmed) { pgDelArmed = true; return MOVED; }
 				pgDelArmed = false;
-				deletedFiles = deleteGameFiles(data, pgPath, pgDelAll);
+				deletedFiles = deleteGameFiles(data, pgPath, pgDelAll, pgNds);
 				if (deletedFiles.empty()) { message = "The game couldn't be deleted: the card may be read-only."; return MOVED; }
 				close();
 				return DELETED;
 			}
 			if (k == Key::START && row == PG_DELETE) return NONE;	// (START is Done, never a delete)
+			if (k == Key::A && row == PG_ACH) { openAch(); return MOVED; }
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -5674,7 +5769,7 @@ namespace banana
 			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps)
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements: its page)
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -5710,6 +5805,9 @@ namespace banana
 				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
 				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
 				  "game, no BIOS. A asks first; A again deletes.")
+				: row == PG_ACH ? lang::tr("Every achievement of this game on RetroAchievements: which are unlocked (when, and softcore or hardcore) and which "
+				  "are still locked, with their points and what each asks for. A shows the list. It is read from the site with the account in "
+				  "Settings > System > First-time setup, and kept on the card for when there is no connection.")
 				: !message.empty() ? message
 				: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
 				  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
@@ -5753,9 +5851,9 @@ namespace banana
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
 		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : "Box art"; };
 		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
@@ -5763,7 +5861,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5782,7 +5880,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || (pgRows[r] == PG_DELETE && pgDelArmed);
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || (pgRows[r] == PG_DELETE && pgDelArmed);
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -5792,7 +5890,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();

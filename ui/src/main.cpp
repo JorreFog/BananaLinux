@@ -362,6 +362,17 @@ static bool openPage(Settings& st, const std::string& page)
 	return false;
 }
 
+// where the menu comes back to when a game or an app ends (runGame, and the headless "gameend"): a game to its
+// system's list with the cursor on it; an app ("[app]" in the theme's systems.cfg: Activity, the Store, Döda Kvarter)
+// to the home row on its tile, where A started it. Its one-entry list, the game card the app's entry is drawn as,
+// isn't a place anyone went to (#228: quitting Activity landed there)
+template <class H, class U> static void backFromGame(H& lib, U& ui, int game)
+{
+	const int sys = lib.currentShelf();
+	if (sys >= 0 && sys < lib.systemCount() && lib.system(sys).app) ui.setHome(sys);
+	else ui.setLibrary(sys, game);
+}
+
 // a favourite starred or unstarred: once the shelf shows, the Favorites collection and the favourite systems are put
 // right, and the cursor stays on the system it was on
 template <class U> static bool rearrange(Host& lib, U& ui)
@@ -887,6 +898,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
 	};
+	int lastLaunch = -1;	// (the headless "gameend": the game the last launch started)
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -905,6 +917,18 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
+		else if (op == "gameend")
+		{
+			if (lastLaunch < 0) { logf("gameend: nothing was launched"); return 2; }
+			backFromGame(lib, ui, lastLaunch);
+			ui.update(now);
+			logf("gameend: view %d sys %d game %d (%s)", (int)ui.view(), ui.systemIndex(), ui.gameIndex(),
+				ui.systemIndex() >= 0 && ui.systemIndex() < lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id.c_str() : "-");
+			lastLaunch = -1;
+		}
+		// ended <game>: the program started from the open shelf has ended (what the handheld's loop does then)
+		else if (op == "ended") { int g = 0; cs >> g; backFromGame(lib, ui, g); logf("ended: view %d sys %d", (int)ui.view(), ui.systemIndex()); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
@@ -935,14 +959,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			// (as the handheld's own loop: no search and no settings while a game is being started, and X only on a game
+			// that is there - a search with no result has none; a script that did either crashed the test run)
+			if (!settings.isOpen() && ui.view() == rnds::UI::LAUNCH && (it->second == Key::SELECT || it->second == Key::START)) { logf("press %s: ignored (launching)", b.c_str()); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
-			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && ui.gameIndex() < lib.gameCount())
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped,
+					lib.systemOf(ui.gameIndex()).id);
 				logf("press x: game page for %s", path.c_str());
+				logf("game page title: %s", lib.gameAt(ui.gameIndex()).title.c_str());
 				continue;
 			}
 			if (!settings.isOpen() && (it->second == Key::A || it->second == Key::X) && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
@@ -1178,6 +1207,34 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.gameComp = on ? &gc : nullptr;
 			settings.gameOpen("Companion Test", "Game Boy Advance", scr, true);
 			logf("gcpanel %s: companion %s", rom.c_str(), on ? gc.game()->title.c_str() : "none");
+		}
+		else if (op == "achdone")
+		{
+			// achdone: real time until the Achievements page's list (and its badges asked for so far) is there, 10 s at most;
+			// its state logged
+			for (int i = 0; i < 1000 && settings.achWorking(); i++) usleep(10000);
+			settings.update(now);
+			logf("achdone: %s", settings.achState().c_str());
+		}
+		else if (op == "achopen")
+		{
+			// achopen <system id> <rom>: that game's Achievements page, as from its game page
+			std::string sys, rom;
+			cs >> sys;
+			std::getline(cs >> std::ws, rom);
+			std::string name = rom.substr(rom.rfind('/') + 1);
+			settings.openAchievements(name.substr(0, name.rfind('.')), rom, sys);
+			logf("achopen %s %s: %s", sys.c_str(), rom.c_str(), settings.achState().c_str());
+		}
+		else if (op == "gamesys")
+		{
+			// gamesys <system id> <rom>: the game panel's game (before gamepanel): its system and file, as runGame gives them
+			std::string sys, rom;
+			cs >> sys;
+			std::getline(cs >> std::ws, rom);
+			settings.gameSystem(sys);
+			settings.gameRom(rom);
+			logf("gamesys %s %s", sys.c_str(), rom.c_str());
 		}
 		else if (op == "gstates")
 		{
@@ -1449,6 +1506,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
+		if (lib.pendingLaunch() >= 0 && lib.pendingLaunch() >= lib.gameCount()) lib.clearLaunch();	// (the shelf changed under it)
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
@@ -1456,7 +1514,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
-			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			else { logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str()); lastLaunch = g; }
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -2289,6 +2347,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	std::string gameRomPath;	// the running game's file (the game panel's save states)
+	std::string gameSysId;		// its system (the game panel's achievements list)
 	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
 	nds::Overlay ndsOverlay;	// the DS companion's picture for BananaDS's bottom screen (nds/overlay.h)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
@@ -2467,7 +2526,8 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path, lib.gameAt(g).scraped,
+					lib.systemOf(g).id);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
@@ -2567,6 +2627,7 @@ int main(int argc, char** argv)
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
+			settingsView.gameSystem(gameSysId);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 			settingsView.gbaAttach(gbaHost.get());
@@ -2731,6 +2792,7 @@ int main(int argc, char** argv)
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;
+		gameSysId = sd.id;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
@@ -2958,10 +3020,18 @@ int main(int argc, char** argv)
 		int status = 0;
 		if (pid > 0)
 		{
-			std::ofstream f("/run/banana/game.pid");	// bananad: the game to pause before a sleep
-			f << pid;
-			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
-			f << "\n";
+			{
+				// bananad: the game to pause before a sleep, and no idle dim or sleep while it runs. Written to a
+				// new file and renamed, and closed here: the stream used to stay open (unflushed) until the game
+				// ended, so the file was empty the whole session and bananad dimmed and slept mid-game (#242)
+				std::ofstream f("/run/banana/game.pid.new");
+				f << pid;
+				if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
+				f << "\n";
+				f.close();
+				if (!f || rename("/run/banana/game.pid.new", "/run/banana/game.pid") != 0)
+					logf("game.pid not written: %s", strerror(errno));
+			}
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
@@ -3072,7 +3142,7 @@ int main(int argc, char** argv)
 			lib.recordPlay(game, secs, achA, achB);	// (a start that failed straight away isn't a play)
 		}
 		ui->dataChanged();
-		ui->setLibrary(lib.currentShelf(), game);
+		backFromGame(lib, *ui, game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
 		if (!forceStorm && stormIrqs >= 0 && disp.isOpen())
 		{

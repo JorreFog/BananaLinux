@@ -35,7 +35,9 @@ GOOD=$WEB/good/feed.json
 u() {
     c=$1; shift
     mkdir -p "$OUT/$c/data" "$OUT/$c/run"
-    env PATH="$HPATH" BANANA_DATA="$OUT/$c/data" BANANA_RUN="$OUT/$c/run" BANANA_BOARD=${B:-rgds} BANANA_VERSION=${V:-0.4.2} \
+    # (no proxy of this machine's: every request here is to this test's own server or to a name that must not
+    # resolve; through a proxy "no DNS" came back as the proxy's refusal, "the connection broke off")
+    env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY PATH="$HPATH" BANANA_DATA="$OUT/$c/data" BANANA_RUN="$OUT/$c/run" BANANA_BOARD=${B:-rgds} BANANA_VERSION=${V:-0.4.2} \
         BANANA_UPDATE_FEED=${FEED:-$GOOD} BANANA_UPDATE_BETA_FEED=${BFEED:-$WEB/auth/beta/feed.json} BANANA_UPDATE_REUSE=${REUSE:-0} $SH "$UPD" "$@" > "$OUT/$c.out" 2> "$OUT/$c.err"
 }
 has() { grep -qxF -- "$2" "$OUT/$1.out" || bad "$1: no '$2' in: $(tr '\n' ' ' < "$OUT/$1.out") $(cat "$OUT/$1.err")"; }
@@ -63,6 +65,20 @@ cmp -s "$P" "$OUT/web/good/files/v0.4.3/banana-rgds-0.4.3.update.tar" || bad "do
 [ -e "$OUT/newer/run/update-download.pid" ] && bad "download: its pid file stayed"
 u newer list; has newer "$(printf '%s\t0.4.3\trgds' "$P")"
 grep -q 'downloaded banana-rgds-0.4.3.update.tar' "$OUT/newer/data/logs/updates.log" || bad "download: no line in updates.log"
+
+# a damaged line in the card's .check (its times and the size go into the shell's sums): the next check still answers and
+# writes a whole .check again, the daily one too, and a download with a damaged size still checks and fetches
+B=rgds V=0.4.2 u numbers check || bad "numbers: exit $?"
+sed -i 's/^fetched=.*/fetched=17x3/; s/^checked=.*/checked=1 2/' "$OUT/numbers/data/updates/.check"
+B=rgds V=0.4.2 u numbers check || bad "numbers: a check after a damaged fetched= line: exit $? $(cat "$OUT/numbers.err")"
+has numbers state=newer
+grep -qE '^fetched=[0-9]+$' "$OUT/numbers/data/updates/.check" || bad "numbers: the damaged fetched= line stayed in .check"
+sed -i 's/^checked=.*/checked=1 2/' "$OUT/numbers/data/updates/.check"; echo "update_daily = on" > "$OUT/numbers/data/settings.conf"
+B=rgds V=0.4.2 u numbers check --daily || bad "numbers: a daily check after a damaged checked= line: exit $? $(cat "$OUT/numbers.err")"
+grep -qE '^checked=[0-9]+$' "$OUT/numbers/data/updates/.check" || bad "numbers: the damaged checked= line stayed in .check"
+sed -i 's/^size=.*/size=12q/' "$OUT/numbers/data/updates/.check"
+B=rgds V=0.4.2 u numbers download || bad "numbers: a download after a damaged size= line: exit $? $(cat "$OUT/numbers.err")"
+[ "$(st numbers)" = "ready $OUT/numbers/data/updates/banana-rgds-0.4.3.update.tar" ] || bad "numbers: download status '$(st numbers)'"
 
 # a damaged download: its SHA-256 isn't the release's: deleted, nothing in banana/updates
 FEED=$WEB/bad/feed.json u damaged check; has damaged state=newer

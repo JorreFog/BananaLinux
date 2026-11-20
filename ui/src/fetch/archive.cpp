@@ -776,7 +776,15 @@ namespace banana
 			if (r)
 			{
 				if (!a.native) removeJunkAndLinks(tmp);
-				if (!moveInto(contentRoot(tmp, o.unwrap), dst)) r = localError(errno, "Moving the files into " + dst);
+				// an archive unpacked at the card's root with a banana/ folder in it (the systems list and its commands,
+				// the servers, the settings): refused whole, as one with a file that would land outside its folder
+				std::string root = contentRoot(tmp, o.unwrap), own;
+				std::error_code ec2;
+				if (!o.keepOut.empty())
+					for (auto& e : fs::directory_iterator(root, ec2))
+						if (insideFolder(dst + "/" + e.path().filename().string(), o.keepOut)) own = e.path().filename().string();
+				if (!own.empty()) r = Result(Err::UNSAFE, "The archive has files for Banana's own folder (" + own + "): it isn't unpacked.");
+				else if (!moveInto(root, dst)) r = localError(errno, "Moving the files into " + dst);
 				else if (o.progress) o.progress(1);
 			}
 			std::error_code ec;
