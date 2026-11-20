@@ -115,7 +115,7 @@ try:
         if all(buttons.values()):
             if held_since is None:
                 held_since = time.monotonic()
-            elif time.monotonic() - held_since >= 2:
+            elif time.monotonic() - held_since >= 0.2:
                 os.kill(pid, signal.SIGTERM)
                 break
 
