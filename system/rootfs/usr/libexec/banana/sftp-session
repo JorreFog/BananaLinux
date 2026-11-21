@@ -1,0 +1,21 @@
+#!/bin/sh
+# File sharing's SFTP: the login shell of the share's name (ssh sftp-on puts it in /etc/passwd), which runs the SFTP
+# server and nothing else, whatever the client asked for (a shell or a command gets the server all the same, which
+# only an SFTP client understands). The server sees the cards as the share shows them: / holds banana (the card) and
+# sd2 (the second card, while it's in; a card put in or taken out closes the sessions, as the share starts again),
+# with the files the share hides (its veto files: Wi-Fi's, the accounts', Files' servers' passwords, the SSH host key)
+# empty and read-only, and root's SSH keys too (the share's password doesn't make a key that logs in as root). All that in a mount namespace of the session's own, so the menu and the share still see the
+# real files; then the server chroots there and becomes nobody (the card's exFAT lets anyone write: uid=0,fmask=0000).
+exec unshare -m /bin/sh -c '
+V=/run/banana/sftp-view
+mount --make-rprivate / &&
+mount -t tmpfs -o mode=0755,size=64k sftp $V &&
+mkdir $V/banana && mount --bind /data $V/banana || exit 1
+if grep -q " /run/sd2 " /proc/mounts; then mkdir $V/sd2 && mount --bind /run/sd2 $V/sd2; fi
+for f in banana/accounts.conf banana/wifi.conf banana/nas.conf banana/nas.key banana/ra.token banana/ssh/host_key_ed25519 \
+         banana/ssh/authorized_keys; do
+    [ -f $V/banana/$f ] && { mount --bind /run/banana/sftp/empty $V/banana/$f || exit 1; }
+done
+mount -o remount,ro $V || exit 1
+exec /usr/libexec/gesftpserver --chroot $V --user nobody
+'

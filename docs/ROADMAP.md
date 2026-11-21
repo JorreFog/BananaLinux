@@ -91,3 +91,4 @@
       its modules loaded only while it is on), Settings > Network > Bluetooth and Bluetooth devices. Built, not yet
       tested on the handhelds; pairing with a PIN or passkey (keyboards, Wii remotes) not yet
 - [x] SSH for working on Banana, off by default (dropbear, keys only, from banana/ssh/authorized_keys)
+- [x] SFTP with File sharing's name and password (#299): FileZilla or a phone's file manager on the cards, nothing else

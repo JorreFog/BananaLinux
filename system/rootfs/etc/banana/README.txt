@@ -26,6 +26,8 @@ File sharing: Settings > Network > File sharing puts this card on the network (\
 smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. It asks for a name and a password:
 name banana, password linux, until you change them in Settings > Network > File sharing > Sharing name and password (Sharing
 login > Guest: no password, only on a network you trust). The second SD card, while it's in, is \\<address>\sd2.
+With a name and a password, the cards are also on SFTP with the same login, for FileZilla, WinSCP or a phone's
+file manager: sftp://<address> (port 22), the card in banana and the second card in sd2.
 DS saves from ROCKNIX beside the games (roms/nds/<game>.dsv) are taken when a game starts here and BananaOS has no save
 for it yet (so a save you delete here comes back from that file; delete or rename the .dsv too).
 
@@ -39,7 +41,7 @@ Equalizer APO's parametric format (what AutoEq and REW export: "Preamp: -3 dB", 
 Q 1.2"), picked in Profile.
 
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
-Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
+Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords; sftp and scp too.
 
 RetroArch (the systems other than the DS): F + a button in a game, F + X its menu, F + Start quits.
 A button bound away in RetroArch's

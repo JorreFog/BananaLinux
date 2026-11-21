@@ -221,7 +221,18 @@ get their words only for the window on screen: a folder of any number of names d
 **SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
 `/root/.ssh` points there); the host key is made once per card. Logs and `sleep_debug`'s timings can be read
-on a computer without taking the card out.
+on a computer without taking the card out. sftp and scp work too (gesftpserver as dropbear's `sftp-server`).
+
+**SFTP for File sharing** (#299): the same dropbear, running while SSH is on or the share is on with a name and a
+password (the `ssh` script keeps one server for both: `-s`, no passwords at all, unless the share's SFTP is on;
+`-j -k`, no port forwarding, always). `share up` hands the name and password to `ssh sftp-on` on its input; that
+adds the name to copies of `/etc/passwd`, `shadow` (a SHA-512 hash, by busybox's mkpasswd; root's own password
+locked) and `shells`, bound over the read-only originals until `sftp-off` (the share down, or Guest: no SFTP with no
+password). The name is uid 0 with `sftp-session` as its shell, which runs the SFTP server whatever the client asks
+for: in a mount namespace of the session's own, a tmpfs root holding `banana` (the card) and `sd2` (the second card),
+the share's veto files and root's `authorized_keys` covered by an empty read-only file, then gesftpserver chroots
+there and becomes nobody (built with `--enable-daemon` for that, external.mk; its names always UTF-8, a patch, as
+the handheld has no locales). A name the system already has (root, nobody) never gets the share's password.
 
 **Low battery**: at 20% (the LED turns red), 10% and 5% (it blinks) on the battery, a notice in the bubble style
 over the bottom of the top panel for 8 s, the status bar's battery three times its size; any button hides it.

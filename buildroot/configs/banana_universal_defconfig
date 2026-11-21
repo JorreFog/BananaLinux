@@ -132,6 +132,10 @@ BR2_PACKAGE_LDACBT=y
 BR2_PACKAGE_DROPBEAR=y
 # BR2_PACKAGE_DROPBEAR_CLIENT is not set
 BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y
+# SFTP over it: File sharing's name and password (ssh sftp-on, sftp-session), and root's keys (#299). Passwords
+# need crypt(), which the toolchain's glibc no longer has
+BR2_PACKAGE_GESFTPSERVER=y
+BR2_PACKAGE_LIBXCRYPT=y
 BR2_PACKAGE_CA_CERTIFICATES=y
 # Ports and PortMaster (from the Store): bash for the ports' scripts, Python for PortMaster's own menu, the
 # SDL2 add-ons and sound libraries ports load from the system
