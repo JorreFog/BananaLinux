@@ -1,0 +1,40 @@
+The RG DS's ICM-42607P IMU (3-axis gyroscope and accelerometer) on i2c2 at 0x68
+
+Both boards carry the InvenSense ICM-42607P at 0x68 on i2c2 (the device trees kept a note of it). Mainline's
+inv_icm42607 driver, copied in by external.mk (board/rgds/imu/inv_icm42607), binds it. The mount matrix is mainline's
+for the RG-DS, its axes against the screen's; the Plus uses the same one until a device says otherwise.
+
+--- a/rk3568-anbernic-rg-ds.dts
++++ b/rk3568-anbernic-rg-ds.dts
+@@ -908,7 +908,13 @@
+             sound-name-prefix = "Right AMP";
+             vcc-supply = <&vcc_amp>;
+     };
+-	/* invensense,icm42607p at 0x68 */
++	icm42607p: imu@68 {
++		compatible = "invensense,icm42607p";
++		reg = <0x68>;
++		mount-matrix = "-1", "0", "0",
++			       "0", "1", "0",
++			       "0", "0", "-1";
++	};
+ };
+ 
+ &i2c3 {
+--- a/rk3568-anbernic-rg-ds-plus.dts
++++ b/rk3568-anbernic-rg-ds-plus.dts
+@@ -965,7 +965,13 @@
+ 		};
+ 	};
+ 
+-	/* invensense,icm42607p at 0x68 */
++	icm42607p: imu@68 {
++		compatible = "invensense,icm42607p";
++		reg = <0x68>;
++		mount-matrix = "-1", "0", "0",
++			       "0", "1", "0",
++			       "0", "0", "-1";
++	};
+ };
+ 
+ &i2c5 {
