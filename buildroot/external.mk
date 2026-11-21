@@ -11,7 +11,8 @@ SDL2_CONF_OPTS += --enable-video-offscreen
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the
-# RG DS's panels at 60 Hz).
+# RG DS's panels at 60 Hz). And the RG DS's ICM-42607P IMU (3-axis gyroscope and accelerometer, i2c2 at 0x68), whose
+# driver mainline merged in v7.3 and v7.2.7 doesn't have (imu/inv_icm42607): copied in and wired into the IIO tree.
 BANANA_RGDS = $(BR2_EXTERNAL_BANANA_PATH)/board/rgds
 # ROCKNIX's kernel patches, applied as ROCKNIX applies them (patch -p1, fuzz allowed): a few of them were written
 # against a slightly different kernel and only fit with fuzz, which Buildroot's own patch step (-F0) refuses
@@ -29,6 +30,12 @@ define BANANA_LINUX_RGDS_DRIVERS
 	cp $(BANANA_RGDS)/kernel/rocknix-singleadc-joypad.c $(BANANA_RGDS)/kernel/rocknix-joypad.h $(LINUX_DIR)/drivers/input/joystick/
 	grep -q rocknix-singleadc-joypad.o $(LINUX_DIR)/drivers/input/joystick/Makefile || \
 		echo 'obj-$$(CONFIG_INPUT_JOYSTICK) += rocknix-singleadc-joypad.o' >> $(LINUX_DIR)/drivers/input/joystick/Makefile
+	# the IMU (drivers/iio/imu/inv_icm42607): mainline's v7.3 driver, for the v7.2.7 Banana builds
+	cp -r $(BANANA_RGDS)/imu/inv_icm42607 $(LINUX_DIR)/drivers/iio/imu/
+	grep -q 'drivers/iio/imu/inv_icm42607/Kconfig' $(LINUX_DIR)/drivers/iio/imu/Kconfig || \
+		echo 'source "drivers/iio/imu/inv_icm42607/Kconfig"' >> $(LINUX_DIR)/drivers/iio/imu/Kconfig
+	grep -q 'obj-y += inv_icm42607/' $(LINUX_DIR)/drivers/iio/imu/Makefile || \
+		echo 'obj-y += inv_icm42607/' >> $(LINUX_DIR)/drivers/iio/imu/Makefile
 	cp $(BANANA_RGDS)/dts/*.dts $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/
 	for p in $(sort $(wildcard $(BANANA_RGDS)/dts-patches/*.patch)); do \
 		patch -p1 -N -d $(LINUX_DIR)/arch/arm64/boot/dts/rockchip < $$p || exit 1; \

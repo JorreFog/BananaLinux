@@ -19,6 +19,10 @@ CONFIG_INPUT_JOYSTICK=y
 CONFIG_INPUT_POLLDEV=y
 CONFIG_DRM_MIPI_DSI=y
 CONFIG_TOUCHSCREEN_GOODIX=y
+# the RG DS's ICM-42607P IMU on i2c2 (3-axis gyroscope and accelerometer): mainline's v7.3 driver, copied in by
+# external.mk (board/rgds/imu/inv_icm42607), built in and exposed as an IIO device
+CONFIG_INV_ICM42607=y
+CONFIG_INV_ICM42607_I2C=y
 # Panfrost (Mesa) for SuperDrastic's shaders and RetroArch's GLES; loaded after the menu is up
 CONFIG_DRM_PANFROST=m
 # suspend to RAM; PM_DEBUG for /sys/power/pm_print_times (each device's suspend and resume time in dmesg, to find
