@@ -288,6 +288,11 @@ machine_id "$T/mid/card2" "$T/mid/run2"
 check "$([ "$(cat "$T/mid/card2")" != "$id1" ] && echo other)" "other" "another card: another id"
 echo "not an id" > "$T/mid/card"; machine_id "$T/mid/card" "$T/mid/run"
 check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "a file that isn't an id is made again"
+# (hex digits only, but not 32 of them: it passed as an id, was never copied and never made again)
+echo "0123456789abcdef" > "$T/mid/card"; rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "an id cut short is made again"
+printf '%s' "$id1" > "$T/mid/card"; rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(cat "$T/mid/card") $(cat "$T/mid/run" 2>/dev/null)" "$id1 $id1" "an id without its line end is that id still"
 
 echo "run-bananads: a zipped game is only kept when it unpacked whole"
 fn "$L/run-bananads" unpack
