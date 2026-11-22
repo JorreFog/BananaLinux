@@ -763,6 +763,10 @@ namespace banana
 		{
 			const char* UP = "Updates";
 			add(UP, "gear", "Update", "A new version, from GitHub or a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
+		// the account the first-time setup asks for, here too (#56: skipped there, logging in meant the whole setup again):
+		// A types its name, then its password, and the site says at once whether they work (startRaCheck)
+		add(S, "gear", "RetroAchievements account", "Your retroachievements.org account, for achievements in every emulator. Type its name, then its password: the login is checked at once.",
+			"", "ra_account", {}, {}, Item::PAGE);
 			add(UP, "gear", "Test versions", "Whether the update check counts test versions.",
 				menu, "update_prerelease", { "Included", "Left out" }, { "on", "off" });
 			items.back().hints = { "Test versions count. Every release so far is one.", "Only stable versions." };
@@ -941,7 +945,7 @@ namespace banana
 			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "System", { "Updates", "Language", "Time zone", "Box art", "RetroAchievements account", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
 			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling", "Game Boy colours", "GBC colour correction" } },
@@ -1344,6 +1348,7 @@ namespace banana
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
+			if (it.key == "ra_account") { startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", LIST, account("ra_user")); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
@@ -2577,6 +2582,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
+			else if (it.kind == Item::PAGE && it.key == "ra_account") { AsNamed named(*this, !account("ra_user").empty()); v = account("ra_user").empty() ? "Not set" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
 			{
 				if (const Item* r = itemByKey(s->summary); r && r->kind == Item::CHOICE && r->at < (int)r->names.size()) v = r->names[r->at];
 			}

@@ -214,6 +214,15 @@ for size in 640x480 1024x768; do
             press b; press start; shot smb-pass; press start; wait 300; shot smb-done" 2> "$alog" || { echo "FAIL $size: banana-ui (sharing login) exited $?"; fail=1; }
     grep -qx 'smb_user=banan' "$FX/data/accounts.conf" && grep -qx 'smb_password=linux' "$FX/data/accounts.conf" || { echo "FAIL $size: accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
     rm -f "$FX/data/accounts.conf"
+    # the RetroAchievements account outside the first-time setup (#56): System (the sixth tile) > RetroAchievements account
+    # (the row after Box art, "Not set"), the keyboard on the name, START, then on the password, START: both in
+    # accounts.conf, where the launchers read them, and the row shows the name (BANANA_RA_CHECK=0: no site here)
+    BANANA_RA_CHECK=0 "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press down; press right; press right; press a; press down; press down; press down; press down; shot ra-row; \
+            press a; type banana-fan; press start; shot ra-pass; type s3cret; press start; wait 300; shot ra-done" 2> "$OUT/$size-ra-account.log" || { echo "FAIL $size: banana-ui (RetroAchievements account) exited $?"; fail=1; }
+    grep -qx 'ra_user=banana-fan' "$FX/data/accounts.conf" && grep -qx 'ra_password=s3cret' "$FX/data/accounts.conf" || { echo "FAIL $size: the RetroAchievements account isn't in accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
+    cmp -s "$OUT/$size-ra-row-bot.png" "$OUT/$size-ra-done-bot.png" && { echo "FAIL $size: the RetroAchievements account row doesn't show the name typed"; fail=1; }
+    rm -f "$FX/data/accounts.conf"
     # Favorites starred itself (first on the shelf, ahead of every system): a GBA favourite launches with GBA's
     # emulator, not the shelf's one along (its systems' places moved when Favorites went in before them)
     flog=$OUT/$size-favorites.log
