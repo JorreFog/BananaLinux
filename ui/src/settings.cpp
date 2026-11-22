@@ -631,6 +631,10 @@ namespace banana
 			add(SS, "gamepad", "Second screen", "What the other screen shows while a game plays. A Commodore 64 or ZX Spectrum game also gets a touch keyboard there: put the game on the top screen.",
 				menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
 			items.back().hints = { "Achievements and tiles to save, load, open the menu, fast-forward and quit (by touch on the bottom screen).", "The other screen stays dark." };
+			// (#75: a light menu, and a panel beside the game that doesn't light the room)
+			add(SS, "picture", "Game panel theme", "The game panel's colours.",
+				menu, "retroarch_panel_theme", { "As the menu", "Dark" }, { "theme", "dark" });
+			items.back().hints = { "The menu's theme.", "Dark whatever the menu's theme is: less light beside the game." };
 			add(SS, "picture", "Game panel when idle", "What the game panel does when you leave it alone.",
 				menu, "bottom_idle_mode", { "Dims", "Turns off", "Stays on" }, { "dim", "off", "on" });
 			items.back().hints = { "It dims. A touch or a button lights it again.", "It turns off. A touch or a button lights it again.", "It stays on." };
@@ -759,14 +763,14 @@ namespace banana
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games: fetching them, and where they come from.", "", "sys_boxart", {}, {}, Item::PAGE);
-		// the Updates page (System > Updates)
-		{
-			const char* UP = "Updates";
-			add(UP, "gear", "Update", "A new version, from GitHub or a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
 		// the account the first-time setup asks for, here too (#56: skipped there, logging in meant the whole setup again):
 		// A types its name, then its password, and the site says at once whether they work (startRaCheck)
 		add(S, "gear", "RetroAchievements account", "Your retroachievements.org account, for achievements in every emulator. Type its name, then its password: the login is checked at once.",
 			"", "ra_account", {}, {}, Item::PAGE);
+		// the Updates page (System > Updates)
+		{
+			const char* UP = "Updates";
+			add(UP, "gear", "Update", "A new version, from GitHub or a package on the card. It runs from the next restart.", "", "update", {}, {}, Item::PAGE);
 			add(UP, "gear", "Test versions", "Whether the update check counts test versions.",
 				menu, "update_prerelease", { "Included", "Left out" }, { "on", "off" });
 			items.back().hints = { "Test versions count. Every release so far is one.", "Only stable versions." };
@@ -1344,11 +1348,11 @@ namespace banana
 			if (it.key == "speaker_eq_page") { openEq(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
+			if (it.key == "ra_account") { startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", LIST, account("ra_user")); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
-			if (it.key == "ra_account") { startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", LIST, account("ra_user")); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
@@ -2578,11 +2582,11 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
+			else if (it.kind == Item::PAGE && it.key == "ra_account") { AsNamed named(*this, !account("ra_user").empty()); v = account("ra_user").empty() ? "Not set" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			else if (const Subpage* s = it.kind == Item::PAGE ? subpageFrom(it.key) : nullptr; s && !s->summary.empty())	// one of its rows' value
-			else if (it.kind == Item::PAGE && it.key == "ra_account") { AsNamed named(*this, !account("ra_user").empty()); v = account("ra_user").empty() ? "Not set" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
 			{
 				if (const Item* r = itemByKey(s->summary); r && r->kind == Item::CHOICE && r->at < (int)r->names.size()) v = r->names[r->at];
 			}

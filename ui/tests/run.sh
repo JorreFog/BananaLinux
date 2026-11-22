@@ -613,6 +613,21 @@ for size in 640x480 1024x768; do
     done
     grep -q "gtouch 576 360: action 0 keys 1" "$KK" || { echo "FAIL $size: the Keys tile didn't open the keyboard"; fail=1; }
     grep -q "gtouch 590 350: action 0 keys 0" "$KK" || { echo "FAIL $size: Done didn't close the keyboard"; fail=1; }
+    # Second screen > Game panel theme > Dark (#75): under the light theme the game panel is the dark theme's own, pixel
+    # for pixel; with the row as it comes ("As the menu") it is light; and Settings after the game is light again
+    PT=$OUT/fixture-panel-theme
+    ptrun() {   # ptrun <name> <settings.conf lines> <script>
+        rm -rf "$PT"; cp -r "$FX/data" "$PT"; printf "$2" >> "$PT/settings.conf"
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$PT" --script "$3" 2> "$OUT/$size-$1.log" || { echo "FAIL $size: banana-ui ($1) exited $?"; fail=1; }
+    }
+    ptrun pt-light 'theme = light\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-light; gameclose; press start; shot pt-light-settings"
+    ptrun pt-dark 'theme = light\nretroarch_panel_theme = dark\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-dark; gameclose; press start; shot pt-dark-settings"
+    ptrun pt-ref 'theme = dark\nretroarch_panel_theme = dark\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-ref"
+    cmp -s "$OUT/$size-pt-dark-bot.png" "$OUT/$size-pt-ref-bot.png" || { echo "FAIL $size: Game panel theme > Dark: the panel under the light theme isn't the dark theme's"; fail=1; }
+    cmp -s "$OUT/$size-pt-light-bot.png" "$OUT/$size-pt-ref-bot.png" && { echo "FAIL $size: the light theme's game panel is the dark one without being asked"; fail=1; }
+    cmp -s "$OUT/$size-pt-dark-settings-bot.png" "$OUT/$size-pt-light-settings-bot.png" || { echo "FAIL $size: Game panel theme > Dark: Settings after the game isn't in the light theme again"; fail=1; }
+    grep -q '^retroarch_panel_theme = dark$' "$PT/settings.conf" || { echo "FAIL $size: retroarch_panel_theme = dark didn't stay in settings.conf"; fail=1; }
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }

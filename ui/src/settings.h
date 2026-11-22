@@ -735,6 +735,7 @@ namespace banana
 		void gameStatesScan();
 		void gameStatesFrame(const SPal& p);
 		bool gTouch = true;
+		bool gPanelDark = false;	// the game panel is dark under a light theme (retroarch_panel_theme): gameClose puts the theme back
 		// the panel's on-screen keyboard (a computer's game: the C64's LOAD"*",8,1 with a finger on the bottom screen).
 		// vkbd is the emulator's own keyboard (vkbd.h), made before the game started and gone after it; the Keys tile
 		// opens the pages, a tap types the key into the game

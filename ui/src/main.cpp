@@ -952,6 +952,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lastLaunch = -1;
 		}
 		// ended <game>: the program started from the open shelf has ended (what the handheld's loop does then)
+		// gameclose: the game panel's game has ended (what runGame does with the panel then)
+		else if (op == "gameclose") { settings.gameClose(); logf("gameclose"); }
 		else if (op == "ended") { int g = 0; cs >> g; backFromGame(lib, ui, g); logf("ended: view %d sys %d", (int)ui.view(), ui.systemIndex()); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)

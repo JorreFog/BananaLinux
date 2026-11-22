@@ -359,6 +359,9 @@ namespace banana
 	void Settings::gameOpen(const std::string& title, const std::string& system, int screen, bool touch)
 	{
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
+		// Settings > Other systems > Second screen > Game panel theme > Dark (#75): the panel in the dark palette under a
+		// light theme, for this game; gameClose puts the theme back before the menu is drawn again
+		if (light && getConfValue(data + "/settings.conf", "retroarch_panel_theme", "theme") == "dark") { setVariant("dark"); gPanelDark = true; }
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
 		gKeysOpen = false; gKeyPage = 0; gKeyShift = 0; gKeyTyped.clear();
 		gcView = gcLast = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
@@ -600,6 +603,7 @@ namespace banana
 		gStateName.clear();
 		gBadges.clear();
 		gbaRelease();
+		if (gPanelDark) { gPanelDark = false; setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); }
 	}
 
 	void Settings::gbaAttach(gba::Host* host)
