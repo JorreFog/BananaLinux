@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+# a pull request's or a work branch's newer push ends the run of the one before it; main's pushes each keep their run
+# (which commit broke a check stays readable), and an image build that was asked for is never ended by a push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main') }}
+
 jobs:
   checks:
     runs-on: ubuntu-24.04
