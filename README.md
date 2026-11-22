@@ -309,6 +309,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 ## Built for two screens and a lid
 
 - Suspend and resume: close the lid and the game pauses, the card is flushed and the handheld sleeps. Open it and the game carries on. Woken in a bag, it goes back to sleep. With Power off after sleeping, a long sleep on the battery saves the game and turns the handheld off; press power and you are back in it.
+- Deep sleep is that same sleep, with nothing to switch on: closing the lid, a short press of the power button, **Sleep** in the Power menu (START on the home screen, then Y) and idle minutes in the menu (10 unless changed) all suspend the handheld to RAM (`mem_sleep = deep` in `bananad.conf`, the default). Only if a suspend fails does that one sleep use a lighter kind. On the charger it stays awake with the screens off instead, so the charging light stays on. `banana/logs/sleep.log` on the card has a line for every sleep.
 - Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream. A speaker EQ (Settings › Display & sound) has a tuned profile for the RG DS Plus speakers.
 - Battery care: while asleep it checks the battery and shuts down cleanly before it runs flat. The LEDs work as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging.
 
