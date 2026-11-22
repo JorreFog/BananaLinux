@@ -24,3 +24,5 @@ CONFIG_FEATURE_STAT_FORMAT=y
 # find -delete: five ports tidy up after unpacking with it (Super Hexagon: the game's own x86_64 libSDL2, which box64
 # would load ahead of the SDL it wraps); the files stayed ("unrecognized: -delete")
 CONFIG_FEATURE_FIND_DELETE=y
+# bzip2 -d: VCMI unpacks the libicudata.so.63 it links against with `bzip2 -fd` (only bunzip2 was there)
+CONFIG_BZIP2=y
