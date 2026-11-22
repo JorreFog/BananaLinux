@@ -25,9 +25,17 @@ mkdir -p "$OUT/obj"
 # ---- build: the menu's sources but main.cpp, once, then each target against them ----
 SAN="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
 # (-Isrc as the Makefile's UI_FLAGS: the sources include "nds/logic.h" and the like from src/; without it nothing built)
-FLAGS="-std=c++17 -O1 -g $SAN -I$HERE/src $(pkg-config --cflags freetype2 libdrm zlib)"
-LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread"
+# (-I rcheevos and its rhash objects, as the Makefile's RC_*: achievements.cpp includes rc_hash.h; without them the
+# build stopped there)
+RC=$HERE/third_party/rcheevos
+FLAGS="-std=c++17 -O1 -g $SAN -I$HERE/src -I$RC/include $(pkg-config --cflags freetype2 libdrm zlib)"
+LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread -ldl"
 OBJS=""
+for s in "$RC"/src/rhash/*.c "$RC/src/rc_compat.c"; do	# (upstream C: built with clang, its warnings off)
+    o=$OUT/obj/rc_$(basename "$s").o
+    [ "$o" -nt "$s" ] || ${FUZZ_CC:-clang} -O1 -g $SAN -fsanitize=fuzzer-no-link -I"$RC/include" -w -c "$s" -o "$o"
+    OBJS="$OBJS $o"
+done
 for s in $(sed -n 's/^SRC +*= //p' "$HERE/Makefile") fuzz/stb.cpp; do	# (stb's code is in main.cpp)
     [ "$s" = src/main.cpp ] && continue
     o=$OUT/obj/$(echo "$s" | tr / _).o
