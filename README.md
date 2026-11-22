@@ -391,6 +391,8 @@ make ui            # ui/banana-ui for this computer
 make test          # renders the menu from a test library into ui/tests/out
 ```
 
+[CONTRIBUTING.md](CONTRIBUTING.md) has the packages to install, every test suite and what it needs, and how reports, translations and pull requests get in.
+
 | Path | What |
 |---|---|
 | `ui/` | `banana-ui`: the KMS host (`src/`), ROCKNIXDS Pixel's engine (`rnds/`), its assets, the headless tests |
