@@ -29,6 +29,9 @@ ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo
 # START (y 328) the same colour as above it (y 300)
 ux_mean() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 'BEGIN { printf "%dx%d+%d+%d", 100 * k, 4 * k, 270 * k, y * k }')" -format '%[fx:int(255*mean.r)] %[fx:int(255*mean.g)] %[fx:int(255*mean.b)]' info: 2>/dev/null; }
 [ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 328)" = "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 300)" ] || { echo "FAIL $size: the plate's dark band runs into START"; fail=1; }
+# ...and its foot is one shade, the accent's own low as under Settings' picked row (#164: a straight dark band lay over
+# the curved shade there, which showed behind it): yellow's c98f12 at y 340
+[ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 340)" = "201 143 18" ] || { echo "FAIL $size: the plate's foot isn't the accent's low shade: $(ux_mean "$OUT/$size-ux-row-first-bot.png" 340)"; fail=1; }
 
 # the box art's frame (Pixel): it fits the picture (owner, 0.5.0: a square frame stood taller than a DS box): a tall
 # cover's frame top is elsewhere than a wide one's, and a game without one keeps the square

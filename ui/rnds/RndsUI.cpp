@@ -1454,8 +1454,10 @@ namespace rnds
 		BoxCss plateBox()
 		{
 			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(accent.base);
-			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 150, -1, Color::hex(accent.dark) } };
-			b.shadows = { inset(0, -8, 0, Color(0, 0, 0, 0.35f)), outer(4, 4, SHADE40) };
+			// (Banana, #164: as Settings' picked row, a straight highlight on top, the accent, one curved shade at the foot.
+			// It had a straight dark band there too, with the curved shade showing behind it)
+			b.bands = { Band{ 0, 14, Color::hex(accent.light) } };
+			b.shadows = { inset(0, -8, 0, Color::hex(accent.low)), outer(4, 4, SHADE40) };
 			return b;
 		}
 		BoxCss slotBox(bool on)

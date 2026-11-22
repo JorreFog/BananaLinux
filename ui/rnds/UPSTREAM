@@ -31,3 +31,4 @@ Banana UX (0.5.1, owner): the box art on the game list's top screen without its 
 Banana (bug hunt 2026-11-04): renderLine makes no bitmap for a line over 4096x4096 px's area (a theme's numbers; it ended the
 menu on bad_alloc).
 Banana: Verbatim (RndsRaster): texts laid out on a thread while one is alive skip the translator; RndsUI's game titles use it.
+Banana UX (#164): the play plate's foot is the accent's low shade alone, as Settings' picked row (plateBox: no dark band).
