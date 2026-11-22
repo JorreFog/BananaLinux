@@ -1,0 +1,116 @@
+name: Something doesn't work
+description: A freeze, a crash, no sound, a black screen, a game that doesn't run, a setting that doesn't hold
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. One problem per report, please: three problems in one are hard to follow up.
+        Before you write, look at the [known issues](https://github.com/JorreFog/BananaLinux#status) and search the [open reports](https://github.com/JorreFog/BananaLinux/issues?q=is%3Aissue): if yours is there, a comment on it with your handheld and version helps more than a new one.
+  - type: dropdown
+    id: handheld
+    attributes:
+      label: Handheld
+      description: The two have different panels, speakers and card slots, so most answers start here.
+      options:
+        - RG DS
+        - RG DS Plus
+        - Both (I have the two)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BananaOS version
+      description: "Settings › System › About says it, slot included: copy that line. Not \"the latest\": it changes every week."
+      placeholder: "Banana 0.5.3.6 (slot b) on the RG DS Plus"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How this version got on the card
+      options:
+        - Updated over Wi-Fi (Settings › System › Updates)
+        - Updated from a package copied to banana/updates
+        - A card freshly flashed with this version's image
+        - Built from source
+        - I don't know
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it happens
+      description: For a DS game, the emulator is in Settings › Nintendo DS › Emulator (or X on the game in the library).
+      options:
+        - The menu (home, library, themes, Settings)
+        - A DS game in BananaDS
+        - A DS game in SuperDrastic
+        - Another system's game (GBA, SNES, PlayStation, N64 ...)
+        - An app, a port or the Store
+        - Sound (speakers, headphones, Bluetooth audio, the microphone)
+        - Sleep, the lid, the battery, charging
+        - Wi-Fi, Bluetooth, file sharing, Files' servers, updates
+        - Flashing the card, the first boot, the first-time setup
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game or app
+      description: Its full name with the region and the file type; for a ROM hack or a translation patch, say so. Empty when no game is involved.
+      placeholder: "Pokémon White Version (USA, Europe) .nds"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens, and what you expected
+      description: What you see and hear, and what should have happened instead. A photo or a short video of both screens says a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      description: From switching the handheld on, step by step. For a game, where in the game (a save right before the spot is the best report there is).
+      placeholder: |
+        1. Start the game from the library
+        2. Close the lid for ten minutes
+        3. Open it: the picture is back, the sound isn't
+    validations:
+      required: true
+  - type: dropdown
+    id: often
+    attributes:
+      label: How often
+      options:
+        - Every time
+        - Often
+        - Now and then
+        - It happened once
+    validations:
+      required: true
+  - type: input
+    id: before
+    attributes:
+      label: Did it work before?
+      description: The last version where it worked, if you know one. Settings › System › Previous version restarts into the version before, to compare.
+      placeholder: "Yes, in 0.5.3.4"
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings and accessories that may matter
+      description: "What you changed from the defaults for this game or system (3D resolution, low latency, shader, screen layout, the frontend or core), and what is connected: a second SD card, headphones, a Bluetooth headset or controller, a charger."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Put the card in a computer (or use Settings › Network › File sharing) and open the `BANANA` drive: the logs are in `banana/logs/`. Drag the files that fit into this box, or zip the folder and drag that.
+        - always: `banana-ui.log` (the menu) and `dmesg.txt` (the kernel; `dmesg.1.txt` is the boot before)
+        - a DS game: the `bananads/` or `superdrastic/` folder; another system's game: `bananafront.log` (RetroArch itself keeps no log on the card)
+        - sleep and wake: `sleep.log`; charging while off: `battery-while-off.txt`; an update: `updates.log`
+        - hard to catch: press A seven times on Settings › System › About, switch on Developer options › Flight recorder (System's last row), make it happen again (hold Select for 2 seconds to mark the moment), and send the newest `session-*.txt` in `banana/logs/sessions/`
+
+        The menu and the emulators start their logs anew each time and keep only the run before (`.1`), so take them before playing on. [docs/FIRST-BOOT.md](https://github.com/JorreFog/BananaLinux/blob/main/docs/FIRST-BOOT.md#when-something-is-wrong) says what each file holds and what to do when the screens stay black.

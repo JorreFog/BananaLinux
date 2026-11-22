@@ -1,0 +1,12 @@
+# (free-form reports stay possible: the long write-ups with their own measurements don't fit a form)
+blank_issues_enabled: true
+contact_links:
+  - name: Black screens, or the handheld doesn't start
+    url: https://github.com/JorreFog/BananaLinux/blob/main/docs/FIRST-BOOT.md#when-something-is-wrong
+    about: What to check first, and which files on the card say what went wrong.
+  - name: Known issues in the current release
+    url: https://github.com/JorreFog/BananaLinux#status
+    about: What is already known not to work yet, release by release.
+  - name: A translation into your language
+    url: https://github.com/JorreFog/BananaLinux/blob/main/CONTRIBUTING.md#translations
+    about: How a language gets into BananaOS, and how to correct a line in one that is there.
