@@ -1,0 +1,20 @@
+config BR2_PACKAGE_BANANATUBE
+	bool "bananatube"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	depends on BR2_INSTALL_LIBSTDCPP
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_MESA3D_PANFROST
+	select BR2_PACKAGE_LIBCURL
+	select BR2_PACKAGE_CJSON
+	select BR2_PACKAGE_JPEG
+	select BR2_PACKAGE_FREETYPE
+	select BR2_PACKAGE_ZLIB
+	select BR2_PACKAGE_MPV
+	help
+	  BananaTube: a native dual-screen YouTube client. The content (search, results and video) is on the
+	  top panel, the controls (keyboard, transport and details) are on the bottom touch panel, and there is
+	  no browser, web view, compositor or yt-dlp. It takes DRM master the way BananaDS does and is started by
+	  /usr/libexec/banana/run-bananatube.
+
+	  libmpv renders the video into the top panel's EGL surface, with the demuxer cache capped at 16 MiB
+	  and mpv's own yt-dlp switched off: its defaults assume a desktop's memory.
