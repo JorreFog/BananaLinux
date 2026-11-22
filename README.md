@@ -199,6 +199,8 @@ The first start after the update runs the new first-time setup once, prefilled w
 
 Coming from GammaOS or ROCKNIX? The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) backs up your saves, converts them and places them in the card's folders, all in your browser. A ROCKNIX `.dsv` next to a game is used as its save the first time.
 
+Where they are on the card: since 0.5.3 every system RetroArch and BananaFront run (PlayStation and N64 too) keeps its saves in `saves/` itself, one folder for all, so Home server sync finds them; only the Game Boy Advance's are in `saves/gba` (one save for gpSP and mGBA) and the DS's in `saves/nds` (BananaDS) and `drastic/backup` (DraStic). Older per-core folders were moved there once, a copy kept in `banana/saves-legacy`.
+
 <a id="a-tour"></a>
 <img src="docs/img/readme/h-tour.png" width="100%" alt="">
 

@@ -59,7 +59,7 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 |---|---|
 | Games | `/data/roms/<system>` (`folder` in `systems.conf`); `.zip` ROMs are the emulator's to read |
 | BIOS files | `/data/bios` (DS: `bios7.bin`, `bios9.bin`, `firmware.bin` if the emulator wants them) |
-| Saves and states | `/data/saves/<system>`, `/data/states/<system>` (DraStic keeps its own in `/data/drastic`) |
+| Saves and states | `/data/saves`, `/data/states` (RetroArch and BananaFront: every system's saves in `/data/saves` itself, GBA's in `saves/gba`, below; BananaDS `saves/nds`, `states/nds`; DraStic keeps its own in `/data/drastic`) |
 | The emulator's own files | `/data/<emulator>` (settings it writes, per-game memory) |
 | Logs | `/data/banana/logs/<emulator>/` (readable on a computer; keep them small) |
 | Screenshots | `/data/screenshots` |
