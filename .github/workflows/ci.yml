@@ -27,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0  # tools/systems-history.sh --check reads every earlier systems.conf from git
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu libcurl4-openssl-dev libssh2-1-dev libssl-dev cmake shellcheck
+        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu libcurl4-openssl-dev libssh2-1-dev libssl-dev cmake shellcheck python3-jsonschema
       # banana-fetch's 7z and RAR checks: the official 7zz (Ubuntu's 7zip has no RAR), the version the image builds
       - name: 7-Zip
         run: |
@@ -49,6 +49,10 @@ jobs:
           pkg-config --modversion libsmb2
       - name: banana-ui and its helpers (headless test, both panel sizes; Files' servers; archives, the session, the runner)
         run: make test
+      # the runner's Chrome and Firefox load the page; the wasm engine is the committed one (no Emscripten here):
+      # engine.test.js compares its pictures with banana-ui's and warns when it was built from other sources
+      - name: Theme Studio (expressions, the browser's engine against banana-ui, the preview server, Chrome, Firefox, the schema)
+        run: make theme-studio
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui
       - name: bananad (native and aarch64)

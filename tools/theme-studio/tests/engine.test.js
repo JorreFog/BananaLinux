@@ -39,6 +39,9 @@ const now = execFileSync("sh", [path.join(STUDIO, "wasm", "sources.sh")]).toStri
 if (!build || build[1] !== now) {
   console.log("  NOTE banana-engine.js was built from other sources (" + (build ? build[1] : "?") + ", now " + now +
     "): rebuild it with sh tools/theme-studio/wasm/build.sh (the pictures below say whether it matters yet)");
+  // (on GitHub, a warning on the run's page too: the hash takes in every header in ui/src, so most changes there
+  // make it stale without changing a picture, and a failure on each would make CI red for no fault)
+  if (process.env.GITHUB_ACTIONS) console.log("::warning file=tools/theme-studio/wasm/banana-engine.js::built from other sources than these: rebuild it with wasm/build.sh");
 } else console.log("  banana-engine.js is current with the engine's sources (" + now + ")");
 
 // a PNG (8-bit RGB or RGBA, not interlaced) -> RGB bytes

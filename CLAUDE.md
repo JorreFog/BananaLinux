@@ -67,8 +67,9 @@ After a change, run what CI runs for that part (`.github/workflows/ci.yml`): bes
 - `banana-fetch` is built without SMB when libsmb2 isn't installed (it isn't packaged for Ubuntu 24.04), and
   `fetch-test.sh` skips the 7z and RAR checks without `7zz`. CI has both.
 - `make theme-studio` compares a prebuilt WebAssembly engine (`tools/theme-studio/wasm`) with banana-ui: after
-  changes to the drawing code it fails until that engine is rebuilt with Emscripten (`wasm/build.sh`). It is not in
-  CI.
+  changes to the drawing code it fails until that engine is rebuilt with Emscripten 6.0.13 (`wasm/build.sh`; its
+  README). CI runs it with the committed engine and warns when the engine's sources changed since its build.
+  Its browser parts want Firefox and Chromium (`CHROME=<path>` names one that isn't on PATH) and skip without.
 - The Python tools that read files from elsewhere are meant to be run with `python3 -I`.
 - Paths on the handheld: the data partition is `/data` (the `BANANA` drive on a computer), settings in
   `/data/banana`, logs in `/data/banana/logs`, state for the running session in `/run/banana`. The root is a

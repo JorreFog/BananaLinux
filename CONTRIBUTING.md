@@ -44,11 +44,12 @@ minutes after that. While working on one thing, run the one suite that covers it
 | `sudo system/bananad/tests/sleep-test.sh` | bananad's sleep, lid and power button against a made-up `/sys`, in namespaces of its own | root |
 | `sh system/tests/launchers-test.sh` | the DS launchers' file work on a made-up card | sh |
 | `python3 tools/companions/validate.py` | every game companion the image ships, against the schema in [docs/COMPANIONS.md](docs/COMPANIONS.md) | python3 |
-| `make theme-studio` | the Banana Theme Studio: its expression port against `ui/src/expr.cpp`, the browser's engine against banana-ui, the preview server, the schema | node, g++, `make ui`, ImageMagick; Firefox and Python's `jsonschema` for the last parts (skipped without) |
+| `make theme-studio` | the Banana Theme Studio: its expression port against `ui/src/expr.cpp`, the browser's engine against banana-ui, the preview server, the schema | node, g++, `make ui`, ImageMagick; Firefox, Chromium (`CHROME=<path>` when it isn't on PATH) and Python's `jsonschema` for the last parts (skipped without) |
 | `make fuzz` | the readers of the card's files under libFuzzer, ASan and UBSan (`FUZZ_SECONDS` each, 60 by default) | clang |
 
-CI runs the first four, the bananad build, the sleep and launcher tests, the validator, a parse and a ShellCheck
-pass over the image's shell scripts, and a check that the Buildroot defconfigs keep every option they name.
+CI runs the first four, the bananad build, the sleep and launcher tests, the validator, `make theme-studio`, a parse
+and a ShellCheck pass over the image's shell scripts, and a check that the Buildroot defconfigs keep every option
+they name.
 
 Things that are easy to trip over:
 
