@@ -303,6 +303,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 - Make your own, or edit one of these: open the [Banana Theme Studio](https://jorrefog.github.io/BananaLinux/theme-studio/). Nothing to install, and nothing you make leaves your computer.
 - Put your theme in `banana/themes/` on the card (over file sharing, or with the card in a computer), then pick it in Settings. A file there with the same name as a built-in theme replaces it. Pick **Dark** to go straight back to the normal look.
+- The built-in themes can't be deleted: they are part of the read-only system and always stay in the list. The copies in `banana/themes/` are yours to change or delete; a deleted copy only brings back the built-in one of that name.
 - The guide: [docs/MAKE-A-THEME.md](docs/MAKE-A-THEME.md). The file format: [docs/THEMES.md](docs/THEMES.md).
 
 <a id="made-for-it"></a>
