@@ -89,6 +89,13 @@ config BR2_PACKAGE_LIBRETRO_FAKE08
 	help
 	  PICO-8 carts (.p8 and .p8.png), when the official PICO-8 isn't on the card.
 
+config BR2_PACKAGE_LIBRETRO_FBNEO
+	bool "libretro-fbneo"
+	default y
+	help
+	  FinalBurn Neo: arcade games, Neo Geo (its BIOS, neogeo.zip,
+	  in bios/) and Capcom's CPS-1, CPS-2 and CPS-3.
+
 config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
 	bool "retroarch-glsl-shaders"
 	default y

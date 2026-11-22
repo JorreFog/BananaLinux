@@ -20,6 +20,9 @@ namespace banana
 		virtual int systemIndex() const = 0;
 		virtual int gameIndex() const = 0;
 		virtual bool press(Button b) = 0;
+		// a button only some themes map, by its name ("l2", "r2"): true when the theme maps it (the button is then the
+		// theme's alone), *used when it did something with it
+		virtual bool pressNamed(const std::string&, bool* used) { *used = false; return false; }
 		virtual bool touch(int screen, float x, float y, bool down) = 0;
 		virtual bool touchMove(int screen, float x, float y) = 0;
 		virtual void touchCancel() = 0;
@@ -34,6 +37,8 @@ namespace banana
 		virtual void trim() {}	// a game is starting: drawn pictures it can make again let go (the memory is the game's)
 		// workOnce guards what it shares with the drawing itself: the worker may run it without the UI's lock
 		virtual bool ownLocking() const { return false; }
+		// a tapped button the host handles itself (a layout theme's "x", "start", "select"), once: "" none
+		virtual std::string takeTapKey() { return ""; }
 	};
 
 	// ROCKNIXDS Pixel's engine, the Dark and Light themes

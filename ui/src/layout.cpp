@@ -48,7 +48,7 @@ namespace banana
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
 	// hook's names by number
-	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint" };
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint", "glint", "zoom", "zoom.steps", "zoomed", "letter", "page", "pages" };
 	static int hookIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
@@ -86,7 +86,7 @@ namespace banana
 	}
 #define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
 	// gameField's names by number
-	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "marquee", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
 	static int gameFieldIndex(const std::string& v)
 	{
 		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
@@ -148,6 +148,7 @@ namespace banana
 		std::vector<State> states;			// overrides while their condition holds (the last one wins)
 		std::vector<std::pair<std::string, Prop>> with;	// a component's parameters, set in its children's scope
 		std::map<std::string, double, std::less<>> smooth;	// property -> time constant (ms): the value eases towards its target
+		bool bounce = false;	// "ease": "bounce": smooth's numbers are durations, each move overshooting a little and settling (RndsUI's)
 		int serial = 0;
 		PropIndex idx;	// (props and the states' made once they're complete: index()
 		void index() { idx.build(props); for (auto& st : states) st.idx.build(st.props); }
@@ -168,9 +169,17 @@ namespace banana
 		std::map<std::string, std::vector<std::pair<std::string, std::string>>> hintSets;
 		bool extraHints = true;
 		double launchMs = 900, settleMs = 600, scrollMs = 70, fps = 30;
+		bool scrollBounce = false;	// behavior.scrollEase "bounce": scrollMs the move's length, past the target and back (RndsUI's)
+		float scrollFrom = 0, scrollTo = 0; double scrollT0 = -1e9;
 		std::vector<std::pair<std::string, double>> cues;
 		bool wrap = false, debug = false;
 		int serials = 0;
+		// behavior.zoom: { "steps": 3, "start": 1 }: the "zoom" hook 0..steps-1 (a grid's columns, the theme's), changed by
+		// the zoomIn / zoomOut buttons and kept per view (home, each system: Library's zoom.txt)
+		int zoomSteps = 0, zoomStart = 0;
+		double zoomedAt = -1e9;
+		mutable std::map<std::string, int> zoomSeen;
+		std::string tapKey;	// a tapped button the host handles (x, start, select): takeTapKey
 
 		// fonts by name: the theme's, then the built-in ones
 		std::map<std::string, std::string> fontFiles;
@@ -189,10 +198,16 @@ namespace banana
 		int launchGame = -1;
 		size_t cuesDone = 0;
 		mutable bool usedTime = false;	// the last frame read "time": it moves by itself
+		// "glint": a shine across a picture, as Banana's own themes' covers: 560 ms every 5 s from the last move, its
+		// progress 0..1 meanwhile, else -1. Read: the menu wakes for the sweeps only (not a redraw all the time as "time")
+		static constexpr double GLINT_PERIOD = 5000, GLINT_SWEEP = 560;
+		mutable bool usedGlint = false;
+		double glintPhase() const { return std::fmod(std::max(0.0, now - std::max(movedAt, enteredAt)), GLINT_PERIOD); }
+		std::map<int, rnds::TexPtr> glints;	// the band, by height (device px)
 		double lastFrame = 0;
 
 		// per element state: eased values and lists' first visible rows
-		struct Smoothed { double v = 0, target = 0; bool set = false; double at = 0; };
+		struct Smoothed { double v = 0, target = 0; bool set = false; double at = 0, from = 0, t0 = 0; };
 		std::map<std::string, Smoothed> smoothed;
 		bool smoothMoving = false;
 
@@ -227,10 +242,10 @@ namespace banana
 		}
 		static size_t cacheBytes(const ShapeTex& t) { return t.bytes; }
 		static size_t cacheBytes(const TextTex&) { return 0; }
-		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
+		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; uint64_t used = 0; };	// placed in the box (device px)
+		static size_t cacheBytes(const ImgTex&) { return 0; }
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
-		std::deque<std::string> imageOrder;
 		struct Job { std::string key, src, fit, crop; int w, h; float radius; };
 		std::deque<Job> jobs;
 		std::set<std::string> pending, pendingSrc, failed;
@@ -353,6 +368,7 @@ namespace banana
 					}
 					continue;
 				}
+				if (k == "ease") { n->bounce = e.second->isStr() && e.second->s == "bounce"; continue; }
 				if (k == "smooth")
 				{
 					if (e.second->isObj()) for (auto& se : e.second->obj) n->smooth[se.first] = se.second->isNum() ? se.second->n : 150;
@@ -409,8 +425,14 @@ namespace banana
 				launchMs = b->num("launchMs", launchMs);
 				settleMs = b->num("settleMs", settleMs);
 				scrollMs = b->num("scrollMs", scrollMs);
+				if (const JVal* e = b->get("scrollEase")) scrollBounce = e->isStr() && e->s == "bounce";
 				fps = std::max(1.0, std::min(60.0, b->num("fps", fps)));
 				wrap = b->flag("wrap", wrap);
+				if (const JVal* z = b->get("zoom"))
+				{
+					zoomSteps = std::max(0, std::min(9, (int)(z->isNum() ? z->n : z->num("steps", 3))));
+					zoomStart = std::max(0, std::min(std::max(0, zoomSteps - 1), (int)(z->isObj() ? z->num("start", zoomSteps / 2) : zoomSteps / 2)));
+				}
 				extraHints = b->flag("extraHints", extraHints);
 				if (const JVal* c = b->get("cues")) for (auto& e : c->obj) if (e.second->isNum()) cues.emplace_back(e.first, e.second->n);
 				std::sort(cues.begin(), cues.end(), [](const std::pair<std::string, double>& a, const std::pair<std::string, double>& b) { return a.second < b.second; });
@@ -465,6 +487,54 @@ namespace banana
 		}
 		int count() const { return m->mView == rnds::UI::HOME ? (int)systems.size() : (int)games.size(); }
 		int cursor() const { return m->mView == rnds::UI::HOME ? m->mSys : m->mGame; }
+		// the zoom's view: "home", or the library's system
+		std::string zoomKey() const
+		{
+			if (m->mView == rnds::UI::HOME) return "home";
+			return m->mSys >= 0 && m->mSys < (int)systems.size() ? systems[m->mSys].id : std::string("library");
+		}
+		int zoomNow() const
+		{
+			if (zoomSteps <= 0) return 0;
+			std::string k = zoomKey();
+			auto it = zoomSeen.find(k);
+			if (it == zoomSeen.end())
+			{
+				Library* lib = dynamic_cast<Library*>(m->src);
+				int z = lib ? lib->zoom(k) : -1;
+				it = zoomSeen.emplace(k, z < 0 ? zoomStart : z).first;
+			}
+			return std::max(0, std::min(zoomSteps - 1, it->second));
+		}
+		// a theme's var as it is now (the row moves' "columns")
+		mutable bool inVarNum = false;	// (a var reading "page" while varNum works one out: no loop)
+		double varNum(const std::string& name, double def) const
+		{
+			if (inVarNum) return def;
+			struct Guard { bool& b; Guard(bool& v) : b(v) { b = true; } ~Guard() { b = false; } } g(inVarNum);
+			Scope root;
+			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
+			Scope vs;
+			vs.parent = &root;
+			for (auto& v : vars) vs.set(v.first, v.second.eval(vs));
+			EV o;
+			return vs.lookup(name, o) ? o.num() : def;
+		}
+		// a page of a "pages" grid: the theme's "columns" x "rows"
+		int perPage() const
+		{
+			return std::max(1, (int)std::lround(varNum("columns", 1))) * std::max(1, (int)std::lround(varNum("rows", 1)));
+		}
+		// a game's first letter, as the A-Z button groups them: A..Z, or "#" for a digit or anything else
+		static std::string initial(const std::string& t)
+		{
+			for (unsigned char ch : t)
+			{
+				if (isalpha(ch)) return std::string(1, (char)toupper(ch));
+				if (isdigit(ch)) return "#";
+			}
+			return "#";
+		}
 		std::string viewName() const { return m->mView == rnds::UI::HOME ? "home" : m->mView == rnds::UI::LIBRARY ? "library" : "launch"; }
 
 		bool sysField(const rnds::SysInfo& si, int index, const std::string& f, EV& out) const
@@ -502,6 +572,7 @@ namespace banana
 			else if (fId == GAMEF("box")) out = EV(g.box);
 			else if (fId == GAMEF("cart")) out = EV(g.cart);
 			else if (fId == GAMEF("label")) out = EV(g.label);
+			else if (fId == GAMEF("marquee")) out = EV(g.marquee);
 			else if (fId == GAMEF("art")) out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
 			else if (fId == GAMEF("rom")) out = EV(g.rom);
 			else if (fId == GAMEF("romIcon")) out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
@@ -529,6 +600,7 @@ namespace banana
 			auto pre = [&](const char* p, std::string& rest) { size_t l = strlen(p); if (n.compare(0, l, p) != 0) return false; rest = n.substr(l); return true; };
 			std::string rest;
 			if (nId == HOOK("time")) { usedTime = true; out = EV(now - start); return true; }
+			if (nId == HOOK("glint")) { usedGlint = true; double g = glintPhase(); out = EV(g < GLINT_SWEEP ? g / GLINT_SWEEP : -1.0); return true; }
 			if (nId == HOOK("view")) { out = EV(viewName()); return true; }
 			if (nId == HOOK("W")) { out = EV((double)W); return true; }
 			if (nId == HOOK("H")) { out = EV((double)H); return true; }
@@ -564,6 +636,17 @@ namespace banana
 			if (nId == HOOK("games.count") || nId == HOOK("gameCount")) { out = EV((double)games.size()); return true; }
 			if (nId == HOOK("launch.t")) { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
 			if (nId == HOOK("launch.progress")) { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
+			if (nId == HOOK("zoom")) { out = EV((double)zoomNow()); return true; }
+			if (nId == HOOK("zoom.steps")) { out = EV((double)zoomSteps); return true; }
+			if (nId == HOOK("zoomed")) { out = EV(now - zoomedAt); return true; }
+			// a "pages" grid's page (the theme's "columns" x "rows" a page) and how many there are
+			if (nId == HOOK("page") || nId == HOOK("pages"))
+			{
+				int per = perPage();
+				out = EV(nId == HOOK("page") ? (double)(std::max(0, cursor()) / per) : (double)std::max(1, (count() + per - 1) / per));
+				return true;
+			}
+			if (nId == HOOK("letter")) { out = EV(m->mView != rnds::UI::HOME && m->mGame < (int)games.size() ? initial(games[m->mGame].title) : std::string()); return true; }
 			if (nId == HOOK("empty")) { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
 			if (nId == HOOK("empty.title")) { out = EV(m->src->emptyTitle()); return true; }
 			if (nId == HOOK("empty.hint")) { out = EV(m->src->emptyHint()); return true; }
@@ -639,6 +722,18 @@ namespace banana
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
 			Smoothed& st = smoothed[*c.key + "." + std::string(k.name)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
+			if (c.n->bounce)
+			{
+				// a timed move from where it is, on Banana's own themes' curve (cubic-bezier(0.2, 1.4, 0.32, 1)): past
+				// the target a little, then back
+				if (target != st.target) { st.from = st.v; st.target = target; st.t0 = now; }
+				st.at = now;
+				double p = (now - st.t0) / sm->second;
+				if (p >= 1) { st.v = target; return target; }
+				st.v = st.from + (target - st.from) * rnds::cubicBezier(0.2f, 1.4f, 0.32f, 1, (float)p);
+				smoothMoving = true;
+				return st.v;
+			}
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
 			st.at = now;
@@ -1075,14 +1170,48 @@ namespace banana
 					if (m->mQueued) m->mQueued();
 				}
 				if (it == images.end()) { drawPlaceholder(c, x, y, w, h, f); return; }
-				const ImgTex& im = it->second;
+				ImgTex& im = it->second;
+				im.used = ++useTick;
 				if (!im.tex) return;
 				float kx = iw / std::max(1.0f, im.w + 2 * im.ox), ky = ih / std::max(1.0f, im.h + 2 * im.oy);
 				m->be->draw(im.tex, std::round(x * s) + im.ox * kx, std::round(y * s) + im.oy * ky, im.w * kx, im.h * ky, tint);
 				return;
 			}
-			const ImgTex& im = it->second;
-			if (im.tex) m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
+			ImgTex& im = it->second;
+			im.used = ++useTick;
+			if (!im.tex) return;
+			m->be->draw(im.tex, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, tint);
+			drawGlint(c, std::round(x * s) + im.ox, std::round(y * s) + im.oy, im.w, im.h, f);
+		}
+		// an image's "glint" (0..1, the "glint" hook): a slanted band of "glintColor" crossing the picture as drawn
+		void drawGlint(const Ctx& c, float px, float py, float pw, float ph, const Frame& f)
+		{
+			if (!has(c, K("glint"))) return;
+			double g = num(c, K("glint"), -1);
+			if (g < 0 || g >= 1 || pw < 1 || ph < 1) return;
+			int dh = (int)std::lround(ph);
+			if (!glints.count(dh) && glints.size() >= 8) glints.clear();	// (another few heights: the old ones go)
+			rnds::TexPtr& t = glints[dh];
+			if (!t)
+			{
+				int band = (int)std::lround(22 * s), slant = (int)std::lround(dh * 0.45f);
+				rnds::Bitmap b;
+				b.w = band + slant; b.h = dh; b.alpha = true;
+				b.px.assign((size_t)b.w * b.h, 0);
+				for (int y = 0; y < dh; y++)
+				{
+					int x0 = slant - (int)std::lround((float)y * slant / std::max(1, dh));
+					for (int x = x0; x < x0 + band && x < b.w; x++) b.px[(size_t)y * b.w + x] = (x - x0) < band / 3 ? 150 : 255;
+				}
+				t = m->be->upload(b, true);
+			}
+			if (!t) return;
+			uint32_t gc = 0x48ffffff;
+			color(c, K("glintColor"), gc);
+			float gw = (float)t->w, gx = px - gw + (pw + gw) * (float)g;
+			m->be->pushClip(px, py, pw, ph);
+			m->be->draw(t, std::round(gx), py, gw, (float)t->h, colorFrom(gc, f.opacity));
+			m->be->popClip();
 		}
 		void drawPlaceholder(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
@@ -1282,6 +1411,11 @@ namespace banana
 			float itemW = (float)num(c, K("itemW"), dirn == "column" ? w : 100), itemH = (float)num(c, K("itemH"), dirn == "row" ? h : 40);
 			float gap = (float)num(c, K("gap"), 0);
 			int cols = intIn(num(c, K("columns"), 1), 1, 1024);
+			// "pages": a grid of "rows" x "columns" a page, the pages side by side ("pageW" apart: the list's width),
+			// the one with the selection in view, sliding to the next as it changes
+			const bool paged = dirn == "pages";
+			int per = paged ? cols * intIn(num(c, K("rows"), 1), 1, 1024) : 1;
+			float pageW = paged ? (float)num(c, K("pageW"), w) : 0;
 			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
 			std::string mode = str(c, K("scrollMode"), "center");
 			bool loop = flag(c, K("loop")) && n > 0;
@@ -1321,6 +1455,21 @@ namespace banana
 				lo = dirn == "grid" ? l0 * cols : l0;
 				hi = dirn == "grid" ? l1 * cols + cols - 1 : l1;
 				if (!loop) hi = std::min(n - 1, hi);
+			}
+			float pv = 0;	// (pages: the eased page in view)
+			if (paged)
+			{
+				Smoothed& st = smoothed[key + ".page"];
+				double target = std::max(0, cur) / per;
+				double dt = st.set ? std::max(0.0, now - st.at) : 0;
+				if (!st.set) { st.set = true; st.v = target; }
+				st.target = target;
+				st.at = now;
+				st.v += (st.target - st.v) * (1 - std::exp(-dt / std::max(1.0, scrollMs)));
+				if (std::fabs(st.v - st.target) < 0.002) st.v = st.target; else smoothMoving = true;
+				pv = (float)st.v;
+				lo = std::max(0, (int)std::floor(pv) * per);
+				hi = std::min(n - 1, ((int)std::ceil(pv) + 1) * per - 1);
 			}
 			if (n == 0) return;
 			hi = std::min(hi, lo + 8192);	// (a looping list has no end of its own: at most this many are drawn)
@@ -1380,6 +1529,7 @@ namespace banana
 				float ix = 0, iy = 0;
 				if (dirn == "row") ix = (v - first) * stepX;
 				else if (dirn == "column") iy = (v - first) * stepY;
+				else if (paged) { int pg = v / per, k = v % per; ix = (pg - pv) * pageW + (k % cols) * stepX; iy = (float)(k / cols) * stepY; }
 				else if (dirn == "grid") { int row = (int)std::floor((float)v / cols); ix = (v - row * cols) * stepX; iy = (row - first) * stepY; }
 				if (dirn == "row" && mode == "none") ix = v * stepX;
 				if (dirn == "column" && mode == "none") iy = v * stepY;
@@ -1429,6 +1579,7 @@ namespace banana
 		{
 			hits.clear();
 			usedTime = false;
+			usedGlint = false;
 			smoothMoving = false;
 			Scope root;
 			root.resolve = [this](const std::string& n, EV& out) { return hook(n, out); };
@@ -1534,16 +1685,14 @@ namespace banana
 				if (cut != std::string::npos) src = dn.first.substr(0, cut);
 				pendingSrc.erase(src);
 				if (!dn.second.tex) continue;
-				images[dn.first] = dn.second;
+				ImgTex& im = images[dn.first] = dn.second;
+				im.used = ++useTick;
 				latest[src] = dn.first;
-				imageOrder.push_back(dn.first);
 			}
 			done.clear();
-			while (images.size() > 160 && !imageOrder.empty())
-			{
-				images.erase(imageOrder.front());
-				imageOrder.pop_front();
-			}
+			// the least recently drawn go, not the first made: scrolling through games (their boxes, logos and the
+			// bounce's sizes) dropped the wallpaper, made first, and the screens went plain white or black meanwhile
+			if (images.size() > 160) evictOldest(images, 120);
 		}
 	};
 
@@ -1594,6 +1743,7 @@ namespace banana
 		d->shapeKeys.clear();
 		d->textKeys.clear();
 		d->texts.clear();
+		d->glints.clear();
 	}
 
 	void LayoutMenu::dataChanged()
@@ -1630,7 +1780,25 @@ namespace banana
 		auto& map = d->input[v];
 		auto it = map.find(buttonName(b));
 		if (it == map.end()) return false;
-		std::string act = it->second, arg;
+		return runAction(it->second);
+	}
+
+	// L2 and R2 (the host's: L and R when the theme doesn't map them)
+	bool LayoutMenu::pressNamed(const std::string& name, bool* used)
+	{
+		*used = false;
+		auto& map = d->input[mView == rnds::UI::HOME ? "home" : "library"];
+		auto it = map.find(name);
+		if (it == map.end()) return false;
+		*used = d->launchAt < 0 && runAction(it->second);	// ("none" does nothing: runAction's)
+		return true;
+	}
+
+	// one of input's actions ("next", "prev:10", "zoomIn"...): a button's, or a tap's "do:<action>"
+	bool LayoutMenu::runAction(const std::string& action)
+	{
+		if (d->launchAt >= 0) return false;
+		std::string act = action, arg;
 		size_t colon = act.find(':');
 		if (colon != std::string::npos) { arg = act.substr(colon + 1); act = act.substr(0, colon); }
 		int n = d->count(), c = d->cursor();
@@ -1663,6 +1831,59 @@ namespace banana
 		if (act == "next") return move(c + k);
 		if (act == "first") return move(0);
 		if (act == "last") return move(n - 1);
+		// a grid's rows: as many as the theme's "columns" var (its zoom's); the last row's short end still reached
+		if (act == "prevRow" || act == "nextRow")
+		{
+			int cols = std::max(1, (int)std::lround(d->varNum("columns", 1)));
+			int to = c + (act == "nextRow" ? cols : -cols);
+			if (to >= n) to = c / cols < (n - 1) / cols ? n - 1 : (d->wrap ? to : c);
+			if (to < 0 && !d->wrap) return false;
+			return move(to);
+		}
+		// a "pages" grid: left and right go on to the page beside at a row's end, up and down stay on the page, a
+		// swipe turns the page (the same place on it, or its last)
+		if (act == "gridLeft" || act == "gridRight" || act == "gridUp" || act == "gridDown" || act == "nextPage" || act == "prevPage")
+		{
+			if (n == 0) return false;
+			int cols = std::max(1, (int)std::lround(d->varNum("columns", 1))), per = d->perPage();
+			int pg = c / per, k = c % per, col = k % cols, row = k / cols, pages = (n + per - 1) / per;
+			int to = c;
+			if (act == "gridRight") to = col < cols - 1 && c + 1 < n ? c + 1 : pg + 1 < pages ? std::min(n - 1, (pg + 1) * per + row * cols) : c;
+			else if (act == "gridLeft") to = col > 0 ? c - 1 : pg > 0 ? (pg - 1) * per + row * cols + cols - 1 : c;
+			else if (act == "gridUp") to = row > 0 ? c - cols : c;
+			else if (act == "gridDown") to = (row + 1) * cols < per && pg * per + (row + 1) * cols < n ? std::min(n - 1, c + cols) : c;
+			else if (act == "nextPage") to = pg + 1 < pages ? std::min(n - 1, (pg + 1) * per + k) : c;
+			else to = pg > 0 ? (pg - 1) * per + k : c;
+			return move(to);
+		}
+		if (act == "zoomIn" || act == "zoomOut")
+		{
+			if (d->zoomSteps <= 0) return false;
+			int z = d->zoomNow(), to = std::max(0, std::min(d->zoomSteps - 1, z + (act == "zoomIn" ? 1 : -1)));
+			if (to == z) return false;
+			std::string key = d->zoomKey();
+			d->zoomSeen[key] = to;
+			if (Library* lib = dynamic_cast<Library*>(src)) lib->setZoom(key, to);
+			d->zoomedAt = d->now;
+			return true;
+		}
+		// the A-Z button: the first game of the next (or the previous) letter, round to the start
+		if ((act == "nextLetter" || act == "prevLetter") && mView != rnds::UI::HOME && n > 1)
+		{
+			const std::string here = Impl::initial(d->games[c].title);
+			if (act == "nextLetter")
+			{
+				for (int i = c + 1; i < n; i++) if (Impl::initial(d->games[i].title) != here) return move(i);
+				return move(0);
+			}
+			int i = c;
+			while (i > 0 && Impl::initial(d->games[i - 1].title) == here) i--;	// (the start of this letter, then the one before's)
+			if (i != c) return move(i);
+			if (i == 0) return false;
+			std::string before = Impl::initial(d->games[i - 1].title);
+			while (i > 0 && Impl::initial(d->games[i - 1].title) == before) i--;
+			return move(i);
+		}
 		if (mView == rnds::UI::HOME)
 		{
 			if (n == 0) return false;
@@ -1724,7 +1945,17 @@ namespace banana
 		if (down) { mDown = true; downX = x; downY = y; downScreen = screen; return false; }
 		if (!mDown) return false;
 		mDown = false;
-		if (screen != downScreen || std::fabs(x - downX) > 24 * d->s || std::fabs(y - downY) > 24 * d->s) return false;
+		// a swipe across the bottom screen: one step the other way, as Banana's own themes (the games, or the systems)
+		float dx = x - downX, dy = y - downY;
+		if (screen == 1 && downScreen == 1 && x >= 0 && std::fabs(dx) > 56 * d->s && std::fabs(dx) > std::fabs(dy) * 1.2f)
+		{
+			// the theme's own swipe ("input": { "library": { "swipeLeft": "nextPage" } }), else the arrow
+			auto& map = d->input[mView == rnds::UI::HOME ? "home" : "library"];
+			auto sw = map.find(dx < 0 ? "swipeLeft" : "swipeRight");
+			if (sw != map.end()) return runAction(sw->second);
+			return press(dx < 0 ? rnds::UI::RIGHT : rnds::UI::LEFT);
+		}
+		if (screen != downScreen || std::fabs(dx) > 24 * d->s || std::fabs(dy) > 24 * d->s) return false;
 		// the topmost thing under the finger: the last drawn
 		for (auto it = d->hits.rbegin(); it != d->hits.rend(); ++it)
 		{
@@ -1738,6 +1969,9 @@ namespace banana
 				for (auto& ch : a) ch = (char)tolower((unsigned char)ch);
 				static const std::map<std::string, Button> btn = { { "a", rnds::UI::A }, { "b", rnds::UI::B }, { "x", rnds::UI::X }, { "y", rnds::UI::Y },
 					{ "l", rnds::UI::L }, { "r", rnds::UI::R }, { "left", rnds::UI::LEFT }, { "right", rnds::UI::RIGHT }, { "up", rnds::UI::UP }, { "down", rnds::UI::DOWN } };
+				// X (a game's page), START (Settings) and SELECT (Search) are the host's: it takes them (takeTapKey)
+				if (a == "x" || a == "start" || a == "select") { d->tapKey = a; return true; }
+				if (act.compare(0, 3, "do:") == 0) return runAction(act.substr(3));
 				auto b = btn.find(a);
 				if (b != btn.end()) return press(b->second);
 				continue;
@@ -1767,9 +2001,18 @@ namespace banana
 		d->clock = src->clockText();
 		d->date = src->dateText();
 		float to = (float)d->cursor();
-		float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));
-		d->scroll += (to - d->scroll) * k;
-		if (std::fabs(to - d->scroll) < 0.002f) d->scroll = to;
+		if (d->scrollBounce)
+		{
+			if (to != d->scrollTo) { d->scrollFrom = d->scroll; d->scrollTo = to; d->scrollT0 = t; }
+			double p = (t - d->scrollT0) / std::max(1.0, d->scrollMs);
+			d->scroll = p >= 1 ? to : d->scrollFrom + (to - d->scrollFrom) * rnds::cubicBezier(0.2f, 1.4f, 0.32f, 1, (float)p);
+		}
+		else
+		{
+			float k = 1 - (float)std::exp(-dt / std::max(1.0, d->scrollMs));
+			d->scroll += (to - d->scroll) * k;
+			if (std::fabs(to - d->scroll) < 0.002f) d->scroll = to;
+		}
 		if (d->launchAt >= 0)
 		{
 			while (d->cuesDone < d->cues.size() && t - d->launchAt >= d->cues[d->cuesDone].second) src->cue(d->cues[d->cuesDone++].first);
@@ -1787,8 +2030,11 @@ namespace banana
 	bool LayoutMenu::animating() const
 	{
 		return std::fabs(d->scroll - (float)d->cursor()) > 0.002f || d->launchAt >= 0 || d->smoothMoving ||
-			d->now - std::max(d->movedAt, d->enteredAt) < d->settleMs;
+			(d->scrollBounce && d->now - d->scrollT0 < d->scrollMs) || (d->usedGlint && d->glintPhase() < Impl::GLINT_SWEEP) ||
+			d->now - std::max(std::max(d->movedAt, d->enteredAt), d->zoomedAt) < d->settleMs;
 	}
+
+	std::string LayoutMenu::takeTapKey() { std::string k; k.swap(d->tapKey); return k; }
 
 	int LayoutMenu::nextWake() const
 	{
@@ -1798,6 +2044,7 @@ namespace banana
 			if (!d->done.empty()) return 0;
 		}
 		if (d->usedTime) return std::max(0, (int)(d->lastFrame + 1000.0 / d->fps - monoMs()));
+		if (d->usedGlint) return std::max(0, (int)(Impl::GLINT_PERIOD - d->glintPhase()));	// (the next sweep)
 		return -1;
 	}
 
