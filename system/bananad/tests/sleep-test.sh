@@ -482,6 +482,8 @@ t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
 a = [int(x) for x in sys.argv[1:]]
 sys.stdout.buffer.write(b''.join(struct.pack('llHHi', s, u, a[i], a[i + 1], a[i + 2]) for i in range(0, len(a), 3)))" "$@" >&4; }
 rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
+# (the battery's line: a gauge with the voltage now and its average, half a degree under zero, in tenths)
+BAT=/sys/class/power_supply/battery; echo 4000000 > $BAT/voltage_now; echo 3900000 > $BAT/voltage_avg; echo -5 > $BAT/temp
 start "recorder = on"
 [ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
 F=$(cat /run/banana/recording 2>/dev/null)
@@ -511,6 +513,8 @@ asleep && ok "asleep" || bad "no sleep"
 grep -q "button .*a down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
 grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
 grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
+grep -q "battery  [0-9]*% Discharging, 4000 mV, 0 mA, -0.5 C$" "$F" && ok "the battery's line: the voltage now, -0.5 C with its sign" || bad "battery line: $(grep 'battery ' "$F")"
+rm -f $BAT/voltage_now $BAT/voltage_avg $BAT/temp
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
 grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
 # (the keyboard is typed on with the buttons too: their names would read back as the password)

@@ -2046,12 +2046,16 @@ static void rec_minute(void)
 		read_str(p, s, sizeof s);
 		if (strcmp(s, "Battery")) continue;
 		#define PS(f) (snprintf(p, sizeof p, "/sys/class/power_supply/%s/" f, e->d_name), p)
-		/* (the rk817's gauge has only the averages) */
-		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_now"), read_int(PS("voltage_avg"), 0)) / 1000;
-		int ma = read_int(PS("current_now"), read_int(PS("current_avg"), 0)) / 1000, t = read_int(PS("temp"), -1000);
+		/* (the rk817's gauge has only the averages. One PS() a statement: they share p, and as one call's two
+		 * arguments, in the order the compiler chose, the average's path could be the one read for "now" too) */
+		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_avg"), 0), ma = read_int(PS("current_avg"), 0);
+		mv = read_int(PS("voltage_now"), mv) / 1000;
+		ma = read_int(PS("current_now"), ma) / 1000;
+		int t = read_int(PS("temp"), -1000);
 		read_str(PS("status"), st, sizeof st);
 		#undef PS
-		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %d.%d C", pct, st, mv, ma, t / 10, abs(t % 10));
+		/* (tenths of a degree; the sign by itself: -0.5 C is t / 10 = 0, and was written "0.5 C") */
+		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %s%d.%d C", pct, st, mv, ma, t < 0 ? "-" : "", abs(t) / 10, abs(t) % 10);
 		else rec("battery", "%d%% %s, %d mV, %d mA", pct, st, mv, ma);
 		break;
 	}
