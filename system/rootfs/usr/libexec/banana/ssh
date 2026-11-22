@@ -1,25 +1,100 @@
 #!/bin/sh
-# SSH (dropbear), for working on Banana itself: off by default (Settings > Network > File sharing > SSH). Root, with the public keys
-# in banana/ssh/authorized_keys on the card and no passwords. The keys are copied to /run (dropbear wants them
-# readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is made once per card.
-#   ssh up | down
+# SSH and SFTP (dropbear): one server, running while either of these is on.
+#  - SSH, for working on Banana itself: off by default (Settings > Network > File sharing > SSH). Root, with the public
+#    keys in banana/ssh/authorized_keys on the card and no passwords; sftp and scp too. The keys are copied to /run
+#    (dropbear wants them readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is
+#    made once per card.
+#  - SFTP, with File sharing (#299: FileZilla, an Android file manager): the share starts it when its login is a name
+#    and a password, and that name and password log into SFTP alone (sftp-session: no shell, no commands), which sees
+#    the cards as the share does.
+#   ssh up | down            root's SSH (Settings)
+#   ssh sftp-on | sftp-off   the share's SFTP (the share script; sftp-on reads the name, then the password, a line each,
+#                            on its input: never on a command line, which ps shows)
+# one run at a time: Settings and the share start it on every change
+[ -z "$SSH_LOCKED" ] && SSH_LOCKED=1 exec flock -o /run/banana/ssh.lock "$0" "$@"
 D=/data/banana/ssh
 R=/run/banana/ssh
+# the share's account: /etc's passwd, shadow and shells with it added, bound over them while SFTP is on (the root
+# filesystem is read-only), user (its name) and empty (sftp-session's)
+A=/run/banana/sftp
+PID=/run/banana/dropbear.pid
+MODE=/run/banana/dropbear.mode
+
+running() { [ -f $PID ] && kill -0 "$(cat $PID)" 2>/dev/null; }
+# dropbear as root's keys and the share's account ask for: r (root's keys), s (the share's password), both or neither.
+# A change starts it again with its options for it (the sessions open stay: they are processes of their own)
+sync() {
+    want=
+    [ -f $R/authorized_keys ] && want=r
+    [ -f $A/user ] && want=${want}s
+    running && [ "$want" = "$(cat $MODE 2>/dev/null)" ] && return 0
+    if running; then
+        # (gone before the next one starts: it fails to listen on 22 otherwise, and only after it has gone into the
+        # background, where this never sees it)
+        old=$(cat $PID); kill $old
+        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do kill -0 $old 2>/dev/null || break; sleep 0.1; done
+    fi
+    rm -f $PID $MODE
+    [ -n "$want" ] || return 0
+    mkdir -p $D
+    [ -s $D/host_key_ed25519 ] || dropbearkey -t ed25519 -f $D/host_key_ed25519 >/dev/null 2>&1 || return 1
+    # -j -k: no port forwarding (the share's name and password, banana and linux at first, would have made the handheld
+    # a way into the network around it). -s: no password logins at all while the share's SFTP is off
+    opts="-j -k"
+    case $want in *s) ;; *) opts="$opts -s" ;; esac
+    dropbear $opts -r $D/host_key_ed25519 -P $PID || return 1
+    echo "$want" > $MODE
+}
+# the share's account out of /etc, and its sessions closed
+sftp_off() {
+    rm -f $A/user
+    for f in passwd shadow shells; do
+        grep -q " /etc/$f " /proc/mounts && umount /etc/$f
+    done
+    pkill -f -- '--chroot /run/banana/sftp-view' 2>/dev/null
+}
 case $1 in
 up)
-    [ -f /run/banana/dropbear.pid ] && kill -0 $(cat /run/banana/dropbear.pid) 2>/dev/null && exit 0
     mkdir -p $D $R
     chmod 700 $R
     [ -f $D/authorized_keys ] || printf '# public keys (one per line) that may log in as root over SSH\n' > $D/authorized_keys
     cp $D/authorized_keys $R/authorized_keys
     chmod 600 $R/authorized_keys
-    [ -s $D/host_key_ed25519 ] || dropbearkey -t ed25519 -f $D/host_key_ed25519 >/dev/null 2>&1 || exit 1
-    dropbear -s -r $D/host_key_ed25519 -P /run/banana/dropbear.pid
+    sync || exit 1
     ;;
 down)
-    [ -f /run/banana/dropbear.pid ] && kill $(cat /run/banana/dropbear.pid) 2>/dev/null
-    rm -f /run/banana/dropbear.pid
+    rm -f $R/authorized_keys
+    sync
     ;;
-*) echo "usage: ssh up|down" >&2; exit 1 ;;
+sftp-on)
+    IFS= read -r u; IFS= read -r p
+    sftp_off        # (the account as it is now: another name or password replaces it)
+    # a name the settings screen didn't write, or one the system has already (root, nobody...): no SFTP
+    case $u in ''|*[!A-Za-z0-9._-]*) sync; exit 1 ;; esac
+    if grep -q "^$u:" /etc/passwd || [ -z "$p" ]; then
+        echo "ssh: no SFTP for the name '$u'" >&2; sync; exit 1
+    fi
+    mkdir -p $A /run/banana/sftp-view
+    chmod 700 $A
+    hash=$(printf '%s\n' "$p" | mkpasswd -m sha512 -P 0)
+    case $hash in '$6$'*) ;; *) sync; exit 1 ;; esac
+    # uid 0: sftp-session builds its view of the cards (mounts, a chroot) before it becomes nobody. Root's own password
+    # locked: its blank one let no one in either (dropbear refuses blank passwords), but -s is off now
+    { cat /etc/passwd; printf '%s:x:0:0:File sharing:%s:/usr/libexec/banana/sftp-session\n' "$u" "$A"; } > $A/passwd
+    (umask 077; { sed 's/^root:[^:]*:/root:*:/' /etc/shadow; printf '%s:%s:0:0:99999:7:::\n' "$u" "$hash"; } > $A/shadow)
+    { cat /etc/shells; echo /usr/libexec/banana/sftp-session; } > $A/shells
+    chmod 644 $A/passwd $A/shells
+    : > $A/empty; chmod 444 $A/empty    # (what sftp-session shows for the secrets: root's, empty, read-only)
+    for f in passwd shadow shells; do
+        mount --bind $A/$f /etc/$f || { sftp_off; sync; exit 1; }
+    done
+    echo "$u" > $A/user
+    sync || exit 1
+    ;;
+sftp-off)
+    sftp_off
+    sync
+    ;;
+*) echo "usage: ssh up|down|sftp-on|sftp-off" >&2; exit 1 ;;
 esac
 exit 0

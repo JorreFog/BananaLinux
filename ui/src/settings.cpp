@@ -714,7 +714,7 @@ namespace banana
 			items.back().hints = { "Not shared.", "A computer opens it as \\\\<address>\\banana." };
 			add(FS, "phone", "Sharing login", "Who can open the shared card.",
 				menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
-			items.back().hints = { "The name and password below. Windows needs one.", "Anyone on the network. Only on a network you trust." };
+			items.back().hints = { "The name and password below, for SMB and SFTP. Windows needs one.", "Anyone on the network, and no SFTP. Only on a network you trust." };
 			add(FS, "phone", "Sharing name and password", "", "", "share_account", {}, {}, Item::PAGE);
 			add(FS, "phone", "SSH", "A shell on the handheld from a computer, over Wi-Fi.", menu, "ssh", { "Off", "On" }, { "off", "on" });
 			items.back().hints = { "Off.", "On: ssh root@<address>." };
@@ -2308,7 +2308,7 @@ namespace banana
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
-				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
+				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: sftp and scp too, or File sharing.";
 		if (cur.key == "hs_server")
 		{
 			std::string n = homeServer();
@@ -2348,14 +2348,14 @@ namespace banana
 				"A profile measured for this handheld or one of your own (an Equalizer APO .txt, as AutoEq makes, in banana/speaker-eq on the card), and seven sliders to adjust it by ear. Now: " + now;
 		}
 		if (cur.key == "share_account")
-			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
+			help = "What a computer asks for when it opens the share, over SMB or SFTP: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
 			help = "The card on the network: \\\\" + at + "\\banana in Windows' File Explorer, smb://" + at +
 				"/banana on a Mac (Finder, Go, Connect to Server). " +
 				(getConfValue(data + "/settings.conf", "share_login", "password") == "guest" ? std::string("Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.")
-					: "Name " + shareUser() + ", password " + sharePassword() + " (Sharing name and password, below).");
+					: "Name " + shareUser() + ", password " + sharePassword() + " (Sharing name and password, below). The same login opens sftp://" + at + " in FileZilla or a phone's file manager.");
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
 		return help;

@@ -8,6 +8,10 @@ SDL2_CONF_OPTS += --enable-video-dummy
 # (patches/sdl2) puts each frame on the panels (SDL_BANANA_PANELS)
 SDL2_CONF_OPTS += --enable-video-offscreen
 
+# gesftpserver's --chroot and --user (File sharing's SFTP sessions: usr/libexec/banana/sftp-session), which only its
+# daemon mode builds
+GESFTPSERVER_CONF_OPTS += --enable-daemon
+
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the

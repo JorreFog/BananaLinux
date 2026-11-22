@@ -1,0 +1,22 @@
+From: swouapiy <swouapiy@users.noreply.github.com>
+Subject: [PATCH] Filenames are UTF-8
+
+The cards' names are UTF-8 and the handheld has no locales: nl_langinfo() says ASCII,
+and every name with an accent failed for SFTP 4 and later clients (WinSCP, for one).
+
+Upstream: not applicable (Banana-specific)
+
+---
+--- a/sftpserver.c
++++ b/sftpserver.c
+@@ -456,7 +456,9 @@
+ 
+   /* We need I18N support for filename encoding */
+   setlocale(LC_CTYPE, "");
+-  local_encoding = nl_langinfo(CODESET);
++  /* Banana: the cards' names are UTF-8 (exFAT, iocharset=utf8) and the handheld has no locales, where
++   * nl_langinfo() says ASCII and every name with an accent failed for SFTP 4 and later clients */
++  local_encoding = "UTF-8";
+ 
+   while((n = getopt_long(argc, argv, "hVdD:r:u:H:L:b46R", options, 0)) >= 0) {
+     switch(n) {

@@ -286,7 +286,7 @@ settings		Choose a group	选择分组
 settings		Close	关闭
 settings		Open	打开
 settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi：{status}。下方的「网络」可加入一个；也可在电脑上把网络写入 banana/wifi.conf（参见 banana/README.txt）。
-settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	用于操作Banana 本身：ssh root@{address}，使用卡上 banana/ssh/authorized_keys 中的公钥（无需密码）。传输文件：scp -O（dropbear 不支持 SFTP），或使用「文件共享」。
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: sftp and scp too, or File sharing.	用于操作Banana 本身：ssh root@{address}，使用卡上 banana/ssh/authorized_keys 中的公钥（无需密码）。传输文件：也可用 sftp 和 scp，或使用「文件共享」。
 settings		<address>	<address>
 settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: leave it off on networks you don't trust.	网络上的存储卡：在 Windows 文件资源管理器中为 \\{address}\banana，在 Mac 上为 smb://{address}/banana（访达 - 前往 - 连接服务器）。网络上的任何人无需密码即可打开：在不信任的网络上请保持关闭。
 settings		(Not connected to Wi-Fi now.)	（当前未连接 Wi-Fi。）
@@ -1134,9 +1134,9 @@ settings		The two screens rarely show the same white. This corrects one of them 
 settings		no correction.	不校正。
 settings		the top screen corrected.	已校正上屏。
 settings		the bottom screen corrected.	已校正下屏。
-settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	电脑打开共享时所要求的：名称 {name}、密码 {password}。按 A 可更改（保存在 banana/accounts.conf 中，共享不会显示该文件）。
+settings		What a computer asks for when it opens the share, over SMB or SFTP: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	电脑通过 SMB 或 SFTP 打开共享时所要求的：名称 {name}、密码 {password}。按 A 可更改（保存在 banana/accounts.conf 中，共享不会显示该文件）。
 settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	网络上任何人无需密码即可打开它（共享登录）：在你不信任的网络上请保持关闭。
-settings		Name {name}, password {password} (Sharing name and password, below).	名称 {name}、密码 {password}（见下方的「共享名称与密码」）。
+settings		Name {name}, password {password} (Sharing name and password, below). The same login opens sftp://{address} in FileZilla or a phone's file manager.	名称 {name}、密码 {password}（见下方的「共享名称与密码」）。用同样的登录信息可在 FileZilla 或手机的文件管理器中打开 sftp://{address}。
 settings		Not set	未设置
 settings		The pictures didn't come: no connection?	图片未能获取：是否无连接？
 settings		Not fetched: {error}.	未能获取：{error}。

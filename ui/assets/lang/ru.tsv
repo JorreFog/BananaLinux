@@ -279,7 +279,7 @@ settings		Choose a group	Выберите группу
 settings		Close	Закрыть
 settings		Open	Открыть
 settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi: {status}. Раздел «Сеть» ниже служит для подключения; сети также можно прописать в banana/wifi.conf на компьютере (см. banana/README.txt).
-settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	Для работы с системой Banana: ssh root@{address}, открытые ключи в banana/ssh/authorized_keys на карте памяти (без пароля). Передача файлов: scp -O (в dropbear нет SFTP) или «Общий доступ к файлам».
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: sftp and scp too, or File sharing.	Для работы с системой Banana: ssh root@{address}, открытые ключи в banana/ssh/authorized_keys на карте памяти (без пароля). Передача файлов: также sftp и scp или «Общий доступ к файлам».
 settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}	Карта памяти в сети: {address}в проводнике Windows, smb://{address}/banana на Mac (Finder > Переход > Подключение к серверу). {sharing}
 settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	Загрузка обложек и титульных экранов. Они сразу появляются в меню; процесс продолжится, даже если выйти из этого экрана.
 settings		Press A again	Нажмите A ещё раз
@@ -616,9 +616,9 @@ settings		The two screens rarely show the same white. This corrects one of them 
 settings		no correction.	без коррекции.
 settings		the top screen corrected.	верхний экран скорректирован.
 settings		the bottom screen corrected.	нижний экран скорректирован.
-settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Данные для входа с компьютера в сетевую папку: имя {name}, пароль {password}. Нажмите A для изменения (они хранятся в файле banana/accounts.conf, скрытом из общего доступа).
+settings		What a computer asks for when it opens the share, over SMB or SFTP: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Данные для входа с компьютера в сетевую папку по SMB или SFTP: имя {name}, пароль {password}. Нажмите A для изменения (они хранятся в файле banana/accounts.conf, скрытом из общего доступа).
 settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	Любой в локальной сети может открыть файлы без пароля (см. «Авторизация общего доступа»): отключайте в ненадёжных сетях.
-settings		Name {name}, password {password} (Sharing name and password, below).	Имя {name}, пароль {password} (см. «Имя и пароль для общего доступа» ниже).
+settings		Name {name}, password {password} (Sharing name and password, below). The same login opens sftp://{address} in FileZilla or a phone's file manager.	Имя {name}, пароль {password} (см. «Имя и пароль для общего доступа» ниже). С этими же данными sftp://{address} открывается в FileZilla или файловом менеджере телефона.
 settings		Not set	Не задано
 settings		The pictures didn't come: no connection?	Изображения не загрузились: нет подключения?
 settings		Not fetched: {error}.	Не удалось загрузить: {error}.

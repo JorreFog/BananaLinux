@@ -281,7 +281,7 @@ settings		Choose a group	Scegli un gruppo
 settings		Close	Chiudi
 settings		Open	Apri
 settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi: {status}. Rete, qui sotto, ne collega una; le reti si possono anche scrivere in banana/wifi.conf da un computer (vedi banana/README.txt).
-settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	Per lavorare su Banana stesso: ssh root@{address}, con le chiavi pubbliche in banana/ssh/authorized_keys sulla scheda (niente password). File: scp -O (dropbear non ha SFTP), oppure Condivisione file.
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: sftp and scp too, or File sharing.	Per lavorare su Banana stesso: ssh root@{address}, con le chiavi pubbliche in banana/ssh/authorized_keys sulla scheda (niente password). File: anche sftp e scp, oppure Condivisione file.
 settings		<address>	<address>
 settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}	La scheda in rete: \\{address}\banana in Esplora file di Windows, smb://{address}/banana su un Mac (Finder, Vai, Connessione al server). {sharing}
 settings		(Not connected to Wi-Fi now.)	(Not connected to Wi-Fi now.)
@@ -620,9 +620,9 @@ settings		The two screens rarely show the same white. This corrects one of them 
 settings		no correction.	nessuna correzione.
 settings		the top screen corrected.	schermo superiore corretto.
 settings		the bottom screen corrected.	schermo inferiore corretto.
-settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Ciò che un computer chiede quando apre la condivisione: nome {name}, password {password}. A li cambia (sono conservati in banana/accounts.conf, che la condivisione non mostra mai).
+settings		What a computer asks for when it opens the share, over SMB or SFTP: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Ciò che un computer chiede quando apre la condivisione, via SMB o SFTP: nome {name}, password {password}. A li cambia (sono conservati in banana/accounts.conf, che la condivisione non mostra mai).
 settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	Chiunque sulla rete può aprirla senza password (Accesso alla condivisione): lasciala disattivata sulle reti di cui non ti fidi.
-settings		Name {name}, password {password} (Sharing name and password, below).	Nome {name}, password {password} (Nome e password della condivisione, qui sotto).
+settings		Name {name}, password {password} (Sharing name and password, below). The same login opens sftp://{address} in FileZilla or a phone's file manager.	Nome {name}, password {password} (Nome e password della condivisione, qui sotto). Le stesse credenziali aprono sftp://{address} in FileZilla o nel gestore file di un telefono.
 settings		Not set	Non impostato
 settings		The pictures didn't come: no connection?	Le immagini non sono arrivate: nessuna connessione?
 settings		Not fetched: {error}.	Non scaricato: {error}.
