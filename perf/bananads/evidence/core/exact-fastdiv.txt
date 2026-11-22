@@ -1,0 +1,11 @@
+# exactness of core.fast_div (melonDS 0040) off vs on, device build of perf/core @ 13bdd71 (/home/user/perf/core/build-b/b, binary kept as /home/user/perf/core/bin/bananads-b); 16:25 UTC
+# command: sh /home/user/perf/core/runs/check-toggle.sh /home/user/perf/core/build-b/b check-fastdiv core.fast_div
+# pictures (frames 50..300 every 50, both screens) + audio dump, 13 ROMs x {soft, Gengis 2x + 2D thread}: FAILS=0; then bananads-difftest --every --frames 300 (main RAM every frame) off vs on, jit on:
+FAILS=0
+difftest cpubench-cpubench-thumb core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest cpubench-cpubench-thumb-arm7 core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest membench-membench core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest ipcrom-ipctest core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest dmasnd-dmasnd core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest sndbench-sndbench core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)
+difftest iorom-dsstress-L5 core.fast_div off vs on: exit 0 SAME after 300 frames (all of main RAM)

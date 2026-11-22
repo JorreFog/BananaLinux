@@ -1,0 +1,320 @@
+From 581f08372219780d0fcf655900c7febc892bff58 Mon Sep 17 00:00:00 2001
+From: core agent <core@perf>
+Date: Sun, 18 Oct 2026 17:31:14 +0000
+Subject: [PATCH] BananaDS: melonDS patch 0041 (jit.gfxstores): the JIT's
+ 16/32-bit stores to VRAM, OAM and the palettes through JIT-emitted helpers
+ instead of a call to SlowWrite9
+
+A store whose expected region isn't fast memory (VRAM, OAM, the palettes) went to SlowWrite9 through PushRegs, a
+call and PopRegs: 450-2700 a frame on the test ROMs, 11,800 on tests/bigcode (MELONDS_IOSTATS). The A64 compiler
+now emits once, into the code memory, a helper per region and size that does the same checks in the same order
+(the TCMs, the region, 0010's VRAM page entry with its capture flag and dirty bit, or the engine's POWCNT1 bit and
+WritePalette/WriteOAM's dirty bit) and the store, with no register of the register cache and no NZCV touched; the
+store site is MOV, BL, CBZ over the old call, which stays as the fallback when a check fails. Setting jit.gfxstores
+(default on, MELONDS_JIT_NOGFXSTORES=1 off; MELONDS_JIT_GFXMASK bisects by region); docs/SETTINGS.md.
+---
+ bananads/docs/SETTINGS.md                     |   1 +
+ ...-palette-stores-inline-jit.gfxstores.patch | 259 ++++++++++++++++++
+ bananads/src/emu.cpp                          |   8 +
+ 3 files changed, 268 insertions(+)
+ create mode 100644 bananads/patches/melonds/0041-ARMJIT_A64-VRAM-OAM-and-palette-stores-inline-jit.gfxstores.patch
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 655521e..7047f02 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -13,6 +13,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `jit.codegen` | `new` | melonDS's JIT's code generation (patches/melonds/0007): `new` (fewer host instructions per block and per exit: cheaper exit stubs, linkable exits both ways of a block-ending branch, self loops checked inline, host flags kept in NZCV, a per-site cache for returns) or `old` (the code before 0007, byte for byte). Exact either way. Sets `MELONDS_JIT_OLDCODEGEN`; each part is also off alone with its `MELONDS_JIT_NO<name>=1` (docs/PERF.md lists them). `MELONDS_JIT_NOFASTLDM=1` keeps block loads (LDM, POP) off the fastmem path (0008). `MELONDS_JIT_LOOPREGS=1` turns on loops that keep their guest registers in host registers (off: HeartGold hangs with it, docs/PERF.md) |
+ | `jit.hugepages` | `on` | the JIT's 32 MB code memory aligned to 2 MB and `madvise(MADV_HUGEPAGE)`'d before its first use, so a kernel with transparent huge pages in `madvise` mode (BananaLinux) maps it with 2 MB pages: fewer iTLB misses and page walks on the A55 (patches/melonds/0021). Emulation doesn't change. Sets `MELONDS_JIT_HUGEPAGE`, read as the first JIT starts; the log line `[jit] code memory at ..., N kB on huge pages` says what the kernel gave |
+ | `jit.irqchain` | `on` | a chain of linked JIT blocks goes on past an IRQ that CPSR.I masks, instead of going back to the loop at every block exit while one is pending (melonDS sets its IRQ flag whatever CPSR.I is; the loop's TriggerIRQ would do nothing with it) (patches/melonds/0023). Exact. `off` sets `MELONDS_JIT_NOIRQCHAIN=1`; `jit.codegen=old` turns it off too. `MELONDS_JIT_EXITSTATS=n` (0022) prints at exit, per frame from frame n on, why chains came back to the loop: compiles, region setups, IRQs taken, IRQs masked, halts and idle loops |
++| `jit.gfxstores` | `on` | the JIT's 16 and 32-bit stores to VRAM, OAM and the palettes as compiled code: the TCM and region checks, the VRAM page's entry (`jit.vramfast`'s table: one bank at the page, no display capture), the dirty bit and the store, or the engine's POWCNT1 bit, the store and the dirty bit, with the old call as the fallback when a check fails (patches/melonds/0041). Exact. `off` sets `MELONDS_JIT_NOGFXSTORES=1`; `jit.codegen=old` or `jit.vramfast=off` turn it off too |
+ | `jit.entry_x26` | `on` | melonDS's ARM_Dispatch puts the CPU's fast memory base in x26, so the JIT's blocks have no entry prologue (12 bytes less per block, three instructions less per dispatch) (patches/melonds/0024). Exact. `off` sets `MELONDS_JIT_NOENTRYX26=1`; `jit.codegen=old` turns it off too |
+ | `jit.iofast` | `on` | direct routes for the JIT's slow memory paths: main RAM block transfers, VRAM, the GX FIFO and command ports, IE/IF/IME/DISPSTAT/VCOUNT/KEYINPUT reads (patches/melonds/0005). Exact. Sets `MELONDS_IOFAST`; `MELONDS_IOFAST_ROUTES` picks single routes, `MELONDS_IOSTATS=n` prints the slow accesses by address from frame n |
+ | `jit.vramfast` | `on` | VRAM with one bank at a 16 KB page written and read straight to the bank (with the dirty bit and the capture check), OAM and palette straight to the GPU (patches/melonds/0010). Exact. Bit 1 of `MELONDS_MEMFAST` |
+diff --git a/bananads/patches/melonds/0041-ARMJIT_A64-VRAM-OAM-and-palette-stores-inline-jit.gfxstores.patch b/bananads/patches/melonds/0041-ARMJIT_A64-VRAM-OAM-and-palette-stores-inline-jit.gfxstores.patch
+new file mode 100644
+index 0000000..53e0219
+--- /dev/null
++++ b/bananads/patches/melonds/0041-ARMJIT_A64-VRAM-OAM-and-palette-stores-inline-jit.gfxstores.patch
+@@ -0,0 +1,259 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: BananaDS <bananads@localhost>
++Date: Sun, 18 Oct 2026 17:30:00 +0000
++Subject: [PATCH] ARMJIT_A64: 16 and 32-bit stores to VRAM, OAM and the palettes
++ through JIT-emitted helpers (jit.gfxstores, MELONDS_JIT_NOGFXSTORES)
++
++A store whose expected region isn't fast memory (VRAM; OAM and the palettes are memregion_Other) went to
++SlowWrite9 through PushRegs, a call and PopRegs: on the test ROMs 450-2700 such stores a frame (11,800 on
++tests/bigcode), nearly all 16-bit VRAM stores, plus OAM and palette ones (MELONDS_IOSTATS). The compiler now
++emits once, into the code memory, a helper per region (VRAM, palettes, OAM) and size (16, 32) that does the same
++checks in the same order with no side effect until all pass (SlowWrite9's TCM checks, QuickWrite9's region, then
++GPU::WriteVRAMQuick's page entry, capture flag, store and dirty bit, or the engine's POWCNT1 bit and
++WritePalette/WriteOAM's store and dirty bit) and returns W1 = 0, or W1 = 1 when a check fails; a store whose
++first execution (CurInstr.DataRegion) or static address is in one of those regions becomes MOV W1, value; BL
++helper; CBZ W1 over the old call, which stays as the fallback (its PushRegs unloads nothing, so the register
++cache is in one state where the two paths join). The helper uses W0 (kept), W1, X2, X3, X5-X7 only and no NZCV
++(CBZ/TBNZ/TBZ), so the register cache's registers and pending lazy flags are untouched; the loads come first
++for the in-order A55. Nothing changes for 8-bit stores (the DS ignores them), loads, block transfers, the ARM7,
++a DSi, jit.vramfast off, or while MELONDS_IOSTATS counts (slow_FullPath). MELONDS_JIT_NOGFXSTORES=1
++(jit.gfxstores=off) or jit.codegen=old keep the call; MELONDS_JIT_GFXMASK=1|2|4 (VRAM, palettes, OAM) bisects.
++(A first version with the whole sequence inline at every store site was measured slower: +1.7% cpubench-thumb,
+++5.8% tests/bigcode under rgds-sim, the code growth's L1I misses; the shared helpers replace it.)
++---
++ src/ARMJIT_A64/ARMJIT_Compiler.cpp  |   8 ++
++ src/ARMJIT_A64/ARMJIT_Compiler.h    |   5 ++
++ src/ARMJIT_A64/ARMJIT_LoadStore.cpp | 150 +++++++++++++++++++++++++++++++++++-
++ 3 files changed, 162 insertions(+), 1 deletion(-)
++
++diff --git a/src/ARMJIT_A64/ARMJIT_Compiler.cpp b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
++index 998d455..5e13c4d 100644
++--- a/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+++++ b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
++@@ -282,6 +282,8 @@ Compiler::Compiler(melonDS::NDS& nds) : Arm64Gen::ARM64XEmitter(), NDS(nds)
++         OptIrqChain = OptExitStub && !getenv("MELONDS_JIT_NOIRQCHAIN");
++         OptNoPrologue = OptFastEntry && !getenv("MELONDS_JIT_NOENTRYX26");
++         OptKeepFlags = !old && !getenv("MELONDS_JIT_NOKEEPFLAGS");
+++        OptGfxStores = !old && !getenv("MELONDS_JIT_NOGFXSTORES");
+++        OptGfxMask = getenv("MELONDS_JIT_GFXMASK") ? strtoul(getenv("MELONDS_JIT_GFXMASK"), nullptr, 0) : 7;
++         // LOOPREGS only with MELONDS_JIT_LOOPREGS=1: on an RG DS Plus, HeartGold (USA) goes to a black screen at its
++         // first overworld frame with it (frame 1200 of tools/device/hgquick.sh's walk), and fine with it off alone.
++         // Every test ROM's pictures and RAM were identical with it, so the cause (a loop the tests don't have) is
++@@ -507,6 +509,12 @@ Compiler::Compiler(melonDS::NDS& nds) : Arm64Gen::ARM64XEmitter(), NDS(nds)
++         }
++     }
++ 
+++    // 0041: the VRAM/OAM/palette store helpers (the ARM9's, DS mode)
+++    if (OptGfxStores && NDS.ConsoleType == 0)
+++        for (int region = 0; region < 3; region++)
+++            for (int size = 0; size < 2; size++)
+++                GfxStoreFuncs[region][size] = EmitGfxStoreHelper(region == 0 ? 0x05 : region == 1 ? 0x06 : 0x07, size ? 32 : 16);
+++
++     FlushIcache();
++ 
++     JitMemSecondarySize = 1024*1024*4;
++diff --git a/src/ARMJIT_A64/ARMJIT_Compiler.h b/src/ARMJIT_A64/ARMJIT_Compiler.h
++index 20bfbfc..bddc987 100644
++--- a/src/ARMJIT_A64/ARMJIT_Compiler.h
+++++ b/src/ARMJIT_A64/ARMJIT_Compiler.h
++@@ -106,6 +106,9 @@ public:
++ 
++     void PushRegs(bool saveHiRegs, bool saveRegsToBeChanged, bool allowUnload = true);
++     void PopRegs(bool saveHiRegs, bool saveRegsToBeChanged);
+++    void* EmitGfxStoreHelper(int region, int size);
+++    void* GfxStoreHelperFor(int size, int staticRegion, int expectedTarget, u32 dataRegion);
+++    void* GfxStoreFuncs[3][2] {};   // [palette, VRAM, OAM][16, 32-bit]: 0041's store helpers (EmitGfxStoreHelper)
++ 
++     Arm64Gen::ARM64Reg MapReg(int reg)
++     {
++@@ -317,6 +320,8 @@ public:
++     bool LoopFlagsEarlyRead = false;  // ... or something read them before
++     bool OptKeepFlags = true;     // NOKEEPFLAGS: a faulted fast memory access's call keeps the host's NZCV, so
++                                   // the guest's flags held there stay valid across fast memory accesses
+++    bool OptGfxStores = true;     // NOGFXSTORES: 16/32-bit stores to VRAM, OAM and the palettes through 0041's helpers
+++    u32 OptGfxMask = 7;           // GFXMASK: which of them (1 VRAM, 2 palettes, 4 OAM; for bisecting)
++     u8* BlockStartRX = nullptr;   // the block being compiled: its entry
++     u32 BlockEntryR15 = 0;        // ... the R15 exits into it store
++     bool R15Stored = false;       // ... and whether its code so far stores R15 (or may: calls, the interpreter)
++diff --git a/src/ARMJIT_A64/ARMJIT_LoadStore.cpp b/src/ARMJIT_A64/ARMJIT_LoadStore.cpp
++index df5131b..979703f 100644
++--- a/src/ARMJIT_A64/ARMJIT_LoadStore.cpp
+++++ b/src/ARMJIT_A64/ARMJIT_LoadStore.cpp
++@@ -22,6 +22,7 @@
++ 
++ #include "../ARMJIT_Memory.h"
++ #include "../NDS.h"
+++#include "../NDS_IOFast.h"
++ 
++ using namespace Arm64Gen;
++ 
++@@ -110,6 +111,136 @@ bool Compiler::Comp_MemLoadLiteral(int size, bool signExtend, int rd, u32 addr)
++     return true;
++ }
++ 
+++// BananaDS (0041, jit.gfxstores): a 16 or 32-bit ARM9 store to VRAM, OAM or the palettes without the call to
+++// SlowWrite9 and its PushRegs/PopRegs: one helper per region and size, emitted once into the code memory, does
+++// the same checks in the same order with no side effect until all have passed (SlowWrite9: the TCMs; QuickWrite9:
+++// the region; then GPU::WriteVRAMQuick: the page's entry, its capture flag, the store, the dirty bit; or the
+++// engine's POWCNT1 bit, WritePalette/WriteOAM's store and dirty bit), and returns W1 = 0; a check that fails
+++// returns W1 = 1 and the caller's old call does everything as before. Its convention: W0 the address (kept),
+++// W1 the value; X1-X3, X5-X7 clobbered, nothing else (no register of the register cache, no NZCV: CBZ/TBNZ/TBZ
+++// only, so pending lazy flags stay pending); called with BL from the block (X30 is not live in a block).
+++void* Compiler::EmitGfxStoreHelper(int region, int size)
+++{
+++    void* start = GetRXPtr();
+++    std::vector<FixupBranch> fail;
+++    static_assert(sizeof(GPU::VRAMDirectPage) == 32, "the page entry's size is compiled into JIT code");
+++    static_assert(GPU::CaptureBlockIsCapture == (1 << 15), "the capture flag's bit is compiled into JIT code");
+++    static_assert(VRAMDirtyGranularity == 512, "the palette dirty bits' granularity is compiled into JIT code");
+++    const u8* cpu = (const u8*)&NDS.ARM9;   // (RCPU in an ARM9 block)
+++    auto objAddr = [&](ARM64Reg dst, const void* p, ARM64Reg scratch) {   // dst = RCPU + (p - &ARM9): the NDS's own
+++        const ptrdiff_t d = (const u8*)p - cpu;
+++        if (d >= 0) ADDI2R(dst, RCPU, (u64)d, scratch);
+++        else SUBI2R(dst, RCPU, (u64)-d, scratch);
+++    };
+++    // the loads first (the A55 is in order): the TCM settings; then the region, the TCMs as SlowWrite9 (addr <
+++    // ITCMSize, (addr & DTCMMask) == DTCMBase: neither changed by the alignment)
+++    LDR(INDEX_UNSIGNED, W3, RCPU, offsetof(ARMv5, ITCMSize));
+++    LDR(INDEX_UNSIGNED, W5, RCPU, offsetof(ARMv5, DTCMMask));
+++    LDR(INDEX_UNSIGNED, W6, RCPU, offsetof(ARMv5, DTCMBase));
+++    LSR(W2, W0, 24);
+++    SUB(W2, W2, region);
+++    fail.push_back(CBNZ(W2));
+++    SUB(X3, X0, X3);                    // negative: addr < ITCMSize
+++    fail.push_back(TBNZ(X3, 63));
+++    AND(W5, W0, W5);
+++    EOR(W5, W5, W6);
+++    fail.push_back(CBZ(W5));
+++    if (region == 0x06)
+++    {
+++        // GPU::WriteVRAMQuick: the page's entry (VRAMDirect[(addr >> 14) & 0x3FF]; Mem null: no bank alone there
+++        // or the table stale), its capture block's flag, the store, the dirty bit
+++        UBFX(W2, W0, 14, 10);
+++        objAddr(X3, NDS.GPU.VRAMDirect, X5);
+++        ADD(X3, X3, X2, ArithOption(X2, ST_LSL, 5));
+++        LDR(INDEX_UNSIGNED, X2, X3, offsetof(GPU::VRAMDirectPage, Mem));
+++        LDR(INDEX_UNSIGNED, X5, X3, offsetof(GPU::VRAMDirectPage, CaptureFlags));
+++        LDR(INDEX_UNSIGNED, W6, X3, offsetof(GPU::VRAMDirectPage, DirtyBit));
+++        LDR(INDEX_UNSIGNED, X7, X3, offsetof(GPU::VRAMDirectPage, DirtyWord));
+++        fail.push_back(CBZ(X2));
+++        LDRH(INDEX_UNSIGNED, W5, X5, 0);
+++        fail.push_back(TBNZ(W5, 15));
+++        ANDI2R(W3, W0, size == 32 ? 0x3FFC : 0x3FFE);
+++        STRGeneric(size, W1, X2, X3);
+++        // *DirtyWord |= 1 << (DirtyBit + ((addr >> 9) & 31))
+++        UBFX(W5, W0, 9, 5);
+++        ADD(W6, W6, W5);
+++        MOVI2R(X5, 1);
+++        LSLV(X5, X5, X6);
+++        LDR(INDEX_UNSIGNED, X6, X7, 0);
+++        ORR(X6, X6, X5);
+++        STR(INDEX_UNSIGNED, X6, X7, 0);
+++    }
+++    else
+++    {
+++        // QuickWrite9's palette/OAM case: the engine's POWCNT1 bit (bit 1 for engine A, 9 for B: addr & 0x400) clear
+++        // drops the store; then GPU::WritePalette/WriteOAM (addr & 0x7FF, aligned)
+++        objAddr(X2, &NDS.PowerControl9, X3);
+++        LDRH(INDEX_UNSIGNED, W2, X2, 0);
+++        UBFX(W3, W0, 10, 1);
+++        LSL(W3, W3, 3);
+++        ADD(W3, W3, 1);
+++        LSRV(W2, W2, W3);
+++        FixupBranch off = TBZ(W2, 0);
+++        ANDI2R(W3, W0, size == 32 ? 0x7FC : 0x7FE);
+++        objAddr(X2, region == 0x05 ? NDS.GPU.Palette : NDS.GPU.OAM, X5);
+++        STRGeneric(size, W1, X2, X3);
+++        if (region == 0x05)
+++        {
+++            // PaletteDirty |= ((addr & 0x3FE) ? 1 : 0x10) << (addr / VRAMDirtyGranularity)
+++            UBFX(W2, W3, 9, 2);
+++            ANDI2R(W5, W3, 0x3FE);
+++            SUB(W5, W5, 1);
+++            LSR(W5, W5, 31);                // 1 iff (addr & 0x3FE) == 0
+++            ADD(W2, W2, W5, ArithOption(W5, ST_LSL, 2));
+++            objAddr(X5, &NDS.GPU.PaletteDirty, X6);
+++        }
+++        else
+++        {
+++            // OAMDirty |= 1 << (addr / 1024)
+++            UBFX(W2, W3, 10, 1);
+++            objAddr(X5, &NDS.GPU.OAMDirty, X6);
+++        }
+++        MOVI2R(W6, 1);
+++        LSLV(W6, W6, W2);
+++        LDR(INDEX_UNSIGNED, W7, X5, 0);
+++        ORR(W7, W7, W6);
+++        STR(INDEX_UNSIGNED, W7, X5, 0);
+++        SetJumpTarget(off);
+++    }
+++    MOVI2R(W1, 0);
+++    RET();
+++    for (FixupBranch& f : fail)
+++        SetJumpTarget(f);
+++    MOVI2R(W1, 1);
+++    RET();
+++    return start;
+++}
+++
+++// the helper for a store, or null: not an ARM9 16/32-bit store in DS mode to a region whose first execution
+++// (CurInstr.DataRegion) or static address is VRAM, OAM or a palette, jit.vramfast off, or MELONDS_IOSTATS counting
+++void* Compiler::GfxStoreHelperFor(int size, int staticRegion, int expectedTarget, u32 dataRegion)
+++{
+++    if (!OptGfxStores || Num != 0 || size < 16 || NDS.ConsoleType != 0)
+++        return nullptr;
+++    const u32 flags = SlowPathFlags;
+++    if (!(flags & slow_MemVRAM) || (flags & slow_FullPath))
+++        return nullptr;
+++    int region;
+++    if (staticRegion >= 0)
+++        region = staticRegion;
+++    else if (expectedTarget == ARMJIT_Memory::memregion_VRAM)
+++        region = 0x06;
+++    else if (expectedTarget == ARMJIT_Memory::memregion_Other)
+++        region = dataRegion >> 24;
+++    else
+++        return nullptr;
+++    if (region != 0x05 && region != 0x06 && region != 0x07)
+++        return nullptr;
+++    if (!(OptGfxMask & (region == 0x06 ? 1 : region == 0x05 ? 2 : 4)))
+++        return nullptr;
+++    return GfxStoreFuncs[region == 0x05 ? 0 : region == 0x06 ? 1 : 2][size == 32];
+++}
+++
++ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
++ {
++     u32 addressMask = ~0;
++@@ -248,7 +379,22 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
++         if (addrIsStatic)
++             func = NDS.JIT.Memory.GetFuncForAddr(CurCPU, staticAddress, flags & memop_Store, size);
++ 
++-        PushRegs(false, false, !LoopMode);   // (LoopMode: no register unloaded, they stay loaded round the loop)
+++        // BananaDS 0041: a VRAM/OAM/palette store through its helper, the call below as the fallback when the
+++        // helper's checks fail (no register unloaded there, so the register cache is in one state where the two
+++        // paths join)
+++        FixupBranch gfxDone;
+++        void* gfxHelper = (flags & memop_Store)
+++            ? GfxStoreHelperFor(size, addrIsStatic ? (int)(staticAddress >> 24) : -1, expectedTarget, CurInstr.DataRegion)
+++            : nullptr;
+++        const bool gfxInline = gfxHelper != nullptr;
+++        if (gfxInline)
+++        {
+++            MOV(W1, rdMapped);
+++            BL(gfxHelper);
+++            gfxDone = CBZ(W1);
+++        }
+++
+++        PushRegs(false, false, !LoopMode && !gfxInline);   // (LoopMode: no register unloaded, they stay loaded round the loop)
++ 
++         if (func)
++         {
++@@ -348,6 +494,8 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
++                     UBFX(rdMapped, W0, 0, size);
++             }
++         }
+++        if (gfxInline)
+++            SetJumpTarget(gfxDone);
++     }
++ 
++     if (CurInstr.Info.Branches())
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index baec990..5376f7c 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -370,6 +370,14 @@ bool Emu::load_rom(const std::string& path) {
+         if (v == "on") unsetenv("MELONDS_JIT_NOIRQCHAIN");
+         else if (v == "off") setenv("MELONDS_JIT_NOIRQCHAIN", "1", 1);
+     }
++    // jit.gfxstores=on|off: off sets MELONDS_JIT_NOGFXSTORES=1, on unsets it (melonDS patch 0041: the JIT's 16 and
++    // 32-bit stores to VRAM, OAM and the palettes as compiled code, SlowWrite9's checks included, the call as the
++    // fallback; exact; read as the JIT compiler is created; default on). A difftest sets it on both --a and --b
++    {
++        const std::string v = cfg_.str("jit.gfxstores", "");
++        if (v == "on") unsetenv("MELONDS_JIT_NOGFXSTORES");
++        else if (v == "off") setenv("MELONDS_JIT_NOGFXSTORES", "1", 1);
++    }
+     // jit.entry_x26=on|off: off sets MELONDS_JIT_NOENTRYX26=1, on unsets it (melonDS patch 0024: ARM_Dispatch sets the
+     // fast memory base, so blocks have no entry prologue: smaller code; exact; read as the JIT compiler is created;
+     // default on). As with jit.irqchain, a difftest sets it on both --a and --b
+-- 
+2.43.0
+

@@ -1,0 +1,18 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/ipcrom-ipctest.nds pgoO3-ipcrom-ipctest-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-pgoO3/b/bananads /home/user/perf/roms/ipcrom-ipctest.nds pgoO3-ipcrom-ipctest-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 3.514 -> 3.486 (-0.79%)   @1992 1.947 -> 1.932 (-0.79%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.236 -> 4.287 (+1.19%)
+  insn 2588.1k->2531.8k (-2.2%)  base 2753.8k->2701.1k (-1.9%)  l1i_miss 21.7k->22.6k (+4.0%)  ld_miss 4.2k->4.0k (-4.0%)  st_miss 1.5k->1.3k (-13.6%)  itlb_l2 15.3k->14.0k (-8.4%)  itlb_walk 0.1k->0.0k (-95.3%)  dtlb_l2 47.6k->46.6k (-2.2%)  dtlb_walk 0.3k->0.3k (-8.5%)  bcond_miss 21.4k->22.0k (+2.6%)  bind_miss 4.0k->4.7k (+18.7%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  interpreter          0.052     0.098    +0.046      31.3k      46.4k
+  other                0.165     0.142    -0.023      77.4k      54.7k
+  2d                   0.519     0.498    -0.021     377.0k     354.5k
+  scheduler/core       0.854     0.834    -0.020     640.4k     630.2k
+  gengis               0.023     0.013    -0.011       9.8k       7.9k
+  jit-runtime          0.755     0.747    -0.008     599.3k     578.3k
+  jit-code             0.396     0.390    -0.006     325.7k     325.7k
+  libc/lib             0.082     0.088    +0.005      35.9k      35.9k
+  memory               0.586     0.590    +0.005     412.9k     421.3k
+  audio                0.082     0.086    +0.004      78.5k      76.9k

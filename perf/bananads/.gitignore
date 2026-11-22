@@ -1,0 +1,13 @@
+# build products and big raw outputs stay out of the repo (evidence is text only)
+*.so
+*.o
+*.ppm
+*.png
+*.raw
+*.wav
+*.gcda
+*.code
+*.map
+runs/
+__pycache__/
+*.pyc

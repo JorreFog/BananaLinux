@@ -1,0 +1,15 @@
+# rgds-sim v1 A/B (ab.sh, st mode), core.fast_div off (A) vs on (B), same binary (/home/user/perf/core/build-b/b/bananads = device build of perf/core @ 13bdd71), cpubench-thumb; 16:21 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh rgds-sim/ab.sh <bin> <bin> /home/user/perf/roms/cpubench-cpubench-thumb.nds --a "--set core.fast_div=off" --b "--set core.fast_div=on" --label fastdiv-cpubench-thumb  (full: /home/user/perf/core/runs/sim/fastdiv-cpubench-thumb-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-b/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds fastdiv-cpubench-thumb-A --mode st --frames 100:300 --set core.fast_div=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-b/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds fastdiv-cpubench-thumb-B --mode st --frames 100:300 --set core.fast_div=on
+
+== thread 0 (main): ms/frame @1104 5.693 -> 5.672 (-0.37%)   @1992 3.253 -> 3.240 (-0.39%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.894 -> 3.902 (+0.19%)
+  insn 5003.2k->4980.8k (-0.4%)  base 5462.4k->5432.0k (-0.6%)  l1i_miss 3.8k->3.9k (+1.3%)  l1i_l3miss 0.3k->0.3k (-1.2%)  ld_miss 2.9k->2.9k (-1.9%)  ld_l3miss 0.8k->0.8k (-0.4%)  st_miss 6.4k->7.1k (+10.5%)  st_l3miss 3.3k->3.2k (-1.9%)  itlb_l2 5.4k->5.5k (+3.1%)  itlb_walk 0.0k->0.0k (-48.3%)  dtlb_l2 34.3k->34.3k (+0.0%)  dtlb_walk 0.0k->0.0k (-65.1%)  bcond_miss 22.7k->23.4k (+3.0%)  bind_miss 10.0k->10.0k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.371     1.346    -0.025    1159.9k    1137.5k
+  jit-code             2.911     2.915    +0.003    2796.8k    2796.8k
+  gengis               0.266     0.264    -0.002     160.1k     160.1k
+  2d                   0.653     0.654    +0.001     432.2k     432.2k
+  audio                0.070     0.071    +0.001      76.0k      76.0k

@@ -1,0 +1,26 @@
+# 2D results verified by sim (model v2; prefetch16 under v3 = SIMARGS=prfm=1), my device build of perf/jit-2d @ a8725d0 (/home/user/perf/sim/vb-jit2d)
+
+## J2D-conv16-membench
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit2d/b/bananads /home/user/perf/roms/membench-membench.nds J2D-conv16-membench-A --mode st --frames 100:300 --set render.2d_conv16=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit2d/b/bananads /home/user/perf/roms/membench-membench.nds J2D-conv16-membench-B --mode st --frames 100:300 --set render.2d_conv16=on
+
+== thread 0 (main): ms/frame @1104 4.518 -> 4.450 (-1.50%)   @1992 2.722 -> 2.685 (-1.38%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.749 -> 3.725 (-0.63%)
+  insn 3342.6k->3286.5k (-1.7%)  base 3775.1k->3693.7k (-2.2%)  l1i_miss 5.0k->5.0k (-0.0%)  l1i_l3miss 1.2k->1.2k (+0.2%)  ld_miss 9.5k->9.6k (+0.5%)  ld_l3miss 2.7k->2.7k (-0.0%)  st_miss 3.5k->3.5k (+1.1%)  st_l3miss 1.3k->1.3k (-0.0%)  itlb_l2 7.2k->7.2k (-0.0%)  itlb_walk 0.0k->0.0k (+49.4%)  dtlb_l2 18.1k->18.1k (-0.1%)  dtlb_walk 0.0k->0.0k (+109.5%)  bcond_miss 18.0k->18.5k (+3.0%)  bind_miss 2.6k->2.6k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   1.970     1.901    -0.070    1383.2k    1327.2k
+  gengis               0.559     0.562    +0.003     387.8k     387.8k
+  libc/lib             0.035     0.034    -0.001       7.4k       7.3k
+
+## J2D-pf16-membench-v3
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit2d/b/bananads /home/user/perf/roms/membench-membench.nds J2D-pf16-membench-v3-A --mode st --frames 100:300 --set render.2d_prefetch16=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-jit2d/b/bananads /home/user/perf/roms/membench-membench.nds J2D-pf16-membench-v3-B --mode st --frames 100:300 --set render.2d_prefetch16=on
+
+== thread 0 (main): ms/frame @1104 4.444 -> 4.350 (-2.11%)   @1992 2.681 -> 2.588 (-3.48%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.736 -> 3.653 (-2.21%)
+  insn 3272.3k->3286.5k (+0.4%)  base 3682.9k->3693.7k (+0.3%)  l1i_miss 5.0k->5.0k (+0.0%)  l1i_l3miss 1.2k->1.2k (+0.0%)  ld_miss 9.7k->9.3k (-5.0%)  ld_l3miss 2.7k->1.9k (-28.9%)  st_miss 3.7k->3.7k (+1.2%)  st_l3miss 1.3k->1.3k (-0.0%)  itlb_l2 7.2k->7.2k (+0.0%)  itlb_walk 0.0k->0.0k (+0.0%)  dtlb_l2 18.1k->18.1k (+0.0%)  dtlb_walk 0.0k->0.0k (+0.0%)  bcond_miss 18.2k->18.5k (+1.7%)  bind_miss 2.6k->2.6k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   1.893     1.797    -0.096    1313.0k    1327.2k
+  scheduler/core       1.294     1.296    +0.002    1014.4k    1014.4k

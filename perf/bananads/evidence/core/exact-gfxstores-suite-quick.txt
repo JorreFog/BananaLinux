@@ -1,0 +1,6 @@
+# exact-suite 2026-10-18T17:36:49Z bin=/home/user/perf/core/build-jitmem-base/b A='jit.gfxstores=off' B='jit.gfxstores=on' quick
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   jitloops-jitloops-thumb (6 files identical)
+DIFF ok   cpubench-cpubench-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb (SAME after 300 frames (all of main RAM))
+FAILS=0

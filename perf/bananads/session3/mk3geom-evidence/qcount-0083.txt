@@ -1,0 +1,13 @@
+# qemu, MK 1650-2150, per frame: qc4-off = b4 with the toggle off, qc5-def = the head (default on); v0 = emulator thread, v5 = the worker
+qc4-off      total  12295.6k  without Gengis  12042.9k  (Gengis  252.7k)  geometry+GX DMA   6107.3k
+qc5-def      total  12092.2k  without Gengis  11876.8k  (Gengis  215.3k)  geometry+GX DMA   5882.4k
+qc4-off v0=10630.2k v1=7052.2k v2=7288.9k v3=7308.5k v4=9317.0k
+   v0   1133.3k _ZN7melonDS5GPU3D18SubmitPolygonBodyTILb1ELb0EEEvv
+   v0      3.2k _ZN7melonDS12GeomFastMath7Mult4x3EPiPKi
+qc5-def v0=10383.1k v1=7451.5k v2=7331.5k v3=6991.8k v4=9232.9k v5=506.7k
+   v0    903.8k _ZN7melonDS5GPU3D18SubmitPolygonBodyTILb1ELb1EEEvv
+   v5    506.7k _ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZN7melonDS5GPU3D9Geom
+   v0      3.2k _ZN7melonDS12GeomFastMath7Mult4x3EPiPKi
+   v0      1.6k _ZN7melonDS5GPU3D8GeomWakeEv
+worker split (tbc, -g1 build): GeomBuild 423.8k, loop/spin/atomics 82.8k
+emu-side hand-off (lines): ~78k the job header and strip shadow, ~33k GeomSlot

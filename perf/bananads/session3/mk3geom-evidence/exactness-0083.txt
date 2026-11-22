@@ -1,0 +1,34 @@
+# mk3geom exactness for 0083 (render.geom_thread), build b4 (0080-0083, toggle then default off, on by --set), and bf2 (= the head, default on), device builds under qemu-dev, Mon Oct 19 14:13:04 UTC 2026
+## MK scene b4 on/off = base: yes; head bf2 default/off = base: yes
+## main RAM every frame 1600-2100, --regs --timing, off vs on
+SAME after 2100 frames (all of main RAM)
+## full savestates
+a57737e0567aab4f488ed894bdec854d 1850 b4/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 b4/bananads 
+a57737e0567aab4f488ed894bdec854d 1850 b4/bananads --set render.geom_thread=on
+f476c39ef33cd7a1166128040aa358d1 2000 b4/bananads --set render.geom_thread=on
+## Run trace build (trace-sab2-build.patch on top)
+tr4-on GXTRACE calls 1133371 hash 123d98004261c019
+tr4-off GXTRACE calls 1133371 hash 123d98004261c019
+## sabotage (MELONDS_GEOMSAB)
+1 (no full check, no batch wake: overflow): [mk-scene] FAILED: bananads exited 139 (see /home/user/perf3/mk3g/sc4-s1/run.log) (qemu: Segmentation fault)
+2 (no drain): [mk-scene] FAILED: bananads exited 139 (see /home/user/perf3/mk3g/sc4-s2/run.log) (qemu: Segmentation fault); its savestate at 1850: not written
+## test ROMs (check.sh off vs on)
+PICS ok   gxstm-soft (30 frames identical)
+PICS ok   gxstm-gengis2x (30 frames identical)
+PICS ok   gxstm-reload (30 frames identical)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq --regs --timing: SAME after 300 frames (all of main RAM)
+## exact-suite.sh off vs on: FAILS=0

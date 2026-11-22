@@ -1,0 +1,30 @@
+[mks] 420 frames from 1680, per frame:
+[mks]   mix           547.1
+[mks]   dirty           3.8
+[mks]   quick           0.0
+[mks]   visit        5697.6
+[mks]   off             8.5
+[mks]   notdue         10.0
+[mks]   run0            0.0
+[mks]   run1         1094.1
+[mks]   run2         4578.7
+[mks]   run3            0.0
+[mks]   run4            0.0
+[mks]   smp0            0.0
+[mks]   smp1         1094.1
+[mks]   smp2         6149.8
+[mks]   smp3            0.0
+[mks]   smp4            0.0
+[mks]   slow            6.2
+[mks]   buf           332.3
+[mks]   capRun          0.0
+[mks]   blip          547.1
+[mks]   sameTail        0.0
+[mks]   event  0      526.0
+[mks]   event  1      547.1
+[mks]   event  3      547.7
+[mks]   event  9       12.0
+[mks]   event 10      161.8
+[mks]   event 11       84.5
+[mks]   dma3 mode0 starts      4.0 words      906.0
+[mks]   dma3 mode7 starts     70.5 words    31564.0

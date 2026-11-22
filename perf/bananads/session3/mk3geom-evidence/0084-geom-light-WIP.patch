@@ -1,0 +1,525 @@
+From cf228f05f39c3336e2339ecfdcfbebc7e2dd7b17 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 19 Oct 2026 14:22:14 +0000
+Subject: [PATCH] GPU3D: the normal command's lighting on the worker thread
+ (render.geom_light)
+
+---
+ src/GPU3D.cpp | 251 +++++++++++++++++++++++++++++++++++++++++++++++---
+ src/GPU3D.h   |  49 ++++++++++
+ 2 files changed, 286 insertions(+), 14 deletions(-)
+
+diff --git a/src/GPU3D.cpp b/src/GPU3D.cpp
+index 218ca8f..a7f5754 100644
+--- a/src/GPU3D.cpp
++++ b/src/GPU3D.cpp
+@@ -189,6 +189,8 @@ void GPU3D::Reset() noexcept
+ {
+     GeomDrain();
+     GeomShadowValid = false;
++    VertexColorLit = false;
++    LightStateDirty = true;
+     CmdFIFO.Clear();
+     CmdPIPE.Clear();
+ 
+@@ -315,6 +317,8 @@ void GPU3D::DoSavestate(Savestate* file) noexcept
+ {
+     GeomDrain(); // render.geom_thread: the polygon and vertex RAM complete before they are saved or replaced
+     GeomShadowValid = false;
++    if (file->Saving && GeomSab != 4) GeomResolveState();
++    else { VertexColorLit = false; LightStateDirty = true; }
+     file->Section("GP3D");
+ 
+     CmdFIFO.DoSavestate(file);
+@@ -858,7 +862,7 @@ void ClipSegment(Vertex* outbuf, Vertex* vin, Vertex* vout)
+ }
+ 
+ template<int comp, bool attribs, int instance = 0>
+-int ClipAgainstPlane(const GPU3D& gpu, Vertex* vertices, int nverts, int clipstart)
++int ClipAgainstPlane(u32 polyattr, Vertex* vertices, int nverts, int clipstart)
+ {
+     Vertex temp[10];
+     int prev, next;
+@@ -878,7 +882,7 @@ int ClipAgainstPlane(const GPU3D& gpu, Vertex* vertices, int nverts, int clipsta
+         Vertex vtx = vertices[i];
+         if (vtx.Position[comp] > vtx.Position[3])
+         {
+-            if ((comp == 2) && (!(gpu.CurPolygonAttr & (1<<12)))) return 0;
++            if ((comp == 2) && (!(polyattr & (1<<12)))) return 0;
+ 
+             Vertex* vprev = &vertices[prev];
+             if (vprev->Position[comp] <= vprev->Position[3])
+@@ -952,13 +956,13 @@ int ClipPolygon(GPU3D& gpu, Vertex* vertices, int nverts, int clipstart)
+     // clipping seems to process the Y plane before the X plane.
+ 
+     // Z clipping
+-    nverts = ClipAgainstPlane<2, attribs>(gpu, vertices, nverts, clipstart);
++    nverts = ClipAgainstPlane<2, attribs>(gpu.CurPolygonAttr, vertices, nverts, clipstart);
+ 
+     // Y clipping
+-    nverts = ClipAgainstPlane<1, attribs>(gpu, vertices, nverts, clipstart);
++    nverts = ClipAgainstPlane<1, attribs>(gpu.CurPolygonAttr, vertices, nverts, clipstart);
+ 
+     // X clipping
+-    nverts = ClipAgainstPlane<0, attribs>(gpu, vertices, nverts, clipstart);
++    nverts = ClipAgainstPlane<0, attribs>(gpu.CurPolygonAttr, vertices, nverts, clipstart);
+ 
+     return nverts;
+ }
+@@ -1161,6 +1165,18 @@ __attribute__((noinline)) void GPU3D::SubmitPolygonBodyT() noexcept
+         if (nverts == 4)
+             clippedvertices[3] = TempVertexBuffer[3];
+     }
++    if constexpr (Threaded)
++    {
++        // render.geom_light: a vertex lit by the worker has its light job's number in its colour here; the worker
++        // works the polygon's colours out again from these inputs (GeomColors)
++        u32 lit = 0;
++        for (int i = clipstart; i < nverts; i++) lit |= (u32)TempVertexBuffer[i].Color[0];
++        job->NeedColors = (lit & 0x80000000u) != 0;
++        if (job->NeedColors)
++            for (int i = clipstart; i < nverts; i++) job->In[i] = TempVertexBuffer[i];
++        job->NIn = nverts;
++        job->Outside = 0;
++    }
+     else
+     for (int i = clipstart; i < nverts; i++)
+         clippedvertices[i] = TempVertexBuffer[i];
+@@ -1201,6 +1217,7 @@ __attribute__((noinline)) void GPU3D::SubmitPolygonBodyT() noexcept
+             const s32 w = p[3], nw = (s32)(0u - (u32)w);
+             outside |= ((p[0] > w) | (p[0] < nw)) | (((p[1] > w) | (p[1] < nw)) << 1) | (((p[2] > w) | (p[2] < nw)) << 2);
+         }
++        if constexpr (Threaded) job->Outside = outside;
+         // When no pass runs, the colours are left as they are: they already are x.FFF (SubmitVertex makes the
+         // vertices' so, and the shared ones of a strip went through this), and only the new vertices' are kept.
+         if (outside)
+@@ -1212,12 +1229,12 @@ __attribute__((noinline)) void GPU3D::SubmitPolygonBodyT() noexcept
+                 sharedcopied = true;
+             }
+             if (outside & 4)
+-                nverts = ClipAgainstPlane<2, true, 1>(*this, clippedvertices, nverts, clipstart);
++                nverts = ClipAgainstPlane<2, true, 1>(CurPolygonAttr, clippedvertices, nverts, clipstart);
+             // (a pass after one that returned 0 still runs: with a strip's clipstart of 2 it returns 2)
+             if (nverts == 0 || ClipPlaneOutside<1>(clippedvertices, nverts, clipstart))
+-                nverts = ClipAgainstPlane<1, true, 1>(*this, clippedvertices, nverts, clipstart);
++                nverts = ClipAgainstPlane<1, true, 1>(CurPolygonAttr, clippedvertices, nverts, clipstart);
+             if (nverts == 0 || ClipPlaneOutside<0>(clippedvertices, nverts, clipstart))
+-                nverts = ClipAgainstPlane<0, true, 1>(*this, clippedvertices, nverts, clipstart);
++                nverts = ClipAgainstPlane<0, true, 1>(CurPolygonAttr, clippedvertices, nverts, clipstart);
+             // a pass that ran made every vertex's colour x.FFF; the vertices of a skipped one already were
+         }
+     }
+@@ -1388,6 +1405,10 @@ __attribute__((noinline)) void GPU3D::SubmitPolygonBodyT() noexcept
+             // render.geom_thread: the rest is the worker's (GeomBuild); the polygon's place and the vertex count as
+             // the build leaves them, and the shadow of the polygon for the next one of a strip, are kept here
+             Vertex* const base = &CurVertexRAM[NumVertices];
++            job->Type = 0;
++            job->LightEnd = GeomLightSeq;
++            // render.geom_light: the four temp vertices' colours as they are now, for a savestate's (GeomResolveState)
++            for (int k = 0; k < 4; k++) job->TC[k] = (u32)TempVertexBuffer[k].Color[0];
+             job->Poly = &CurPolygonRAM[NumPolygons++];
+             job->Prev = LastStripPolygon;
+             job->VtxBase = base;
+@@ -1826,9 +1847,17 @@ __attribute__((no_stack_protector)) void GPU3D::SubmitVertexBody() noexcept
+ 
+     // this probably shouldn't be.
+     // the way color is handled during clipping needs investigation. TODO
++    if (Fast && VertexColorLit) [[unlikely]]
++    {
++        // render.geom_light: the colour is the worker's light job's (resolved by GeomColors, or at a savestate)
++        vertextrans->Color[0] = vertextrans->Color[1] = vertextrans->Color[2] = (s32)(0x80000000u | VertexColorSeq);
++    }
++    else
++    {
+     vertextrans->Color[0] = (VertexColor[0] << 12) + 0xFFF;
+     vertextrans->Color[1] = (VertexColor[1] << 12) + 0xFFF;
+     vertextrans->Color[2] = (VertexColor[2] << 12) + 0xFFF;
++    }
+ 
+     if ((TexParam >> 30) == 3)
+     {
+@@ -2530,6 +2559,7 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+                 VertexColor[0] = r;
+                 VertexColor[1] = g;
+                 VertexColor[2] = b;
++                VertexColorLit = false;
+             }
+             break;
+ 
+@@ -2538,7 +2568,10 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+             Normal[0] = (s16)((entry.Param & 0x000003FF) << 6) >> 6;
+             Normal[1] = (s16)((entry.Param & 0x000FFC00) >> 4) >> 6;
+             Normal[2] = (s16)((entry.Param & 0x3FF00000) >> 14) >> 6;
+-            CalculateLightingBody<Fast>();
++            if (Fast && GeomLight && GeomThread) [[likely]]
++                GeomLightCmd();
++            else
++                CalculateLightingBody<Fast>();
+             break;
+ 
+         case 0x22: // texcoord
+@@ -2610,6 +2643,7 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+             break;
+ 
+         case 0x30: // diffuse/ambient material
++            LightStateDirty = true;
+             VertexPipelineCmdDelayed6<Fast>();
+             MatDiffuse[0] = entry.Param & 0x1F;
+             MatDiffuse[1] = (entry.Param >> 5) & 0x1F;
+@@ -2622,11 +2656,13 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+                 VertexColor[0] = MatDiffuse[0];
+                 VertexColor[1] = MatDiffuse[1];
+                 VertexColor[2] = MatDiffuse[2];
++                VertexColorLit = false;
+             }
+             AddCyclesT<Fast>(3);
+             break;
+ 
+         case 0x31: // specular/emission material
++            LightStateDirty = true;
+             VertexPipelineCmdDelayed6<Fast>();
+             MatSpecular[0] = entry.Param & 0x1F;
+             MatSpecular[1] = (entry.Param >> 5) & 0x1F;
+@@ -2639,6 +2675,7 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+             break;
+ 
+         case 0x32: // light direction
++            LightStateDirty = true;
+             StallPolygonPipeline(8 + 1,  2); // 0x32 can run 6 cycles after a vertex
+             {
+                 u32 l = entry.Param >> 30;
+@@ -2660,6 +2697,7 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+             break;
+ 
+         case 0x33: // light color
++            LightStateDirty = true;
+             VertexPipelineCmdDelayed8<Fast>();
+             {
+                 u32 l = entry.Param >> 30;
+@@ -2963,6 +3001,7 @@ inline __attribute__((always_inline)) void GPU3D::ExecuteEntryBody(CmdFIFOEntry
+                     break;
+ 
+                 case 0x34: // shininess table
++                    LightStateDirty = true;
+                     {
+                         for (int i = 0; i < 128; i += 4)
+                         {
+@@ -3258,6 +3297,162 @@ __attribute__((no_stack_protector)) void GPU3D::RunFast() noexcept
+ }
+ 
+ 
++
++// render.geom_light: the normal command's lighting on the worker. Here: the texcoords it makes (TexParam mode 2),
++// the transformed normal, its timing (one cycle per enabled light, at least one: the light loop's count) and a light
++// job; the worker computes the colour (GeomLightJob) and the vertices submitted until the next colour change carry
++// the job's number
++void GPU3D::GeomLightCmd() noexcept
++{
++    if ((TexParam >> 30) == 2)
++    {
++        TexCoords[0] = RawTexCoords[0] + (((s64)Normal[0]*TexMatrix[0] + (s64)Normal[1]*TexMatrix[4] + (s64)Normal[2]*TexMatrix[8]) >> 21);
++        TexCoords[1] = RawTexCoords[1] + (((s64)Normal[0]*TexMatrix[1] + (s64)Normal[1]*TexMatrix[5] + (s64)Normal[2]*TexMatrix[9]) >> 21);
++    }
++    if (!GeomRing) [[unlikely]] GeomStart();
++    const u32 h = GeomLHead.load(std::memory_order_relaxed);
++    if (h - GeomLTail.load(std::memory_order_acquire) >= GeomLightRing) [[unlikely]]
++    {
++        while (h - GeomLTail.load(std::memory_order_acquire) >= GeomLightRing) { GeomWake(); std::this_thread::yield(); }
++    }
++    GeomLightEntry& e = GeomLRing[h & (GeomLightRing - 1)];
++    e.NT[0] = ((Normal[0]*VecMatrix[0] + Normal[1]*VecMatrix[4] + Normal[2]*VecMatrix[8]) << 9) >> 21;
++    e.NT[1] = ((Normal[0]*VecMatrix[1] + Normal[1]*VecMatrix[5] + Normal[2]*VecMatrix[9]) << 9) >> 21;
++    e.NT[2] = ((Normal[0]*VecMatrix[2] + Normal[1]*VecMatrix[6] + Normal[2]*VecMatrix[10]) << 9) >> 21;
++    const u32 lights = CurPolygonAttr & 0xF;
++    e.Lights = lights;
++    e.State = 0;
++    if (LightStateDirty) [[unlikely]]
++    {
++        // a new light state, in the states' ring (64; waits while the worker hasn't taken the oldest)
++        const u32 sh = GeomSHead;
++        while (sh - GeomSTail.load(std::memory_order_acquire) >= 64) { GeomWake(); std::this_thread::yield(); }
++        GeomLightState& ls = GeomSRing[sh & 63];
++        memcpy(ls.LightDirection, LightDirection, sizeof(LightDirection));
++        memcpy(ls.SpecRecip, SpecRecip, sizeof(SpecRecip));
++        memcpy(ls.LightColor, LightColor, sizeof(LightColor));
++        memcpy(ls.MatDiffuse, MatDiffuse, 3); memcpy(ls.MatAmbient, MatAmbient, 3);
++        memcpy(ls.MatSpecular, MatSpecular, 3); memcpy(ls.MatEmission, MatEmission, 3);
++        ls.UseShininessTable = UseShininessTable;
++        memcpy(ls.ShininessTable, ShininessTable, sizeof(ShininessTable));
++        GeomSHead = sh + 1;
++        e.State = 0x80000000u | sh;
++        LightStateDirty = false;
++    }
++    GeomLHead.store(h + 1, std::memory_order_release);
++    if (((h & 255) == 255) && GeomSleeping.load(std::memory_order_relaxed)) GeomWake();
++    GeomLightSeq = h + 1;
++    VertexColorSeq = h & (GeomLightResults - 1);
++    VertexColorLit = true;
++    const s32 c = lights ? __builtin_popcount(lights) : 1;
++    NormalPipeline = 7;
++    AddCyclesT<true>(c);
++}
++
++// the worker: CalculateLightingBody<true>'s colour for a light job, from its transformed normal and the light state
++void GPU3D::GeomLightJob(const GeomLightEntry& jb, u32 seq) noexcept
++{
++    if (jb.State) { GeomLS = GeomSRing[jb.State & 63]; GeomSTail.store((jb.State & 0x7FFFFFFFu) + 1, std::memory_order_release); }
++    const GeomLightState& ls = GeomLS;
++    const s32* normaltrans = jb.NT;
++    u32 vtxbuff[3] = {(u32)ls.MatEmission[0] << 14, (u32)ls.MatEmission[1] << 14, (u32)ls.MatEmission[2] << 14};
++    for (u32 lights = jb.Lights; lights; lights &= lights - 1)
++    {
++        const int i = __builtin_ctz(lights);
++        s32 dot = ((ls.LightDirection[i][0]*normaltrans[0]) >> 9) +
++                  ((ls.LightDirection[i][1]*normaltrans[1]) >> 9) +
++                  ((ls.LightDirection[i][2]*normaltrans[2]) >> 9);
++        s32 shinelevel;
++        if (dot > 0)
++        {
++            s32 diffdot = (dot << 21) >> 21;
++            vtxbuff[0] += (ls.MatDiffuse[0] * ls.LightColor[i][0] * diffdot) & 0xFFFFF;
++            vtxbuff[1] += (ls.MatDiffuse[1] * ls.LightColor[i][1] * diffdot) & 0xFFFFF;
++            vtxbuff[2] += (ls.MatDiffuse[2] * ls.LightColor[i][2] * diffdot) & 0xFFFFF;
++            dot += normaltrans[2];
++            dot = (dot << 21) >> 21;
++            dot = ((dot * dot) >> 10) & 0x3FF;
++            shinelevel = ((dot * ls.SpecRecip[i]) >> 8) - (1<<9);
++            if (shinelevel < 0) shinelevel = 0;
++            else
++            {
++                shinelevel = (shinelevel << 18) >> 18;
++                if (shinelevel < 0) shinelevel = 0;
++                else if (shinelevel > 0x1FF) shinelevel = 0x1FF;
++            }
++        }
++        else shinelevel = 0;
++        if (ls.UseShininessTable)
++        {
++            shinelevel >>= 2;
++            shinelevel = ls.ShininessTable[shinelevel];
++            shinelevel <<= 1;
++        }
++        vtxbuff[0] += ((ls.MatSpecular[0] * shinelevel) + (ls.MatAmbient[0] << 9)) * ls.LightColor[i][0];
++        vtxbuff[1] += ((ls.MatSpecular[1] * shinelevel) + (ls.MatAmbient[1] << 9)) * ls.LightColor[i][1];
++        vtxbuff[2] += ((ls.MatSpecular[2] * shinelevel) + (ls.MatAmbient[2] << 9)) * ls.LightColor[i][2];
++    }
++    u8* r = GeomLightRes[seq & (GeomLightResults - 1)];
++    r[0] = (vtxbuff[0] >> 14 > 31) ? 31 : (vtxbuff[0] >> 14);
++    r[1] = (vtxbuff[1] >> 14 > 31) ? 31 : (vtxbuff[1] >> 14);
++    r[2] = (vtxbuff[2] >> 14 > 31) ? 31 : (vtxbuff[2] >> 14);
++}
++
++// a colour as SubmitVertex makes it, from a literal one or a light job's number
++static inline void GeomResolve(Vertex& v, const u8 (*res)[3], u32 mask) noexcept
++{
++    if (!((u32)v.Color[0] & 0x80000000u)) return;
++    const u8* c = res[(u32)v.Color[0] & mask];
++    v.Color[0] = (c[0] << 12) + 0xFFF;
++    v.Color[1] = (c[1] << 12) + 0xFFF;
++    v.Color[2] = (c[2] << 12) + 0xFFF;
++}
++
++// the worker: the stored polygon's vertex colours for a polygon with lit vertices, by the emulator thread's steps:
++// the inputs' colours, then the same clipping passes (they depend on the positions only) with the attributes
++void GPU3D::GeomColors(GeomJob& jb) noexcept
++{
++    Vertex v[10];
++    const int clipstart = jb.ClipStart;
++    if (clipstart == 2) { v[0] = *jb.Reuse[0]; v[1] = *jb.Reuse[1]; }
++    for (int i = clipstart; i < jb.NIn; i++) { v[i] = jb.In[i]; GeomResolve(v[i], GeomLightRes, GeomLightResults - 1); }
++    int nverts = jb.NIn;
++    const u32 outside = jb.Outside;
++    if (outside)
++    {
++        if (outside & 4)
++            nverts = ClipAgainstPlane<2, true, 1>(jb.Attr, v, nverts, clipstart);
++        if (nverts == 0 || ClipPlaneOutside<1>(v, nverts, clipstart))
++            nverts = ClipAgainstPlane<1, true, 1>(jb.Attr, v, nverts, clipstart);
++        if (nverts == 0 || ClipPlaneOutside<0>(v, nverts, clipstart))
++            nverts = ClipAgainstPlane<0, true, 1>(jb.Attr, v, nverts, clipstart);
++    }
++    for (int i = clipstart; i < jb.NVerts; i++)
++        for (int k = 0; k < 3; k++) jb.V[i].Color[k] = v[i].Color[k];
++}
++
++// at a savestate (drained): the lit colours made literal again, as the plain path has them
++void GPU3D::GeomResolveState() noexcept
++{
++    if (VertexColorLit)
++    {
++        const u8* c = GeomLightRes[VertexColorSeq];
++        VertexColor[0] = c[0]; VertexColor[1] = c[1]; VertexColor[2] = c[2];
++        VertexColorLit = false;
++    }
++    // a temp vertex the last stored polygon's job saw resolves as the worker saw it then (its light result may
++    // have been reused since); a later one from the results
++    for (Vertex& v : TempVertexBuffer)
++    {
++        const u32 enc = (u32)v.Color[0];
++        if (!(enc & 0x80000000u)) continue;
++        const u8* c = GeomLightRes[enc & (GeomLightResults - 1)];
++        for (int k = 0; k < 4; k++) if (GeomTempEnc[k] == enc) { c = GeomTempRes[k]; break; }
++        v.Color[0] = (c[0] << 12) + 0xFFF; v.Color[1] = (c[1] << 12) + 0xFFF; v.Color[2] = (c[2] << 12) + 0xFFF;
++    }
++    LightStateDirty = true;
++}
++
+ // render.geom_thread: the ring of polygon jobs (one producer: the emulator thread; one consumer: the worker)
+ GeomJob* GPU3D::GeomSlot() noexcept
+ {
+@@ -3295,7 +3490,9 @@ void GPU3D::GeomWake() noexcept
+ void GPU3D::GeomDrain() noexcept
+ {
+     if (!GeomRing || GeomSab == 2) return;
+-    while (GeomTail.load(std::memory_order_acquire) != GeomHead.load(std::memory_order_relaxed))
++    GeomLHead.store(GeomLHead.load(std::memory_order_relaxed), std::memory_order_seq_cst);
++    while (GeomTail.load(std::memory_order_acquire) != GeomHead.load(std::memory_order_relaxed) ||
++           GeomLTail.load(std::memory_order_acquire) != GeomLHead.load(std::memory_order_relaxed))
+     {
+         GeomWake();
+         std::this_thread::yield();
+@@ -3324,14 +3521,33 @@ void GPU3D::GeomStart() noexcept
+ void GPU3D::GeomWorkerLoop() noexcept
+ {
+     u32 t = GeomTail.load(std::memory_order_relaxed);
++    u32 lt = GeomLTail.load(std::memory_order_relaxed);
+     for (;;)
+     {
+         if (t != GeomHead.load(std::memory_order_acquire))
+         {
+-            GeomBuild(GeomRing[t & (GeomRingSize - 1)]);
++            GeomJob& jb = GeomRing[t & (GeomRingSize - 1)];
++            {
++                while ((s32)(jb.LightEnd - lt) > 0) { // (the worker may have lit ahead of it)
++                     GeomLightJob(GeomLRing[lt & (GeomLightRing - 1)], lt); GeomLTail.store(++lt, std::memory_order_release); }
++                if (jb.NeedColors) GeomColors(jb);
++                GeomBuild(jb);
++                for (int k = 0; k < 4; k++)
++                {
++                    GeomTempEnc[k] = jb.TC[k];
++                    if (jb.TC[k] & 0x80000000u) memcpy(GeomTempRes[k], GeomLightRes[jb.TC[k] & (GeomLightResults - 1)], 3);
++                }
++            }
+             GeomTail.store(++t, std::memory_order_release);
+             continue;
+         }
++        if (lt != GeomLHead.load(std::memory_order_acquire))
++        {
++            // lighting ahead of the polygons that use it
++            GeomLightJob(GeomLRing[lt & (GeomLightRing - 1)], lt);
++            GeomLTail.store(++lt, std::memory_order_release);
++            continue;
++        }
+         // a short spin, then sleep until woken
+         bool got = false;
+         for (int n = 0; n < 256 && !got; n++)
+@@ -3339,12 +3555,12 @@ void GPU3D::GeomWorkerLoop() noexcept
+ #if defined(__aarch64__)
+             asm volatile("yield");
+ #endif
+-            got = t != GeomHead.load(std::memory_order_acquire);
++            got = t != GeomHead.load(std::memory_order_acquire) || lt != GeomLHead.load(std::memory_order_acquire);
+         }
+         if (got) continue;
+         std::unique_lock<std::mutex> lk(GeomMutex);
+         GeomSleeping.store(true, std::memory_order_seq_cst);
+-        while (t == GeomHead.load(std::memory_order_seq_cst) && !GeomQuit.load())
++        while (t == GeomHead.load(std::memory_order_seq_cst) && lt == GeomLHead.load(std::memory_order_seq_cst) && !GeomQuit.load())
+             GeomCond.wait(lk);
+         GeomSleeping.store(false, std::memory_order_relaxed);
+         if (GeomQuit.load() && t == GeomHead.load()) return;
+@@ -3365,6 +3581,13 @@ GPU3D::~GPU3D() noexcept
+     }
+ }
+ 
++bool GPU3D::GeomLightEnv() noexcept
++{
++    // read as the GPU3D is created; default off; needs render.geom_thread
++    const char* e = getenv("MELONDS_GEOMLIGHT");
++    return e && e[0] == '1';
++}
++
+ bool GPU3D::GeomThreadEnv() noexcept
+ {
+     // read as the GPU3D is created (a difftest's two NDS objects each with its own setting); default on
+@@ -3374,7 +3597,7 @@ bool GPU3D::GeomThreadEnv() noexcept
+ 
+ int GPU3D::GeomSabEnv() noexcept
+ {
+-    // the sabotage switch for the checks (MELONDS_GEOMSAB): 1 = no full check and no batch wake (the ring overflows), 2 = no drain
++    // the sabotage switch for the checks (MELONDS_GEOMSAB): 1 = no full check and no batch wake (the ring overflows), 2 = no drain, 4 = lit colours not made literal at a savestate
+     const char* e = getenv("MELONDS_GEOMSAB");
+     return e ? atoi(e) : 0;
+ }
+diff --git a/src/GPU3D.h b/src/GPU3D.h
+index 67a4d8a..4450a18 100644
+--- a/src/GPU3D.h
++++ b/src/GPU3D.h
+@@ -91,8 +91,35 @@ class NDS;
+ 
+ // render.geom_thread: a stored polygon handed to the worker (GPU3D::GeomBuild): its clipped vertices (with their
+ // screen positions) and reciprocals, its place, the shared vertices' places, and the state the build reads
++struct GeomLightState
++{
++    s16 LightDirection[4][3];
++    s32 SpecRecip[4];
++    u8 LightColor[4][3];
++    u8 MatDiffuse[3], MatAmbient[3], MatSpecular[3], MatEmission[3];
++    bool UseShininessTable;
++    u8 ShininessTable[128];
++};
++
++// render.geom_light: a normal command's light entry: its transformed normal, enabled lights, and a new light state
++// (bit 31 and the state's number) when it changed before it
++struct GeomLightEntry
++{
++    s32 NT[3];
++    u32 Lights, State;
++    u32 Pad[3];
++};
++
+ struct GeomJob
+ {
++    u32 Type; // 0: a stored polygon
++    u32 LightEnd; // render.geom_light: the light entries published before it
++    // a polygon's input vertices when some are lit, and the clipping passes' planes, for the worker's colours
++    bool NeedColors;
++    int NIn;
++    u32 Outside;
++    Vertex In[4];
++    u32 TC[4];
+     Vertex V[10];
+     u64 WRecip[10];
+     Polygon* Poly;
+@@ -477,6 +504,28 @@ public:
+     void GeomStart() noexcept;
+     void GeomWorkerLoop() noexcept;
+     void GeomBuild(const GeomJob& jb) noexcept;
++    // BananaDS (render.geom_light, MELONDS_GEOMLIGHT=1 turns it on; default off; with render.geom_thread): the normal
++    // command's lighting on the worker; the vertices it lights carry the light job's number as their colour until
++    // the worker works the polygon's colours out (GeomColors); made literal again at a savestate
++    static bool GeomLightEnv() noexcept;
++    bool GeomLight = GeomLightEnv();
++    static constexpr u32 GeomLightResults = 65536;
++    u32 GeomTempEnc[4] {};
++    u8 GeomTempRes[4][3] {};
++    std::unique_ptr<u8[][3]> GeomLightResBuf {new u8[GeomLightResults][3]()};
++    u8 (*GeomLightRes)[3] = GeomLightResBuf.get();
++    u32 GeomLightSeq = 0, VertexColorSeq = 0;
++    bool VertexColorLit = false, LightStateDirty = true;
++    GeomLightState GeomLS {};
++    void GeomLightCmd() noexcept;
++    void GeomLightJob(const GeomLightEntry& jb, u32 seq) noexcept;
++    static constexpr u32 GeomLightRing = 4096;
++    std::unique_ptr<GeomLightEntry[]> GeomLRing {new GeomLightEntry[GeomLightRing]};
++    std::unique_ptr<GeomLightState[]> GeomSRing {new GeomLightState[64]};
++    std::atomic<u32> GeomLHead {0}, GeomLTail {0}, GeomSTail {0};
++    u32 GeomSHead = 0;
++    void GeomColors(GeomJob& jb) noexcept;
++    void GeomResolveState() noexcept;
+     template<bool Fast, bool Threaded> void SubmitPolygonBodyT() noexcept;
+     // while RunFast defers them, and whether one of the checks was due
+     bool FIFOChecksDeferred = false;
+-- 
+2.43.0
+

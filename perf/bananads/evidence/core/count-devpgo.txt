@@ -1,0 +1,17 @@
+# qemu-count, main thread insns/frame (frames 100-300): the device PGO build (Bootlin GCC 14.3 -O2, -fprofile-use with the full-suite profile prof-dev, -fprofile-partial-training) vs the device build (/home/user/perf/build-dev); 16:09 UTC
+# instrumented: JOBS=2 build-a64-device.sh /home/user/perf/core/sd /home/user/perf/core/build-devgen -DBANANADS_PGO_GENERATE=ON -DBANANADS_PGO_DIR=/home/user/perf/core/build-devgen/pgo
+# training (full suite, 16 ROMs x {gengis 1x, gengis 2x + 2D thread, soft} x 300 frames, 0 failed; log /home/user/perf/core/runs/train-dev.out): QEMU=/home/user/perf/tools/qemu-dev QEMU_L=<bootlin sysroot> sh bananads/tools/perf/pgo/train.sh <instrumented bananads> /home/user/perf/roms /home/user/perf/core/build-devgen/pgo /home/user/perf/core/prof-dev   (127 .gcda, 1.2 MB)
+# PGO build: CCACHE_DISABLE=1 JOBS=2 build-a64-device.sh /home/user/perf/core/sd /home/user/perf/core/build-devpgo -DBANANADS_PGO=/home/user/perf/core/prof-dev   (0 control-flow mismatches, 0 missing profiles; 10629 'source locations' warnings from the instrumented build predating the -fprofile-prefix-map commit; .text 2.21 MB vs 1.95 MB, +13%)
+# count: QEMU=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/count.sh /home/user/perf/core/build-devpgo/b/bananads devpgo  (raw: /home/user/perf/core/runs/{dev,devpgo}/<rom>/report.txt)
+## main thread (all 10 ROMs were in the training set here; the no-3D / 3D-only splits are separate builds)
+rom                                  dev      devpgodevpgo/dev
+arm7-thumb-dsstress-L5          21157.1k    19324.1k    -8.66%
+cpubench-cpubench-arm            4396.3k     4201.1k    -4.44%
+cpubench-cpubench-thumb          4896.0k     4707.1k    -3.86%
+cpubench-cpubench-thumb-arm7     5338.0k     5145.2k    -3.61%
+ds2dtest-ds2dtest               21212.4k    16766.6k   -20.96%
+dsstress-L10                    18450.8k    16824.4k    -8.81%
+dsstress-L5                     20746.1k    18917.2k    -8.82%
+ipcrom-ipctest                   2852.9k     2581.1k    -9.53%
+membench-membench                6013.3k     5520.7k    -8.19%
+sndbench-sndbench                4873.8k     4424.3k    -9.22%

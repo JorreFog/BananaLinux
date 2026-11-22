@@ -1,0 +1,220 @@
+From 0b5346b496097f22e54dddcdb9614fb724d93446 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 17:28:29 +0000
+Subject: [PATCH 14/23] BananaDS perf: the compositor's step list kept while
+ its inputs hold (render.2d_steps_cache)
+
+BuildSteps made the painter's step list (which layer lines, in which order, from which one up) once per line, for
+each unit: ~220 instructions a call (16 priority x BG tests, the sprite steps, the search for the covering layer),
+83k instructions a frame on the 2D thread at 2x (dsstress L5), 86k on membench's emulator's thread at 1x, 138k on
+ds2dtest: 2-3% of the thread, for the same answer on nearly every line.
+
+The list now lives in the renderer (Steps[8]) with the key of everything BuildSteps reads: the layers drawn and
+full, the sprite priorities present, the four BG priorities, the raw 3D path and whether a second pixel is wanted;
+the layer lines, OBJColor and the backdrop are fixed buffers, and the raw 3D step's line (the one per-line input)
+is set on every call either way. With render.2d_steps_cache (default on) a call whose key equals the last one's
+returns the kept list; off, it is rebuilt every line as before. CompStep moves to the header for the member.
+
+Exact by construction (the same inputs, the same list); checked by the matrix (m14) and the per-toggle A/B.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md       |  1 +
+ bananads/gpu2d/GPU2D_Banana.cpp | 51 +++++++++++++++++++++------------
+ bananads/gpu2d/GPU2D_Banana.h   | 20 +++++++++++--
+ bananads/src/emu.cpp            |  2 ++
+ 4 files changed, 53 insertions(+), 21 deletions(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 1cc7118..0236dfb 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -37,6 +37,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
+ | `render.2d_prefetch` | `off` | at `render.scale=2` with `render.3d_share` and `render.2d_quarters`, the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows, written on other cores and read once here: the 2D thread's main memory cost at 2x) while it composites this line's. Same pixels; off until the device says it helps (the simulator can't see prefetches) |
+ | `render.2d_win_neon` | `on` | the windows' per-pixel loops sixteen pixels at a time (a layer line masked by the window mask) and the 3D layer's conversion to a BG line four at a time (`render.2d_fast` builds); at `render.scale=2` with `render.2d_quarters` a line with a window on keeps the raw 3D path, the window applied inside the quarters' merge instead of a converted and masked quarter line per quarter (two 256-pixel passes each). Same pixels |
++| `render.2d_steps_cache` | `on` | the compositor's step list (which layer lines are painted, in which order, from which one up) is built once and kept while the inputs it depends on (the layers drawn and full, the sprite priorities present, the BG priorities, the raw 3D path, whether a second pixel is needed) are the same as on the last line, instead of once per line; `off`: rebuilt every line. Same pixels |
+ | `render.2d_job_stride` | `compact` | the layout of the 2D thread's job ring (512 jobs). `compact`: a job's 3D-line copy (4 KB) and display-line copy (512 B) are stored apart from its other ~250 bytes, so the ring the 2D thread reads is 128 KB of consecutive jobs (with `render.3d_share` the 3D-line copies are never touched); `inline`: the arrays right behind each job as before (~5 KB a job, 2.5 MB, every job on a page of its own). Same pictures |
+ | `render.3d_share` | `on` | with Gengis and the 2D thread, a line's job points at Gengis's rows of the 3D frame (Gengis keeps two frames' rows) instead of a copy: at `render.scale=2` the line's four quarters (4 KB), at 1x the line (1 KB). Exact: the same frames and audio |
+ | `render.2d_lazy` | `on` | with the 2D thread (`render.2d_thread`), a frame's last lines may be drawn while the emulator runs the next frame: at a frame's end the emulator waits only for the frame before's, and whoever reads a frame (the KMS presenter, `top()`/`bottom()`, a savestate's picture) waits for its own. Same pictures |
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index 4523c3b..98e145e 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -132,6 +132,7 @@ bool Banana2DQuarters = true;
+ bool Banana2DEmitZip = true;
+ bool Banana2DPrefetch = false;
+ bool Banana2DWinNeon = true;
++bool Banana2DStepsCache = true;
+ bool Banana3DShare = true;
+ bool Banana3DWait2D = true;
+ 
+@@ -2273,14 +2274,7 @@ void BananaRenderer2D::ResolveSprites()
+ 
+ // ---- compositing -------------------------------------------------------------------------------
+ 
+-struct CompStep
+-{
+-    const u32* line;
+-    const u32* prio;   // null for a BG; the OBJ priority line for a sprite step
+-    u32 prioval;       // compared with the prio line's pixels and priomask
+-    u32 priomask;
+-    bool raw3d;        // line is the 3D layer's own line, converted here (DrawBG_3D's conversion)
+-};
++// (struct CompStep: GPU2D_Banana.h)
+ 
+ alignas(16) static const u32 ZeroLine[256] = {};
+ 
+@@ -2399,10 +2393,26 @@ static void CompositeN(const CompStep* steps, const u32* startLine, bool onBackd
+ // then the sprites of that priority (the same order as melonDS). full[k]: step k covers the whole line. bg0: BG0's
+ // step (-1: none). Then the first step to paint, and what it paints onto: layers under the top-most fully opaque
+ // layer (the two top-most when the second layer is needed for blending) can't show through
+-int BananaRenderer2D::BuildSteps(CompStep* steps, u8* full, int& bg0, bool needSecond, int& start, const u32*& startLine)
+-{
++int BananaRenderer2D::BuildSteps(const CompStep*& steps, int& bg0, bool needSecond, int& start, const u32*& startLine)
++{
++    // render.2d_steps_cache: the steps depend on the layers drawn and full, the sprite priorities present, the BGs'
++    // priorities, the raw 3D path and needSecond, the same on most consecutive lines (the layer lines, OBJColor and
++    // the backdrop are fixed buffers): kept while that key holds. The raw 3D step's line is the one per-line input
++    const u64 key = (1ull << 63) | LayerDrawn | ((u64)LayerFull << 8) | ((u64)OBJPrioPresent << 16) | ((u64)Raw3D << 24)
++                  | ((u64)needSecond << 25) | ((u64)(R.BGCnt[0] & 3) << 32) | ((u64)(R.BGCnt[1] & 3) << 34)
++                  | ((u64)(R.BGCnt[2] & 3) << 36) | ((u64)(R.BGCnt[3] & 3) << 38);
++    steps = Steps;
++    if (Banana2DStepsCache && key == StepsKey)
++    {
++        bg0 = StepsBg0;
++        start = StepsStart;
++        startLine = StepsStartLine;
++        if (bg0 >= 0 && Steps[bg0].raw3d) Steps[bg0].line = Line3D;
++        return StepsN;
++    }
+     int n = 0;
+     bg0 = -1;
++    u8 full[8];
+     // sprites of a single priority: every opaque OBJColor pixel has it, no priority test
+     // (fast: the priority is read from OBJLine's bits 16-17, ResolveSpritesNeon doesn't write OBJPrio)
+     const u32* objprio = !Banana2DFast ? OBJPrio : !(OBJPrioPresent & (OBJPrioPresent - 1)) ? nullptr : OBJLine;
+@@ -2415,7 +2425,7 @@ int BananaRenderer2D::BuildSteps(CompStep* steps, u8* full, int& bg0, bool needS
+             if ((LayerDrawn & (1<<bg)) && ((R.BGCnt[bg] & 0x3) == p))
+             {
+                 bool raw = (bg == 0) && Raw3D;
+-                steps[n] = { raw ? Line3D : BGLine(bg), nullptr, 0, 0, raw };
++                Steps[n] = { raw ? Line3D : BGLine(bg), nullptr, 0, 0, raw };
+                 full[n] = (LayerFull >> bg) & 1;
+                 if (bg == 0) bg0 = n;
+                 n++;
+@@ -2423,7 +2433,7 @@ int BananaRenderer2D::BuildSteps(CompStep* steps, u8* full, int& bg0, bool needS
+         }
+         if (OBJPrioPresent & (1<<p))
+         {
+-            steps[n] = { OBJColor, objprio, (u32)p << prioshift, priomask, false };
++            Steps[n] = { OBJColor, objprio, (u32)p << prioshift, priomask, false };
+             full[n] = 0;
+             n++;
+         }
+@@ -2441,11 +2451,16 @@ int BananaRenderer2D::BuildSteps(CompStep* steps, u8* full, int& bg0, bool needS
+             if (found == wanted)
+             {
+                 start = k + 1;
+-                startLine = steps[k].line;
++                startLine = Steps[k].line;
+                 break;
+             }
+         }
+     }
++    StepsKey = key;
++    StepsN = n;
++    StepsBg0 = bg0;
++    StepsStart = start;
++    StepsStartLine = startLine;
+     return n;
+ }
+ 
+@@ -2467,11 +2482,10 @@ static void CompositeRange(const CompStep* s, int cnt, const u32* startLine, boo
+ 
+ void BananaRenderer2D::Composite(u32* outTop, u32* outSecond, bool needSecond)
+ {
+-    CompStep steps[8];
+-    u8 full[8];
++    const CompStep* steps;
+     int bg0, start;
+     const u32* startLine;
+-    const int n = BuildSteps(steps, full, bg0, needSecond, start, startLine);
++    const int n = BuildSteps(steps, bg0, needSecond, start, startLine);
+     const bool onBackdrop = Banana2DFast && startLine == BackdropLine;   // (BackdropLine is all one colour)
+     bool has3d = false;
+     for (int k = start; k < n; k++) has3d |= steps[k].raw3d;
+@@ -2559,11 +2573,10 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+     const bool possible = secondTargets || ((effect >= 2) && (blendCnt & 0x3F));
+     const bool needSecond = possible && secondTargets;
+ 
+-    CompStep steps[8];
+-    u8 full[8];
++    const CompStep* steps;
+     int bg0, start;
+     const u32* startLine;
+-    const int n = BuildSteps(steps, full, bg0, needSecond, start, startLine);
++    const int n = BuildSteps(steps, bg0, needSecond, start, startLine);
+     u32* const outs[4] = { dst, HiOut[0], HiOut[1], HiOut[2] };
+     if (bg0 < start)
+     {
+diff --git a/bananads/gpu2d/GPU2D_Banana.h b/bananads/gpu2d/GPU2D_Banana.h
+index 07af947..b26935e 100644
+--- a/bananads/gpu2d/GPU2D_Banana.h
++++ b/bananads/gpu2d/GPU2D_Banana.h
+@@ -52,12 +52,23 @@ extern bool Banana2DPrefetch;
+ // layer's conversion four at a time (DrawBG_3D); at 2x with render.2d_quarters the 3D layer's window is applied
+ // inside the quarters' merge, so a windowed line keeps the raw 3D path (no converted and masked quarter lines)
+ extern bool Banana2DWinNeon;
++// render.2d_steps_cache (default on): the compositor's step list (which layer lines, in which order, from which
++// one up) is rebuilt only when the inputs it depends on changed since the last line
++extern bool Banana2DStepsCache;
+ extern bool Banana3DShare;
+ extern bool Banana3DWait2D;  // render.3d_wait2d: the 2D thread, not the emulator's, waits for the 3D rows (BananaRenderer)  // render.3d_share: 2D jobs point at Gengis's rows of the 3D frame (BananaRenderer)
+ 
+ // The 2D unit's registers one scanline reads, as GPU2D holds them when the line is drawn (same names as GPU2D's).
+ // A line is drawn from this copy, so it can be drawn later, on another thread (render.2d_thread).
+-struct CompStep;
++// one step of the compositor's painter's pass (BuildSteps): a layer line, or the sprites of one priority
++struct CompStep
++{
++    const u32* line;
++    const u32* prio;   // null for a BG; the OBJ priority line for a sprite step
++    u32 prioval;       // compared with the prio line's pixels and priomask
++    u32 priomask;
++    bool raw3d;        // line is the 3D layer's own line, converted here (DrawBG_3D's conversion)
++};
+ 
+ struct Banana2DRegs
+ {
+@@ -273,7 +284,12 @@ private:
+     template<bool window> void DrawSprite_Rotscale(u32 num, u32 boundwidth, u32 boundheight, u32 width, u32 height, s32 xpos, s32 ypos);
+     template<bool window> void DrawSprite_Normal(u32 num, u32 width, u32 height, s32 xpos, s32 ypos);
+ 
+-    int BuildSteps(struct CompStep* steps, u8* full, int& bg0, bool needSecond, int& start, const u32*& startLine);
++    int BuildSteps(const CompStep*& steps, int& bg0, bool needSecond, int& start, const u32*& startLine);
++    // render.2d_steps_cache: BuildSteps' result, kept while its inputs (StepsKey) are the same
++    CompStep Steps[8];
++    u64 StepsKey = 0;
++    int StepsN = 0, StepsBg0 = -1, StepsStart = 0;
++    const u32* StepsStartLine = nullptr;
+     void Composite(u32* outTop, u32* outSecond, bool needSecond);
+     void CompositeTo(u32* dst);
+     void CompositeHires(u32* dst, const u32* const* q3d);
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 5b7f12e..4994dc2 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -438,6 +438,8 @@ bool Emu::load_rom(const std::string& path) {
+     // render.2d_win_neon: the windows' per-pixel loops and the 3D layer's conversion vectorized; at 2x a windowed line
+     // keeps the raw 3D path (the window applied in the quarters' merge)
+     melonDS::Banana2DWinNeon = cfg_.flag("render.2d_win_neon", true);
++    // render.2d_steps_cache: the compositor's step list rebuilt only when its inputs changed since the last line
++    melonDS::Banana2DStepsCache = cfg_.flag("render.2d_steps_cache", true);
+     // render.3d_share: at 2x the 2D thread reads Gengis's rows of the 3D frame instead of a 4 KB copy a line (on)
+     melonDS::Banana3DShare = cfg_.flag("render.3d_share", true);
+     // render.3d_wait2d: with render.3d_share, the 2D thread waits for the 3D rows, not the emulator's thread (on)
+-- 
+2.43.0
+

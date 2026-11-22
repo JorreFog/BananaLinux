@@ -1,0 +1,43 @@
+# per-symbol L1I misses per frame on the emulator's thread, dsstress-L5 at render.scale=1 (dev mode), A = build-dev (base), B = b10d (eee302e): the growth is spread over unrelated hot functions (audio, geometry, the scheduler) while the 2D functions' misses fall: a code-layout reshuffle (set conflicts in a 32 KB 4-way L1I), not one function's growth. MEASURED (rgds-sim v2).
+l1i_miss per frame, vcpu 0: A 10.7k  B 13.7k
+     delta          A          B      insnA      insnB  symbol
+       802          0        802          0      44871  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_
+       609        369        978      71996      71996  [3d-geometry] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       596       1079       1675     398942     398942  [3d-geometry] _ZN7melonDS5GPU3D3RunEv.localalias
+       444        462        906     201077     201077  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+      -431        496         65      13632      13632  [2d] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+      -420        435         15     155328     155328  [2d] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+       385        117        502      22788      22788  [2d] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_
+       339          0        339          0       7296  [2d] _ZN7melonDSL14CompositeRangeEPKNS_8CompStepEiPKjbbbPjS5_
+      -329        335          6      16540      16540  [jit-code] mj9_02000668
+       317          6        323      22086      22086  [2d] _ZN7melonDS5GPU2D22UpdateRegistersPreDrawEb.part.0
+      -309        500        191     286464      17856  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+      -306        402         96      13379      13379  [jit-code] mj9_02000628
+      -302        540        238      30653      30653  [2d] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       300         13        313      33968      33968  [scheduler/core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       299          0        299          0      62976  [2d] _ZN7melonDSL10CompositeNILi0ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       298          0        299       4992       4992  [2d] _ZNK7melonDS15VRAMTrackingSetILj8192ELj8192EE9UnchangedERKNS_3GPUE.isra.0
+       289          0        289          0      12050  [scheduler/core] _ZN7melonDS3RTC10ProcessIRQEi
+       278        890       1168     102336     103104  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+      -262        271          9      20352      20352  [2d] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+      -234        234          0      19300          0  [scheduler/core] _ZN7melonDS3NDS9CheckDMAsEjj
+      -218        238         20      17871      17871  [3d-geometry] _ZN7melonDS16ClipAgainstPlaneILi0ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       206         93        299       4992       4992  [2d] _ZNK7melonDS15VRAMTrackingSetILj32768ELj8192EE9UnchangedERKNS_3GPUE.isra.0
+      -191        192          1       4992       4992  [2d] _ZN7melonDS14BananaRenderer7LineDstEij
+       182          6        187      15548      15548  [jit-code] mj9_020006e8
+       181          3        184      17863      17863  [jit-code] mj9_02000768
+      -175        188         12      15621      15621  [jit-code] mj9_020005e8
+       157          3        161       2496       2496  [2d] _ZNK7melonDS15VRAMTrackingSetILj524288ELj16384EE9UnchangedERKNS_3GPUE.isra.0
+       153        255        409      17349      17349  [jit-code] mj9_02000728
+       152          0        152          0     113856  [2d] _ZN7melonDSL10CompositeNILi1ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       151          2        152       9048       9048  [2d] _ZNK7melonDS15VRAMTrackingSetILj131072ELj16384EE9UnchangedERKNS_3GPUE.isra.0
+       149          1        150      22501      22501  [scheduler/core] _ZN7melonDSL13GXWrite9RouteERNS_3NDSEjj
+      -146        148          2      17136      17136  [jit-code] stub_0000ec00
+      -145        153          8      33090      33090  [3d-geometry] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       143          9        151       2688       2688  [2d] _ZN7melonDS14BananaRenderer5EmitAEPjjtPKt
+       142          8        149       1920       1920  [2d] _ZN7melonDS14BananaRenderer11OutputLineAEPjjtPKt
+       122          1        123       2496       2496  [2d] _ZNK7melonDS15VRAMTrackingSetILj262144ELj16384EE9UnchangedERKNS_3GPUE.isra.0
+       122         29        151      18048      18048  [2d] _ZN7melonDS16BananaRenderer2D14PrepareSpritesERNS_12Banana2DRegsE
+       112        187        299       3072       3072  [2d] _ZN7melonDS14BananaRenderer5EmitBEPjjt
+      -109        118          8      15291      15291  [jit-code] mj9_020006a8
+       -99        201        102       6720       7872  [gengis] _ZN8bananads16GengisRenderer3D10GetQuarterEii

@@ -1,0 +1,131 @@
+# rgds-sim v2 (L1D write streaming) and the 2D thread at 2x; sim, 17:07 UTC
+# v2 = v1 + write streaming (ws=4 whole lines -> store misses stop allocating; wsl3=128 for the L3; wsn=2 streams). v1 = SIMARGS=ws=0.
+# Source for the mechanism: Arm TF-A include/lib/cpus/aarch64/cortex_a55.h: CPUACTLR_EL1 bit 24 DISABLE_WRITE_STREAMING, CPUECTLR_EL1 bits 25-26 L1WSCTL
+#   (the A55 has a write-streaming no-allocate mode with an L1 threshold); TF-A's erratum 778703 workaround (r0p0, no L2) disables it.
+# ASSUMED: the thresholds (A53 TRM's equivalent fields default to 4 lines for L1 as I recall them), the number of streams tracked, the L3 threshold; and that the
+#   RK3568's A55 is not r0p0 (else TF-A turns write streaming off: check /proc/cpuinfo 'CPU revision' on the device).
+# commands: /home/user/perf/sim/set2d.sh <bin> <tag> [SIMARGS]  (rgds-sim/run.sh, dev = 2x gengis 2 threads + 2D thread, st = 1x), frames 100-300
+# dev mode noise (A=A): ~±3% per thread (evidence/sim/verify-L5.txt)
+
+## per thread ms/frame @1104 (insns/frame): base build-dev under v1 (ws=0) and v2; render head 1c9095b under v2
+### L5-2x
+base-v1 (model=v2; ws=0):
+0    main                  3500.2k      4959.5k     4.492     2.728
+1    thread1               1811.1k      2838.2k     2.571     1.670
+2    thread2               1879.7k      2931.0k     2.655     1.722
+3    bananads-2d           2611.8k      5239.2k     4.746     3.299
+base-v2 (model=v2; ws=4):
+0    main                  3437.3k      4879.2k     4.420     2.689
+1    thread1               1946.4k      3007.9k     2.725     1.763
+2    thread2               1945.0k      2989.8k     2.708     1.747
+3    bananads-2d           2460.5k      4572.5k     4.142     2.823
+render-1c9095b-v2 (model=v2; ws=4):
+0    main                  2471.1k      3535.7k     3.203     1.877
+1    thread1               2418.1k      3624.9k     3.283     2.091
+2    thread2               2388.7k      3621.9k     3.281     2.102
+3    bananads-2d           2281.5k      4463.0k     4.043     2.775
+### L10-2x
+base-v1 (model=v2; ws=0):
+0    main                  3496.8k      4972.3k     4.504     2.707
+1    thread1               1437.7k      2282.3k     2.067     1.324
+2    thread2               1405.8k      2257.5k     2.045     1.315
+3    bananads-2d           2498.5k      5108.8k     4.628     3.220
+base-v2 (model=v2; ws=4):
+0    main                  3418.5k      4862.4k     4.404     2.647
+1    thread1               1433.8k      2291.0k     2.075     1.334
+2    thread2               1482.5k      2331.0k     2.111     1.347
+3    bananads-2d           2439.3k      4565.6k     4.135     2.811
+render-1c9095b-v2 (model=v2; ws=4):
+0    main                  2384.9k      3451.0k     3.126     1.825
+1    thread1               1812.8k      2749.1k     2.490     1.555
+2    thread2               1846.2k      2796.4k     2.533     1.581
+3    bananads-2d           2396.4k      4661.0k     4.222     2.872
+### ds2dtest-2x
+base-v1 (model=v2; ws=0):
+0    main                  9010.9k     11418.4k    10.343     5.908
+1    thread1                274.2k       518.5k     0.470     0.316
+2    thread2                263.9k       502.7k     0.455     0.307
+3    bananads-2d          14151.9k     18420.4k    16.685     9.612
+base-v2 (model=v2; ws=4):
+0    main                  8743.6k     11008.0k     9.971     5.672
+1    thread1                267.7k       404.8k     0.367     0.239
+2    thread2                272.2k       409.6k     0.371     0.241
+3    bananads-2d          14153.8k     18096.6k    16.392     9.330
+render-1c9095b-v2 (model=v2.1; ws=4):
+0    main                  8113.0k     10466.6k     9.481     5.405
+1    thread1                270.7k       412.6k     0.374     0.244
+2    thread2                268.6k       410.5k     0.372     0.243
+3    bananads-2d          12565.8k     16765.9k    15.186     8.675
+### membench-2x
+base-v1 (model=v2; ws=0):
+0    main                  2729.7k      3569.0k     3.233     1.878
+1    thread1                519.3k       980.5k     0.888     0.579
+2    thread2                504.2k       956.2k     0.866     0.566
+3    bananads-2d           3739.3k      5745.5k     5.204     3.483
+base-v2 (model=v2; ws=4):
+0    main                  1936.6k      2656.0k     2.406     1.420
+1    thread1                529.3k       982.5k     0.890     0.598
+2    thread2                493.2k       925.8k     0.839     0.568
+3    bananads-2d           3739.2k      5340.1k     4.837     3.157
+render-1c9095b-v2 (model=v2.1; ws=4):
+0    main                  1990.6k      2721.4k     2.465     1.455
+1    thread1                510.5k       981.0k     0.889     0.607
+2    thread2                513.8k       975.0k     0.883     0.600
+3    bananads-2d           1896.9k      3937.8k     3.567     2.455
+
+## 1x st mode, main thread's 2d bucket (insns, %, ms@1104, %, L1I%, L1D%, TLB%, br%)
+ds2dtest-1x base-v1:   2d                 19061.4k  89.5%     22.376  88.9%     1.0%    18.3%     0.3%     2.4%
+ds2dtest-1x base-v2:   2d                 19061.4k  89.5%     22.474  89.2%     1.0%    18.6%     0.3%     2.4%
+membench-1x base-v1:   2d                  1677.1k  46.1%      2.184  45.5%     3.9%    20.8%     1.3%     2.5%
+membench-1x base-v2:   2d                  1677.1k  46.1%      2.131  45.7%     3.9%    18.9%     1.3%     2.6%
+cpubench-thumb-1x base-v1:   2d                   432.2k   8.7%      0.646  11.4%     3.7%    24.7%     2.8%     2.6%
+cpubench-thumb-1x base-v2:   2d                   432.2k   8.7%      0.568  10.4%     3.7%    14.8%     3.1%     3.0%
+
+
+## the 2D thread's L1D misses per buffer and function: rgds-sim/regions.py /home/user/perf/sim/s2d/base-v2/L5-2x bananads-2d
+thread 3 (bananads-2d), frames 100-300, per frame: L1D load misses, allocating store misses, write-streamed store lines (no allocate), and of them to DRAM
+total: ld 14.3k st 3.0k ws 62.3k | DRAM: ld 9.4k st 1.8k ws(no L3 alloc) 4.5k
+buffer                                                        ld miss  st miss  ws line  ld DRAM  st DRAM  functions (ld+st misses)
+heap regions led by DoubleLine (24x64K)                          0.0k     1.1k    30.7k     0.0k     0.9k  DoubleLine 31.5k; BananaRenderer::EmitA 0.3k
+heap regions led by BananaRenderer::EmitA (25x64K)               0.0k     0.5k    23.4k     0.0k     0.4k  BananaRenderer::EmitA 23.0k; DoubleLine 0.9k
+anon@7ffdbc000000+284K                                           4.5k     1.0k     5.1k     1.2k     0.4k  gx2_render_bin 5.4k; rast_kern_h02000 2.1k; rast_kern_h02100 1.2k; rast_kern_h02010 1.1k
+anon@7fffe5bcd000+13124K                                         6.2k     0.0k     2.1k     5.9k     0.0k  BananaRenderer2D::Composite 6.1k; gx2_render_bin 2.2k; bananads::GengisRenderer3D::WaitRowsFn 0.0k; f_run.constprop.0 0.0k
+anon@7fffe4d16000+14744K                                         1.5k     0.2k     0.1k     1.1k     0.0k  std::thread::_State_impl<std::thread::_Invoker<s 0.8k; BananaRenderer2D::DrawSpritesFrom 0.4k; BananaRenderer2D::DrawScanlineFrom 0.2k; gx_polygon.lto_priv.1 0.1k
+heap regions led by ConvertRun16 (4x64K)                         1.0k     0.0k     0.5k     0.8k     0.0k  ConvertRun16 1.3k; BananaRenderer2D::Composite 0.2k; BananaRenderer2D::DrawScanlineFrom 0.0k; BananaRenderer2D::DrawSpritesFrom 0.0k
+anon@7fffdc000000+696K                                           0.8k     0.0k     0.0k     0.4k     0.0k  gx2_render_bin 0.4k; rast_kern_h02000 0.1k; gx_polygon.lto_priv.1 0.1k; tex_min_alpha_scan.lto_priv.0 0.1k
+heap regions led by BananaRenderer2D::Composite (2x64K)          0.1k     0.2k     0.4k     0.0k     0.0k  BananaRenderer2D::Composite 0.4k; BananaRenderer2D::DrawSpritesFrom 0.1k; BananaRenderer::WriteLine 0.1k; std::thread::_State_impl<std::thread::_Invoker<s 0.0k
+
+## the 2D thread's L1D misses per buffer and function: rgds-sim/regions.py /home/user/perf/sim/s2d/render-1c9095b-v2/L5-2x bananads-2d
+thread 3 (bananads-2d), frames 100-300, per frame: L1D load misses, allocating store misses, write-streamed store lines (no allocate), and of them to DRAM
+total: ld 15.3k st 3.1k ws 38.8k | DRAM: ld 9.6k st 1.8k ws(no L3 alloc) 5.5k
+buffer                                                        ld miss  st miss  ws line  ld DRAM  st DRAM  functions (ld+st misses)
+heap regions led by WriteDouble (25x64K)                         0.0k     1.1k    15.8k     0.0k     1.0k  WriteDouble 16.4k; WriteZip 0.5k
+heap regions led by WriteZip (24x64K)                            0.0k     0.5k    14.1k     0.0k     0.4k  WriteZip 14.3k; WriteDouble 0.3k
+anon@7ffdbc000000+284K                                           5.7k     1.2k     6.2k     1.0k     0.4k  gx2_render_bin 6.6k; rast_kern_h02000 2.6k; rast_kern_h02100 1.5k; rast_kern_h02010 1.4k
+anon@7fffe5799000+16512K                                         6.2k     0.0k     2.6k     5.9k     0.0k  BananaRenderer2D::CompositeHires 6.1k; gx2_render_bin 2.7k; f_run.constprop.0 0.0k; bananads::GengisRenderer3D::RenderOne 0.0k
+anon@7fffe48e2000+14744K                                         1.5k     0.2k     0.0k     1.3k     0.0k  std::thread::_State_impl<std::thread::_Invoker<s 0.8k; BananaRenderer2D::DrawSpritesFrom 0.4k; BananaRenderer2D::DrawScanlineFrom 0.2k; gx_polygon.lto_priv.1 0.2k
+heap regions led by ConvertRun16 (3x64K)                         0.8k     0.0k     0.0k     0.8k     0.0k  ConvertRun16 0.8k; void CompositeN<0, false, true> 0.0k; BananaRenderer2D::DrawScanlineFrom 0.0k; BananaRenderer2D::DrawSpritesFrom 0.0k
+heap regions led by gx2_render_bin (5x64K)                       0.6k     0.0k     0.0k     0.4k     0.0k  gx2_render_bin 0.5k; gx_polygon.lto_priv.1 0.1k; f_run.constprop.0 0.0k
+
+## the 2D thread's L1D misses per buffer and function: rgds-sim/regions.py /home/user/perf/sim/s2d/base-v2/ds2dtest-2x bananads-2d
+thread 3 (bananads-2d), frames 100-300, per frame: L1D load misses, allocating store misses, write-streamed store lines (no allocate), and of them to DRAM
+total: ld 89.0k st 14.1k ws 86.7k | DRAM: ld 4.3k st 1.5k ws(no L3 alloc) 0.0k
+buffer                                                        ld miss  st miss  ws line  ld DRAM  st DRAM  functions (ld+st misses)
+heap regions led by BananaRenderer2D::DrawScanline (10x64K)     79.3k     8.3k    47.2k     3.3k     0.1k  BananaRenderer2D::DrawScanlineFrom 103.1k; BananaRenderer2D::Composite 21.0k; BananaRenderer2D::CompositeTo 2.6k; BananaRenderer2D::DrawSpriteEntry 2.5k
+heap regions led by DoubleLine (48x64K)                          0.0k     1.5k    36.9k     0.0k     1.3k  DoubleLine 38.5k
+anon@7fffe4f7b000+12292K                                         1.3k     1.8k     2.5k     0.0k     0.0k  BananaRenderer::WriteLine 2.6k; BananaRenderer2D::Composite 1.1k; DoubleLine 0.7k; BananaRenderer2D::DrawScanlineFrom 0.4k
+heap regions led by BananaRenderer2D::DrawSpriteEn (2x64K)       4.7k     0.0k     0.0k     0.1k     0.0k  BananaRenderer2D::DrawSpriteEntry 4.1k; BananaRenderer2D::DrawScanlineFrom 0.6k
+heap regions led by BananaRenderer2D::CompositeTo (1x64K)        0.8k     2.4k     0.0k     0.0k     0.0k  BananaRenderer2D::CompositeTo 2.3k; BananaRenderer::WriteLine 0.7k; std::thread::_State_impl<std::thread::_Invoker<s 0.2k; BananaRenderer::EmitA 0.1k
+anon@7fffe695d000+2452K                                          2.0k     0.0k     0.0k     0.8k     0.0k  std::thread::_State_impl<std::thread::_Invoker<s 1.2k; BananaRenderer2D::DrawScanlineFrom 0.5k; BananaRenderer2D::DrawSpritesFrom 0.4k
+
+## the 2D thread's L1D misses per buffer and function: rgds-sim/regions.py /home/user/perf/sim/s2d/base-v2/membench-2x bananads-2d
+thread 3 (bananads-2d), frames 100-300, per frame: L1D load misses, allocating store misses, write-streamed store lines (no allocate), and of them to DRAM
+total: ld 12.9k st 2.5k ws 65.9k | DRAM: ld 8.6k st 1.5k ws(no L3 alloc) 0.0k
+buffer                                                        ld miss  st miss  ws line  ld DRAM  st DRAM  functions (ld+st misses)
+heap regions led by DoubleLine (23x64K)                          0.0k     1.1k    30.0k     0.0k     0.9k  DoubleLine 30.7k; BananaRenderer::EmitA 0.3k
+heap regions led by BananaRenderer::EmitA (25x64K)               0.0k     0.5k    23.5k     0.0k     0.4k  BananaRenderer::EmitA 23.1k; DoubleLine 0.9k
+heap regions led by ConvertRun16 (4x64K)                         1.2k     0.2k     5.7k     0.8k     0.0k  ConvertRun16 6.7k; BananaRenderer2D::Composite 0.3k; BananaRenderer2D::DrawScanlineFrom 0.2k; BananaRenderer2D::DrawSpritesFrom 0.0k
+anon@7fffe8cf5000+14744K                                         2.8k     0.0k     4.1k     1.5k     0.0k  BananaRenderer::WriteLine 4.1k; BananaRenderer::EmitA 1.3k; std::thread::_State_impl<std::thread::_Invoker<s 0.8k; BananaRenderer2D::DrawSpritesFrom 0.4k
+anon@7fffe9bac000+13124K                                         6.1k     0.0k     0.0k     6.1k     0.0k  BananaRenderer2D::Composite 6.1k; bananads::GengisRenderer3D::WaitRowsFn 0.0k
+heap regions led by BananaRenderer2D::Composite (2x64K)          0.9k     0.6k     1.8k     0.1k     0.1k  BananaRenderer2D::Composite 2.1k; BananaRenderer2D::DrawScanlineFrom 0.7k; BananaRenderer::WriteLine 0.3k; BananaRenderer2D::DrawSpritesFrom 0.2k
+heap regions led by BananaRenderer2D::DrawScanline (5x64K)       1.4k     0.0k     0.9k     0.1k     0.0k  BananaRenderer2D::DrawScanlineFrom 1.4k; DoubleLine 0.9k

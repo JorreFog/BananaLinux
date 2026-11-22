@@ -1,0 +1,12 @@
+# tests/cp15nop (final main9.s): bananads-difftest --frames 300 --every --regs --timing, jit.cp15nop=off (A) vs on (B). base = the build of c1019bc (0085+0086); sab2/sab1 = the sabotage build (MELONDS_JIT_SABCP15=2: the far region does not take the cycles back; =1: the fast path adds CI(1))
+== base
+run A at 02010e40: 33 00 00 00 22 00 00 00 9b 00 00 60 00 00 00 00 a8 01 00 02 7f 3c 00 00 00 00 00 00 00 00 00 00 11 53 07 d0 22 00 00 00 9b 00 00 20 60 0f 01 02 e0 01 00 02 98 8c 00 00
+SAME after 300 frames (all of main RAM)
+== sab2
+  ARM9 pc: 02000208 / 02000208, ARM7 pc: 02380010 / 02380010
+  ARM9 r3: 00008c98 / 00009271
+  0 of 98304 pixels differ
+== sab1
+  ARM9 pc: 02000208 / 02000208, ARM7 pc: 02380010 / 02380010
+  ARM9 r3: 00008c98 / 000072cb
+  0 of 98304 pixels differ

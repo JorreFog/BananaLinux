@@ -1,0 +1,170 @@
+From 8677fadf98b2f21f04b440169bf4cf5703dfdde9 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:44:01 +0000
+Subject: [PATCH 10/23] BananaDS perf: the waits for the 2D thread block
+ instead of spinning (render.2d_fence_wait)
+
+Every wait for the 2D thread spun on sched_yield: a frame's fence (render.2d_lazy: the KMS presenter before it
+shows a slot, the emulator's thread at a frame's end and at line 215), a drain (savestates, capture) and a full
+job ring or copy log. The presenter runs SCHED_FIFO (kms.rt): a FIFO thread spinning on yield keeps its core from
+every CFS thread, among them the 2D thread it waits for, until that thread catches up on another core; and the
+2D thread is late exactly when the 3D is (likelier with render.3d_pipeline). The emulator's thread's spins burn
+its core the same way. Now the waiter sets a flag (sequentially consistent), re-tests under a mutex and waits on a
+condition variable (timed, as a safety net); the 2D thread publishes Tail the same way and, when the flag is set,
+notifies under the mutex: a job's cost is one load. render.2d_fence_wait=spin keeps the yield loops. Same pictures:
+only how a thread waits changes.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md     |  1 +
+ bananads/gpu2d/GPU_Banana.cpp | 43 +++++++++++++++++++++++++++--------
+ bananads/gpu2d/GPU_Banana.h   | 12 ++++++++++
+ bananads/src/emu.cpp          |  2 ++
+ 4 files changed, 49 insertions(+), 9 deletions(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index ecf34e1..dcbd519 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -30,6 +30,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d` | `banana` | the 2D renderer: `banana` (the Banana 2D engine, gpu2d/: melonDS's picture, pixel for pixel, in about a third of the time) or `melonds` (melonDS's own) |
+ | `render.2d_thread` | `off` (`on` at `render.scale=2`) | `on` draws the Banana 2D engine's lines (`render.2d=banana`) on a thread of their own (`bananads-2d`), the same pictures: the emulator's thread only snapshots each line (its registers, the 3D layer's line, and the VRAM, palette and OAM changes since the last line, through a copy log) and waits for the thread at the end of the frame. While display capture is on (a game's DISPCAPCNT), that frame's lines are drawn on the emulator's thread, as with `off`. It logs what it did when the game quits (`[2d]`) |
+ | `render.2d_batch` | `16` | with `render.2d_thread`, the jobs (two a line: the scanline and the next line's sprites) the emulator's thread hands over before it wakes the 2D thread; the frame's last lines are kicked at VBlank and at the frame's end whatever the value. Larger: fewer wakeups a frame (each a futex syscall on the emulator's thread when the 2D thread sleeps, and an idle exit of its core), the 2D thread further behind within the frame. Same pictures |
++| `render.2d_fence_wait` | `block` | how the other threads wait for the 2D thread (`render.2d_thread`): a frame's fence (`render.2d_lazy`: the KMS presenter before it shows a slot, the emulator's thread at a frame's end and at line 215), a drain (savestates, capture), a full job ring or copy log. `block`: on a condition variable the 2D thread signals after a job while someone waits. `spin`: a `sched_yield` loop, as before; from the presenter, which runs `SCHED_FIFO`, a spin keeps its core from every other thread until the 2D thread catches up. Same pictures |
+ | `render.2d_fast` | `on` | the Banana 2D engine's fast paths (`render.2d=banana`, on either thread of `render.2d_thread`): NEON (aarch64) for the output stage (master brightness, 6-to-8-bit expansion, display modes 2-3), 16-colour text BGs (palette lookups with `tbl`, 8 pixels per `st4`), 256-colour text BGs, direct-colour bitmaps, colour effects (blending, brightness) and sprite resolving; the 3D layer read by the compositor without a pass of its own; affine BGs 4 pixels per step; per-line sprite lists; partial clears of the sprite line. `off`: the portable code. The same pixels either way. Also `BANANADS_RENDER_2D_FAST=off` |
+ | `render.2d_comp_unroll` | `on` | the Banana 2D engine's compositor (the painter's pass over the layer lines, four pixels at a time) with its loop over the layers unrolled by the template (a fold over the steps), the same operations in the same order; `off`: the plain loop, which GCC compiles well only at `-O3` (BananaLinux builds at `-O2`: 2.5-3x the instructions per line). Same pixels |
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
+diff --git a/bananads/gpu2d/GPU_Banana.cpp b/bananads/gpu2d/GPU_Banana.cpp
+index 327ec8b..9a2c3a3 100644
+--- a/bananads/gpu2d/GPU_Banana.cpp
++++ b/bananads/gpu2d/GPU_Banana.cpp
+@@ -822,8 +822,7 @@ void BananaRenderer::LogReserve(u64 bytes)
+         return;
+     StatWaits++;
+     Kick();
+-    while (LogWrite + bytes - LogRead.load(std::memory_order_acquire) > LogSize)
+-        std::this_thread::yield();
++    WaitForWorker([&] { return LogWrite + bytes - LogRead.load(std::memory_order_acquire) <= LogSize; });
+ }
+ 
+ // the 2D thread, before it draws a job
+@@ -866,7 +865,14 @@ void BananaRenderer::WorkerLoop()
+         }
+         Execute(Jobs[tail % NumJobs]);
+         tail++;
+-        Tail.store(tail, std::memory_order_release);
++        Tail.store(tail, std::memory_order_seq_cst);
++        if (FenceWaiting.load(std::memory_order_seq_cst))
++        {
++            // (render.2d_fence_wait: a waiter; the flag is cleared here and set again by a waiter that still waits)
++            FenceWaiting.store(false, std::memory_order_relaxed);
++            { std::lock_guard<std::mutex> l(FenceM); }
++            FenceCv.notify_all();
++        }
+     }
+ }
+ 
+@@ -887,8 +893,7 @@ BananaRenderer::Job& BananaRenderer::NewJob()
+     {
+         StatWaits++;
+         Kick();
+-        while (head - Tail.load(std::memory_order_acquire) >= NumJobs)
+-            std::this_thread::yield();
++        WaitForWorker([&] { return head - Tail.load(std::memory_order_acquire) < NumJobs; });
+     }
+     return Jobs[head % NumJobs];
+ }
+@@ -902,6 +907,28 @@ void BananaRenderer::Submit()
+         Kick();
+ }
+ 
++// a wait for the 2D thread (render.2d_fence_wait). Blocking: the flag is set with sequential consistency before the
++// condition is tested again, and the 2D thread publishes Tail the same way before it reads the flag, so either the
++// re-test sees the new Tail or the 2D thread sees the flag and notifies under the mutex; the timed wait is a safety
++// net only. Spinning: as before
++template<class Pred> void BananaRenderer::WaitForWorker(Pred pred) const
++{
++    if (!FenceBlock)
++    {
++        while (!pred())
++            std::this_thread::yield();
++        return;
++    }
++    while (!pred())
++    {
++        FenceWaiting.store(true, std::memory_order_seq_cst);
++        std::unique_lock<std::mutex> l(FenceM);
++        if (pred())
++            break;
++        FenceCv.wait_for(l, std::chrono::milliseconds(1));
++    }
++}
++
+ bool BananaRenderer::Drain2D()
+ {
+     if (!Thread2D)
+@@ -910,15 +937,13 @@ bool BananaRenderer::Drain2D()
+     if (Tail.load(std::memory_order_acquire) == head)
+         return false;
+     Kick();
+-    while (Tail.load(std::memory_order_acquire) != head)
+-        std::this_thread::yield();
++    WaitForWorker([&] { return Tail.load(std::memory_order_acquire) == head; });
+     return true;
+ }
+ 
+ void BananaRenderer::WaitFence(u32 fence) const
+ {
+-    while ((s32)(Tail.load(std::memory_order_acquire) - fence) < 0)
+-        std::this_thread::yield();
++    WaitForWorker([&] { return (s32)(Tail.load(std::memory_order_acquire) - fence) >= 0; });
+ }
+ 
+ // the next frame's 3D: Gengis draws it into the rows the frame before last showed (render.3d_share), which that
+diff --git a/bananads/gpu2d/GPU_Banana.h b/bananads/gpu2d/GPU_Banana.h
+index b4d0c85..ca492a3 100644
+--- a/bananads/gpu2d/GPU_Banana.h
++++ b/bananads/gpu2d/GPU_Banana.h
+@@ -99,6 +99,11 @@ public:
+     void SetOutput(u32* top, u32* bottom);
+ 
+     bool Drain2D();   // wait until the 2D thread has drawn every line handed to it (false: it already had)
++    // render.2d_fence_wait: the waits for the 2D thread (a frame's fence, a drain, a full ring or log) block on a
++    // condition variable the 2D thread signals after a job while someone waits (block, the default), or spin on
++    // sched_yield as before (spin). A spin from the KMS presenter, at SCHED_FIFO, keeps its core from every other
++    // thread until the 2D thread catches up; blocking gives the core to the thread being waited for
++    void SetFenceWaitBlocking(bool on) { FenceBlock = on; }
+     void Resync2D();  // after GPU::ResetVRAMCache (a savestate): the copies are made again from GPU's memory
+ 
+ private:
+@@ -185,6 +190,13 @@ private:
+     bool KickPending = false, Quit = false;
+     std::thread Worker;
+     u64 StatJobs = 0, StatInPlace = 0, StatLogBytes = 0, StatWaits = 0;
++    // the blocking waits (render.2d_fence_wait): a waiter sets FenceWaiting, then re-tests under FenceM and waits
++    // (timed, as a safety net); the 2D thread, after it publishes a job, notifies under FenceM when the flag is set
++    template<class Pred> void WaitForWorker(Pred pred) const;
++    bool FenceBlock = true;
++    mutable std::mutex FenceM;
++    mutable std::condition_variable FenceCv;
++    mutable std::atomic<bool> FenceWaiting{false};
+ };
+ 
+ }
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 65e9bc4..3204294 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -483,6 +483,8 @@ bool Emu::load_rom(const std::string& path) {
+     if (banana2d && cfg_.flag("render.2d_thread", scale_ == 2)) banana_->SetThreaded2D(true);
+     // render.2d_batch: jobs handed to the 2D thread before it is woken (16: about 24 wakeups a frame)
+     if (banana2d) banana_->SetKickBatch((u32)cfg_.num("render.2d_batch", 16));
++    // render.2d_fence_wait: the waits for the 2D thread block (the default) or spin on sched_yield as before
++    if (banana2d) banana_->SetFenceWaitBlocking(cfg_.str("render.2d_fence_wait", "block") != "spin");
+ #endif
+ 
+     set_clock();
+-- 
+2.43.0
+

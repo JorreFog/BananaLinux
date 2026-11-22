@@ -1,0 +1,10 @@
+# qemu-count, main thread insns/frame (frames 100-300): core.fast_div off vs on (device build of perf/core @ 13bdd71, /home/user/perf/core/build-b), and build-dev (no patch 0040) for reference; 16:18 UTC
+# commands: QEMU=/home/user/perf/tools/qemu-dev EXTRA="--set core.fast_div=off" sh /home/user/perf/core/runs/count.sh /home/user/perf/core/build-b/b/bananads b-divoff <roms>; same without EXTRA as b-divon  (raw: /home/user/perf/core/runs/b-div{off,on}/<rom>/report.txt)
+rom                             b-divoff     b-divon         devb-divon/b-divoffdev/b-divoff
+cpubench-cpubench-thumb          4929.1k     4906.9k     4896.0k    -0.45%    -0.67%
+cpubench-cpubench-arm            4428.1k     4406.8k     4396.3k    -0.48%    -0.72%
+membench-membench                6018.5k     6015.3k     6013.3k    -0.05%    -0.09%
+sndbench-sndbench                4873.8k     4873.8k     4873.8k    +0.00%    +0.00%
+ipcrom-ipctest                   2859.7k     2855.0k     2852.9k    -0.16%    -0.24%
+dsstress-L5                     20746.2k    20746.2k    20746.1k    +0.00%    -0.00%
+## cpubench-thumb divider symbols: off: ScheduleEvent 83.4k, StartDiv 48.9k (CancelEvent inlined); on: RescheduleEvent 52.2k, ScheduleEvent 33.9k (other callers), StartDiv 24.0k; the slice loop lambda unchanged (962.0k vs 961.8k): the SchedNext=0 walks were not the cost

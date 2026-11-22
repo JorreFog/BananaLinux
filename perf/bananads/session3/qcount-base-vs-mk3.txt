@@ -1,0 +1,28 @@
+# coordinator, 14:20 UTC: matched qemu count (jitcount, mk3jit-evidence/qc.sh, MK frames 1650-2150, the emulator thread incl. the Gengis bins it draws itself), both device-toolchain builds
+## base: 00c34c78 (= mkbase without the profiler), /home/user/perf/build-dev/b/bananads
+main thread: 15829.1k insns/frame
+  3d                        8153.7k   51.5%
+  other                     3179.9k   20.1%
+  jit-code                  1529.4k    9.7%
+  audio                     1184.1k    7.5%
+  memory                     715.1k    4.5%
+  jit-runtime                279.3k    1.8%
+  2d/gpu                     276.9k    1.7%
+  core                       263.9k    1.7%
+  libs                       193.3k    1.2%
+  interpreter-fallback        53.5k    0.3%
+  JIT total (code+runtime+fallback): 1862.2k/frame
+## mk3 ea310c8 (mk2 + 0080-0083 + 0085-0088, defaults), /home/user/perf3/mk3-b/b/bananads
+main thread: 12231.3k insns/frame
+  3d                        6040.7k   49.4%
+  other                     1914.2k   15.6%
+  jit-code                  1530.1k   12.5%
+  audio                     1067.8k    8.7%
+  memory                     563.1k    4.6%
+  core                       487.6k    4.0%
+  2d/gpu                     273.4k    2.2%
+  jit-runtime                184.3k    1.5%
+  libs                       148.6k    1.2%
+  interpreter-fallback        21.5k    0.2%
+  JIT total (code+runtime+fallback): 1735.9k/frame
+## 15829.1k -> 12231.3k a frame: -22.7%

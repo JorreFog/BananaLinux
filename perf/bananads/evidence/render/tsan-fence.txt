@@ -1,0 +1,6 @@
+# ThreadSanitizer (x86-64 gcc -fsanitize=thread; no Gengis on x86: render.renderer=soft render.threaded=off, the Banana 2D engine on its thread), perf/render HEAD with render.2d_fence_wait, 300 frames each; 'waits for the thread' = the [2d] log's count of blocking waits (capture drains, full ring/log)
+# command: TSAN_OPTIONS=halt_on_error=0 bananads --frontend headless --set jit=on --set render.renderer=soft --set render.threaded=off --set render.2d_thread=on --set rtc.fixed=... --set headless.frames=300 --set headless.direct=on <per-run --set> <rom>
+L5-block               [2d] 2D thread: 115200 jobs, 0 lines with unit A drawn in place (display capture) | 0 TSan warnings; 1 finished | 30 waits for the thread
+ds2d-block-reload      [2d] 2D thread: 115200 jobs, 24576 lines with unit A drawn in place (display capture) | 0 TSan warnings; 1 finished | 27888 waits for the thread
+membench-block-nolazy  [2d] 2D thread: 115200 jobs, 0 lines with unit A drawn in place (display capture) | 0 TSan warnings; 1 finished | 0 waits for the thread
+L5-spin                [2d] 2D thread: 115200 jobs, 0 lines with unit A drawn in place (display capture) | 0 TSan warnings; 1 finished | 104 waits for the thread

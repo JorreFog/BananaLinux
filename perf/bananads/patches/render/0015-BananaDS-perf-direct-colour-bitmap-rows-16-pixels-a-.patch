@@ -1,0 +1,144 @@
+From 94ee0ea6050d78e156e4d03ac4e7851b0825d22b Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 17:08:17 +0000
+Subject: [PATCH 15/18] BananaDS perf: direct-colour bitmap rows 16 pixels a
+ NEON step (render.2d_conv16), and a prefetch toggle (render.2d_prefetch16)
+
+ConvertRun16 (a direct-colour bitmap BG's row into the layer line) converted 8 pixels a step and folded every
+converted pixel into acc/all (4 vector operations per 8 pixels, plus the horizontal reductions). Its callers only
+test whether acc and all are zero, and an opaque pixel always carries the layer's non-zero flag, so the sources'
+bit 15 tells the same: some pixel opaque, every pixel opaque. Now 16 pixels a step, two operations per 16 for the
+test. rgds-sim (device build): ConvertRun16 175k -> 119k instructions a frame on membench 1x (0.314 -> 0.240 ms; main
+thread -1.9%), and the 2D thread's 2d bucket -0.073 ms on dsstress-L5 at 2x. Exact: a random test against the old
+function (200k runs, every n 0-256, opaque/transparent/mixed rows; a sabotaged copy is caught) and the pictures.
+render.2d_conv16=off is the old loop.
+
+render.2d_prefetch16 (off) prefetches the run's VRAM row and the next 512 bytes before converting, so their misses
+overlap (~770 DRAM misses a frame on these ROMs); rgds-sim can't see prefetches yet, so it is a device verdict.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md       |  2 ++
+ bananads/gpu2d/GPU2D_Banana.cpp | 47 ++++++++++++++++++++++++++++++++-
+ bananads/gpu2d/GPU2D_Banana.h   |  6 +++++
+ bananads/src/emu.cpp            |  4 +++
+ 4 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 0236dfb..e7e8cbb 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -35,6 +35,8 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_comp_unroll` | `on` | the Banana 2D engine's compositor (the painter's pass over the layer lines, four pixels at a time) with its loop over the layers unrolled by the template (a fold over the steps), the same operations in the same order; `off`: the plain loop, which GCC compiles well only at `-O3` (BananaLinux builds at `-O2`: 2.5-3x the instructions per line). Same pixels |
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
+ | `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
++| `render.2d_conv16` | `on` | direct-colour bitmap BG rows (`ConvertRun16`) converted 16 pixels a NEON step, the layer's drawn/full test taken from the pixels' bit 15 (the callers only test whether anything/everything is opaque). The same pixels |
++| `render.2d_prefetch16` | `off` | `ConvertRun16` prefetches its VRAM row and the next 512 bytes (a 256-pixel bitmap's next row) before converting, so the misses overlap. No effect on the pixels; off until the device (or a model that sees prefetches) says |
+ | `render.2d_prefetch` | `off` | at `render.scale=2` with `render.3d_share` and `render.2d_quarters`, the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows, written on other cores and read once here: the 2D thread's main memory cost at 2x) while it composites this line's. Same pixels; off until the device says it helps (the simulator can't see prefetches) |
+ | `render.2d_win_neon` | `on` | the windows' per-pixel loops sixteen pixels at a time (a layer line masked by the window mask) and the 3D layer's conversion to a BG line four at a time (`render.2d_fast` builds); at `render.scale=2` with `render.2d_quarters` a line with a window on keeps the raw 3D path, the window applied inside the quarters' merge instead of a converted and masked quarter line per quarter (two 256-pixel passes each). Same pixels |
+ | `render.2d_steps_cache` | `on` | the compositor's step list (which layer lines are painted, in which order, from which one up) is built once and kept while the inputs it depends on (the layers drawn and full, the sprite priorities present, the BG priorities, the raw 3D path, whether a second pixel is needed) are the same as on the last line, instead of once per line; `off`: rebuilt every line. Same pixels |
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index 98e145e..807b9b1 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -133,6 +133,8 @@ bool Banana2DEmitZip = true;
+ bool Banana2DPrefetch = false;
+ bool Banana2DWinNeon = true;
+ bool Banana2DStepsCache = true;
++bool Banana2DConv16 = true;
++bool Banana2DPrefetch16 = false;
+ bool Banana3DShare = true;
+ bool Banana3DWait2D = true;
+ 
+@@ -1032,11 +1034,54 @@ static inline u32 HorOr16(uint16x8_t lo, uint16x8_t hi)
+ }
+ #endif
+ 
++#ifdef BANANA_NEON
++// 8 direct-colour pixels to the 18-bit format with the layer's flag (zero where bit 15 is clear), stored interleaved:
++// low halves R | G << 8, high halves B | the flag
++static inline void Conv16x8(u32* out, uint16x8_t c, uint16x8_t m3e, uint16x8_t vflag)
++{
++    uint16x8_t a = vreinterpretq_u16_s16(vshrq_n_s16(vreinterpretq_s16_u16(c), 15));
++    uint16x8_t r = vandq_u16(vshlq_n_u16(c, 1), m3e);
++    uint16x8_t g = vandq_u16(vshrq_n_u16(c, 4), m3e);
++    uint16x8_t b = vandq_u16(vshrq_n_u16(c, 9), m3e);
++    uint16x8x2_t o;
++    o.val[0] = vandq_u16(vsliq_n_u16(r, g, 8), a);
++    o.val[1] = vandq_u16(vorrq_u16(b, vflag), a);
++    vst2q_u16((u16*)out, o);
++}
++#endif
++
+ static inline void ConvertRun16(u32* out, const u16* src, int n, u32 flag, u32& acc, u32& all)
+ {
+     int j = 0;
+ #ifdef BANANA_NEON
+-    if (Banana2DFast && n >= 8)
++    if (Banana2DPrefetch16)
++    {
++        // render.2d_prefetch16: this run's VRAM row and the 512 bytes after it (a 256-pixel bitmap's next row) asked
++        // for at once, so their misses overlap instead of coming one at a time as the loop reaches them
++        const u8* p = (const u8*)src;
++        const u8* end = (const u8*)(src + n) + 512;
++        for (p = (const u8*)((uintptr_t)p & ~(uintptr_t)63); p < end; p += 64)
++            __builtin_prefetch(p);
++    }
++    if (Banana2DFast && Banana2DConv16 && n >= 16)
++    {
++        // render.2d_conv16: 16 pixels a step, and acc/all from the sources' bit 15 alone: the callers only test
++        // whether acc and all are zero, and an opaque pixel always carries the (non-zero) flag, so "some pixel
++        // opaque" and "every pixel opaque" are all they need
++        const uint16x8_t m3e = vdupq_n_u16(0x3E), vflag = vdupq_n_u16((u16)(flag >> 16));
++        uint16x8_t any = vdupq_n_u16(0), every = vdupq_n_u16(0xFFFF);
++        for (; j + 16 <= n; j += 16)
++        {
++            uint16x8_t c0 = vld1q_u16(src + j), c1 = vld1q_u16(src + j + 8);
++            any = vorrq_u16(any, vorrq_u16(c0, c1));
++            every = vandq_u16(every, vandq_u16(c0, c1));
++            Conv16x8(out + j, c0, m3e, vflag);
++            Conv16x8(out + j + 8, c1, m3e, vflag);
++        }
++        if (vmaxvq_u16(any) & 0x8000) acc |= flag;
++        if (!(vminvq_u16(every) & 0x8000)) all = 0;
++    }
++    if (Banana2DFast && n - j >= 8)
+     {
+         // 8 pixels in 16-bit lanes: low halves R | G << 8, high halves B | the flag, zeroed where bit 15 is clear,
+         // stored interleaved (st2)
+diff --git a/bananads/gpu2d/GPU2D_Banana.h b/bananads/gpu2d/GPU2D_Banana.h
+index b26935e..f101bb7 100644
+--- a/bananads/gpu2d/GPU2D_Banana.h
++++ b/bananads/gpu2d/GPU2D_Banana.h
+@@ -55,6 +55,12 @@ extern bool Banana2DWinNeon;
+ // render.2d_steps_cache (default on): the compositor's step list (which layer lines, in which order, from which
+ // one up) is rebuilt only when the inputs it depends on changed since the last line
+ extern bool Banana2DStepsCache;
++// render.2d_conv16 (default on): direct-colour bitmap rows (ConvertRun16) 16 pixels a NEON step, the layer's drawn/full
++// test from the pixels' bit 15; the same pixels either way
++extern bool Banana2DConv16;
++// render.2d_prefetch16 (default off; a device verdict: the model can't see prefetches yet): ConvertRun16 asks for its
++// VRAM row and the next 512 bytes before converting. No effect on the pixels
++extern bool Banana2DPrefetch16;
+ extern bool Banana3DShare;
+ extern bool Banana3DWait2D;  // render.3d_wait2d: the 2D thread, not the emulator's, waits for the 3D rows (BananaRenderer)  // render.3d_share: 2D jobs point at Gengis's rows of the 3D frame (BananaRenderer)
+ 
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 4994dc2..65a34c9 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -440,6 +440,10 @@ bool Emu::load_rom(const std::string& path) {
+     melonDS::Banana2DWinNeon = cfg_.flag("render.2d_win_neon", true);
+     // render.2d_steps_cache: the compositor's step list rebuilt only when its inputs changed since the last line
+     melonDS::Banana2DStepsCache = cfg_.flag("render.2d_steps_cache", true);
++    // render.2d_conv16: direct-colour bitmap rows converted 16 pixels a NEON step (on; the same pixels)
++    melonDS::Banana2DConv16 = cfg_.flag("render.2d_conv16", true);
++    // render.2d_prefetch16: the direct-colour bitmap rows prefetched before their conversion (off: a device verdict)
++    melonDS::Banana2DPrefetch16 = cfg_.flag("render.2d_prefetch16", false);
+     // render.3d_share: at 2x the 2D thread reads Gengis's rows of the 3D frame instead of a 4 KB copy a line (on)
+     melonDS::Banana3DShare = cfg_.flag("render.3d_share", true);
+     // render.3d_wait2d: with render.3d_share, the 2D thread waits for the 3D rows, not the emulator's thread (on)
+-- 
+2.43.0
+

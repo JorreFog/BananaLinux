@@ -1,0 +1,8 @@
+# qemu-count, main thread insns/frame (frames 100-300): the stale-profile build (prof-dev, collected from f503a7a's tree, applied to a tree with a new function inserted at the top of NDS.cpp and with patch 0040 + the emu.cpp setting line = 3 changed functions) vs the device PGO build (same profile, matching tree) and the device build; 16:34 UTC
+# build: CCACHE_DISABLE=1 JOBS=2 build-a64-device.sh /home/user/perf/core/sd /home/user/perf/core/build-stale -DBANANADS_PGO=/home/user/perf/core/prof-dev, with /home/user/perf/core/build-stale/melonds-src pre-seeded (pristine melonDS + bananads_stale_probe() before line 48 of src/NDS.cpp); warnings: 7 -Wcoverage-mismatch lines = StartDiv, StartSqrt (0040 changed them), Emu::load_rom (the setting line); 0 for the 99 other NDS.cpp functions behind the inserted one
+# count: QEMU=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/count.sh /home/user/perf/core/build-stale/b/bananads stale <roms>
+rom                               devpgo       stale         devstale/devpgodev/devpgo
+cpubench-cpubench-thumb          4707.1k     4727.3k     4896.0k    +0.43%    +4.01%
+membench-membench                5520.7k     5530.4k     6013.3k    +0.18%    +8.92%
+dsstress-L5                     18917.2k    18959.6k    20746.1k    +0.22%    +9.67%
+ipcrom-ipctest                   2581.1k     2581.2k     2852.9k    +0.00%   +10.53%

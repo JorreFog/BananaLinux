@@ -1,0 +1,20 @@
+# qemu-count, main thread insns/frame (frames 100-300): PGO build (Ubuntu GCC 13.3 -O3, -fprofile-use with the TRAIN half's profile, -fprofile-partial-training) vs the reference build; 15:45 UTC
+# instrumented build: JOBS=2 build-a64.sh /home/user/perf/core/sd /home/user/perf/core/build-pgogen -DBANANADS_PGO_GENERATE=ON -DBANANADS_PGO_DIR=/home/user/perf/core/build-pgogen/pgo
+# training (train half -> /home/user/perf/core/prof-T): ROMS="cpubench-cpubench-thumb cpubench-cpubench-thumb-arm7 membench-membench dsstress-L5 thumb-dsstress-L10 ds2dtest-ds2dtest sndbench-sndbench ipcrom-ipctest jitloops-jitloops-thumb" QEMU=/home/user/perf/qemu-src/build/qemu-aarch64 sh bananads/tools/perf/pgo/train.sh <instrumented bananads> /home/user/perf/roms /home/user/perf/core/build-pgogen/pgo /home/user/perf/core/prof-T  (each ROM 300 frames x {gengis scale 1, gengis scale 2 + 2D thread, soft}; log /home/user/perf/core/runs/train-T.out)
+# held-out half (prof-H, not used by this build): cpubench-arm membench-arm dsstress-L10 arm7-thumb-dsstress-L5 iorom-L5 dmasnd thumb-dsstress-L5 (geomtest's run failed under the instrumented build, unexplained; train-H.out)
+# PGO build: CCACHE_DISABLE=1 JOBS=2 build-a64.sh /home/user/perf/core/sd /home/user/perf/core/build-pgoT -DBANANADS_PGO=/home/user/perf/core/prof-T   (0 'control flow does not match' warnings; 4648 'source locations have changed' warnings = the file path checksum, harmless, fixed by -fprofile-prefix-map in the commit)
+# count: sh /home/user/perf/core/runs/count.sh /home/user/perf/core/build-pgoT/b/bananads pgoT  (raw: /home/user/perf/core/runs/pgoT/<rom>/report.txt)
+# binary: .text 3.70 MB vs ref 3.50 MB (+5.6%: unrolling/peeling/inlining from the profile)
+## main thread, pgoT vs ref (held-out ROMs marked *)
+rom                                  ref        pgoT  pgoT/ref
+cpubench-cpubench-thumb          4808.0k     4622.3k    -3.86%
+*cpubench-cpubench-arm           4324.3k     4126.0k    -4.59%
+cpubench-cpubench-thumb-arm7     5244.7k     5055.9k    -3.60%
+membench-membench                5660.0k     5505.2k    -2.73%
+dsstress-L5                     20866.3k    19285.1k    -7.58%
+*dsstress-L10                   18625.2k    17066.8k    -8.37%
+*arm7-thumb-dsstress-L5         21278.4k    19703.8k    -7.40%
+sndbench-sndbench                4821.9k     4432.6k    -8.07%
+ipcrom-ipctest                   2799.5k     2534.5k    -9.47%
+ds2dtest-ds2dtest               13684.9k    13096.3k    -4.30%
+## pgoT cpubench-thumb buckets: jit-code 2746.8k (unchanged: generated code), 2d 372.0k (ref 461.4k), memory 232.2k (245.0k), libs 192.0k, RunSlicesJIT now inlined into bananads::Emu::run_frame 867.0k (ref: RunSlicesJIT.part.0 904.2k)

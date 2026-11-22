@@ -1,0 +1,11 @@
+# render.2d_ring with the 2D thread slowed (render.2d_test_delay=150, tests only): the job ring fills every frame
+# MK scene, every 10th frame (210) + audio; ds2dtest (render.2d_thread=on, 1x), every 10th frame to 300 (30)
+d-t-split: 334356 waits for the 2D thread (capture, full ring or log)
+d-t-shared: 369398 waits for the 2D thread (capture, full ring or log)
+d-tsab: 1543 waits for the 2D thread (capture, full ring or log)
+MK split vs shared (slow 2D): 0 of 210 frames differ; audio same
+MK split slow 2D vs split no delay: 0 of 210 differ; audio same
+MK split vs SABOTAGE (ring bound +128), slow 2D: 28 of 210 differ  -> caught
+ds2dtest split vs shared (slow 2D): identical, 30 frames
+ds2dtest slow vs no delay: identical
+ds2dtest split vs SABOTAGE, slow 2D: 15 of 30 differ  -> caught

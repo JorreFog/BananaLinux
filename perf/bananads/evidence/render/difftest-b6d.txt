@@ -1,0 +1,7 @@
+# bananads-difftest --every --frames 300 (main RAM compared after every frame) on the device build b6d under qemu-dev, A = every toggle off, B = every toggle on, both at render.renderer=gengis render.scale=2 render.2d_thread=on jit=on
+# A: --a render.3d_pipeline=off --a render.2d_quarters=off --a render.2d_emit_zip=off --a render.2d_comp_unroll=off --a render.geom_sort=off --a render.3d_share=off; B: the same =on
+dsstress-L5: SAME after 300 frames (all of main RAM)
+ds2dtest-ds2dtest: SAME after 300 frames (all of main RAM)
+geomtest-geomtest: SAME after 300 frames (all of main RAM)
+
+# bananads-tests (b6d, qemu-dev): all BananaDS host tests passed

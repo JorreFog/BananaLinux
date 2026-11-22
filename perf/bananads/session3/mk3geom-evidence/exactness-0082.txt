@@ -1,0 +1,39 @@
+# mk3geom exactness for 0082 (render.gx_dmatime), build b3 (3a743f3 + 0080-0082), device build under qemu-dev, Mon Oct 19 13:15:23 UTC 2026
+## randomized test of the 4-unit step vs the unit loop (dmatime-test.cpp): cases 3978482 bad 0
+   sabotage 5 in the test (sum reaching the target taken): cases 3978482 bad 14782
+   sabotage 6 in the test (a 0 in the 4th entry not seen): cases 3978482 bad 361669
+## MK scene on/off = base hashes: yes
+## main RAM every frame 1600-2100, --regs --timing, off vs on
+SAME after 2100 frames (all of main RAM)
+## full savestates
+a57737e0567aab4f488ed894bdec854d 1850 b3/bananads --set render.gx_dmatime=off
+f476c39ef33cd7a1166128040aa358d1 2000 b3/bananads --set render.gx_dmatime=off
+a57737e0567aab4f488ed894bdec854d 1850 b3/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 b3/bananads 
+## Run9 trace build (dmatrace-sab3-build.patch, mk2geom's trace; MELONDS_DMASAB=5/6)
+tr3-on DMATRACE calls 676042 hash 9b0e23f126188cd7
+tr3-off DMATRACE calls 676042 hash 9b0e23f126188cd7
+tr3-s5 DMATRACE calls 675888 hash 4df573b4cc4824e3
+tr3-s6 DMATRACE calls 676042 hash 9b0e23f126188cd7
+sab5 savestate 1850: ab8bac7ddc37ec648f38ffa7db919761 1850 btr3/bananads 
+sab6 savestate 1850: a57737e0567aab4f488ed894bdec854d 1850 btr3/bananads 
+sab5/sab6 frames+audio identical to on
+## test ROMs (check.sh off vs on)
+PICS ok   gxstm-soft (30 frames identical)
+PICS ok   gxstm-gengis2x (30 frames identical)
+PICS ok   gxstm-reload (30 frames identical)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq --regs --timing: SAME after 300 frames (all of main RAM)
+## exact-suite.sh off vs on: FAILS=0

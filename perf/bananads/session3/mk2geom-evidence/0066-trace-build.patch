@@ -1,0 +1,50 @@
+diff --git a/src/DMA.cpp b/src/DMA.cpp
+index be1c58f..e2519cd 100644
+--- a/src/DMA.cpp
++++ b/src/DMA.cpp
+@@ -596,6 +596,17 @@ static inline __attribute__((always_inline)) bool GXBlockOn() noexcept
+     return v;
+ }
+ 
++// TRACE (test build only): every Run9 call's resulting DMA state and ARM9 timestamp folded into a hash
++static u64 TraceHash = 0, TraceCalls = 0;
++static void TracePrint() { fprintf(stderr, "DMATRACE calls %llu hash %016llx\n", (unsigned long long)TraceCalls, (unsigned long long)TraceHash); }
++void DMA::TraceRun9() noexcept
++{
++    if (TraceCalls++ == 0) atexit(TracePrint);
++    u64 h = NDS.ARM9Timestamp ^ ((u64)CurSrcAddr << 1) ^ ((u64)IterCount << 7) ^ ((u64)RemCount << 13) ^ ((u64)MRAMBurstCount << 19)
++        ^ ((u64)Running << 27) ^ ((u64)Cnt << 29) ^ ((u64)MRAMBurstTable[0] << 41) ^ ((u64)MRAMBurstTable[1] << 47) ^ ((u64)Num << 55);
++    TraceHash = (TraceHash ^ h) * 0x100000001B3ull + TraceCalls;
++}
++
+ bool DMA::GXRunEnv() noexcept
+ {
+     // read as the DMA is created (a difftest's two NDS objects each with its own setting)
+@@ -617,9 +628,14 @@ void DMA::Run9()
+         const u32 rgn = NDS.ARM9Regions[0x04000400 >> 14];
+         if (rgn != Mem9_MainRAM && rgn != Mem9_GBAROM && DMABlockOn() && GXBlockOn()
+             && NDS.GPU.GPU3D.GeomFast && NDS.GPU.GPU3D.GXDMAFast) [[likely]]
+-            return Run9GX();
++        {
++            Run9GX();
++            TraceRun9();
++            return;
++        }
+     }
+     Run9Full();
++    TraceRun9();
+ }
+ 
+ // Run9Full's end, after its units
+diff --git a/src/DMA.h b/src/DMA.h
+index 2dcb384..5c1ee6c 100644
+--- a/src/DMA.h
++++ b/src/DMA.h
+@@ -50,6 +50,7 @@ public:
+     void Run9Full();
+     void Run9GX() noexcept;
+     void Run9End() noexcept;
++    void TraceRun9() noexcept;
+     template<typename T> void FastWrite9(u32 addr, T val);
+     void Run7();
+ 

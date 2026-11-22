@@ -1,0 +1,24 @@
+== hsoff vs on
+all: 16785k vs 16313k; without rendering symbols: 15887k vs 15728k (-1.00%)
+    599.2k     375.9k   -223.2k  line_px
+   1007.9k     858.3k   -149.7k  _ZN8bananads12run_headlessERNS_3EmuERKNS_6ConfigE
+     77.0k      52.1k    -24.9k  rast_kern_h12010
+      7.0k      -5.6k    -12.7k  rast_kern_h12000
+      8.9k      -1.5k    -10.4k  rast_kern_h11010
+      0.7k      -8.4k     -9.2k  rast_kern_h13110
+== scoff vs on
+all: 15939k vs 16313k; without rendering symbols: 15775k vs 15728k (-0.30%)
+     70.7k     375.9k   +305.2k  line_px
+      0.0k     157.9k   +157.9k  _ZN7melonDS3NDS11SliceChain9EPS0_
+   1005.6k     858.3k   -147.4k  _ZN8bananads12run_headlessERNS_3EmuERKNS_6ConfigE
+      6.9k      52.1k    +45.2k  rast_kern_h12010
+    130.9k      98.4k    -32.5k  _ZN7melonDS4Wifi7CheckRXEi
+      1.0k      21.5k    +20.5k  gx_polygon
+== loopoff vs on
+all: 16256k vs 16313k; without rendering symbols: 15967k vs 15728k (-1.50%)
+   1150.7k     858.3k   -292.4k  _ZN8bananads12run_headlessERNS_3EmuERKNS_6ConfigE
+    135.9k     375.9k   +240.1k  line_px
+      0.0k     157.9k   +157.9k  _ZN7melonDS3NDS11SliceChain9EPS0_
+   1554.6k    1521.5k    -33.1k  [JIT/libs]
+    130.9k      98.4k    -32.5k  _ZN7melonDS4Wifi7CheckRXEi
+     25.5k      52.1k    +26.6k  rast_kern_h12010

@@ -1,0 +1,11 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/membench-membench.nds st-membench-unroll-A --mode st --frames 100:300 --set render.2d_comp_unroll=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/membench-membench.nds st-membench-unroll-B --mode st --frames 100:300 --set render.2d_comp_unroll=on
+
+== thread 0 (main): ms/frame @1104 4.871 -> 4.604 (-5.49%)   @1992 2.939 -> 2.786 (-5.20%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.175 -> 4.029 (-3.48%)
+  insn 3652.9k->3310.2k (-9.4%)  base 4024.4k->3744.6k (-7.0%)  l1i_miss 6.1k->6.1k (-1.4%)  l1i_l3miss 1.1k->1.1k (+0.0%)  ld_miss 10.0k->9.9k (-0.5%)  ld_l3miss 2.3k->2.2k (-3.8%)  st_miss 11.0k->11.0k (+0.1%)  st_l3miss 5.4k->5.4k (+0.0%)  itlb_l2 6.4k->6.8k (+7.5%)  itlb_walk 0.0k->0.0k (+98.4%)  dtlb_l2 17.9k->17.9k (-0.1%)  dtlb_walk 0.0k->0.0k (+171.1%)  bcond_miss 18.1k->17.9k (-0.8%)  bind_miss 2.3k->2.3k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   2.258     1.992    -0.266    1691.8k    1349.1k
+  gengis               0.636     0.633    -0.003     387.7k     387.7k
+  scheduler/core       1.281     1.282    +0.001    1012.2k    1012.2k

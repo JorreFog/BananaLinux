@@ -1,0 +1,35 @@
+# mk3geom exactness for 0081 (render.geom_switch), build b2 (3a743f3 + 0080 + 0081), device build under qemu-dev, Mon Oct 19 12:58:47 UTC 2026
+## MK scene on/off = base hashes: yes
+## main RAM every frame 1600-2100, --regs --timing, off vs on
+SAME after 2100 frames (all of main RAM)
+## full savestates
+a57737e0567aab4f488ed894bdec854d 1850 b2/bananads --set render.geom_switch=off
+f476c39ef33cd7a1166128040aa358d1 2000 b2/bananads --set render.geom_switch=off
+a57737e0567aab4f488ed894bdec854d 1850 b2/bananads 
+f476c39ef33cd7a1166128040aa358d1 2000 b2/bananads 
+## trace build (trace-sab2-build.patch: + ExecParams[0..3] in the hash)
+tr2-on GXTRACE calls 1133371 hash 123d98004261c019
+tr2-off GXTRACE calls 1133371 hash 123d98004261c019
+tr2-s3 GXTRACE calls 1133371 hash 8ccfde75f889a2a8
+sab3 frames/audio identical to on (not caught there)
+## sab4 (box test to the unknown path), geomtest 300 frames
+sab4 geomtest pictures: DIFFERENT ; traces: GXTRACE calls 86158 hash 6a0e50626205dfb4 / GXTRACE calls 2822909 hash 508c2149cef0927c
+## test ROMs (check.sh off vs on)
+PICS ok   gxstm-soft (30 frames identical)
+PICS ok   gxstm-gengis2x (30 frames identical)
+PICS ok   gxstm-reload (30 frames identical)
+PICS ok   geomtest-geomtest-soft (30 frames identical)
+PICS ok   geomtest-geomtest-gengis2x (30 frames identical)
+PICS ok   geomtest-geomtest-reload (30 frames identical)
+PICS ok   dsstress-L5-soft (30 frames identical)
+PICS ok   dsstress-L5-gengis2x (30 frames identical)
+PICS ok   dsstress-L5-reload (30 frames identical)
+PICS ok   dsstress-L10-soft (30 frames identical)
+PICS ok   dsstress-L10-gengis2x (30 frames identical)
+PICS ok   dsstress-L10-reload (30 frames identical)
+DIFF rc=0 gxstm SAME after 300 frames (all of main RAM)
+DIFF rc=0 geomtest-geomtest SAME after 300 frames (all of main RAM)
+DIFF rc=0 dsstress-L5 SAME after 300 frames (all of main RAM)
+DIFF rc=0 iorom-dsstress-L5 SAME after 300 frames (all of main RAM)
+geomtest-irq --regs --timing: SAME after 300 frames (all of main RAM)
+## exact-suite.sh off vs on: FAILS=0

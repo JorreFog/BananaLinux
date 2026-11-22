@@ -1,0 +1,19 @@
+# rgds-sim v1 A/B (ab.sh, st mode), device build (A) vs the PGO build trained on 3D stress ROMs only (B, build-dev3donly), membench (never seen by that profile); 16:30 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-dev3donly/b/bananads /home/user/perf/roms/membench-membench.nds --label dev3donly-membench  (full: /home/user/perf/core/runs/sim/dev3donly-membench-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/membench-membench.nds dev3donly-membench-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-dev3donly/b/bananads /home/user/perf/roms/membench-membench.nds dev3donly-membench-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.811 -> 4.495 (-6.57%)   @1992 2.898 -> 2.728 (-5.87%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.120 -> 4.109 (-0.26%)
+  insn 3636.8k->3307.9k (-9.0%)  base 3991.2k->3575.6k (-10.4%)  l1i_miss 3.9k->6.1k (+57.8%)  l1i_l3miss 1.1k->1.2k (+3.3%)  ld_miss 11.9k->11.4k (-4.3%)  ld_l3miss 2.1k->2.2k (+2.6%)  st_miss 11.7k->12.1k (+3.5%)  st_l3miss 5.4k->5.4k (+0.1%)  itlb_l2 5.8k->5.9k (+0.7%)  itlb_walk 0.0k->0.0k (+123.1%)  dtlb_l2 17.9k->17.8k (-0.8%)  dtlb_walk 0.0k->0.0k (+76.7%)  bcond_miss 17.0k->18.1k (+6.2%)  bind_miss 2.3k->1.2k (-48.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.296     1.120    -0.176    1014.4k     862.5k
+  2d                   2.184     2.080    -0.104    1677.1k    1549.5k
+  gengis               0.629     0.580    -0.048     386.3k     322.6k
+  other                0.053     0.059    +0.006      39.0k      47.4k
+  audio                0.072     0.078    +0.006      76.0k      76.8k
+  3d-geometry          0.130     0.129    -0.001     107.6k     109.8k
+  libc/lib             0.033     0.034    +0.001       7.2k       7.2k
+  jit-runtime          0.018     0.019    +0.001      15.2k      15.2k
+  memory               0.206     0.207    +0.000     185.1k     188.1k

@@ -1,0 +1,8 @@
+# qemu-count at render.scale=1 with 2 Gengis threads (measure-dev.sh SCALE=1 GXT=2), device builds under qemu-dev, frames 100-300, k instructions/frame; no2d = render.2d_thread=off (the device's default at 1x), 2d = on; base = build-dev, mine = b7d (1c9095b); share-off = mine with --set render.3d_share=off
+== 1x-no2d-base: main thread: 3642.6k insns/frame | vcpu:kinsn/frame 1:919.3 2:911.7 
+== 1x-no2d-mine: main thread: 3561.4k insns/frame | vcpu:kinsn/frame 1:1006.1 2:906.4 
+== 1x-2d-mine: main thread: 2292.6k insns/frame | vcpu:kinsn/frame 1:857.3 2:1076.8 3:1317.2 
+== 1x-2d-share-off: main thread: 3317.6k insns/frame | vcpu:kinsn/frame 1:557.0 2:969.2 3:679.8 
+== 1x-no2d-ds2d-base: main thread: 21136.0k insns/frame | vcpu:kinsn/frame 1:72.9 2:75.4 
+== 1x-2d-ds2d-mine: main thread: 6990.6k insns/frame | vcpu:kinsn/frame 1:73.8 2:75.1 3:12427.7 
+# the emulator's thread's 2d/gpu bucket: no2d base 712.7k, no2d mine 528.0k (render.2d_comp_unroll on the emulator's thread), 2d mine 241.5k

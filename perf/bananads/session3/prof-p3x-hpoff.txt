@@ -1,0 +1,134 @@
+# BananaDS prof: the emulator's thread (tid 6399), prof.hz=1000, frames 1250-1850, from the task-clock perf event
+# 10082 samples (1060 a second of its CPU time; 0 dropped, 0 timer overruns); 9.52 s CPU in 11.20 s (85% busy), 53.6 fps
+# symbols: /proc/self/exe .symtab (4237 functions)
+# waiting: 4.8% of the samples (sched_yield 4.8%, futex/condition-variable/mutex waits 0.0%, the 2D thread's wait functions 0.0%, Gengis's bin waits 0.0%): CPU time /proc counts as busy
+# JIT code: 29.8% of the samples
+# pmu: cycles 30443k/frame; instructions 13168k/frame; branch-misses 179947/frame (13.67 per 1000 instructions); L1I-misses 145864/frame (11.08 per 1000 instructions); L1D-misses 52560/frame (3.99 per 1000 instructions); iTLB-misses 68994/frame (5.24 per 1000 instructions); IPC 0.43; 1920 MHz while running
+
+## by module
+ 63.04%    6356  bananads
+ 29.78%    3002  [JIT code]
+  7.03%     709  libc.so.6
+  0.08%       8  linux-vdso.so.1
+  0.07%       7  libstdc++.so.6
+
+## top 40 symbols
+ 25.11%  25.11%    2532  [JIT code]   [JIT blocks]
+  8.29%  33.41%     836  bananads     melonDS::GPU3D::Run()
+  6.33%  39.73%     638  bananads     bananads::Emu::run_frame()
+  5.73%  45.47%     578  bananads     void melonDS::GPU3D::SubmitPolygonBodyT<true, false>()
+  4.76%  50.23%     480  libc.so.6    __sched_yield
+  4.05%  54.27%     408  bananads     melonDS::GPU3D::WriteGXFIFOBlock(unsigned char const*, unsigned int, unsigned int, unsigned int)
+  3.28%  57.56%     331  bananads     melonDS::SPU::SPU(melonDS::NDS&, melonDS::AudioBitDepth, melonDS::AudioInterpolation, double)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+  2.91%  60.46%     293  bananads     void melonDS::GPU3D::SubmitVertexBody<true>()
+  1.74%  62.20%     175  bananads     void melonDS::GPU3D::CalculateLightingBody<true>()
+  1.72%  63.92%     173  bananads     melonDS::DMA::Run9GX()
+  1.51%  65.42%     152  [JIT code]   [JIT stub_0000ed00]
+  1.47%  66.89%     148  bananads     int melonDS::RunSamples<2u>(melonDS::SPUChannel&, unsigned int)
+  1.24%  68.13%     125  [JIT code]   [JIT stub_0000ec00]
+  1.15%  69.28%     116  bananads     melonDS::NDS::SliceChain9(melonDS::NDS*)
+  0.71%  70.00%      72  bananads     bool melonDS::IOFastRead9<unsigned int>(melonDS::NDS&, unsigned int, unsigned int&)
+  0.67%  70.67%      68  bananads     melonDS::YSortCounting(melonDS::Polygon**, unsigned int, melonDS::Polygon**) [clone .lto_priv.0]
+  0.66%  71.34%      67  bananads     melonDS::BananaRenderer::Submit()
+  0.64%  71.98%      65  bananads     blip_add_delta
+  0.63%  72.61%      64  bananads     void melonDS::GPU3D::WriteToGXFIFOBody<true>(unsigned int)
+  0.63%  73.25%      64  [JIT code]   [JIT stub_0000eb00]
+  0.62%  73.87%      63  bananads     melonDS::GPU3D::NextVertexSlot() [clone .localalias] [clone .lto_priv.0]
+  0.61%  74.48%      61  libc.so.6    libc.so.6+0x89eec
+  0.61%  75.08%      61  bananads     melonDS::NDS::ARM9IORead32(unsigned int)
+  0.60%  75.68%      60  bananads     int melonDS::RunValid<2u>(melonDS::SPUChannel&, unsigned int)
+  0.59%  76.26%      59  bananads     unsigned int melonDS::SlowRead9Full<unsigned int, 0>(unsigned int, melonDS::ARMv5*)
+  0.55%  76.81%      55  bananads     int melonDS::ClipAgainstPlane<2, true, 1>(melonDS::GPU3D const&, melonDS::Vertex*, int, int)
+  0.55%  77.36%      55  libc.so.6    pthread_cond_signal
+  0.53%  77.88%      53  [JIT code]   [JIT stub_0000e900]
+  0.53%  78.41%      53  bananads     unsigned int melonDS::SlowRead9<unsigned int, 0>(unsigned int, melonDS::ARMv5*)
+  0.51%  78.91%      51  bananads     melonDS::ARMv5::JumpTo(unsigned int, bool)
+  0.50%  79.41%      50  bananads     melonDS::DMA::Run9() [clone .localalias] [clone .lto_priv.0]
+  0.47%  79.88%      47  bananads     bool melonDS::SwapCodeRegion3<0u, melonDS::ARMv5>(melonDS::NDS&, melonDS::ARMv5&, unsigned int) [clone .lto_priv.0]
+  0.47%  80.34%      47  bananads     void melonDS::SlowWrite9<unsigned int, 0>(unsigned int, melonDS::ARMv5*, unsigned int)
+  0.45%  80.79%      45  bananads     melonDS::BananaRenderer2D::PrepareSprites(melonDS::Banana2DRegs&)
+  0.45%  81.23%      45  bananads     melonDS::GPU::StartScanline(unsigned int)
+  0.37%  81.60%      37  bananads     int melonDS::ClipAgainstPlane<0, true, 0>(melonDS::GPU3D const&, melonDS::Vertex*, int, int) [clone .isra.0]
+  0.37%  81.97%      37  bananads     melonDS::NDS::CheckDMAs(unsigned int, unsigned int) [clone .localalias] [clone .lto_priv.0]
+  0.35%  82.32%      35  bananads     void melonDS::SlowBlockTransfer7<true, 0>(unsigned int, unsigned long*, unsigned int)
+  0.35%  82.66%      35  bananads     melonDS::BananaRenderer2D::PrepareScanline(melonDS::Banana2DRegs&)
+  0.34%  83.00%      34  [JIT code]   [JIT stub_0000ec01]
+
+## by area (docs/PERF.md's device profile's areas, by name: a heuristic)
+ 26.70%    2692  3D geometry
+ 25.11%    2532  JIT code
+  8.78%     885  scheduler, RunFrame and events
+  7.01%     707  memory/IO slow paths
+  6.60%     665  other
+  6.32%     637  SPU
+  5.94%     599  JIT dispatch and exits
+  5.58%     563  waits and wake-ups (yield, futex)
+  3.96%     399  2D and video
+  3.41%     344  DMA
+  0.33%      33  JIT compiler and invalidation
+  0.14%      14  3D rendering (Gengis on this thread)
+  0.12%      12  libc memory/string
+
+## by scope (C++ class or namespace; a C function is its own)
+ 29.78%    3002  [JIT code]
+ 24.67%    2487  melonDS::GPU3D
+  9.90%     998  melonDS
+  6.33%     638  bananads::Emu
+  4.87%     491  melonDS::NDS
+  4.76%     480  __sched_yield
+  3.31%     334  melonDS::SPU
+  3.02%     304  melonDS::DMA
+  1.65%     166  melonDS::ARMv5
+  1.30%     131  melonDS::BananaRenderer
+  0.82%      83  melonDS::GPU
+  0.79%      80  melonDS::BananaRenderer2D
+  0.64%      65  blip_add_delta
+  0.61%      61  libc.so.6+0x89eec
+  0.55%      55  pthread_cond_signal
+  0.52%      52  melonDS::GPU2D
+  0.52%      52  melonDS::SPUCaptureUnit
+  0.47%      47  melonDS::ARMInterpreter
+  0.36%      36  melonDS::RTC
+  0.35%      35  melonDS::ARM
+  0.34%      34  melonDS::Compiler
+  0.34%      34  ARM_Ret
+  0.26%      26  melonDS::ARMJIT
+  0.26%      26  Arm64Gen::ARM64XEmitter
+  0.24%      24  melonDS::ARMv4
+  0.22%      22  pthread_cond_broadcast
+  0.22%      22  ARM_Dispatch
+  0.18%      18  melonDS::VRAMTrackingSet<131072u, 16384u>
+  0.18%      18  melonDS::RegisterCache<melonDS::Compiler, Arm64Gen::ARM64Reg>
+  0.15%      15  __mprotect
+
+## JIT code by block (mj9_/mj7_<guest address>) and stub (MELONDS_JIT_PERFMAP)
+  1.51%     152  stub_0000ed00
+  1.24%     125  stub_0000ec00
+  0.63%      64  stub_0000eb00
+  0.53%      53  stub_0000e900
+  0.34%      34  stub_0000ec01
+  0.31%      31  mj9_0214d048
+  0.22%      22  mj9_01ff86b4
+  0.22%      22  mj9_02146418
+  0.21%      21  mj9_01ff8738
+  0.20%      20  stub_0000ed01
+  0.20%      20  stub_0000e700
+  0.20%      20  mj9_01ff88e0
+  0.20%      20  mj9_01ff85d0
+  0.19%      19  mj9_01ff8220
+  0.18%      18  mj9_0200c9dc
+  0.18%      18  mj9_01ff9030
+  0.17%      17  mj9_01ff8000
+  0.15%      15  mj9_01ff8924
+  0.13%      13  mj9_01ff8e8c
+  0.13%      13  mj7_037f9034
+  0.13%      13  mj9_01ff93a0
+  0.13%      13  mj9_0214d490
+  0.12%      12  mj9_0214d4fc
+  0.12%      12  mj9_01ff835c
+  0.11%      11  mj9_0214cd54
+  0.11%      11  mj9_01ff8b98
+  0.11%      11  mj9_01ff8f0c
+  0.11%      11  mj7_037fe074
+  0.11%      11  mj9_02063d94
+  0.10%      10  mj9_0200c994

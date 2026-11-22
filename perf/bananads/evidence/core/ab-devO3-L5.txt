@@ -1,0 +1,19 @@
+# rgds-sim v1 A/B (ab.sh, st mode), devO3-L5: see the A/B lines; 16:37 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh rgds-sim/ab.sh <A> <B> <rom> --label devO3-L5  (full: /home/user/perf/core/runs/sim/devO3-L5-ab.txt; A = /home/user/perf/build-dev/b/bananads, B = build-devpgo or build-devO3)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds devO3-L5-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devO3/b/bananads /home/user/perf/roms/dsstress-L5.nds devO3-L5-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.974 -> 6.951 (-0.32%)   @1992 4.149 -> 4.135 (-0.36%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.524 -> 6.901 (+5.77%)
+  insn 5472.0k->5329.4k (-2.6%)  base 5652.6k->5499.9k (-2.7%)  l1i_miss 10.9k->14.6k (+34.8%)  l1i_l3miss 0.5k->0.5k (-3.1%)  ld_miss 19.0k->20.0k (+5.3%)  ld_l3miss 3.8k->3.8k (-0.8%)  st_miss 9.3k->9.4k (+1.6%)  st_l3miss 5.0k->5.0k (+0.3%)  itlb_l2 14.4k->9.2k (-36.4%)  itlb_walk 0.0k->0.0k (+56.4%)  dtlb_l2 31.9k->32.3k (+1.2%)  dtlb_walk 0.0k->0.0k (-17.4%)  bcond_miss 31.3k->31.2k (-0.4%)  bind_miss 5.9k->5.9k (-0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       0.701     0.669    -0.032     548.2k     534.0k
+  audio                0.072     0.094    +0.022      76.0k      85.2k
+  memory               0.265     0.256    -0.009     254.1k     246.8k
+  gengis               2.726     2.721    -0.005    2332.9k    2327.6k
+  2d                   1.581     1.576    -0.005     868.4k     785.9k
+  other                0.299     0.302    +0.003     263.9k     256.8k
+  jit-runtime          0.072     0.075    +0.003      65.5k      65.5k
+  3d-geometry          0.961     0.964    +0.002     849.9k     814.4k
+  jit-code             0.262     0.260    -0.002     207.4k     207.4k

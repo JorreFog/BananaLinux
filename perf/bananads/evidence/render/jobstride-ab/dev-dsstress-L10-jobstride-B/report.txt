@@ -1,0 +1,160 @@
+rgds-sim report dev-dsstress-L10-jobstride-B (model v2; frames per thread; ms at 1104 / 1992 MHz)
+params: base_scale=1.0 l3_cyc=30.0 l3_ns=0.0 dram_ns=120.0 mispredict_cyc=8.0 tlb_l2_cyc=2.0 walk_cyc=25.0 st_cost=0.2 note=v2 = v1's cost parameters (documented/assumed defaults) + the plugin's L1D write streaming (ws=4, wsl3=128, wsn=2). v3 = v2 + timed software prefetch: SIMARGS=prfm=1 (opt-in; label numbers 'v3'). v1 = SIMARGS=ws=0. Calibration: as v1 (README).
+
+vcpu thread            insns/frame  cycles@1104   ms@1104   ms@1992
+0    main                  2325.8k      3131.3k     2.836     1.668
+1    thread1               1705.0k      2596.4k     2.352     1.473
+2    thread2               1839.1k      2809.5k     2.545     1.595
+3    bananads-2d           2529.5k      4817.8k     4.364     2.950
+
+== thread 0 (main): 2325.8k insns, 2.836 ms @1104, 1.668 ms @1992, IPC@1104 0.74
+  cycle shares @1104: base 78.7%  L1I 6.1%  L1D 7.7%  iTLB 0.8%  dTLB 1.3%  branch 5.5%
+  per frame: L1I miss 3.4k (0.58% of fetch blocks; to DRAM 0.7k)  L1D ld miss 2.8k (0.50% of loads; DRAM 0.8k) st miss 1.9k (DRAM 1.6k)  pf 1.6k
+  iTLB L2 hit 12.4k walk 0.0k  dTLB L2 hit 19.9k walk 0.0k  branches: cond 350.5k mispred 4.51%, indirect+ret 34.9k mispred 16.10%
+  classes: alu 44.3% ld 19.8% bcond 15.1% st 7.3% ldp 2.7% stp 2.4% b 1.4% mul 1.3% fpneon 1.2% ret 1.1% bl 0.9% ldv 0.8% stv 0.8% sys 0.3% br 0.2% blr 0.2%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  3d-geometry          847.1k  36.4%      0.924  32.6%     5.2%     3.2%     1.4%     7.6%
+  scheduler/core       579.5k  24.9%      0.712  25.1%     1.6%     1.6%     2.2%     5.6%
+  2d                   240.7k  10.3%      0.402  14.2%    10.9%    21.7%     3.5%     3.0%
+  jit-code             207.2k   8.9%      0.235   8.3%    13.4%     1.2%     3.4%     5.2%
+  memory               205.1k   8.8%      0.202   7.1%     0.1%     0.9%     0.6%     0.7%
+  other                 37.9k   1.6%      0.121   4.3%     6.5%    56.5%     0.9%     4.8%
+  audio                 76.0k   3.3%      0.076   2.7%     4.3%    12.3%     2.2%     2.5%
+  jit-runtime           71.3k   3.1%      0.073   2.6%     0.4%     0.0%     2.7%    12.8%
+  libc/lib              46.0k   2.0%      0.073   2.6%    30.7%    10.6%     1.3%     3.3%
+  gengis                15.0k   0.6%      0.019   0.7%    24.8%     6.4%     5.6%     0.3%
+  top functions / JIT blocks by modeled time @1104:
+       0.591 ms  20.8%     467.7k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       0.442 ms  15.6%     398.4k insns  [3d-geometry] _ZN7melonDS5GPU3D3RunEv.localalias
+       0.245 ms   8.6%     207.6k insns  [3d-geometry] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+       0.114 ms   4.0%     125.6k insns  [3d-geometry] _ZN7melonDS5GPU3D7Write32Ejj
+       0.088 ms   3.1%      92.1k insns  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       0.075 ms   2.6%      71.5k insns  [3d-geometry] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       0.073 ms   2.6%      30.9k insns  [2d] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+       0.063 ms   2.2%      17.8k insns  [other] _ZSt12__move_mergeIPPN7melonDS7PolygonES3_N9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2_EEEET0_T_SB_SB
+       0.062 ms   2.2%      56.7k insns  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       0.062 ms   2.2%      19.5k insns  [2d] _ZN7melonDS3GPU13StartScanlineEj.localalias
+       0.051 ms   1.8%      56.3k insns  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       0.050 ms   1.8%      42.1k insns  [jit-runtime] ARM_Dispatch
+       0.045 ms   1.6%      44.9k insns  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j.lto_priv
+       0.042 ms   1.5%      30.4k insns  [2d] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       0.040 ms   1.4%      20.4k insns  [2d] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+       0.035 ms   1.2%      34.0k insns  [scheduler/core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       0.035 ms   1.2%      16.9k insns  [jit-code] stub_0000ec00
+       0.032 ms   1.1%      18.0k insns  [2d] _ZN7melonDS16BananaRenderer2D14PrepareSpritesERNS_12Banana2DRegsE
+       0.030 ms   1.1%      29.2k insns  [3d-geometry] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       0.030 ms   1.0%      22.1k insns  [2d] _ZN7melonDS5GPU2D22UpdateRegistersPreDrawEb.part.0
+       0.029 ms   1.0%      24.1k insns  [scheduler/core] _ZZN7melonDS3RTCC4ERNS_3NDSEENUlPvjE_4_FUNES3_j.lto_priv.0
+       0.027 ms   1.0%       4.7k insns  [other] _ZSt16__insertion_sortIPPN7melonDS7PolygonEN9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2_EEEEvT_SA_T0_
+       0.026 ms   0.9%      19.3k insns  [scheduler/core] _ZN7melonDS3NDS9CheckDMAsEjj
+       0.025 ms   0.9%      22.8k insns  [2d] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_4_FUNES9_j
+       0.023 ms   0.8%      29.2k insns  [jit-runtime] ARM_Ret
+
+== thread 1 (thread1): 1705.0k insns, 2.352 ms @1104, 1.473 ms @1992, IPC@1104 0.66
+  cycle shares @1104: base 66.0%  L1I 0.2%  L1D 31.2%  iTLB 0.0%  dTLB 0.4%  branch 2.3%
+  per frame: L1I miss 0.0k (0.01% of fetch blocks; to DRAM 0.0k)  L1D ld miss 12.7k (3.35% of loads; DRAM 3.0k) st miss 2.2k (DRAM 0.6k)  pf 9.5k
+  iTLB L2 hit 0.0k walk 0.0k  dTLB L2 hit 5.1k walk 0.0k  branches: cond 92.0k mispred 7.89%, indirect+ret 1.6k mispred 4.45%
+  classes: fpneon 53.4% alu 19.3% ld 7.3% ldv 6.5% bcond 5.4% stv 3.1% stp 1.6% st 1.5% mul 0.8% b 0.7% ldp 0.3%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  gengis              1612.8k  94.6%      2.258  96.0%     0.2%    31.9%     0.4%     2.2%
+  other                 90.3k   5.3%      0.090   3.8%     0.4%    14.3%     1.6%     3.2%
+  libc/lib               1.9k   0.1%      0.004   0.2%    24.3%    30.0%     1.3%     4.3%
+  top functions / JIT blocks by modeled time @1104:
+       0.763 ms  32.5%     647.1k insns  [gengis] rast_kern_h02000
+       0.504 ms  21.4%     317.2k insns  [gengis] rast_kern_h02100
+       0.280 ms  11.9%     277.6k insns  [gengis] gx_polygon
+       0.252 ms  10.7%     194.9k insns  [gengis] rast_kern_h02010
+       0.180 ms   7.7%      43.6k insns  [gengis] gx2_render_bin
+       0.143 ms   6.1%      80.7k insns  [gengis] rast_kern_h02110
+       0.126 ms   5.4%      42.0k insns  [gengis] _ZN8bananads16GengisRenderer3D7ConvertERNS0_4SlotE
+       0.083 ms   3.5%      87.9k insns  [other] f_run.constprop.0
+       0.008 ms   0.3%       8.2k insns  [gengis] batch_asm.lto_priv.0
+       0.005 ms   0.2%       0.7k insns  [other] tex_min_alpha_scan.lto_priv.0
+       0.002 ms   0.1%       1.3k insns  [gengis] _ZN8bananads16GengisRenderer3D9RenderOneEb
+       0.001 ms   0.1%       0.9k insns  [other] _init
+       0.001 ms   0.1%       0.9k insns  [other] first_white
+       0.001 ms   0.0%       1.3k insns  [libc/lib] libc.so.6:__sched_yield@@GLIBC_2.17
+       0.001 ms   0.0%       0.2k insns  [libc/lib] libc.so.6:_int_malloc
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__pthread_mutex_lock@GLIBC_2.17
+       0.000 ms   0.0%       0.1k insns  [libc/lib] libc.so.6:__libc_malloc@@GLIBC_2.17
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libstdc++.so.6.0.33:_init
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__GI___pthread_mutex_unlock_usercnt
+       0.000 ms   0.0%       0.1k insns  [libc/lib] libc.so.6:__libc_free@@GLIBC_2.17
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:pthread_cond_broadcast@@GLIBC_2.17
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__aarch64_cas4_acq
+       0.000 ms   0.0%       0.0k insns  [gengis] rast_kern_h22100
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:_int_free_merge_chunk
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__aarch64_swp4_rel
+
+== thread 2 (thread2): 1839.1k insns, 2.545 ms @1104, 1.595 ms @1992, IPC@1104 0.65
+  cycle shares @1104: base 65.8%  L1I 0.2%  L1D 31.3%  iTLB 0.0%  dTLB 0.4%  branch 2.3%
+  per frame: L1I miss 0.0k (0.01% of fetch blocks; to DRAM 0.0k)  L1D ld miss 13.7k (3.38% of loads; DRAM 3.3k) st miss 2.4k (DRAM 0.6k)  pf 10.3k
+  iTLB L2 hit 0.0k walk 0.0k  dTLB L2 hit 5.5k walk 0.0k  branches: cond 99.8k mispred 7.84%, indirect+ret 2.0k mispred 3.90%
+  classes: fpneon 53.1% alu 19.5% ld 7.4% ldv 6.5% bcond 5.4% stv 3.1% stp 1.5% st 1.5% mul 0.8% b 0.7% ldp 0.3%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  gengis              1738.8k  94.5%      2.443  96.0%     0.2%    32.0%     0.4%     2.2%
+  other                 97.4k   5.3%      0.097   3.8%     0.4%    13.9%     1.6%     3.1%
+  libc/lib               2.9k   0.2%      0.005   0.2%    21.9%    26.7%     1.0%     3.9%
+  top functions / JIT blocks by modeled time @1104:
+       0.806 ms  31.7%     690.4k insns  [gengis] rast_kern_h02000
+       0.539 ms  21.2%     340.4k insns  [gengis] rast_kern_h02100
+       0.301 ms  11.8%     298.4k insns  [gengis] gx_polygon
+       0.270 ms  10.6%     211.3k insns  [gengis] rast_kern_h02010
+       0.203 ms   8.0%      47.0k insns  [gengis] gx2_render_bin
+       0.159 ms   6.3%      52.9k insns  [gengis] _ZN8bananads16GengisRenderer3D7ConvertERNS0_4SlotE
+       0.153 ms   6.0%      87.2k insns  [gengis] rast_kern_h02110
+       0.089 ms   3.5%      94.3k insns  [other] f_run.constprop.0
+       0.008 ms   0.3%       8.8k insns  [gengis] batch_asm.lto_priv.0
+       0.005 ms   0.2%       0.7k insns  [other] tex_min_alpha_scan.lto_priv.0
+       0.003 ms   0.1%       2.3k insns  [gengis] _ZN8bananads16GengisRenderer3D9RenderOneEb
+       0.002 ms   0.1%       1.5k insns  [other] _init
+       0.002 ms   0.1%       2.2k insns  [libc/lib] libc.so.6:__sched_yield@@GLIBC_2.17
+       0.001 ms   0.1%       0.9k insns  [other] first_white
+       0.001 ms   0.0%       0.2k insns  [libc/lib] libc.so.6:_int_malloc
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__pthread_mutex_lock@GLIBC_2.17
+       0.000 ms   0.0%       0.1k insns  [libc/lib] libc.so.6:__libc_malloc@@GLIBC_2.17
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libstdc++.so.6.0.33:_init
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__GI___pthread_mutex_unlock_usercnt
+       0.000 ms   0.0%       0.1k insns  [libc/lib] libc.so.6:__libc_free@@GLIBC_2.17
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:pthread_cond_broadcast@@GLIBC_2.17
+       0.000 ms   0.0%       0.1k insns  [gengis] rast_kern_h22100
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:__aarch64_cas4_acq
+       0.000 ms   0.0%       0.0k insns  [gengis] rast_kern_h22010
+       0.000 ms   0.0%       0.0k insns  [libc/lib] libc.so.6:_int_free_merge_chunk
+
+== thread 3 (bananads-2d): 2529.5k insns, 4.364 ms @1104, 2.950 ms @1992, IPC@1104 0.53
+  cycle shares @1104: base 58.8%  L1I 0.2%  L1D 38.8%  iTLB 0.0%  dTLB 0.5%  branch 1.8%
+  per frame: L1I miss 0.1k (0.01% of fetch blocks; to DRAM 0.1k)  L1D ld miss 18.0k (1.27% of loads; DRAM 9.6k) st miss 3.5k (DRAM 1.6k)  pf 16.0k
+  iTLB L2 hit 0.4k walk 0.0k  dTLB L2 hit 8.1k walk 0.3k  branches: cond 199.9k mispred 5.33%, indirect+ret 4.2k mispred 1.45%
+  classes: fpneon 46.7% alu 22.6% bcond 7.9% ldv 6.9% ld 5.9% stv 5.3% st 1.6% stp 1.3% ldp 0.5% b 0.5% mul 0.4% ret 0.1% bl 0.1%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  2d                   897.2k  35.5%      2.339  53.6%     0.1%    50.5%     0.3%     1.2%
+  gengis              1268.8k  50.2%      1.666  38.2%     0.3%    27.4%     0.4%     2.4%
+  other                356.1k  14.1%      0.349   8.0%     0.2%    15.1%     1.9%     3.1%
+  libc/lib               7.4k   0.3%      0.010   0.2%     9.3%    15.5%     4.4%     2.1%
+  top functions / JIT blocks by modeled time @1104:
+       1.549 ms  35.5%     423.7k insns  [2d] _ZN7melonDS16BananaRenderer2D14CompositeHiresEPjPKPKj
+       0.587 ms  13.4%     514.5k insns  [gengis] rast_kern_h02000
+       0.386 ms   8.8%     253.6k insns  [gengis] rast_kern_h02100
+       0.284 ms   6.5%     155.4k insns  [2d] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+       0.225 ms   5.2%     223.9k insns  [gengis] gx_polygon
+       0.202 ms   4.6%     159.0k insns  [gengis] rast_kern_h02010
+       0.168 ms   3.8%     178.6k insns  [other] _ZN7melonDSL8WriteZipEPjPKjS2_t
+       0.139 ms   3.2%      21.4k insns  [2d] _ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZN7melonDS14BananaRenderer13SetThreaded2DEbEUlvE_EE
+       0.137 ms   3.1%      34.1k insns  [gengis] gx2_render_bin
+       0.115 ms   2.6%      68.4k insns  [gengis] rast_kern_h02110
+       0.107 ms   2.5%     104.9k insns  [other] _ZN7melonDSL11WriteDoubleEPjPKjt
+       0.105 ms   2.4%     106.8k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       0.093 ms   2.1%      83.5k insns  [2d] _ZN7melonDS16BananaRenderer2D10BuildStepsEPNS_8CompStepEPhRibS4_RPKj
+       0.076 ms   1.7%      16.1k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpritesFromEjRKNS_12Banana2DRegsE
+       0.072 ms   1.6%      63.0k insns  [2d] _ZN7melonDSL10CompositeNILi0ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       0.067 ms   1.5%      70.9k insns  [other] f_run.constprop.0
+       0.009 ms   0.2%       8.5k insns  [gengis] _ZN8bananads16GengisRenderer3D10WaitRowsFnEPvjj
+       0.007 ms   0.2%       7.9k insns  [2d] _ZN7melonDS14BananaRenderer5EmitAEPjjtPKt
+       0.006 ms   0.1%       6.6k insns  [gengis] batch_asm.lto_priv.0
+       0.006 ms   0.1%       8.1k insns  [2d] _ZN7melonDS16BananaRenderer2D9CompositeEPjS1_b
+       0.005 ms   0.1%       0.7k insns  [other] tex_min_alpha_scan.lto_priv.0
+       0.004 ms   0.1%       4.2k insns  [2d] _ZN7melonDS14BananaRenderer5EmitBEPjjt
+       0.003 ms   0.1%       2.6k insns  [libc/lib] libc.so.6:pthread_cond_broadcast@@GLIBC_2.17
+       0.002 ms   0.1%       3.8k insns  [2d] _ZN7melonDS16BananaRenderer2D11CompositeToEPj
+       0.002 ms   0.1%       3.3k insns  [2d] _ZN7melonDSL14CompositeRangeEPKNS_8CompStepEiPKjbbbPjS5_

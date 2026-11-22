@@ -1,0 +1,19 @@
+# rgds-sim v1 A/B (ab.sh, st mode), device build (A) vs the PGO build trained WITHOUT 3D ROMs (B, build-devno3d), dsstress-L5 (never seen by that profile); 16:28 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devno3d/b/bananads /home/user/perf/roms/dsstress-L5.nds --label devno3d-L5  (full: /home/user/perf/core/runs/sim/devno3d-L5-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds devno3d-L5-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devno3d/b/bananads /home/user/perf/roms/dsstress-L5.nds devno3d-L5-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.984 -> 6.569 (-5.95%)   @1992 4.155 -> 3.925 (-5.53%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.567 -> 5.893 (-10.26%)
+  insn 5472.0k->5210.5k (-4.8%)  base 5652.6k->5374.4k (-4.9%)  l1i_miss 10.9k->5.4k (-50.5%)  l1i_l3miss 0.5k->0.5k (+2.3%)  ld_miss 19.4k->19.3k (-0.6%)  ld_l3miss 3.8k->3.8k (-0.1%)  st_miss 9.3k->9.6k (+2.6%)  st_l3miss 5.0k->5.0k (+0.1%)  itlb_l2 14.4k->7.1k (-50.7%)  itlb_walk 0.0k->0.0k (+52.2%)  dtlb_l2 32.0k->34.1k (+6.7%)  dtlb_walk 0.0k->0.0k (+23.6%)  bcond_miss 31.3k->31.7k (+1.4%)  bind_miss 5.9k->4.8k (-18.5%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   1.583     1.441    -0.141     868.4k     764.4k
+  scheduler/core       0.706     0.578    -0.128     548.2k     463.3k
+  gengis               2.730     2.679    -0.051    2332.9k    2300.0k
+  3d-geometry          0.962     0.911    -0.051     849.9k     830.0k
+  jit-code             0.264     0.233    -0.030     207.4k     207.4k
+  memory               0.265     0.249    -0.015     254.1k     249.5k
+  audio                0.072     0.080    +0.009      76.0k      78.5k
+  other                0.298     0.294    -0.005     263.9k     246.2k
+  jit-runtime          0.072     0.069    -0.003      65.5k      65.5k

@@ -1,0 +1,15 @@
+# qemu (jitcount, device build), emulator's thread (vcpu 0), instructions per frame over MK frames 1650-2150 (runs to 1650 and 2150, difference / 500)
+# 'without Gengis' drops the Gengis bins and 2D lines the emulator's thread draws itself (they vary with thread timing under qemu)
+mkbase       total  16226.0k  without Gengis  15781.9k  (Gengis  444.1k)  geometry+GX DMA   9644.7k
++0050+0060     total  14355.4k  without Gengis  13530.5k  (Gengis  825.0k)  geometry+GX DMA   7379.4k
++0061         total  14256.9k  without Gengis  13328.0k  (Gengis  928.8k)  geometry+GX DMA   7138.9k
++0062         total  13748.3k  without Gengis  13246.6k  (Gengis  501.7k)  geometry+GX DMA   7052.6k
+
+# per function (k insns/frame): base -> +0050+0060 -> +0061 -> +0062
+GPU3D3Run                  3785.1k   3090.3k   2211.2k   2211.2k
+WriteToGXFIFOBodyILb1      2079.4k    153.9k    153.9k    153.9k
+DMA4Run9                   1505.4k   1860.4k   1860.4k   1774.1k
+CalculateLightingBody            0         0    638.6k    638.6k
+SubmitPolygonBodyILb1      1137.6k   1137.6k   1137.6k   1137.6k
+SubmitVertexBodyILb1        775.6k    775.6k    775.6k    775.6k
+mainENKUlvE                1059.2k   1060.4k   1060.4k   1060.4k

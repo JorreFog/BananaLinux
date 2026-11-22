@@ -1,0 +1,306 @@
+# Combined measurement 1 (sim, 17:36 UTC), rgds-sim model v2 (params.json v2; PRFM not modeled)
+# A = /home/user/perf/build-dev/b/bananads (base 00c34c7, device build)
+# B = /home/user/perf/sim/vb-int: perf/render @ eee302e + perf/jit b0218cd 7315d05 b178c99 3450884 + perf/core f503a7a (cherry-picked, no conflicts),
+#     CCACHE_DISABLE=1 JOBS=2 build-a64-device.sh <tree> vb-int -DBANANADS_PGO=/home/user/perf/core/prof-dev (profile from the base tree: stale for changed files)
+# commands: /home/user/perf/sim/combined.sh v2-int1 <B> (rgds-sim/ab.sh A B <rom> --mode st|dev ...); critical path = the slowest thread; dev mode noise ±3-4%
+
+L5-1x-dev (model v2):
+   main           4.310 ->   4.311 ms @1104 (  +0.0%)   @1992   2.580 ->   2.583
+   thread1        1.336 ->   1.323 ms @1104 (  -1.0%)   @1992   0.783 ->   0.775
+   thread2        1.315 ->   1.280 ms @1104 (  -2.7%)   @1992   0.765 ->   0.749
+   critical path (slowest thread) @1104: main 4.310 -> main 4.311 ms (+0.0%); @1992 2.580 -> 2.583 (+0.1%)
+L5-1x-st (model v2):
+   main           6.871 ->   6.809 ms @1104 (  -0.9%)   @1992   4.064 ->   4.034
+   critical path (slowest thread) @1104: main 6.871 -> main 6.809 ms (-0.9%); @1992 4.064 -> 4.034 (-0.7%)
+L5-2x-dev (model v2):
+   main           4.392 ->   2.765 ms @1104 ( -37.0%)   @1992   2.672 ->   1.630
+   bananads-2d    4.181 ->   4.080 ms @1104 (  -2.4%)   @1992   2.849 ->   2.791
+   thread1        2.620 ->   3.335 ms @1104 ( +27.3%)   @1992   1.694 ->   2.127
+   thread2        2.811 ->   3.321 ms @1104 ( +18.1%)   @1992   1.809 ->   2.119
+   critical path (slowest thread) @1104: main 4.392 -> bananads-2d 4.080 ms (-7.1%); @1992 2.849 -> 2.791 (-2.0%)
+L5-2x-dev-rep (model v2):
+   main           4.272 ->   2.753 ms @1104 ( -35.6%)   @1992   2.592 ->   1.622
+   bananads-2d    4.281 ->   4.219 ms @1104 (  -1.5%)   @1992   2.906 ->   2.867
+   thread1        2.713 ->   3.172 ms @1104 ( +16.9%)   @1992   1.743 ->   2.022
+   thread2        2.677 ->   3.307 ms @1104 ( +23.5%)   @1992   1.723 ->   2.102
+   critical path (slowest thread) @1104: bananads-2d 4.281 -> bananads-2d 4.219 ms (-1.5%); @1992 2.906 -> 2.867 (-1.3%)
+cpubench-thumb-st (model v2):
+   main           5.482 ->   5.376 ms @1104 (  -1.9%)   @1992   3.082 ->   3.023
+   critical path (slowest thread) @1104: main 5.482 -> main 5.376 ms (-1.9%); @1992 3.082 -> 3.023 (-1.9%)
+ds2dtest-2x-dev (model v2):
+   main           9.651 ->   6.730 ms @1104 ( -30.3%)   @1992   5.497 ->   3.885
+   bananads-2d   16.510 ->  11.612 ms @1104 ( -29.7%)   @1992   9.425 ->   6.718
+   thread1        0.384 ->   0.347 ms @1104 (  -9.6%)   @1992   0.253 ->   0.233
+   thread2        0.376 ->   0.351 ms @1104 (  -6.4%)   @1992   0.249 ->   0.235
+   critical path (slowest thread) @1104: bananads-2d 16.510 -> bananads-2d 11.612 ms (-29.7%); @1992 9.425 -> 6.718 (-28.7%)
+ds2dtest-2x-dev-rep (model v2):
+   main           9.686 ->   6.692 ms @1104 ( -30.9%)   @1992   5.516 ->   3.854
+   bananads-2d   16.507 ->  11.575 ms @1104 ( -29.9%)   @1992   9.425 ->   6.688
+   thread1        0.372 ->   0.342 ms @1104 (  -8.1%)   @1992   0.247 ->   0.231
+   thread2        0.380 ->   0.358 ms @1104 (  -6.0%)   @1992   0.250 ->   0.238
+   critical path (slowest thread) @1104: bananads-2d 16.507 -> bananads-2d 11.575 ms (-29.9%); @1992 9.425 -> 6.688 (-29.0%)
+membench-1x-st (model v2):
+   main           4.662 ->   4.295 ms @1104 (  -7.9%)   @1992   2.800 ->   2.600
+   critical path (slowest thread) @1104: main 4.662 -> main 4.295 ms (-7.9%); @1992 2.800 -> 2.600 (-7.2%)
+
+## L5-1x-dev-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-1x-dev-A --mode dev --frames 100:300 --set render.scale=1
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-1x-dev-B --mode dev --frames 100:300 --set render.scale=1
+
+== thread 0 (main): ms/frame @1104 4.310 -> 4.311 (+0.02%)   @1992 2.580 -> 2.583 (+0.10%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.000 -> 4.219 (+5.48%)
+  insn 3222.6k->3124.6k (-3.0%)  base 3436.6k->3352.3k (-2.5%)  l1i_miss 10.7k->13.7k (+27.2%)  l1i_l3miss 0.5k->0.5k (+0.6%)  ld_miss 7.3k->7.1k (-2.1%)  ld_l3miss 2.7k->2.8k (+2.0%)  st_miss 2.9k->2.9k (-1.9%)  st_l3miss 1.8k->1.7k (-4.8%)  itlb_l2 14.3k->10.6k (-26.3%)  itlb_walk 0.0k->0.0k (+46.9%)  dtlb_l2 24.5k->29.9k (+21.8%)  dtlb_walk 0.0k->0.0k (+48.4%)  bcond_miss 20.9k->20.2k (-3.6%)  bind_miss 5.7k->5.7k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.345     0.404    +0.059     288.1k     321.6k
+  scheduler/core       0.701     0.649    -0.052     548.2k     510.5k
+  3d-geometry          0.959     0.946    -0.013     849.9k     833.6k
+  memory               0.264     0.253    -0.012     254.1k     249.5k
+  other                0.105     0.112    +0.008      61.2k      63.0k
+  jit-code             0.263     0.268    +0.005     207.4k     200.9k
+  2d                   1.503     1.506    +0.003     868.4k     794.8k
+  audio                0.071     0.073    +0.002      76.0k      78.5k
+  libc/lib             0.029     0.028    -0.001       3.9k       3.7k
+  jit-runtime          0.072     0.072    +0.001      65.5k      68.5k
+
+== thread 1 (thread1): ms/frame @1104 1.336 -> 1.323 (-0.95%)   @1992 0.783 -> 0.775 (-1.00%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 1.247 -> 1.244 (-0.23%)
+  insn 1147.2k->1126.0k (-1.8%)  base 1129.6k->1116.2k (-1.2%)  l1i_miss 0.1k->0.2k (+139.3%)  l1i_l3miss 0.0k->0.0k (+15.7%)  ld_miss 6.0k->6.0k (-1.0%)  ld_l3miss 0.7k->0.7k (-2.0%)  st_miss 1.1k->1.0k (-4.7%)  st_l3miss 0.2k->0.2k (-9.9%)  itlb_l2 0.0k->0.0k (-5.4%)  dtlb_l2 2.9k->3.4k (+16.6%)  bcond_miss 5.3k->5.1k (-3.6%)  bind_miss 0.1k->0.1k (-3.8%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.232     1.215    -0.017    1041.6k    1026.3k
+  other                0.100     0.104    +0.004     104.3k      97.6k
+  libc/lib             0.004     0.004    +0.000       1.4k       2.1k
+
+== thread 2 (thread2): ms/frame @1104 1.315 -> 1.280 (-2.66%)   @1992 0.765 -> 0.749 (-2.10%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 1.222 -> 1.204 (-1.53%)
+  insn 1145.5k->1091.7k (-4.7%)  base 1127.7k->1082.1k (-4.0%)  l1i_miss 0.1k->0.2k (+138.4%)  l1i_l3miss 0.0k->0.0k (+24.4%)  ld_miss 5.9k->5.8k (-1.7%)  ld_l3miss 0.6k->0.7k (+8.1%)  st_miss 1.0k->1.0k (-2.8%)  st_l3miss 0.2k->0.2k (+11.9%)  itlb_l2 0.0k->0.0k (-7.4%)  dtlb_l2 2.9k->3.3k (+14.2%)  dtlb_walk 0.0k->0.0k (-69.4%)  bcond_miss 5.2k->4.9k (-5.5%)  bind_miss 0.1k->0.1k (-7.9%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.211     1.175    -0.036    1038.5k     993.8k
+  libc/lib             0.004     0.005    +0.001       1.7k       3.0k
+  other                0.100     0.100    -0.000     105.4k      94.9k
+
+## L5-1x-st-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-1x-st-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-1x-st-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.871 -> 6.809 (-0.91%)   @1992 4.064 -> 4.034 (-0.73%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.362 -> 6.511 (+2.34%)
+  insn 5472.0k->5299.0k (-3.2%)  base 5652.6k->5507.6k (-2.6%)  l1i_miss 10.9k->14.0k (+29.4%)  l1i_l3miss 0.5k->0.5k (+4.0%)  ld_miss 18.5k->17.7k (-4.6%)  ld_l3miss 3.9k->3.9k (+2.2%)  st_miss 4.8k->4.8k (-0.3%)  st_l3miss 2.1k->2.0k (-2.6%)  itlb_l2 14.4k->10.6k (-26.2%)  itlb_walk 0.0k->0.0k (+22.5%)  dtlb_l2 32.0k->36.9k (+15.6%)  dtlb_walk 0.0k->0.0k (+49.5%)  bcond_miss 31.3k->30.2k (-3.6%)  bind_miss 5.9k->5.9k (-0.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       0.697     0.641    -0.056     548.2k     510.5k
+  3d-geometry          0.956     0.933    -0.023     849.9k     833.6k
+  memory               0.264     0.253    -0.011     254.1k     249.5k
+  other                0.295     0.304    +0.009     263.9k     248.9k
+  gengis               2.707     2.714    +0.007    2332.9k    2308.2k
+  2d                   1.515     1.520    +0.005     868.4k     794.8k
+  jit-code             0.263     0.266    +0.003     207.4k     200.9k
+  audio                0.070     0.072    +0.002      76.0k      78.5k
+  libc/lib             0.034     0.034    +0.001       5.7k       5.7k
+  jit-runtime          0.071     0.072    +0.000      65.5k      68.5k
+
+## L5-2x-dev-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-2x-dev-A --mode dev --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-2x-dev-B --mode dev --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.392 -> 2.765 (-37.04%)   @1992 2.672 -> 1.630 (-39.01%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.740 -> 2.156 (-42.35%)
+  insn 3413.0k->2280.6k (-33.2%)  base 3528.6k->2399.1k (-32.0%)  l1i_miss 5.8k->4.1k (-29.4%)  l1i_l3miss 0.7k->0.8k (+11.8%)  ld_miss 8.5k->1.9k (-77.8%)  ld_l3miss 3.2k->0.6k (-79.7%)  st_miss 4.0k->2.7k (-31.4%)  st_l3miss 3.0k->2.1k (-30.9%)  itlb_l2 12.7k->4.1k (-67.5%)  itlb_walk 0.0k->0.0k (+6.2%)  dtlb_l2 22.7k->24.7k (+8.4%)  dtlb_walk 0.1k->0.1k (-35.0%)  bcond_miss 19.6k->13.9k (-28.9%)  bind_miss 5.7k->5.6k (-0.9%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.512     0.018    -1.495    1079.3k      15.0k
+  other                0.139     0.082    -0.056      80.9k      33.9k
+  scheduler/core       0.688     0.637    -0.051     548.2k     510.5k
+  3d-geometry          0.932     0.892    -0.041     849.9k     833.6k
+  libc/lib             0.043     0.080    +0.037      13.1k      47.9k
+  memory               0.267     0.250    -0.017     254.1k     249.5k
+  jit-code             0.254     0.245    -0.009     207.4k     200.9k
+  audio                0.077     0.081    +0.004      76.0k      78.5k
+  2d                   0.408     0.408    +0.000     238.7k     242.5k
+  jit-runtime          0.071     0.071    +0.000      65.5k      68.5k
+
+== thread 1 (thread1): ms/frame @1104 2.620 -> 3.335 (+27.28%)   @1992 1.694 -> 2.127 (+25.53%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.440 -> 3.144 (+28.86%)
+  insn 1874.3k->2430.4k (+29.7%)  base 1841.7k->2400.1k (+30.3%)  l1i_miss 0.1k->0.1k (+28.4%)  l1i_l3miss 0.0k->0.1k (+30.7%)  ld_miss 12.3k->16.0k (+30.5%)  ld_l3miss 4.3k->4.9k (+15.4%)  st_miss 2.7k->3.4k (+28.2%)  st_l3miss 1.1k->1.1k (+4.4%)  itlb_l2 0.0k->0.0k (+22.0%)  dtlb_l2 4.5k->6.8k (+52.8%)  dtlb_walk 0.0k->0.0k (-9.1%)  bcond_miss 6.9k->9.2k (+33.3%)  bind_miss 0.1k->0.1k (+25.9%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.528     3.215    +0.687    1792.3k    2331.8k
+  other                0.087     0.115    +0.028      80.2k      97.5k
+  libc/lib             0.005     0.005    -0.000       1.8k       1.0k
+
+== thread 2 (thread2): ms/frame @1104 2.811 -> 3.321 (+18.12%)   @1992 1.809 -> 2.119 (+17.13%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.634 -> 3.128 (+18.75%)
+  insn 2026.2k->2420.6k (+19.5%)  base 1992.7k->2389.6k (+19.9%)  l1i_miss 0.1k->0.1k (+9.7%)  l1i_l3miss 0.1k->0.1k (+8.7%)  ld_miss 13.3k->15.9k (+19.4%)  ld_l3miss 4.4k->4.9k (+11.4%)  st_miss 2.9k->3.4k (+15.5%)  st_l3miss 1.1k->1.1k (+2.0%)  itlb_l2 0.0k->0.0k (+11.7%)  dtlb_l2 4.8k->6.8k (+40.4%)  dtlb_walk 0.0k->0.0k (-19.7%)  bcond_miss 7.5k->9.2k (+22.0%)  bind_miss 0.1k->0.1k (+16.5%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.711     3.201    +0.491    1937.4k    2321.2k
+  other                0.096     0.115    +0.019      87.0k      97.8k
+  libc/lib             0.005     0.005    -0.000       1.8k       1.6k
+
+== thread 3 (bananads-2d): ms/frame @1104 4.181 -> 4.080 (-2.41%)   @1992 2.849 -> 2.791 (-2.05%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.452 -> 3.410 (-1.22%)
+  insn 2485.9k->2185.5k (-12.1%)  base 2731.9k->2627.1k (-3.8%)  l1i_miss 0.1k->0.1k (+61.5%)  l1i_l3miss 0.1k->0.1k (+72.4%)  ld_miss 14.5k->15.0k (+3.1%)  ld_l3miss 9.5k->9.5k (-0.8%)  st_miss 2.9k->2.9k (-1.9%)  st_l3miss 1.8k->1.7k (-3.3%)  itlb_l2 0.0k->4.1k (+15276.7%)  itlb_walk 0.0k->0.0k (-21.9%)  dtlb_l2 5.7k->7.4k (+29.8%)  dtlb_walk 0.9k->0.9k (+2.5%)  bcond_miss 9.5k->6.1k (-35.7%)  bind_miss 0.0k->0.0k (+2.8%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   2.828     2.452    -0.376    1464.0k     857.2k
+  other                0.192     0.366    +0.174     162.8k     350.3k
+  gengis               1.159     1.249    +0.090     857.8k     967.9k
+  libc/lib             0.003     0.014    +0.011       1.2k      10.1k
+
+## L5-2x-dev-rep-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-2x-dev-rep-A --mode dev --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/dsstress-L5.nds L5-2x-dev-rep-B --mode dev --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.272 -> 2.753 (-35.56%)   @1992 2.592 -> 1.622 (-37.45%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.629 -> 2.096 (-42.26%)
+  insn 3334.4k->2291.8k (-31.3%)  base 3450.6k->2409.7k (-30.2%)  l1i_miss 5.8k->4.1k (-29.9%)  l1i_l3miss 0.7k->0.8k (+9.8%)  ld_miss 8.0k->1.3k (-83.3%)  ld_l3miss 2.9k->0.6k (-78.5%)  st_miss 3.8k->2.4k (-38.9%)  st_l3miss 2.9k->2.0k (-31.1%)  itlb_l2 12.8k->4.1k (-67.5%)  itlb_walk 0.0k->0.0k (-23.9%)  dtlb_l2 22.6k->24.7k (+9.3%)  dtlb_walk 0.1k->0.1k (-41.2%)  bcond_miss 19.3k->14.0k (-27.6%)  bind_miss 5.7k->5.6k (-0.8%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.401     0.017    -1.383    1008.1k      15.0k
+  scheduler/core       0.687     0.632    -0.055     548.2k     510.5k
+  other                0.133     0.083    -0.049      75.9k      34.5k
+  3d-geometry          0.933     0.884    -0.049     849.9k     833.6k
+  libc/lib             0.044     0.090    +0.046      12.8k      57.8k
+  memory               0.267     0.250    -0.017     254.1k     249.5k
+  jit-code             0.254     0.245    -0.010     207.4k     200.9k
+  2d                   0.405     0.401    -0.004     236.7k     243.2k
+  audio                0.077     0.079    +0.002      76.0k      78.5k
+  jit-runtime          0.071     0.071    +0.000      65.5k      68.5k
+
+== thread 1 (thread1): ms/frame @1104 2.713 -> 3.172 (+16.90%)   @1992 1.743 -> 2.022 (+16.02%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.543 -> 2.995 (+17.80%)
+  insn 1965.5k->2314.0k (+17.7%)  base 1931.6k->2284.4k (+18.3%)  l1i_miss 0.1k->0.1k (+21.1%)  l1i_l3miss 0.0k->0.1k (+22.1%)  ld_miss 12.9k->15.2k (+18.6%)  ld_l3miss 4.2k->4.7k (+10.7%)  st_miss 2.8k->3.3k (+18.9%)  st_l3miss 1.0k->1.0k (+2.9%)  itlb_l2 0.0k->0.0k (+9.7%)  dtlb_l2 4.7k->6.7k (+42.4%)  dtlb_walk 0.0k->0.0k (+58.2%)  bcond_miss 7.3k->8.8k (+20.6%)  bind_miss 0.1k->0.1k (+16.1%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.618     3.056    +0.438    1880.5k    2219.1k
+  other                0.092     0.111    +0.019      84.0k      93.6k
+  libc/lib             0.004     0.005    +0.001       1.1k       1.3k
+
+== thread 2 (thread2): ms/frame @1104 2.677 -> 3.307 (+23.50%)   @1992 1.723 -> 2.102 (+22.01%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.508 -> 3.128 (+24.72%)
+  insn 1931.4k->2422.6k (+25.4%)  base 1898.1k->2393.4k (+26.1%)  l1i_miss 0.1k->0.1k (+43.1%)  l1i_l3miss 0.0k->0.1k (+45.1%)  ld_miss 12.7k->16.0k (+25.9%)  ld_l3miss 4.2k->4.8k (+12.8%)  st_miss 2.7k->3.4k (+24.9%)  st_l3miss 1.0k->1.1k (+4.0%)  itlb_l2 0.0k->0.0k (+18.8%)  dtlb_l2 4.6k->6.8k (+46.9%)  dtlb_walk 0.0k->0.0k (+11.6%)  bcond_miss 7.2k->9.2k (+28.2%)  bind_miss 0.1k->0.1k (+20.9%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.582     3.187    +0.605    1847.0k    2324.2k
+  other                0.090     0.114    +0.024      82.6k      97.1k
+  libc/lib             0.005     0.006    +0.001       1.8k       1.3k
+
+== thread 3 (bananads-2d): ms/frame @1104 4.281 -> 4.219 (-1.45%)   @1992 2.906 -> 2.867 (-1.35%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.568 -> 3.574 (+0.16%)
+  insn 2568.1k->2306.4k (-10.2%)  base 2813.5k->2745.6k (-2.4%)  l1i_miss 0.1k->0.1k (+44.2%)  l1i_l3miss 0.1k->0.1k (+51.4%)  ld_miss 15.3k->16.0k (+4.5%)  ld_l3miss 9.5k->9.4k (-0.9%)  st_miss 3.0k->3.5k (+14.6%)  st_l3miss 1.8k->1.7k (-8.6%)  itlb_l2 0.1k->4.1k (+7581.1%)  itlb_walk 0.0k->0.0k (-20.8%)  dtlb_l2 5.9k->7.9k (+32.4%)  dtlb_walk 0.9k->0.9k (+2.1%)  bcond_miss 9.8k->6.6k (-32.8%)  bind_miss 0.0k->0.0k (+5.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   2.837     2.467    -0.371    1465.8k     857.7k
+  other                0.199     0.370    +0.171     166.4k     355.2k
+  gengis               1.240     1.366    +0.126     932.1k    1079.6k
+  libc/lib             0.005     0.017    +0.012       3.7k      13.9k
+
+## cpubench-thumb-st-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds cpubench-thumb-st-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds cpubench-thumb-st-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 5.482 -> 5.376 (-1.94%)   @1992 3.082 -> 3.023 (-1.91%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.583 -> 3.552 (-0.85%)
+  insn 4970.1k->4848.2k (-2.5%)  base 5438.4k->5316.2k (-2.2%)  l1i_miss 2.9k->3.2k (+11.5%)  l1i_l3miss 0.2k->0.2k (-4.9%)  ld_miss 2.4k->2.4k (+1.9%)  ld_l3miss 0.5k->0.5k (+1.7%)  st_miss 1.1k->1.1k (+7.1%)  st_l3miss 0.5k->0.5k (+2.3%)  itlb_l2 5.6k->6.3k (+11.2%)  itlb_walk 0.0k->0.0k (+71.0%)  dtlb_l2 33.7k->33.1k (-1.7%)  dtlb_walk 0.0k->0.0k (+30.1%)  bcond_miss 22.9k->22.0k (-3.8%)  bind_miss 10.0k->10.0k (-0.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.194     0.149    -0.045     160.1k      98.1k
+  jit-code             2.913     2.887    -0.026    2796.8k    2771.6k
+  scheduler/core       1.328     1.305    -0.023    1126.5k    1116.5k
+  2d                   0.567     0.550    -0.018     432.2k     394.5k
+  jit-runtime          0.195     0.203    +0.007     190.2k     198.8k
+  libc/lib             0.023     0.019    -0.003       5.4k       5.4k
+  audio                0.067     0.069    +0.003      76.0k      78.5k
+  memory               0.192     0.190    -0.002     181.8k     183.6k
+
+## ds2dtest-2x-dev-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds ds2dtest-2x-dev-A --mode dev --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds ds2dtest-2x-dev-B --mode dev --frames 100:300
+
+== thread 0 (main): ms/frame @1104 9.651 -> 6.730 (-30.27%)   @1992 5.497 -> 3.885 (-29.33%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 8.110 -> 6.782 (-16.37%)
+  insn 8423.2k->5340.2k (-36.6%)  base 8918.8k->5658.3k (-36.6%)  l1i_miss 5.5k->8.7k (+58.4%)  l1i_l3miss 0.5k->0.6k (+24.2%)  ld_miss 29.2k->28.9k (-1.3%)  ld_l3miss 1.9k->1.9k (-0.1%)  st_miss 6.2k->6.0k (-3.9%)  st_l3miss 1.8k->1.9k (+0.8%)  itlb_l2 5.8k->7.3k (+26.8%)  itlb_walk 0.0k->0.0k (+134.1%)  dtlb_l2 19.2k->20.7k (+7.5%)  dtlb_walk 0.2k->0.2k (+4.8%)  bcond_miss 27.8k->18.9k (-32.1%)  bind_miss 1.7k->1.7k (-0.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   6.479     4.239    -2.240    5530.1k    3168.7k
+  other                0.436     0.101    -0.335     366.4k      62.7k
+  libc/lib             0.386     0.111    -0.275     468.9k      84.1k
+  memory               0.409     0.364    -0.045     416.8k     366.8k
+  scheduler/core       1.456     1.413    -0.042    1122.2k    1139.1k
+  audio                0.080     0.087    +0.007      76.0k      78.5k
+  jit-runtime          0.171     0.176    +0.005     191.0k     199.7k
+  gengis               0.029     0.032    +0.003      10.0k       8.8k
+  jit-code             0.207     0.206    -0.001     241.7k     231.8k
+
+== thread 1 (thread1): ms/frame @1104 0.384 -> 0.347 (-9.64%)   @1992 0.253 -> 0.233 (-8.08%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 0.466 -> 0.439 (-5.67%)
+  insn 273.0k->213.5k (-21.8%)  base 221.0k->183.8k (-16.8%)  ld_miss 3.2k->3.2k (-2.1%)  ld_l3miss 0.7k->0.7k (+0.5%)  st_miss 0.4k->0.4k (-3.2%)  st_l3miss 0.4k->0.4k (-2.1%)  itlb_l2 0.0k->0.0k (-7.5%)  dtlb_l2 0.5k->0.5k (-3.0%)  bcond_miss 0.2k->0.0k (-86.9%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.380     0.343    -0.037     271.9k     212.3k
+
+== thread 2 (thread2): ms/frame @1104 0.376 -> 0.351 (-6.45%)   @1992 0.249 -> 0.235 (-5.32%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 0.454 -> 0.447 (-1.75%)
+  insn 265.5k->217.1k (-18.2%)  base 215.0k->186.9k (-13.0%)  ld_miss 3.1k->3.2k (+2.4%)  ld_l3miss 0.7k->0.7k (+0.3%)  st_miss 0.4k->0.4k (+1.2%)  st_l3miss 0.4k->0.4k (+2.3%)  itlb_l2 0.0k->0.0k (-2.0%)  dtlb_l2 0.5k->0.5k (+1.4%)  bcond_miss 0.2k->0.0k (-86.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.373     0.348    -0.024     264.5k     216.0k
+
+== thread 3 (bananads-2d): ms/frame @1104 16.510 -> 11.612 (-29.66%)   @1992 9.425 -> 6.718 (-28.73%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 16.478 -> 14.312 (-13.15%)
+  insn 14157.4k->8721.6k (-38.4%)  base 14277.7k->8780.6k (-38.5%)  l1i_miss 0.1k->4.1k (+7145.6%)  l1i_l3miss 0.0k->0.1k (+1032.8%)  ld_miss 90.7k->91.7k (+1.1%)  ld_l3miss 4.8k->4.9k (+0.5%)  st_miss 14.2k->12.8k (-9.4%)  st_l3miss 1.5k->1.5k (+1.3%)  itlb_l2 0.1k->7.2k (+5340.4%)  itlb_walk 0.0k->0.0k (+50.5%)  dtlb_l2 23.0k->24.0k (+4.4%)  dtlb_walk 0.4k->0.4k (+5.6%)  bcond_miss 50.5k->39.6k (-21.6%)  bind_miss 0.0k->0.0k (-100.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                  16.253    11.277    -4.976   13957.9k    8453.2k
+  libc/lib             0.008     0.055    +0.048       8.0k      36.0k
+  other                0.249     0.280    +0.031     191.5k     232.4k
+
+## ds2dtest-2x-dev-rep-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds ds2dtest-2x-dev-rep-A --mode dev --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds ds2dtest-2x-dev-rep-B --mode dev --frames 100:300
+
+== thread 0 (main): ms/frame @1104 9.686 -> 6.692 (-30.91%)   @1992 5.516 -> 3.854 (-30.14%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 8.139 -> 6.692 (-17.78%)
+  insn 8453.5k->5348.4k (-36.7%)  base 8952.9k->5666.0k (-36.7%)  l1i_miss 5.5k->8.7k (+58.6%)  l1i_l3miss 0.5k->0.6k (+24.9%)  ld_miss 29.4k->28.0k (-4.9%)  ld_l3miss 1.9k->1.7k (-9.5%)  st_miss 6.0k->5.9k (-2.1%)  st_l3miss 1.8k->1.8k (-1.2%)  itlb_l2 5.7k->7.3k (+27.5%)  itlb_walk 0.0k->0.0k (+143.8%)  dtlb_l2 19.2k->20.7k (+7.6%)  dtlb_walk 0.2k->0.2k (+8.9%)  bcond_miss 27.8k->19.0k (-31.7%)  bind_miss 1.7k->1.7k (-0.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   6.487     4.195    -2.292    5535.5k    3169.2k
+  other                0.447     0.100    -0.347     375.2k      63.1k
+  libc/lib             0.396     0.117    -0.278     482.3k      91.1k
+  memory               0.408     0.364    -0.044     416.8k     366.8k
+  scheduler/core       1.457     1.414    -0.043    1122.2k    1139.1k
+  audio                0.080     0.087    +0.008      76.0k      78.5k
+  jit-runtime          0.171     0.176    +0.005     191.0k     199.7k
+  gengis               0.034     0.033    -0.001      12.8k       9.1k
+  jit-code             0.207     0.206    -0.001     241.7k     231.8k
+
+== thread 1 (thread1): ms/frame @1104 0.372 -> 0.342 (-8.06%)   @1992 0.247 -> 0.231 (-6.51%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 0.449 -> 0.431 (-4.02%)
+  insn 261.6k->208.2k (-20.4%)  base 211.8k->179.2k (-15.4%)  ld_miss 3.1k->3.1k (-0.3%)  ld_l3miss 0.7k->0.7k (+1.5%)  st_miss 0.4k->0.4k (-1.4%)  st_l3miss 0.4k->0.4k (-0.2%)  itlb_l2 0.0k->0.0k (+2.3%)  dtlb_l2 0.5k->0.5k (-1.3%)  bcond_miss 0.2k->0.0k (-86.5%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.369     0.339    -0.030     260.6k     207.1k
+
+== thread 2 (thread2): ms/frame @1104 0.380 -> 0.358 (-6.02%)   @1992 0.250 -> 0.238 (-4.74%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 0.464 -> 0.458 (-1.38%)
+  insn 273.0k->223.7k (-18.1%)  base 221.0k->192.6k (-12.9%)  ld_miss 3.2k->3.3k (+2.7%)  ld_l3miss 0.6k->0.7k (+2.1%)  st_miss 0.4k->0.4k (+1.3%)  st_l3miss 0.4k->0.4k (+2.5%)  itlb_l2 0.0k->0.0k (-10.0%)  dtlb_l2 0.5k->0.5k (+1.6%)  bcond_miss 0.2k->0.0k (-86.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               0.377     0.354    -0.023     271.9k     222.5k
+
+== thread 3 (bananads-2d): ms/frame @1104 16.507 -> 11.575 (-29.88%)   @1992 9.425 -> 6.688 (-29.03%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 16.474 -> 14.235 (-13.59%)
+  insn 14152.7k->8723.5k (-38.4%)  base 14273.1k->8782.5k (-38.5%)  l1i_miss 0.1k->4.1k (+7365.1%)  l1i_l3miss 0.0k->0.1k (+1080.9%)  ld_miss 90.6k->90.9k (+0.3%)  ld_l3miss 4.9k->4.7k (-3.3%)  st_miss 14.2k->13.0k (-8.3%)  st_l3miss 1.5k->1.5k (+3.9%)  itlb_l2 0.1k->7.2k (+5414.0%)  itlb_walk 0.0k->0.0k (-1.5%)  dtlb_l2 22.9k->24.0k (+4.7%)  dtlb_walk 0.4k->0.4k (+1.9%)  bcond_miss 50.5k->39.6k (-21.5%)  bind_miss 0.0k->0.0k (-100.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                  16.248    11.239    -5.009   13953.3k    8455.3k
+  libc/lib             0.008     0.055    +0.048       8.0k      35.7k
+  other                0.251     0.281    +0.030     191.4k     232.4k
+
+## membench-1x-st-ab.txt
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/membench-membench.nds membench-1x-st-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int/b/bananads /home/user/perf/roms/membench-membench.nds membench-1x-st-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.662 -> 4.295 (-7.88%)   @1992 2.800 -> 2.600 (-7.15%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.698 -> 3.591 (-2.90%)
+  insn 3636.9k->3073.8k (-15.5%)  base 3991.3k->3544.3k (-11.2%)  l1i_miss 3.9k->4.8k (+24.0%)  l1i_l3miss 1.1k->1.2k (+2.1%)  ld_miss 9.3k->9.4k (+0.9%)  ld_l3miss 2.7k->2.7k (+1.4%)  st_miss 3.5k->3.2k (-9.2%)  st_l3miss 1.3k->1.3k (-0.3%)  itlb_l2 5.8k->9.5k (+63.3%)  itlb_walk 0.0k->0.0k (-2.7%)  dtlb_l2 17.9k->19.0k (+5.7%)  dtlb_walk 0.0k->0.0k (+22.0%)  bcond_miss 17.0k->16.5k (-2.9%)  bind_miss 2.3k->2.2k (-0.7%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   2.128     1.871    -0.257    1677.1k    1247.7k
+  scheduler/core       1.279     1.221    -0.058    1014.4k     952.3k
+  gengis               0.556     0.513    -0.043     386.3k     322.8k
+  memory               0.206     0.196    -0.010     185.1k     180.0k
+  3d-geometry          0.130     0.125    -0.004     107.6k     104.1k
+  other                0.051     0.054    +0.003      39.0k      38.3k
+  audio                0.071     0.074    +0.003      76.0k      78.5k
+  jit-code             0.189     0.186    -0.003     128.7k     127.1k
+  libc/lib             0.034     0.035    +0.001       7.3k       7.4k
+  jit-runtime          0.018     0.018    +0.000      15.2k      15.5k

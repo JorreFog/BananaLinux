@@ -1,0 +1,18 @@
+# rgds-sim v1 A/B (ab.sh, st mode), device build (A) vs device build with -DBANANADS_HOT_OPT=-O3 (B), cpubench-thumb; 16:19 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh /home/user/BananaLinux/perf/bananads/rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devO3/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds --label devO3-cpubench-thumb   (full: /home/user/perf/core/runs/sim/devO3-cpubench-thumb-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds devO3-cpubench-thumb-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devO3/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds devO3-cpubench-thumb-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 5.647 -> 5.557 (-1.61%)   @1992 3.226 -> 3.178 (-1.50%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.806 -> 3.813 (+0.18%)
+  insn 4969.8k->4881.6k (-1.8%)  base 5438.1k->5320.1k (-2.2%)  l1i_miss 2.9k->3.7k (+25.8%)  l1i_l3miss 0.3k->0.3k (+4.4%)  ld_miss 2.9k->3.0k (+4.7%)  ld_l3miss 0.8k->0.8k (+1.1%)  st_miss 7.1k->6.6k (-7.1%)  st_l3miss 3.2k->3.3k (+1.5%)  itlb_l2 5.6k->5.0k (-11.7%)  itlb_walk 0.0k->0.0k (+1097.7%)  dtlb_l2 33.7k->32.9k (-2.4%)  dtlb_walk 0.0k->0.0k (+1386.0%)  bcond_miss 22.9k->21.9k (-4.4%)  bind_miss 10.0k->10.0k (-0.1%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.333     1.185    -0.148    1126.5k    1004.7k
+  memory               0.192     0.245    +0.053     181.8k     236.5k
+  audio                0.067     0.078    +0.010      76.0k      85.2k
+  2d                   0.646     0.652    +0.006     432.2k     403.9k
+  jit-code             2.915     2.909    -0.005    2796.8k    2796.8k
+  gengis               0.264     0.260    -0.003     160.1k     158.4k
+  libc/lib             0.226     0.225    -0.002     195.3k     195.3k
+  jit-runtime          0.003     0.002    -0.000       1.0k       0.8k

@@ -1,0 +1,8 @@
+calls/frame: 1007
+    394  ee07cf9a  cp15 c7,c10,4  id 7a4
+    394  ee070f3e  cp15 c7,c14,1  id 7e1
+    123  ee072f5a  cp15 c7,c10,2  id 7a2
+     71  ee070f36  cp15 c7,c6,1  id 761
+     18  ee070f3a  cp15 c7,c10,1  id 7a1
+      6  ee070f90  cp15 c7,c0,4  id 704
+      0  ee070f9a  cp15 c7,c10,4  id 7a4

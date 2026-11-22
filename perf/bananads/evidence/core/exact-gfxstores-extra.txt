@@ -1,0 +1,11 @@
+ds2dtest-ds2dtest soft: compared
+ds2dtest-ds2dtest gengis2: compared
+membench-membench soft: compared
+membench-membench gengis2: compared
+sndbench-sndbench soft: compared
+sndbench-sndbench gengis2: compared
+dmasnd-dmasnd soft: compared
+dmasnd-dmasnd gengis2: compared
+dsstress-L5 soft: compared
+dsstress-L5 gengis2: compared
+extra: FAILS=0

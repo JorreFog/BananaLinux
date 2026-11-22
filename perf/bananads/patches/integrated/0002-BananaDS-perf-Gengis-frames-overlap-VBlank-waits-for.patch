@@ -1,0 +1,467 @@
+From ea886e871516f9e7842fb50fd989b6784632d384 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 15:27:30 +0000
+Subject: [PATCH 02/23] BananaDS perf: Gengis frames overlap, VBlank waits for
+ the conversion only (render.3d_pipeline)
+
+At VBlank the emulator's thread waited for every bin of the 3D frame (Finish3DRendering -> WaitAll) and drew
+the missing ones itself (render.gengis_help); under qemu on dsstress L5 that was 227 of 1188 bins, a third of
+the thread's instructions. The frame's polygons and render registers are only read by the conversion (the first
+thread to claim a bin copies them into gx_polys and a gx_frame), the bins read those copies, the texture flats
+and the texture cache. So two frame slots now (gx_frame, polygons, rows, and their own copies of the pipeline's
+DISP3DCNT / alpha reference / toon table blocks, gx_frame_init), bins claimed from one 64-bit word (gen << 32 |
+next bin, so a claim is of a known frame), a done mask per slot:
+- Finish3DRendering waits only for the frame's conversion (melonDS swaps its polygon RAM right after), and
+  helps with it only with render.gengis_help=2 as before;
+- a frame starts (line 215) once the slot it takes, the frame before last's, is drawn, and once every bin of the
+  last frame is claimed (it helps or waits for those); texture or texture-palette VRAM changes still wait for
+  every bin first (the bins read the flats and the cache);
+- the 2D thread waits for each line's bin of the frame its job names (render.3d_wait2d; a slot holding a later
+  frame means the job's frame was all drawn before it); the emulator's thread, when it does need a bin
+  (X scroll, capture, no 2D thread), waits for the shown frame's, helping only with that frame's bins;
+- savestates wait for every bin (PreSavestate), as do Reset and the end.
+Off: VBlank waits for all the frame's bins as before. Same pictures: every read is ordered as it was, and
+fused.c's per-thread texture alpha cache (f_begin_frame per frame gen) only chooses between kernels of the same
+result. With no render threads nothing changes.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md        |   1 +
+ bananads/gengis/gx.c             |  27 +++----
+ bananads/gengis/gx.h             |   7 +-
+ bananads/src/emu.cpp             |   3 +
+ bananads/src/gengis_renderer.cpp | 125 +++++++++++++++++++++++--------
+ bananads/src/gengis_renderer.h   |  51 +++++++++----
+ 6 files changed, 153 insertions(+), 61 deletions(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 35cd95c..6df8537 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -41,6 +41,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.fog` | `on` | Gengis Engine draws the distance fog games ask for (DISP3DCNT's fog). `off` leaves it out |
+ | `render.gengis_threads` | `3` | Gengis Engine's render threads (the emulator's thread also renders a bin when it has to wait for one) |
+ | `render.gengis_defer` | `off` | Gengis Engine's deferred shading of opaque polygons |
++| `render.3d_pipeline` | `on` | Gengis Engine with render threads: a frame's bins may still be being drawn while the next frame is converted and started (two frame slots, each with its own polygons and rows). The emulator's thread waits at VBlank only for the frame's conversion (after it melonDS's polygon RAM is free), not for its bins, and before a frame starts only for the slot it takes (the frame before last's bins). The 2D thread waits for each line's bin (`render.3d_wait2d`); without the 2D thread, the emulator's thread waits for a line's bin when it composites the line. `off`: VBlank waits for all the frame's bins, as before. Same pictures |
+ | `render.gengis_help` | `1` | when the emulator's thread needs a Gengis bin that isn't drawn yet: `2` it draws one itself (as before), `1` only once a render thread has converted the frame (its polygons and textures stay off the emulator's thread), `0` it waits. With no render threads it always draws. Same pictures |
+ | `render.threaded` | `on` | melonDS's software 3D renderer on its own thread (`render.renderer=soft`) |
+ | `save.dir` | the ROM's folder | where `<game>.sav` lives |
+diff --git a/bananads/gengis/gx.c b/bananads/gengis/gx.c
+index 0ad37a3..b15cec3 100644
+--- a/bananads/gengis/gx.c
++++ b/bananads/gengis/gx.c
+@@ -67,33 +67,34 @@ extern uint32_t gx_tabs[GX_TABS_N];
+ #endif
+ 
+ /* the sys and geom blocks: the fields fused.c reads, at DraStic's offsets (calloc'd: the untouched pages cost no
+- * memory) */
++ * memory); a frame's own (gx_frame_init), so that a frame's bins can still be drawn while the next frame's are
++ * started with other values (render.3d_pipeline) */
+ #define GX_SYS_SIZE  0x34ec00
+ #define GX_GEOM_SIZE 0x9b00
+ #define SYS_ALPHA_REF 0x34eb44
+ #define GEOM_TOON     0x99cc
+ #if GX_SCALE == 1
+-uint8_t *gx_sys, *gx_geom;
+-
+ void gx_init(void) {
+-    if (gx_sys) return;
++    if (ds_base) return;
+     for (uint32_t i = 1; i < 1024; i++) {
+         gx_tabs[i] = (0x3fffffffu + i) / i;
+         gx_tabs[(GX_RECIP_U_OFF - GX_RECIP_OFF) / 4 + i] = (0x7fffffffu + i) / i;
+     }
+     ds_base = (uintptr_t)gx_tabs - GX_RECIP_OFF;
+-    gx_sys = calloc(1, GX_SYS_SIZE);
+-    gx_geom = calloc(1, GX_GEOM_SIZE);
++}
++
++void gx_frame_init(gx_frame *f) {
++    if (f->sys) return;
++    f->sys = calloc(1, GX_SYS_SIZE);
++    f->geom = calloc(1, GX_GEOM_SIZE);
+ }
+ 
+ /* the frame's values that fused.c reads; before any thread renders a bin of the frame */
+-void gx_begin_frame(const gx_frame *f) {
+-    U32(gx_sys, SYS_DISP3DCNT) = f->d3;
+-    U32(gx_sys, SYS_ALPHA_REF) = f->aref;
+-    memcpy(gx_geom + GEOM_TOON, f->toon, sizeof f->toon);
++void gx_begin_frame(gx_frame *f) {
++    U32(f->sys, SYS_DISP3DCNT) = f->d3;
++    U32(f->sys, SYS_ALPHA_REF) = f->aref;
++    memcpy(f->geom + GEOM_TOON, f->toon, sizeof f->toon);
+ }
+-#else
+-extern uint8_t *gx_sys, *gx_geom;
+ #endif
+ 
+ /* ---- the walker: walk_impl.h in this scale's layout ---- */
+@@ -238,7 +239,7 @@ static const uint32_t *gx_resolve(gx_t *H, const gx_frame *f) {
+ void gx_render_bin(const gx_frame *f, unsigned bin, uint32_t *out) {
+     gx_t *H = gx_get();
+     if (H->gen != f->gen) { f_begin_frame(); H->gen = f->gen; }     /* (the texture entries are the frame's) */
+-    U64(H->ctx, GX_HDR) = (uint64_t)(uintptr_t)gx_sys; U64(H->ctx, GX_HDR + 8) = (uint64_t)(uintptr_t)gx_geom;
++    U64(H->ctx, GX_HDR) = (uint64_t)(uintptr_t)f->sys; U64(H->ctx, GX_HDR + 8) = (uint64_t)(uintptr_t)f->geom;
+     const unsigned hy0 = bin * GX_BL;
+     const int lb = (int)hy0 - 1;                                    /* context line l is frame line lb + l */
+     const unsigned bin_top = hy0 ? hy0 - 1 : 0;
+diff --git a/bananads/gengis/gx.h b/bananads/gengis/gx.h
+index 2b0009c..42cab0d 100644
+--- a/bananads/gengis/gx.h
++++ b/bananads/gengis/gx.h
+@@ -49,11 +49,16 @@ typedef struct {
+     const gx_poly *polys;
+     unsigned npolys, ntranslucent;      /* the translucent ones last */
+     unsigned gen;                       /* the frame's number: the threads' per-frame state */
++    uint8_t *sys, *geom;                /* the frame's own copies of the blocks the pixel pipeline reads (DISP3DCNT,
++                                         * the alpha reference, the toon table): gx_frame_init allocates them,
++                                         * gx_begin_frame fills them, so two frames can be in flight at once */
+ } gx_frame;
+ 
+ void gx_init(void);
++/* the frame's blocks (sys, geom), once per gx_frame before its first gx_begin_frame */
++void gx_frame_init(gx_frame *f);
+ /* the frame's state the pixel pipeline reads from its own places; before any thread renders a bin of the frame */
+-void gx_begin_frame(const gx_frame *f);
++void gx_begin_frame(gx_frame *f);
+ /* render bin `bin` of the frame into out (GX_BL lines of GX_W pixels, melonDS's 3D layer format) */
+ void gx_render_bin(const gx_frame *f, unsigned bin, uint32_t *out);
+ /* the same at 2x (gx2.c), from 2x vertex positions: 2 * GX_BL rows of 2 * GX_W pixels, each row as its even pixels
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 3655014..ca0c4bf 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -444,6 +444,9 @@ bool Emu::load_rom(const std::string& path) {
+         const int threads = (int)cfg_.num("render.gengis_threads", 3);
+         const bool defer = cfg_.flag("render.gengis_defer", false);
+         GengisRenderer3D::Help = (int)cfg_.num("render.gengis_help", 1);
++        // render.3d_pipeline: a frame's bins may still be drawn while the next frame starts; VBlank waits only for
++        // the frame's conversion, not its bins (on; exact)
++        GengisRenderer3D::Pipeline = cfg_.flag("render.3d_pipeline", true);
+         // render.edge_marking, render.fog: off leaves the effect out even where the game turns it on (outlines
+         // round 3D models; distance fog)
+         GengisRenderer3D::SetEffects(cfg_.flag("render.edge_marking", true), cfg_.flag("render.fog", true));
+diff --git a/bananads/src/gengis_renderer.cpp b/bananads/src/gengis_renderer.cpp
+index 62169c8..d59e6fb 100644
+--- a/bananads/src/gengis_renderer.cpp
++++ b/bananads/src/gengis_renderer.cpp
+@@ -17,7 +17,10 @@ GengisRenderer3D::GengisRenderer3D(melonDS::GPU3D& gpu3D, int threads, bool defe
+     gx_init();
+     gx_defer = defer;
+     memset(OutBuf, 0, sizeof OutBuf);
+-    for (auto& d : Done) d.store(0);
++    for (int i = 0; i < 2; i++) {
++        gx_frame_init(&Slots[i].Frame);
++        Slots[i].Out = OutBuf[i];
++    }
+     if (threads < 0) threads = 0;
+     for (int i = 0; i < threads; i++) Threads.emplace_back([this] { Worker(); });
+     Platform::Log(Platform::LogLevel::Info, "[gengis] Gengis Engine at %dx, %d render threads%s\n", Scale_, threads,
+@@ -155,8 +158,10 @@ const gx_texture* GengisRenderer3D::GetTexture(uint32_t texparam, uint32_t texpa
+ 
+ melonDS::u32 GengisRenderer3D::DispMask = ~0u;
+ 
+-void GengisRenderer3D::Convert() {
++void GengisRenderer3D::Convert(Slot& s) {
+     const u32 d3 = GPU3D.RenderDispCnt;
++    std::vector<gx_poly>& Polys = s.Polys;
++    gx_frame& Frame = s.Frame;
+     Polys.clear();
+     std::vector<gx_poly> trl;
+     for (u32 i = 0; i < GPU3D.RenderNumPolygons; i++) {
+@@ -262,26 +267,34 @@ void GengisRenderer3D::Convert() {
+ // ---- the bins and the threads ----
+ 
+ int GengisRenderer3D::Help = 1;
++bool GengisRenderer3D::Pipeline = true;
+ 
+ bool GengisRenderer3D::RenderOne(bool emu) {
+-    const unsigned b = Next.fetch_add(1, std::memory_order_acq_rel);
+-    if (b >= GX_NBINS) return false;
++    uint64_t c = Claim.load(std::memory_order_acquire);
++    for (;;) {
++        if ((uint32_t)c >= GX_NBINS) return false;
++        if (Claim.compare_exchange_weak(c, c + 1, std::memory_order_acq_rel, std::memory_order_acquire)) break;
++    }
++    const unsigned b = (uint32_t)c, gen = (unsigned)(c >> 32);
++    Slot& s = Slots[gen & 1];
+     // the frame's polygons and textures, converted by the first thread to claim a bin of it (melonDS's state stays
+-    // until VBlank, where Finish3DRendering waits for the frame first)
++    // until VBlank, where Finish3DRendering waits for the conversion first)
+     int expect = 0;
+-    if (Converted.compare_exchange_strong(expect, 1, std::memory_order_acq_rel)) {
++    if (s.Converted.compare_exchange_strong(expect, 1, std::memory_order_acq_rel)) {
+         if (emu) EmuConverts++;
+-        Convert();
+-        gx_begin_frame(&Frame);
+-        Converted.store(2, std::memory_order_release);
++        Convert(s);
++        gx_begin_frame(&s.Frame);
++        s.Converted.store(2, std::memory_order_release);
++        { std::lock_guard<std::mutex> l(M); }  // (FinishRendering may be waiting for the conversion)
++        BinDone.notify_all();
+     } else {
+-        while (Converted.load(std::memory_order_acquire) != 2) std::this_thread::yield();
++        while (s.Converted.load(std::memory_order_acquire) != 2) std::this_thread::yield();
+     }
+-    if (Scale_ == 2) gx2_render_bin(&Frame, b, Out + b * GX_BL * GX_W * 4);
+-    else gx_render_bin(&Frame, b, Out + b * GX_BL * GX_W);
++    if (Scale_ == 2) gx2_render_bin(&s.Frame, b, s.Out + b * GX_BL * GX_W * 4);
++    else gx_render_bin(&s.Frame, b, s.Out + b * GX_BL * GX_W);
+     if (emu) EmuBins++;
+     AllBins.fetch_add(1, std::memory_order_relaxed);
+-    Done[b].store(Frame.gen, std::memory_order_release);
++    s.Done.fetch_or(1u << b, std::memory_order_release);
+     { std::lock_guard<std::mutex> l(M); }  // (a waiter between its test and its wait sees the notify)
+     BinDone.notify_all();
+     return true;
+@@ -292,7 +305,7 @@ void GengisRenderer3D::Worker() {
+     for (;;) {
+         {
+             std::unique_lock<std::mutex> l(M);
+-            Wake.wait(l, [&] { return Quit || (Gen != seen && Next.load(std::memory_order_acquire) < GX_NBINS); });
++            Wake.wait(l, [&] { return Quit || (Gen != seen && (uint32_t)Claim.load(std::memory_order_acquire) < GX_NBINS); });
+             if (Quit) return;
+             seen = Gen;
+         }
+@@ -300,56 +313,106 @@ void GengisRenderer3D::Worker() {
+     }
+ }
+ 
+-void GengisRenderer3D::WaitBin(unsigned bin) {
+-    while (Done[bin].load(std::memory_order_acquire) != Frame.gen) {
+-        // the emulator's thread renders a bin itself rather than wait (render.gengis_help)
+-        const bool help = Threads.empty() || Help == 2 || (Help == 1 && Converted.load(std::memory_order_acquire) == 2);
++// the emulator's thread waits for bins of s: it draws one itself rather than wait (render.gengis_help) when the
++// bins being claimed are s's (drawing another frame's would only lengthen this wait)
++void GengisRenderer3D::WaitSlot(Slot& s, uint32_t mask) {
++    auto drawn = [&] { return (s.Done.load(std::memory_order_acquire) & mask) == mask; };
++    while (!drawn()) {
++        const bool own = (unsigned)(Claim.load(std::memory_order_acquire) >> 32) == s.Gen.load(std::memory_order_relaxed);
++        const bool help = own && (Threads.empty() || Help == 2 || (Help == 1 && s.Converted.load(std::memory_order_acquire) == 2));
+         if (help && RenderOne(true)) continue;
+         std::unique_lock<std::mutex> l(M);
+-        BinDone.wait_for(l, std::chrono::milliseconds(1),
+-                         [&] { return Done[bin].load(std::memory_order_acquire) == Frame.gen; });
++        BinDone.wait_for(l, std::chrono::milliseconds(1), drawn);
+     }
+ }
+ 
++void GengisRenderer3D::WaitBin(unsigned bin) { WaitSlot(*Cur, 1u << bin); }
++
+ void GengisRenderer3D::WaitRows(int line, unsigned gen) {
+     if (line >= GX_H) line = GX_H - 1;
+-    const unsigned bin = (unsigned)line / GX_BL;
+-    auto drawn = [&] { return (int)(Done[bin].load(std::memory_order_acquire) - gen) >= 0; };
++    const uint32_t bit = 1u << ((unsigned)line / GX_BL);
++    Slot& s = Slots[gen & 1];
++    // (the slot holding a later frame: this one was all drawn before that frame took the slot)
++    auto drawn = [&] { return s.Gen.load(std::memory_order_acquire) != gen || (s.Done.load(std::memory_order_acquire) & bit); };
+     while (!drawn()) {
+-        if (Converted.load(std::memory_order_acquire) == 2 && RenderOne()) continue;  // (the 2D thread may help)
++        // (the 2D thread may help, with bins of the frame being claimed once it is converted)
++        const uint64_t c = Claim.load(std::memory_order_acquire);
++        if ((uint32_t)c < GX_NBINS && Slots[(unsigned)(c >> 32) & 1].Converted.load(std::memory_order_acquire) == 2 && RenderOne()) continue;
+         std::unique_lock<std::mutex> l(M);
+         BinDone.wait_for(l, std::chrono::milliseconds(1), drawn);
+     }
+ }
+ 
+ void GengisRenderer3D::WaitAll() {
+-    for (unsigned b = 0; b < GX_NBINS; b++) WaitBin(b);
++    for (Slot& s : Slots) WaitSlot(s, AllBinsMask);
++}
++
++template <class F>
++static bool AnyDirty(const F& f) {
++    uint64_t any = 0;
++    for (size_t i = 0; i < sizeof(f.Data) / sizeof(f.Data[0]); i++) any |= f.Data[i];
++    return any != 0;
+ }
+ 
+ void GengisRenderer3D::RenderFrame() {
+-    WaitAll();  // the last frame's bins read VRAM and the polygons: done before either changes
++    // the slot this frame takes held the frame before last: its bins done (as are their readers: the 2D thread is
++    // drained at each frame's end, QuarterRows) and its rows free. Without the pipeline the last frame's too
++    Slot& s = Slots[(Gen + 1) & 1];
++    if (!Pipeline || Threads.empty()) WaitAll();
++    else WaitSlot(s, AllBinsMask);
+     auto textureDirty = GPU.VRAMDirty_Texture.DeriveState(GPU.VRAMMap_Texture, GPU);
+     auto texPalDirty = GPU.VRAMDirty_TexPal.DeriveState(GPU.VRAMMap_TexPal, GPU);
++    // the last frame's bins read the texture flats and the texture cache: done before either changes
++    if (AnyDirty(textureDirty) || AnyDirty(texPalDirty)) WaitAll();
+     const bool textureChanged = GPU.MakeVRAMFlat_TextureCoherent(textureDirty);
+     const bool texPalChanged = GPU.MakeVRAMFlat_TexPalCoherent(texPalDirty);
+     if (!(textureChanged || texPalChanged) && GPU3D.RenderFrameIdentical) return;  // the lines are the last frame's
+     if (textureChanged || texPalChanged) Textures.clear();
+-    Out = Out == OutBuf[0] ? OutBuf[1] : OutBuf[0];  // (the workers see it through Next's store under M)
+-    Frame.gen = ++Gen;
++    // every bin of the last frame claimed before the claim word moves on to this frame (they are, unless the render
++    // threads had no time at all: then the emulator's thread claims them itself, or waits)
++    while ((uint32_t)Claim.load(std::memory_order_acquire) < GX_NBINS) {
++        Slot& last = *Cur;
++        const bool help = Threads.empty() || Help == 2 || (Help == 1 && last.Converted.load(std::memory_order_acquire) == 2);
++        if (help && RenderOne(true)) continue;
++        std::unique_lock<std::mutex> l(M);
++        BinDone.wait_for(l, std::chrono::milliseconds(1),
++                         [&] { return (uint32_t)Claim.load(std::memory_order_acquire) >= GX_NBINS; });
++    }
++    ++Gen;
++    s.Done.store(0, std::memory_order_relaxed);
++    s.Converted.store(0, std::memory_order_relaxed);
++    s.Out = OutBuf[Gen & 1];
++    s.Frame.gen = Gen;
++    s.Gen.store(Gen, std::memory_order_release);
++    Cur = &s;
+     if (Gen % 3600 == 0) {  // (render.gengis_help's effect, in the game's log, a line a minute or so)
+         Platform::Log(Platform::LogLevel::Info, "[gengis] %lu frames: the emulator's thread drew %lu of %lu bins and converted %lu frames\n",
+                       (unsigned long)Gen, EmuBins, AllBins.load(), EmuConverts);
+     }
+-    Converted.store(0, std::memory_order_relaxed);
+     {
+         std::lock_guard<std::mutex> l(M);
+-        Next.store(0, std::memory_order_release);
++        Claim.store((uint64_t)Gen << 32, std::memory_order_release);
+     }
+     Wake.notify_all();
+     if (Threads.empty()) WaitAll();
+ }
+ 
+-void GengisRenderer3D::FinishRendering() { WaitAll(); }
++void GengisRenderer3D::FinishRendering() {
++    if (!Pipeline || Threads.empty()) {
++        WaitAll();
++        return;
++    }
++    // melonDS swaps its polygon RAM and render registers next: the frame's conversion has read them. Its bins go on
++    // being drawn into their rows, which the 2D thread waits for line by line (render.3d_wait2d)
++    Slot& s = *Cur;
++    auto converted = [&] { return s.Converted.load(std::memory_order_acquire) == 2; };
++    while (!converted()) {
++        // (render.gengis_help=1 keeps the conversion off the emulator's thread: it waits for a render thread's)
++        if (Help == 2 && RenderOne(true)) continue;
++        std::unique_lock<std::mutex> l(M);
++        BinDone.wait_for(l, std::chrono::milliseconds(1), converted);
++    }
++}
+ 
+ u32* GengisRenderer3D::GetLine(int line) { return const_cast<u32*>(GetQuarter(line, 0)); }
+ 
+@@ -361,7 +424,7 @@ const u32* GengisRenderer3D::GetQuarter(int line, int q) {
+     }
+     if (line < GX_H) WaitBin((unsigned)line / GX_BL);  // (the same bin at 2x: 2 * GX_BL rows a bin)
+     else line = GX_H - 1;
+-    const u32* raw = Scale_ == 2 ? Out + (2 * line + (q >> 1)) * 2 * GX_W + (q & 1) * GX_W : Out + line * GX_W;
++    const u32* raw = QuarterRow(line, q);
+     const u16 xpos = GPU3D.RenderXPos;
+     if (!xpos) return raw;
+     // the X scroll, as melonDS's software renderer applies it (at 2x 2 * xpos 2x pixels: xpos in each quarter)
+diff --git a/bananads/src/gengis_renderer.h b/bananads/src/gengis_renderer.h
+index b68dd3f..c6e3fd2 100644
+--- a/bananads/src/gengis_renderer.h
++++ b/bananads/src/gengis_renderer.h
+@@ -44,8 +44,15 @@ public:
+     // 1 (the default) only once a render thread has converted the frame (its polygons and textures, the long part,
+     // kept off the emulator's thread), 0 never (it waits); with no render threads it always does
+     static int Help;
++    // render.3d_pipeline: a frame's bins may still be being drawn while the next frame is converted and started (two
++    // frame slots, each with its own polygons, pipeline blocks and rows). VBlank (FinishRendering) then waits only for
++    // the frame's conversion, after which melonDS's polygon RAM and render registers are free; the frame after next
++    // waits for the slot's bins before it reuses it (RenderFrame), and the 2D thread waits for each line's bin
++    // (render.3d_wait2d). Off: VBlank waits for all the frame's bins, as before. Same pictures either way
++    static bool Pipeline;
+     unsigned long EmuBins = 0, EmuConverts = 0;  // drawn and converted on the emulator's thread (logged at the end)
+     std::atomic<unsigned long> AllBins{0};
++    void WaitAll();   // every bin of every frame drawn (reset, savestates, texture changes, the end)
+     // at 2x, DS line `line`'s four 256-pixel lines: quarter q is 2x row 2 * line + (q >> 1), its even pixels (q & 1
+     // clear) or odd ones, with the X scroll applied
+     const melonDS::u32* GetQuarter(int line, int q);
+@@ -62,13 +69,14 @@ public:
+     // render's: those go into the other buffer). The emulator's thread then waits for the frame only at VBlank.
+     const melonDS::u32* QuarterRow(int line, int q) const {
+         if (line >= GX_H) line = GX_H - 1;
+-        return Scale_ == 2 ? Out + (2 * line + (q >> 1)) * 2 * GX_W + (q & 1) * GX_W : Out + line * GX_W;
++        const uint32_t* out = Cur->Out;
++        return Scale_ == 2 ? out + (2 * line + (q >> 1)) * 2 * GX_W + (q & 1) * GX_W : out + line * GX_W;
+     }
+     void WaitRows(int line, unsigned gen);
+     static const melonDS::u32* QuarterRowFn(void* self, melonDS::u32 line, int q) {
+         return static_cast<GengisRenderer3D*>(self)->QuarterRow((int)line, q);
+     }
+-    static unsigned RowsGenFn(void* self) { return static_cast<GengisRenderer3D*>(self)->Frame.gen; }
++    static unsigned RowsGenFn(void* self) { return static_cast<GengisRenderer3D*>(self)->Cur->Gen.load(std::memory_order_relaxed); }
+     static void WaitRowsFn(void* self, melonDS::u32 line, unsigned gen) { static_cast<GengisRenderer3D*>(self)->WaitRows((int)line, gen); }
+ 
+ private:
+@@ -80,26 +88,34 @@ private:
+     };
+     const gx_texture* GetTexture(uint32_t texparam, uint32_t texpal);
+     void Decode(Texture& tx, uint32_t texparam, uint32_t texpal);
+-    void Convert();
+-    bool RenderOne(bool emu = false);  // claim and render a bin of the frame; false when none is left
+-    void WaitBin(unsigned bin);
+-    void WaitAll();
++    // a frame in flight: two, alternated by each frame rendered (render.3d_pipeline lets them overlap). A frame's
++    // rows stay as they are through the next frame's rendering, so the 2D thread can read them (QuarterRows) until
++    // the frame's end without a wait at the next start
++    static constexpr uint32_t AllBinsMask = (1u << GX_NBINS) - 1;
++    struct Slot {
++        gx_frame Frame{};
++        std::vector<gx_poly> Polys;
++        uint32_t* Out = nullptr;                // OutBuf[Gen & 1]
++        std::atomic<unsigned> Gen{0};          // the frame's number (the 2D thread reads it: WaitRows)
++        std::atomic<int> Converted{2};         // the frame's conversion: 0 to do, 1 being done, 2 done
++        std::atomic<uint32_t> Done{AllBinsMask};  // bit b: bin b drawn
++    };
++    void Convert(Slot& s);
++    bool RenderOne(bool emu = false);  // claim and render a bin of the frame being claimed; false when none is left
++    void WaitBin(unsigned bin);        // the shown frame's bin
++    void WaitSlot(Slot& s, uint32_t mask);  // the emulator's thread: until s's bins in mask are drawn
+     void Worker();
+ 
+     std::unordered_map<uint64_t, std::unique_ptr<Texture>> Textures;
+-    std::vector<gx_poly> Polys;
+-    gx_frame Frame{};
+     int Scale_;
+-    // two frames' rows, alternated by each frame rendered: a frame's stay as they are through the next frame's
+-    // rendering, so the 2D thread can read them (QuarterRows) until the frame's end without a wait at the next start
+     alignas(64) uint32_t OutBuf[2][GX_H * GX_W * 4];  // 1x: GX_H lines of GX_W; 2x: gx2_render_bin's rows
+-    uint32_t* Out = OutBuf[0];                         // the frame being rendered or shown
+     alignas(16) uint32_t Scrolled[4][GX_W];
++    Slot Slots[2];
++    Slot* Cur = &Slots[0];              // the latest frame started: the one shown (GetQuarter, QuarterRow)
+ 
+-    // the frame's bins: claimed by the workers (and by the emulator's thread while it waits for one)
+-    std::atomic<unsigned> Next{GX_NBINS};
+-    std::atomic<unsigned> Done[GX_NBINS];
+-    std::atomic<int> Converted{2};  // the frame's conversion: 0 to do, 1 being done, 2 done
++    // the bins, claimed by the workers (and by the emulator's thread while it waits for one, and the 2D thread):
++    // the frame being claimed and its next bin, in one word so a claim is of a known frame
++    std::atomic<uint64_t> Claim{GX_NBINS};  // gen << 32 | next bin
+     unsigned Gen = 0;
+     std::mutex M;
+     std::condition_variable Wake, BinDone;
+@@ -131,14 +147,17 @@ public:
+     GengisRendererOn(melonDS::NDS& nds, int threads, bool defer, int scale = 1) : Base(nds) {
+         auto r = std::make_unique<GengisRenderer3D>(this->GPU.GPU3D, threads, defer, scale);
+         SetHires(this, r.get(), scale);
++        G = r.get();
+         this->Rend3D = std::move(r);
+     }
+     void PreSavestate() override {
+         Drain2D(this);
+-        this->Rend3D->FinishRendering();
++        G->WaitAll();  // (every bin, not only the frame's conversion as FinishRendering with render.3d_pipeline)
+     }
+     void PostSavestate() override { Resync2D(this); }
+     void SetRenderSettings(melonDS::RendererSettings&) override {}
++private:
++    GengisRenderer3D* G;
+ };
+ using GengisSoftRenderer = GengisRendererOn<melonDS::SoftRenderer>;
+ #ifdef BANANADS_2D
+-- 
+2.43.0
+

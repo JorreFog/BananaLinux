@@ -1,0 +1,9 @@
+# qemu libcache plugin (A55 L1: 32 KB 4-way 64 B I and D, LRU, no L2/prefetch/TLB), frames 100-300, whole process (soft renderer, single-threaded settings as measure.sh), reference build; 15:41 UTC
+# command: sh /home/user/perf/core/runs/icache.sh /home/user/perf/build-ref/b/bananads ref   (raw: /home/user/perf/core/runs/ref/<rom>/cache{100,300}.txt, incl. the top-20 missing instructions)
+cpubench-cpubench-thumb          insn     4808.0k/frame  L1I-miss      3.6k/frame (0.076%)  data     1935.2k/frame  L1D-miss     18.7k/frame (0.967%)
+cpubench-cpubench-arm            insn     4324.3k/frame  L1I-miss      2.1k/frame (0.049%)  data     1775.4k/frame  L1D-miss     18.6k/frame (1.046%)
+membench-membench                insn     5660.0k/frame  L1I-miss      7.6k/frame (0.135%)  data     2956.2k/frame  L1D-miss     35.9k/frame (1.214%)
+dsstress-L5                      insn    20866.3k/frame  L1I-miss     20.7k/frame (0.099%)  data     6873.8k/frame  L1D-miss    161.8k/frame (2.354%)
+sndbench-sndbench                insn     4821.9k/frame  L1I-miss      4.3k/frame (0.089%)  data     1810.4k/frame  L1D-miss     19.7k/frame (1.089%)
+ipcrom-ipctest                   insn     2799.5k/frame  L1I-miss     42.7k/frame (1.527%)  data     1010.6k/frame  L1D-miss      4.8k/frame (0.471%)
+# NB: the test ROMs' code fits the 32 KB L1I almost entirely (0.05-0.14% miss rate, 2-21k misses/frame); a game's JIT code is much larger, so layout gains measured here are a lower bound.

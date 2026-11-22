@@ -1,0 +1,19 @@
+# rgds-sim v1 A/B (ab.sh, st mode: single-threaded, Gengis on the main thread, 2D thread off; frames 100-300), device build (A) vs device PGO build (B), dsstress-L5; 16:16 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh /home/user/BananaLinux/perf/bananads/rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/dsstress-L5.nds --label devpgo-L5   (full: /home/user/perf/core/runs/sim/devpgo-L5-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds devpgo-L5-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/dsstress-L5.nds devpgo-L5-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.997 -> 6.708 (-4.13%)   @1992 4.163 -> 4.000 (-3.91%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.606 -> 6.532 (-1.12%)
+  insn 5471.9k->5182.1k (-5.3%)  base 5652.5k->5334.6k (-5.6%)  l1i_miss 10.8k->13.4k (+23.3%)  l1i_l3miss 0.5k->0.5k (-5.1%)  ld_miss 19.8k->18.6k (-5.7%)  ld_l3miss 3.8k->3.8k (-0.6%)  st_miss 9.8k->9.4k (-4.2%)  st_l3miss 5.0k->5.0k (+0.1%)  itlb_l2 14.4k->6.7k (-53.6%)  itlb_walk 0.0k->0.0k (+123.8%)  dtlb_l2 31.4k->34.5k (+10.0%)  dtlb_walk 0.0k->0.0k (+66.2%)  bcond_miss 31.3k->29.2k (-6.6%)  bind_miss 5.9k->4.8k (-18.6%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       0.709     0.580    -0.129     548.2k     467.7k
+  gengis               2.733     2.645    -0.088    2332.9k    2269.9k
+  2d                   1.592     1.525    -0.066     868.4k     765.0k
+  memory               0.265     0.247    -0.017     254.1k     249.5k
+  other                0.293     0.279    -0.014     263.2k     238.5k
+  jit-code             0.263     0.276    +0.013     207.4k     207.4k
+  audio                0.072     0.079    +0.008      76.0k      78.5k
+  3d-geometry          0.961     0.968    +0.006     849.9k     833.8k
+  libc/lib             0.109     0.108    -0.001      71.8k      71.8k

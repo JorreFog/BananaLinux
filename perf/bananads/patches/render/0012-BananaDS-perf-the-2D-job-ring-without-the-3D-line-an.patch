@@ -1,0 +1,175 @@
+From dc02f53340f28537dfb7264cd559df8cb21d4bf6 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 17:22:22 +0000
+Subject: [PATCH 12/18] BananaDS perf: the 2D job ring without the 3D-line and
+ display arrays between the jobs (render.2d_job_stride)
+
+A BananaRenderer::Job held its 4 KB copy of the 3D line's four quarters and its 512-byte display line inline, so a
+job was ~4.9 KB and the ring of 512 jobs 2.5 MB: every job the 2D thread took was on a page of its own, its ~250
+hot bytes on cache lines no stream prefetcher could have brought in, and with render.3d_share (the default at 2x)
+the 4 KB copy is never written at all. rgds-sim on the head (dsstress L5, device mode): the thread's loop
+(SetThreaded2D's lambda) 22.5k instructions but 0.147 ms/frame, 3.8% of the 2D thread, with 0.9k dTLB walks a frame.
+
+Now Line3D and Display are pointers; MakeJobRing lays the jobs out with a byte stride (JobAt) and points them at
+their arrays: render.2d_job_stride=compact (the default) keeps the arrays in a block of their own, so the ring the
+2D thread reads is 512 x ~256 B, consecutive; =inline puts each job's arrays right behind it, the layout before.
+Read once, when the ring is made (before SetThreaded2D in emu.cpp).
+
+Exact by construction: a layout, the same bytes in the same fields. rgds-sim (dev mode, inline -> compact): the
+thread's loop 0.176 -> 0.112 ms/frame on L5, 0.172 -> 0.139 on L10; the 2D thread's dTLB walks 0.9k -> 0.3k/frame;
+the thread as a whole within dev mode's noise. TSan (x86, 3 runs): no data race.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md     |  1 +
+ bananads/gpu2d/GPU_Banana.cpp | 28 +++++++++++++++++++++++-----
+ bananads/gpu2d/GPU_Banana.h   | 19 ++++++++++++++++---
+ bananads/src/emu.cpp          |  3 +++
+ 4 files changed, 43 insertions(+), 8 deletions(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 976aa40..56537ed 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -36,6 +36,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
+ | `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
+ | `render.2d_prefetch` | `off` | at `render.scale=2` with `render.3d_share` and `render.2d_quarters`, the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows, written on other cores and read once here: the 2D thread's main memory cost at 2x) while it composites this line's. Same pixels; off until the device says it helps (the simulator can't see prefetches) |
++| `render.2d_job_stride` | `compact` | the layout of the 2D thread's job ring (512 jobs). `compact`: a job's 3D-line copy (4 KB) and display-line copy (512 B) are stored apart from its other ~250 bytes, so the ring the 2D thread reads is 128 KB of consecutive jobs (with `render.3d_share` the 3D-line copies are never touched); `inline`: the arrays right behind each job as before (~5 KB a job, 2.5 MB, every job on a page of its own). Same pictures |
+ | `render.3d_share` | `on` | with Gengis and the 2D thread, a line's job points at Gengis's rows of the 3D frame (Gengis keeps two frames' rows) instead of a copy: at `render.scale=2` the line's four quarters (4 KB), at 1x the line (1 KB). Exact: the same frames and audio |
+ | `render.2d_lazy` | `on` | with the 2D thread (`render.2d_thread`), a frame's last lines may be drawn while the emulator runs the next frame: at a frame's end the emulator waits only for the frame before's, and whoever reads a frame (the KMS presenter, `top()`/`bottom()`, a savestate's picture) waits for its own. Same pictures |
+ | `render.3d_wait2d` | `on` | with `render.3d_share` (1x and 2x), the 2D thread waits for each line's Gengis bin before compositing it, not the emulator's thread; the emulator waits for the 3D frame only at VBlank (before the geometry engine's next frame; with `render.3d_pipeline` only for its conversion). Same pictures |
+diff --git a/bananads/gpu2d/GPU_Banana.cpp b/bananads/gpu2d/GPU_Banana.cpp
+index 9a2c3a3..88b5157 100644
+--- a/bananads/gpu2d/GPU_Banana.cpp
++++ b/bananads/gpu2d/GPU_Banana.cpp
+@@ -604,7 +604,7 @@ void BananaRenderer::PrepareScanlineJob(Job& job, u32 line, u32*& line3d)
+         const u16* display = DisplaySource(GPU, line);
+         job.HasDisplay = display != nullptr;
+         if (display)
+-            memcpy(job.Display, display, sizeof(job.Display));
++            memcpy(job.Display, display, 256 * sizeof(u16));
+     }
+     job.LogEnd = LogWrite;
+ }
+@@ -738,6 +738,24 @@ void BananaRenderer::Execute(Job& job)
+ // The 2D thread sleeps on Wake when it has caught up; Kick wakes it every KickBatch jobs, at VBlank, and whenever
+ // the emulator's thread is about to wait for it.
+ 
++// the job ring (render.2d_job_stride): every job's Line3D and Display point into JobArrays (compact) or just behind
++// the job itself (inline); the jobs are zeroed, as make_unique<Job[]> made them
++void BananaRenderer::MakeJobRing()
++{
++    JobStride = JobCompact ? JobHotSize : JobHotSize + JobArraysSize;
++    JobRing = std::make_unique<u8[]>((size_t)NumJobs * JobStride);
++    if (JobCompact)
++        JobArrays = std::make_unique<u8[]>((size_t)NumJobs * JobArraysSize);
++    for (u32 n = 0; n < NumJobs; n++)
++    {
++        u8* at = JobRing.get() + (size_t)n * JobStride;
++        Job* job = new (at) Job();
++        u8* arrays = JobCompact ? JobArrays.get() + (size_t)n * JobArraysSize : at + JobHotSize;
++        job->Line3D = reinterpret_cast<u32 (*)[256]>(arrays);
++        job->Display = reinterpret_cast<u16*>(arrays + 4 * 256 * sizeof(u32));
++    }
++}
++
+ void BananaRenderer::SetThreaded2D(bool on)
+ {
+     if (on == Thread2D)
+@@ -747,8 +765,8 @@ void BananaRenderer::SetThreaded2D(bool on)
+         StopWorker();
+         return;
+     }
+-    if (!Jobs)
+-        Jobs = std::make_unique<Job[]>(NumJobs);
++    if (!JobRing)
++        MakeJobRing();
+     if (!Log)
+         Log = std::make_unique<u8[]>(LogSize);
+     Head.store(0, std::memory_order_relaxed);
+@@ -863,7 +881,7 @@ void BananaRenderer::WorkerLoop()
+             KickPending = false;
+             continue;
+         }
+-        Execute(Jobs[tail % NumJobs]);
++        Execute(JobAt(tail));
+         tail++;
+         Tail.store(tail, std::memory_order_seq_cst);
+         if (FenceWaiting.load(std::memory_order_seq_cst))
+@@ -895,7 +913,7 @@ BananaRenderer::Job& BananaRenderer::NewJob()
+         Kick();
+         WaitForWorker([&] { return head - Tail.load(std::memory_order_acquire) < NumJobs; });
+     }
+-    return Jobs[head % NumJobs];
++    return JobAt(head);
+ }
+ 
+ void BananaRenderer::Submit()
+diff --git a/bananads/gpu2d/GPU_Banana.h b/bananads/gpu2d/GPU_Banana.h
+index ca492a3..e48fe8e 100644
+--- a/bananads/gpu2d/GPU_Banana.h
++++ b/bananads/gpu2d/GPU_Banana.h
+@@ -104,6 +104,8 @@ public:
+     // sched_yield as before (spin). A spin from the KMS presenter, at SCHED_FIFO, keeps its core from every other
+     // thread until the 2D thread catches up; blocking gives the core to the thread being waited for
+     void SetFenceWaitBlocking(bool on) { FenceBlock = on; }
++    // render.2d_job_stride (see Job below): compact (the arrays apart from the jobs) or inline; before SetThreaded2D
++    void SetJobCompact(bool on) { JobCompact = on; }
+     void Resync2D();  // after GPU::ResetVRAMCache (a savestate): the copies are made again from GPU's memory
+ 
+ private:
+@@ -141,13 +143,19 @@ private:
+         u32* DstB;
+         u16 BrightnessA, BrightnessB;
+         Banana2DRegs Regs[2];
+-        alignas(16) u32 Line3D[4][256];  // the 3D layer's line, when unit A's DISPCNT enables 3D (2x: its quarters)
++        u32 (*Line3D)[256];              // [4][256]: the 3D layer's line, when unit A's DISPCNT enables 3D (2x: its quarters)
+         const u32* Q3D[4];               // where the drawing reads them: Line3D's, or the 3D frame's rows (render.3d_share)
+         bool WaitRows;                   // render.3d_wait2d: the 2D thread waits for the rows of render RowsGen first
+         unsigned RowsGen;
+-        alignas(16) u16 Display[256];
++        u16* Display;                    // [256]
+         u64 LogEnd;                 // the copy log up to here is applied before the job is drawn
+     };
++    // render.2d_job_stride: a job's Line3D (4 KB) and Display (512 B) live apart from its other fields (compact, the
++    // default: the ring the 2D thread reads is 512 jobs x ~256 B, consecutive; with render.3d_share the arrays are
++    // never touched) or right behind them (inline: the layout before, ~5 KB a job, every job on a page of its own).
++    // Read when the ring is made (SetThreaded2D)
++    static constexpr size_t JobArraysSize = 4 * 256 * sizeof(u32) + 256 * sizeof(u16);
++    static constexpr size_t JobHotSize = (sizeof(Job) + 15) & ~(size_t)15;
+     // a whole frame's jobs (192 lines and 191 sprite lines): the emulator's thread doesn't wait for a 2D thread that
+     // lags within the frame, which catches up in VBlank (drained at the frame's end, SwapBuffers)
+     static constexpr u32 NumJobs = 512;
+@@ -179,7 +187,12 @@ private:
+     void PrepareSpritesJob(Job& job, u32 line);
+ 
+     bool Thread2D = false;
+-    std::unique_ptr<Job[]> Jobs;
++    bool JobCompact = true;
++    std::unique_ptr<u8[]> JobRing;      // NumJobs jobs, JobStride bytes apart (16-byte aligned)
++    std::unique_ptr<u8[]> JobArrays;    // compact: NumJobs x JobArraysSize, the jobs' Line3D and Display
++    size_t JobStride = 0;
++    Job& JobAt(u32 n) { return *reinterpret_cast<Job*>(JobRing.get() + (size_t)(n % NumJobs) * JobStride); }
++    void MakeJobRing();
+     std::atomic<u32> Head{0};   // jobs handed over (written by the emulator's thread)
+     std::atomic<u32> Tail{0};   // jobs drawn (written by the 2D thread)
+     bool LazyFrames = false;
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 64f8090..6228d57 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -482,6 +482,9 @@ bool Emu::load_rom(const std::string& path) {
+     // pictures (the default at render.scale=2); off (the default at 1x) draws them on the emulator's thread
+     // (on by default at 2x, where unit A composites four times: HeartGold at 1104 MHz 39.8 -> 49.6 fps)
+     if (banana2d) banana_ = &static_cast<BananaRenderer&>(nds_->GetRenderer());
++    // render.2d_job_stride: the 2D thread's jobs without their 3D-line and display arrays in between (compact, the
++    // default: the ring is 128 KB instead of 2.5 MB, a job no longer a page of its own) or with them (inline, as before)
++    if (banana2d) banana_->SetJobCompact(cfg_.str("render.2d_job_stride", "compact") != "inline");
+     if (banana2d && cfg_.flag("render.2d_thread", scale_ == 2)) banana_->SetThreaded2D(true);
+     // render.2d_batch: jobs handed to the 2D thread before it is woken (16: about 24 wakeups a frame)
+     if (banana2d) banana_->SetKickBatch((u32)cfg_.num("render.2d_batch", 16));
+-- 
+2.43.0
+

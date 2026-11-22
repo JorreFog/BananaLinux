@@ -1,0 +1,3 @@
+# coordinator, 17:50 UTC: ds2dtest, integrated + 0041 (coord-build, device toolchain), jit.gfxstores off vs on, 300 frames, dump every 30, audio dump
+## off: md5 of (ppm md5s + audio md5): 225633da4de5b4c3092d27d5f2787d6f  -
+## on: md5 of (ppm md5s + audio md5): 225633da4de5b4c3092d27d5f2787d6f  -

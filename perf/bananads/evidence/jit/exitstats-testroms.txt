@@ -1,0 +1,82 @@
+# MELONDS_JIT_EXITSTATS=100, Ubuntu-flag build of perf/jit 7315d05-era (first counter version: it also counted dispatches/slice ends), qemu, 300 frames, --set jit.irqchain=off|on; command per ROM:
+# MELONDS_JIT_EXITSTATS=100 qemu-aarch64 bananads --frontend headless --set jit=on --set jit.irqchain=$ic --set rtc.fixed=2026-10-11_12:00:00 --set headless.frames=300 ... <rom>
+== jitloops-jitloops-thumb irqchain=off
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              8042.6          0.0
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           2.9          0.0
+    back at the slice's end                              8040.3          0.0
+    back for an IRQ taken (CPSR.I clear)                    0.7          0.0
+    back for an IRQ masked (CPSR.I set)                     0.7          0.0
+    back for a halt or idle loop                            0.1          0.0
+    back otherwise (lookup/link/region at an exit)          0.9          0.0
+== jitloops-jitloops-thumb irqchain=on
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              8042.0          0.0
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           1.6          0.0
+    back at the slice's end                              8040.3          0.0
+    back for an IRQ taken (CPSR.I clear)                    0.7          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                            0.1          0.0
+    back otherwise (lookup/link/region at an exit)          0.9          0.0
+== cpubench-cpubench-thumb-arm7 irqchain=off
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              8600.9       4246.9
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           9.4          0.0
+    back at the slice's end                              8284.0       4246.9
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          316.9          0.0
+    back otherwise (lookup/link/region at an exit)          0.1          0.0
+== cpubench-cpubench-thumb-arm7 irqchain=on
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              8600.9       4246.9
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           9.4          0.0
+    back at the slice's end                              8284.0       4246.9
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          316.9          0.0
+    back otherwise (lookup/link/region at an exit)          0.1          0.0
+== membench-membench irqchain=off
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                               569.0         64.0
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           0.0          0.0
+    back at the slice's end                               463.6         60.0
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          105.4          4.0
+    back otherwise (lookup/link/region at an exit)          0.0          0.0
+== membench-membench irqchain=on
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                               569.0         64.0
+    lookup misses (compiled)                                0.0          0.0
+    region setups                                           0.0          0.0
+    back at the slice's end                               463.6         60.0
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          105.4          4.0
+    back otherwise (lookup/link/region at an exit)          0.0          0.0
+== ipcrom-ipctest irqchain=off
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              4495.5        202.4
+    lookup misses (compiled)                              102.2          0.0
+    region setups                                           0.0          0.0
+    back at the slice's end                              4291.2        100.2
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          204.2        102.2
+    back otherwise (lookup/link/region at an exit)          0.0          0.0
+== ipcrom-ipctest irqchain=on
+melonDS JIT exit stats: frames 100-299 (200), per frame ARM9 / ARM7
+  dispatches (ARM_Dispatch)                              4495.5        202.4
+    lookup misses (compiled)                              102.2          0.0
+    region setups                                           0.0          0.0
+    back at the slice's end                              4291.2        100.2
+    back for an IRQ taken (CPSR.I clear)                    0.0          0.0
+    back for an IRQ masked (CPSR.I set)                     0.0          0.0
+    back for a halt or idle loop                          204.2        102.2
+    back otherwise (lookup/link/region at an exit)          0.0          0.0

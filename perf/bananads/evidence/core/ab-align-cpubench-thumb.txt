@@ -1,0 +1,13 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds align-cpubench-thumb-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-align/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds align-cpubench-thumb-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 5.406 -> 5.401 (-0.10%)   @1992 3.093 -> 3.089 (-0.11%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.649 -> 3.590 (-1.62%)
+  insn 4739.2k->4765.0k (+0.5%)  base 5191.7k->5213.7k (+0.4%)  l1i_miss 2.7k->2.0k (-26.6%)  l1i_l3miss 0.3k->0.3k (+2.0%)  ld_miss 2.9k->3.0k (+0.9%)  ld_l3miss 0.8k->0.8k (-0.2%)  st_miss 6.6k->7.2k (+9.1%)  st_l3miss 3.3k->3.2k (-1.6%)  itlb_l2 3.9k->3.9k (-0.5%)  itlb_walk 0.0k->0.0k (+182.4%)  dtlb_l2 35.4k->32.9k (-7.2%)  dtlb_walk 0.0k->0.0k (-23.4%)  bcond_miss 21.7k->21.7k (-0.1%)  bind_miss 9.4k->8.8k (-6.3%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   0.589     0.579    -0.011     377.4k     382.8k
+  scheduler/core       1.210     1.220    +0.009    1012.5k    1033.0k
+  gengis               0.210     0.207    -0.002      93.9k      93.9k
+  audio                0.073     0.071    -0.002      78.5k      78.5k
+  memory               0.188     0.189    +0.001     183.6k     183.6k
