@@ -112,7 +112,7 @@ gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_KEYS=/run/test/keys "$W/bananad" & BD=$!
     sleep 0.5
 }
 stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }

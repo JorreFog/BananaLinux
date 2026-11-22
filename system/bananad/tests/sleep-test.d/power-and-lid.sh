@@ -101,3 +101,26 @@ asleep 2>/dev/null && bad "it slept: the new setting wasn't read" || ok "no slee
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 stop
 rm -f /run/banana/game.pid
+
+echo "power 9. a tap of the power button whose release is lost as a pad comes (the devices opened again): no shutdown"
+# (the release came during the 0.2 s bananad waits for the new node and went with the old descriptors: the button
+# stayed "held", and 2 s later the handheld shut down. /run/test/keys: the keys held now, as the kernel would say)
+: > /run/test/keys
+start "power_long_ms = 600"
+ev $EV_KEY $KEY_POWER 1; sleep 0.1
+: > /dev/input/js0; sleep 1.5      # (no release written: lost)
+[ $POWEROFF = 0 ] && ok "no shutdown from a release that was lost" || bad "shut down: the power button counted as held"
+asleep 2>/dev/null && { bad "it slept"; wake; } || ok "no sleep either (the tap is dropped)"
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+if asleep; then ok "the next tap sleeps"; wake; else bad "no sleep on the next tap"; fi
+stop; POWEROFF=0
+# ...and a button really held through it still shuts down
+echo $KEY_POWER > /run/test/keys
+start "power_long_ms = 600"
+ev $EV_KEY $KEY_POWER 1; sleep 0.1
+rm -f /dev/input/js0
+for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
+[ $POWEROFF = 1 ] && ok "held through it: shut down" || bad "no shutdown with the button held"
+ev $EV_KEY $KEY_POWER 0
+stop; POWEROFF=0
+rm -f /run/test/keys

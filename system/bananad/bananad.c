@@ -1811,6 +1811,37 @@ static int quiet_scan(void)
 	return 1;
 }
 
+/* The buttons bananad follows from press to release (power: held 2 s shuts down; F: the volume keys change the
+ * brightness; Select: the recorder's marker), after the devices were opened again: an event that came between the last
+ * read and the close went with the old descriptors (the 0.2 s the loop waits for a new node, mostly). A release lost
+ * that way left the button "held": a tap of the power button as a pad connected, or as a port's virtual pad
+ * (gptokeyb's uinput device) came or went, shut the handheld down 2 s later. So what the kernel says is held now
+ * (EVIOCGKEY) takes a button bananad still has down back up; the tap itself is dropped, no sleep from it.
+ * (Only asked while one is down: the ioctl also empties the descriptor's queue of key events.) */
+static const char *test_keys;	/* tests (tests/sleep-test.sh): the codes of the keys held now from this file, not the kernel */
+static void read_held(void)
+{
+	if (!power_down && !fn_held && !sel_down) return;
+	int known = 0, power = 0, fn = 0, sel = 0;
+	if (test_keys) {
+		FILE *f = fopen(test_keys, "r");
+		if (!f) return;
+		known = 1;
+		for (int c; fscanf(f, "%d", &c) == 1; ) { power |= c == KEY_POWER; fn |= c == BTN_MODE; sel |= c == BTN_SELECT; }
+		fclose(f);
+	}
+	for (int i = 0; i < ndev && !test_keys; i++) {
+		unsigned long keys[(KEY_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(devfd[i], EVIOCGKEY(sizeof keys), keys) < 0) continue;
+		known = 1;
+		power |= test_bit(keys, KEY_POWER); fn |= test_bit(keys, BTN_MODE); sel |= test_bit(keys, BTN_SELECT);
+	}
+	if (!known) return;
+	if (power_down && !power) { power_down = 0; say("the power button's release was lost while the input devices were opened again: not held"); }
+	if (fn_held && !fn) fn_held = 0;
+	if (sel_down && !sel) sel_down = 0;
+}
+
 static void open_inputs(void)
 {
 	for (int i = 0; i < ndev; i++) close(devfd[i]);
@@ -1840,6 +1871,7 @@ static void open_inputs(void)
 	}
 	closedir(d);
 	read_lid();
+	read_held();
 }
 
 /* the game running is a DS one (its command line): its emulator passes the lid on to the game */
@@ -2050,6 +2082,7 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	test_keys = getenv("BANANAD_TEST_KEYS");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
