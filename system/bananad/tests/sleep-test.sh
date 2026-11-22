@@ -64,6 +64,20 @@ int main(int argc, char **argv)
 }
 EOF
     cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"; cp "$W/drastic" "$W/bananafront"
+    # a wall clock that moves half a second at each reading of time() (LD_PRELOAD), from the whole second it starts
+    # in: a second that ticks over between two readings, at a known reading (sleep-test.d/poweroff-clock.sh)
+    cc -O2 -shared -fPIC -o "$W/half-second-clock.so" -x c - <<'EOF'
+#include <time.h>
+static time_t start;
+static long n;
+time_t time(time_t *t)
+{
+	if (!start) { struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); start = ts.tv_sec; }
+	time_t v = start + n++ / 2;
+	if (t) *t = v;
+	return v;
+}
+EOF
     [ "$1" = --build ] && exit 0
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"

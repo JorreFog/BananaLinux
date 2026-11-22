@@ -949,9 +949,12 @@ static void suspend_now(const char *why)
 			continue;
 		}
 		/* the RTC alarm: the sooner of the battery check and the deadline (passed: woken for it, or anything else
-		 * after it with the lid shut, and the game is saved and the handheld shut down) */
-		if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
-		if (off_at && time(NULL) >= off_at) {
+		 * after it with the lid shut, and the game is saved and the handheld shut down). One reading of the clock for
+		 * the check and the alarm: read again for the alarm, a second that ticked over in between gave an alarm of 0 s,
+		 * which is none, and the handheld slept past the deadline and the battery check until someone woke it */
+		time_t now = time(NULL);
+		if (cfg.poweroff_after_min > 0 && !off_at) off_at = now + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
+		if (off_at && now >= off_at) {
 			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
@@ -969,7 +972,7 @@ static void suspend_now(const char *why)
 			}
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
-		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
+		if (off_at && (secs <= 0 || off_at - now < secs)) secs = (int)(off_at - now);	/* (>= 1: checked above) */
 		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
