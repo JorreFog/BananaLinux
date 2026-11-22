@@ -5,7 +5,7 @@
 # (app.js once used Node's `global` and threw before drawing anything). This loads the page in headless Chromium,
 # checks the console is clean and the panels were populated, and — when the engine is built — that a preview drew.
 #
-#   sh tools/theme-studio/tests/ui.test.sh
+#   sh tools/theme-studio/tests/ui.test.sh            (CHROME=<path>: that Chromium, e.g. Playwright's)
 #
 # Skips (exit 0) when no Chromium is installed.
 set -e
@@ -14,10 +14,14 @@ ROOT=$(cd "$HERE/../../.." && pwd)
 PORT=8794
 BASE="http://127.0.0.1:$PORT"
 
-CHROME=""
-for c in chromium chromium-browser google-chrome google-chrome-stable; do
-    command -v "$c" >/dev/null 2>&1 && { CHROME=$c; break; }
-done
+# a Chromium that isn't on PATH under one of these names (Playwright's, in its own folder) is named by CHROME
+if [ -n "$CHROME" ]; then
+    command -v "$CHROME" >/dev/null 2>&1 || { echo "  FAIL CHROME=$CHROME isn't a program"; exit 1; }
+else
+    for c in chromium chromium-browser google-chrome google-chrome-stable; do
+        command -v "$c" >/dev/null 2>&1 && { CHROME=$c; break; }
+    done
+fi
 if [ -z "$CHROME" ]; then
     echo "  (skipped: no chromium to load the page with)"
     exit 0
