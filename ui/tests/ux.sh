@@ -356,3 +356,16 @@ ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png
 # English: nothing too long on the home screen, so no marquee wakes the menu
 ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
 grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
+
+# Chinese: a word's characters stand in the middle of the capitals beside them (#296: on the Latin baseline the
+# fallback font's characters sat 3 px high in a button, 5 on the Plus). The library's B button: the middle of Back's
+# two characters within 2 px (of 640x480) of the middle of the key cap beside them (3.5 before)
+ZHFX=$OUT/ux-zh-fixture-$size
+rm -rf "$ZHFX"; "$HERE/tests/fixture.sh" "$ZHFX" >/dev/null; echo "language = zh-cn" >> "$ZHFX/data/settings.conf"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$ZHFX/roms" --data "$ZHFX/data" \
+    --script "lib 0 0; wait 2400; shot ux-zh-lib" 2> "$OUT/$size-zh.log" || { echo "FAIL $size: banana-ui (Chinese) exited $?"; fail=1; }
+ux_mid() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v x=$3 'BEGIN { printf "%dx%d+%d+%d", w * k, 30 * k, x * k, 428 * k }')" +repage -threshold 78% -trim -format '%[fx:page.y+h/2]' info: 2>/dev/null; }
+zh_word=$(ux_mid "$OUT/$size-ux-zh-lib-bot.png" 46 62); zh_cap=$(ux_mid "$OUT/$size-ux-zh-lib-bot.png" 20 34)
+awk -v a="$zh_word" -v b="$zh_cap" -v k=$ux_k 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(a != "" && b != "" && d <= 2 * k) }' \
+    || { echo "FAIL $size: Chinese text isn't in the middle of its button (the word's middle at $zh_word, the key cap's at $zh_cap)"; fail=1; }

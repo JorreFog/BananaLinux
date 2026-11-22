@@ -4,6 +4,7 @@
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 #include FT_ADVANCES_H
+#include FT_TRUETYPE_TABLES_H
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -459,6 +460,16 @@ namespace rnds
 		return sFallbackPx * (float)(k < 1 ? 1 : k);
 	}
 
+	// (Banana, #296) A CJK character of the fallback stands in a box that reaches further above the baseline than the
+	// style's capitals do, so on the Latin baseline a Chinese word sat 3 px high in a button whose English word is
+	// centred. These characters are moved (whole device px) so their box's middle is the middle of the style's capitals;
+	// the fallback's Latin, Greek and signs keep the baseline.
+	static bool wideChar(uint32_t cp)
+	{
+		return (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7AF) || (cp >= 0xF900 && cp <= 0xFAFF) ||
+			(cp >= 0xFE30 && cp <= 0xFE4F) || (cp >= 0xFF00 && cp <= 0xFFEF) || (cp >= 0x20000 && cp <= 0x3FFFF);
+	}
+
 	static std::u32string (*sTranslate)(const std::u32string&) = nullptr;
 	void setTranslator(std::u32string (*translate)(const std::u32string&)) { sTranslate = translate; }
 	Translator translator() { return sTranslate; }
@@ -488,6 +499,12 @@ namespace rnds
 		font->mUpm = font->mFace->units_per_EM ? font->mFace->units_per_EM : 1000;
 		font->mAsc = font->mFace->ascender;
 		font->mDesc = -font->mFace->descender;
+		// (Banana, #296: what a fallback's CJK characters are centred by, renderLine)
+		TT_OS2* os2 = (TT_OS2*)FT_Get_Sfnt_Table(font->mFace, FT_SFNT_OS2);
+		font->mCap = os2 && os2->version != 0xffff && os2->sCapHeight > 0 ? os2->sCapHeight : font->mUpm * 7 / 10;
+		if (unsigned gi = FT_Get_Char_Index(font->mFace, 0x56FD))	// 国: a character that fills its box
+			if (FT_Load_Glyph(font->mFace, gi, FT_LOAD_NO_SCALE) == 0 && font->mFace->glyph->metrics.height > 0)
+				font->mWideMid = (int)(font->mFace->glyph->metrics.horiBearingY - font->mFace->glyph->metrics.height / 2);
 		return font;
 	}
 
@@ -769,7 +786,7 @@ namespace rnds
 		bool subpixel = (gTextMode & 1) != 0;
 		FT_Int32 flags = (gTextMode & 2) ? (FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) : FT_LOAD_TARGET_LIGHT;
 		// (Banana: a fallback character is drawn with its own face, at its own size: fallbackSize)
-		int fbSize64 = 0;
+		int fbSize64 = 0, fbDown = 0;
 		for (size_t i = 0; i < line.text.size(); i++)
 		{
 			unsigned gi;
@@ -778,12 +795,17 @@ namespace rnds
 			if (fnt != st.font.get())
 			{
 				glyphSize64 = roundi(fallbackSize(size) * 64);
-				if (fbSize64 != glyphSize64) { FT_Set_Char_Size(fnt->mFace, 0, (FT_F26Dot6)glyphSize64, 72, 72); fbSize64 = glyphSize64; }
+				if (fbSize64 != glyphSize64)
+				{
+					FT_Set_Char_Size(fnt->mFace, 0, (FT_F26Dot6)glyphSize64, 72, 72); fbSize64 = glyphSize64;
+					fbDown = fnt->mWideMid ? roundi(fnt->mWideMid * fallbackSize(size) / fnt->mUpm - st.font->mCap * size / st.font->mUpm / 2) : 0;
+				}
 			}
 			FT_Face face = fnt->mFace;
 			float penX = pad + leftFrac + line.x[i] * scale;
 			int ix = subpixel ? (int)std::floor(penX) : roundi(penX);
 			int iy = roundi(baseline);
+			if (fnt != st.font.get() && wideChar(line.text[i])) iy += fbDown;
 			// the rendered glyph (without a subpixel shift it doesn't depend on the pen position): kept per font
 			Font::Glyph tmp;
 			Font::Glyph* gl = &tmp;
