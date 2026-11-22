@@ -59,7 +59,8 @@ jobs:
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: DS launchers (run-drastic's drastic.cfg changes, nds-saves, against a made-up card)
-        run: sh system/tests/launchers-test.sh
+        # (as root: run-port's mounts for a port on the second card, in a namespace of their own)
+        run: sudo sh system/tests/launchers-test.sh
       - name: Shell scripts parse
         run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
       # past parsing: what ShellCheck calls a warning or an error in the same scripts, read as dash (the nearest it

@@ -917,6 +917,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("homeid %s: tile %d", id.c_str(), at);
 		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		else if (op == "games")
+		{
+			// games <system id>: that system's entries as the card has them ("@sd2/" before the second card's)
+			std::string id, all; cs >> id;
+			int at = -1;
+			for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+			if (at >= 0) for (auto& g : lib.shelf(at).games) all += " [" + g.rel + "]";
+			logf("games %s:%s", id.c_str(), at < 0 ? " not on the shelf" : all.c_str());
+		}
 		// gameend: the last launched game (or app) has ended, the menu back as runGame brings it back
 		else if (op == "gameend")
 		{

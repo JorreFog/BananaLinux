@@ -6,6 +6,37 @@
 # /data/home, not the read-only root.
 #   run-port <script>
 P=/data/roms/ports
+# A port on the second SD card (its roms/ports is on the Ports shelf too, as every system's folder there). A port's
+# script names its files by /roms/ports, which is this card's: the port's own folder wasn't there, and it quit at once
+# (#235). So such a port runs with mounts of its own (unshare -m; nothing changes for the menu or file sharing), where
+# the second card's ports folder is the one at /roms/ports, with this card's PortMaster in it (the Store's, the one
+# kept up to date), or the second card's own PortMaster where this card has none.
+# card_ports <this card's ports> <the second card's ports> <a folder to hold PortMaster's meanwhile>
+card_ports() {
+    _pm=
+    if [ -d "$1/PortMaster" ]; then
+        mkdir -p "$3" && mount --bind "$1/PortMaster" "$3" || return 1
+        _pm=1
+    fi
+    mount --bind "$2" "$1" || return 1
+    [ -z "$_pm" ] && return 0
+    mkdir -p "$1/PortMaster" && mount --bind "$3" "$1/PortMaster"
+}
+S2=$(cat /run/banana/sd2/roms 2>/dev/null)
+D=$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)
+if [ -n "$S2" ] && [ -n "$D" ] && [ "$D" = "$(cd "$S2/ports" 2>/dev/null && pwd -P)" ]; then
+    if [ -z "$BANANA_PORT_NS" ]; then
+        export BANANA_PORT_NS=1
+        unshare -m true 2>/dev/null && exec unshare -m "$0" "$@"
+        echo "no unshare -m here: $1 runs with this card's /roms/ports" >&2
+    elif card_ports $P "$D" /run/banana/port-pm; then
+        echo "the second card's ports are at /roms/ports for $1"
+        set -- "$P/${1##*/}"
+    else
+        echo "the second card's ports couldn't be put at /roms/ports: $1 runs with this card's" >&2
+    fi
+fi
+unset BANANA_PORT_NS
 # BananaOS's hook for ports (mod_<CFW_NAME>.txt, sourced by each port's script): the pad's GUID for get_controls,
 # without which every port quit at once ("Argument list too long"). Put back each time: PortMaster updates itself.
 M=/usr/share/banana/portmaster/mod_BananaOS.txt

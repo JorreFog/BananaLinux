@@ -333,5 +333,32 @@ fn "$L/run-bananafront" flat_gba_save
 check "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-bananafront" | cksum)" "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-retroarch" | cksum)" "run-bananafront's flat_gba_save is run-retroarch's"
 check "$(grep -c 'f=$(flat_gba_save "$n" ' "$L/run-retroarch" "$L/run-bananafront" | tr '\n' ' ')" "$L/run-retroarch:1 $L/run-bananafront:1 " "both launchers look there for a GBA game with no save yet"
 
+echo "run-port: a port on the second card runs with that card's ports at /roms/ports (#235)"
+# run-port itself down to where the port's place is settled, on a made-up pair of cards; what it prints then: the
+# script it would start, whose PortMaster is in /roms/ports, and what else is there
+PC=$T/portcards; SP=$PC/sys/roms/ports; CP=$PC/sd2/roms/ports
+mkdir -p "$PC/run/sd2" "$SP/PortMaster" "$SP/own" "$CP/PortMaster" "$CP/game"
+echo system > "$SP/PortMaster/which"; echo second > "$CP/PortMaster/which"; : > "$SP/Own.sh"; : > "$CP/Game.sh"
+{ sed -n '1,/^unset BANANA_PORT_NS$/p' "$L/run-port" | sed -e "s|^P=/data/roms/ports\$|P=$SP|" -e "s|/run/banana/sd2/roms|$PC/run/sd2/roms|" -e "s|/run/banana/port-pm|$PC/run/port-pm|"
+  echo 'echo "$1 $(cat $P/PortMaster/which 2>/dev/null): $(ls $P | tr "\n" " ")"'; } > "$PC/run-port"; chmod +x "$PC/run-port"
+check "$(grep -c "$PC" "$PC/run-port")" "3" "(the test's copy of run-port has the made-up cards' three paths)"
+port() { sh "$PC/run-port" "$1" 2>&1 | tail -n 1; }
+check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "no second card named in /run: as before"
+echo "$PC/sd2/roms" > "$PC/run/sd2/roms"
+check "$(port "$SP/Own.sh")" "$SP/Own.sh system: Own.sh PortMaster own " "a port on this card: as before"
+if [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a port on the second card: its script and folder at /roms/ports, this card's PortMaster"
+    check "$(ls "$SP" | tr '\n' ' ')$(cat "$CP/PortMaster/which")" "Own.sh PortMaster own second" "...for the port alone: both cards as they were afterwards"
+    rm -rf "$CP/PortMaster"
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a second card without PortMaster: this card's"
+    check "$(ls -A "$CP/PortMaster" | wc -l | tr -d ' ')" "0" "...and nothing of it written to the second card"
+    mv "$SP/PortMaster" "$PC/away"; mkdir -p "$CP/PortMaster"; echo second > "$CP/PortMaster/which"
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh second: Game.sh PortMaster game " "no PortMaster on this card: the second card's own"
+    mv "$PC/away" "$SP/PortMaster"
+else
+    echo "  skipped: the second card's port itself (root and unshare -m are needed for its mounts)"
+    check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "without unshare -m the port still starts, as before"
+fi
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

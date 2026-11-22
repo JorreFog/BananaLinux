@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
 #include <fstream>
@@ -528,7 +529,8 @@ namespace banana
 	std::vector<std::string> Library::roots() const
 	{
 		std::vector<std::string> r = { romRoot };
-		std::ifstream f("/run/banana/sd2/roms");
+		const char* run = getenv("BANANA_RUN");	// (the tests' stand-in for /run/banana, as Settings')
+		std::ifstream f(std::string(run ? run : "/run/banana") + "/sd2/roms");
 		std::string ln;
 		if (f && std::getline(f, ln) && !trim(ln).empty() && trim(ln) != romRoot) r.push_back(trim(ln));
 		return r;
@@ -665,8 +667,13 @@ namespace banana
 				std::vector<std::string> rels;
 				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
 				auto gl = readGamelist(dir);
+				// PortMaster is the system card's (roms/ports/PortMaster there is where every port looks for it, and the
+				// Store installs and removes it). A second card with its entry too (a card PortMaster was once put on)
+				// made a second PortMaster on the Ports shelf, which started the same one and which nothing took away (#235)
+				bool ownPortMaster = ri > 0 && def.id == "ports" && exists(folderPath(rootList[0], def.folder) + "/PortMaster.sh");
 				for (auto& rel : rels)
 				{
+					if (ownPortMaster && rel == "PortMaster.sh") continue;
 					Game g;
 					g.rel = (ri > 0 ? "@sd2/" : "") + rel; g.path = dir + "/" + rel;
 					std::string base = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);

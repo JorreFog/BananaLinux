@@ -230,6 +230,19 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
+# a second card that has PortMaster's entry too (#235: two PortMasters on the Ports shelf, the second one nothing took
+# away): the shelf has this card's PortMaster alone, and the second card's ports; with none on this card, the second
+# card's entry is the one
+UX2=$OUT/ux-sd2-$size; rm -rf "$UX2"; mkdir -p "$UX2/run/sd2" "$UX2/card/roms/ports"
+printf '#!/bin/bash\n' > "$UX2/card/roms/ports/PortMaster.sh"; printf '#!/bin/bash\n' > "$UX2/card/roms/ports/Cave Story.sh"
+echo "$UX2/card/roms" > "$UX2/run/sd2/roms"
+ux_run ports2 "games ports" BANANA_RUN="$UX2/run"
+ux_check ports2 'games ports: \[@sd2/Cave Story.sh\] \[PortMaster.sh\]$'
+mv "$UXP/PortMaster.sh" "$UXP/PortMaster.off"
+ux_run ports2-only "games ports" BANANA_RUN="$UX2/run"
+ux_check ports2-only 'games ports: \[@sd2/Cave Story.sh\] \[@sd2/PortMaster.sh\]$'
+mv "$UXP/PortMaster.off" "$UXP/PortMaster.sh"
+
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
 # languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
 # starts again: settings result 9, LANGUAGE)

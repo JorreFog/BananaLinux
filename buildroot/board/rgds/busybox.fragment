@@ -7,3 +7,5 @@ CONFIG_SYSCTL=y
 CONFIG_PGREP=y
 CONFIG_PKILL=y
 CONFIG_TIMEOUT=y
+# a port on the second SD card runs with mounts of its own (usr/libexec/banana/run-port, #235)
+CONFIG_UNSHARE=y
