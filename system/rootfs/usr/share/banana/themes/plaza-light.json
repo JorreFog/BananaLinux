@@ -1,4 +1,6 @@
 {
+  // where Parental controls' play time left goes (the menu's pill, with a daily limit): between the clock and Wi-Fi
+  "timeLeft": { "x": 440, "y": 18 },
   // Plaza light: bright tiles on soft stripes and dots, the systems in a grid you zoom with L and R, every button on
   // the bottom screen. Plaza dark is the same in the evening's colours: tools/plaza-theme/make.py writes it from this
   // file (change this one, then run it), and makes the icons (RetroArch's system shapes, libretro, CC BY 4.0), the
