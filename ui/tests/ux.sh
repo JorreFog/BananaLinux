@@ -243,6 +243,13 @@ ux_run ports2-only "games ports" BANANA_RUN="$UX2/run"
 ux_check ports2-only 'games ports: \[@sd2/Cave Story.sh\] \[@sd2/PortMaster.sh\]$'
 mv "$UXP/PortMaster.off" "$UXP/PortMaster.sh"
 
+# the home row and a game list sound by touch as by button (#276: they were silent, Settings' rows weren't): a tap on
+# the next tile is the d-pad's scroll, on the tile under the cursor A's select, on the game A's chime; a tap that
+# changes nothing has no sound
+ux_run touchsound "home 0; touch 1 470 240; wait 600; touch 1 320 240; wait 600; touch 1 320 240; wait 600; touch 1 600 20"
+[ "$(sed -n 's/.*touch sound: //p' "$OUT/$size-touchsound.log" | tr '\n' ' ')" = "scroll select ready " ] \
+    || { echo "FAIL $size: the menu's sounds by touch: $(sed -n 's/.*touch sound: //p' "$OUT/$size-touchsound.log" | tr '\n' ' ')"; fail=1; }
+
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
 # languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
 # starts again: settings result 9, LANGUAGE)

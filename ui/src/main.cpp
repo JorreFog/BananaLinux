@@ -349,6 +349,21 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 	}
 }
 
+// what a finger did on the menu's bottom screen sounds as the button that does the same (#276: the home row and the game
+// lists were silent by touch, while Settings' rows weren't): a game or an app started is A's chime, a list opened A's
+// select, back B's, and the cursor on another tile (a tap on it, a swipe, the rail) the d-pad's scroll
+static const char* touchSound(rnds::UI::View before, int sysBefore, int gameBefore, rnds::UI::View after, int sys, int game)
+{
+	if (after != before)
+	{
+		if (after == rnds::UI::LAUNCH) return "ready";
+		return before == rnds::UI::LAUNCH || after == rnds::UI::HOME ? "back" : "select";
+	}
+	if (after == rnds::UI::HOME) return sys != sysBefore ? "scroll" : nullptr;
+	if (after == rnds::UI::LIBRARY) return game != gameBefore ? "scroll" : nullptr;
+	return nullptr;
+}
+
 // a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [files]), not a program: A or X
 // on it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts and
 // layout themes' own start of an app) does the same. The page's name, or "" for a program
@@ -1145,8 +1160,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			else
 			{
+				auto before = ui.view();
+				int sysBefore = ui.systemIndex(), gameBefore = ui.gameIndex();
 				ui.touch(scr, x * k, y * k, true);
 				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
+				if (const char* snd = touchSound(before, sysBefore, gameBefore, ui.view(), ui.systemIndex(), ui.gameIndex())) logf("touch sound: %s", snd);
 			}
 		}
 		else if (op == "gamepanel")
@@ -2569,9 +2587,20 @@ int main(int argc, char** argv)
 			dirty = true;
 			return;
 		}
-		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, true); return; }
-		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
-		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
+		if (ev.type == InputEvent::TOUCH_DOWN || ev.type == InputEvent::TOUCH_MOVE || ev.type == InputEvent::TOUCH_UP)
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			auto before = ui->view();
+			int sysBefore = ui->systemIndex(), gameBefore = ui->gameIndex();
+			if (ev.type == InputEvent::TOUCH_MOVE) dirty |= ui->touchMove(ev.screen, ev.x, ev.y);
+			else dirty |= ui->touch(ev.screen, ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN);
+			const char* s = touchSound(before, sysBefore, gameBefore, ui->view(), ui->systemIndex(), ui->gameIndex());
+			// (a tap on one of the menu's own pages' tiles, Files: its page opens with no cartridge going in, as A's select)
+			int at = ui->systemIndex();
+			if (s && before == rnds::UI::HOME && ui->view() == rnds::UI::LAUNCH && at >= 0 && at < lib.systemCount() && !internalPage(lib.shelf(at).def).empty()) s = "select";
+			if (s) sound.play(s);
+			return;
+		}
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
 		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
 		{
