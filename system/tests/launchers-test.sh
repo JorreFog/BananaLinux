@@ -258,6 +258,23 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+# gw-meta on a full card (as above): the Game & Watch folder's gamelist.xml, with the scraper's entries, stays whole
+echo "a full card: gw-meta leaves gamelist.xml whole"
+GW=$T/gw; mkdir -p "$GW/run" "$GW/data" "$GW/roms"
+# a stand-in for MAME: its list of machines (the covers are never asked for: no artwork here)
+printf '%s\n' '#!/bin/sh' '[ "$1" = -listxml ] || exit 1' 'printf "<machine name=\"gnw_dkong2\">\n<description>Game &amp; Watch: Donkey Kong II</description>\n<year>1983</year>\n<manufacturer>Nintendo</manufacturer>\n</machine>\n"' > "$GW/mame"
+chmod +x "$GW/mame"
+: > "$GW/roms/gnw_dkong2.zip"
+gwlist() { printf '<?xml version="1.0"?>\n<gameList>\n'; i=0; while [ $i -lt 60 ]; do printf '\t<game>\n\t\t<path>./game%s.zip</path>\n\t\t<name>Game %s</name>\n\t\t<desc>What the scraper wrote about game %s.</desc>\n\t</game>\n' $i $i $i; i=$((i + 1)); done; printf '</gameList>\n'; }
+gw() { MAME=$GW/mame GW_META_RUN=$GW/run GW_META_DATA=$GW/data sh "$L/gw-meta" "$GW/roms" > /dev/null 2>&1; }
+gwlist > "$GW/roms/gamelist.xml"; want=$(wc -c < "$GW/roms/gamelist.xml" | tr -d ' ')
+( trap "" XFSZ; ulimit -f 4; gw )
+check "$(wc -c < "$GW/roms/gamelist.xml" | tr -d ' ') $(grep -c '</gameList>' "$GW/roms/gamelist.xml") $(ls "$GW/roms" | grep -c 'new$')" "$want 1 0" "gw-meta: gamelist.xml not cut short on a full card, no piece left beside it"
+gw
+check "$(grep -c '<game>' "$GW/roms/gamelist.xml") $(grep -c '<name>Donkey Kong II</name>' "$GW/roms/gamelist.xml") $(tail -n 1 "$GW/roms/gamelist.xml")" "61 1 </gameList>" "...and with room again the game's name is added to the 60 there"
+rm -f "$GW/roms/gamelist.xml"; gw
+check "$(grep -c '<game>' "$GW/roms/gamelist.xml") $(wc -l < "$GW/roms/gamelist.xml" | tr -d ' ')" "1 10" "no gamelist.xml yet: a new one"
+
 echo "rcS: the card the system booted from is the one the root is on"
 fn "$R/system/rootfs/etc/init.d/rcS" root_disk
 # a made-up /sys: the eMMC, this card in the first slot (mmcblk1), another Banana card in the second (mmcblk2)
