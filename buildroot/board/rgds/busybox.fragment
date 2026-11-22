@@ -9,3 +9,11 @@ CONFIG_PKILL=y
 CONFIG_TIMEOUT=y
 # a port on the second SD card runs with mounts of its own (usr/libexec/banana/run-port, #235)
 CONFIG_UNSHARE=y
+# tar that reads compressed archives, as PortMaster and ports expect (#275, #246). PortMaster's funcs.txt, sourced by
+# every port and by PortMaster itself, unpacks its fonts with `tar -xf NotoSans.tar.xz`; nine ports unpack with
+# `tar -xzf`, one with `tar -xjf`, one with `tar -xf data.tar.bz2`. Buildroot's tar knew none of these ("invalid
+# option -- 'z'", "invalid tar magic"), so the files a port's first start unpacks were never there.
+CONFIG_FEATURE_SEAMLESS_GZ=y
+CONFIG_FEATURE_SEAMLESS_BZ2=y
+CONFIG_FEATURE_SEAMLESS_XZ=y
+CONFIG_FEATURE_TAR_AUTODETECT=y
