@@ -21,3 +21,6 @@ CONFIG_FEATURE_TAR_AUTODETECT=y
 # device's owner and mode with `stat -c '%u:%g:%a'`; with no stat they read an empty size (#275)
 CONFIG_STAT=y
 CONFIG_FEATURE_STAT_FORMAT=y
+# find -delete: five ports tidy up after unpacking with it (Super Hexagon: the game's own x86_64 libSDL2, which box64
+# would load ahead of the SDL it wraps); the files stayed ("unrecognized: -delete")
+CONFIG_FEATURE_FIND_DELETE=y
