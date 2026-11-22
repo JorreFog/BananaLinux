@@ -17,3 +17,7 @@ CONFIG_FEATURE_SEAMLESS_GZ=y
 CONFIG_FEATURE_SEAMLESS_BZ2=y
 CONFIG_FEATURE_SEAMLESS_XZ=y
 CONFIG_FEATURE_TAR_AUTODETECT=y
+# stat -c: seven ports size a file with it (`stat -c%s`) before patching or choosing what to run, one keeps a
+# device's owner and mode with `stat -c '%u:%g:%a'`; with no stat they read an empty size (#275)
+CONFIG_STAT=y
+CONFIG_FEATURE_STAT_FORMAT=y
