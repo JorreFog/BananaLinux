@@ -286,6 +286,7 @@ struct Options
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
+	std::string brand;		// --brand TEXT: beside the logo, as the device's version file makes it ("Alpha 0.5.3"; headless)
 	int w = 640, h = 480;
 };
 
@@ -519,11 +520,21 @@ struct BshareNotice
 	uint32_t accent = 0x6ad07a;
 	double until = 0, lookedAt = -1e9;
 	std::string bsReq, bsRecv = "?", bsSend = "?";	// the request, receive and send, as last read ("?": not yet)
+	std::string ptSeen = "?";	// Parental controls' play time notice (bananad's), as last read ("?": not yet)
 	bool showing(double now) const { return until > now; }
 	bool hide(double now) { bool was = showing(now); until = 0; return was; }
 	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
 	{
 		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	// Parental controls' daily play time: what bananad says ("left <minutes>", "up"), and a game asked for once it's up
+	void showPlaytime(const std::string& what, int minutes, double now)
+	{
+		if (what == "left")
+			show(minutes == 1 ? "1 minute of play left" : std::to_string(minutes) + " minutes of play left",
+				"Then the game is saved and closed until tomorrow.", 2, 0xffb340, now);
+		else show("Play time is up for today", "The game is saved. More tomorrow.", 2, 0xffb340, now);
+		until = now + 6000;
 	}
 	// true when a new one came
 	bool check(double now)
@@ -531,6 +542,22 @@ struct BshareNotice
 		if (now - lookedAt < 1000) return false;
 		lookedAt = now;
 		bool came = false;
+		// Parental controls: bananad's word on the daily play time (/run/banana/playtime-notice: "left <minutes> <when>",
+		// "up <when>"; the time makes each one new)
+		{
+			std::ifstream f("/run/banana/playtime-notice");
+			std::string pt;
+			std::getline(f, pt);
+			if (pt != ptSeen)
+			{
+				std::istringstream in(pt);
+				std::string what;
+				int minutes = 0;
+				in >> what >> minutes;
+				if (ptSeen != "?" && (what == "left" || what == "up")) { showPlaytime(what, minutes, now); came = true; }
+				ptSeen = pt;
+			}
+		}
 		const char* run = getenv("BSHARE_RUN");
 		std::string dir = run && *run ? run : "/run/banana";
 		auto read = [&](const char* n) { std::ifstream f(dir + "/" + n); std::stringstream s; s << f.rdbuf(); return s.str(); };
@@ -857,6 +884,17 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	return 0;
 }
 
+// Parental controls' play time left today, over every theme's status bar (where its menu says, timeLeftAt), as the
+// menu shows it: nothing with no limit
+static void drawTimeLeft(Library& lib, const Menu& ui, Settings& settings)
+{
+	long left = lib.playLeft();
+	if (left < 0) return;
+	float x = 320, y = 32, room = 640;
+	ui.timeLeftAt(x, y, room);
+	settings.timeLeftPill((left + 59) / 60, x, y, room);
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -886,6 +924,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setLibraryPaths(o.systems, o.roms);
 	settings.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settings.allGames = [&]() { return lib.allGames(); };
 	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
 	FetchNotice fetchNotice;
@@ -893,6 +932,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
 	be.overlay = [&](int screen)
 	{
+		if (screen == 0 && !settings.isOpen()) drawTimeLeft(lib, ui, settings);
 		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
 		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
@@ -963,6 +1003,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			// that is there - a search with no result has none; a script that did either crashed the test run)
 			if (!settings.isOpen() && ui.view() == rnds::UI::LAUNCH && (it->second == Key::SELECT || it->second == Key::START)) { logf("press %s: ignored (launching)", b.c_str()); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
+			if (!settings.isOpen() && it->second == Key::X && lib.parentalOn()) { logf("press x: parental controls, no game page"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && ui.gameIndex() < lib.gameCount())
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
@@ -982,7 +1023,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
-				if (!settings.isOpen()) { settings.open(); recordEvent("settings", "open"); logf("press %s: settings open", b.c_str()); continue; }
+				if (!settings.isOpen())
+				{
+					if (lib.parentalOn()) settings.openLocked(); else settings.open();
+					recordEvent("settings", "open");
+					logf("press %s: settings open%s", b.c_str(), lib.parentalOn() ? " (locked: the PIN first)" : "");
+					continue;
+				}
 				int r = (int)settings.press(it->second);
 				if (r == Settings::TITLES)
 				{
@@ -1013,6 +1060,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			bool used = ui.press(btn);
 			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
+		}
+		else if (op == "row")
+		{
+			// row <section> <key>: Settings open on that row of that list ("row System about"; the section may have
+			// spaces: the key is the last word)
+			std::string rest, sec, key;
+			std::getline(cs >> std::ws, rest);
+			size_t sp = rest.find_last_of(' ');
+			if (sp != std::string::npos) { sec = rest.substr(0, sp); key = rest.substr(sp + 1); } else sec = rest;
+			if (!settings.isOpen()) settings.open();
+			settings.openSection(sec);
+			settings.toRow(key);
+			logf("row %s %s", sec.c_str(), key.c_str());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
@@ -1514,6 +1574,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
+			else if (parental::playLeft(o.data) == 0) logf("launch refused: today's play time is up");
 			else { logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str()); lastLaunch = g; }
 		}
 		ui.update(now);
@@ -2120,6 +2181,7 @@ int main(int argc, char** argv)
 		else if (a == "--headless") o.headless = next();
 		else if (a == "--script") o.script = next();
 		else if (a == "--theme") o.theme = next();
+		else if (a == "--brand") o.brand = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
@@ -2167,6 +2229,7 @@ int main(int argc, char** argv)
 		std::ifstream("/etc/banana/version") >> v;
 		std::ifstream sf("/etc/banana/stage"); std::string st; if (std::getline(sf, st) && !st.empty()) stage = st;
 		if (!v.empty()) rnds::brandNote = stage + " " + v.substr(0, v.find('-'));
+		if (!o.brand.empty()) rnds::brandNote = o.brand;
 	}
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
@@ -2298,6 +2361,7 @@ int main(int argc, char** argv)
 	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
 	unlink("/run/banana/files.pid");	// (a job of a menu that went away mid-way holds no sleep)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settingsView.allGames = [&]() { return lib.allGames(); };
 	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	if (setupNow)
@@ -2388,6 +2452,7 @@ int main(int argc, char** argv)
 		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
 		if (access("/run/banana/recording", F_OK) == 0)
 			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
+		if (!settingsView.isOpen()) drawTimeLeft(lib, *ui, settingsView);	// (under the notices)
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
 		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
@@ -2516,8 +2581,9 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS && ev.key == Key::X)
 		{
 			// X on a game in the library: its own page (Settings' game page): a DS game's emulator and shader, and any
-			// game's name and sort title
+			// game's name and sort title. (Not with Parental controls on: it deletes and renames)
 			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (lib.parentalOn()) { rep.key = Key::NONE; return; }
 			int g = ui->gameIndex();
 			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount())
 			{
@@ -2553,7 +2619,8 @@ int main(int argc, char** argv)
 			if (ui->view() == rnds::UI::LAUNCH) return;
 			ui->touchCancel();
 			settingsView.setVariant(settings["theme"]);
-			settingsView.open();
+			// (Parental controls on: the PIN's keypad first)
+			if (lib.parentalOn()) settingsView.openLocked(); else settingsView.open();
 			recordEvent("settings", "open");
 			rep.key = Key::NONE;
 			sound.play("select");
@@ -2789,6 +2856,18 @@ int main(int argc, char** argv)
 
 	auto runGame = [&](int game)
 	{
+		// Parental controls: today's play time used up (bananad counts it): no game until tomorrow
+		if (parental::playLeft(o.data) == 0)
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			bsNotice.showPlaytime("up", 0, nowMs());
+			ui->setLibrary(lib.currentShelf(), game);	// (back from the ready screen's "Starting...": no game comes)
+			sound.play("notify");
+			dirty = true;
+			logf("launch refused: today's play time is up");
+			recordEvent("game", "refused: today's play time is up");
+			return;
+		}
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		gameRomPath = rom;

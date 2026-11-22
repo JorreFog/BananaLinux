@@ -77,7 +77,7 @@ rm -f "$STAGE"/rnds/fonts/fusion-pixel-*.ttf
 cp "$UI"/assets/banana/fonts/*.ttf "$STAGE/banana/fonts/"
 cp "$UI"/assets/banana/*.png "$STAGE/banana/"
 
-SRC="src/layout.cpp src/expr.cpp src/json.cpp src/library.cpp src/theme.cpp src/soft.cpp src/zip.cpp src/zipdir.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp"
+SRC="src/layout.cpp src/expr.cpp src/json.cpp src/library.cpp src/parental.cpp src/theme.cpp src/soft.cpp src/zip.cpp src/zipdir.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp"
 HASH=$(sh "$HERE/sources.sh")
 STAMP=$(date -u +%Y-%m-%dT%H:%MZ)
 COMMIT=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)

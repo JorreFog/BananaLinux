@@ -1,6 +1,7 @@
 {
   "name": "Orbital HUD",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 575, "y": 16 },
   "base": "dark",
   "font": "inter",
   "screens": {

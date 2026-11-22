@@ -1,6 +1,7 @@
 {
   "name": "Neon Arcade",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 320, "y": 13 },
   "base": "dark",
   "font": "pixel",
   "screens": {

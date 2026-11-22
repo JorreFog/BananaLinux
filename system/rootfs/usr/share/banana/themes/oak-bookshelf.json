@@ -1,6 +1,7 @@
 {
   "name": "Oak Bookshelf",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 365, "y": 18 },
   "base": "dark",
   "font": "inter",
   "screens": {
