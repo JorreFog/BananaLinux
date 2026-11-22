@@ -1561,6 +1561,15 @@ namespace banana
 	}
 	LayoutMenu::~LayoutMenu() {}
 
+	// (a layout theme's status bar is its own, 36 px high in most: the pill in its middle, unless the theme's
+	// "timeLeft" puts it elsewhere, as Plaza's does, beside its clock)
+	void LayoutMenu::timeLeftAt(float& x, float& y, float& room) const
+	{
+		x = 320; y = 18; room = 640;
+		const JVal* t = d->doc ? d->doc->get("timeLeft") : nullptr;
+		if (t) { x = (float)t->num("x", x); y = (float)t->num("y", y); }
+	}
+
 	void LayoutMenu::setLog(std::function<void(const std::string&)> log)
 	{
 		mLog = log;

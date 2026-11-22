@@ -212,6 +212,10 @@ namespace banana
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
 		void level(const std::string& label, int percent);
+		// Parental controls' play time left today (minutes, rounded up), as a pill centred on (cx, cy) on the top
+		// screen, over every theme's status bar: in the accent, red for the last 5 minutes; "20 min" and no "left" when
+		// it wouldn't fit in room
+		void timeLeftPill(long minutes, float cx, float cy, float room = 640);
 		// a pop-up along the top of the top panel in ROCKNIXDS's look (the RetroAchievements account check's result);
 		// the host draws it over the top panel while Settings is open
 		void drawToast(double nowMs);

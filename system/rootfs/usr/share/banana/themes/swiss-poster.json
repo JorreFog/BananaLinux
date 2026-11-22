@@ -1,6 +1,7 @@
 {
   "name": "Swiss Poster",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 280, "y": 18 },
   "base": "light",
   "font": "inter",
   "screens": {

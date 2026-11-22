@@ -30,6 +30,7 @@ namespace banana
 		void setLibrary(int sys, int game) override;
 		void dataChanged() override;
 		void trim() override;
+		void timeLeftAt(float& x, float& y, float& room) const override;
 		View view() const override { return mView; }
 		int systemIndex() const override { return mSys; }
 		int gameIndex() const override { return mGame; }

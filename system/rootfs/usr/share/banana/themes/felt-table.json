@@ -1,6 +1,7 @@
 {
   "name": "Felt Table",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 320, "y": 32 },
   "base": "dark",
   "font": "inter",
   "screens": {

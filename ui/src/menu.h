@@ -2,6 +2,7 @@
 // banana-ui: the menu of the theme in use, as the main loop drives it. Dark and Light are ROCKNIXDS Pixel's engine
 // (rnds::UI, used as it is through RndsMenu); Carts is Banana's own (carts.cpp). The calls are rnds::UI's.
 #include "../rnds/RndsUI.h"
+#include <cmath>
 #include <functional>
 #include <string>
 
@@ -31,6 +32,10 @@ namespace banana
 		virtual void setNotifiers(std::function<void()> queued, std::function<void()> finished) = 0;
 		virtual bool animating() const = 0;
 		virtual void setLog(std::function<void(const std::string&)> log) = 0;
+		// where Parental controls' play time left goes on the top screen, its pill's centre (in the 640x480 layout), and
+		// the room it has (a narrower one shortens it): the middle of the status bar, or a theme's own spot (a layout
+		// theme's "timeLeft": { "x", "y" })
+		virtual void timeLeftAt(float& x, float& y, float& room) const { x = 320; y = 32; room = 640; }
 		virtual void trim() {}	// a game is starting: drawn pictures it can make again let go (the memory is the game's)
 		// workOnce guards what it shares with the drawing itself: the worker may run it without the UI's lock
 		virtual bool ownLocking() const { return false; }
@@ -49,6 +54,13 @@ namespace banana
 		int systemIndex() const override { return ui.systemIndex(); }
 		int gameIndex() const override { return ui.gameIndex(); }
 		bool press(Button b) override { return ui.press(b); }
+		// (the engine's bar: the logo and the version on the left, the date and the time on the right; the pill halfway
+		// between them, where its middle is free)
+		void timeLeftAt(float& x, float& y, float& room) const override
+		{
+			x = std::round((rnds::statusFreeFrom + rnds::statusFreeTo) / 2); y = 32;
+			room = rnds::statusFreeTo - rnds::statusFreeFrom - 16;	// (8 clear on each side)
+		}
 		bool touch(int screen, float x, float y, bool down) override { return ui.touch(screen, x, y, down); }
 		bool touchMove(int screen, float x, float y) override { return ui.touchMove(screen, x, y); }
 		void touchCancel() override { ui.touchCancel(); }

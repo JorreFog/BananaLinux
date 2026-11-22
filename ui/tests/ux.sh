@@ -361,4 +361,21 @@ ux_check pc-up "launch refused: today's play time is up"
 echo "$(date +%F) 600" > "$PCFX/playtime.txt"
 ux_run pc-left "lib 0 0; press a; wait 3000; shot ux-pc-left"
 grep -q "launch refused" "$OUT/$size-pc-left.log" && { echo "FAIL $size: a launch refused with 20 minutes left"; fail=1; }
+# the play time left, over every theme's status bar (drawTimeLeft: the middle, or a theme's own "timeLeft"): 20 min
+# left, a pill there in each (the shots, for a look; the version beside the logo as on the device), and in the
+# default theme's free middle and not without the limit
+for th in dark light carts $(ls "$HERE/../system/rootfs/usr/share/banana/themes/"*.json); do
+    nm=$(basename "$th" .json)
+    case $th in /*) ta="--theme $th" ;; *) ta=""; sed -i '/^theme = /d' "$PCFX/settings.conf"; echo "theme = $th" >> "$PCFX/settings.conf" ;; esac
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
+        --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXFX/data" \
+        --brand "Alpha 0.5.3.4+sw1" $ta --script "home 0; wait 1500; shot ux-pc-time-$nm" 2> "$OUT/$size-pc-time-$nm.log" || { echo "FAIL $size: banana-ui (play time, $nm) exited $?"; fail=1; }
+done
+sed -i '/^theme = /d' "$PCFX/settings.conf"
 mv "$PCFX/settings.conf.pc" "$PCFX/settings.conf"; rm -f "$PCFX/parental.conf" "$PCFX/parental-games.txt" "$PCFX/playtime.txt"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
+    --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXFX/data" \
+    --brand "Alpha 0.5.3.4+sw1" --script "home 0; wait 1500; shot ux-pc-time-none" 2> "$OUT/$size-pc-time-none.log"
+tl=$(ux_std "$OUT/$size-ux-pc-time-dark-top.png" 60 16 440 24); tn=$(ux_std "$OUT/$size-ux-pc-time-none-top.png" 60 16 440 24)
+awk -v a="$tl" -v b="$tn" 'BEGIN { exit !(a != "" && b != "" && a > b + 0.05) }' ||
+    { echo "FAIL $size: no play time pill in the default theme's status bar (its middle: $tl, with no limit $tn)"; fail=1; }

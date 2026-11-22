@@ -1157,4 +1157,12 @@ namespace banana
 		std::string ext = s.def.exts.empty() ? "" : "." + s.def.exts[0] + " ";
 		return "Copy " + ext + "files to roms/" + s.def.folder;
 	}
+
+	long Library::playLeft()
+	{
+		double now = monoSec();
+		if (now - playLeftAt < 20) return playLeftSeen;
+		playLeftAt = now;
+		return playLeftSeen = parental::playLeft(dataDir);
+	}
 }

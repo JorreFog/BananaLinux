@@ -1,6 +1,7 @@
 {
   "name": "Phosphor Terminal",
   "author": "Banana Theme Studio",
+  "timeLeft": { "x": 470, "y": 17 },
   "base": "dark",
   "font": "pixel",
   "screens": {

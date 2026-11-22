@@ -1918,8 +1918,14 @@ namespace banana
 				p.ditherA = Color(1, 1, 1, 0.10f); p.ditherB = Color(1, 1, 1, 0.05f);
 			}
 			else if (kind == "kbd") { st.radius = X(4); st.bg = p.kbdBg; }
+			// the play time left (timeLeftPill): a pill, the accent or red, the same in every look
+			else if (kind == "timeleft" || kind == "timeleft-last")
+			{
+				st.radius = X(h / 2); st.bg = kind == "timeleft" ? p.pick : Color::hex(0xff453a);
+				st.shadows = { outer(X(2), X(2), Color(0, 0, 0, 0.25f)) };
+			}
 			st.ditherScale = s; st.ditherA = p.ditherA; st.ditherB = p.ditherB;
-			if (cleanFonts)
+			if (cleanFonts && kind.compare(0, 8, "timeleft") != 0)
 			{
 				// the Carts theme: flat panels, a hairline edge, no dither, bands or hard shadows
 				rnds::BoxStyle c;
@@ -2153,6 +2159,23 @@ namespace banana
 		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
 		text(title, true, 22, 172, 360, p.ink);
 		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+	}
+
+	void Settings::timeLeftPill(long minutes, float cx, float cy, float room)
+	{
+		SPal p = pal(light);
+		std::string mm = (minutes % 60 < 10 ? "0" : "") + std::to_string(minutes % 60);
+		std::string t = minutes < 60 ? std::to_string(minutes) + " min left" : std::to_string(minutes / 60) + " h " + mm + " left";
+		float w = std::round(text(t, true, 15, 0, 0, p.ink, false, 0, true) + 22), h = 24;
+		if (w > room)
+		{
+			t = minutes < 60 ? std::to_string(minutes) + " min" : std::to_string(minutes / 60) + " h " + mm;
+			w = std::round(text(t, true, 15, 0, 0, p.ink, false, 0, true) + 22);
+		}
+		bool last = minutes <= 5;
+		float x = std::round(cx - w / 2), y = std::round(cy - h / 2);
+		box(last ? "timeleft-last" : "timeleft", false, x, y, w, h);
+		text(t, true, 15, x + 11, y + 4, last ? Color(1, 1, 1, 1) : p.onPick);
 	}
 
 	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)

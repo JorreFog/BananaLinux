@@ -10,6 +10,7 @@
 namespace rnds
 {
 	std::string brandNote;
+	float statusFreeFrom = 240, statusFreeTo = 500;
 	Accent accent = { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 };
 	static const struct { const char* name; Accent a; } ACCENTS[] = {
 		{ "yellow", { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 } },
@@ -1594,7 +1595,10 @@ namespace rnds
 					nx += bw + 8;
 				}
 				drawText(ver, ts(true, 18), nx, 22 + ry, INK);
+				nx += line(ver, ts(true, 18)).width;
+				statusFreeFrom = nx;
 			}
+			else statusFreeFrom = brandX + 148.23f;
 			if (!logo.empty())
 				drawSprite(still("logo", logo, true), brandX + 7, 22 + ry);
 
@@ -1602,6 +1606,7 @@ namespace rnds
 			float cw = line(clock, ts(true, 20)).width, dw = line(date, ts(false, 20)).width;
 			drawText(clock, ts(true, 20), 622 - cw, 20 + ry, INK);
 			drawText(date, ts(false, 20), 622 - cw - 8 - dw, 20 + ry, INK);
+			statusFreeTo = 622 - cw - 8 - dw;
 		}
 
 		// the game list's top screen, left: the box cover in a pixel frame, bobbing like the home screen's icon, its

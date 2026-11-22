@@ -127,6 +127,11 @@ namespace banana
 		// Parental controls (parental.h): on as of the last scan, and every game for the Allowed games page
 		bool parentalOn() const { return kids; }
 		const std::vector<parental::GameRef>& allGames() const { return everything; }
+		// the daily play time (parental::playLeft): the seconds left today, -1 with no limit. Read at most every 20 s
+		// (the top screen asks on every frame it draws)
+		long playLeft();
+		double playLeftAt = -1e9;
+		long playLeftSeen = -1;
 		// Settings > Display & sound > Menu look > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
 		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
 		bool dsCartIcons = false;
