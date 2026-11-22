@@ -2062,10 +2062,14 @@ int main(int argc, char **argv)
 	signal(SIGCHLD, SIG_DFL);
 	signal(SIGPIPE, SIG_IGN);	/* a game's pipe that closed must not take the daemon with it */
 	struct sigaction sa = { 0 };
-	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
+	sa.sa_handler = on_hup;		/* no SA_RESTART: the loop's wait returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	sa.sa_handler = on_term;
 	sigaction(SIGTERM, &sa, NULL);
+	sigset_t loop_sigs, sigs_before;	/* (the two the loop's wait must not miss, below) */
+	sigemptyset(&loop_sigs);
+	sigaddset(&loop_sigs, SIGHUP);
+	sigaddset(&loop_sigs, SIGTERM);
 	mkdir("/run/banana", 0755);
 	/* a menu Sleep asked for while bananad wasn't running would otherwise come true at the next, unrelated SIGHUP
 	 * (any settings change): dropped */
@@ -2136,9 +2140,17 @@ int main(int argc, char **argv)
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
+		/* SIGHUP and SIGTERM are held back from the look at their flags until the wait itself has begun (ppoll lets
+		 * them in as it starts to wait). A SIGHUP that came while the loop was busy (alsactl storing the volume, the
+		 * volume script, the 0.2 s for a new input device) only set its flag, and poll() then slept on for up to a
+		 * minute, until the next battery look or a button: a setting not taken, the menu's Sleep not slept, which
+		 * then came at the next press. A flag already up: no wait at all. */
+		struct timespec ts = { timeout / 1000, timeout % 1000 * 1000000L };
+		sigprocmask(SIG_BLOCK, &loop_sigs, &sigs_before);
 		in_poll = 1;
-		if (!stopping) poll(pf, n, timeout);
+		if (!stopping && !reload) ppoll(pf, n, &ts, &sigs_before);
 		in_poll = 0;
+		sigprocmask(SIG_SETMASK, &sigs_before, NULL);
 		double now = mono();
 		sound_poll();
 		if (stopping) {	/* a restart or a turn-off from the menu, an update: banana-ui's last events, then the card's copy */
