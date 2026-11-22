@@ -2,15 +2,14 @@
 # lang-extract.py: every English line BananaOS shows on screen, from the sources, for the next translation document
 # (tools/lang-to-docx.py writes it) and for checking what a language file is missing.
 #
-#   lang-extract.py [--bl DIR] [--sd DIR] [--bd DIR] [--bf DIR] [--out strings.tsv] [--doc OLD.docx] [--report]
+#   lang-extract.py [--bl DIR] [--sd DIR] [--bd DIR] [--bf DIR] [--out strings.tsv]
 #
 #   --bl  BananaLinux checkout (banana-ui, its themes, systems.conf, the update script): default this repo
 #   --sd  SuperDrastic checkout (src/: the in-game menu, pop-ups, RetroAchievements)
 #   --bd  the checkout BananaDS is built from (superdrastic repo, bananads/src/)
 #   --bf  BananaFront's checkout (its in-game menu is BananaDS's: its lines go in the same "bananads" part, so one
 #         translation serves both)
-#   --doc the last translation document: its lines tell which Where and part a new line belongs to (lines found in the
-#         same function as an old one go under the same Where), and are matched back by their number.
+#   (matching the lines to the last translation document's numbers is tools/lang-to-docx.py's, with --template)
 #
 # Output: one line per (part, English): part TAB where TAB English TAB sources (file:line, ...).
 # Parts are the language file's: menu, settings, systems (banana-ui), bananads, superdrastic.
