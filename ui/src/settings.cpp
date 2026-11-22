@@ -666,6 +666,16 @@ namespace banana
 			add(PS, "picture", "Integer scaling", "Whether the picture is a whole multiple of the game's size.",
 				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
 			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
+			// (#314: Gambatte's own core options, in its file as RetroArch's Core Options writes them and BananaFront reads
+			// them - which has no menu for them. The file's keys and values: gambatte-libretro's libretro_core_options.h.
+			// A value from RetroArch's menu that isn't a choice here (custom, always) is shown as it is and kept, load())
+			const char* GO = "/data/retroarch/config/Gambatte/Gambatte.opt";
+			add(PS, "picture", "Game Boy colours", "The colours Game Boy games are drawn in, in the Gambatte emulator.",
+				GO, "gambatte_gb_colorization", { "Grey", "Green", "Game Boy Color's", "Super Game Boy's", "Auto" }, { "disabled", "internal", "GBC", "SGB", "auto" });
+			items.back().hints = { "Four shades of grey.", "The first Game Boy's green screen (or the Internal Palette chosen in RetroArch's Core Options).", "The colours a Game Boy Color gives the game.", "The colours a Super Game Boy gives the game.", "The most colourful of the game's own palettes." };
+			add(PS, "picture", "GBC colour correction", "Whether Game Boy Color games get the colours of its screen, in the Gambatte emulator.",
+				GO, "gambatte_gbc_color_correction", { "On", "Off" }, { "GBC only", "disabled" });
+			items.back().hints = { "Softer colours, as a Game Boy Color's screen showed them.", "The game's own colours: brighter and stronger." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -934,7 +944,7 @@ namespace banana
 			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
+			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling", "Game Boy colours", "GBC colour correction" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
@@ -1219,6 +1229,13 @@ namespace banana
 				if (system("mkdir -p /data/retroarch && cp -n /etc/banana/retroarch.cfg /data/retroarch/ 2>/dev/null") != 0) {}
 			}
 			setConfValue(it.file, it.key, "\"" + v + "\"");	// RetroArch quotes its values
+		}
+		else if (it.file.size() > 4 && it.file.compare(it.file.size() - 4, 4, ".opt") == 0)
+		{
+			// a RetroArch core's options (config/<core>/<core>.opt, quoted as RetroArch writes them): its folder is made
+			// at the core's first game, or now
+			if (system(("mkdir -p '" + it.file.substr(0, it.file.rfind('/')) + "'").c_str()) != 0) {}
+			setConfValue(it.file, it.key, "\"" + v + "\"");
 		}
 		else if (it.file.find("drastic.cfg") != std::string::npos)
 		{

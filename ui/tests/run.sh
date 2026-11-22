@@ -364,6 +364,24 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press a; press down; press left" 2> "$OUT/$size-res-order.log" \
         || { echo "FAIL $size: banana-ui (3D resolution order) exited $?"; fail=1; }
     grep -q 'press left: settings result 2' "$OUT/$size-res-order.log" || { echo "FAIL $size: Left from 2x on BananaDS's 3D resolution: $(grep 'press left' "$OUT/$size-res-order.log")"; fail=1; }
+    # Settings > Other systems > Picture & sound > Game Boy colours and GBC colour correction (#314): Gambatte's own
+    # core options, written into its file as RetroArch writes them (quoted; the folder made), each a change at once;
+    # a value RetroArch's menu left that isn't a choice here stays in the file until the row is changed
+    if [ -n "$BANANA_TEST_OWN_DATA" ]; then
+        GO=/data/retroarch/config/Gambatte/Gambatte.opt; rm -rf /data/retroarch/config/Gambatte
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press right; press a; press down; press a; press down; press down; press down; press down; press down; shot gb-colours; press right; press down; press right" 2> "$OUT/$size-gb-colours.log" \
+            || { echo "FAIL $size: banana-ui (Game Boy colours) exited $?"; fail=1; }
+        [ "$(grep -c 'press right: settings result 2' "$OUT/$size-gb-colours.log")" = 2 ] && grep -qx 'gambatte_gb_colorization = "internal"' $GO && grep -qx 'gambatte_gbc_color_correction = "disabled"' $GO ||
+            { echo "FAIL $size: Game Boy colours: $(grep 'press right' "$OUT/$size-gb-colours.log" | tr '\n' ' ') $(tr '\n' ' ' < $GO 2>&1)"; fail=1; }
+        printf 'gambatte_gb_colorization = "custom"\ngambatte_dark_filter_level = "10"\n' > $GO
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press right; press a; press down; press a; press down; press down; press down; press down; press down; press down; press right" 2>> "$OUT/$size-gb-colours.log" \
+            || { echo "FAIL $size: banana-ui (Game Boy colours 2) exited $?"; fail=1; }
+        [ "$(tr '\n' '|' < $GO)" = 'gambatte_gb_colorization = "custom"|gambatte_dark_filter_level = "10"|gambatte_gbc_color_correction = "disabled"|' ] ||
+            { echo "FAIL $size: Gambatte's other options: $(tr '\n' '|' < $GO 2>&1)"; fail=1; }
+        rm -rf /data/retroarch/config/Gambatte
+    fi
     # a DS game's own BananaDS timing (Origin HeartGold's Fast while Golden Sun stays Accurate): down to Timing (the row
     # after Microphone), right (Accurate), right (Fast): kept at once; left twice back to "As in Settings": no file left
     FT="$FX/data/nds-per-game-timing.conf"; rm -f "$FT"
