@@ -81,6 +81,9 @@ jobs:
           for f in store/catalog.json docs/theme.schema.json; do
             python3 -c 'import json, sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$f" || { echo "$f isn't valid JSON"; exit 1; }
           done
+      # docs/COMPANIONS.md asks for this of every new definition; the image's own are held to it here
+      - name: Game companions (every definition the image ships, against its schema)
+        run: python3 -I tools/companions/validate.py -q
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
