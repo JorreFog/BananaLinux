@@ -145,6 +145,22 @@ static void testFileSystem()
 	// a FAT pointing past the end
 	Bytes broken = makeRom(); put32(broken, 0x48, (uint32_t)broken.size() + 16);
 	CHECK(!nitro::Rom().openMemory(broken));
+	// one file's entry past the image, another's end before its start (a hack's tool, a trimmed image: #264): those
+	// two don't read, the ROM and its other files do
+	Bytes stray = makeRom();
+	const size_t fatAt = stray[0x48] | stray[0x49] << 8 | stray[0x4a] << 16;
+	put32(stray, fatAt + 4, (uint32_t)stray.size() + 4);		// top.txt ends past the image
+	put32(stray, fatAt + 8, 0x300); put32(stray, fatAt + 12, 0x200);	// a/x.bin ends before it starts
+	nitro::Rom st;
+	CHECK(st.openMemory(stray));
+	EQ(st.fileId("top.txt"), 0);
+	CHECK(!st.file("top.txt", b));
+	CHECK(!st.read(1, b));
+	uint8_t one = 0;
+	CHECK(!st.readPart(0, 0, 1, &one) && !st.readPart(1, 0, 1, &one));
+	CHECK(!nitro::NarcFile().open(st, "a/x.bin"));
+	CHECK(st.file("a/b/y", b));
+	EQ(std::string(b.begin(), b.end()), std::string("deep y"));
 	// table and ARM9 sizes far past the image: refused, nothing huge allocated
 	Bytes huge = makeRom(); put32(huge, 0x44, 0xfffffff0);
 	CHECK(!nitro::Rom().openMemory(huge));
@@ -196,6 +212,86 @@ static void testNarcFile()
 		EQ(f[0].n, (size_t)5);
 	}
 	setrlimit(RLIMIT_AS, &was);
+}
+
+// ---- Gen IV's map headers: the ARM9's table, or a DSPRE "dynamic headers" hack's archive (#264) -------------------------
+// a header as the games' own are: Platinum's {wild file u16 @14, music @10/@12, name u8 @18}, HGSS's {wild u8 @0,
+// music @12/@14, name u8 @18}
+static Bytes mapHeader(bool hg, int wild, int name, uint16_t music = 1100)
+{
+	Bytes e(24, 0);
+	if (hg) { e[0] = (uint8_t)(wild < 0 ? 0xff : wild); put16(e, 12, music); put16(e, 14, music); }
+	else { put16(e, 14, (uint16_t)(wild < 0 ? 0xffff : wild)); put16(e, 10, music); put16(e, 12, music); }
+	e[16] = (uint8_t)name;	// (its events file: anything, here to tell the headers apart)
+	e[18] = (uint8_t)name;
+	return e;
+}
+
+static void testMapHeaders()
+{
+	const size_t NAMES = 20, ENCS = 10;
+	for (int hgss = 0; hgss < 2; hgss++)
+	{
+		const bool hg = hgss == 1;
+		const GameId id = hg ? GameId::HEARTGOLD : GameId::PLATINUM;
+		// the game's own: 8 headers in the ARM9 at 0x40, after bytes that aren't headers
+		std::vector<Bytes> own;
+		for (int m = 0; m < 8; m++) own.push_back(mapHeader(hg, m % 3 == 0 ? -1 : m, m + 1));
+		Bytes arm9(0x40, 0x11);
+		for (auto& e : own) arm9.insert(arm9.end(), e.begin(), e.end());
+		arm9.resize(arm9.size() + 0x40, 0x22);
+		Gen4Headers h;
+		CHECK(gen4MapHeaders(id, arm9, 8, {}, NAMES, ENCS, h));
+		EQ(h.at, (size_t)0x40);
+		CHECK(h.table.empty());
+		EQ(h.zone.size(), (size_t)8);
+		EQ(h.zone[0].first, 1); EQ(h.zone[0].second, -1);
+		EQ(h.zone[7].first, 8); EQ(h.zone[7].second, 7);
+		// more maps than the ARM9's table has (what the hack's longer mapname.bin says) and no archive: none
+		CHECK(!gen4MapHeaders(id, arm9, 10, {}, NAMES, ENCS, h));
+		EQ(h.at, (size_t)SIZE_MAX);
+		CHECK(!gen4MapHeaders(id, arm9, 0, {}, NAMES, ENCS, h));
+		// the file the game itself has under the archive's name (not headers: other sizes, or bytes that aren't one's):
+		// the ARM9's table still
+		CHECK(gen4MapHeaders(id, arm9, 8, makeNarc({ bytes("something else"), Bytes(24, 0) }), NAMES, ENCS, h));
+		EQ(h.at, (size_t)0x40); CHECK(h.table.empty());
+		CHECK(gen4MapHeaders(id, arm9, 8, makeNarc({ Bytes(24, 0), Bytes(24, 0xff), Bytes(24, 7), own[1] }), NAMES, ENCS, h));
+		EQ(h.at, (size_t)0x40); CHECK(h.table.empty());
+		CHECK(gen4MapHeaders(id, arm9, 8, bytes("not an archive at all"), NAMES, ENCS, h));
+		EQ(h.at, (size_t)0x40);
+		CHECK(gen4MapHeaders(id, arm9, 8, makeNarc({}), NAMES, ENCS, h));
+		EQ(h.at, (size_t)0x40);
+		// a hack's archive: the game's 8 maps changed (map 2 with other wild Pokémon), 2 of the hack's own after them,
+		// one with a name and a wild file the ROM doesn't have. It counts over the ARM9's (which the game no longer
+		// reads), for 10 maps, with or without the ARM9's table
+		std::vector<Bytes> hack = own;
+		hack[2] = mapHeader(hg, 9, 3);
+		hack.push_back(mapHeader(hg, 4, 15));
+		hack.push_back(mapHeader(hg, 200, 250));
+		const Bytes archive = makeNarc(hack);
+		for (int with = 0; with < 2; with++)
+		{
+			CHECK(gen4MapHeaders(id, with ? arm9 : Bytes(0x200, 0x11), 10, archive, NAMES, ENCS, h));
+			EQ(h.at, (size_t)0);
+			EQ(h.table.size(), (size_t)240);
+			EQ(h.zone.size(), (size_t)10);
+			EQ(h.zone[2].first, 3); EQ(h.zone[2].second, 9);
+			EQ(h.zone[8].first, 15); EQ(h.zone[8].second, 4);
+			EQ(h.zone[9].first, 0); EQ(h.zone[9].second, -1);		// (not the ROM's: the first name, no wild Pokémon)
+			EQ((int)h.table[24 * 8 + 16], 15);							// (the table as the town map reads it: header 8's bytes)
+			CHECK(memcmp(&h.table[24 * 2], hack[2].data(), 24) == 0);
+		}
+	}
+	// Diamond/Pearl: the name is 16 bits (a name past 255)
+	{
+		Bytes e = mapHeader(false, 5, 0);
+		put16(e, 18, 300);
+		Gen4Headers h;
+		CHECK(gen4MapHeaders(GameId::DIAMOND, e, 1, {}, 400, 10, h));
+		EQ(h.zone[0].first, 300);
+		CHECK(gen4MapHeaders(GameId::DIAMOND, {}, 1, makeNarc({ e }), 400, 10, h));
+		EQ(h.zone[0].first, 300); EQ(h.table.size(), (size_t)24);
+	}
 }
 
 // ---- BLZ ---------------------------------------------------------------------------------------------------------
@@ -855,6 +951,7 @@ int main(int argc, char** argv)
 	testNarc();
 	testFileSystem();
 	testNarcFile();
+	testMapHeaders();
 	testBlz();
 	testLz();
 	testGen4Text();
