@@ -382,5 +382,27 @@ else
     check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "without unshare -m the port still starts, as before"
 fi
 
+echo "run-port: zip for ports, as Info-ZIP's (#275)"
+# the stand-in run-port puts last on PATH, on the lines ports run (GameMaker ports: zip -r -0 ./game.port ./assets/)
+Z=$R/system/rootfs/usr/share/banana/portmaster/bin/zip
+check "$(grep -c '^export PATH="$PATH:/usr/share/banana/portmaster/bin"$' "$L/run-port")" "1" "run-port puts the stand-ins' folder last on PATH"
+if command -v python3 >/dev/null; then
+    ZD=$T/zip; mkdir -p "$ZD/assets/sub" "$ZD/lib"
+    echo droid > "$ZD/assets/game.droid"; seq 1 500 > "$ZD/assets/sub/a.bin"; echo y > "$ZD/assets/place all game files here"
+    echo so > "$ZD/lib/libyoyo.so"; touch -d 1975-01-01 "$ZD/assets/sub/old"
+    # names <archive>: each entry's name, S for stored and D for deflated, and its size
+    names() { python3 -I -c 'import sys, zipfile
+for i in zipfile.ZipFile(sys.argv[1]).infolist(): print(i.filename, "SD"[i.compress_type != 0], i.file_size)' "$1" | tr '\n' ';'; }
+    (cd "$ZD" && python3 "$Z" -q -r -0 ./game.port ./assets/); check "$?" "0" "zip -r -0 ./game.port ./assets/ (a file from 1975 too)"
+    check "$(names "$ZD/game.port")" "assets/ S 0;assets/sub/ S 0;assets/game.droid S 6;assets/place all game files here S 2;assets/sub/a.bin S 1892;assets/sub/old S 0;" "...every file and folder under assets/, stored, no ./"
+    (cd "$ZD" && python3 "$Z" -q -r ./game.apk ./lib/ && python3 "$Z" -q -r -0 ./game.apk ./game.apk ./assets/ -x "assets/place all game files here" "assets/sub/*")
+    check "$(names "$ZD/game.apk")" "lib/ S 0;lib/libyoyo.so D 3;assets/ S 0;assets/game.droid S 6;" "an archive that is there: its entries kept, -x left out (assets/sub/ too, as Info-ZIP), not itself"
+    (cd "$ZD/assets" && python3 "$Z" -q -j ../game.apk sub/a.bin); check "$(names "$ZD/game.apk" | tr ';' '\n' | grep -c '^a.bin D 1892$')" "1" "-j: the name alone"
+    (cd "$ZD" && python3 "$Z" -q -r none.zip ./nothing 2>/dev/null); check "$?:$([ -e "$ZD/none.zip" ] && echo made)" "12:" "nothing to pack: exit 12 and no archive, as Info-ZIP"
+    (cd "$ZD" && python3 "$Z" -FF game.apk --out fixed.zip 2>/dev/null); check "$?" "16" "an option it doesn't know (-FF): exit 16, the archive left alone"
+else
+    echo "  skipped: the zip stand-in (no python3)"
+fi
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

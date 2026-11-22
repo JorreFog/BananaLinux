@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+# zip for ports, as Info-ZIP's: BananaOS has no zip program, and over 160 of PortMaster's ports pack the game's files
+# into the archive their engine reads at their first start (GameMaker ports: `zip -r -0 ./game.port ./assets/`, then
+# `rm -Rf ./assets/`). With no zip the game's files were deleted and nothing was made in their place (#275). run-port
+# puts this folder last on PATH, so a real zip, if the system ever has one, comes first.
+#   zip [-r] [-0..-9] [-q] [-j] [-u] [-f] archive [file|folder]... [-x pattern...]
+# As Info-ZIP: names as given less a leading ./ or /, folders with -r (their own entries too), an archive that is
+# there is updated (its other entries kept), -x patterns match the whole name (* across /), the archive never goes
+# into itself, exit 12 when there is nothing to do. Anything else (-FF, -d, -T...) exits 16, as an unknown option.
+import fnmatch
+import os
+import shutil
+import sys
+import tempfile
+import zipfile
+
+
+def die(code, msg):
+    sys.stderr.write("zip error: %s\n" % msg)
+    sys.exit(code)
+
+
+def name_of(path, junk):
+    if junk:
+        return os.path.basename(path)
+    n = path.replace(os.sep, "/")
+    while True:
+        if n.startswith("./"):
+            n = n[2:]
+        elif n.startswith("/"):
+            n = n[1:]
+        elif n.startswith("../"):
+            n = n[3:]
+        else:
+            break
+    return "" if n in (".", "..") else n
+
+
+def main(argv):
+    recurse = junk = quiet = False
+    level = 6
+    archive, inputs, excludes = None, [], []
+    i, in_x = 0, False
+    while i < len(argv):
+        a = argv[i]
+        i += 1
+        if a.startswith("-") and len(a) > 1 and a != "-":
+            in_x = False
+            if a.startswith("--"):
+                die(16, "option %s is not supported here" % a)
+            for c in a[1:]:
+                if c == "r":
+                    recurse = True
+                elif c == "j":
+                    junk = True
+                elif c == "q":
+                    quiet = True
+                elif c in "uf":
+                    pass                                    # update/freshen: every file given replaces its entry
+                elif c.isdigit():
+                    level = int(c)
+                elif c == "x":
+                    in_x = True
+                else:
+                    die(16, "option -%s is not supported here" % c)
+            continue
+        if in_x:
+            excludes.append(a)
+        elif archive is None:
+            archive = a if os.path.splitext(a)[1] or os.path.exists(a) else a + ".zip"
+        else:
+            inputs.append(a)
+    if archive is None:
+        die(16, "no archive named")
+    arc_real = os.path.realpath(archive)
+
+    files = []                                              # (path on disk, name in the archive)
+    seen = set()
+
+    def add(path, name):
+        if not name or name in seen or any(fnmatch.fnmatchcase(name, p) for p in excludes):
+            return
+        if os.path.isfile(path) and os.path.realpath(path) == arc_real:
+            return
+        seen.add(name)
+        files.append((path, name))
+
+    for p in inputs:
+        if os.path.isdir(p) and not os.path.islink(p):
+            n = name_of(p, junk)
+            if not junk and n:
+                add(p, n.rstrip("/") + "/")
+            if not recurse:
+                continue
+            for root, dirs, fs in os.walk(p):
+                dirs.sort()
+                for d in dirs:
+                    dp = os.path.join(root, d)
+                    if not junk:
+                        add(dp, name_of(dp, False).rstrip("/") + "/")
+                for f in sorted(fs):
+                    fp = os.path.join(root, f)
+                    if os.path.exists(fp):
+                        add(fp, name_of(fp, junk))
+        elif os.path.exists(p):
+            add(p, name_of(p, junk))
+        else:
+            sys.stderr.write("\tzip warning: name not matched: %s\n" % p)
+
+    if not files:
+        die(12, "Nothing to do! (%s)" % archive)
+    method = zipfile.ZIP_STORED if level == 0 else zipfile.ZIP_DEFLATED
+    folder = os.path.dirname(os.path.abspath(archive))
+    fd, tmp = tempfile.mkstemp(prefix=".zip-", dir=folder)
+    os.close(fd)
+    try:
+        with zipfile.ZipFile(tmp, "w", allowZip64=True, strict_timestamps=False) as out:
+            if os.path.exists(archive):
+                try:
+                    old = zipfile.ZipFile(archive)
+                except zipfile.BadZipFile:
+                    die(3, "Zip file structure invalid (%s)" % archive)
+                with old:
+                    for info in old.infolist():
+                        if info.filename in seen:
+                            continue
+                        with old.open(info) as src, out.open(info, "w", force_zip64=info.file_size > 0x7fffffff) as dst:
+                            shutil.copyfileobj(src, dst, 1 << 20)
+            for path, name in files:
+                if not quiet:
+                    print("  adding: %s" % name)
+                if name.endswith("/"):
+                    info = zipfile.ZipInfo.from_file(path, name, strict_timestamps=False)
+                    out.writestr(info, b"")
+                else:
+                    out.write(path, name, compress_type=method,
+                              compresslevel=None if level == 0 else level)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, archive)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except OSError as e:
+        die(15, str(e))
