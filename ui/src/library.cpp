@@ -1,4 +1,5 @@
 #include "library.h"
+#include "pinyin_initials.h"
 #include "theme.h"
 #include <algorithm>
 #include <cerrno>
@@ -767,10 +768,33 @@ namespace banana
 		return words;
 	}
 
+	// a Chinese name as the first letters of its pinyin (#212: "sed" finds 塞尔达, Sai Er Da, with no input method on the
+	// keyboard): each character that has one (pinyin_initials.h) becomes its letter, everything else stays, so a name
+	// with Latin in it still reads on. Empty when the name has no such character
+	static std::string pinyinInitials(const std::string& s)
+	{
+		std::string out;
+		bool any = false;
+		for (size_t i = 0; i < s.size();)
+		{
+			unsigned char c = (unsigned char)s[i];
+			if ((c & 0xf0) == 0xe0 && i + 2 < s.size() && ((unsigned char)s[i + 1] & 0xc0) == 0x80 && ((unsigned char)s[i + 2] & 0xc0) == 0x80)
+			{
+				unsigned cp = (c & 0x0fu) << 12 | ((unsigned char)s[i + 1] & 0x3fu) << 6 | ((unsigned char)s[i + 2] & 0x3fu);
+				char l = cp >= PINYIN_FIRST && cp <= PINYIN_LAST ? PINYIN_INITIALS[cp - PINYIN_FIRST] : '.';
+				if (l != '.') { out += l; any = true; i += 3; continue; }
+			}
+			out += s[i++];
+		}
+		return any ? out : std::string();
+	}
+
 	static bool searchMatch(const Game& g, const std::vector<SearchWord>& words)
 	{
 		if (words.empty()) return false;
 		std::string t = lower(g.title) + " " + lower(g.rel) + " " + lower(g.genre) + " " + g.year;
+		const std::string py = pinyinInitials(t);
+		if (!py.empty()) t += " " + py;
 		auto has = [&](const std::string& w) { return t.find(w) != std::string::npos; };
 		for (auto& w : words)
 			if (!has(w.word) && (w.genre.empty() || !std::all_of(w.genre.begin(), w.genre.end(), has))) return false;

@@ -1135,6 +1135,16 @@ for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; d
         --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
     grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
 done
+# ...and a Chinese name by the first letters of its pinyin (#212): "sed" is 塞尔达 (Sai Er Da), the name's Latin part as
+# it is, a letter that isn't the next character's finds nothing; and the table is the one its tool writes
+python3 -I "$HERE/../tools/pinyin-initials.py" --check || { echo "FAIL: ui/src/pinyin_initials.h is out of step with tools/pinyin-initials.py"; fail=1; }
+cp "$SX/roms/snes/Super Smoothie World.sfc" "$SX/roms/snes/塞尔达传说 时之笛 DX.sfc"
+for qn in "sed:1" "sedcs:1" "szd dx:1" "sedx:0" "rpg:2"; do
+    q=${qn%:*}
+    "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
+    grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" by pinyin (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
+done
 # a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
 # under its name gets its own again
 IX=$OUT/icons-fx; "$HERE/tests/fixture.sh" "$IX" >/dev/null
