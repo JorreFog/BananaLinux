@@ -357,6 +357,7 @@ Known issues from 0.5.0:
 - **4x resolution** heats the handheld in heavy 3D games; use 2x for long sessions.
 - **A DS game can freeze after a very long sleep** (reported after 2 hours with the lid shut): the in-game menu still works and quitting is fine. Being investigated.
 - **Charging while switched off:** it charges, but no light shows it (the lights are the system's, and it isn't running), and after such a charge the percentage can read low, or stop near 95%, until the charge finishes ([#99](https://github.com/JorreFog/BananaLinux/issues/99), [#104](https://github.com/JorreFog/BananaLinux/issues/104), [#116](https://github.com/JorreFog/BananaLinux/issues/116)).
+- **Black screens at power-on that depend on the card:** some handhelds start BananaOS from one microSD card and not from another written with the same image, or only after the card is taken out and put back ([#183](https://github.com/JorreFog/BananaLinux/issues/183), [#267](https://github.com/JorreFog/BananaLinux/issues/267), [#311](https://github.com/JorreFog/BananaLinux/issues/311)). The cause isn't known yet. What has helped in the reports: another card (not the one that came with the handheld), written again.
 - **Bluetooth headphones** were tested with a SteelSeries headset (and AirPods on an earlier beta); tell us how others do.
 
 Not available yet:

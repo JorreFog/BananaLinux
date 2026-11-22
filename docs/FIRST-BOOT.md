@@ -62,6 +62,9 @@ Send those files back and say what you saw. Some cases:
 
 - **Black screens, and no `BANANA` drive on the computer afterwards**: the kernel or init never got far enough to
   make the data partition. Only a serial console tells more (the RG DS's UART at 1500000 baud, `ttyS2`).
+  Before that, try another microSD card, written again: in several reports (#183, #267, #311) the same image
+  started from one card and not from another on the same handheld (the card that came with the handheld among the
+  ones that didn't), or only after the card was taken out and put back. Why isn't known yet.
 - **Black screens, but the `BANANA` drive is there**: `banana/logs/banana-ui.log` and `dmesg.txt` say why the menu
   couldn't open the panels.
 - **The menu, but "Can't read the card's games"**: the `BANANA` partition couldn't be mounted (formatted as
