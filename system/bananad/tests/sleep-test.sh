@@ -572,6 +572,23 @@ ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
 [ "$(ls /data/banana/logs/sessions | wc -l)" = "$n" ] && ok "recorder off: no new session" || bad "a session with recorder off"
 stop
 
+echo "27b. rcK's TERM while the loop is at its own work (alsactl storing the volume): the loop's stop, the recording written out"
+# (only a TERM in the loop's poll was the loop's: one while it read banana-ui's datagram, the touchscreen or stored the
+# volume ended bananad at once, its last lines lost. The stand-in alsactl holds the store until the test lets it go)
+mkdir -p "$W/bin"; mkfifo /run/test/alsactl-go
+printf '#!/bin/sh\n[ "$3" = store ] || exit 0\n: > /run/test/alsactl-storing\nread x < /run/test/alsactl-go\n' > "$W/bin/alsactl"
+chmod +x "$W/bin/alsactl"; rm -f /run/test/alsactl-storing
+P0=$PATH; PATH="$W/bin:$PATH"; start "recorder = on"; PATH=$P0
+F=$(cat /run/banana/recording 2>/dev/null)
+kill -HUP $BD     # (the settings read again: the volume stored 2 s later, as after the settings screen)
+soon test -e /run/test/alsactl-storing || bad "alsactl store not started in 5 s ($(bd_state))"
+kill $BD; sleep 0.3
+case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) bad "bananad gone at the TERM, in the middle of the store" ;; *) ok "the TERM waits for the loop" ;; esac
+timeout 5 sh -c 'echo > /run/test/alsactl-go' || bad "the stand-in alsactl not waiting"
+stop
+grep -q "bananad  settings read again" "$F" && grep -q "bananad  stopped" "$F" && ok "stopped: the lines before it and the stop, on the card" || bad "at a TERM during the store: $(tail -n 2 "$F" | tr '\n' '|')"
+rm -f /run/test/alsactl-go /run/test/alsactl-storing
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

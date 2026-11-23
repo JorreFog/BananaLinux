@@ -100,10 +100,14 @@ static double sel_since;
 
 static volatile sig_atomic_t reload, stopping;
 static void on_hup(int sig) { (void)sig; reload = 1; }
-static volatile sig_atomic_t in_poll;	/* the main loop's poll: a TERM there is taken by the loop (the recording written out) */
-/* rcK's: the recording written out, then gone. Anywhere but the main loop's poll (a sleep's or a shutdown's own waits,
- * which may not come back to the loop) at once, as before the recorder */
-static void on_term(int sig) { (void)sig; stopping = 1; if (!in_poll) _exit(0); }
+/* the main loop, its poll and its own work, and a sleep from its wake on: a TERM there is taken by the loop at its next
+ * turn (the recording written out). Only the poll before: a TERM while the loop read a datagram of banana-ui's, read
+ * the touchscreen (every 0.2 s while recording), blinked the LED for a marker, or just after a wake, ended bananad at
+ * once, and the last half-minute of the recording was lost at that restart */
+static volatile sig_atomic_t term_to_loop;
+/* rcK's: the recording written out, then gone. Anywhere else (a sleep's or a shutdown's own waits, which may not come
+ * back to the loop) at once, as before the recorder */
+static void on_term(int sig) { (void)sig; stopping = 1; if (!term_to_loop) _exit(0); }
 
 static double mono(void)
 {
@@ -885,7 +889,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 
 static void suspend_now(const char *why)
 {
-	if (powering_off()) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
+	/* (stopping: a TERM the loop took while it was busy, the stop next: no sleep before it) */
+	if (powering_off() || stopping) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
+	term_to_loop = 0;	/* (a TERM while asleep or dark: gone at once, see on_term) */
 	double t0 = mono();
 	/* the panels dark first: the pre-sleep hooks (Wi-Fi down and its driver unloaded, Bluetooth down) take ~2 s on the
 	 * RG DS Plus, and the panels stayed lit that long with the lid shut. The wake lights them again (below: the lid
@@ -1023,7 +1029,8 @@ static void suspend_now(const char *why)
 		woke = lid_closed ? "power button" : "lid opened";
 		break;
 	}
-	/* awake: the game and the menu first */
+	/* awake: the game and the menu first. From here on back to the loop (a TERM now: the recording written out there) */
+	term_to_loop = 1;
 	double t_wake = mono();
 	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
 	 * power-button sleep (the lid-open event that would light them is drained below) */
@@ -1057,6 +1064,7 @@ static void suspend_now(const char *why)
 
 static void shutdown_now(const char *why)
 {
+	term_to_loop = 0;	/* (a TERM during its wait for the game: gone at once) */
 	say("shutting down (%s)", why);
 	shutting_down = 1;
 	rec("power", "shutting down (%s)", why);
@@ -2145,6 +2153,7 @@ int main(int argc, char **argv)
 	if (rf) fclose(rf);
 
 	for (;;) {
+		term_to_loop = 1;	/* (again after a sleep or a shutdown_now that came back here) */
 		struct pollfd pf[MAXDEV + 3];
 		int n = 0;
 		for (int i = 0; i < ndev; i++) pf[n++] = (struct pollfd){ devfd[i], POLLIN, 0 };
@@ -2187,9 +2196,7 @@ int main(int argc, char **argv)
 		 * then came at the next press. A flag already up: no wait at all. */
 		struct timespec ts = { timeout / 1000, timeout % 1000 * 1000000L };
 		sigprocmask(SIG_BLOCK, &loop_sigs, &sigs_before);
-		in_poll = 1;
 		if (!stopping && !reload) ppoll(pf, n, &ts, &sigs_before);
-		in_poll = 0;
 		sigprocmask(SIG_SETMASK, &sigs_before, NULL);
 		double now = mono();
 		sound_poll();
