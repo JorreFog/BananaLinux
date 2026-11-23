@@ -56,8 +56,8 @@ test: ui
 	sh store/apps/activity/tests/sync-test.sh
 	@if [ -n "$(ROCKNIXDS_STORE)" ]; then python3 store/test-banana.py "$(ROCKNIXDS_STORE)"; else echo "store test skipped (set ROCKNIXDS_STORE to a rocknixds-store checkout)"; fi
 
-# ui/fuzz: themes, expressions, zips, DS ROM banners, Banana's own files on the card and the DS Pokémon companion's ROM
-# reader, under libFuzzer, ASan and UBSan
+# ui/fuzz: themes, expressions, zips, DS ROM banners, Banana's own files on the card, the DS Pokémon companion's ROM
+# reader and the game companions' definitions, under libFuzzer, ASan and UBSan
 fuzz:
 	sh ui/fuzz/run.sh
 
