@@ -123,6 +123,12 @@ EV_SW=5 SW_LID=0 EV_KEY=1 KEY_POWER=116
 asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
 wake() { head -c 3 /sys/power/state > /dev/null; sleep 0.3; }       # read "mem": the write returns, it is awake
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
+# the game stopped (T), or going on again: looked at until it shows, up to 5 s. kill() returns once a signal is sent,
+# and a game shows T only once it has run to take its SIGSTOP: on a busy CI runner that came after the one look, and
+# "game not stopped (R)" failed a sleep that was right (the state is never S: a sleeping game the signal reached is R)
+soon() { for i in $(seq 50); do "$@" && return 0; sleep 0.1; done; return 1; }
+game_is() { [ "$(gstate)" = "$1" ]; }
+game_runs() { [ "$(gstate)" != T ]; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
@@ -140,11 +146,11 @@ echo "1. lid closed, then opened"
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 if asleep; then ok "suspended on the lid"; else bad "no suspend on the lid"; fi
-[ "$(gstate)" = T ] && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
+soon game_is T && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
 [ "$(cat /sys/power/pm_async)" = 1 ] && ok "devices resume in parallel (pm_async 1)" || bad "pm_async $(cat /sys/power/pm_async)"
 grep -q "\[deep\]" /sys/power/mem_sleep && ok "deep sleep chosen" || bad "mem_sleep $(cat /sys/power/mem_sleep)"
 echo 0 > /run/test/lid; wake
-[ "$(gstate)" != T ] && ok "game running again after the wake" || bad "game still stopped"
+soon game_runs && ok "game running again after the wake" || bad "game still stopped"
 rm -f /run/banana/game.pid; sleep 0.1
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "sleep.log: $(tail -n1 /data/banana/logs/sleep.log | cut -c21-)" || bad "no wake in sleep.log"
 stop
@@ -171,8 +177,7 @@ wake      # the power button bumped in a bag: the lid is still shut
 if asleep; then ok "straight back to sleep with the lid shut"; else bad "stayed awake with the lid shut"; fi
 [ ! -s /run/test/ui-signals ] && ok "the menu wasn't woken for it" || bad "the menu was woken with the lid shut"
 echo 0 > /run/test/lid; wake
-sleep 0.2
-grep -q SIGUSR1 /run/test/ui-signals && ok "menu told to redraw after the real wake" || bad "menu not told to redraw"
+soon grep -q SIGUSR1 /run/test/ui-signals && ok "menu told to redraw after the real wake" || bad "menu not told to redraw"
 grep -q 'slept again with the lid shut' /data/banana/logs/sleep.log && ok "logged the second sleep" || bad "second sleep not logged"
 stop
 
@@ -198,7 +203,7 @@ echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
 : > /sys/class/rtc/rtc0/wakealarm; wake
 if asleep; then ok "back to sleep after the battery check"; else bad "awake after the battery check"; fi
-[ "$(gstate)" = T ] && ok "the game stayed stopped" || bad "the game ran during the check"
+soon game_is T && ok "the game stayed stopped" || bad "the game ran during the check"
 echo 0 > /run/test/lid; wake; sleep 0.2
 grep -q 'battery checked' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
 stop
@@ -290,7 +295,7 @@ start "sleep_check_hours = 4" "poweroff_after_sleep_minutes = 0.02"    # 1.2 s
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
 [ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +1 ] && ok "the RTC alarm at the deadline, not the 4 h battery check" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
-[ "$(gstate)" = T ] && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
+soon game_is T && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
 sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
 poweroff && ok "shut down cleanly (init asked to power off)" || bad "no shutdown at the deadline"
 grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1 (save a resume state and quit)" || bad "drastic: $(cat /run/test/drastic.log 2>/dev/null)"
