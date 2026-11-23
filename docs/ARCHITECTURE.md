@@ -218,6 +218,17 @@ it starts without them (the page says so). The settings' pages keep their textur
 times the panel's area; the least recently used go after each frame), as the menu's engine does, and a folder's rows
 get their words only for the window on screen: a folder of any number of names doesn't fill the memory.
 
+**The reader** (#173; `src/settings_text.cpp`, the text itself `src/textfile.cpp`): A on a `.txt`, `.md` (as it is
+written), `.nfo` or `.log` in Files reads it, read-only. The text runs from the top panel on to
+the bottom one, 13 lines each; UP and DOWN move it a line, LEFT, RIGHT, L and R both panels' worth, a drag on the bottom
+panel as far as the finger went, B goes back. The first MB of a file is read (a bigger one says so at the end); UTF-8,
+UTF-16 with its mark and old guides' Windows-1252 (a byte that isn't UTF-8 is read as that) are decoded, Windows', old
+Macs' and Unix's line ends taken, tabs made spaces to the next stop of 4, control characters and ANSI colour codes left
+out; a file with NUL bytes or many control characters isn't text and isn't opened (its actions are, with why). The lines
+are wrapped once, when it opens, to the width of the font's own layout (kerning included) at their spaces, a word
+longer than a line where the line is full, Chinese and Japanese between characters (the CJK pixel font is loaded for a
+file that needs it). Where each file was left is kept for the session in Files' store of folders' places.
+
 **SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
 `/root/.ssh` points there); the host key is made once per card. Logs and `sleep_debug`'s timings can be read

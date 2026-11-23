@@ -1155,6 +1155,7 @@ namespace banana
 		if (achLoader) achLoader->stop();	// (the Achievements page's threads end after what they are doing)
 		achLoader.reset();
 		achTex.clear();
+		rd.reset();	// (the reader's lines)
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1557,6 +1558,7 @@ namespace banana
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
 		if (page == FILES) return pressFiles(k);
+		if (page == TEXT) return pressText(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
 		if (page == SERVERS) return pressServers(k);
@@ -1745,6 +1747,7 @@ namespace banana
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
 		if (page == FILES) return touchFiles(cx, cy);
+		if (page == TEXT) return touchText(cx, cy);
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (askButtons): No, Yes
@@ -2479,6 +2482,7 @@ namespace banana
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (page == FILES) { renderFiles(); return; }
+		if (page == TEXT) { renderText(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }
 		if (page == SERVERS) { renderServers(); return; }

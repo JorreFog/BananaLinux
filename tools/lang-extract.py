@@ -338,6 +338,7 @@ BL_UI = [
     ("ui/src/settings.cpp", "settings", "Settings"),
     ("ui/src/settings_defaults.cpp", "settings", "Settings"),
     ("ui/src/settings_files.cpp", "settings", "Files"),
+    ("ui/src/settings_text.cpp", "settings", "Files: the reader"),
     ("ui/src/settings_servers.cpp", "settings", "Files: servers, downloads and archives"),
     ("ui/src/settings_bshare.cpp", "settings", "Bshare"),
     ("ui/src/settings_gamepanel.cpp", "settings", "Game panel (second screen)"),

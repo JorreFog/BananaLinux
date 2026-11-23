@@ -40,6 +40,7 @@ ui/tests/nds-logic-test
 ui/tests/nds-ram-test
 ui/tests/nds-romfile-test
 /ui/tests/eq-test
+/ui/tests/textfile-test
 /ui/libasound_module_pcm_banana_eq.so
 /ui/tests/ach-test
 /ui/rc-obj/

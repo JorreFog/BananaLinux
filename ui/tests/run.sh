@@ -63,6 +63,8 @@ make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test"
 make -s -C "$HERE" tests/ach-test >/dev/null && "$HERE/tests/ach-test" "$OUT" 2> "$OUT/ach-test.log" || { echo "FAIL the achievements list's data: $(grep FAIL "$OUT/ach-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the reader's text: encodings, line ends, a file that isn't text, the wrap
+make -s -C "$HERE" tests/textfile-test >/dev/null && "$HERE/tests/textfile-test" 2> "$OUT/textfile-test.log" || { echo "FAIL the reader's text: $(grep FAIL "$OUT/textfile-test.log" | head -3)"; fail=1; }
 # the translations: a line's %d takes a number only, not a game's or a file's name
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
@@ -677,6 +679,8 @@ for size in 640x480 1024x768; do
     . "$HERE/tests/ux.sh"
     # the first-time setup's slides and the first boot's arrival
     . "$HERE/tests/setup.sh"
+    # the reader: text files from Files, a game's guide from its page (#173, #203)
+    . "$HERE/tests/reader.sh"
     # each view drew something of its own (not the same frame again)
     # (a ROM not supported: the tiles have no tabs and a battle leaves them be, so pk-game, pk-team and pk-battle match)
     for pair in "pk-party pk-game" "pk-party zh-pk-party"; do
