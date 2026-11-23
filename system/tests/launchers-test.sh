@@ -405,6 +405,18 @@ for i in zipfile.ZipFile(sys.argv[1]).infolist(): print(i.filename, "SD"[i.compr
     (cd "$ZD/assets" && python3 "$Z" -q -j ../game.apk sub/a.bin); check "$(names "$ZD/game.apk" | tr ';' '\n' | grep -c '^a.bin D 1892$')" "1" "-j: the name alone"
     (cd "$ZD" && python3 "$Z" -q -r none.zip ./nothing 2>/dev/null); check "$?:$([ -e "$ZD/none.zip" ] && echo made)" "12:" "nothing to pack: exit 12 and no archive, as Info-ZIP"
     (cd "$ZD" && python3 "$Z" -FF game.apk --out fixed.zip 2>/dev/null); check "$?" "16" "an option it doesn't know (-FF): exit 16, the archive left alone"
+    # a folder that is a link is gone into (Info-ZIP's way without -y), a link back up isn't gone round, a FIFO is left out
+    ZL=$T/ziplinks; mkdir -p "$ZL/assets/real" "$ZL/elsewhere"; echo in > "$ZL/elsewhere/f.txt"; echo r > "$ZL/assets/real/r.txt"
+    ln -s ../elsewhere "$ZL/assets/dirlink"; ln -s .. "$ZL/assets/real/up"; mkfifo "$ZL/assets/pipe"
+    (cd "$ZL" && timeout 20 python3 "$Z" -q -r -0 ./game.port ./assets/ 2>/dev/null); check "$?" "0" "a tree with a linked folder, a link back up and a FIFO: packed, not waited on for ever"
+    check "$(names "$ZL/game.port" | tr ';' '\n' | grep -c -e '^assets/dirlink/f.txt S 3$' -e '^assets/real/r.txt S 2$'):$(names "$ZL/game.port" | grep -c -e pipe -e 'up/assets')" "2:0" "...the linked folder's file is in, the FIFO and the way back up aren't"
+    # a quit while it writes (the port quit at its first start): the old archive whole, no temporary file left beside it
+    ZT=$T/zipterm; mkdir -p "$ZT/assets"; truncate -s 1500M "$ZT/assets/big"; echo old > "$ZT/keep.txt"
+    (cd "$ZT" && python3 "$Z" -q game.port keep.txt)
+    (cd "$ZT" && exec python3 "$Z" -q -r -6 ./game.port ./assets/) & zp=$!
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do ls -A "$ZT" | grep -q '^\.zip-' && break; sleep 0.1; done
+    during=$(ls -A "$ZT" | grep -c '^\.zip-'); kill -TERM $zp; wait $zp; zrc=$?
+    check "$during:$zrc:$(ls -A "$ZT" | grep -c '^\.zip-'):$(names "$ZT/game.port")" "1:143:0:keep.txt D 4;" "a TERM while it writes: exit 143, its temporary file gone, the archive as it was"
 else
     echo "  skipped: the zip stand-in (no python3)"
 fi

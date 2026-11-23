@@ -10,6 +10,8 @@
 import fnmatch
 import os
 import shutil
+import signal
+import stat
 import sys
 import tempfile
 import zipfile
@@ -36,7 +38,15 @@ def name_of(path, junk):
     return "" if n in (".", "..") else n
 
 
+def quit_now(sig, frame):
+    sys.exit(128 + sig)
+
+
 def main(argv):
+    # a quit while the archive is written (the port quit at its first start): ended as an exception is, so the
+    # temporary file, as large as the game, is taken away and not left in the port's folder for good
+    signal.signal(signal.SIGTERM, quit_now)
+    signal.signal(signal.SIGHUP, quit_now)
     recurse = junk = quiet = False
     level = 6
     archive, inputs, excludes = None, [], []
@@ -85,25 +95,38 @@ def main(argv):
         seen.add(name)
         files.append((path, name))
 
+    def regular(path):
+        # (a FIFO or a device in the tree: left out, as Info-ZIP does; opened, a FIFO was waited on for ever)
+        try:
+            return stat.S_ISREG(os.stat(path).st_mode)
+        except OSError:
+            return False
+
     for p in inputs:
-        if os.path.isdir(p) and not os.path.islink(p):
+        if os.path.isdir(p):
             n = name_of(p, junk)
             if not junk and n:
                 add(p, n.rstrip("/") + "/")
             if not recurse:
                 continue
-            for root, dirs, fs in os.walk(p):
-                dirs.sort()
+            # (a folder that is a link is gone into, as Info-ZIP without -y: only its name went in, empty. One met
+            # before, a link back up the tree, isn't gone into again)
+            been = {os.path.realpath(p)}
+            for root, dirs, fs in os.walk(p, followlinks=True):
+                dirs[:] = sorted(d for d in dirs if os.path.realpath(os.path.join(root, d)) not in been)
+                been.update(os.path.realpath(os.path.join(root, d)) for d in dirs)
                 for d in dirs:
                     dp = os.path.join(root, d)
                     if not junk:
                         add(dp, name_of(dp, False).rstrip("/") + "/")
                 for f in sorted(fs):
                     fp = os.path.join(root, f)
-                    if os.path.exists(fp):
+                    if regular(fp):
                         add(fp, name_of(fp, junk))
-        elif os.path.exists(p):
+        elif regular(p):
             add(p, name_of(p, junk))
+        elif os.path.exists(p):
+            sys.stderr.write("\tzip warning: not a file or a folder, left out: %s\n" % p)
         else:
             sys.stderr.write("\tzip warning: name not matched: %s\n" % p)
 
