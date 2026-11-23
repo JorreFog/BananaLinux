@@ -374,6 +374,11 @@ if [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
     rm -rf "$CP/PortMaster"
     check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a second card without PortMaster: this card's"
     check "$(ls -A "$CP/PortMaster" | wc -l | tr -d ' ')" "0" "...and nothing of it written to the second card"
+    # a second card that can't be written (its switch, a worn card mounted read-only) and has no PortMaster folder:
+    # nowhere there to put this card's PortMaster, so the port runs with this card's /roms/ports, all of it
+    rm -rf "$CP/PortMaster"; mount --bind "$CP" "$CP" && mount -o remount,ro,bind "$CP"
+    check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "a read-only second card without PortMaster: this card's /roms/ports as it is, not the second card's without PortMaster"
+    umount "$CP"
     mv "$SP/PortMaster" "$PC/away"; mkdir -p "$CP/PortMaster"; echo second > "$CP/PortMaster/which"
     check "$(port "$CP/Game.sh")" "$SP/Game.sh second: Game.sh PortMaster game " "no PortMaster on this card: the second card's own"
     mv "$PC/away" "$SP/PortMaster"

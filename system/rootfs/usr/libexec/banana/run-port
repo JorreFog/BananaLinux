@@ -20,7 +20,11 @@ card_ports() {
     fi
     mount --bind "$2" "$1" || return 1
     [ -z "$_pm" ] && return 0
-    mkdir -p "$1/PortMaster" && mount --bind "$3" "$1/PortMaster"
+    mkdir -p "$1/PortMaster" 2>/dev/null && mount --bind "$3" "$1/PortMaster" && return 0
+    # (no folder for it on a second card that can't be written: this card's ports back at /roms/ports, all of them,
+    # not the second card's with no PortMaster at all)
+    umount "$1"
+    return 1
 }
 S2=$(cat /run/banana/sd2/roms 2>/dev/null)
 D=$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)
