@@ -11,10 +11,25 @@ set -e
 # ...and a /data of its own the same way: Settings writes the emulators' own files where they are on the handheld
 # (/data/bananads/bananads.conf, /data/retroarch/retroarch.cfg) whatever --data says, so as root the checks changed
 # this machine's /data, and found there what the run before had set (BANANA_TEST_OWN_DATA: it is this run's alone)
+# ...and processes of its own where it can (a PID namespace, its own /proc): Settings tells bananad of a change with a
+# SIGHUP to every process named bananad that /proc shows, and the headless menus here sent theirs to this machine's
+# own too (a developer's, or a sleep test's beside this run). There the suite is a child of a shell of its own, the
+# namespace's init, and a stand-in bananad out here (a copy of sleep, which a SIGHUP ends) must outlive it; where
+# only the mount namespace is allowed, that alone, as before
 if [ -z "$BANANA_TEST_OWN_RUN" ] && [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
-    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c 'mount -t tmpfs tmpfs /run 2>/dev/null
+    own='mount -t tmpfs tmpfs /run 2>/dev/null
         mkdir -p /data 2>/dev/null && mount -t tmpfs tmpfs /data 2>/dev/null && export BANANA_TEST_OWN_DATA=1
-        exec "$0" "$@"' "$0" "$@"
+        '
+    if unshare -m -p -f --mount-proc true 2>/dev/null; then
+        SB=$(mktemp -d); cp "$(command -v sleep)" "$SB/bananad"; "$SB/bananad" 7200 & B=$!
+        BANANA_TEST_OWN_RUN=1 unshare -m -p -f --kill-child --mount-proc sh -c "$own"'"$0" "$@"' "$0" "$@" && r=0 || r=$?
+        case $(awk '{print $3}' "/proc/$B/stat" 2>/dev/null) in    # (ended: gone, or a zombie not reaped yet)
+            ''|Z) echo "FAIL: the menus' SIGHUP reached a process named bananad outside the test"; r=1 ;;
+            *) kill $B ;;
+        esac
+        rm -rf "$SB"; exit $r
+    fi
+    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c "$own"'exec "$0" "$@"' "$0" "$@"
 fi
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}
