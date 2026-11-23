@@ -5,8 +5,12 @@
 set -e
 D=${1:?usage: fixture.sh <dir>}
 rm -rf "$D"; mkdir -p "$D/roms/nds/media/box" "$D/roms/gba" "$D/roms/snes/media/box" "$D/roms/gb" "$D/data"
+# the titles in the menu's own Inter, not ImageMagick's default font: that is whatever the computer has installed, so
+# the covers were other pictures elsewhere, and the Theme Studio's engine test found 90 to 1283 pixels of difference
+# between two engines that drew the same thing
+FONT=$(cd "$(dirname "$0")/.." && pwd)/assets/banana/fonts/Inter-Bold.ttf
 box() {   # box <file> <colour> <text>
-    convert -size 420x380 "gradient:$2-black" -gravity center -fill white -pointsize 34 -annotate 0 "$3" "$1"
+    convert -size 420x380 "gradient:$2-black" -gravity center -fill white -font "$FONT" -pointsize 34 -annotate 0 "$3" "$1"
 }
 for g in "Banana Kart DS" "Peel Quest" "Split Racers (USA)" "Monkey Puzzle League" "Yellow Planet [!]"; do
     head -c 4096 /dev/zero > "$D/roms/nds/$g.nds"

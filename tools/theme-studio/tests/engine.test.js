@@ -102,10 +102,12 @@ function png(w, h, rgb) {
   };
 
   // the native build reads the library the wasm build carries (its /fx: the games, the box art, systems.conf), not
-  // one fixture.sh draws here: fixture.sh draws the box art's titles with ImageMagick's default font, so on another
+  // one fixture.sh draws here: fixture.sh drew the box art's titles with ImageMagick's default font, so on another
   // computer the covers were other pictures, and comic-panel, coral-reef, felt-table, vinyl-lounge, hillside and
   // turntable (the themes that show a cover's title big enough) differed by 90 to 1283 pixels with nothing wrong in
-  // either engine. fixture.sh still gives the native run its fresh data (play stats, the favourite) each time
+  // either engine. It names Inter now, but the engine's covers are the ones drawn when it was built, and ImageMagick's
+  // and FreeType's versions still draw text a little apart. fixture.sh still gives the native run its fresh data
+  // (play stats, the favourite) each time
   const fxRoms = path.join(work, "fx-roms"), fxSystems = path.join(work, "fx-systems.conf");
   if (native) {
     (function copy(from, to) {
