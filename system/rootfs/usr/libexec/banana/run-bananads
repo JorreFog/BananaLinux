@@ -178,11 +178,16 @@ case ${BANANADS_MIC_DEVICE:-} in
     *) echo "run-bananads: BANANADS_MIC_DEVICE=$BANANADS_MIC_DEVICE bypasses ALSA's 48 kHz plug: the mic may not start" >&2 ;;
 esac
 # the in-game save as DraStic left it, when it played the game last (nds-saves: the two emulators share saves); a
-# quick resume state older than the save is dropped, as run-drastic does: loading it would put an older save back
-/usr/libexec/banana/nds-saves "$1"
+# quick resume state that isn't loaded at this start is dropped, as run-drastic does: it is the last session's spot,
+# and loaded after a later session it would put that session's save back (nds-saves and the home server's sync drop
+# it too when they replace the save, and nds-saves when the save isn't the one the game was quit with, which the menu
+# or bananad told it at the game's end: one copied onto the card by hand since; and when the last session's end was
+# never told to it, the battery or a crash having ended it: the state is from before what the game saved then; the
+# files' times, which decided this before, lie when the clock was lost); both changed since they last agreed, BananaDS's own is played and DraStic's
+# kept in the vault
+/usr/libexec/banana/nds-saves "$1" --prefer sav
 G=${1##*/}; G=${G%.*}
-[ -f "/data/states/nds/$G.resume.mst" ] && [ -f "/data/saves/nds/$G.sav" ] && [ "/data/saves/nds/$G.sav" -nt "/data/states/nds/$G.resume.mst" ] &&
-    rm -f "/data/states/nds/$G.resume.mst"
+[ -f "/data/states/nds/$G.resume.mst" ] && [ "${BANANADS_RESUME_ON_START:-on}" = off ] && rm -f "/data/states/nds/$G.resume.mst"
 # a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens files only, so the zip's game is
 # unpacked once into the card's cache, named after the zip (its saves and states then go by the name the menu shows),
 # and unpacked again only when the zip is newer

@@ -13,6 +13,9 @@
 #include <map>
 #include <poll.h>
 #include <sys/syscall.h>
+#ifndef SYS_pidfd_open
+#define SYS_pidfd_open 434	// (the toolchain's headers predate it, as in main.cpp; the handhelds' kernel has it)
+#endif
 #include <sys/wait.h>
 #include <unistd.h>
 

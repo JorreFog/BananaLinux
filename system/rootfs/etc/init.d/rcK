@@ -5,8 +5,11 @@
 # a game on its own shutdown and waits for it)
 touch /run/banana/powering-off 2>/dev/null
 # the game's process group first (banana-ui starts each game in its own session; a poweroff over SSH reaches
-# BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu; waited for until they are
-# gone, up to 3 s, instead of a second whatever happened
+# BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu and the home server's sync
+# (which leaves at once, once a save it is placing is in place and recorded); waited for until they are gone, up to
+# 3 s, instead of a second whatever happened; a sync still there past that is placing a save (a slow card: its
+# copies in the vault, the save, each synced), and is given up to 10 s more rather than the card pulled from under
+# it half done
 G= START=; read -r G START 2>/dev/null < /run/banana/game.pid
 # (the start time, when the file has one, tells a reused pid; /proc/<pid>'s file times can't: they are when it was
 # first looked up)
@@ -15,11 +18,12 @@ if [ -n "$G" ] && [ -n "$START" ]; then
     [ "$S" = "$START" ] || G=
 fi
 [ -n "$G" ] && kill -TERM -"$G" 2>/dev/null
-killall -TERM banana-ui retroarch drastic 2>/dev/null
+killall -TERM banana-ui retroarch drastic banana-sync 2>/dev/null
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
-    pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
+    pidof banana-ui retroarch drastic banana-sync >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
     sleep 0.1
 done
+i=0; while [ $i -lt 100 ] && pidof banana-sync >/dev/null; do sleep 0.1; i=$((i + 1)); done
 # then bananad, while the card is still mounted: it writes the flight recorder's last lines out and goes (killed after
 # the unmount, the last half-minute of a recording was lost at every restart)
 killall bananad 2>/dev/null

@@ -22,6 +22,17 @@ int main(int argc, char** argv)
 		// the key caps: the button's name as printed on the device (a chip "START  Settings")
 		expect(lang::tr("START"), "START", (c + ": the START key cap").c_str());
 		expect(lang::tr("SELECT"), "SELECT", (c + ": the SELECT key cap").c_str());
+		// the Server row's help with what it says of the certificate: each case a line of its own in every language,
+		// the server's name and address carried into it (put together from two sentences it matched no line at all)
+		for (const std::string& en : {
+			std::string("Paired with RomM 5.4.1 at https://romm.example.com. A opens its address and Check certificate. Connect there pairs again. Its certificate isn't checked (Check certificate is off)."),
+			std::string("Paired with RomM 5.4.1 at https://romm.example.com. A opens its address and Check certificate. Connect there pairs again. Its certificate is one you trusted on this handheld."),
+			std::string("Paired with Test server (Romhost) at https://host.example.com. A pairs again. Its certificate isn't checked (Check certificate is off)."),
+			std::string("Paired with Test server (Romhost) at https://host.example.com. A pairs again. Its certificate is one you trusted on this handheld.") })
+		{
+			const std::string got = lang::tr(en);
+			expect(got != en && got.find(".example.com") != std::string::npos ? "translated" : got, "translated", (c + ": the Server row's help with its certificate").c_str());
+		}
 		// the line itself still translates ("Start" on a button's label)
 		expect(lang::tr("Start") == "Start" ? "untranslated" : "translated", "translated", (c + ": Start").c_str());
 	}

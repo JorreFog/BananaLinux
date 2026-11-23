@@ -27,44 +27,10 @@ mkdir -p /data/saves /data/states /data/screenshots
 [ -x /usr/libexec/banana/saves-flat ] && /usr/libexec/banana/saves-flat
 set -- --system "${BANANA_SYSTEM:-}" --config /data/retroarch/config "$CORE" "$ROM"
 # the Game Boy Advance's one save folder for every GBA core (run-retroarch's /data/saves/gba): the same files, and a
-# game with no save there yet gets the newest one from a core's folder, as there
-# (as run-retroarch's)
-# flat_gba_save <game name> <rom>: saves/<name>.srm when it can only be this GBA game's save. Every other system's saves
-# are there, so the Save Mover's packs (before it knew) and saves copied by hand put a GBA save there too, where no GBA
-# core looked: the game started without it. Not when another system's folder has a game of that name (a Game Boy
-# game's save is there as well, and the two can't be told apart by their size), on either card.
-# (BANANA_ROOT, BANANA_RUN: the tests' made-up card, as nds-saves and saves-flat)
-flat_gba_save() {
-    _d=${BANANA_ROOT:-/data}; _f=$_d/saves/$1.srm
-    [ -s "$_f" ] || return 0
-    _roots="$_d/roms
-$(cat "${BANANA_RUN:-/run/banana}/sd2/roms" 2>/dev/null)"
-    # (the game's own system folder, the part after its card's roms/)
-    _mine=$(printf '%s\n' "$_roots" | while read -r _r; do [ -n "$_r" ] || continue; case $2 in "$_r"/*/*) _m=${2#"$_r"/}; echo "${_m%%/*}" ;; esac; done | head -n 1)
-    printf '%s\n' "$_roots" | while read -r _r; do
-        [ -n "$_r" ] || continue
-        for _g in "$_r"/*/"$1".* "$_r"/*/*/"$1".*; do
-            [ -e "$_g" ] || continue
-            _s=${_g#"$_r"/}; [ "${_s%%/*}" = "$_mine" ] || { echo other; exit; }
-        done
-    done | grep -q other || echo "$_f"
-}
+# game with no save there yet gets the newest one from a core's folder, by the same script as there (gba-seed)
 if [ "$BANANA_SYSTEM" = gba ]; then
     G=/data/saves/gba; mkdir -p $G
-    n=${ROM##*/}; n=${n%.*}
-    if [ ! -f "$G/$n.srm" ]; then
-        best=
-        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor ""; do
-            f="/data/saves/$d/$n.srm"
-            [ -n "$d" ] || f=$(flat_gba_save "$n" "$ROM")   # (and the one in saves/ itself, when it is this game's)
-            [ -s "$f" ] || continue
-            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
-        done
-        [ -n "$best" ] && cp -p "$best" "$G/$n.srm.new" && mv "$G/$n.srm.new" "$G/$n.srm" && sync &&
-            echo "run-bananafront: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
-    fi
+    /usr/libexec/banana/gba-seed "$ROM"
     set -- --save-dir $G "$@"
 else
     # every other system's saves flat in /data/saves, as RetroArch keeps them now (sort_savefiles_enable false) and

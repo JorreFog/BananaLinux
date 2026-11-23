@@ -1,0 +1,58 @@
+#!/bin/sh
+# The Game Boy Advance's one save folder, /data/saves/gba/<game>.srm, which every GBA core reads whichever frontend
+# starts it: a game with no save there yet gets a copy of its newest one from a core's own folder
+# (/data/saves/<core>/<game>.srm, where RetroArch kept them before; saves-flat moves those folders over, and this is
+# for a game started while that move hasn't gone through), one with data in it: a core that only ever wrote a blank one
+# doesn't win. /data/saves/<game>.srm itself is looked at too, when it can only be this game's (flat_gba_save, below).
+# The files it copies from stay as they were. Run by run-retroarch and run-bananafront before a GBA game,
+# the one script for both, so the two frontends can't come to seed differently.
+# The copy is put there as save-put.sh says (written beside the save, the card synced, renamed over, synced again): a
+# power cut can't leave a half-written save under the name the cores read, which no later start would seed again, the
+# file being there.
+#   gba-seed <rom>
+#   BANANA_ROOT=<dir> gba-seed ...   the data partition somewhere else than /data (the tests' cards)
+#   BANANA_RUN=<dir> gba-seed ...    /run/banana somewhere else (the second card's roms folder is named there)
+DATA=${BANANA_ROOT:-/data}
+case $0 in */*) . "${0%/*}/save-put.sh" ;; *) . /usr/libexec/banana/save-put.sh ;; esac
+G=$DATA/saves/gba
+n=${1##*/}; n=${n%.*}
+[ -n "$n" ] || exit 2
+mkdir -p "$G"
+[ -f "$G/$n.srm" ] && exit 0
+stale_tmps seed "$G/$n.srm.seed."*.tmp
+# flat_gba_save <game name> <rom>: saves/<name>.srm when it can only be this GBA game's save. Every other system's saves
+# are there, so the Save Mover's packs (before it knew) and saves copied by hand put a GBA save there too, where no GBA
+# core looked: the game started without it. Not when another system's folder has a game of that name (a Game Boy
+# game's save is there as well, and the two can't be told apart by their size), on either card.
+flat_gba_save() {
+    _f=$DATA/saves/$1.srm
+    [ -s "$_f" ] || return 0
+    _roots="$DATA/roms
+$(cat "${BANANA_RUN:-/run/banana}/sd2/roms" 2>/dev/null)"
+    # (the game's own system folder, the part after its card's roms/)
+    _mine=$(printf '%s\n' "$_roots" | while read -r _r; do [ -n "$_r" ] || continue; case $2 in "$_r"/*/*) _m=${2#"$_r"/}; echo "${_m%%/*}" ;; esac; done | head -n 1)
+    printf '%s\n' "$_roots" | while read -r _r; do
+        [ -n "$_r" ] || continue
+        for _g in "$_r"/*/"$1".* "$_r"/*/*/"$1".*; do
+            [ -e "$_g" ] || continue
+            _s=${_g#"$_r"/}; [ "${_s%%/*}" = "$_mine" ] || { echo other; exit; }
+        done
+    done | grep -q other || echo "$_f"
+}
+best=
+for d in gpSP mGBA "VBA Next" "VBA-M" Meteor ""; do
+    f="$DATA/saves/$d/$n.srm"
+    [ -n "$d" ] || f=$(flat_gba_save "$n" "$1")     # (and the one in saves/ itself, when it is this game's)
+    [ -s "$f" ] || continue
+    # (blank: what the save sync also counts as no save, all 0xff or all 0x00 for a GBA core, which the one in saves/
+    # is taken as here)
+    banana-sync blank "$f" "${d:-mGBA}" && continue
+    if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+done
+[ -n "$best" ] || exit 0
+if put_synced "$best" "$G/$n.srm" seed; then
+    echo "gba-seed: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
+else
+    echo "gba-seed: the GBA save from $best couldn't be copied to $G/$n.srm (the card full?)" >&2
+    exit 1
+fi

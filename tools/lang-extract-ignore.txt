@@ -7,6 +7,10 @@
 @~running .*\|.*
 @~done \{.*
 @~error .*
+@~probe --romm .*
+@~pair --romm .*
+refused in RomM
+the code ran out
 @~(?s)READ_CORE_MEMORY.*
 RIFF
 WAVE
@@ -77,3 +81,23 @@ running: {slot}, default: {value}
 # handheld names put into other lines
 RG DS Plus
 RG DS
+# banana-sync's log of the sync before a game: say() is left out, but this one is built first (say(std::string(...) + how))
+# and reaches the extractor as a line of its own
+@~sync before the game: .*
+# banana-sync's commands the Saves page runs, and their arguments
+@~resolve \{f\} .*
+restore {f}
+drop {gamesync}
+--rom {f}
+rename {gamesync}
+probe {gamesync}
+@~\{syncTool\} --root .*
+# the status line the menu writes for its own Sync now, as banana-sync's are (running ...|...)
+@~(?s)\{runDir\}running .*
+@~(?s)\{runDir\}error .*
+
+# the save sync's sizes: pieces of a longer line, never on screen alone
+{folder} KB
+%lld KB
+# the URL keyboard's L chip: pieces of an address, typed the same in every language
+.com, https://

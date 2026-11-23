@@ -4,42 +4,86 @@
 //            save plan the server decides)
 //   RomM     the popular self-hosted ROM manager (rommapp/romm, API of 5.x: a device pairing code approved in its web
 //            UI, platforms + roms listed, ROMs and covers downloaded, saves and states per ROM)
+// Romhost, the ROM sync, pairing and the commands are here; RomM is in sync_romm.cpp, and what they share (http(),
+// the state file, Backend, the saves on the card) in sync_core.h.
 // Usage (the menu runs it; it says how far it got in /run/banana/sync.status, one line):
 //   banana-sync discover                       Romhost servers on the LAN: "ROMHOST\t<url>\t<name>" lines
-//   banana-sync probe <address>                what answers there: "romhost <url> <name>" / "romm <url> <version>" / "none"
-//   banana-sync pair <address> [code]          Romhost: the code from Homeport. RomM: no code = the device flow (the
-//                                              status shows the code to type in RomM: "pair <code> <url>"); a code =
-//                                              a client token's pairing code; rmm_... = a token pasted
+//   banana-sync probe <address>                what answers there: "romhost <url> <name>" / "romm <url> <version>" / "none";
+//                                              an address with no scheme is tried on Romhost's port, 8080 and 80, then
+//                                              on HTTPS; one with a scheme or a port as typed
+//   banana-sync probe --romm <url>             RomM at that base URL and nowhere else: "romm <url> RomM <version>" (and
+//                                              " old" before 5.4), or "fail <why> [detail]", why one of dns, refused,
+//                                              timeout, tls, clock (tls with the clock not set yet), ca, redirect
+//                                              <location> (the same API elsewhere), access <location> (another page
+//                                              in its place: a login in front of it), denied
+//                                              <status>, http <status>, notromm, noanswer <curl's message>
+//   banana-sync pair [--romm] <address> [code] Romhost: the code from Homeport. RomM: no code = the device flow (the
+//                                              status shows the code and the page that approves it, and the seconds
+//                                              the code lasts: "pair <code> <url> <seconds>"); a code =
+//                                              a client token's pairing code; rmm_... = a token pasted. Whichever,
+//                                              the card is then a RomM device: bananaos-<banana/sync-id>, kept.
+//                                              --romm: the address is RomM's base URL, checked as probe --romm does;
+//                                              what fails says why as "error <why> [detail]" with probe's words
 //   banana-sync forget                         the pairing (and the sync's state) dropped; the files stay
-//   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
-//   banana-sync status                         the pairing and the last sync, for a person
+//   banana-sync sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run]
+//                                              --rom: that one game's save and, with homesync_states, its states (its
+//                                              ROM's path, roms-relative or absolute, on either SD card), beside a sync
+//                                              that is copying games: one at a time over the saves only, its status in
+//                                              <run>/gameend.status (--report <file>: there instead, the menu's own
+//                                              file for each game's end). Romhost and a RomM before 5.4 sync every save
+//                                              instead;
+//                                              --auto launch --rom: the one before the game starts (homesync_launch),
+//                                              the save alone, each request given less time, its status in
+//                                              <run>/launch.status; RomM 5.4 and newer only
+//   banana-sync status                         the pairing, the last sync, what is held and the vault, for a person
+//   banana-sync saves [--rom <path>]           what the Saves page lists, tab-separated; nothing asked of the server
+//   banana-sync resolve <key> card|server [--rom <path>]
+//                                              a held save settled: the card's kept (an ordinary run of the saves),
+//                                              or the server's from the vault. Says "ok" or "error <why>" on its last
+//                                              line, as restore does
+//   banana-sync restore <file>                 a kept copy in the vault as the card's save; the next sync sends it
+//   banana-sync cert <address>                 an https server's certificate, read unchecked, for its owner to look at:
+//                                              "cert <server> <subject> <issuer> <from> <to> <SHA-1>" (tabs between)
+//   banana-sync trust                          the certificate cert last showed, trusted for that server from here on
+//   banana-sync blank <file> [<folder>]        exit 0 when the save is blank (a core's fresh one); folder: under saves/
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
-// --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto, homesync_tls,
-// homesync.<system>).
+// --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto,
+// homesync_launch, homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate,
+// homesync_tls = off: no certificate checked (banana/homesync-server.pem, written by trust: the one certificate a
+// server of its own making is checked against); homesync_slot = custom with homesync_slot_name: the RomM slot saves sync
+// with instead of autosave).
 // The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
 // Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
 // (the state lists them with their hashes; a file of the user's at the same path is left alone and reported);
 // downloads go to <file>.part, are checked, then renamed; gamelist.xml is merged; saves never sync while a game runs.
+// A save comes down to /run first, is checked against the server's hash and installed through the vault (the save it
+// replaces kept, the install journalled: save_vault.h), after the journal of a run cut short is recovered; a blank
+// save is neither sent nor taken (save_adapt.h). RomM's saves are each game's one save file, the one its emulator
+// reads, for a game whose ROM is the server's by its contents (save_paths.h); a RomM before 5.4, which has no slots,
+// syncs every save at once, each way by content, and never before a game; and
+// one that has this handheld's sync switched off gives none.
+#include "get_list.h"
 #include "json.h"
+#include "save_adapt.h"
+#include "save_paths.h"
+#include "save_vault.h"
+#include "sync_core.h"
+#include "sync_romm.h"
 #include "sync_util.h"
 #include <arpa/inet.h>
 #include <cerrno>
-#include <cstdarg>
-#include <cstdlib>
-#include <ctime>
 #include <dirent.h>
-#include <dlfcn.h>
+#include <ctime>
 #include <fcntl.h>
 #include <fstream>
-#include <functional>
 #include <memory>
+#include <set>
 #include <signal.h>
 #include <sstream>
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <sys/statvfs.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -47,747 +91,37 @@ using namespace bsync;
 using banana::JVal;
 using banana::JPtr;
 
+bool Backend::keepPlayed(Played& g, std::vector<std::string>& errors)
+{
+	if (onlyRom.empty() || onlyRom[0] == '/' || beforeGame || onlyQueued || dryRun) return false;
+	size_t sl = onlyRom.find('/');
+	if (sl == std::string::npos) return false;
+	// (the ROM's folder is its system's, which systems.conf may name otherwise than the system's id)
+	std::string sys = systemOfFolder(onlyRom.substr(0, sl));
+	if (sys.empty()) return false;
+	SysSaves ss = systemSaves(sys);
+	if (!ss.known()) return false;
+	g.ndsHeld = ss.folder == "nds" && ndsSaves(romPath(onlyRom)) != 0;
+	g.rel = ss.rel(stemOf(baseOf(onlyRom)));
+	std::string p = ROOT + "/" + g.rel, e, kept;
+	// (the two DS saves not brought together: what was played may be DraStic's, so it is kept too, beside BananaDS's,
+	// whatever BananaDS's is; the Saves page cuts its footer off when it is put back)
+	std::string dsv = ROOT + "/drastic/backup/" + stemOf(baseOf(onlyRom)) + ".dsv";
+	if (g.ndsHeld && exists(dsv) && !vaultKeep(g.rel, dsv, kept, e)) errors.push_back(g.rel + ": DraStic's can't be kept in the vault: " + e);
+	bool ok;
+	std::string bytes = readFile(p, &ok);
+	if (!ok || blankSave(bytes, saveFolder(g.rel))) return false;
+	g.md5 = hashStr(bytes, "md5");
+	if (!vaultKeep(g.rel, p, g.vault, e)) { errors.push_back(g.rel + ": can't be kept in the vault: " + e); return false; }
+	return true;
+}
+
 namespace
 {
-	const char* VERSION = "banana-sync 1.0";
-	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana";
-	bool dryRun = false, verbose = false;
-	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
-
-	// ---- the status line the menu reads ---------------------------------------------------------------------------
-	std::string statusLine;
-	void status(const std::string& s)
-	{
-		if (s == statusLine) return;
-		statusLine = s;
-		if (verbose) fprintf(stderr, "status: %s\n", s.c_str());
-		std::string tmp = STATUS + ".new";
-		if (FILE* f = fopen(tmp.c_str(), "w")) { fprintf(f, "%s\n", s.c_str()); fclose(f); rename(tmp.c_str(), STATUS.c_str()); }
-	}
-	// killed (a quit, the menu's Stop, a shutdown): the status says so at once ("error stopped", what the menu shows for
-	// a run that is gone) instead of "running" until the menu's 120 s check notices. Async-signal-safe: open, write,
-	// rename and _exit only, on paths set before the handler is installed.
-	char sigStatus[512], sigStatusTmp[520], sigPid[512];
-	void onKill(int sig)
-	{
-		static const char msg[] = "error stopped\n";
-		int fd = open(sigStatusTmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
-		if (fd >= 0) { ssize_t w = write(fd, msg, sizeof msg - 1); (void)w; close(fd); rename(sigStatusTmp, sigStatus); }
-		unlink(sigPid);
-		_exit(128 + sig);
-	}
-	void catchKill()
-	{
-		snprintf(sigStatus, sizeof sigStatus, "%s", STATUS.c_str());
-		snprintf(sigStatusTmp, sizeof sigStatusTmp, "%s.new", STATUS.c_str());
-		snprintf(sigPid, sizeof sigPid, "%s/sync.pid", RUN.c_str());
-		struct sigaction sa = {};
-		sa.sa_handler = onKill;
-		sigemptyset(&sa.sa_mask);
-		for (int sig : { SIGTERM, SIGINT, SIGHUP }) sigaction(sig, &sa, nullptr);
-	}
-	// a sync's report also kept on the card, whoever started it (the menu, leaving a game, Wi-Fi: their output goes
-	// nowhere): banana/logs/sync.log, the one before as sync.log.1
-	// (opened at the first line said, so a sync that has nothing to say, as an automatic one with Auto sync off, doesn't
-	// push the last report to sync.log.1)
-	FILE* logFile = nullptr;
-	bool logWanted = false;
-	void openLog()
-	{
-		std::string dir = ROOT + "/banana/logs", path = dir + "/sync.log";
-		if (mkdir(dir.c_str(), 0755) != 0 && errno != EEXIST)
-		{
-			return;
-		}
-		rename(path.c_str(), (path + ".1").c_str());
-		logFile = fopen(path.c_str(), "w");
-		if (logFile)
-		{
-			// (UTC: the menu and the Wi-Fi script start syncs with different time zones)
-			time_t now = time(nullptr);
-			char when[32];
-			strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S UTC", gmtime(&now));
-			fprintf(logFile, "%s %s\n", VERSION, when);
-		}
-	}
-	void say(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
-	void say(const char* fmt, ...)
-	{
-		va_list a; va_start(a, fmt);
-		if (logWanted && !logFile)
-		{
-			logWanted = false;
-			openLog();
-		}
-		if (logFile)
-		{
-			va_list b;
-			va_copy(b, a);
-			vfprintf(logFile, fmt, b);
-			va_end(b);
-			fputc('\n', logFile);
-			fflush(logFile);
-		}
-		vprintf(fmt, a); va_end(a); printf("\n"); fflush(stdout);
-	}
-
-	// ---- files --------------------------------------------------------------------------------------------------------
-	bool exists(const std::string& p) { struct stat st; return stat(p.c_str(), &st) == 0; }
-	long long fileSize(const std::string& p) { struct stat st; return stat(p.c_str(), &st) == 0 ? (long long)st.st_size : -1; }
-	double fileTime(const std::string& p)
-	{
-		struct stat st;
-		return stat(p.c_str(), &st) == 0 ? st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 1e9 : 0;
-	}
-	std::string readFile(const std::string& p, bool* ok = nullptr)
-	{
-		std::ifstream f(p, std::ios::binary);
-		if (ok) *ok = (bool)f;
-		std::stringstream ss; ss << f.rdbuf(); return ss.str();
-	}
-	void mkdirs(const std::string& dir)
-	{
-		for (size_t i = 1; i <= dir.size(); i++)
-			if (i == dir.size() || dir[i] == '/') mkdir(dir.substr(0, i).c_str(), 0755);
-	}
-	std::string dirOf(const std::string& p) { size_t s = p.rfind('/'); return s == std::string::npos ? "." : p.substr(0, s); }
-	std::string baseOf(const std::string& p) { size_t s = p.rfind('/'); return s == std::string::npos ? p : p.substr(s + 1); }
-	std::string stemOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
-	std::string extOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos ? "" : lower(name.substr(d + 1)); }
-	// written beside, synced, renamed over
-	bool writeAtomic(const std::string& path, const std::string& data)
-	{
-		mkdirs(dirOf(path));
-		std::string tmp = path + ".new";
-		FILE* f = fopen(tmp.c_str(), "wb");
-		if (!f) return false;
-		bool ok = fwrite(data.data(), 1, data.size(), f) == data.size();
-		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
-		ok &= fclose(f) == 0;
-		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
-		return true;
-	}
-	long long freeBytes(const std::string& p)
-	{
-		struct statvfs v;
-		std::string d = p;
-		while (!exists(d) && d.size() > 1) d = dirOf(d);
-		return statvfs(d.c_str(), &v) == 0 ? (long long)v.f_bavail * v.f_frsize : -1;
-	}
-	// the second SD card's roms folder, the one the library shows games from: the sd2 script writes its path in
-	// <run>/sd2/roms while the card is in, has a roms folder and Settings shows its games; "" otherwise
-	std::string sd2Roms()
-	{
-		std::string p = trim(readFile(RUN + "/sd2/roms"));
-		if (p.empty() || p == ROMS || !exists(p))
-		{
-			return "";
-		}
-		return p;
-	}
-	// a second SD card that's in but has no roms folder (a fresh one): the folder made and the sd2 script run, as Files
-	// does for a roms folder made there, so the library shows its games and sd2Roms has it. The card at /run/sd2 (the
-	// test: BANANA_SD2, its scan BANANA_SD2_SCAN)
-	void sd2MakeRoms()
-	{
-		const char* fake = getenv("BANANA_SD2");
-		std::string mnt = fake ? fake : "/run/sd2";
-		bool in = fake ? exists(mnt) : readFile("/proc/mounts").find(" " + mnt + " ") != std::string::npos;
-		if (!in || dryRun)
-		{
-			return;
-		}
-		mkdirs(mnt + "/roms");
-		if (!exists(mnt + "/roms"))
-		{
-			return;
-		}
-		say("made a roms folder on the second SD card");
-		const char* scan = getenv("BANANA_SD2_SCAN");
-		std::string cmd = scan ? "'" + std::string(scan) + "'" : "flock -o /run/banana/sd2.lock /usr/libexec/banana/sd2 scan";
-		if (system((cmd + " </dev/null >/dev/null 2>&1").c_str()) != 0) {}
-	}
-	// empty folders left behind by a deleted file, up to (not including) top
-	void pruneDirs(std::string d, const std::string& top)
-	{
-		while (d.size() > top.size() && d.compare(0, top.size(), top) == 0 && rmdir(d.c_str()) == 0) d = dirOf(d);
-	}
-	std::string fmtNum(double d) { char b[32]; snprintf(b, sizeof b, "%.0f", d); return b; }
-	std::string isoNow() { char b[32]; time_t t = time(nullptr); strftime(b, sizeof b, "%Y%m%d-%H%M%S", localtime(&t)); return b; }
-
-	// settings.conf ("key = value" lines)
-	std::map<std::string, std::string> readConf(const std::string& path)
-	{
-		std::map<std::string, std::string> m;
-		std::ifstream f(path);
-		for (std::string ln; std::getline(f, ln);)
-		{
-			ln = trim(ln);
-			if (ln.empty() || ln[0] == '#') continue;
-			size_t e = ln.find('=');
-			if (e == std::string::npos) continue;
-			std::string v = trim(ln.substr(e + 1));
-			if (v.size() >= 2 && v.front() == '"' && v.back() == '"') v = v.substr(1, v.size() - 2);
-			m[trim(ln.substr(0, e))] = v;
-		}
-		return m;
-	}
-
-	// the systems list (systems.conf, as the menu reads it): the folders of the systems that make their own covers
-	// ("covers = own"), whose server covers aren't downloaded
-	std::set<std::string> ownCoversOf(const std::string& path)
-	{
-		std::set<std::string> r;
-		std::ifstream f(path);
-		std::string id, folder, covers;
-		auto done = [&]()
-		{
-			if (!id.empty() && covers == "own")
-			{
-				r.insert(folder.empty() ? id : folder);
-			}
-		};
-		for (std::string ln; std::getline(f, ln);)
-		{
-			ln = trim(ln);
-			if (ln.empty() || ln[0] == '#')
-			{
-				continue;
-			}
-			if (ln[0] == '[' && ln.back() == ']')
-			{
-				done();
-				id = lower(trim(ln.substr(1, ln.size() - 2)));
-				folder.clear();
-				covers.clear();
-				continue;
-			}
-			size_t e = ln.find('=');
-			if (e == std::string::npos)
-			{
-				continue;
-			}
-			std::string k = lower(trim(ln.substr(0, e))), v = trim(ln.substr(e + 1));
-			if (k == "folder")
-			{
-				folder = v;
-			}
-			else if (k == "covers")
-			{
-				covers = lower(v);
-			}
-		}
-		done();
-		return r;
-	}
-
-	// ---- libcurl, dlopen()ed as banana-ui and banana-scrape do it --------------------------------------------------
-	struct Curl
-	{
-		void* (*init)(void) = nullptr;
-		void (*reset)(void*) = nullptr;
-		int (*setopt)(void*, int, ...) = nullptr;
-		int (*perform)(void*) = nullptr;
-		int (*getinfo)(void*, int, ...) = nullptr;
-		void (*cleanup)(void*) = nullptr;
-		char* (*escape)(void*, const char*, int) = nullptr;
-		void (*freep)(void*) = nullptr;
-		void* (*slistAppend)(void*, const char*) = nullptr;
-		void (*slistFree)(void*) = nullptr;
-		const char* (*strerror)(int) = nullptr;
-		void* (*mimeInit)(void*) = nullptr;
-		void* (*mimeAddpart)(void*) = nullptr;
-		int (*mimeName)(void*, const char*) = nullptr;
-		int (*mimeFiledata)(void*, const char*) = nullptr;
-		int (*mimeFilename)(void*, const char*) = nullptr;
-		void (*mimeFree)(void*) = nullptr;
-		bool load()
-		{
-			void* l = dlopen("libcurl.so.4", RTLD_NOW | RTLD_LOCAL);
-			if (!l) return false;
-			init = (void* (*)(void))dlsym(l, "curl_easy_init");
-			reset = (void (*)(void*))dlsym(l, "curl_easy_reset");
-			setopt = (int (*)(void*, int, ...))dlsym(l, "curl_easy_setopt");
-			perform = (int (*)(void*))dlsym(l, "curl_easy_perform");
-			getinfo = (int (*)(void*, int, ...))dlsym(l, "curl_easy_getinfo");
-			cleanup = (void (*)(void*))dlsym(l, "curl_easy_cleanup");
-			escape = (char* (*)(void*, const char*, int))dlsym(l, "curl_easy_escape");
-			freep = (void (*)(void*))dlsym(l, "curl_free");
-			slistAppend = (void* (*)(void*, const char*))dlsym(l, "curl_slist_append");
-			slistFree = (void (*)(void*))dlsym(l, "curl_slist_free_all");
-			strerror = (const char* (*)(int))dlsym(l, "curl_easy_strerror");
-			mimeInit = (void* (*)(void*))dlsym(l, "curl_mime_init");
-			mimeAddpart = (void* (*)(void*))dlsym(l, "curl_mime_addpart");
-			mimeName = (int (*)(void*, const char*))dlsym(l, "curl_mime_name");
-			mimeFiledata = (int (*)(void*, const char*))dlsym(l, "curl_mime_filedata");
-			mimeFilename = (int (*)(void*, const char*))dlsym(l, "curl_mime_filename");
-			mimeFree = (void (*)(void*))dlsym(l, "curl_mime_free");
-			return init && reset && setopt && perform && getinfo && cleanup && escape && freep && slistAppend && slistFree && strerror
-				&& mimeInit && mimeAddpart && mimeName && mimeFiledata && mimeFilename && mimeFree;
-		}
-	} cu;
-	enum
-	{
-		O_WRITEDATA = 10001, O_URL = 10002, O_POSTFIELDS = 10015, O_USERAGENT = 10018, O_HTTPHEADER = 10023,
-		O_HEADERDATA = 10029, O_CUSTOMREQUEST = 10036, O_MIMEPOST = 10269, O_WRITEFUNCTION = 20011, O_HEADERFUNCTION = 20079,
-		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
-		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
-		O_HTTPGET = 80, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002
-	};
-	std::string urlEsc(const std::string& s)
-	{
-		std::string r;
-		for (unsigned char c : s)
-		{
-			if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') r += (char)c;
-			else { char b[4]; snprintf(b, sizeof b, "%%%02X", c); r += b; }
-		}
-		return r;
-	}
-	// a URL a server gave as it is made safe to request: what a URL can't hold escaped (RomM's cover is
-	// ...big.png?ts=<its updated_at>, a datetime with a space and a "+": curl refused every cover), the rest kept
-	std::string urlFix(const std::string& u)
-	{
-		std::string r;
-		for (unsigned char c : u)
-		{
-			if (c <= ' ' || c >= 0x7f || c == '"' || c == '<' || c == '>' || c == '\\' || c == '^' || c == '`' || c == '{' || c == '|' || c == '}' || c == '+')
-			{
-				char b[4];
-				snprintf(b, sizeof b, "%%%02X", c);
-				r += b;
-			}
-			else
-			{
-				r += (char)c;
-			}
-		}
-		return r;
-	}
-	// a path's parts escaped, the slashes kept
-	std::string pathEsc(const std::string& p)
-	{
-		std::string r;
-		size_t a = 0;
-		while (true)
-		{
-			size_t b = p.find('/', a);
-			r += urlEsc(p.substr(a, b == std::string::npos ? std::string::npos : b - a));
-			if (b == std::string::npos) break;
-			r += '/';
-			a = b + 1;
-		}
-		return r;
-	}
-
-	struct Resp
-	{
-		long code = 0;			// 0: no answer (err says why)
-		std::string body, err;
-		std::map<std::string, std::string> hdr;	// lower-case names
-		JPtr json() const { return banana::parseJson(body); }
-		std::string error() const	// the server's {"error": ...} (Romhost) or {"detail": ...} (RomM/FastAPI), or why
-		{
-			if (code == 0) return err.empty() ? "no answer" : err;
-			JPtr j = json();
-			if (j && j->isObj())
-			{
-				if (j->get("error") && j->get("error")->isStr()) return j->str("error");
-				if (j->get("detail") && j->get("detail")->isStr()) return j->str("detail");
-			}
-			return "HTTP " + std::to_string(code);
-		}
-	};
-	size_t onBody(char* p, size_t sz, size_t n, void* u) { ((std::string*)u)->append(p, sz * n); return sz * n; }
-	size_t onFile(char* p, size_t sz, size_t n, void* u) { return fwrite(p, sz, n, (FILE*)u) * sz; }
-	size_t onHeader(char* p, size_t sz, size_t n, void* u)
-	{
-		std::string l(p, sz * n);
-		size_t c = l.find(':');
-		if (c != std::string::npos) (*(std::map<std::string, std::string>*)u)[lower(trim(l.substr(0, c)))] = trim(l.substr(c + 1));
-		return sz * n;
-	}
-	std::function<void(long long, long long)> progress;	// (bytes so far, of) for the download running
-	int onProgress(void*, long long dltotal, long long dlnow, long long, long long)
-	{
-		if (progress) progress(dlnow, dltotal);
-		return 0;
-	}
-
-	struct Req
-	{
-		std::string method = "GET", url;
-		std::vector<std::string> headers;
-		const std::string* body = nullptr;		// POST/PUT bytes
-		FILE* out = nullptr;					// the body into a file instead of Resp::body
-		std::vector<std::pair<std::string, std::string>> fileParts;	// multipart: (field name, file path)
-		std::string partName;					// the multipart file's name as sent
-		long timeout = 60;						// whole request (0 = none: the speed floor below instead)
-	};
-	Resp http(const Req& q)
-	{
-		Resp r;
-		static void* h = nullptr;
-		if (!h) h = cu.init();
-		else cu.reset(h);
-		if (!h) { r.err = "libcurl"; return r; }
-		cu.setopt(h, O_URL, q.url.c_str());
-		cu.setopt(h, O_USERAGENT, "BananaOS banana-sync/1.0 (+https://github.com/JorreFog/BananaLinux)");
-		cu.setopt(h, O_NOSIGNAL, 1L);
-		cu.setopt(h, O_CONNECTTIMEOUT, 10L);
-		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
-		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
-		cu.setopt(h, O_FOLLOWLOCATION, 1L);
-		if (!tlsVerify) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }
-		cu.setopt(h, O_HEADERFUNCTION, onHeader);
-		cu.setopt(h, O_HEADERDATA, &r.hdr);
-		if (q.out) { cu.setopt(h, O_WRITEFUNCTION, onFile); cu.setopt(h, O_WRITEDATA, q.out); }
-		else { cu.setopt(h, O_WRITEFUNCTION, onBody); cu.setopt(h, O_WRITEDATA, &r.body); }
-		if (progress) { cu.setopt(h, O_NOPROGRESS, 0L); cu.setopt(h, O_XFERINFOFUNCTION, onProgress); cu.setopt(h, O_XFERINFODATA, nullptr); }
-		void* hl = nullptr;
-		for (auto& x : q.headers) hl = cu.slistAppend(hl, x.c_str());
-		void* mime = nullptr;
-		if (!q.fileParts.empty())
-		{
-			mime = cu.mimeInit(h);
-			for (auto& fp : q.fileParts)
-			{
-				void* part = cu.mimeAddpart(mime);
-				cu.mimeName(part, fp.first.c_str());
-				cu.mimeFiledata(part, fp.second.c_str());
-				cu.mimeFilename(part, (q.partName.empty() ? baseOf(fp.second) : q.partName).c_str());
-			}
-			cu.setopt(h, O_MIMEPOST, mime);
-			if (q.method != "POST") cu.setopt(h, O_CUSTOMREQUEST, q.method.c_str());
-		}
-		else if (q.body)
-		{
-			hl = cu.slistAppend(hl, "Expect:");
-			cu.setopt(h, O_POSTFIELDSIZE_LARGE, (long long)q.body->size());
-			cu.setopt(h, O_POSTFIELDS, q.body->data());
-			if (q.method != "POST") cu.setopt(h, O_CUSTOMREQUEST, q.method.c_str());
-		}
-		else if (q.method != "GET") cu.setopt(h, O_CUSTOMREQUEST, q.method.c_str());
-		cu.setopt(h, O_HTTPHEADER, hl);
-		int rc = cu.perform(h);
-		if (hl) cu.slistFree(hl);
-		if (mime) cu.mimeFree(mime);
-		if (rc != 0)
-		{
-			r.err = cu.strerror(rc);
-			if (r.err == "Error")
-			{
-				r.err += " (curl " + std::to_string(rc) + ")";	// (a libcurl without its messages, as the image's: which one)
-			}
-			cu.cleanup(h);
-			h = nullptr;
-			return r;
-		}
-		cu.getinfo(h, I_RESPONSE_CODE, &r.code);
-		return r;
-	}
-
-	// ---- the card's sync state: /data/banana/romsync.json --------------------------------------------------------
-	// The same file romsync.py (Romhost's reference client) keeps: server, token, device, name, state{files,gamelist,
-	// etag}, saves{path: {version, sha1}}, so either can carry on from the other. backend says which server it is.
-	struct SaveSt { double version = 0; std::string hash, server; };	// romm: version = the save's id, hash its MD5, server its updated_at
-	struct Conf
-	{
-		std::string backend = "romhost", server, token, device, name, serverName, etag, last;
-		bool deviceNum = false;	// Romhost's device id is a number
-		std::map<std::string, std::string> files;					// roms-relative path -> the hash it had when written
-		std::map<std::string, std::string> where;					// a file of files' on the second SD card -> "sd2" (absent: this card)
-		std::map<std::string, std::vector<std::string>> gamelist;	// system folder -> entry paths written into gamelist.xml
-																	// (the second SD card's: "@sd2/<folder>")
-		std::map<std::string, SaveSt> saves;						// data-relative path -> as of the last sync
-		std::map<std::string, SaveSt> states;						// RomM's states (Romhost keeps them with the saves)
-		double lastTime = 0;
-		bool paired() const { return !server.empty() && !token.empty(); }
-	};
-	void readSaves(const JVal* j, std::map<std::string, SaveSt>& out)
-	{
-		if (!j || !j->isObj()) return;
-		for (auto& kv : j->obj)
-		{
-			SaveSt s;
-			s.version = kv.second->num("version");
-			s.hash = kv.second->get("md5") ? kv.second->str("md5") : kv.second->str("sha1");
-			s.server = kv.second->str("server");
-			out[kv.first] = s;
-		}
-	}
-	Conf loadConf()
-	{
-		Conf c;
-		JPtr j = banana::readJsonFile(CONF);
-		if (!j || !j->isObj()) return c;
-		c.backend = j->str("backend", "romhost");
-		c.server = j->str("server"); c.token = j->str("token"); c.name = j->str("name"); c.serverName = j->str("serverName");
-		c.last = j->str("last"); c.lastTime = j->num("lastTime");
-		if (const JVal* d = j->get("device")) { c.deviceNum = d->isNum(); c.device = d->isNum() ? fmtNum(d->n) : d->s; }
-		if (const JVal* st = j->get("state"))
-		{
-			c.etag = st->str("etag");
-			if (const JVal* f = st->get("files")) if (f->isObj()) for (auto& kv : f->obj) c.files[kv.first] = kv.second->s;
-			if (const JVal* w = st->get("where"))
-			{
-				if (w->isObj())
-				{
-					for (auto& kv : w->obj)
-					{
-						c.where[kv.first] = kv.second->s;
-					}
-				}
-			}
-			if (const JVal* g = st->get("gamelist")) if (g->isObj())
-				for (auto& kv : g->obj) for (auto& p : kv.second->arr) c.gamelist[kv.first].push_back(p->s);
-		}
-		readSaves(j->get("saves"), c.saves);
-		readSaves(j->get("states"), c.states);
-		return c;
-	}
-	std::string savesJson(const std::map<std::string, SaveSt>& m, bool md5)
-	{
-		std::string o = "{";
-		bool first = true;
-		for (auto& kv : m)
-		{
-			o += std::string(first ? "\n" : ",\n") + "  " + jsonStr(kv.first) + ": {\"version\": " + fmtNum(kv.second.version) + ", \"" + (md5 ? "md5" : "sha1") + "\": " + jsonStr(kv.second.hash);
-			if (!kv.second.server.empty()) o += ", \"server\": " + jsonStr(kv.second.server);
-			o += "}";
-			first = false;
-		}
-		return o + (first ? "}" : "\n }");
-	}
-	bool saveConf(const Conf& c)
-	{
-		if (dryRun) return true;
-		std::string o = "{\n \"backend\": " + jsonStr(c.backend) + ",\n \"server\": " + jsonStr(c.server) + ",\n \"token\": " + jsonStr(c.token) +
-			",\n \"device\": " + (c.deviceNum && !c.device.empty() ? c.device : jsonStr(c.device)) + ",\n \"name\": " + jsonStr(c.name) +
-			",\n \"serverName\": " + jsonStr(c.serverName) + ",\n \"last\": " + jsonStr(c.last) + ",\n \"lastTime\": " + fmtNum(c.lastTime) +
-			",\n \"state\": {\"etag\": " + jsonStr(c.etag) + ", \"files\": {";
-		bool first = true;
-		for (auto& kv : c.files) { o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": " + jsonStr(kv.second); first = false; }
-		o += "},\n  \"where\": {";
-		first = true;
-		for (auto& kv : c.where)
-		{
-			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": " + jsonStr(kv.second);
-			first = false;
-		}
-		o += "},\n  \"gamelist\": {";
-		first = true;
-		for (auto& kv : c.gamelist)
-		{
-			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": [";
-			for (size_t i = 0; i < kv.second.size(); i++) o += (i ? ", " : "") + jsonStr(kv.second[i]);
-			o += "]";
-			first = false;
-		}
-		o += "}},\n \"saves\": " + savesJson(c.saves, c.backend == "romm") + ",\n \"states\": " + savesJson(c.states, true) + "\n}\n";
-		std::string tmp = CONF + ".new";
-		mkdirs(dirOf(CONF));
-		int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);	// (the token: only root reads it)
-		if (fd < 0) return false;
-		bool ok = write(fd, o.data(), o.size()) == (ssize_t)o.size() && fsync(fd) == 0;
-		ok &= close(fd) == 0;
-		return ok && rename(tmp.c_str(), CONF.c_str()) == 0;
-	}
-
-	// ---- what a server offers: one list of files whichever server it is ----------------------------------------------
-	struct MFile
-	{
-		std::string path;		// relative to the roms folder
-		long long size = -1;	// -1: not known (a cover)
-		std::string sha1, md5;	// either may be empty
-		std::string url;		// absolute
-		std::string content;	// made here (a PS1 set's .m3u): no download
-		bool generated = false, media = false;
-		std::string key() const	// what the state keeps for it: its hash, or for a cover the URL (its ?ts= changes with it)
-		{
-			if (generated) return "sha1:" + hashStr(content, "sha1");
-			if (!sha1.empty()) return sha1;
-			if (!md5.empty()) return "md5:" + md5;
-			return "url:" + url + (size >= 0 ? "#" + std::to_string(size) : "");
-		}
-	};
-	struct MGame { std::string title; std::vector<MFile> files; std::vector<std::pair<std::string, std::string>> gl; };
-	struct MSystem { std::string folder; std::vector<MGame> games; };
-	struct Manifest { long long generation = 0; std::vector<MSystem> systems; std::string etag; bool unchanged = false; int skipped = 0; };
-
-	// the key of a file on the card, in the form the state keeps for the same manifest file
-	std::string localKey(const MFile& f, const std::string& path)
-	{
-		if (f.generated) return "sha1:" + hashFile(path, "sha1");
-		if (!f.sha1.empty()) return hashFile(path, "sha1");
-		if (!f.md5.empty()) return "md5:" + hashFile(path, "md5");
-		return "";
-	}
-	// a state key checked against the file it says is on the card ("" key: unknown, counts as unchanged)
-	bool unchangedOnCard(const std::string& key, const std::string& path)
-	{
-		if (key.compare(0, 4, "url:") == 0) return true;	// (a cover: never changed by a person on purpose)
-		if (key.compare(0, 5, "sha1:") == 0) return "sha1:" + hashFile(path, "sha1") == key;
-		if (key.compare(0, 4, "md5:") == 0) return "md5:" + hashFile(path, "md5") == key;
-		return hashFile(path, "sha1") == key;
-	}
-
-	struct Backend
-	{
-		Conf& c;
-		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
-		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
-		std::set<std::string> ownCovers;	// system folders that make their own covers (systems.conf: covers = own)
-		explicit Backend(Conf& conf) : c(conf) {}
-		virtual ~Backend() {}
-		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
-		Resp call(const std::string& method, const std::string& path, const std::string* body = nullptr, std::vector<std::string> h = {}) const
-		{
-			Req q; q.method = method; q.url = c.server + path; q.headers = auth();
-			for (auto& x : h) q.headers.push_back(x);
-			if (body) q.headers.push_back("Content-Type: application/json");
-			q.body = body;
-			return http(q);
-		}
-		virtual bool manifest(Manifest& m, const std::set<std::string>& skip, std::string& err) = 0;
-		virtual void report(const Manifest&, int, int, const std::vector<std::string>&, const std::vector<std::string>&) {}
-		virtual bool saves(bool statesToo, int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note) = 0;
-	};
-
-	// ---- the saves on the card ----------------------------------------------------------------------------------------
-	// Romhost's rules (saves.py classify): saves/** always, states/** and drastic/savestates/** with states, never
-	// *.bak .new .part .tmp, dot files or quick-resume states (*.resume.*)
-	std::string saveKind(const std::string& rel)
-	{
-		std::string name = baseOf(rel);
-		size_t a = 0;
-		while (true)
-		{
-			size_t b = rel.find('/', a);
-			if (rel[a] == '.') return "";
-			if (b == std::string::npos) break;
-			a = b + 1;
-		}
-		for (const char* x : { ".bak", ".new", ".part", ".tmp" })
-			if (name.size() >= strlen(x) && name.compare(name.size() - strlen(x), std::string::npos, x) == 0) return "";
-		if (name.find(".resume.") != std::string::npos) return "";
-		if (rel.compare(0, 6, "saves/") == 0) return "save";
-		if (rel.compare(0, 7, "states/") == 0 || rel.compare(0, 19, "drastic/savestates/") == 0) return "state";
-		return "";
-	}
-	void walk(const std::string& dir, const std::string& rel, std::vector<std::string>& out, int depth = 0)
-	{
-		DIR* d = opendir(dir.c_str());
-		if (!d) return;
-		while (dirent* e = readdir(d))
-		{
-			std::string n = e->d_name;
-			if (n[0] == '.') continue;
-			std::string p = dir + "/" + n, r = rel + "/" + n;
-			struct stat st;
-			if (stat(p.c_str(), &st) != 0) continue;
-			if (S_ISDIR(st.st_mode)) { if (depth < 4) walk(p, r, out, depth + 1); }
-			else if (S_ISREG(st.st_mode)) out.push_back(r);
-		}
-		closedir(d);
-	}
-	std::map<std::string, std::string> localSaves(bool states)	// rel -> kind
-	{
-		std::map<std::string, std::string> m;
-		for (const char* top : { "saves", "states", "drastic/savestates" })
-		{
-			std::vector<std::string> rels;
-			walk(ROOT + "/" + top, top, rels);
-			for (auto& r : rels)
-			{
-				std::string k = saveKind(r);
-				if (k == "save" || (k == "state" && states)) m[r] = k;
-			}
-		}
-		return m;
-	}
-	// BananaOS: DraStic's .dsv and BananaDS's .sav brought together first (the .sav is the one that syncs). Only on the
-	// card's own /data (nds-saves knows no other root)
-	void ndsSavesFirst()
-	{
-		const char* tool = getenv("BANANA_NDS_SAVES");
-		std::string t = tool ? tool : (ROOT == "/data" ? "/usr/libexec/banana/nds-saves" : "");
-		if (t.empty() || access(t.c_str(), X_OK) != 0) return;
-		DIR* d = opendir((ROOT + "/drastic/backup").c_str());
-		if (!d) return;
-		std::vector<std::string> games;
-		while (dirent* e = readdir(d)) { std::string n = e->d_name; if (n.size() > 4 && lower(n.substr(n.size() - 4)) == ".dsv") games.push_back(n.substr(0, n.size() - 4)); }
-		closedir(d);
-		for (auto& g : games)
-		{
-			std::string cmd = "'" + t + "' '" + ROMS + "/nds/";
-			for (char ch : g) { if (ch == '\'') cmd += "'\\''"; else cmd += ch; }
-			cmd += ".nds' >/dev/null 2>&1";
-			if (system(cmd.c_str()) != 0) {}
-		}
-	}
-	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save
-	bool gameRunning()
-	{
-		int pid = 0;
-		unsigned long long start = 0;
-		std::ifstream(RUN + "/game.pid") >> pid >> start;
-		if (pid <= 0 || kill(pid, 0) != 0) return false;
-		if (!start) return true;	// (a pid file from before the start time was kept)
-		std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
-		std::string ln;
-		if (!std::getline(f, ln)) return false;
-		size_t q = ln.rfind(')');
-		if (q == std::string::npos) return false;
-		std::istringstream in(ln.substr(q + 1));
-		std::string v;
-		for (int i = 0; i < 20 && in >> v; i++) if (i == 19) return strtoull(v.c_str(), nullptr, 10) == start;
-		return false;
-	}
-	// downloaded to <dst>.part, checked, renamed. The part file is left for a retry when the connection broke
-	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
-		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr)
-	{
-		mkdirs(dirOf(dst));
-		std::string part = dst + ".part";
-		long long have = fileSize(part);
-		if (have < 0 || (size >= 0 && have > size) || size < 0) { unlink(part.c_str()); have = 0; }
-		Req q; q.url = url; q.headers = headers; q.timeout = 0;
-		if (have > 0) q.headers.push_back("Range: bytes=" + std::to_string(have) + "-");
-		FILE* f = nullptr;
-		Resp r;
-		if (!(size >= 0 && have == size))
-		{
-			f = fopen(part.c_str(), have > 0 ? "ab" : "wb");
-			if (!f) { err = "can't write " + part + ": " + strerror(errno); return false; }
-			q.out = f;
-			r = http(q);
-			bool wok = fflush(f) == 0 && fsync(fileno(f)) == 0;
-			fclose(f);
-			if (r.code == 200 && have > 0)	// (the server sent it all again: the part file has it after the old bytes)
-			{
-				unlink(part.c_str());
-				return fetchTo(url, headers, dst, size, algo, want, err, got);
-			}
-			if (r.code != 200 && r.code != 206)
-			{
-				if (r.code != 0) unlink(part.c_str());
-				err = r.code ? "HTTP " + std::to_string(r.code) : r.err;
-				return false;
-			}
-			if (!wok) { err = "write failed (card full?)"; unlink(part.c_str()); return false; }
-		}
-		if (size >= 0 && fileSize(part) != size) { err = "size mismatch"; unlink(part.c_str()); return false; }
-		if (!want.empty())
-		{
-			std::string h = hashFile(part, algo);
-			if (got) *got = h;
-			if (h != want) { err = "checksum mismatch"; unlink(part.c_str()); return false; }
-		}
-		else if (got) *got = hashFile(part, algo.empty() ? "sha1" : algo);
-		if (rename(part.c_str(), dst.c_str()) != 0) { err = std::string("rename: ") + strerror(errno); return false; }
-		return true;
-	}
+	// the DS game of a save, for nds-saves, where no better path is known (a kept copy put back, Romhost's download):
+	// nds-saves goes by the stem alone, so the folder and extension guessed here don't matter to it. Where the game
+	// is known (RomM's records carry its path), that is passed instead
+	std::string romOfSave(const std::string& rel) { return ROMS + "/nds/" + stemOf(baseOf(rel)) + ".nds"; }
 
 	// =============================================================================================================
 	// Romhost (romhost/PROTOCOL.md)
@@ -853,11 +187,16 @@ namespace
 			b += "], \"free\": " + std::to_string(freeBytes(ROMS)) + ", \"files\": " + std::to_string(c.files.size()) + ", \"client\": " + jsonStr(VERSION) + "}";
 			call("POST", "/api/v1/report", &b);
 		}
+		void keepUnsent(std::vector<std::string>& errors)
+		{
+			Played g;
+			if (keepPlayed(g, errors)) say("  kept in the vault, the server out of reach: %s", g.rel.c_str());
+		}
 		// PROTOCOL.md "Saves": the plan, then each action; the server decides conflicts and keeps every version
 		bool saves(bool, int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note) override
 		{
 			Resp r = call("GET", "/api/v1/saves/rules");
-			if (r.code != 200) { errors.push_back("saves: " + (r.code == 401 ? std::string("unpaired") : r.error())); return false; }
+			if (r.code != 200) { errors.push_back("saves: " + (r.code == 401 ? std::string("unpaired") : r.error())); keepUnsent(errors); return false; }
 			JPtr rules = r.json();
 			std::string mode = rules ? rules->str("mode", "off") : "off";
 			if (mode == "off") { note = "save sync is off for this handheld (Homeport: ROMs > Devices)"; return true; }
@@ -872,6 +211,9 @@ namespace
 				sums[kv.first] = hashFile(p, "sha1");
 				if (sums[kv.first].empty()) continue;
 				auto st = c.saves.find(kv.first);
+				// a core's fresh save that never synced: left out, so the server plans its own version down over it
+				// (listed, it would be a conflict with no base). One that did sync stays listed: not taken as deleted
+				if (st == c.saves.end() && blankSave(readFile(p), saveFolder(kv.first))) continue;
 				char mt[32]; snprintf(mt, sizeof mt, "%.3f", fileTime(p));
 				b += std::string(first ? "" : ", ") + "{\"path\": " + jsonStr(kv.first) + ", \"sha1\": " + jsonStr(sums[kv.first]) + ", \"size\": " +
 					std::to_string(fileSize(p)) + ", \"mtime\": " + mt + ", \"base\": " + (st == c.saves.end() ? "0" : fmtNum(st->second.version)) +
@@ -885,13 +227,20 @@ namespace
 			b += "]}";
 			r = call("POST", "/api/v1/saves/plan", &b);
 			JPtr plan = r.code == 200 ? r.json() : nullptr;
-			if (!plan || !plan->get("actions")) { errors.push_back("saves: " + r.error()); return false; }
+			if (!plan || !plan->get("actions")) { errors.push_back("saves: " + r.error()); keepUnsent(errors); return false; }
 			int n = 0, total = (int)plan->get("actions")->arr.size();
+			// (the game about to start again: each of its files is named "<its stem>.", a state's too, "<stem>.state.auto")
+			std::string resumeName = resumeRom.empty() ? "" : stemOf(baseOf(resumeRom)) + ".";
 			for (auto& a : plan->get("actions")->arr)
 			{
+				if (stopForGame(errors)) break;
 				std::string rel = a->str("path"), act = a->str("action");
 				n++;
 				if (!safeRel(rel) || saveKind(rel).empty()) continue;
+				// (the DS's two saves apart: the game left alone until its next start brings the two together; still
+				// in the plan's list, so the server doesn't take it as deleted)
+				std::string ndsWhy = ndsDivergedWhy(rel);
+				if (!ndsWhy.empty()) { say("  not synced, %s: %s", ndsWhyLog(ndsWhy), rel.c_str()); continue; }
 				status("running " + std::to_string(n) + " " + std::to_string(total) + " Saves|" + baseOf(rel));
 				std::string p = ROOT + "/" + rel;
 				if (act == "same") c.saves[rel] = { a->num("version"), a->str("sha1"), "" };
@@ -901,6 +250,8 @@ namespace
 					if (!local.count(rel)) continue;
 					std::string body = readFile(p);
 					if (hashStr(body, "sha1") != sums[rel]) { errors.push_back(rel + ": changed while syncing, next time"); continue; }
+					// (a core's fresh save: never sent; still in the plan's list, so the server doesn't take it as deleted)
+					if (blankSave(body, saveFolder(rel))) { say("  blank, not sent: %s", rel.c_str()); continue; }
 					std::string qs = act == "upload" ? "expect=" + fmtNum(a->num("expect")) : "conflict=1&base=" + (c.saves.count(rel) ? fmtNum(c.saves[rel].version) : std::string("0"));
 					char mt[48]; snprintf(mt, sizeof mt, "X-Save-Mtime: %.3f", fileTime(p));
 					if (dryRun) { say("  upload %s", rel.c_str()); continue; }
@@ -908,403 +259,68 @@ namespace
 					q.headers.push_back("X-Save-Sha1: " + sums[rel]); q.headers.push_back(mt); q.headers.push_back("Content-Type: application/octet-stream");
 					q.body = &body; q.timeout = 0;
 					Resp u = http(q);
-					if (u.code != 200) { errors.push_back(rel + ": " + u.error()); continue; }
+					// (not sent: the card's save is the only copy of what was played until it is, so a copy goes to the vault)
+					if (u.code != 200)
+					{
+						errors.push_back(rel + ": " + u.error());
+						std::string kept, e;
+						if (vaultKeep(rel, p, kept, e)) say("  not sent, kept in the vault: %s", rel.c_str());
+						else errors.push_back(rel + ": can't be kept in the vault: " + e);
+						continue;
+					}
+					vaultGood(rel, body);
 					if (act == "upload") { JPtr res = u.json(); c.saves[rel] = { res ? res->num("version") : 0, sums[rel], "" }; up++; say("  up %s", rel.c_str()); }
 					else { conflicts++; say("  conflict (kept here; Homeport decides) %s", rel.c_str()); }
 				}
 				else if (act == "conflict") conflicts++;
 				else if (act == "download")
 				{
+					// (the game about to start again after Power off after sleeping: its save and its states, the resume state
+					// among them, are left as they are here, every file named for the game)
+					if (!resumeName.empty() && baseOf(rel).compare(0, resumeName.size(), resumeName) == 0) { say("  not synced, about to start again after Power off after sleeping, its resume state with the save here: %s", rel.c_str()); continue; }
 					if (exists(p) && hashFile(p, "sha1") != sums[rel]) { errors.push_back(rel + ": changed while syncing, next time"); continue; }
 					if (dryRun) { say("  download %s", rel.c_str()); continue; }
-					std::string err;
-					if (!fetchTo(c.server + "/api/v1/saves/file/" + pathEsc(rel) + "?version=" + fmtNum(a->num("version")), auth(), p, -1, "sha1", a->str("sha1"), err))
-					{ errors.push_back(rel + ": " + err); continue; }
-					// (its time is now: newer than DraStic's .dsv, so nds-saves passes it on at the next start)
+					// (what the save held when the plan was checked, by the MD5 installSave compares: a game played and quit
+					// during a slow fetch leaves another, which the server's version mustn't go over as agreed)
+					std::string before = exists(p) ? hashFile(p, "md5") : "";
+					std::string err, dl = RUN + "/sync-dl." + std::to_string(getpid());
+					OpenOp op;
+					Install in = fetchTo(c.server + "/api/v1/saves/file/" + pathEsc(rel) + "?version=" + fmtNum(a->num("version")), auth(), dl, -1, "sha1", a->str("sha1"), err)
+						? installSave(rel, dl, fmtNum(a->num("version")), err, &before, "", &op.id) : Install::Failed;
+					if (in == Install::Done) op.md5 = hashFile(p, "md5");
+					if (in == Install::Blank) { say("  blank on the server, not taken: %s", rel.c_str()); continue; }
+					if (in == Install::Failed) { dropDownload(dl); errors.push_back(rel + ": " + err); continue; }
+					// (DraStic's .dsv brought into step with a DS save just installed, before either emulator starts; not in
+					// step after all: not recorded, so the next sync looks again)
+					if (saveFolder(rel) == "nds" && ndsSaves(romOfSave(rel)) != 0) { errors.push_back(rel + ": DraStic's save isn't in step with it, decided next time"); continue; }
+					// (a game started while it was placed: not recorded, so the next sync decides again from what it finds)
+					if (gameRunning()) { errors.push_back(rel + ": a game started while it was placed, decided next time"); continue; }
 					c.saves[rel] = { a->num("version"), a->str("sha1"), "" };
 					down++;
 					say("  down %s", rel.c_str());
+					// (the journal's entry ended once the record is written: a run killed between the two is agreed by
+					// the next start)
+					// (the record not written, the card full or the pairing gone meanwhile: the entry is left open, so the
+					// next run's recovery agrees the save it finds installed rather than taking it for the card's change)
+					if (saveConf(c)) op.close();
+					else { op.id.clear(); errors.push_back(rel + ": put in place, its record not written (the card full?), agreed next time"); }
 				}
 				saveConf(c);
 			}
-			return true;
-		}
-	};
-
-	// =============================================================================================================
-	// RomM (rommapp/romm 5.x REST API, /api)
-	// =============================================================================================================
-	// RomM's platform slugs (utils/platform_slugs.py) -> BananaOS's system folders (etc/banana/systems.conf); a
-	// platform whose folder (fs_slug) is one of ours is taken as that system too
-	const std::map<std::string, std::string> ROMM_SLUGS = {
-		{ "nds", "nds" }, { "gba", "gba" }, { "gbc", "gbc" }, { "gb", "gb" }, { "nes", "nes" }, { "famicom", "nes" },
-		{ "snes", "snes" }, { "sfam", "snes" }, { "genesis", "megadrive" }, { "genesis-slash-megadrive", "megadrive" },
-		{ "megadrive", "megadrive" }, { "psx", "psx" }, { "ps", "psx" }, { "n64", "n64" },
-		{ "c64", "c64" }, { "commodore-64", "c64" }, { "commodore64", "c64" },
-		{ "zxs", "zxspectrum" }, { "zx-spectrum", "zxspectrum" }, { "zxspectrum", "zxspectrum" },
-		{ "g-and-w", "gameandwatch" },
-	};
-	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64", "gameandwatch" };
-	struct RommRom { long long id; std::string folder, stem, fsName; };
-	struct Romm : Backend
-	{
-		using Backend::Backend;
-		std::map<long long, std::string> platforms;	// platform id -> our folder
-		std::vector<RommRom> roms;					// every ROM of those platforms (for the saves)
-		bool listed = false;
-		std::vector<JPtr> romJson;
-		bool list(const std::set<std::string>& skip, std::string& err)
-		{
-			if (listed) return true;
-			Resp r = call("GET", "/api/platforms");
-			if (r.code != 200) { err = r.code == 401 || r.code == 403 ? "unpaired" : "platforms: " + r.error(); return false; }
-			JPtr j = r.json();
-			if (!j || !j->isArr()) { err = "the server's platforms can't be read"; return false; }
-			for (auto& p : j->arr)
-			{
-				auto it = ROMM_SLUGS.find(p->str("slug"));
-				std::string folder = it != ROMM_SLUGS.end() ? it->second : BANANA_FOLDERS.count(p->str("fs_slug")) ? p->str("fs_slug") : "";
-				if (folder.empty() || skip.count(folder)) continue;
-				platforms[(long long)p->num("id")] = folder;
-			}
-			for (auto& pf : platforms)
-			{
-				for (long long off = 0;; off += 500)
-				{
-					std::string q = "/api/roms?platform_ids=" + std::to_string(pf.first) + "&platform_id=" + std::to_string(pf.first) +
-						"&limit=500&offset=" + std::to_string(off) + "&order_by=name&with_char_index=false&with_filter_values=false&with_rom_id_index=false";
-					Resp rr = call("GET", q);
-					if (rr.code != 200) { err = "roms: " + rr.error(); return false; }
-					JPtr page = rr.json();
-					const JVal* items = page ? (page->isArr() ? page.get() : page->get("items")) : nullptr;
-					if (!items || !items->isArr()) { err = "the server's games can't be read"; return false; }
-					for (auto& it : items->arr)
-					{
-						if ((long long)it->num("platform_id") != pf.first) continue;
-						romJson.push_back(it);
-						roms.push_back({ (long long)it->num("id"), pf.second, it->str("fs_name_no_ext", stemOf(it->str("fs_name"))), it->str("fs_name") });
-					}
-					long long total = page->isArr() ? (long long)items->arr.size() : (long long)page->num("total", -1);
-					if (page->isArr() || items->arr.size() < 500 || (total >= 0 && off + 500 >= total)) break;
-				}
-			}
-			listed = true;
-			return true;
-		}
-		bool manifest(Manifest& m, const std::set<std::string>& skip, std::string& err) override
-		{
-			if (!list(skip, err)) return false;
-			std::map<std::string, MSystem> by;
-			for (auto& f : platforms) by[f.second].folder = f.second;
-			// Game & Watch: the games' MAME artwork zips, in the platform's artwork folder, which RomM lists as one ROM of
-			// several files (its files only on its own page): each zip goes with its game (gameandwatch/artwork/<game>.zip,
-			// run-gw's place for it), so a chosen game brings its artwork and the folder is no game of its own
-			std::map<std::string, MFile> gwArt;
-			for (auto& it : romJson)
-			{
-				if (platforms[(long long)it->num("platform_id")] != "gameandwatch" || it->str("fs_name") != "artwork") continue;
-				Resp d = call("GET", "/api/roms/" + std::to_string((long long)it->num("id")));
-				JPtr dj = d.code == 200 ? d.json() : nullptr;
-				const JVal* files = dj ? dj->get("files") : nullptr;
-				if (!files || !files->isArr()) continue;
-				for (auto& fj : files->arr)
-				{
-					std::string fn = fj->str("file_name");
-					if (fn.empty() || !safeRel(fn) || lower(extOf(fn)) != "zip") continue;
-					MFile f;
-					f.path = "gameandwatch/artwork/" + fn;
-					// checked by size only: RomM's hashes of the files in a folder like this one aren't the files' own (it
-					// hashes what's inside a zip; checked with RomM 5.4.1: every artwork zip "mismatched", sent intact)
-					f.size = (long long)fj->num("file_size_bytes", -1);
-					f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
-					gwArt[stemOf(fn)] = f;
-				}
-			}
-			for (auto& it : romJson)
-			{
-				std::string folder = platforms[(long long)it->num("platform_id")], fsName = it->str("fs_name");
-				long long id = (long long)it->num("id");
-				if (folder == "gameandwatch" && fsName == "artwork") continue;	// (its zips go with their games: above)
-				if (!safeRel(folder + "/" + fsName) || it->flag("missing_from_fs")) { m.skipped++; continue; }
-				MGame g;
-				g.title = it->str("name", fsName);
-				const JVal* files = it->get("files");
-				std::string entry = fsName;
-				bool multi = it->flag("has_multiple_files") || (files && files->isArr() && files->arr.size() > 1);
-				if (!multi)
-				{
-					MFile f;
-					f.path = folder + "/" + fsName;
-					f.size = (long long)it->num("fs_size_bytes", -1);
-					if (files && files->isArr() && files->arr.size() == 1)
-					{
-						f.sha1 = lower(files->arr[0]->str("sha1_hash")); f.md5 = lower(files->arr[0]->str("md5_hash"));
-						if (files->arr[0]->get("file_size_bytes")) f.size = (long long)files->arr[0]->num("file_size_bytes");
-					}
-					f.url = c.server + "/api/roms/" + std::to_string(id) + "/content/" + urlEsc(fsName);
-					g.files.push_back(f);
-				}
-				else if (folder == "psx" && files && files->isArr())
-				{
-					// a disc set: its files in psx/.discs/<name>/, an .m3u of its discs as the game (Romhost's layout)
-					std::string m3u;
-					std::vector<std::string> discs;
-					for (auto& fj : files->arr)
-					{
-						std::string fn = fj->str("file_name");
-						if (fn.empty() || !safeRel(fn)) continue;
-						std::string ext = extOf(fn);
-						if (ext == "m3u" || ext == "txt" || ext == "pdf" || ext == "jpg" || ext == "png") continue;
-						MFile f;
-						f.path = "psx/.discs/" + fsName + "/" + fn;
-						f.size = (long long)fj->num("file_size_bytes", -1);
-						f.sha1 = lower(fj->str("sha1_hash")); f.md5 = lower(fj->str("md5_hash"));
-						f.url = c.server + "/api/roms/" + std::to_string((long long)fj->num("id")) + "/files/content/" + urlEsc(fn);
-						g.files.push_back(f);
-						if (ext == "cue" || ext == "chd" || ext == "pbp" || ext == "iso") discs.push_back(".discs/" + fsName + "/" + fn);
-					}
-					if (discs.empty()) { m.skipped++; continue; }
-					std::sort(discs.begin(), discs.end());
-					for (auto& d : discs) m3u += d + "\n";
-					MFile mf; mf.path = "psx/" + fsName + ".m3u"; mf.generated = true; mf.content = m3u; mf.size = (long long)m3u.size();
-					g.files.push_back(mf);
-					entry = fsName + ".m3u";
-				}
-				else { m.skipped++; continue; }	// (a game of several files on a cartridge system: not one the menu can start)
-				std::string stem = stemOf(entry);
-				if (folder == "gameandwatch")
-				{
-					auto art = gwArt.find(stem);
-					if (art != gwArt.end()) g.files.push_back(art->second);
-				}
-				// the cover, as the menu's library reads it (media/box/<rom name>.png or .jpg), unless the system makes its
-				// own (systems.conf: covers = own; Game & Watch's gw-meta, from the artwork); one already on the card is kept
-				std::string cover = ownCovers.count(folder) ? std::string() : it->str("path_cover_large");
-				std::string cext = extOf(cover.substr(0, cover.find('?')));
-				std::string image;
-				if (!cover.empty() && (cext == "png" || cext == "jpg" || cext == "jpeg"))
-				{
-					MFile f;
-					f.media = true;
-					f.path = folder + "/media/box/" + stem + "." + (cext == "png" ? "png" : "jpg");
-					f.url = urlFix(cover.compare(0, 4, "http") == 0 ? cover : c.server + cover);
-					if (safeRel(f.path)) { g.files.push_back(f); image = "./media/box/" + stem + "." + (cext == "png" ? "png" : "jpg"); }
-				}
-				g.gl.push_back({ "path", "./" + entry });
-				g.gl.push_back({ "name", it->str("name", stem) });
-				if (!it->str("summary").empty()) g.gl.push_back({ "desc", it->str("summary") });
-				if (!image.empty()) g.gl.push_back({ "image", image });
-				if (const JVal* md = it->get("metadatum"))
-				{
-					if (const JVal* gs = md->get("genres")) if (gs->isArr() && !gs->arr.empty()) g.gl.push_back({ "genre", gs->arr[0]->s });
-					double d = md->num("first_release_date", 0);
-					if (d > 0)
-					{
-						time_t t = (time_t)(d > 1e11 ? d / 1000 : d);	// (ms in RomM's metadatum, seconds in IGDB's)
-						char b[32]; strftime(b, sizeof b, "%Y%m%dT000000", gmtime(&t));
-						g.gl.push_back({ "releasedate", b });
-					}
-					std::string pub = md->get("publishers") && md->get("publishers")->isArr() && !md->get("publishers")->arr.empty() ? md->get("publishers")->arr[0]->s : "";
-					if (!pub.empty()) g.gl.push_back({ "publisher", pub });
-				}
-				by[folder].games.push_back(g);
-			}
-			for (auto& kv : by) m.systems.push_back(kv.second);
-			return true;
-		}
-		// RomM keeps a save per ROM (and per file name). The card's save is matched to its ROM by name: saves/nds/<rom
-		// name>.sav (BananaDS), saves/<rom name>.srm (RetroArch, one folder for every system), states/... the same.
-		// The decision, per save: changed here only -> upload; changed on the server only -> download; changed on both
-		// -> the newer one wins and the other is kept on the card as <file>.<side>-<date>.bak (never lost); the same
-		// on both -> nothing. A save deleted here is forgotten, not deleted on the server.
-		bool matchRom(const std::string& rel, RommRom& out)
-		{
-			// saves/<folder>/<name>.<ext> or saves/<name>.<ext>
-			size_t s1 = rel.find('/');
-			std::string rest = rel.substr(s1 + 1), folder, name = baseOf(rel);
-			if (rest.find('/') != std::string::npos) folder = rest.substr(0, rest.find('/'));
-			std::string stem = stemOf(name);
-			std::vector<RommRom*> c1;
-			for (auto& r : roms)
-				if (r.stem == stem && (folder.empty() ? r.folder != "nds" : r.folder == folder)) c1.push_back(&r);
-			if (c1.size() > 1)	// (the same name on two systems: the one on the card)
-			{
-				std::vector<RommRom*> c2;
-				std::string sd2 = sd2Roms();
-				for (auto* r : c1)
-				{
-					std::string rel = r->folder + "/" + r->fsName;
-					if (exists(ROMS + "/" + rel) || (!sd2.empty() && exists(sd2 + "/" + rel)))
-					{
-						c2.push_back(r);
-					}
-				}
-				c1 = c2;
-			}
-			if (c1.size() != 1) return false;
-			out = *c1[0];
-			return true;
-		}
-		bool saves(bool statesToo, int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note) override
-		{
-			std::string err;
-			if (!list(skip, err)) { errors.push_back("saves: " + err); return false; }
-			ndsSavesFirst();
-			auto local = localSaves(statesToo);
-			bool ok = sync("save", local, c.saves, up, down, conflicts, errors);
-			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors);
-			(void)note;
-			return ok;
-		}
-		bool sync(const std::string& kind, const std::map<std::string, std::string>& localAll, std::map<std::string, SaveSt>& state,
-			int& up, int& down, int& conflicts, std::vector<std::string>& errors)
-		{
-			std::string api = kind == "save" ? "/api/saves" : "/api/states", field = kind == "save" ? "saveFile" : "stateFile";
-			std::string dev = c.device.empty() ? "" : "device_id=" + urlEsc(c.device);
-			// the server's, per platform
-			struct Srv { long long id, rom; std::string name, hash, updated; };
-			std::map<std::string, Srv> srv;	// card path -> the server's newest save of that name for that ROM
-			std::map<long long, RommRom> romById;
-			for (auto& r : roms) romById[r.id] = r;
-			for (auto& pf : platforms)
-			{
-				Resp r = call("GET", api + "?platform_id=" + std::to_string(pf.first) + (kind == "save" && !dev.empty() ? "&" + dev : ""));
-				if (r.code != 200) { errors.push_back(kind + "s: " + r.error()); return false; }
-				JPtr j = r.json();
-				if (!j || !j->isArr()) continue;
-				for (auto& s : j->arr)
-				{
-					auto ri = romById.find((long long)s->num("rom_id"));
-					if (ri == romById.end() || s->flag("missing_from_fs")) continue;
-					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName)) continue;	// (not chosen: not pulled)
-					if (!s->str("slot").empty()) continue;	// (another client's versioned slots: left to it)
-					std::string name = s->str("file_name");
-					if (!safeRel(name) || name.find('/') != std::string::npos || stemOf(name) != ri->second.stem) continue;
-					std::string top = kind == "save" ? "saves/" : "states/";
-					std::string rel = ri->second.folder == "nds" ? top + "nds/" + name : top + name;
-					Srv v{ (long long)s->num("id"), ri->second.id, name, lower(s->str("content_hash")), s->str("updated_at") };
-					auto e = srv.find(rel);
-					if (e == srv.end() || e->second.updated < v.updated) srv[rel] = v;
-				}
-			}
-			std::set<std::string> paths;
-			for (auto& kv : localAll) if (kv.second == kind && kv.first.compare(0, kind == "save" ? 6 : 7, kind == "save" ? "saves/" : "states/") == 0) paths.insert(kv.first);
-			for (auto& kv : srv) paths.insert(kv.first);
-			for (auto& kv : state) paths.insert(kv.first);
-			int n = 0, total = (int)paths.size();
-			for (auto& rel : paths)
-			{
-				n++;
-				status("running " + std::to_string(n) + " " + std::to_string(total) + (kind == "save" ? " Saves|" : " States|") + baseOf(rel));
-				std::string p = ROOT + "/" + rel;
-				bool here = localAll.count(rel) > 0;
-				auto si = srv.find(rel);
-				auto st = state.find(rel);
-				if (!here)
-				{
-					if (st != state.end()) { state.erase(st); continue; }	// deleted here: forgotten (the server keeps its copy)
-					if (si == srv.end()) continue;
-					if (exists(p)) continue;	// (a file the rules leave out)
-					SaveSt ns;
-					if (download(api, si->second, p, ns, dev, false, errors)) { state[rel] = ns; down++; }
-					continue;
-				}
-				std::string md5 = hashFile(p, "md5");
-				if (md5.empty()) continue;
-				RommRom rom;
-				if (si == srv.end())
-				{
-					if (st != state.end() && st->second.version > 0 && !st->second.server.empty())
-					{
-						// it was on the server and is gone: deleted there on purpose (RomM's web UI); not sent back
-						// until it changes here
-						if (st->second.hash == md5) continue;
-					}
-					if (!matchRom(rel, rom)) continue;	// (no ROM of this name on the server)
-					if (upload(api, field, rom.id, p, rel, md5, state, dev, false, errors)) up++;
-					continue;
-				}
-				const Srv& s = si->second;
-				bool known = st != state.end();
-				bool localChanged = !known || st->second.hash != md5;
-				bool serverChanged = !known || st->second.version != s.id || (st->second.server != s.updated && (s.hash.empty() || s.hash != st->second.hash));
-				if (!s.hash.empty() && s.hash == md5)
-				{
-					state[rel] = { (double)s.id, md5, s.updated };
-					continue;
-				}
-				if (!localChanged && !serverChanged) continue;
-				if (localChanged && !serverChanged) { if (upload(api, field, s.rom, p, rel, md5, state, dev, false, errors)) up++; continue; }
-				if (!localChanged && serverChanged) { SaveSt ns = st->second; if (download(api, s, p, ns, dev, false, errors)) { state[rel] = ns; down++; } continue; }
-				// both changed (or a card that never synced holding another version): the newer wins, the other kept
-				conflicts++;
-				if (dryRun) { say("  conflict %s", rel.c_str()); continue; }
-				struct tm tmv = {};
-				time_t srvT = strptime(s.updated.substr(0, 19).c_str(), "%Y-%m-%dT%H:%M:%S", &tmv) ? timegm(&tmv) : 0;
-				std::string stamp = isoNow();
-				if (fileTime(p) >= srvT)
-				{
-					// the card's is newer: the server's kept here beside it, then the card's uploaded over it
-					std::string keep = p + ".server-" + stamp + ".bak", e2;
-					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), keep, -1, "", "", e2)) { errors.push_back(rel + ": " + e2); continue; }
-					if (upload(api, field, s.rom, p, rel, md5, state, dev, true, errors)) { up++; say("  conflict: the card's (newer) kept, the server's saved as %s", baseOf(keep).c_str()); }
-				}
-				else
-				{
-					std::string keep = p + ".card-" + stamp + ".bak";
-					if (link(p.c_str(), keep.c_str()) != 0) { std::string d = readFile(p); if (!writeAtomic(keep, d)) { errors.push_back(rel + ": can't keep the card's copy"); continue; } }
-					SaveSt ns;
-					if (download(api, s, p, ns, dev, true, errors)) { state[rel] = ns; down++; say("  conflict: the server's (newer) taken, the card's kept as %s", baseOf(keep).c_str()); }
-				}
-				saveConf(c);
-			}
-			saveConf(c);
-			return true;
-		}
-		bool upload(const std::string& api, const std::string& field, long long romId, const std::string& p, const std::string& rel,
-			const std::string& md5, std::map<std::string, SaveSt>& state, const std::string& dev, bool overwrite, std::vector<std::string>& errors)
-		{
-			if (dryRun) { say("  upload %s", rel.c_str()); return true; }
-			// a copy of the file as it is now: the emulator can't change what is sent halfway
-			std::string snap = RUN + "/sync-upload." + std::to_string(getpid());
-			std::string body = readFile(p);
-			if (hashStr(body, "md5") != md5 || !writeAtomic(snap, body)) { errors.push_back(rel + ": changed while syncing, next time"); unlink(snap.c_str()); return false; }
-			Req q; q.method = "POST"; q.headers = auth(); q.timeout = 0;
-			q.url = c.server + api + "?rom_id=" + std::to_string(romId) + (api == "/api/saves" && !dev.empty() ? "&" + dev : "") + (overwrite ? "&overwrite=true" : "") + "&emulator=" + urlEsc(baseOf(dirOf(rel)) == "nds" ? "bananaos-nds" : "retroarch");
-			q.fileParts.push_back({ field, snap });
-			q.partName = baseOf(rel);
-			Resp r = http(q);
-			unlink(snap.c_str());
-			if (r.code == 409) { errors.push_back(rel + ": changed on the server meanwhile, next time"); return false; }
-			JPtr j = r.json();
-			if ((r.code != 200 && r.code != 201) || !j || !j->isObj()) { errors.push_back(rel + ": " + r.error()); return false; }
-			state[rel] = { j->num("id"), md5, j->str("updated_at") };
-			say("  up %s", rel.c_str());
-			saveConf(c);
-			return true;
-		}
-		template <class S> bool download(const std::string& api, const S& s, const std::string& p, SaveSt& st, const std::string& dev, bool force, std::vector<std::string>& errors)
-		{
-			if (dryRun) { say("  download %s", p.c_str()); return false; }
-			if (!force && exists(p) && hashFile(p, "md5") != st.hash) { errors.push_back(baseOf(p) + ": changed while syncing, next time"); return false; }
-			std::string err, got;
-			std::string url = c.server + api + "/" + std::to_string(s.id) + "/content" + (api == "/api/saves" && !dev.empty() ? "?" + dev : "");
-			if (!fetchTo(url, auth(), p, -1, "md5", "", err, &got)) { errors.push_back(baseOf(p) + ": " + err); return false; }
-			st = { (double)s.id, got, s.updated };
-			say("  down %s", p.c_str());
-			saveConf(c);
 			return true;
 		}
 	};
 
 	std::unique_ptr<Backend> backendFor(Conf& c)
 	{
-		if (c.backend == "romm") return std::unique_ptr<Backend>(new Romm(c));
+		if (c.backend == "romm") return newRomm(c);
 		return std::unique_ptr<Backend>(new Romhost(c));
 	}
 
 	// ---- the ROMs: the card made to match the server's list (PROTOCOL.md "What a device sync must do") ----------------
-	struct RomResult { int downloaded = 0, removed = 0; std::vector<std::string> conflicts, errors; bool changed = false; };
+	// (stopped: what was copied could no longer be recorded, the pairing forgotten or made again under the run, or the
+	// card full: nothing more is to be done for this pairing by the run, its saves included)
+	struct RomResult { int downloaded = 0, removed = 0; std::vector<std::string> conflicts, errors; bool changed = false, stopped = false; };
 	// Choosing games (owner, 0.5.0): settings homesync_games = all | chosen; the chosen ones in banana/homesync-games.txt,
 	// a line each: the game's key, its first ROM file's roms-relative path ("gba/Name.gba"), as `banana-sync games` lists
 	std::string gameKey(const MGame& g)
@@ -1312,34 +328,117 @@ namespace
 		for (auto& f : g.files) if (!f.media) return f.path;
 		return g.files.empty() ? std::string() : g.files[0].path;
 	}
-	std::string choiceFile() { return ROOT + "/banana/homesync-games.txt"; }
-	std::set<std::string> readChoice()
+	std::set<std::string> readChoice() { auto v = readListLines(ROOT + "/banana/homesync-games.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	// RomM's Get games: the games asked for and not on the card yet, banana/homesync-get.txt, a key a line (as games
+	// lists them), in the order asked. Any sync of the games brings them, and a game leaves the list once its files are
+	// in place (or a file of the owner's own is at its path); one whose download failed stays for the next sync. Once
+	// on the card a game is the owner's like any other: nothing updates it or removes it. The list is changed under
+	// get.lock, the menu adding (with get_list's code, which banana-sync get also runs) while a sync takes games off it
+	std::string getFile() { return ROOT + "/banana/homesync-get.txt"; }
+	std::string getFailedFile() { return ROOT + "/banana/homesync-get-failed.txt"; }
+	bool editGet(const std::vector<std::string>& add, const std::set<std::string>& drop) { return editGetList(ROOT + "/banana", RUN, add, drop); }
+	// why each game still on Get games' list didn't come the last time a sync tried it (banana/homesync-get-failed.txt,
+	// "<key> TAB <why>", for the page's Failed): a game that came, or was taken off the list, has no line
+	// (files: each game's paths under the ROMs folder, as the manifest has them, a disc set's every disc: an error is a
+	// game's when it names one of them)
+	void noteGetFailed(const std::set<std::string>& tried, const std::vector<std::string>& passErrors, const std::map<std::string, std::vector<std::string>>& files)
 	{
-		std::set<std::string> out;
-		std::ifstream f(choiceFile());
-		std::string l;
-		while (std::getline(f, l)) { while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back(); if (!l.empty() && l[0] != '#') out.insert(l); }
-		return out;
+		editGetFailed(ROOT + "/banana", RUN, [&](const std::set<std::string>& listed, std::map<std::string, std::string>& why)
+		{
+			for (auto& k : tried)
+			{
+				if (!listed.count(k)) { why.erase(k); continue; }
+				// (its own files' error when there is one, else what stopped the whole pass: no space, the server's list.
+				// Never another game's file's)
+				auto about = [&](const std::string& e, const std::string& path) { return e.compare(0, path.size() + 2, path + ": ") == 0; };
+				auto anyGame = [&](const std::string& e) { for (auto& g : files) for (auto& f : g.second) if (about(e, f)) return true; return about(e, k); };
+				std::string w;
+				auto own = files.find(k);
+				for (auto& e : passErrors)
+				{
+					if (about(e, k)) { w = e.substr(k.size() + 2); break; }
+					if (own != files.end()) for (auto& f : own->second) if (about(e, f)) { w = e; break; }
+					if (!w.empty()) break;
+				}
+				if (w.empty()) for (auto& e : passErrors) if (!anyGame(e)) { w = e; break; }
+				why[k] = w.empty() ? "not brought, for no reason given" : w;
+			}
+		});
+	}
+	// a game as the games command prints it, "<system>\t<key>\t<title>\t<bytes>\t<chosen>\t<on the handheld>", "" for one
+	// with no key; chosen is on Get games' list (RomM) or ticked (Romhost), on the handheld is on either card (not looked
+	// at without look: 0)
+	std::string gameLine(const MSystem& s, const MGame& g, const std::set<std::string>& chosen, const std::string& sd2, bool look = true)
+	{
+		std::string k = gameKey(g);
+		if (k.empty()) return "";
+		long long bytes = 0;
+		bool there = look;
+		for (auto& f : g.files)
+		{
+			if (f.media) continue;
+			bytes += std::max(0LL, f.size);
+			if (there && !exists(ROMS + "/" + f.path) && (sd2.empty() || !exists(sd2 + "/" + f.path))) there = false;
+		}
+		std::string t = g.title.empty() ? baseOf(k) : g.title;
+		for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
+		return s.folder + "\t" + k + "\t" + t + "\t" + std::to_string(bytes) + "\t" + (chosen.count(k) ? "1" : "0") + "\t" + (there ? "1" : "0") + "\n";
+	}
+	// RomM's games as Get games shows them, kept on the card (banana/homesync-server-games.tsv) so the page opens at once
+	// rather than after the half a minute the full list took on a real server of 742 games: "# <server>\t<unix time>",
+	// then the games command's lines, every system's (a system set to Skip included: on RomM that keeps only its saves
+	// here), written afresh by the games command and by each sync of the games or every save.
+	// The page works out what is waiting or on the card itself, as both change after: the chosen column is as it was
+	// when written, and the cards aren't looked at for the other (0), which every sync would otherwise do for each game
+	std::string gamesCacheFile() { return ROOT + "/banana/homesync-server-games.tsv"; }
+	// the server's games, for Get games, and what was asked of it and why some didn't come: gone with a Forget and with a
+	// pairing to another server, whose next sync would otherwise download games asked of this one. The games whose saves
+	// stay here are this handheld's, whichever server
+	void dropServerLists()
+	{
+		unlink(gamesCacheFile().c_str());
+		unlink(getFile().c_str());
+		unlink(getFailedFile().c_str());
+	}
+	void writeGamesCache(const Conf& c, const Manifest& m)
+	{
+		auto v = readListLines(getFile());
+		std::set<std::string> chosen(v.begin(), v.end());
+		std::string sd2 = sd2Roms(), rows;
+		for (auto& s : m.systems)
+			for (auto& g : s.games) rows += gameLine(s, g, chosen, sd2, false);
+		if (!writeAtomic(gamesCacheFile(), "# " + c.server + "\t" + std::to_string((long long)time(nullptr)) + "\n" + rows))
+			say("the server's games couldn't be kept on the card (%s)", gamesCacheFile().c_str());
+	}
+	// RomM: the games whose saves stay on this handheld (the game page's Save sync), "<system folder>/<ROM file name>"
+	std::set<std::string> readLocal() { auto v = readListLines(ROOT + "/banana/homesync-local.txt"); return std::set<std::string>(v.begin(), v.end()); }
+	std::string localKeyOf(const std::string& romRel)
+	{
+		size_t s = romRel.find('/');
+		return s == std::string::npos || romRel[0] == '/' ? "" : romRel.substr(0, s) + "/" + baseOf(romRel);
 	}
 
 	// chosen: null = every game; else only those games come to the card, and the others' files already on it stay (an
 	// unticked game isn't removed: un-choosing never deletes, as a skipped system's games stay)
+	// fetch (RomM's Get games): the chosen games downloaded once and left to the owner, nothing removed, and only their
+	// own gamelist entries written; the server's list isn't followed after (no etag kept)
 	// toSd2 (settings homesync_roms_to = sd2): new games go to the second SD card instead of this one. A game the sync
 	// already put on a card stays on that card (its updates and its removal happen there); a new game whose files are
 	// on either card already (copied by hand) is adopted where it is. With the second card out, the files that belong
 	// on it wait for the next sync (an error says so): they never go to this card instead
 	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders, const std::set<std::string>* chosen = nullptr,
-		bool toSd2 = false)
+		bool toSd2 = false, bool fetch = false)
 	{
 		RomResult res;
 		std::map<std::string, const MFile*> want;
 		std::set<std::string> keep;
 		std::string sd2 = sd2Roms();
 		std::set<std::string> onSd2;	// the wanted files that belong on the second SD card
+		std::map<std::string, const MGame*> gameOf;	// each wanted file's game, for the progress line
 		for (auto& s : m.systems) for (auto& g : s.games)
 		{
 			bool on = !chosen || chosen->count(gameKey(g));
-			for (auto& f : g.files) { if (on) want[f.path] = &f; else keep.insert(f.path); }
+			for (auto& f : g.files) { if (on) { want[f.path] = &f; gameOf[f.path] = &g; } else keep.insert(f.path); }
 			if (!on)
 			{
 				continue;
@@ -1442,6 +541,7 @@ namespace
 		bool emptyList = want.empty() && !c.files.empty();
 		for (auto& kv : c.files)
 		{
+			if (fetch) break;	// (a download only: nothing leaves the card)
 			if (want.count(kv.first)) continue;
 			std::string folder = kv.first.substr(0, kv.first.find('/'));
 			if (skipFolders.count(folder)) continue;	// (a system skipped on this handheld: its games stay as they are)
@@ -1475,17 +575,30 @@ namespace
 			for (auto& g : res.conflicts) say("  ! (yours, left alone) %s", g.c_str());
 			return res;
 		}
+		// the progress line counts games, not files: a game is its ROM, its cover, a PS1 set's discs and .m3u, so the
+		// files are put in their games' order (by path a cover, under media/, comes after every ROM of its system) and
+		// the line says which game of how many, by its title
+		std::map<const MGame*, int> order;
+		for (auto* f : todo) order.emplace(gameOf[f->path], (int)order.size());
+		std::stable_sort(todo.begin(), todo.end(), [&](const MFile* a, const MFile* b) { return order[gameOf[a->path]] < order[gameOf[b->path]]; });
+		const int games = (int)order.size();
 		long long doneBytes = 0;
-		int i = 0;
+		int gi = 0, fi = 0;
+		const MGame* last = nullptr;
+		std::set<std::string> got;	// (the files this run downloaded)
 		for (auto* f : todo)
 		{
-			i++;
+			const MGame* g = gameOf[f->path];
+			fi++;
+			if (g != last) { gi++; last = g; }
 			bool sd = onSd2.count(f->path) > 0;
 			std::string dst = (sd ? sd2 : ROMS) + "/" + f->path, err;
-			std::string label = baseOf(f->path);
+			std::string label = g && !g->title.empty() ? g->title : baseOf(f->path);
+			if (f->media) label += " (cover)";
+			const std::string what = games > 1 ? "Downloading game " + std::to_string(gi) + " of " + std::to_string(games) : "Downloading";
 			auto show = [&](long long now) {
 				long long mb = (doneBytes + now) >> 20, tot = std::max(1LL, need >> 20);
-				status("running " + std::to_string(std::min(mb, tot)) + " " + std::to_string(tot) + " Games " + std::to_string(i) + "/" + std::to_string(todo.size()) + "|" + label);
+				status("running " + std::to_string(std::min(mb, tot)) + " " + std::to_string(tot) + " " + what + "|" + label);
 			};
 			show(0);
 			progress = [&](long long now, long long) { show(now); };
@@ -1493,8 +606,26 @@ namespace
 			if (f->generated) ok = writeAtomic(dst, f->content);
 			else
 			{
-				std::string algo = !f->sha1.empty() ? "sha1" : !f->md5.empty() ? "md5" : "";
-				ok = fetchTo(f->url, b.auth(), dst, f->media ? -1 : f->size, algo, !f->sha1.empty() ? f->sha1 : f->md5, err);
+				std::string algo = f->packed ? "" : !f->sha1.empty() ? "sha1" : !f->md5.empty() ? "md5" : "";
+				std::function<std::string(const std::string&)> members;
+				if (f->packed && !f->members.empty() && extOf(f->path) == "zip")
+					members = [f](const std::string& part) {
+						// (a zip whose list of members isn't read here (zip64, a member of 4 GB) is kept unchecked, as a
+						// download the server gave no hash for is, rather than thrown away and fetched again every sync;
+						// a member the server gave no size is matched by its CRC, and one with no CRC isn't checked)
+						auto local = zipMembers(part);
+						if (local.empty()) { say("  %s: its members can't be read here, not checked", baseOf(f->path).c_str()); return std::string(); }
+						for (auto& m : f->members)
+						{
+							const std::string crc = lower(m.second);
+							if (crc.empty()) continue;
+							bool found = false;
+							for (auto& l : local) if (l.second == crc && (m.first < 0 || l.first == m.first)) { found = true; break; }
+							if (!found) return std::string("checksum mismatch (a member of the zip)");
+						}
+						return std::string();
+					};
+				ok = fetchTo(f->url, b.authFor(f->url), dst, f->media ? -1 : f->size, algo, f->packed ? "" : !f->sha1.empty() ? f->sha1 : f->md5, err, nullptr, members, f->media ? 16ll << 20 : -1);
 			}
 			progress = nullptr;
 			doneBytes += std::max(0LL, f->size);
@@ -1510,9 +641,24 @@ namespace
 			}
 			res.downloaded++;
 			res.changed = true;
-			saveConf(c);	// progress kept: a sync cut short goes on from here
-			say("  [%d/%zu] %s", i, todo.size(), f->path.c_str());
+			got.insert(f->path);
+			say("  [file %d/%zu] %s", fi, todo.size(), f->path.c_str());
+			// (progress kept: a sync cut short goes on from here. Not kept, the pairing forgotten or made again while
+			// this ran, or the card full: nothing further is copied for a state that can't say it was, and no game the
+			// server stopped listing leaves the card, for a pairing that may be gone, whose Forget said the games stay)
+			if (!saveConf(c))
+			{
+				progress = nullptr;
+				res.errors.push_back("stopped: what was copied couldn't be recorded (the pairing changed, or the card is full)");
+				res.stopped = true;
+				break;
+			}
 		}
+		// (stopped: no gamelist rewritten either, which takes out the entries of the games no longer listed, the games
+		// themselves staying. Get games' entries are only ever added, for the games this run brought, which are on the
+		// card whatever became of the pairing: written, or a game recorded before the stop would have a file and never
+		// a title, the next run finding it in place and bringing nothing)
+		if (res.stopped && !fetch) return res;
 		for (auto& rel : gone)
 		{
 			bool sd = c.where.count(rel) > 0;
@@ -1534,6 +680,10 @@ namespace
 			std::vector<std::vector<std::pair<std::string, std::string>>> ours[2];
 			for (auto& g : s.games)
 			{
+				// (a download writes the entries of the games it brought, no other's: a game asked for that was on the
+				// card already, copied by hand and adopted, keeps the entry its owner gave it)
+				if (fetch && !chosen->count(gameKey(g))) continue;
+				if (fetch && std::none_of(g.files.begin(), g.files.end(), [&](const MFile& f) { return !f.media && got.count(f.path); })) continue;
 				bool all = !g.gl.empty();
 				for (auto& f : g.files) { auto st = c.files.find(f.path); if (!f.media && (st == c.files.end() || st->second != f.key())) all = false; }
 				if (!all) continue;
@@ -1560,7 +710,10 @@ namespace
 					continue;	// (the second SD card is out: its gamelist when it's back)
 				}
 				std::string path = root + "/" + s.folder + "/gamelist.xml", out;
-				auto& before = c.gamelist[key];
+				if (fetch && ours[k].empty()) continue;
+				// (a download's entries are the owner's once written: not kept to be taken out again)
+				std::vector<std::string> none;
+				auto& before = fetch ? none : c.gamelist[key];
 				std::set<std::string> drop(before.begin(), before.end());
 				bool had = exists(path);
 				if (ours[k].empty() && drop.empty()) { c.gamelist.erase(key); continue; }
@@ -1571,9 +724,10 @@ namespace
 				res.changed = true;
 			}
 		}
+		if (res.stopped) return res;
 		std::set<std::string> listed;
 		for (auto& s : m.systems) listed.insert(s.folder);
-		for (auto it = c.gamelist.begin(); it != c.gamelist.end();)
+		for (auto it = c.gamelist.begin(); !fetch && it != c.gamelist.end();)
 		{
 			bool sd = it->first.compare(0, 5, "@sd2/") == 0;
 			std::string folder = sd ? it->first.substr(5) : it->first, root = sd ? sd2 : ROMS;
@@ -1589,7 +743,33 @@ namespace
 			res.errors.push_back("the second SD card is out, has no roms folder or its games are off in Settings: " + std::to_string(waiting) +
 				(waiting == 1 ? " file waits" : " files wait") + " for it");
 		}
-		if (res.errors.empty()) c.etag = m.etag;
+		if (res.errors.empty() && !fetch) c.etag = m.etag;
+		if (fetch)
+		{
+			// (each game asked for taken off the list once its files are all in place, or one of them is the owner's own)
+			std::set<std::string> done, mine(res.conflicts.begin(), res.conflicts.end());
+			for (auto& s : m.systems)
+				for (auto& g : s.games)
+				{
+					std::string k = gameKey(g);
+					if (!chosen->count(k)) continue;
+					bool in = true, own = false;
+					for (auto& f : g.files)
+					{
+						if (f.media) continue;
+						own = own || mine.count(f.path);
+						auto st = c.files.find(f.path);
+						std::string root = c.where.count(f.path) ? sd2 : ROMS;
+						in = in && st != c.files.end() && st->second == f.key() && !root.empty() && exists(root + "/" + f.path);
+					}
+					if (in || own) done.insert(k);
+				}
+			// (and one the server no longer lists: nothing to bring)
+			std::set<std::string> listedKeys;
+			for (auto& s : m.systems) for (auto& g : s.games) listedKeys.insert(gameKey(g));
+			for (auto& k : *chosen) if (!listedKeys.count(k)) { done.insert(k); say("  get: %s isn't on the server any more", k.c_str()); }
+			if (!dryRun) editGet({}, done);
+		}
 		saveConf(c);
 		b.report(m, res.downloaded, res.removed, res.conflicts, res.errors);
 		return res;
@@ -1644,30 +824,136 @@ namespace
 		close(s);
 		return out;
 	}
-	// what answers at an address: Romhost's hello, RomM's heartbeat
-	std::string probe(const std::string& addr, std::string& url, std::string& name)
+	// libcurl's codes for an HTTPS server not trusted (CURLE_PEER_FAILED_VERIFICATION) and homesync_ca's file not read
+	// (CURLE_SSL_CACERT_BADFILE)
+	enum { CURL_UNTRUSTED = 60, CURL_BAD_CA = 77 };
+	// what answers at an address: Romhost's hello, RomM's heartbeat. tls: the HTTPS try's CURL_UNTRUSTED or CURL_BAD_CA
+	std::string probe(const std::string& addr, std::string& url, std::string& name, int* tls = nullptr)
 	{
 		std::vector<std::string> tries;
 		std::string a = trim(addr);
 		bool hasPort = a.find(':', a.find("://") == std::string::npos ? 0 : a.find("://") + 3) != std::string::npos;
-		bool scheme = a.find("://") != std::string::npos, tls = lower(a.substr(0, 8)) == "https://";
+		bool scheme = a.find("://") != std::string::npos, https = lower(a.substr(0, 8)) == "https://";
 		if (hasPort || scheme) tries.push_back(normUrl(a, 0));
 		// a bare address: Romhost's port first (the LAN's usual server), then the web ports, and https (443) last (#109);
-		// https typed without a port is that server's 443 alone
-		if (!hasPort && !tls) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
+		// https typed without a port is that server's 443 alone, and an address with a port is taken as typed
+		if (!hasPort && !https) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
 		if (!hasPort && !scheme) tries.push_back(normUrl("https://" + a, 0));
-		for (auto& u : tries)
+		// (a redirect to https on the same host, which an address typed with http:// and a server behind a proxy that
+		// sends everything to https gives: the address it names tried next, as the https try is for a bare one, rather
+		// than followed, so the address kept is the one that answers)
+		auto hostOf = [](const std::string& u)
 		{
-			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5;
+			size_t h = u.find("://");
+			h = h == std::string::npos ? 0 : h + 3;
+			size_t e = u.find_first_of(":/", h);
+			return lower(u.substr(h, e == std::string::npos ? std::string::npos : e - h));
+		};
+		auto moved = [&](const Resp& r, const std::string& from, const std::string& asked)
+		{
+			auto l = r.hdr.find("location");
+			if (r.code < 300 || r.code >= 400 || l == r.hdr.end()) return;
+			const std::string& loc = l->second;
+			if (lower(loc.substr(0, 8)) != "https://" || loc.size() <= asked.size() || loc.compare(loc.size() - asked.size(), asked.size(), asked) != 0) return;
+			std::string base = loc.substr(0, loc.size() - asked.size());
+			if (hostOf(base) == hostOf(from) && std::find(tries.begin(), tries.end(), base) == tries.end()) tries.push_back(base);
+		};
+		for (size_t i = 0; i < tries.size(); i++)
+		{
+			const std::string u = tries[i];
+			// (redirects not followed: a web port that sends everything to https would otherwise answer as the https
+			// server, and that port then be kept, every POST to it turned into a GET by the redirect; the https try
+			// further down finds the server where it is)
+			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5; q.follow = false;
 			Resp r = http(q);
+			if (tls && (r.curl == CURL_UNTRUSTED || r.curl == CURL_BAD_CA)) *tls = r.curl;
+			if (r.code == 0) continue;	// (nothing there, on this scheme and port: the heartbeat wouldn't get further)
+			moved(r, u, "/api/v1/hello");
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (j && j->str("service") == "romhost") { url = u; name = j->str("name"); return "romhost"; }
 			q.url = u + "/api/heartbeat";
 			r = http(q);
+			moved(r, u, "/api/heartbeat");
 			j = r.code == 200 ? r.json() : nullptr;
 			if (j && j->get("SYSTEM")) { url = u; name = "RomM " + j->get("SYSTEM")->str("VERSION"); return "romm"; }
 		}
 		return "none";
+	}
+	// RomM at the base URL given, asked once (its heartbeat), no port guessed and no redirect followed: the answer the
+	// form on the handheld shows. ok: "romm"; else why it isn't, and what it found (a redirect's location, a status)
+	std::string probeRomm(const std::string& base, std::string& version, std::string& detail)
+	{
+		Req q; q.url = base + "/api/heartbeat"; q.timeout = 8; q.follow = false;
+		Resp r = http(q);
+		if (r.code == 0)
+		{
+			switch (r.curl)
+			{
+			case 6: return "dns";			// (CURLE_COULDNT_RESOLVE_HOST)
+			case 7: return "refused";		// (CURLE_COULDNT_CONNECT)
+			case 28: return "timeout";		// (CURLE_OPERATION_TIMEDOUT)
+			case CURL_BAD_CA: return "ca";
+			case 35: case 51: case 58: case CURL_UNTRUSTED:
+			{
+				// (a certificate is checked against the clock too, and until Wi-Fi's first time sync (the wifi script
+				// writes time-synced) the clock is whatever the RTC kept: a certificate newer than that isn't valid
+				// yet. Said as the clock only when the certificate's own dates are what this clock fails, looked at
+				// with a second request that takes it unchecked and sends nothing; one simply not trusted is that, with
+				// or without the time, so the form offers its way past it. curl's words can't tell the two apart: the
+				// image's libcurl has none)
+				if (access((RUN + "/time-synced").c_str(), F_OK) == 0) return "tls";
+				q.certDates = true;
+				Resp d = http(q);
+				const long long now = (long long)time(nullptr);
+				return d.certFrom && d.certTo && (now < d.certFrom || now > d.certTo) ? "clock" : "tls";
+			}
+			}
+			detail = r.err;
+			return "noanswer";
+		}
+		if (r.code >= 300 && r.code < 400)
+		{
+			// (a redirect that still ends at the heartbeat is the same API at another address, http to https or another
+			// port, which the form offers to take. One that leads to any other page is something answering in RomM's
+			// place, nearly always the sign-in of a proxy put in front of it (Cloudflare Access, Authelia, Authentik,
+			// oauth2-proxy and their like all answer so), told by where it leads and not by whose it is. Such a page is
+			// often handed the address asked for as its query, which is cut off before the path is looked at)
+			detail = r.hdr.count("location") ? r.hdr["location"] : "";
+			const std::string to = detail.substr(0, detail.find_first_of("?#")), hb = "/api/heartbeat";
+			if (to.size() < hb.size() || to.compare(to.size() - hb.size(), hb.size(), hb) != 0) return "access";
+			detail = to;	// (the address the form offers to take: without a query, as it is judged)
+			return "redirect";
+		}
+		if (r.code == 401 || r.code == 403) { detail = std::to_string(r.code); return "denied"; }
+		JPtr j = r.code == 200 ? r.json() : nullptr;
+		if (r.code == 200 && !(j && j->get("SYSTEM") && j->get("SYSTEM")->isObj())) return "notromm";
+		if (r.code != 200) { detail = std::to_string(r.code); return "http"; }
+		version = j->get("SYSTEM")->str("VERSION");
+		return "romm";
+	}
+	// a RomM base URL as typed: a scheme (https when none), no slash at its end
+	// base64 as a PEM file holds it, its line ends and padding passed over
+	std::string unBase64(const std::string& in)
+	{
+		std::string out;
+		unsigned acc = 0;
+		int bits = 0;
+		for (unsigned char ch : in)
+		{
+			int v = ch >= 'A' && ch <= 'Z' ? ch - 'A' : ch >= 'a' && ch <= 'z' ? ch - 'a' + 26 : ch >= '0' && ch <= '9' ? ch - '0' + 52 : ch == '+' ? 62 : ch == '/' ? 63 : -1;
+			if (v < 0) continue;
+			acc = (acc << 6) | (unsigned)v;
+			bits += 6;
+			if (bits >= 8) { bits -= 8; out += (char)((acc >> bits) & 0xFF); }
+		}
+		return out;
+	}
+	std::string rommBase(std::string a)
+	{
+		a = trim(a);
+		while (!a.empty() && a.back() == '/') a.pop_back();
+		if (a.find("://") == std::string::npos) a = "https://" + a;
+		return a;
 	}
 	std::string deviceName()
 	{
@@ -1678,22 +964,57 @@ namespace
 		char h[64] = {}; gethostname(h, sizeof h - 1);
 		return h[0] ? h : "BananaOS";
 	}
-	int pair(const std::string& addr, const std::string& codeIn)
+	int pair(const std::string& addr, const std::string& codeIn, bool romm)
 	{
 		std::string url, name;
-		std::string kind = probe(addr, url, name);
+		int tls = 0;
+		std::string kind;
+		if (romm)
+		{
+			std::string v, detail;
+			url = rommBase(addr);
+			kind = probeRomm(url, v, detail);
+			if (kind != "romm")
+			{
+				status("error " + kind + (detail.empty() ? "" : " " + detail));
+				say("no RomM at %s: %s %s", url.c_str(), kind.c_str(), detail.c_str());
+				return 1;
+			}
+			name = "RomM " + v;
+		}
+		else kind = probe(addr, url, name, &tls);
+		if (kind == "none" && tls == CURL_BAD_CA)
+		{
+			status("error homesync_ca can't be read");
+			say("homesync_ca: %s can't be read", CA.c_str());
+			return 1;
+		}
+		if (kind == "none" && tls == CURL_UNTRUSTED)
+		{
+			status("error the server's certificate isn't trusted (homesync_ca)");
+			say("the HTTPS server at %s isn't trusted: its certificate trusted on the handheld (the form's Y, for RomM), its "
+				"CA's certificate as homesync_ca, or homesync_tls = off (not recommended: any certificate is then taken), in "
+				"banana/settings.conf", addr.c_str());
+			return 1;
+		}
 		if (kind == "none") { status("error no server at " + addr); say("no Romhost or RomM answers at %s", addr.c_str()); return 1; }
+		if (!tlsVerify && url.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
+		// (RomM: the card's id, its device's hostname and identifier, before anything is asked: without it every such card
+		// would be one device)
+		if (kind == "romm" && cardId().empty()) { status("error can't write banana/sync-id"); say("can't write %s/banana/sync-id", ROOT.c_str()); return 1; }
 		Conf c = loadConf();
-		std::string code = trim(codeIn), dev = getenv("BANANA_SYNC_NAME") ? getenv("BANANA_SYNC_NAME") : deviceName();
+		std::string code = trim(codeIn), dev = getenv("BANANA_SYNC_NAME") ? getenv("BANANA_SYNC_NAME") : !c.name.empty() ? c.name : deviceName();	// (paired again: the name it was given)
 		Conf n;
 		n.backend = kind; n.server = url; n.serverName = name; n.name = dev;
-		// a new server: a new state (another server's files and versions mean nothing here); the files stay on the card
-		if (c.server == url && c.backend == kind) { n.files = c.files; n.gamelist = c.gamelist; n.saves = c.saves; n.states = c.states; }
+		if (kind == "romm" && name.compare(0, 5, "RomM ") == 0) n.serverVersion = name.substr(5);
+		// a new server: a new state (another server's files and versions mean nothing here); the files stay on the card.
+		// The same server again: its state as it is, the saves' part too (what was agreed, held or waiting still holds)
+		if (c.server == url && c.backend == kind) { n.files = c.files; n.gamelist = c.gamelist; takeSaves(n, c); }
 		if (kind == "romhost")
 		{
 			if (code.empty()) { status("error the pairing code from Homeport is needed"); return 1; }
 			std::string b = "{\"code\": " + jsonStr(code) + ", \"name\": " + jsonStr(dev) + "}";
-			Req q; q.method = "POST"; q.url = url + "/api/v1/pair"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/v1/pair"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (!j || j->str("token").empty()) { status("error " + r.error()); say("pairing failed: %s", r.error().c_str()); return 1; }
@@ -1705,7 +1026,7 @@ namespace
 		{
 			// a client token's pairing code (RomM: Profile > Client tokens > Pair)
 			std::string b = "{\"code\": " + jsonStr(code) + "}";
-			Req q; q.method = "POST"; q.url = url + "/api/client-tokens/exchange"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/client-tokens/exchange"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (!j || j->str("raw_token").empty()) { status("error " + r.error()); say("pairing failed: %s", r.error().c_str()); return 1; }
@@ -1714,26 +1035,32 @@ namespace
 		else
 		{
 			// RomM's device pairing: a code shown here, typed (approved) in RomM's web UI at /pair/device
-			char host[64] = {}; gethostname(host, sizeof host - 1);
-			std::string ident = "bananaos-" + std::string(host[0] ? host : "handheld") + "-" + trim(readFile("/etc/machine-id")).substr(0, 8);
-			std::string b = "{\"client_device_identifier\": " + jsonStr(ident) + ", \"name\": " + jsonStr(dev) + ", \"client\": \"BananaOS\", \"platform\": \"linux\", \"client_version\": \"1.0\", "
+			// (as the device it then registers: RomM makes the device from this when the code is approved)
+			std::string b = "{\"client_device_identifier\": " + jsonStr("bananaos-" + cardId()) + ", " + deviceFields(n) + ", "
 				"\"requested_scopes\": [\"me.read\", \"roms.read\", \"platforms.read\", \"assets.read\", \"assets.write\", \"devices.read\", \"devices.write\"]}";
-			Req q; q.method = "POST"; q.url = url + "/api/auth/device/init"; q.body = &b; q.headers = { "Content-Type: application/json" };
+			Req q; q.method = "POST"; q.url = url + "/api/auth/device/init"; q.body = &b; q.headers = { "Content-Type: application/json" }; q.follow = false;
 			Resp r = http(q);
 			JPtr j = (r.code == 200 || r.code == 201) ? r.json() : nullptr;
 			if (!j || j->str("device_code").empty()) { status("error " + (r.code == 404 ? std::string("this RomM has no device pairing (update it, or type a client token's code)") : r.error())); return 1; }
 			std::string dc = j->str("device_code"), uc = j->str("user_code");
-			int interval = std::max(2, (int)j->num("interval", 5)), left = (int)j->num("expires_in", 600);
+			int interval = std::min(60, std::max(2, (int)j->num("interval", 5))), left = std::min(3600, (int)j->num("expires_in", 600));
 			// the page's address with the code in it (verification_path_complete): RomM's /pair/device has no field to
 			// type a code into, it takes it from ?user_code= only (#141)
-			std::string verify = url + j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
-			status("pair " + uc + " " + verify);
+			// (the page is the paired server's own, a path under its address: one that doesn't start as a path, "@other.host/…"
+			// say, would make the QR code a link to another server; and the code is letters and digits, as RomM makes it)
+			std::string vpath = j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
+			bool plain = !uc.empty() && uc.size() <= 32 && vpath.size() > 1 && vpath[0] == '/' && vpath[1] != '/';
+			for (unsigned char ch : uc) if (!isalnum(ch) && ch != '-') plain = false;
+			for (unsigned char ch : vpath) if (ch <= ' ' || ch == 0x7f) plain = false;
+			if (!plain) { status("error the server's pairing answer isn't RomM's (its code, or the page that approves it)"); return 1; }
+			std::string verify = url + vpath;
+			status("pair " + uc + " " + verify + " " + std::to_string(left));
 			say("On RomM, open %s and enter %s", verify.c_str(), uc.c_str());
 			std::string body = "{\"device_code\": " + jsonStr(dc) + "}";
 			for (; left > 0; left -= interval)
 			{
 				sleep(interval);
-				Req t; t.method = "POST"; t.url = url + "/api/auth/device/token"; t.body = &body; t.headers = { "Content-Type: application/json" };
+				Req t; t.method = "POST"; t.url = url + "/api/auth/device/token"; t.body = &body; t.headers = { "Content-Type: application/json" }; t.follow = false;
 				Resp tr = http(t);
 				JPtr tj = tr.code == 200 ? tr.json() : nullptr;
 				if (tj && !tj->str("access_token").empty()) { n.token = tj->str("access_token"); n.device = tj->str("device_id"); break; }
@@ -1743,7 +1070,16 @@ namespace
 			}
 			if (n.token.empty()) { status("error the code ran out"); return 1; }
 		}
-		if (!saveConf(n)) { status("error can't write " + CONF); return 1; }
+		if (kind == "romm")
+		{
+			// the card as a RomM device, whichever way it paired; re-paired with the same server, the same device
+			if (n.device.empty() && c.server == url && c.backend == kind) n.device = c.device;
+			std::string e = registerDevice(n);
+			if (!e.empty()) say("not registered as a device yet (%s): the next sync tries again", e.c_str());
+		}
+		if (!savePairing(n)) { status("error can't write " + CONF); return 1; }
+		settlePin(originOf(url));
+		if (!(c.server == url && c.backend == kind)) dropServerLists();	// (another server: what was asked of the last one isn't asked of this)
 		status("paired " + (n.serverName.empty() ? url : n.serverName));
 		say("paired with %s (%s) as \"%s\"", n.serverName.c_str(), url.c_str(), n.name.c_str());
 		return 0;
@@ -1770,42 +1106,313 @@ namespace
 		}
 	};
 
-	int doSync(bool savesOnly, const std::string& autoWhy)
+	std::string settleKey;
+	bool gamesOnly = false;	// sync --games-only: Get games' own run, its downloads and not the saves
+	// the commands that change the card's saves with no server: the saves' lock held and no game running, as a sync's
+	// save phase; each says "ok", or "error <why>", on its one line, for the menu
+	int answer(const std::string& why) { printf("%s\n", why.empty() ? "ok" : ("error " + why).c_str()); return why.empty() ? 0 : 1; }
+	std::string lockForSaves()
+	{
+		if (gameRunning()) return "a game is running";
+		if (!lockSaves(10)) return "another sync is saving";
+		if (gameRunning()) return "a game is running";
+		holdRoms = false; holdSaves = true;
+		return "";
+	}
+	// what its owner can choose for a held note: both (the card's or the server's: a conflict, or a held note that is
+	// one, as a state's or a RomM before 5.4's), server (the save here is blank or gone, so only that), none (held back
+	// for another reason, a format or a size this handheld can't take). Choosing the server's takes its
+	// copy in the vault, so a note with none there offers no such thing. DraStic's and BananaDS's saves apart offer none:
+	// the game's next start brings them together, the emulator starting taking its own (nds-saves --prefer)
+	bool bothHeld(const SlotNote& n) { return n.why.empty() || n.why.find("changed here and on the server") != std::string::npos; }
+	std::string choiceOf(bool isConflict, const SlotNote& n)
+	{
+		if (n.why == NDS_DIVERGED) return "none";
+		bool two = isConflict || bothHeld(n);
+		bool gone = lostNote(n);
+		if (!two && !gone) return "none";
+		if (n.vault.empty() || hashFile(n.vault, "md5") != n.serverMd5) return "none";
+		// (the server's a blank save: nothing to put in place from it)
+		if (gone && blankSave(readFile(n.vault), saveFolder(n.rel))) return "none";
+		return two ? "both" : "server";
+	}
+	// which of the Saves page's lines a note is: both (changed on both sides, a state's too), gone (missing or blank here
+	// since it synced), ds (DraStic's and BananaDS's saves apart, or not brought together), unread (DraStic's save here
+	// can't be read), format (the server's save is one this handheld can't take: a format or a size)
+	const char* kindOf(bool isConflict, const SlotNote& n)
+	{
+		if (isConflict || bothHeld(n)) return "both";
+		if (lostNote(n)) return "gone";
+		if (n.why == NDS_DIVERGED || n.why == NDS_NOT_BROUGHT) return "ds";
+		if (n.why == NDS_UNREAD) return "unread";
+		return "format";
+	}
+	// a DS note under key: DraStic's and BananaDS's differ, so which is the card's save isn't known until the game's next
+	// start brings them together; no choice over the server's before then
+	bool heldForDs(const Conf& c, const std::string& key)
+	{
+		auto i = c.held.find(key);
+		return i != c.held.end() && i->second.why == NDS_DIVERGED;
+	}
+	// the system a save is, for the checks its size and form get before it is put in place. Its folder says it for the
+	// DS and the GBA; the flat saves/ holds every other RetroArch system's, so there the game's path says it when it
+	// is known, and otherwise the card's games of the save's name do, when they are all one system's. "" when no game
+	// has the name, or games of two systems share it: the save is put in place unchecked, as one of a system with no
+	// checks is, and the log says so
+	std::string systemOfSave(const std::string& rel, const std::string& rom)
+	{
+		std::string folder = saveFolder(rel);
+		if (!folder.empty()) return folder;
+		if (!rom.empty() && rom.find('/') != std::string::npos) return systemOfFolder(rom.substr(0, rom.find('/')));
+		std::set<std::string> found;
+		std::string stem = stemOf(baseOf(rel));
+		for (const std::string& top : { ROMS, sd2Roms() })
+		{
+			DIR* d = top.empty() ? nullptr : opendir(top.c_str());
+			if (!d) continue;
+			while (dirent* e = readdir(d))
+			{
+				if (e->d_name[0] == '.') continue;
+				DIR* g = opendir((top + "/" + e->d_name).c_str());
+				if (!g) continue;
+				std::string sys = systemOfFolder(e->d_name);
+				while (dirent* f = readdir(g))
+					if (!sys.empty() && f->d_name[0] != '.' && stemOf(f->d_name) == stem) found.insert(sys);
+				closedir(g);
+			}
+			closedir(d);
+		}
+		if (found.size() == 1) return *found.begin();
+		say("  %s: %s, its size not checked", rel.c_str(), found.empty() ? "no game of that name on the card" : "games of more than one system have that name");
+		return "";
+	}
+
+	// a copy in the vault put in place as the save at rel, in this handheld's form as the sync would take it (a .dsv's
+	// footer cut off, the sizes checked), with DraStic's in step. expect: what the save held when this was chosen; rom:
+	// the game's path under the ROMs folder, when known
+	// (placed: the MD5 of what was put in place, when asked for)
+	std::string place(const std::string& rel, const std::string& file, const std::string& serverId, const std::string& expect, const std::string& rom = "", std::string* placed = nullptr)
+	{
+		bool ok, had = exists(ROOT + "/" + rel);
+		std::string data = readFile(file, &ok), local = had ? readFile(ROOT + "/" + rel) : "", why;
+		if (!ok) return "that copy can't be read";
+		// (a blank save here says nothing of the game's size, as in the sync's download)
+		bool sized = had && !blankSave(local, saveFolder(rel));
+		if (rel.compare(0, 6, "saves/") == 0) why = adaptIn(systemOfSave(rel, rom), data, sized ? &local : nullptr);
+		if (!why.empty()) return why;
+		if (placed) *placed = hashStr(data, "md5");
+		std::string dl = RUN + "/sync-dl." + std::to_string(getpid()), err;
+		if (!writeAtomic(dl, data)) return "can't write the copy";
+		KillHold placing;
+		Install in = installSave(rel, dl, serverId, err, &expect);
+		if (in != Install::Done) unlink(dl.c_str());
+		if (in == Install::Blank) return "that copy is blank, nothing to put in place";
+		if (in == Install::Failed) return err;
+		if (saveFolder(rel) == "nds" && ndsSaves(rom.empty() ? romOfSave(rel) : romPath(rom)) != 0) return "put in place, but DraStic's save isn't in step with it";
+		return gameRunning() ? "a game started while it was placed" : "";
+	}
+	// resolve <key> server: the server's copy, from the vault, so it needs no network. It is recorded as the version
+	// both sides hold, as a download of it is: chosen before a game with no sync in between (the menu's question, or
+	// the server out of reach), what the game then saves is that version played on, sent as any change, where with the
+	// version agreed before still on record it came back as a second conflict with the very save it was played from
+	int settleHere(const std::string& key)
+	{
+		std::string why = lockForSaves();
+		if (!why.empty()) return answer(why);
+		Conf c = loadConf();
+		auto* from = c.conflicts.count(key) ? &c.conflicts : c.held.count(key) ? &c.held : nullptr;
+		if (!from) return answer("nothing held for it");
+		SlotNote n = (*from)[key];
+		std::string can = choiceOf(from == &c.conflicts, n);
+		if (heldForDs(c, key)) return answer("DraStic's and BananaDS's saves differ: start the game first");
+		if (can == "none") return answer(n.why.empty() || bothHeld(n) ? "the server's copy isn't in the vault" : "not a conflict: " + n.why);
+		std::string md5;
+		why = place(n.rel, n.vault, std::to_string(n.saveId), n.localMd5, n.rom, &md5);
+		if (!why.empty()) return answer(why);
+		from->erase(key);
+		// (a version the server has, that is: a save outside the slots isn't the slot's, and the card's still goes there;
+		// Romhost's plan keeps its own record)
+		if (c.backend == "romm" && n.saveId > 0 && !n.outside && !md5.empty())
+		{
+			if (key.find("/state:") != std::string::npos) c.states[n.rel] = { (double)n.saveId, md5, n.updated };
+			// (RomM 5.4 and newer: the slot's record, the server's MD5 beside the card's when the card holds the save
+			// in another form; before it, the path's)
+			else if (c.serverVersion.empty() || versionAtLeast(c.serverVersion, 5, 4, 0)) c.slots[key] = { md5, n.rel, n.saveId, md5 != n.serverMd5 ? n.serverMd5 : "" };
+			else c.saves[n.rel] = { (double)n.saveId, md5, n.updated };
+		}
+		// (the save is in place either way; the note that couldn't be taken off is by the next sync, which finds the
+		// two the same)
+		if (!saveConf(c)) return answer("put in place, but that couldn't be recorded: Sync now settles it");
+		return answer("");
+	}
+	// restore <file>: a kept copy as the card's save, the save it replaces kept; the next sync sends it as any change
+	int restore(const std::string& arg)
+	{
+		std::string file = vaultFile(arg), why;
+		// (a copy the vault lists, never a file of another kind beside them)
+		bool listed = false;
+		if (!file.empty()) for (auto& k : vaultList()) if (vaultFile(k.file) == file) listed = true;
+		if (!listed) return answer("not a kept copy in the vault");
+		why = lockForSaves();
+		if (!why.empty()) return answer(why);
+		std::string rel;
+		for (auto& k : vaultList()) if (vaultFile(k.file) == file) rel = k.rel;
+		if (rel.empty()) return answer("not a kept copy of a save");
+		std::string p = ROOT + "/" + rel;
+		return answer(place(rel, file, "restore", exists(p) ? hashFile(p, "md5") : ""));
+	}
+	// what the Saves page lists (banana-sync saves), a tab-separated line each: what is held (conflict, held), what waits
+	// to be sent (queued), and, with kept, every copy in the vault (kept); onlyRom: that game's alone
+	std::string noteLines(const Conf& c, const std::string& onlyRom, bool kept)
+	{
+		std::string out, only = onlyRom.empty() ? "" : stemOf(baseOf(onlyRom));
+		auto mine = [&](const std::string& rel) { return only.empty() || stemOf(baseOf(rel)) == only; };
+		auto noteMine = [&](const SlotNote& n) { return n.rom.empty() ? mine(n.rel) : onlyRom.empty() || n.rom == onlyRom; };
+		auto clean = [](std::string s) { for (char& ch : s) if (ch == '\t' || ch == '\n') ch = ' '; return s; };
+		auto line = [&](const std::vector<std::string>& f) { for (size_t i = 0; i < f.size(); i++) out += (i ? "\t" : "") + f[i]; out += "\n"; };
+		auto notes = [&](const char* word, const std::map<std::string, SlotNote>& m)
+		{
+			for (auto& kv : m)
+			{
+				const SlotNote& n = kv.second;
+				// (one with a slot Settings no longer names: nothing to decide, the next sync drops it, its copy kept)
+				if (c.backend == "romm" && !slotOfKey(kv.first).empty() && slotOfKey(kv.first) != saveSlot) continue;
+				// (a conflict the last sync left, its game's DS saves apart since: neither choice could be carried out
+				// until the game's next start brings the two together, so none is offered, and the line says why)
+				bool ds = heldForDs(c, kv.first);
+				if (noteMine(n)) line({ word, kv.first, clean(n.rel), clean(n.why), n.localMd5, std::to_string(fileSize(ROOT + "/" + n.rel)),
+					n.serverMd5, std::to_string(n.vault.empty() ? -1 : fileSize(n.vault)), clean(n.device), n.updated, clean(n.vault),
+					ds ? "none" : choiceOf(word[0] == 'c', n), clean(n.rom), ds ? "ds" : kindOf(word[0] == 'c', n) });
+			}
+		};
+		notes("conflict", c.conflicts);
+		notes("held", c.held);
+		for (auto& kv : c.queue)
+		{
+			auto si = c.slots.find(kv.first);
+			std::string rel = !kv.second.rel.empty() ? kv.second.rel : si != c.slots.end() ? si->second.rel : "";
+			if (mine(rel)) line({ "queued", kv.first, clean(rel), kv.second.md5, clean(kv.second.vault) });
+		}
+		if (kept)
+			for (auto& k : vaultList())
+				if (mine(k.rel)) line({ "kept", clean(k.rel), clean(k.file), std::to_string(k.size) });
+		return out;
+	}
+
+	int doSync(bool savesOnly, const std::string& autoWhy, const std::string& onlyRom)
 	{
 		auto set = readConf(SETTINGS);
 		auto get = [&](const std::string& k, const std::string& d) { auto i = set.find(k); return i == set.end() || i->second.empty() ? d : i->second; };
+		bool queued = false;
 		Conf c = loadConf();
 		if (!c.paired()) { if (autoWhy.empty()) status("error not paired"); return 2; }
 		if (!autoWhy.empty())
 		{
 			std::string a = get("homesync_auto", "off");
-			if (a == "off" || (autoWhy == "wifi" && a != "both")) return 0;
+			if (a == "off") return 0;
+			// (Wi-Fi back with only "Leaving a game": the saves that couldn't be sent then, sent now)
+			if (autoWhy == "wifi" && a != "both")
+			{
+				// (one that waits for a game of the second SD card, never synced from here, while that card is out, isn't
+				// one to send now: its game isn't there to be matched with the server's. Alone, it doesn't bring the
+				// server's games listed at every return of Wi-Fi, for a card that may be out for weeks or for good; it
+				// waits at no cost, and is decided by the first return of Wi-Fi with the card in)
+				const bool sd2Out = sd2Roms().empty();
+				bool some = false;
+				for (auto& kv : c.queue) some = some || !(sd2Out && kv.second.sd2 && kv.first.compare(0, 4, "rom:") == 0);
+				if (!some || c.backend != "romm") return 0;
+				savesOnly = true;
+				queued = true;
+			}
 			if (autoWhy == "quit") savesOnly = true;	// (leaving a game: only the saves, it's quick)
+			// (before a game starts: RomM's slots only, one game's, under either card's ROMs folder; Romhost's plan is all
+			// the saves at once)
+			if (autoWhy == "launch" && (onlyRom.empty() || onlyRom[0] == '/' || c.backend != "romm" || get("homesync_launch", "off") != "on")) return 0;
 		}
-		bool roms = !savesOnly && get("homesync_roms", "on") == "on";
-		bool states = get("homesync_states", "off") == "on";
+		if (!tlsVerify && c.server.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
+		if (c.backend == "romm" && get("homesync_slot", "autosave") == "custom")
+		{
+			if (saveSlot != "autosave") say("save slot: %s", saveSlot.c_str());
+			else if (get("homesync_slot_name", "") != "autosave")
+				say("save slot: \"%s\" isn't a slot name (letters, digits, spaces, - and _, up to 64): saves sync with autosave", get("homesync_slot_name", "").c_str());
+		}
+		bool states = get("homesync_states", "off") == "on" || settleKey.find("/state:") != std::string::npos;
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
-		bool pick = get("homesync_games", "all") == "chosen";
+		// RomM: the games come only by Get games (fetch: the games asked for, downloaded once), and a game's saves stay
+		// on this handheld when its page says so. Romhost: the card follows the server's list, every game or the chosen
+		const bool romm = c.backend == "romm";
+		bool pick = !romm && get("homesync_games", "all") == "chosen";
 		std::set<std::string> chosen;
-		if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
+		if (romm) { auto v = readListLines(getFile()); chosen.insert(v.begin(), v.end()); c.etag.clear(); }
+		else if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
 		auto b = backendFor(c);
 		b->skip = skip;
-		b->chosen = pick ? &chosen : nullptr;
 		b->ownCovers = ownCoversOf(SYSTEMS);
+		if (romm) b->local = readLocal();
+		b->onlyRom = onlyRom;
+		// (one game's sync, before it or after it, for a game whose saves stay here: nothing to do, said at once so the
+		// wait before the game is over)
+		if (romm && !onlyRom.empty() && b->local.count(localKeyOf(onlyRom)))
+		{
+			say("%s: its saves stay on this handheld", onlyRom.c_str());
+			if (autoWhy == "launch" && !dryRun) writeAtomic(RUN + "/launch.conflict", "");
+			// (the menu's banner after a game says nothing for this note: keep the two the same)
+			status("done 0 0 0 0 0 0|its saves stay on this handheld");
+			return 0;
+		}
+		b->onlyQueued = queued;
+		b->settleKey = settleKey;
+		b->beforeGame = autoWhy == "launch";
+		if (!onlyRom.empty() && c.backend != "romm") say("Romhost decides which saves move: all of them synced, not only %s's", onlyRom.c_str());
+		// (one game's: its states go too, when they are on, except while it waits to start)
+		if (!onlyRom.empty()) { savesOnly = true; if (autoWhy == "launch") states = false; }
+		bool roms = !savesOnly && (romm ? !chosen.empty() : get("homesync_roms", "on") == "on");
 		Awake awake;
 		if (roms) awake.take();
-		status("running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName));
+		// (the line before the server's first answer: the menu's wait before a game gives that answer 5 s from it)
+		const std::string first = "running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName);
+		status(first);
+		// (RomM, a run of every save or of games: the server asked first, and one that doesn't answer at all (Wi-Fi not
+		// back yet, the server down) ends the run there, said as that, rather than as each part failing in turn and the
+		// menu saying it didn't all work. One game's sync has its own way with the server out of reach: the vault)
+		if (romm && onlyRom.empty())
+		{
+			Req q; q.url = c.server + "/api/heartbeat"; q.timeout = 8; q.follow = false;
+			Resp r = http(q);
+			if (r.code == 0)
+			{
+				std::string why = r.err.empty() ? "no answer" : r.err;
+				say("the server can't be reached: %s", why.c_str());
+				status("error noconnect " + why);
+				return 1;
+			}
+		}
 		std::vector<std::string> errors, conflicts;
 		int downloaded = 0, removed = 0, up = 0, down = 0, sconf = 0;
 		std::string note;
-		if (roms)
+		bool stopped = false;	// (the games' part could no longer record what it did: the run does nothing more)
+		auto romsPass = [&]() -> bool
 		{
+			const size_t before = errors.size();
+			// (Get games: what didn't come said per game, for the page)
 			Manifest m;
-			std::string err;
-			if (!b->manifest(m, skip, err))
+			std::map<std::string, std::vector<std::string>> files;
+			auto noteFailed = [&]()
 			{
-				if (err == "unpaired") { status("error unpaired"); c.last = "unpaired"; saveConf(c); return 1; }
+				if (!romm || dryRun) return;
+				for (auto& s : m.systems) for (auto& g : s.games)
+				{
+					std::string k = gameKey(g);
+					if (k.empty() || !chosen.count(k)) continue;
+					for (auto& f : g.files) if (!f.media) files[k].push_back(f.path);
+				}
+				noteGetFailed(chosen, std::vector<std::string>(errors.begin() + before, errors.end()), files);
+			};
+			std::string err;
+			if (!b->manifest(m, romm ? std::set<std::string>() : skip, err))
+			{
+				if (err == "unpaired") { status("error unpaired"); c.last = "unpaired"; saveConf(c); noteFailed(); return false; }
 				errors.push_back(err);
 			}
 			else if (m.unchanged) say("roms: up to date");
@@ -1818,13 +1425,90 @@ namespace
 				{
 					sd2MakeRoms();	// (a fresh card; not one whose games are off in Settings)
 				}
-				RomResult r = syncRoms(*b, c, m, skip, pick ? &chosen : nullptr, toSd2);
-				downloaded = r.downloaded; removed = r.removed; conflicts = r.conflicts;
+				RomResult r = syncRoms(*b, c, m, skip, romm || pick ? &chosen : nullptr, toSd2, romm);
+				downloaded += r.downloaded; removed += r.removed; conflicts.insert(conflicts.end(), r.conflicts.begin(), r.conflicts.end());
 				for (auto& e : r.errors) errors.push_back(e);
+				stopped = stopped || r.stopped;
 			}
+			noteFailed();
+			return true;
+		};
+		// (Get games: what was asked for while this run was going, brought by it too, once each: a game whose download
+		// failed waits for the next sync. Before the saves, so a game's save comes with it; after them, the last ones)
+		std::set<std::string> tried = chosen;
+		auto more = [&]()
+		{
+			if (!romm || savesOnly || dryRun || stopped) return false;
+			std::set<std::string> next;
+			for (auto& k : readListLines(getFile())) if (tried.insert(k).second) next.insert(k);
+			if (next.empty()) return false;
+			chosen = next;
+			awake.take();
+			return true;
+		};
+		if (roms && !romsPass()) return 1;
+		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
+		// (the saves one run at a time: a sync of one game's beside a sync copying games waits for the other's to end,
+		// and takes the saves' state as that one left it)
+		// (and asked again once it has them: a game can start during that wait, with no lock of its own if a sync held it then)
+		const char* running = "saves: a game is running, next time";
+		// (a wait for the lock said before a game, when there is one: the menu waits it out, up to its cap, instead of
+		// starting the game at 5 s under the sync after the last one, still placing. The line before the first answer
+		// is put back once the lock is had, so a server that then doesn't answer is given its 5 s from there, not the
+		// wait's length over)
+		auto lock = [&]()
+		{
+			if (lockSaves(0)) return true;
+			say("saves: waiting for another sync's to end");
+			if (b->beforeGame) status("waiting 0 0 |saves");
+			bool had = lockSaves(onlyRom.empty() ? 60 : 10);
+			if (had && b->beforeGame) status(first);
+			return had;
+		};
+		// (Get games' own run, --games-only: the games asked for and nothing else, the saves left to the syncs that are for them)
+		if (gamesOnly) say("saves: left to the syncs for them (--games-only)");
+		// (the games' part stopped, nothing of it recorded any more: the saves aren't looked at for a pairing that may be
+		// gone, with a token only this run still holds, none of what it did there to be kept)
+		else if (stopped) say("saves: left alone, the run stopped");
+		else if (gameRunning()) errors.push_back(running);
+		else if (!lock()) errors.push_back("saves: another sync is saving, next time");
+		// (the lock let go with the saves left alone: kept, it would be held through the games asked for meanwhile, below,
+		// and the sync after this game, which waits 10 s for it, would leave the session's save unsent)
+		else if (gameRunning()) { unlockSaves(); errors.push_back(running); }
+		else
+		{
+			takeSaves(c, loadConf());
+			holdSaves = true;
+			// (a run cut short last time: how far each operation got, before anything else touches the saves; a save
+			// found in place is agreed in the record, as the run would have done next, and the record written before
+			// the journal is closed)
+			if (!dryRun)
+			{
+				std::string rec = journalRecover(&c, [&] { return saveConf(c); });
+				for (size_t a = 0, e; (e = rec.find('\n', a)) != std::string::npos; a = e + 1) say("  journal: %s", rec.substr(a, e - a).c_str());
+				savesFlatFirst();
+			}
+			// (the game started again after Power off after sleeping, before it starts: left to its own sync, which its
+			// launcher runs when it ends. The resume state bananad saved belongs with the save on the card now)
+			std::string resume;
+			std::getline(std::ifstream(RUN + "/resume-once"), resume);
+			if (resume.empty()) { std::ifstream rb(ROOT + "/banana/resume-boot"); for (std::string l; std::getline(rb, l);) if (l.compare(0, 4, "rom=") == 0) resume = l.substr(4); }
+			std::string rr = romsRelative(resume);
+			b->resumeRom = !rr.empty() && rr[0] == '/' ? "" : rr;
+			b->saves(states, up, down, sconf, errors, note);
 		}
-		if (gameRunning()) errors.push_back("saves: a game is running, next time");
-		else b->saves(states, up, down, sconf, errors, note);
+		// (the saves' part written and save.lock let go first: the games asked for meanwhile can take minutes, and the
+		// sync after a game, or before one, must not wait on them)
+		if (holdSaves) { saveConf(c); holdSaves = false; unlockSaves(); }
+		for (int pass = 0; pass < 8 && more(); pass++) if (!romsPass()) return 1;
+		// (RomM: the server's games, listed for the saves or for Get games' downloads, kept for Get games' page; not
+		// from one game's sync, which lists that game's system alone)
+		if (romm && onlyRom.empty() && !dryRun && !stopped && b->haveList())
+		{
+			Manifest m;
+			std::string err;
+			if (b->manifest(m, {}, err)) writeGamesCache(c, m);
+		}
 		for (auto& e : errors) say("  error: %s", e.c_str());
 		if (!note.empty()) say("%s", note.c_str());
 		char sum[256];
@@ -1832,8 +1516,16 @@ namespace
 		c.last = std::string(errors.empty() ? "ok " : "errors ") + sum + (errors.empty() ? "" : "|" + errors[0]);
 		c.lastTime = (double)time(nullptr);
 		saveConf(c);
-		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + (errors.empty() ? note : errors[0]));
-		say("done: %d games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
+		// (before a game: what is held for it, as the Saves page lists it, for the menu's question, written before the
+		// done line it reads it after; read off the card, the menu would wait on it)
+		if (autoWhy == "launch" && !dryRun) writeAtomic(RUN + "/launch.conflict", noteLines(loadConf(), onlyRom, false));
+		// (one game's save left waiting, the server out of reach: said, for the menu's banner after a game)
+		std::string said = errors.empty() ? note : errors[0];
+		if (b->keptUnsent) said += "; kept to send with the next sync";
+		// (Get games' own run says so first, for Sync now's report: its saves weren't looked at)
+		if (gamesOnly) said = said.empty() ? "games only" : "games only: " + said;
+		status("done " + std::string(sum) + " " + std::to_string(errors.size()) + "|" + said);
+		say("done: %d files of games down, %d removed, %d saves up, %d down, %d conflicts, %zu errors", downloaded, removed, up, down, sconf + (int)conflicts.size(), errors.size());
 		return errors.empty() ? 0 : 1;
 	}
 }
@@ -1843,6 +1535,8 @@ int main(int argc, char** argv)
 	std::vector<std::string> args;
 	std::string autoWhy;
 	bool savesOnly = false;
+	std::string onlyRom;
+	std::string report;	// (sync --rom after a game: where its lines go, else <run>/gameend.status)
 	for (int i = 1; i < argc; i++)
 	{
 		std::string a = argv[i];
@@ -1856,7 +1550,10 @@ int main(int argc, char** argv)
 		else if (a == "--run") RUN = val();
 		else if (a == "--dry-run") dryRun = true;
 		else if (a == "--saves-only") savesOnly = true;
+		else if (a == "--games-only") gamesOnly = true;
 		else if (a == "--auto") autoWhy = val();
+		else if (a == "--rom") onlyRom = val();
+		else if (a == "--report") report = val();
 		else if (a == "-v") verbose = true;
 		else args.push_back(a);
 	}
@@ -1870,24 +1567,107 @@ int main(int argc, char** argv)
 		SYSTEMS = e ? e : ROOT == "/data" ? (access("/run/banana/systems.conf", R_OK) == 0 ? "/run/banana/systems.conf" :
 			"/etc/banana/systems.conf") : "";
 	}
+	if (!onlyRom.empty()) onlyRom = romsRelative(onlyRom);
+	// (before a game starts, while it waits: a server that doesn't answer soon is left for the sync after the game)
+	if (autoWhy == "launch") { connectTimeout = 3; callTimeout = 10; }
+	// (and its own status file: the menu waits on it, and a run stopped so a game can start says nothing on the Sync row)
+	if (autoWhy == "launch") STATUS = RUN + "/launch.status";
+	// an https server's certificate: signed by the owner's own CA (its certificate file, data-relative or absolute), or,
+	// the owner's choice for one of its own making, not checked at all (homesync_tls = off)
 	{
 		auto set = readConf(SETTINGS);
-		auto t = set.find("homesync_tls");
-		tlsVerify = t == set.end() || t->second != "off";
+		CA = set["homesync_ca"];
+		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
+		tlsVerify = set["homesync_tls"] != "off";
+		loadPin();
+		saveSlot = slotOf(set["homesync_slot"], set["homesync_slot_name"]);
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe [--romm] <address> | cert <address> | trust | pair [--romm] <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | get [--drop] <key>... | saves [--rom <path>] | resolve <key> card|server | restore <file> | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
+	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
+	if (cmd == "blank" && args.size() > 1)
+	{
+		bool ok;
+		std::string b = readFile(args[1], &ok);
+		return !ok ? 2 : blankSave(b, args.size() > 2 ? args[2] : "") ? 0 : 1;
+	}
+	if (cmd == "resolve" && args.size() > 2 && args[2] != "card")
+		return args[2] == "server" ? settleHere(args[1]) : answer("no such choice");
+	if (cmd == "restore" && args.size() > 1) return restore(args[1]);
+	// banana-sync saves [--rom <path>]: what the Saves page lists, nothing asked of the server, a line each, tab between
+	// fields: conflict|held <key> <save> <why> <card's MD5> <card's size> <server's MD5> <server's size> <its device>
+	// <its time> <vault copy> <what can be chosen: both, server, none> <the game, when known> <its kind: both (changed
+	// on both sides), gone (missing or blank here), ds (DraStic's and BananaDS's apart), unread (DraStic's here can't
+	// be read), format (the server's, which this handheld can't take)>; queued <key> <save> <MD5> <vault copy>; kept <save> <file> <bytes>; and with --rom only that game's,
+	// by the save's name. The page shows a fixed line per kind; why is for a person reading this
+	if (cmd == "saves")
+	{
+		fputs(noteLines(loadConf(), onlyRom, true).c_str(), stdout);
+		return 0;
+	}
 	if (!cu.load()) { status("error libcurl is missing"); fprintf(stderr, "banana-sync: libcurl is missing\n"); return 1; }
 	if (cmd == "discover")
 	{
 		for (auto& s : discover(2.0)) printf("ROMHOST\t%s\t%s\n", s.first.c_str(), s.second.c_str());
 		return 0;
 	}
+	// cert <address>: the certificate an https server shows, read without checking it and with nothing sent but the
+	// request for RomM's heartbeat, for its owner to look at on the handheld: kept in the run folder with the server it
+	// came from, and said on one line (the server, whom it names, who signed it, its dates, its SHA-1 fingerprint as
+	// openssl x509 -fingerprint prints it). trust: that certificate, the one just shown and no other read since, becomes
+	// the one this server is checked against (homesync-server.pem on the card; for a server other than the one paired
+	// with, kept in the run folder until the pairing with it is written, so a pairing given up leaves the paired
+	// server's certificate as it was)
+	if (cmd == "cert" && args.size() > 1)
+	{
+		std::string base = rommBase(args[1]), origin = originOf(base);
+		unlink((RUN + "/server-cert.pem").c_str());
+		if (origin.compare(0, 8, "https://") != 0) { printf("fail not an https address\n"); return 1; }
+		Req q; q.url = base + "/api/heartbeat"; q.timeout = 8; q.follow = false; q.certDates = true;
+		Resp r = http(q);
+		size_t b = r.certPem.find("-----BEGIN CERTIFICATE-----"), e = r.certPem.find("-----END CERTIFICATE-----");
+		if (b == std::string::npos || e == std::string::npos || e < b) { printf("fail %s\n", r.code == 0 && !r.err.empty() ? r.err.c_str() : "no certificate read"); return 1; }
+		std::string pem = r.certPem.substr(b, e + 25 - b), der = unBase64(pem.substr(27, e - b - 27)), fp;
+		std::string hex = hashStr(der, "sha1");
+		for (size_t i = 0; i + 1 < hex.size(); i += 2) { if (i) fp += ':'; fp += (char)toupper(hex[i]); fp += (char)toupper(hex[i + 1]); }
+		if (der.empty() || !writeAtomic(RUN + "/server-cert.pem", "# for " + origin + "\n" + pem + "\n")) { printf("fail the certificate couldn't be kept\n"); return 1; }
+		auto clean = [](std::string s) { for (char& ch : s) if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' '; return s; };
+		printf("cert\t%s\t%s\t%s\t%lld\t%lld\t%s\n", origin.c_str(), clean(r.certSubject).c_str(), clean(r.certIssuer).c_str(), r.certFrom, r.certTo, fp.c_str());
+		return 0;
+	}
+	if (cmd == "trust")
+	{
+		bool ok;
+		std::string shown = readFile(RUN + "/server-cert.pem", &ok);
+		if (!ok || shown.compare(0, 6, "# for ") != 0 || shown.find("-----BEGIN CERTIFICATE-----") == std::string::npos) return answer("no certificate was shown to trust");
+		const std::string origin = trim(shown.substr(6, shown.find('\n') - 6));
+		Conf c = loadConf();
+		const bool other = c.paired() && originOf(c.server) != origin;
+		const std::string to = other ? stagedPinPath() : pinPath();
+		if (!writeAtomic(to, shown)) return answer("can't write " + to);
+		unlink((RUN + "/server-cert.pem").c_str());
+		if (other) say("the certificate of %s is trusted, and kept on the card once paired with it (the card is paired with %s)", origin.c_str(), c.server.c_str());
+		else say("the certificate of %s is trusted from here on (banana/homesync-server.pem)", origin.c_str());
+		return answer("");
+	}
+	if (cmd == "probe" && args.size() > 2 && args[1] == "--romm")
+	{
+		std::string v, detail, url = rommBase(args[2]);
+		std::string k = probeRomm(url, v, detail);
+		if (k != "romm") { printf("fail %s%s%s\n", k.c_str(), detail.empty() ? "" : " ", detail.c_str()); return 1; }
+		printf("romm %s RomM %s%s\n", url.c_str(), v.c_str(), v.empty() || versionAtLeast(v, 5, 4, 0) ? "" : " old");
+		return 0;
+	}
 	if (cmd == "probe" && args.size() > 1)
 	{
 		std::string url, name;
-		std::string k = probe(args[1], url, name);
-		printf("%s %s %s\n", k.c_str(), url.c_str(), name.c_str());
+		int tls = 0;
+		std::string k = probe(args[1], url, name, &tls);
+		// (nothing found, an https server among the tries refusing for its certificate: "none tls", for the menu to say)
+		if (k == "none" && tls == CURL_UNTRUSTED) { printf("none tls\n"); return 1; }
+		// (a RomM before 5.4 marked " old", as probe --romm marks it: the menu says what such a server does with saves)
+		std::string v = k == "romm" && name.compare(0, 5, "RomM ") == 0 ? name.substr(5) : "";
+		printf("%s %s %s%s\n", k.c_str(), url.c_str(), name.c_str(), v.empty() || versionAtLeast(v, 5, 4, 0) ? "" : " old");
 		return k == "none";
 	}
 	if (cmd == "status")
@@ -1896,10 +1676,13 @@ int main(int argc, char** argv)
 		if (!c.paired()) { printf("not paired\n"); return 0; }
 		printf("paired with %s (%s, %s) as %s; %zu files, %zu saves synced; last: %s\n", c.serverName.c_str(), c.server.c_str(), c.backend.c_str(), c.name.c_str(),
 			c.files.size(), c.saves.size() + c.states.size(), c.last.c_str());
+		long long bytes = 0;
+		for (auto& k : vaultList()) bytes += k.size;
+		printf("%zu conflicts, %zu held, %zu waiting to be sent; vault %s: %lld bytes\n", c.conflicts.size(), c.held.size(), c.queue.size(), vaultDir().c_str(), bytes);
 		return 0;
 	}
 	// banana-sync games: the server's games for the menu's chooser, a line each: system folder TAB key TAB title TAB
-	// bytes TAB chosen (1/0) TAB on the card (1/0); "error <why>" on failure
+	// bytes TAB chosen (1/0; on RomM, waiting in Get games' list) TAB on the card (1/0); "error <why>" on failure
 	if (cmd == "games")
 	{
 		Conf c = loadConf();
@@ -1911,47 +1694,140 @@ int main(int argc, char** argv)
 		std::string err;
 		if (!b->manifest(m, {}, err)) { printf("error %s\n", err.c_str()); return 1; }
 		std::set<std::string> chosen = readChoice();
+		if (c.backend == "romm") { auto v = readListLines(getFile()); chosen = std::set<std::string>(v.begin(), v.end()); }
 		std::string sd2 = sd2Roms();	// (a game on either card is on the handheld)
 		for (auto& s : m.systems)
-			for (auto& g : s.games)
-			{
-				std::string k = gameKey(g);
-				if (k.empty()) continue;
-				long long bytes = 0; bool there = true;
-				for (auto& f : g.files)
-				{
-					if (!f.media)
-					{
-						bytes += std::max(0LL, f.size);
-						if (!exists(ROMS + "/" + f.path) && (sd2.empty() || !exists(sd2 + "/" + f.path)))
-						{
-							there = false;
-						}
-					}
-				}
-				std::string t = g.title.empty() ? baseOf(k) : g.title;
-				for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
-				printf("%s\t%s\t%s\t%lld\t%d\t%d\n", s.folder.c_str(), k.c_str(), t.c_str(), bytes, chosen.count(k) ? 1 : 0, there ? 1 : 0);
-			}
+			for (auto& g : s.games) fputs(gameLine(s, g, chosen, sd2).c_str(), stdout);
+		if (c.backend == "romm" && !dryRun) writeGamesCache(c, m);
 		return 0;
+	}
+	// banana-sync get <key>...: games added to Get games' list (RomM), for the next sync to bring; get --drop <key>...:
+	// taken off it. "ok" or "error <why>"
+	if (cmd == "get" && args.size() > 1)
+	{
+		bool drop = args[1] == "--drop";
+		std::vector<std::string> keys(args.begin() + (drop ? 2 : 1), args.end());
+		for (auto& k : keys) if (!safeRel(k) || k.find('/') == std::string::npos) return answer("not a game: " + k);
+		bool ok = drop ? editGet({}, std::set<std::string>(keys.begin(), keys.end())) : editGet(keys, {});
+		return answer(ok ? "" : "the list can't be written");
+	}
+	// banana-sync rename <name>: the handheld's name in RomM's Devices, set there at once (the device registered if it
+	// has none), then kept as the pairing's. "ok" or "error <why>"; nothing changes on an error
+	if (cmd == "rename" && args.size() > 1)
+	{
+		std::string nm = trim(args[1]);
+		if (nm.empty() || nm.size() > 63) return answer("a name of 1 to 63 characters");
+		// (under romsync.lock from the read to the write: a pairing or a Forget can't land between RomM renamed and the
+		// card's name kept, which would leave the two apart. A sync writing its part back meanwhile waits out this one
+		// call to the server)
+		int lk = lockConf();
+		Conf c = loadConf();
+		std::string e = !c.paired() ? "not paired" : c.backend != "romm" ? "Homeport names this handheld (ROMs > Devices)" : "";
+		if (e.empty()) { c.name = nm; e = registerDevice(c); }
+		if (e.empty() && !saveNameLocked(c)) e = "the name can't be kept on the card";
+		if (lk >= 0) close(lk);
+		return answer(e);
 	}
 	if (cmd == "forget")
 	{
-		if (unlink(CONF.c_str()) != 0 && errno != ENOENT) return 1;
+		// (under the state file's lock: a run writing its part back meanwhile would write the pairing back with it)
+		int lk = lockConf();
+		int rc = unlink(CONF.c_str()) != 0 && errno != ENOENT ? 1 : 0;
+		unlink((CONF + ".new").c_str());	// (a copy a cut rename left, which the state is otherwise read from)
+		unlink(pinPath().c_str());			// (and the certificate trusted for that server: the next pairing asks again)
+		unlink(stagedPinPath().c_str());	// (one trusted for a server never paired with, too)
+		if (lk >= 0) close(lk);
+		if (rc) return rc;
+		dropServerLists();
 		status("");
 		return 0;
 	}
-	// one at a time (the menu's Sync now beside an automatic one)
+	// one at a time (the menu's Sync now beside an automatic one); a sync of one game's save beside it, by save.lock
+	if (cmd == "sync" && !onlyRom.empty())
+	{
+		// (no sync.pid and not sync.status: the menu's Home server page and its Stop are for a sync copying games, which
+		// holds sync.lock, and this run doesn't. A status line of its own, as the wait before a game has launch.status:
+		// on sync.status the page would offer a Stop with nothing to stop, and take a line left unchanged through a slow
+		// upload for a sync gone)
+		holdRoms = holdSaves = false;
+		if (autoWhy != "launch") STATUS = report.empty() ? RUN + "/gameend.status" : report;
+		int other = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		bool beside = other >= 0 && flock(other, LOCK_EX | LOCK_NB) != 0;
+		if (other >= 0) close(other);
+		// (the report on the card for the sync after a game, as for every sync: not beside a sync copying games, whose
+		// report it would push aside mid-run, nor for the wait before a game, which reports on launch.status)
+		logWanted = !dryRun && autoWhy != "launch" && !beside;
+		catchKill(false);
+		return doSync(true, autoWhy, onlyRom);
+	}
+	// resolve <key> card: the card's save kept over the server's. An ordinary run of the saves that knows the choice, so
+	// the head is looked at afresh and a 409 is held again; --rom keeps it to that game
+	if (cmd == "resolve" && args.size() > 2)
+	{
+		Conf c = loadConf();
+		if (!c.paired()) return answer("not paired");
+		auto* from = c.conflicts.count(args[1]) ? &c.conflicts : c.held.count(args[1]) ? &c.held : nullptr;
+		if (!from) return answer("nothing held for it");
+		SlotNote n = (*from)[args[1]];
+		std::string can = choiceOf(from == &c.conflicts, n);
+		if (heldForDs(c, args[1])) return answer("DraStic's and BananaDS's saves differ: start the game first");
+		if (can != "both" && !bothHeld(n)) return answer("not a conflict: " + n.why);
+		if (c.device.empty() && c.backend == "romm") return answer("this handheld's can be kept once it is a RomM device (pair again)");
+		settleKey = args[1];
+		STATUS = RUN + "/resolve.status";	// (the menu's Sync row is another run's)
+		holdRoms = holdSaves = false;
+		catchKill(false);
+		const int ran = doSync(true, "", onlyRom);
+		// (a server out of reach ends the run before it writes anything to the state: said as that, not as the last
+		// sync's words)
+		const std::string said = trim(readFile(STATUS));
+		if (ran != 0 && said.compare(0, 16, "error noconnect ") == 0) return answer("the server can't be reached: " + said.substr(16));
+		// (settled only if the card's save is now the agreed version, however the run came to it: a run can end with the
+		// note gone and nothing sent)
+		Conf a = loadConf();
+		std::string md5 = hashFile(ROOT + "/" + n.rel, "md5");
+		auto si = a.slots.find(settleKey);
+		bool agreed = si != a.slots.end() && si->second.rel == n.rel ? si->second.md5 == md5
+			: a.saves.count(n.rel) ? a.saves[n.rel].hash == md5 : a.states.count(n.rel) && a.states[n.rel].hash == md5;
+		if (agreed && !a.conflicts.count(settleKey) && !a.held.count(settleKey)) return answer("");
+		size_t bar = a.last.find('|');
+		return answer(bar != std::string::npos ? a.last.substr(bar + 1) : "held again: the server's changed since");
+	}
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
-	if (cmd == "pair" && args.size() > 1) return pair(args[1], args.size() > 2 ? args[2] : "");
+	// (a sync asked for by hand, the menu's Sync now or Get games' next run, waits a moment for one that is ending: a
+	// run writes its done line before it lets go of the lock, and the menu starts the next as it reads that line. On
+	// the device a Get games run started there gave up at once, and the game asked for during the last one never came)
+	if (lk >= 0 && cmd == "sync" && autoWhy.empty())
+		for (int i = 0; i < 100 && flock(lk, LOCK_EX | LOCK_NB) != 0; i++) usleep(100000);
+	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0)
+	{
+		// (and one still running after that: said over the menu's own line, never over that run's)
+		if (cmd == "sync" && autoWhy.empty() && trim(readFile(STATUS)) == "running 0 0 |") status("error busy: another sync is running");
+		if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n");
+		// (the pairing screen waits for a line: a pairing started as a sync began isn't left asking for a code. Said
+		// only over the menu's own "pairing": a line the running sync wrote is that sync's)
+		if (cmd == "pair" && trim(readFile(STATUS)) == "pairing") status("error busy");
+		return 3;
+	}
+	if (cmd == "pair" && args.size() > 1)
+	{
+		// (its pid as a sync's: the menu's pairing screen stops it with B or X, the device flow waiting up to 10 minutes
+		// for RomM's approval; it says "error stopped" as it goes)
+		catchKill();
+		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		bool romm = args[1] == "--romm";
+		int rc = romm ? (args.size() > 2 ? pair(args[2], args.size() > 3 ? args[3] : "", true) : 2) : pair(args[1], args.size() > 2 ? args[2] : "", false);
+		unlink((RUN + "/sync.pid").c_str());
+		return rc;
+	}
 	if (cmd == "sync")
 	{
 		// the pid for the menu's Stop (Settings > Network > Home server > Sync now while it runs)
 		catchKill();
 		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		holdSaves = false;
 		logWanted = !dryRun;
-		int rc = doSync(savesOnly, autoWhy);
+		int rc = doSync(savesOnly, autoWhy, "");
 		unlink((RUN + "/sync.pid").c_str());
 		return rc;
 	}

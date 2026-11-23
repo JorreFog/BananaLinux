@@ -104,10 +104,17 @@ export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
 ll=$(sed -n '/^ *DSFLIP_LOWLAT *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 if [ "$ll" = 1 ]; then echo "run-drastic: low latency (experimental): no frame queue" >&2
 else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
-# the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves)
-/usr/libexec/banana/nds-saves "$1"
+# the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves); both
+# changed since they last agreed, DraStic's own is played and BananaDS's kept in the vault
+/usr/libexec/banana/nds-saves "$1" --prefer dsv
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
-# the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
+# the game. One that isn't loaded at this start is dropped: it is the last session's spot, and a later session's save
+# would be put back by it; whatever replaces the save from outside (nds-saves, the home server's sync) drops it too,
+# and nds-saves above drops it when the save isn't the one the game was quit with (the menu, or bananad when it quits
+# the game itself, tells it what the saves held at the game's end, --played): a save copied onto the card by hand
+# since is played as it is, not under the old spot's memory; and when the game's last session was never told to it as
+# over (the battery, a crash): the state is the one that session started from, older than what the game saved in it.
+# (The files' times decided this before, and the handheld's clock, lost with its battery, made them lie.)
 # Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game. The
 # file is set either way: off, DSFLIP_RESUME_ON_QUIT=0 keeps it for bananad's SIGUSR1 alone (Power off after
 # sleeping saves the game before it shuts the handheld down), and the state is loaded only at the boot after that.
@@ -122,7 +129,7 @@ mkdir -p $D/savestates
 QR=0; grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null && QR=1
 RLOAD=0
 if [ -f "$R" ]; then
-    if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; elif [ $QR = 1 ] || [ $ONCE = 1 ]; then RLOAD=1; fi
+    if [ $QR = 1 ] || [ $ONCE = 1 ]; then RLOAD=1; else rm -f "$R"; fi
 fi
 export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD DSFLIP_RESUME_ON_QUIT=$QR
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic

@@ -341,52 +341,19 @@ EOF
 fi
 # The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
 # able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
-# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
-# 0xff, mGBA writes the cartridge's size: 512 bytes for a small EEPROM; RetroArch loads the part a core asks for), so
-# one file serves both. A game with no save there yet gets a copy of its newest one from a core's folder (one with
-# data in it: a core that only ever wrote a blank one doesn't win); the core folders' files stay as they were, as
-# backups. States stay per core (their formats differ). What RetroArch saves of the two keys on exit is put back below.
-# flat_gba_save <game name> <rom>: saves/<name>.srm when it can only be this GBA game's save. Every other system's saves
-# are there, so the Save Mover's packs (before it knew) and saves copied by hand put a GBA save there too, where no GBA
-# core looked: the game started without it. Not when another system's folder has a game of that name (a Game Boy
-# game's save is there as well, and the two can't be told apart by their size), on either card.
-# (BANANA_ROOT, BANANA_RUN: the tests' made-up card, as nds-saves and saves-flat)
-flat_gba_save() {
-    _d=${BANANA_ROOT:-/data}; _f=$_d/saves/$1.srm
-    [ -s "$_f" ] || return 0
-    _roots="$_d/roms
-$(cat "${BANANA_RUN:-/run/banana}/sd2/roms" 2>/dev/null)"
-    # (the game's own system folder, the part after its card's roms/)
-    _mine=$(printf '%s\n' "$_roots" | while read -r _r; do [ -n "$_r" ] || continue; case $2 in "$_r"/*/*) _m=${2#"$_r"/}; echo "${_m%%/*}" ;; esac; done | head -n 1)
-    printf '%s\n' "$_roots" | while read -r _r; do
-        [ -n "$_r" ] || continue
-        for _g in "$_r"/*/"$1".* "$_r"/*/*/"$1".*; do
-            [ -e "$_g" ] || continue
-            _s=${_g#"$_r"/}; [ "${_s%%/*}" = "$_mine" ] || { echo other; exit; }
-        done
-    done | grep -q other || echo "$_f"
-}
+# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save, 128 KB with 0xff past the
+# game's data (gpSP always did; our mGBA is patched to, where upstream writes the size the game reached that
+# session, which cut a Flash 1M save to 64 KB or an 8 KB EEPROM one to 512 bytes when the game stayed low; RetroArch
+# loads the part a core asks for), so one file serves both. A game with no save there yet gets a copy of its newest
+# one from a core's folder (one with data in it: a core that only ever wrote a blank one doesn't win; gba-seed, which
+# run-bananafront runs too); the core folders' files stay as they were, as backups. States stay per core (their
+# formats differ). What RetroArch saves of the two keys on exit is put back below.
 GBASAVE=
 if [ "$BANANA_SYSTEM" = gba ]; then
     GBASAVE=/data/saves/gba
     mkdir -p $GBASAVE
-    n=${2##*/}; n=${n%.*}
-    if [ ! -f "$GBASAVE/$n.srm" ]; then
-        best=
-        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor ""; do
-            f="/data/saves/$d/$n.srm"
-            [ -n "$d" ] || f=$(flat_gba_save "$n" "$2")     # (and the one in saves/ itself, when it is this game's)
-            [ -s "$f" ] || continue
-            # (blank: only 0xff or only 0x00 bytes; counted, not compared: the shell drops a NUL from $(...))
-            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
-            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
-        done
-        if [ -n "$best" ]; then
-            cp -p "$best" "$GBASAVE/$n.srm.new" && mv "$GBASAVE/$n.srm.new" "$GBASAVE/$n.srm" && sync
-            echo "run-retroarch: the GBA save from $best, now $GBASAVE/$n.srm (every GBA core)" >&2
-        fi
-    fi
+    # (gba-seed: the copy from a core's folder, written under a name of its own and synced before its rename)
+    /usr/libexec/banana/gba-seed "$2"
     SVD=$(sed -n '/^savefile_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
     SVS=$(sed -n '/^sort_savefiles_enable = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
 fi
