@@ -7,9 +7,10 @@
 #
 # Targets: json (themes), expr (layout themes' expressions and colours), zip (.zip ROMs), romicon (a DS ROM's banner,
 # from a .nds and a .zip), cardfiles (systems.conf, settings.conf, favourites, play stats, bananad.conf), layout (a
-# layout theme: the menu drawn from it, used, at both panel sizes). The seeds
-# are made from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between runs.
-# A crash stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is
+# layout theme: the menu drawn from it, used, at both panel sizes), ndsrom (the DS Pokémon companion's ROM reader: a
+# made-up game's cartridge image the input changes, its sprites and its cache on the card; or the input as the image).
+# The seeds are made from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between
+# runs. A crash stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is
 # fuzzed, ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -17,7 +18,7 @@ ROOT=$(cd "$HERE/.." && pwd)
 OUT=${OUT:-$HERE/fuzz/out}
 SECONDS_EACH=${FUZZ_SECONDS:-60}
 CXX=${FUZZ_CXX:-clang++}
-TARGETS="json expr zip romicon cardfiles layout"
+TARGETS="json expr zip romicon cardfiles layout ndsrom"
 # the targets' assets and systems list (cardfiles, layout)
 export BANANA_FUZZ_ASSETS="$HERE/assets/rnds" BANANA_FUZZ_SYSTEMS="$ROOT/system/rootfs/etc/banana/systems.conf"
 mkdir -p "$OUT/obj"
@@ -97,6 +98,10 @@ PY
         done > "$d/card"
         printf 'nds/Peel Quest.nds\n%sfavorites\n%snds/Peel Quest.nds\t3\t200\t1700000000\n%sbattery_shutdown_percent = 3\n' "$sep" "$sep" "$sep" >> "$d/card"
         ;;
+    ndsrom)
+        # each game the target makes (the first byte, 0-9; 10: the rest is the image), read once and through its cache
+        for g in 0 1 2 3 4 5 6 7 8 9; do printf "\\$(printf %o "$g")\\000" > "$d/game-$g"; printf "\\$(printf %o "$g")\\001" > "$d/game-$g-cache"; done
+        ;;
     esac
 }
 
@@ -137,6 +142,8 @@ for t in $TARGETS; do
     mkdir -p "$OUT/corpus-$t"
     echo "== $t ($SECONDS_EACH s)"
     case $t in json|expr|layout) D=-dict="$OUT/dict" ;; *) D= ;; esac
+    # (ndsrom's seeds are two bytes: without a length to grow into, libFuzzer kept its inputs at a few bytes for minutes)
+    [ "$t" = ndsrom ] && D="-max_len=16384 -len_control=0"
     "$OUT/fuzz-$t" $D -max_total_time="$SECONDS_EACH" -timeout=${FUZZ_TIMEOUT:-10} -rss_limit_mb=2048 \
         -artifact_prefix="$OUT/crash-$t-" -print_final_stats=1 "$OUT/corpus-$t" "$OUT/seeds-$t" > "$OUT/$t.log" 2>&1 ||
         { echo "FAIL $t: $(grep -m1 -E 'ERROR|runtime error|deadly signal|timeout' "$OUT/$t.log")"; ls "$OUT"/crash-$t-* 2>/dev/null
