@@ -12,7 +12,10 @@ HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOTFS=$(cd "$HERE/../rootfs" && pwd)
 if [ "$1" != --inside ]; then
     if [ "$1" = --build ]; then W=$2; mkdir -p "$W"; else W=$(mktemp -d); fi
-    cc -O2 -o "$W/bananad" "$HERE/bananad.c"
+    # (a name of its own: banana-ui's Settings send SIGHUP to every process named bananad that /proc shows, and the
+    # banana-ui of a make test running beside this one sees ours too. One that came during a Power off after sleeping
+    # broke the "mem" write off; bananad then shut down without the wake the test waits for, and the test hung)
+    cc -O2 -o "$W/bananad-test" "$HERE/bananad.c"
     cc -O2 -o "$W/banana-ui" -x c - <<'EOF'
 #include <signal.h>
 #include <stdio.h>
@@ -121,7 +124,18 @@ EV_SW=5 SW_LID=0 EV_KEY=1 KEY_POWER=116
 # is bananad blocked writing "mem" (asleep)? wait up to 3 s
 # (blocked opening the FIFO: its wait channel is wait_for_partner)
 asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
-wake() { head -c 3 /sys/power/state > /dev/null; sleep 0.3; }       # read "mem": the write returns, it is awake
+# bananad as it is now, for a message: its state and wait channel, the last line of sleep.log
+bd_state() {
+    s=$(awk '{print $3}' /proc/$BD/stat 2>/dev/null) || s=
+    case $s in ''|Z) printf 'bananad (%s) gone' "$BD" ;; *) printf 'bananad (%s) %s in %s' "$BD" "$s" "$(cat /proc/$BD/wchan 2>/dev/null)" ;; esac
+    printf '; sleep.log: %s' "$(tail -n 1 /data/banana/logs/sleep.log 2>/dev/null | cut -c21-)"
+}
+# read "mem": the write returns, it is awake. Up to 10 s: with no write to read (bananad awake, or gone) the read
+# waited for good, and the whole test with it
+wake() {
+    timeout 10 head -c 3 /sys/power/state > /dev/null || bad "wake: nothing wrote mem to /sys/power/state in 10 s ($(bd_state))"
+    sleep 0.3
+}
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
 # the game stopped (T), or going on again: looked at until it shows, up to 5 s. kill() returns once a signal is sent,
 # and a game shows T only once it has run to take its SIGSTOP: on a busy CI runner that came after the one look, and
@@ -132,10 +146,16 @@ game_runs() { [ "$(gstate)" != T ]; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_KEYS=/run/test/keys "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_KEYS=/run/test/keys "$W/bananad-test" & BD=$!
     sleep 0.5
 }
-stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
+# SIGTERM, and up to 10 s for it to end (a stopped bananad would have held the wait for good)
+stop() {
+    kill $BD 2>/dev/null || true
+    for i in $(seq 100); do case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) break ;; esac; sleep 0.1; done
+    case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) ;; *) bad "stop: bananad still there 10 s after SIGTERM ($(bd_state))"; kill -9 $BD 2>/dev/null || true ;; esac
+    wait $BD 2>/dev/null || true
+}
 
 "$W/banana-ui" & UI=$!
 setsid sleep 600 & GAME=$!
