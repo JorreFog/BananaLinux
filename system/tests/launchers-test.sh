@@ -408,6 +408,16 @@ printf '#!/bin/sh\necho "installer ran" >> "%s/log"\nmkdir -p "%s/data/easypsp/r
 check "$(easy easypsp /g.iso) [$(ezlog | sed 's/curl .* -o [^ ]* /curl /')] $(ls "$EZ/run" | wc -l | tr -d ' ')" \
     "0 [curl https://example.invalid/easypsp/releases/latest/download/Install-EasyPSP.sh|installer ran|python3 $EZ/data/easypsp/runtime/0.0.1/run.py /g.iso async=|] 0" \
     "not installed: the installer fetched and run, then the game in what it installed"
+# a TERM while the installer runs (the menu's quit, a shutdown): the installer ends with it, no game is started
+rm -rf "$EZ/data/easypsp"; : > "$EZ/log"
+printf '#!/bin/sh\necho "installer ran" >> "%s/log"\nsleep 30\necho "installer went on" >> "%s/log"\n' "$EZ" "$EZ" > "$EZ/installer"
+( PATH="$EZ/bin:$PATH" RUN_EASY_DATA="$EZ/data" RUN_EASY_RUN="$EZ/run" RUN_EASY_MODULES="$EZ/mod" RUN_EASY_BACKLIGHT="$EZ/bl" \
+    RUN_EASY_BOARD=rgds-plus RUN_EASY_URL=https://example.invalid sh "$L/run-easy" easypsp /g.iso 2>"$EZ/err" & echo $! > "$EZ/pid"; wait $!; echo $? > "$EZ/rc" )  &
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do grep -q "installer ran" "$EZ/log" 2>/dev/null && break; sleep 0.1; done
+t0=$(date +%s); kill -TERM "$(cat "$EZ/pid")"; wait; sleep 0.3
+check "$(cat "$EZ/rc") $([ $(( $(date +%s) - t0 )) -lt 10 ] && echo soon) [$(ezlog | sed 's/curl .* -o [^ ]* /curl /')] $(ls "$EZ/run" | wc -l | tr -d ' ') $(ps -eo args | grep -c "[s]h $EZ/run/Install-EasyPSP.sh")" \
+    "1 soon [curl https://example.invalid/easypsp/releases/latest/download/Install-EasyPSP.sh|installer ran|] 0 0" \
+    "a TERM while the installer runs: the installer ended, its file gone from /run, no game started"
 # the shelf
 SC=$R/system/rootfs/etc/banana/systems.conf
 sysrun() { sed -n "/^\[$1\]/,/^\[/{s/^run = //p}" "$SC"; }

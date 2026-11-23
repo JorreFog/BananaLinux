@@ -9,7 +9,7 @@
 # While a game runs they take Panfrost out of the kernel and load Arm's own Mali driver (mali_kbase.ko, with its Vulkan
 # library), and put Panfrost back when the game ends: their run.py does both. The menu draws with Panfrost, so a run.py
 # that ended without putting it back (killed; EasyPSP's has no handler for a TERM) would leave the menu without a GPU
-# until the next boot. So run.py is not exec'ed: a TERM here goes to the emulator itself, whose end run.py sees as a
+# until the next boot. So run.py is not exec'ed: a TERM to this script goes to the emulator itself, whose end run.py sees as a
 # game quit, and whatever happened, Panfrost is looked for afterwards and put back, and a panel left dark is lit.
 #   run-easy easycast|easypsp <game>
 case $1 in
@@ -54,7 +54,15 @@ if ! D=$(runtime); then
         exit 1
     fi
     mv -f "$I.part" "$I"
-    sh "$I"     # (it takes itself away when it is done)
+    # in a session of its own, and waited for with a quit taken: a TERM here (the menu's quit, a shutdown) ended this
+    # script alone, and the installer went on by itself, drawing over the menu that had come back and waiting for a
+    # button there
+    setsid sh "$I" &    # (it takes itself away when it is done)
+    IP=$!
+    trap 'kill -TERM -$IP 2>/dev/null; sleep 0.5; kill -KILL -$IP 2>/dev/null; rm -f "$I"; echo "run-easy: quit while $N was being installed: $ROM not started" >&2; exit 1' TERM INT HUP
+    wait $IP
+    while kill -0 $IP 2>/dev/null; do wait $IP; done
+    trap - TERM INT HUP
     rm -f "$I"
     D=$(runtime) || { echo "run-easy: $N wasn't installed (its log: $R/downloads/install.log)" >&2; exit 1; }
     echo "run-easy: $N $(basename "$D") installed" >&2
@@ -81,27 +89,33 @@ restore() {
 }
 
 [ $ID = easycast ] && export EASYCAST_ASYNC_PRESENT=1    # (as its own tile)
-# in a session of its own (its process group = $C), as run-store-app: a quit reaches everything it started
-setsid python3 "$D/run.py" "$ROM" &
+# in this script's own process group, which is the game's for bananad: its stop before a sleep and its going on after
+# (SIGSTOP, SIGCONT to the group) reach the emulator as they reach every other game's. (In a session of its own it
+# ran on into the suspend, with Arm's driver loaded.)
+python3 "$D/run.py" "$ROM" &
 C=$!
-# a quit from outside (the menu, a shutdown: bananad's TERM): to the emulator, so run.py sees a game that ended and puts
-# Panfrost back itself. No emulator yet (run.py still switching drivers): asked again for 5 s, then run.py itself.
+emu() { pidof $E 2>/dev/null; }
+# a quit from outside. To this script alone: passed on to the emulator, so run.py sees a game that ended and puts
+# Panfrost back itself; no emulator yet (run.py still switching drivers): asked again for 5 s, then run.py itself.
+# To the whole group (bananad's, at a shutdown or a sleep's power-off): run.py and the emulator have it already, and
+# EasyPSP's run.py ends without putting Panfrost back: restore, below, does.
+# (pidof, not pkill -x: BusyBox's pkill matches the whole path the emulator was started by, and found none)
 quit() {
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do
         kill -0 $C 2>/dev/null || return 0
-        pkill -TERM -x $E 2>/dev/null && return 0
+        p=$(emu) && kill -TERM $p 2>/dev/null && return 0
         sleep 0.2
     done
-    kill -TERM -$C 2>/dev/null
+    kill -TERM $C 2>/dev/null
 }
 trap quit TERM INT HUP
 wait $C; S=$?
 while kill -0 $C 2>/dev/null; do wait $C; S=$?; done
 trap '' TERM INT HUP
-if kill -0 -$C 2>/dev/null; then    # (something of its still running: the Mali module can't go while it has the GPU)
-    kill -TERM -$C 2>/dev/null
-    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 -$C 2>/dev/null || break; sleep 0.2; done
-    kill -KILL -$C 2>/dev/null
+if p=$(emu); then    # (the emulator outlived run.py: the Mali module can't go while it has the GPU)
+    kill -TERM $p 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do emu >/dev/null || break; sleep 0.2; done
+    p=$(emu) && kill -KILL $p 2>/dev/null && sleep 0.3
 fi
 restore
 exit $S
