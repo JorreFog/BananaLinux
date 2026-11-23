@@ -21,6 +21,7 @@
 #include "pokemon.h"
 #include "gamecomp.h"
 #include "gba/panel.h"
+#include "achievements.h"
 #include "lang.h"
 #include "gamesync.h"
 #include <map>
@@ -121,6 +122,9 @@ namespace banana
 		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
 		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
 		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
+		// the game's system id (systems.conf's [id], before gameOpen): the Achievements list's console when the game panel
+		// has no game id from the emulator yet
+		void gameSystem(const std::string& id) { gSysId = id; }
 		int gameSlot() const { return gSlotPick; }	// G_LOADSLOT's slot
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
@@ -173,8 +177,14 @@ namespace banana
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
-			const std::string& scraped = "", const std::string& folder = "");	// folder: the system's on the card (Save sync's key)
+			const std::string& scraped = "", const std::string& system = "",
+			const std::string& folder = "");	// system: its id (Achievements); folder: the system's on the card (Save sync's key)
 		std::string gameKey, gameName, gameSort;
+		bool achWorking() const;	// (tests) the Achievements page's list still being made, or its badges fetched
+		std::string achState() const;	// (tests) "<state> <items> <unlocked> offline|online", or "closed"
+		// a game's Achievements page straight away (its game page under it: B goes there), for a game of the library
+		void openAchievements(const std::string& title, const std::string& path, const std::string& system);
+		bool gameAchShown() const { return gAchOpen; }	// (tests) the game panel's list is up
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
 		std::function<std::string(const ScreenColors&)> setColors;	// "" when it took, else why not
@@ -222,6 +232,7 @@ namespace banana
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
+			std::string def;						// the value shown while the file has none, when it isn't the first choice
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
@@ -253,7 +264,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES, HOMESRV } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES, HOMESRV, ACHIEVEMENTS } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title, failed; long long bytes = 0; bool on = false, there = false; };	// failed: why its download didn't come (Get games)
 		std::vector<PickGame> pickGames;
@@ -343,7 +354,7 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_SYNC };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_SYNC, PG_ACH };
 		// Save sync (paired with RomM): off keeps this game's saves on this handheld, its line "<system folder>/<ROM file
 		// name>" in banana/homesync-local.txt, which banana-sync reads
 		std::string pgLocalKey;
@@ -352,6 +363,30 @@ namespace banana
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
+		std::string pgSystem;	// the game's system id (the Achievements row's console)
+		std::string pgAchValue;	// the Achievements row's value: "12 / 40" from the card's cache, else "Show the list"
+		// ---- the Achievements page (settings_achievements.cpp): a game's whole list from RetroAchievements, read-only.
+		// The loader (achievements.h) does the hashing and the network on its threads; the page draws its snapshots
+		std::shared_ptr<ach::Loader> achLoader;
+		int achSel = 0, achTop = 0, achSeen = -1;
+		std::map<std::string, rnds::TexPtr> achTex;	// badge textures by name (name_lock: the greyed one)
+		void openAch();
+		Result pressAch(Key k);
+		Result touchAch(float cx, float cy);
+		void renderAch();
+		std::string achCacheDir() const { return data + "/cache/ra"; }
+		std::string achBadgeDir() const { return data + "/cache/ra-badges"; }
+		// the list's pieces, shared with the game panel's list: a row (badge, title, description in up to descLines
+		// lines, points, when or Locked), the header's line, an item's state line, a state's sentence
+		void achRow(const SPal& p, const ach::Item& it, float y, float h, int descLines, bool on, const rnds::TexPtr& badge);
+		rnds::TexPtr achBadge(const std::string& file, std::map<std::string, rnds::TexPtr>& texs);
+		static std::string achCounts(const ach::List& l);
+		static std::string achStatus(const ach::Item& it);
+		static std::string achDate(long long t);
+		static std::string achAsOf(const ach::List& l);
+		static std::string achStateText(ach::Loader::State st);
+		static std::string achPoints(unsigned n);
+		void achPlaceholder(const SPal& p, bool unlocked, float x, float y, float size);	// a badge not there (yet)
 		bool pgArtDone = false;	// a cover fetched on the page: the library read again when it closes
 		std::vector<PgRow> pgRows;
 		std::vector<std::string> pgShaderNames, pgShaderValues;
@@ -565,7 +600,7 @@ namespace banana
 		void openNetworks();
 		void startScan();
 		void pollStatus();
-		void markNetworks();
+		void markNetworks(const std::string* selected = nullptr);
 		void join(const wifi::Network& n, const std::string& password);
 		Result pressNetworks(Key k);
 		Result pressKeyboard(Key k);
@@ -853,6 +888,18 @@ namespace banana
 		int gSeen = -1;						// the watch's generation last drawn
 		int awardsSeen = 0; bool wake = false;	// (gameWake)
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
+		// the panel's achievements list (the List button on the achievements box): the game's whole list in the panel, a
+		// page of rows at a time; from the watch once the server answered, else the card's cache (the last one seen)
+		std::string gSysId, gRomPath;
+		bool gAchOpen = false;
+		int gAchPage = 0;
+		ach::List gAchCache;		// (read once as the list opens, while the watch has none)
+		void gameAchOpen();
+		void gameAchFrame(const SPal& p);
+		ach::List gameAchList(int& state, bool& cached);	// what the list shows now
+		static constexpr float GACH_Y = 80, GACH_PITCH = 72, GACH_H = 66;
+		static constexpr int GACH_ROWS = 4;
+		float gAchBtnX = 0, gAchBtnW = 0;	// the List button on the achievements box, as last drawn (0: none)
 		gba::Panel gbaPanel;		// the GBA Pokémon companion's pages
 		// the companion's switch (either companion): the icon on the menu's header, the button that switches
 		std::vector<int> gCompKeys;	// (the buttons whose job is Companion: evdev codes, read at gameOpen)
@@ -928,6 +975,7 @@ namespace banana
 		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
 		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
 		std::vector<Chip> keyboardChips();
+		std::vector<Chip> achChips(int n);	// the Achievements page's buttons: Back, and L / R Page for a list longer than the panel
 		static constexpr int ROWS = 5;
 		static constexpr float SETUP_Y = 82, SETUP_PITCH = 66, SETUP_H = 58;	// the setup's choices on the bottom panel
 	};

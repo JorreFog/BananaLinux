@@ -665,6 +665,9 @@ namespace banana::nds
 				Bytes eb; Narc en;
 				if (!narc(f.enc, eb, en)) return false;
 				const size_t names = out.locationNames.size(), encs = en.size();
+				// (every zone is given a name below, the first one when its own isn't there: none at all - a ROM whose
+				// location texts are empty or unreadable, a hack's rebuilt archive - was a read through nothing)
+				if (names == 0) { err = "no location names"; return false; }
 				std::vector<std::pair<int, int>> zone;	// name index, encounter file (-1 none)
 				if (gen() == Gen::IV)
 				{
@@ -1396,6 +1399,8 @@ namespace banana::nds
 				{
 					e.species = in.u16(); e.minLevel = in.u8(); e.maxLevel = in.u8(); e.percent = in.u8(); e.kind = (EncounterKind)in.u8();
 					e.time = (TimeOfDay)in.u8(); e.season = in.u8(); e.form = in.u8(); e.condition = in.u8();
+					// (the pages index by these: a cache file with a byte gone wrong is not used, the ROM is read again)
+					if (e.time > TimeOfDay::NIGHT || e.kind > EncounterKind::NIGHT_FISH) in.ok = false;
 				}
 			}
 			size_t trainers = in.count(15);
@@ -1487,15 +1492,17 @@ namespace banana::nds
 		const nitro::Rom::Overlay& b = table[bi], & f = table[fi];
 		// where both are loaded (their code and data), the first 32 bytes of the battle's that differ from the field's in
 		// at least a quarter of them and aren't one byte repeated
-		const uint32_t lo = std::max(b.ram, f.ram), hi = std::min(b.ram + (uint32_t)bo.size(), f.ram + (uint32_t)fo.size());
-		for (uint32_t a = (lo + 31) & ~31u; a + 32 <= hi; a += 32)
+		// (in 64 bits: an overlay table that puts one at the top of the 32-bit addresses wrapped these sums, and the
+		// loop read 4 GB away from the overlays)
+		const uint64_t lo = std::max(b.ram, f.ram), hi = std::min((uint64_t)b.ram + bo.size(), (uint64_t)f.ram + fo.size());
+		for (uint64_t a = (lo + 31) & ~(uint64_t)31; a + 32 <= hi; a += 32)
 		{
 			const uint8_t* x = &bo[a - b.ram], * y = &fo[a - f.ram];
 			int differ = 0;
 			bool same = true;
 			for (int i = 0; i < 32; i++) { differ += x[i] != y[i]; same = same && x[i] == x[0]; }
 			if (differ < 8 || same) continue;
-			h.battleSig = { a, 32 };
+			h.battleSig = { (uint32_t)a, 32 };
 			h.battleBytes.assign(x, x + 32);
 			return h;
 		}

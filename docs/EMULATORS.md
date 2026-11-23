@@ -81,7 +81,9 @@ reached in that session, which cut a 128 KB Flash save to 64 KB when the game st
 EEPROM save to 512 bytes when it stayed in its first 512, the rest gone from the file. The other GBA cores (VBA Next,
 VBA-M, Meteor) write what their upstream does. `saves-flat` moves the GBA cores' old folders there as it does the rest;
 while that move hasn't gone through, a game with no save there yet gets a copy of its newest non-blank one from a core's
-folder (`gba-seed`, which both frontends' launchers run). States stay per core (their formats differ).
+folder (`gba-seed`, which both frontends' launchers run), or of `/data/saves/<game>.srm` when no other system has a
+game of that name on either card (a save copied there by hand, or by the Save Mover before it knew); that file stays as
+it was. States stay per core (their formats differ).
 
 RetroArch's automatic slot (`<game>.state.auto`, Quick resume) belongs with the save it was made from: when the home
 server's sync puts another save in place, the game's automatic states are removed, in each GBA core's folder for a GBA

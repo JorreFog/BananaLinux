@@ -1,0 +1,4 @@
+rcheevos v12.5.0 (https://github.com/RetroAchievements/rcheevos), MIT (LICENSE): only what hashes a game's file -
+src/rhash, src/rc_compat.*, include/rc_hash.h, rc_consoles.h, rc_export.h - unmodified, copied from BananaFront's
+copy (banana-emu/BananaFront src/third_party/rcheevos, whose one change is in rc_client, not here). banana-ui's
+Achievements page identifies a game with it (src/achievements.cpp); the Makefile builds it with CC.

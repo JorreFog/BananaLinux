@@ -191,18 +191,30 @@ G=${1##*/}; G=${G%.*}
 # a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens files only, so the zip's game is
 # unpacked once into the card's cache, named after the zip (its saves and states then go by the name the menu shows),
 # and unpacked again only when the zip is newer
+# unpack <zip> <cache folder> <game file>: the zip's game as <game file>. 2 when the zip didn't unpack whole, 1 when it
+# has no game. (unzip's own answer counts: on a full card, or from a damaged zip, the part of the game that came was
+# kept as the game, newer than its zip, so it was never unpacked again and the cut-short game was what started from
+# then on.)
+unpack() {
+    rm -rf "$2"/*.nds "$2/.unzip"    # one game unpacked at a time: they are large
+    mkdir -p "$2/.unzip" && unzip -q -o "$1" -d "$2/.unzip" || { rm -rf "$2/.unzip"; return 2; }
+    # (a DSi game's .dsi or .cia too: BananaDS tells them by their contents, not their names)
+    _e=$(find "$2/.unzip" -type f \( -iname '*.nds' -o -iname '*.dsi' -o -iname '*.cia' \) | head -n 1)
+    [ -n "$_e" ] && mv -f "$_e" "$3"; rm -rf "$2/.unzip"
+    [ -f "$3" ]
+}
 ROM=$1
 case "$ROM" in
 *.zip|*.ZIP)
     C=/data/bananads/unzipped; mkdir -p $C
     N=${ROM##*/}; N=$C/${N%.*}.nds
     if [ ! -f "$N" ] || [ "$ROM" -nt "$N" ]; then
-        rm -rf $C/*.nds $C/.unzip    # one game unpacked at a time: they are large
-        mkdir -p $C/.unzip && unzip -q -o "$ROM" -d $C/.unzip
-        # (a DSi game's .dsi or .cia too: BananaDS tells them by their contents, not their names)
-        E=$(find $C/.unzip -type f \( -iname '*.nds' -o -iname '*.dsi' -o -iname '*.cia' \) | head -n 1)
-        [ -n "$E" ] && mv -f "$E" "$N"; rm -rf $C/.unzip
-        [ -f "$N" ] || { echo "no .nds, .dsi or .cia in $ROM" >&2; exit 1; }
+        unpack "$ROM" $C "$N"
+        case $? in
+        0) ;;
+        2) echo "run-bananads: $ROM couldn't be unpacked (the card full, or the zip damaged?)" >&2; exit 1 ;;
+        *) echo "no .nds, .dsi or .cia in $ROM" >&2; exit 1 ;;
+        esac
     fi
     ROM=$N ;;
 esac

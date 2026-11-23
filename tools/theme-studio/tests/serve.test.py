@@ -49,6 +49,31 @@ def post(url, obj, timeout=120):
         return r.status, json.loads(r.read())
 
 
+def raw(port, method, path, body=None, headers=None):
+    """One request with the headers as given (Host, Origin, Content-Type): the status, or 0 when no answer came."""
+    import http.client
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
+    try:
+        c.putrequest(method, path, skip_host=True)
+        h = {"Host": "127.0.0.1:%d" % port}
+        h.update(headers or {})
+        data = body.encode() if isinstance(body, str) else (body or b"")
+        if method == "POST":
+            h["Content-Length"] = str(len(data))
+        for k, v in h.items():
+            c.putheader(k, v)
+        c.endheaders()
+        if data:
+            c.send(data)
+        r = c.getresponse()
+        r.read()
+        return r.status
+    except Exception:
+        return 0
+    finally:
+        c.close()
+
+
 def main():
     fails = []
     port = free_port()
@@ -139,6 +164,36 @@ def main():
             fails.append("/api/themes/save didn't show up in the list")
         if not (own_dir / "mine.json").exists():
             fails.append("/api/themes/save didn't write the file")
+
+        # only the editor's own page: the server writes files and runs the engine for whoever asks, and a browser asks
+        # for any page open in it. Another site's form (no application/json), its fetch (its Origin), a name it points
+        # at this machine (its Host) are refused, and nothing is written; the page's own request goes through
+        save = json.dumps({"name": "other-site", "theme": '{"name":"X","screens":{}}'})
+        J = {"Content-Type": "application/json"}
+        for what, hdrs in (("no application/json", {"Content-Type": "text/plain"}),
+                           ("another site's Origin", dict(J, Origin="https://example.org")),
+                           ("another Host", dict(J, Host="example.org:%d" % port))):
+            st = raw(port, "POST", "/api/themes/save", save, hdrs)
+            if st != 403 or (own_dir / "other-site.json").exists():
+                fails.append("a POST with %s wasn't refused (%d)" % (what, st))
+        if raw(port, "GET", "/api/themes", headers={"Host": "example.org:%d" % port}) != 403:
+            fails.append("a GET of /api/themes with another Host wasn't refused")
+        if raw(port, "GET", "/", headers={"Host": "example.org:%d" % port}) != 200:
+            fails.append("the page itself should be served whatever the Host")
+        st = raw(port, "POST", "/api/themes/save", save.replace("other-site", "own-page"),
+                 dict(J, Origin="http://127.0.0.1:%d" % port))
+        if st != 200 or not (own_dir / "own-page.json").exists():
+            fails.append("the page's own request (its Origin the server's) was refused (%d)" % st)
+        if raw(port, "POST", "/api/themes/save", save.replace("other-site", "localhost"),
+               dict(J, Host="localhost:%d" % port, Origin="http://localhost:%d" % port)) != 200:
+            fails.append("the page opened as localhost was refused")
+        # a body that isn't what the page sends gets an answer (400), not a closed connection
+        for what, body in (("a list", "[]"), ("assets that aren't a list", '{"theme":"{}","assets":{"a":1}}'),
+                           ("an asset that isn't an object", '{"theme":"{}","name":"odd","assets":[5]}'),
+                           ("a name that isn't text", '{"theme":"{}","name":5}')):
+            st = raw(port, "POST", "/api/themes/save", body, J)
+            if st not in (200, 400) or (st == 200 and "assets\":[5]" not in body):
+                fails.append("a body with %s: %d, not 400" % (what, st))
     finally:
         srv.terminate()
         try:

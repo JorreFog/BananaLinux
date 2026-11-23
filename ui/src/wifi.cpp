@@ -66,8 +66,11 @@ namespace banana
 				if (fl.find("EAP") != std::string::npos || fl.find("WEP") != std::string::npos || fl.find("OWE") != std::string::npos)
 					n.unsupported = true;
 				else if (psk || sae) { n.secured = true; n.saeOnly = sae && !psk; }
+				// one row a name: the strongest access point's, but one with a password before one without (a network
+				// of the same name with none, nearer, isn't the one a saved password is for: its row said "Saved", and A
+				// put an open network in the saved one's place)
 				auto it = best.find(n.ssid);
-				if (it == best.end() || it->second.dbm < n.dbm) best[n.ssid] = n;
+				if (it == best.end() || (n.secured != it->second.secured ? n.secured : it->second.dbm < n.dbm)) best[n.ssid] = n;
 			}
 			std::vector<Network> r;
 			for (auto& kv : best) r.push_back(kv.second);
@@ -150,6 +153,16 @@ namespace banana
 			std::vector<std::string> r;
 			for (auto& b : blocks) if (!b.ssid.empty()) r.push_back(b.ssid);
 			return r;
+		}
+
+		bool savedWithPassword(const std::string& conf, const std::string& ssid)
+		{
+			std::string head;
+			std::vector<Block> blocks;
+			readConf(conf, head, blocks);
+			for (auto& b : blocks)
+				if (b.ssid == ssid && (b.text.find("psk=") != std::string::npos || b.text.find("sae_password=") != std::string::npos)) return true;
+			return false;
 		}
 
 		bool passwordOk(const std::string& p)

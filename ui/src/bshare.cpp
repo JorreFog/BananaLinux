@@ -375,6 +375,18 @@ namespace
 		return path;
 	}
 
+	// whether <path> is in Banana's own folder on the card (banana/: the settings, the systems list and its commands,
+	// the Wi-Fi's and the accounts' files, SSH's keys) and not in banana/received. The names as exFAT takes them, case
+	// aside ("Banana/" is banana/ there)
+	bool inOwnFolder(const std::string& path)
+	{
+		if (path.compare(0, data.size() + 1, data + "/") != 0) return false;
+		std::string rel = path.substr(data.size() + 1);
+		for (auto& c : rel) c = (char)tolower((unsigned char)c);
+		if (rel != "banana" && rel.compare(0, 7, "banana/") != 0) return false;
+		return rel.compare(0, 16, "banana/received/") != 0;
+	}
+
 	// ---- receiving -------------------------------------------------------------------------------------------------
 	struct RFile { std::string name, token, dest; long long size = -1; bool done = false; };
 	struct Session
@@ -508,18 +520,25 @@ namespace
 			for (;;)
 			{
 				size_t e;
-				while ((e = b.find("\r\n")) == std::string::npos) if (!more(b)) return -1;
+				// (a size line is a few hex digits: one that doesn't end was read into memory for as long as it came)
+				while ((e = b.find("\r\n")) == std::string::npos) if (b.size() > 64 || !more(b)) return -1;
 				long long n = strtoll(b.substr(0, e).c_str(), nullptr, 16);
 				b.erase(0, e + 2);
 				if (n == 0) return got;
+				// (a size below nothing, or past what is left of the limit, before any of the chunk is taken in: a
+				// negative one became a length of nearly 2^64 for the sink, and the limit was only looked at once the
+				// whole chunk was in memory)
+				if (n < 0 || n > limit - got) return -1;
 				while ((long long)b.size() < n + 2) if (!more(b)) return -1;
-				if (got + n > limit || !sink(b.data(), (size_t)n)) return -1;
+				if (!sink(b.data(), (size_t)n)) return -1;
 				got += n;
 				b.erase(0, (size_t)n + 2);
 			}
 		}
 		long long want = r.head.count("content-length") ? atoll(r.head["content-length"].c_str()) : 0;
-		if (want > limit) return -1;
+		// ("Content-Length: -1": as a size it was nearly 2^64 bytes to append below - an exception nothing catches on a
+		// connection's own thread, and the receiver was gone for everyone)
+		if (want < 0 || want > limit) return -1;
 		if (!r.buf.empty())
 		{
 			size_t n = (size_t)std::min<long long>(want, (long long)r.buf.size());
@@ -649,7 +668,15 @@ namespace
 				if (ok)
 				{
 					s->games = false; s->other = true;
-					for (auto& f : s->files) f.second.dest = w + "/" + f.second.name;
+					// (never into Banana's own folder: a file's name keeps its folders, so with the card itself chosen a
+					// sender's "banana/systems.conf", unseen behind the first file's name on the request, became the
+					// systems list, whose commands the menu runs; banana/wifi.conf and banana/ssh the same way. Those
+					// go to banana/received, as with no folder chosen)
+					for (auto& f : s->files)
+					{
+						f.second.dest = w + "/" + f.second.name;
+						if (inOwnFolder(f.second.dest)) f.second.dest = data + "/banana/received/" + f.second.name;
+					}
 					s->where = w;
 				}
 			}

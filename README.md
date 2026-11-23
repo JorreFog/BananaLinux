@@ -12,7 +12,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
   <a href="https://bananaos-cfw.dev">Website</a> ·
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Download</a> ·
   <a href="#get-it">Install</a> ·
-  <a href="#new-in-0-5-3-4">What's new</a> ·
+  <a href="#new-in-0-5-3-6">What's new</a> ·
   <a href="#seen-on-youtube">Videos</a> ·
   <a href="#status">Known issues</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a> ·
@@ -28,7 +28,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 </p>
 
 > [!WARNING]
-> **Beta 0.5.3.4.** An update over Wi-Fi on top of 0.5.0: install 0.5.0 from its card image, then update in Settings › System › Update. Read the known issues under [Status](#status) before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
+> **Beta 0.5.3.6.** An update over Wi-Fi on top of 0.5.0: install 0.5.0 from its card image, then update in Settings › System › Update. Read the known issues under [Status](#status) before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
 
 <a id="what-it-is"></a>
 <img src="docs/img/readme/h-what.png" width="100%" alt="">
@@ -67,8 +67,21 @@ It starts directly in the menu, releases display, input and audio resources when
 </table>
 <p align="center"><sub>Thank you all! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
 
-<a id="new-in-0-5-3-4"></a>
+<a id="new-in-0-5-3-6"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
+
+## New in 0.5.3.6
+
+The full list: the [0.5.3.6 release notes](https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.3.6). It brings together the 0.5.3.5 and 0.5.3.6 builds the beta testers ran first. Over Wi-Fi only: there is no new card image.
+
+- **Your voice reaches DS games:** BananaDS turns the quiet microphone up before its noise gate, so Nintendogs hears its name. Programs that record one channel get the mic's own channel.
+- **RetroAchievements list:** X on a game › Achievements, or All achievements in the in-game panel, with badges and the ones you have earned.
+- **Integer scaling:** sharp pixels at a whole multiple of the game's size (Settings › Other systems › Picture & sound). BananaFront also keeps the Picture size you pick for each system.
+- **No more dimming mid-game:** the menu knows a game is running and no longer dims or sleeps the handheld during it.
+- **A full audit of the system, with more than 30 fixes:** two Banana cards in the handheld, Check for updates, lid and sleep, GBA saves from the Save Mover, Delete game with its saves, damaged zips and ROMs, Wi-Fi rescans, Bshare and Activity.
+- **Also:** Menu sounds Off silences both DS emulators' menus, 3D resolution lists 1x to 4x in order, games with the same name show their file names, a machine ID per handheld, the VPN module (tun) for Tailscale, and **Banana Player** by tonywei92 in the App Store.
+
+<a id="new-in-0-5-3-4"></a>
 
 ## New in 0.5.3.4
 
@@ -178,7 +191,7 @@ Insert the card and power on. The first boot prepares your data partition, plays
 
 - **From 0.4.x:** put `banana-rgds-plus-0.5.0.update.tar` (RG DS Plus) or `banana-rgds-0.5.0.update.tar` (RG DS) in `banana/updates` on the card, then Settings › System › Update, A on the package and A again. It installs to the card's other system slot and runs from the next restart; the version you had stays one restart away (Settings › System › Previous version). Games, saves and settings stay.
 - **From a 0.5.0 beta:** Settings › System › Update finds 0.5.0 over Wi-Fi. Beta testers: switch Beta channel off there to follow the releases from now on.
-- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update (Settings › System › Updates from 0.5.2.2 on) checks the releases, downloads the package for your handheld and checks it before installing. On 0.5.0 or later it finds 0.5.3.4. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS-<handheld>.txt` file.
+- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update (Settings › System › Updates from 0.5.2.2 on) checks the releases, downloads the package for your handheld and checks it before installing. On 0.5.0 or later it finds 0.5.3.6. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS-<handheld>.txt` file.
 
 The first start after the update runs the new first-time setup once, prefilled with what your card already has.
 
@@ -331,9 +344,15 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 ## Status and known issues
 
-BananaOS is a beta. The QA team tested 0.5.0 on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both its update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. 0.5.2.2 was tested on both handhelds, with the DS companion checked game by game, and 0.5.3.4 was installed through the update on both handhelds, with each DS emulator and BananaFront run on them. These are checks of those releases, not a compatibility guarantee.
+BananaOS is a beta. The QA team tested 0.5.0 on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both its update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. 0.5.2.2 was tested on both handhelds, with the DS companion checked game by game, 0.5.3.4 was installed through the update on both handhelds, with each DS emulator and BananaFront run on them, and 0.5.3.6 was installed through the update on both handhelds and run with stress test ROMs in BananaDS, SuperDrastic and BananaFront. These are checks of those releases, not a compatibility guarantee.
 
-Known issues in 0.5.3.4:
+Known issues in 0.5.3.6:
+
+- **Translations:** lines added in 0.5.3.5 and 0.5.3.6 (the achievements list, Integer scaling) show in English in the other languages until the next round.
+- **The DS microphone fix** was checked with a recorded speech-level signal; tell us how it does with your own voice. SuperDrastic still has only its blow key.
+- **Integer scaling** does nothing for RetroArch systems while Screen border is on.
+
+Known issues from 0.5.3.4:
 
 - **Translations:** lines added in 0.5.3.4 (the new Settings texts, Speaker EQ, Activity) show in English in the other languages until the next round.
 - **Speaker EQ:** the tuned profile is for the RG DS Plus; the RG DS gets the sliders only.
@@ -354,6 +373,7 @@ Known issues from 0.5.0:
 - **RetroAchievements** shows "Achievement Unlocked: Unsupported Game Version" for a game it doesn't recognise; nothing is unlocked.
 - **4x resolution** heats the handheld in heavy 3D games; use 2x for long sessions.
 - **A DS game can freeze after a very long sleep** (reported after 2 hours with the lid shut): the in-game menu still works and quitting is fine. Being investigated.
+- **Charging while switched off:** it charges, but no light shows it (the lights are the system's, and it isn't running), and after such a charge the percentage can read low, or stop near 95%, until the charge finishes ([#99](https://github.com/JorreFog/BananaLinux/issues/99), [#104](https://github.com/JorreFog/BananaLinux/issues/104), [#116](https://github.com/JorreFog/BananaLinux/issues/116)).
 - **Bluetooth headphones** were tested with a SteelSeries headset (and AirPods on an earlier beta); tell us how others do.
 
 Home server saves (not in a release yet): the save sync was tested on PCs against a stand-in for RomM 5.4.1, its behaviour measured on a real one, with Grout's side scripted or run from Grout's own sync code, and inside the card image in QEMU (power cuts during a sync, the server gone at a game's start). Still to be checked on the handhelds: Grout on a real device, a sync around Power off after sleeping, the wait's timings on real Wi-Fi, and DS saves carried over from another device in real games. Its Chinese, Russian, Finnish and Italian lines are machine-translated drafts for the translators to check; Spanish has none yet.
@@ -371,7 +391,7 @@ What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Release
 
 ### Build from source
 
-On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The latest release is the tag `v0.5.3.4`:
+On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev`). The latest release is the tag `v0.5.3.6`:
 
 ```sh
 make rgds          # output/rgds/images/banana-rgds.img.gz

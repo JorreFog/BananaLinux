@@ -7,6 +7,7 @@
 #                      libraries are there (banana-fetch: libcurl, libssh2, OpenSSL; libsmb2 too, or it has no SMB)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick), then the
 #                      helpers' own checks (banana-fetch's: archives, the session, the runner; 7zz for 7z and RAR)
+#                      and Activity's history (store/apps/activity/tests)
 #   make fuzz          the readers of the card's files fuzzed (needs clang; FUZZ_SECONDS each, 60 by default)
 #   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
 #   make theme-studio-desktop  the PySide6 designer's smoke test
@@ -46,6 +47,7 @@ test: ui
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
+	sh store/apps/activity/tests/sync-test.sh
 	@if [ -n "$(ROCKNIXDS_STORE)" ]; then python3 store/test-banana.py "$(ROCKNIXDS_STORE)"; else echo "store test skipped (set ROCKNIXDS_STORE to a rocknixds-store checkout)"; fi
 
 # ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan

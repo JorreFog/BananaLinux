@@ -35,6 +35,9 @@ namespace banana
 		std::string parentPath(const std::string& p);
 		std::string baseName(const std::string& p);
 		std::string lower(std::string s);
+		// path is folder or in it, the names compared as the cards compare them: the case aside (exFAT and FAT: "Banana"
+		// is banana), a doubled slash, the dots and spaces at a name's end (the cards drop them)
+		bool insideFolder(const std::string& path, const std::string& folder);
 		std::string trim(const std::string& s);		// without the spaces, tabs and line ends at either end
 		// "4.1 GB", "350 MB", "12 KB", "512 B" (1024s)
 		std::string bytes(long long n);

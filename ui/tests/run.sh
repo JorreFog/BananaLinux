@@ -3,6 +3,19 @@
 # must hold (the right view after each button, a game launched from the ready screen, frames rendered) and
 # timed. The PNGs are left in $OUT for a look.
 set -e
+# a /run of its own, where this can make one (root, with unshare: a container, a build machine): banana-ui keeps a few
+# files in /run/banana whatever --data says (the box art's and the sync's progress, the recorder's socket), and the
+# last check below makes that folder. With it there, one run's files were the next run's menus' (the setup's box art
+# slide found a fetch "running"): as root the suite passed once on a machine and failed from then on. Without the
+# rights for it, as before (/run can't be written then, and nothing is left there)
+# ...and a /data of its own the same way: Settings writes the emulators' own files where they are on the handheld
+# (/data/bananads/bananads.conf, /data/retroarch/retroarch.cfg) whatever --data says, so as root the checks changed
+# this machine's /data, and found there what the run before had set (BANANA_TEST_OWN_DATA: it is this run's alone)
+if [ -z "$BANANA_TEST_OWN_RUN" ] && [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
+    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c 'mount -t tmpfs tmpfs /run 2>/dev/null
+        mkdir -p /data 2>/dev/null && mount -t tmpfs tmpfs /data 2>/dev/null && export BANANA_TEST_OWN_DATA=1
+        exec "$0" "$@"' "$0" "$@"
+fi
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}
 FX=$OUT/fixture
@@ -48,6 +61,9 @@ make -s -C "$HERE" tests/nds-romfile-test >/dev/null && "$HERE/tests/nds-romfile
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-test" 2> "$OUT/soft-base-test.log" || { echo "FAIL the software backend's background copy: $(grep FAIL "$OUT/soft-base-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
+# the Achievements page's data: the systems' consoles, the server's replies, the card's cache, the ROM's hash (a .zip's
+# too), the loader's states against made-up replies (never a session started)
+make -s -C "$HERE" tests/ach-test >/dev/null && "$HERE/tests/ach-test" "$OUT" 2> "$OUT/ach-test.log" || { echo "FAIL the achievements list's data: $(grep FAIL "$OUT/ach-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # the translations: a line's %d takes a number only, not a game's or a file's name
@@ -226,6 +242,19 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press a; wait 3000; wait 1" 2>> "$tlog" || { echo "FAIL $size: banana-ui (titles 2) exited $?"; fail=1; }
     grep -q "launch 0: .*Yellow Planet" "$tlog" || { echo "FAIL $size: the sort title didn't put it first: $(grep launch "$tlog")"; fail=1; }
     rm -f "$T"
+    # #228: an app started from its tile on the home row (Activity: systems.conf's [activity], "[app]" in systems.cfg)
+    # comes back to the home row on its tile when it quits, not to its one-entry list; a game still comes back to its
+    # system's list on the game (Activity's folder is the image's /usr/share/banana/apps/activity: one in $OUT here)
+    alog=$OUT/$size-app-end.log; AC=$OUT/app-end
+    mkdir -p "$AC/activity"; : > "$AC/activity/Activity.app"
+    sed "s|^folder = /usr/share/banana/apps/activity\$|folder = $AC/activity|" "$HERE/../system/rootfs/etc/banana/systems.conf" > "$AC/systems.conf"
+    grep -q "^folder = $AC/activity\$" "$AC/systems.conf" || { echo "FAIL $size: app end: no [activity] folder line in systems.conf"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$AC/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "homeid activity; press a; wait 3000; wait 1; gameend; shot app-end; home 0; press a; press right; press a; wait 3000; wait 1; gameend" \
+        2> "$alog" || { echo "FAIL $size: banana-ui (app end) exited $?"; fail=1; }
+    grep -q "launch 0: $AC/activity/Activity.app (system activity)" "$alog" || { echo "FAIL $size: app end: Activity didn't start from its tile: $(grep 'launch\|homeid' "$alog")"; fail=1; }
+    grep -q "gameend: view 0 sys [0-9]* game [-0-9]* (activity)" "$alog" || { echo "FAIL $size: app end: Activity's end isn't the home row on its tile: $(grep gameend "$alog" | head -n 1)"; fail=1; }
+    grep -q "gameend: view 1 sys 0 game 1 (nds)" "$alog" || { echo "FAIL $size: app end: a DS game's end isn't its list on the game: $(grep gameend "$alog" | tail -n 1)"; fail=1; }
     # Power off after sleeping: bananad's banana/resume-boot names the game it saved; at the next start it is launched
     # once (on its own shelf, not Favorites) and the marker is gone; one naming a game no longer there launches nothing
     rlog=$OUT/$size-resume.log
@@ -333,6 +362,15 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press right" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (4x prompt 3) exited $?"; fail=1; }
     [ -e "$FR" ] && { echo "FAIL $size: leaving 4x asked or kept it: $(cat "$FR")"; fail=1; }
+    # Settings > Nintendo DS > BananaDS > 3D resolution lists 1x, 2x, 3x, 4x left to right (#250: it was 2x, 1x, 3x, 4x,
+    # so Left from the default 2x went round to the 4x question): Left from 2x is 1x, a change, not the question
+    # (from BananaDS's settings as a new card has them: with a /data of this run's own, the other panel size's run of
+    # this check left 1x there)
+    [ -z "$BANANA_TEST_OWN_DATA" ] || rm -f /data/bananads/bananads.conf
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press a; press down; press left" 2> "$OUT/$size-res-order.log" \
+        || { echo "FAIL $size: banana-ui (3D resolution order) exited $?"; fail=1; }
+    grep -q 'press left: settings result 2' "$OUT/$size-res-order.log" || { echo "FAIL $size: Left from 2x on BananaDS's 3D resolution: $(grep 'press left' "$OUT/$size-res-order.log")"; fail=1; }
     # a DS game's own BananaDS timing (Origin HeartGold's Fast while Golden Sun stays Accurate): down to Timing (the row
     # after Microphone), right (Accurate), right (Fast): kept at once; left twice back to "As in Settings": no file left
     FT="$FX/data/nds-per-game-timing.conf"; rm -f "$FT"
@@ -377,7 +415,7 @@ for size in 640x480 1024x768; do
     alog2=$OUT/$size-boxart.log; SL=$OUT/$size-fake-scrape.txt; rm -f "$SL"
     BANANA_SCRAPE="$HERE/tests/fake-scrape.sh" FAKE_SCRAPE_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "lib 0 4; press x; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
+        --script "lib 0 4; press x; press up; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
         || { echo "FAIL $size: banana-ui (box art) exited $?"; fail=1; }
     [ "$(cat "$SL" 2>/dev/null)" = "nds|$FX/roms/nds/Yellow Planet [!].zip|Yellow Planet - Second Orbit (Europe)" ] || { echo "FAIL $size: --match: $(cat "$SL" 2>/dev/null)"; fail=1; }
     grep -q 'titles nds/Yellow Planet' "$alog2" || { echo "FAIL $size: closing the page didn't read the library again"; fail=1; }
@@ -1043,6 +1081,8 @@ PY
     grep -q "rablock .*: state 3 rp 'Lv 23 Charmeleon, Viridian Forest, 3 badges' near 2" "$OUT/$size-rablock.log" || { echo "FAIL $size: the RA block wasn't read"; fail=1; }
     [ "$(convert "$OUT/$size-ra-block-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the RA block panel is blank"; fail=1; }
 done
+# the Achievements page and the game panel's list against made-up RetroAchievements replies, at both sizes
+OUT="$OUT" sh "$HERE/tests/achievements.sh" || fail=1
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
 OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
@@ -1050,6 +1090,8 @@ OUT="$OUT" bash "$HERE/tests/update-apply.sh" || fail=1
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
 # the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket
 # (a stand-in for bananad here): Settings opened, a group, a setting changed (old -> new), closed, a library
+# (closed with START, from wherever the presses before it got to: two presses of B no longer leave Settings from
+# there, and this check, which only root's runs get to, had failed since without anyone seeing it)
 if [ -w /run ] || [ -w /run/banana ]; then
     mkdir -p /run/banana; rm -f /run/banana/recorder.sock; : > /run/banana/recording
     python3 -I - "$OUT/recorder.txt" <<'PY' &
@@ -1063,7 +1105,7 @@ PY
     L=$!; sleep 0.5
     "$HERE/banana-ui" --headless "$OUT/rec-" --size 640x480 --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press a; press right; press left; press b; press b; press a; wait 300" 2> "$OUT/rec.log" ||
+        --script "home 0; press start; press r; press a; press right; press left; press start; press a; wait 300" 2> "$OUT/rec.log" ||
         { echo "FAIL: banana-ui (recorder) exited $?"; fail=1; }
     sleep 0.5; kill $L 2>/dev/null; rm -f /run/banana/recording /run/banana/recorder.sock
     R=$OUT/recorder.txt

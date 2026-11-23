@@ -16,6 +16,7 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | DraStic settings and button map for the RG DS | buildroot/board/rgds/drastic.cfg | ROCKNIX drastic-sa (config/RK3566/drastic.cfg.rgds) | GPL-2.0 (ROCKNIX) |
 | stb_image, stb_image_write | ui/third_party | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
 | QR Code generator (the pairing screen's QR code) | ui/src/qr | [nayuki/QR-Code-generator](https://github.com/nayuki/QR-Code-generator) v1.8.0, unchanged (ui/src/qr/UPSTREAM) | MIT |
+| rcheevos' rhash (identifies a game's file for the Achievements page), unmodified, only the hashing parts | ui/third_party/rcheevos | [RetroAchievements/rcheevos](https://github.com/RetroAchievements/rcheevos) v12.5.0 | MIT (rcheevos/LICENSE); its md5.c: zlib-style licence (L. Peter Deutsch, Aladdin Enterprises, in the file); its aes.c: tiny-AES-c, the Unlicense |
 | Kernel patches, RG DS and RG DS Plus device trees, kernel config, U-Boot patches | buildroot/board/rgds | [ROCKNIX](https://github.com/ROCKNIX/distribution), pinned in board/rgds/ROCKNIX | GPL-2.0 |
 | Generic DSI panel driver | buildroot/board/rgds/kernel/panel-generic-dsi.c | ROCKNIX (stolen/overlay_server) | GPL-2.0 |
 | ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |

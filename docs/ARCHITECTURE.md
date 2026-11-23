@@ -12,7 +12,7 @@
 
 The image holds the first three partitions (the empty slot costs nothing compressed), so it is small and quick to
 write. `/usr/libexec/banana/firstboot`
-moves the GPT's backup header to the end of the card, adds partition 3 and formats it (exFAT, so Windows and macOS
+moves the GPT's backup header to the end of the card, adds partition 4 and formats it (exFAT, so Windows and macOS
 can read and fill it). The root is never written to; nothing on it can be corrupted by pulling the battery.
 
 ## Updates
