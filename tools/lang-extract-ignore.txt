@@ -73,6 +73,10 @@ QWERTYUIOP
 @~\{value\} On the RG DS Plus a shader also heats the chip.*
 running: {slot}, default: {value}
 @~banana-perf .*
+# the reader's line in the log (settings_text.cpp)
+, the first {CAP} of {value} bytes
+, not UTF-8
+, from its line {value} (drawn line {top})
 {value} (Not connected to Wi-Fi now.)
 # handheld names put into other lines
 RG DS Plus

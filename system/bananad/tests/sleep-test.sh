@@ -12,7 +12,10 @@ HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOTFS=$(cd "$HERE/../rootfs" && pwd)
 if [ "$1" != --inside ]; then
     if [ "$1" = --build ]; then W=$2; mkdir -p "$W"; else W=$(mktemp -d); fi
-    cc -O2 -o "$W/bananad" "$HERE/bananad.c"
+    # (a name of its own: banana-ui's Settings send SIGHUP to every process named bananad that /proc shows, and the
+    # banana-ui of a make test running beside this one sees ours too. One that came during a Power off after sleeping
+    # broke the "mem" write off; bananad then shut down without the wake the test waits for, and the test hung)
+    cc -O2 -o "$W/bananad-test" "$HERE/bananad.c"
     cc -O2 -o "$W/banana-ui" -x c - <<'EOF'
 #include <signal.h>
 #include <stdio.h>
@@ -64,6 +67,20 @@ int main(int argc, char **argv)
 }
 EOF
     cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"; cp "$W/drastic" "$W/bananafront"
+    # a wall clock that moves half a second at each reading of time() (LD_PRELOAD), from the whole second it starts
+    # in: a second that ticks over between two readings, at a known reading (sleep-test.d/poweroff-clock.sh)
+    cc -O2 -shared -fPIC -o "$W/half-second-clock.so" -x c - <<'EOF'
+#include <time.h>
+static time_t start;
+static long n;
+time_t time(time_t *t)
+{
+	if (!start) { struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); start = ts.tv_sec; }
+	time_t v = start + n++ / 2;
+	if (t) *t = v;
+	return v;
+}
+EOF
     [ "$1" = --build ] && exit 0
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"
@@ -107,15 +124,38 @@ EV_SW=5 SW_LID=0 EV_KEY=1 KEY_POWER=116
 # is bananad blocked writing "mem" (asleep)? wait up to 3 s
 # (blocked opening the FIFO: its wait channel is wait_for_partner)
 asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
-wake() { head -c 3 /sys/power/state > /dev/null; sleep 0.3; }       # read "mem": the write returns, it is awake
+# bananad as it is now, for a message: its state and wait channel, the last line of sleep.log
+bd_state() {
+    s=$(awk '{print $3}' /proc/$BD/stat 2>/dev/null) || s=
+    case $s in ''|Z) printf 'bananad (%s) gone' "$BD" ;; *) printf 'bananad (%s) %s in %s' "$BD" "$s" "$(cat /proc/$BD/wchan 2>/dev/null)" ;; esac
+    printf '; sleep.log: %s' "$(tail -n 1 /data/banana/logs/sleep.log 2>/dev/null | cut -c21-)"
+}
+# read "mem": the write returns, it is awake. Up to 10 s: with no write to read (bananad awake, or gone) the read
+# waited for good, and the whole test with it
+wake() {
+    timeout 10 head -c 3 /sys/power/state > /dev/null || bad "wake: nothing wrote mem to /sys/power/state in 10 s ($(bd_state))"
+    sleep 0.3
+}
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
+# the game stopped (T), or going on again: looked at until it shows, up to 5 s. kill() returns once a signal is sent,
+# and a game shows T only once it has run to take its SIGSTOP: on a busy CI runner that came after the one look, and
+# "game not stopped (R)" failed a sleep that was right (the state is never S: a sleeping game the signal reached is R)
+soon() { for i in $(seq 50); do "$@" && return 0; sleep 0.1; done; return 1; }
+game_is() { [ "$(gstate)" = "$1" ]; }
+game_runs() { [ "$(gstate)" != T ]; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_KEYS=/run/test/keys "$W/bananad-test" & BD=$!
     sleep 0.5
 }
-stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
+# SIGTERM, and up to 10 s for it to end (a stopped bananad would have held the wait for good)
+stop() {
+    kill $BD 2>/dev/null || true
+    for i in $(seq 100); do case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) break ;; esac; sleep 0.1; done
+    case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) ;; *) bad "stop: bananad still there 10 s after SIGTERM ($(bd_state))"; kill -9 $BD 2>/dev/null || true ;; esac
+    wait $BD 2>/dev/null || true
+}
 
 "$W/banana-ui" & UI=$!
 setsid sleep 600 & GAME=$!
@@ -126,11 +166,11 @@ echo "1. lid closed, then opened"
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 if asleep; then ok "suspended on the lid"; else bad "no suspend on the lid"; fi
-[ "$(gstate)" = T ] && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
+soon game_is T && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
 [ "$(cat /sys/power/pm_async)" = 1 ] && ok "devices resume in parallel (pm_async 1)" || bad "pm_async $(cat /sys/power/pm_async)"
 grep -q "\[deep\]" /sys/power/mem_sleep && ok "deep sleep chosen" || bad "mem_sleep $(cat /sys/power/mem_sleep)"
 echo 0 > /run/test/lid; wake
-[ "$(gstate)" != T ] && ok "game running again after the wake" || bad "game still stopped"
+soon game_runs && ok "game running again after the wake" || bad "game still stopped"
 rm -f /run/banana/game.pid; sleep 0.1
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "sleep.log: $(tail -n1 /data/banana/logs/sleep.log | cut -c21-)" || bad "no wake in sleep.log"
 stop
@@ -157,8 +197,7 @@ wake      # the power button bumped in a bag: the lid is still shut
 if asleep; then ok "straight back to sleep with the lid shut"; else bad "stayed awake with the lid shut"; fi
 [ ! -s /run/test/ui-signals ] && ok "the menu wasn't woken for it" || bad "the menu was woken with the lid shut"
 echo 0 > /run/test/lid; wake
-sleep 0.2
-grep -q SIGUSR1 /run/test/ui-signals && ok "menu told to redraw after the real wake" || bad "menu not told to redraw"
+soon grep -q SIGUSR1 /run/test/ui-signals && ok "menu told to redraw after the real wake" || bad "menu not told to redraw"
 grep -q 'slept again with the lid shut' /data/banana/logs/sleep.log && ok "logged the second sleep" || bad "second sleep not logged"
 stop
 
@@ -184,7 +223,7 @@ echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
 : > /sys/class/rtc/rtc0/wakealarm; wake
 if asleep; then ok "back to sleep after the battery check"; else bad "awake after the battery check"; fi
-[ "$(gstate)" = T ] && ok "the game stayed stopped" || bad "the game ran during the check"
+soon game_is T && ok "the game stayed stopped" || bad "the game ran during the check"
 echo 0 > /run/test/lid; wake; sleep 0.2
 grep -q 'battery checked' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
 stop
@@ -276,7 +315,7 @@ start "sleep_check_hours = 4" "poweroff_after_sleep_minutes = 0.02"    # 1.2 s
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
 [ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +1 ] && ok "the RTC alarm at the deadline, not the 4 h battery check" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
-[ "$(gstate)" = T ] && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
+soon game_is T && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
 sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
 poweroff && ok "shut down cleanly (init asked to power off)" || bad "no shutdown at the deadline"
 grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1 (save a resume state and quit)" || bad "drastic: $(cat /run/test/drastic.log 2>/dev/null)"
@@ -482,6 +521,8 @@ t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
 a = [int(x) for x in sys.argv[1:]]
 sys.stdout.buffer.write(b''.join(struct.pack('llHHi', s, u, a[i], a[i + 1], a[i + 2]) for i in range(0, len(a), 3)))" "$@" >&4; }
 rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
+# (the battery's line: a gauge with the voltage now and its average, half a degree under zero, in tenths)
+BAT=/sys/class/power_supply/battery; echo 4000000 > $BAT/voltage_now; echo 3900000 > $BAT/voltage_avg; echo -5 > $BAT/temp
 start "recorder = on"
 [ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
 F=$(cat /run/banana/recording 2>/dev/null)
@@ -511,6 +552,8 @@ asleep && ok "asleep" || bad "no sleep"
 grep -q "button .*a down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
 grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
 grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
+grep -q "battery  [0-9]*% Discharging, 4000 mV, 0 mA, -0.5 C$" "$F" && ok "the battery's line: the voltage now, -0.5 C with its sign" || bad "battery line: $(grep 'battery ' "$F")"
+rm -f $BAT/voltage_now $BAT/voltage_avg $BAT/temp
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
 grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
 # (the keyboard is typed on with the buttons too: their names would read back as the password)
@@ -528,6 +571,23 @@ n=$(ls /data/banana/logs/sessions | wc -l)
 ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
 [ "$(ls /data/banana/logs/sessions | wc -l)" = "$n" ] && ok "recorder off: no new session" || bad "a session with recorder off"
 stop
+
+echo "27b. rcK's TERM while the loop is at its own work (alsactl storing the volume): the loop's stop, the recording written out"
+# (only a TERM in the loop's poll was the loop's: one while it read banana-ui's datagram, the touchscreen or stored the
+# volume ended bananad at once, its last lines lost. The stand-in alsactl holds the store until the test lets it go)
+mkdir -p "$W/bin"; mkfifo /run/test/alsactl-go
+printf '#!/bin/sh\n[ "$3" = store ] || exit 0\n: > /run/test/alsactl-storing\nread x < /run/test/alsactl-go\n' > "$W/bin/alsactl"
+chmod +x "$W/bin/alsactl"; rm -f /run/test/alsactl-storing
+P0=$PATH; PATH="$W/bin:$PATH"; start "recorder = on"; PATH=$P0
+F=$(cat /run/banana/recording 2>/dev/null)
+kill -HUP $BD     # (the settings read again: the volume stored 2 s later, as after the settings screen)
+soon test -e /run/test/alsactl-storing || bad "alsactl store not started in 5 s ($(bd_state))"
+kill $BD; sleep 0.3
+case $(awk '{print $3}' /proc/$BD/stat 2>/dev/null) in ''|Z) bad "bananad gone at the TERM, in the middle of the store" ;; *) ok "the TERM waits for the loop" ;; esac
+timeout 5 sh -c 'echo > /run/test/alsactl-go' || bad "the stand-in alsactl not waiting"
+stop
+grep -q "bananad  settings read again" "$F" && grep -q "bananad  stopped" "$F" && ok "stopped: the lines before it and the stop, on the card" || bad "at a TERM during the store: $(tail -n 2 "$F" | tr '\n' '|')"
+rm -f /run/test/alsactl-go /run/test/alsactl-storing
 
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"

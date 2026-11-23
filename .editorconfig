@@ -1,0 +1,35 @@
+# What the files here already do, for editors that read this (https://editorconfig.org). Nothing is reformatted to
+# it, and nothing is said about trailing spaces or last newlines: patches, language files and test data keep theirs.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+
+# banana-ui, bananad, Activity, the engine imported from ROCKNIXDS: tabs
+[*.{c,cpp,h}]
+indent_style = tab
+
+# upstream's code, as it comes
+[ui/third_party/**]
+indent_style = unset
+
+[{Makefile,*.mk,Config.in}]
+indent_style = tab
+
+# the shell scripts (the rootfs' have no extension) and Python: four spaces
+[{*.sh,*.py,system/rootfs/etc/init.d/*,system/rootfs/usr/bin/*,system/rootfs/usr/libexec/banana/*,system/rootfs/etc/banana/sleep.d/*}]
+indent_style = space
+indent_size = 4
+
+# the web tools, JSON (themes, companions, the catalogue) and the workflow: two
+[*.{js,mjs,json,html,css,yml}]
+indent_style = space
+indent_size = 2
+
+# the language files and the lists beside them: the tabs are the columns
+[*.tsv]
+indent_style = tab
+
+[*.patch]
+end_of_line = unset

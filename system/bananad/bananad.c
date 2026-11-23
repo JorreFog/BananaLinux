@@ -100,10 +100,14 @@ static double sel_since;
 
 static volatile sig_atomic_t reload, stopping;
 static void on_hup(int sig) { (void)sig; reload = 1; }
-static volatile sig_atomic_t in_poll;	/* the main loop's poll: a TERM there is taken by the loop (the recording written out) */
-/* rcK's: the recording written out, then gone. Anywhere but the main loop's poll (a sleep's or a shutdown's own waits,
- * which may not come back to the loop) at once, as before the recorder */
-static void on_term(int sig) { (void)sig; stopping = 1; if (!in_poll) _exit(0); }
+/* the main loop, its poll and its own work, and a sleep from its wake on: a TERM there is taken by the loop at its next
+ * turn (the recording written out). Only the poll before: a TERM while the loop read a datagram of banana-ui's, read
+ * the touchscreen (every 0.2 s while recording), blinked the LED for a marker, or just after a wake, ended bananad at
+ * once, and the last half-minute of the recording was lost at that restart */
+static volatile sig_atomic_t term_to_loop;
+/* rcK's: the recording written out, then gone. Anywhere else (a sleep's or a shutdown's own waits, which may not come
+ * back to the loop) at once, as before the recorder */
+static void on_term(int sig) { (void)sig; stopping = 1; if (!term_to_loop) _exit(0); }
 
 static double mono(void)
 {
@@ -885,7 +889,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 
 static void suspend_now(const char *why)
 {
-	if (powering_off()) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
+	/* (stopping: a TERM the loop took while it was busy, the stop next: no sleep before it) */
+	if (powering_off() || stopping) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
+	term_to_loop = 0;	/* (a TERM while asleep or dark: gone at once, see on_term) */
 	double t0 = mono();
 	/* the panels dark first: the pre-sleep hooks (Wi-Fi down and its driver unloaded, Bluetooth down) take ~2 s on the
 	 * RG DS Plus, and the panels stayed lit that long with the lid shut. The wake lights them again (below: the lid
@@ -949,9 +955,12 @@ static void suspend_now(const char *why)
 			continue;
 		}
 		/* the RTC alarm: the sooner of the battery check and the deadline (passed: woken for it, or anything else
-		 * after it with the lid shut, and the game is saved and the handheld shut down) */
-		if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
-		if (off_at && time(NULL) >= off_at) {
+		 * after it with the lid shut, and the game is saved and the handheld shut down). One reading of the clock for
+		 * the check and the alarm: read again for the alarm, a second that ticked over in between gave an alarm of 0 s,
+		 * which is none, and the handheld slept past the deadline and the battery check until someone woke it */
+		time_t now = time(NULL);
+		if (cfg.poweroff_after_min > 0 && !off_at) off_at = now + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
+		if (off_at && now >= off_at) {
 			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
@@ -969,7 +978,7 @@ static void suspend_now(const char *why)
 			}
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
-		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
+		if (off_at && (secs <= 0 || off_at - now < secs)) secs = (int)(off_at - now);	/* (>= 1: checked above) */
 		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
@@ -1020,7 +1029,8 @@ static void suspend_now(const char *why)
 		woke = lid_closed ? "power button" : "lid opened";
 		break;
 	}
-	/* awake: the game and the menu first */
+	/* awake: the game and the menu first. From here on back to the loop (a TERM now: the recording written out there) */
+	term_to_loop = 1;
 	double t_wake = mono();
 	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
 	 * power-button sleep (the lid-open event that would light them is drained below) */
@@ -1054,6 +1064,7 @@ static void suspend_now(const char *why)
 
 static void shutdown_now(const char *why)
 {
+	term_to_loop = 0;	/* (a TERM during its wait for the game: gone at once) */
 	say("shutting down (%s)", why);
 	shutting_down = 1;
 	rec("power", "shutting down (%s)", why);
@@ -1811,6 +1822,37 @@ static int quiet_scan(void)
 	return 1;
 }
 
+/* The buttons bananad follows from press to release (power: held 2 s shuts down; F: the volume keys change the
+ * brightness; Select: the recorder's marker), after the devices were opened again: an event that came between the last
+ * read and the close went with the old descriptors (the 0.2 s the loop waits for a new node, mostly). A release lost
+ * that way left the button "held": a tap of the power button as a pad connected, or as a port's virtual pad
+ * (gptokeyb's uinput device) came or went, shut the handheld down 2 s later. So what the kernel says is held now
+ * (EVIOCGKEY) takes a button bananad still has down back up; the tap itself is dropped, no sleep from it.
+ * (Only asked while one is down: the ioctl also empties the descriptor's queue of key events.) */
+static const char *test_keys;	/* tests (tests/sleep-test.sh): the codes of the keys held now from this file, not the kernel */
+static void read_held(void)
+{
+	if (!power_down && !fn_held && !sel_down) return;
+	int known = 0, power = 0, fn = 0, sel = 0;
+	if (test_keys) {
+		FILE *f = fopen(test_keys, "r");
+		if (!f) return;
+		known = 1;
+		for (int c; fscanf(f, "%d", &c) == 1; ) { power |= c == KEY_POWER; fn |= c == BTN_MODE; sel |= c == BTN_SELECT; }
+		fclose(f);
+	}
+	for (int i = 0; i < ndev && !test_keys; i++) {
+		unsigned long keys[(KEY_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(devfd[i], EVIOCGKEY(sizeof keys), keys) < 0) continue;
+		known = 1;
+		power |= test_bit(keys, KEY_POWER); fn |= test_bit(keys, BTN_MODE); sel |= test_bit(keys, BTN_SELECT);
+	}
+	if (!known) return;
+	if (power_down && !power) { power_down = 0; say("the power button's release was lost while the input devices were opened again: not held"); }
+	if (fn_held && !fn) fn_held = 0;
+	if (sel_down && !sel) sel_down = 0;
+}
+
 static void open_inputs(void)
 {
 	for (int i = 0; i < ndev; i++) close(devfd[i]);
@@ -1840,6 +1882,7 @@ static void open_inputs(void)
 	}
 	closedir(d);
 	read_lid();
+	read_held();
 }
 
 /* the game running is a DS one (its command line): its emulator passes the lid on to the game */
@@ -2014,12 +2057,16 @@ static void rec_minute(void)
 		read_str(p, s, sizeof s);
 		if (strcmp(s, "Battery")) continue;
 		#define PS(f) (snprintf(p, sizeof p, "/sys/class/power_supply/%s/" f, e->d_name), p)
-		/* (the rk817's gauge has only the averages) */
-		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_now"), read_int(PS("voltage_avg"), 0)) / 1000;
-		int ma = read_int(PS("current_now"), read_int(PS("current_avg"), 0)) / 1000, t = read_int(PS("temp"), -1000);
+		/* (the rk817's gauge has only the averages. One PS() a statement: they share p, and as one call's two
+		 * arguments, in the order the compiler chose, the average's path could be the one read for "now" too) */
+		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_avg"), 0), ma = read_int(PS("current_avg"), 0);
+		mv = read_int(PS("voltage_now"), mv) / 1000;
+		ma = read_int(PS("current_now"), ma) / 1000;
+		int t = read_int(PS("temp"), -1000);
 		read_str(PS("status"), st, sizeof st);
 		#undef PS
-		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %d.%d C", pct, st, mv, ma, t / 10, abs(t % 10));
+		/* (tenths of a degree; the sign by itself: -0.5 C is t / 10 = 0, and was written "0.5 C") */
+		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %s%d.%d C", pct, st, mv, ma, t < 0 ? "-" : "", abs(t) / 10, abs(t) % 10);
 		else rec("battery", "%d%% %s, %d mV, %d mA", pct, st, mv, ma);
 		break;
 	}
@@ -2050,6 +2097,7 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	test_keys = getenv("BANANAD_TEST_KEYS");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
@@ -2062,10 +2110,14 @@ int main(int argc, char **argv)
 	signal(SIGCHLD, SIG_DFL);
 	signal(SIGPIPE, SIG_IGN);	/* a game's pipe that closed must not take the daemon with it */
 	struct sigaction sa = { 0 };
-	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
+	sa.sa_handler = on_hup;		/* no SA_RESTART: the loop's wait returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	sa.sa_handler = on_term;
 	sigaction(SIGTERM, &sa, NULL);
+	sigset_t loop_sigs, sigs_before;	/* (the two the loop's wait must not miss, below) */
+	sigemptyset(&loop_sigs);
+	sigaddset(&loop_sigs, SIGHUP);
+	sigaddset(&loop_sigs, SIGTERM);
 	mkdir("/run/banana", 0755);
 	/* a menu Sleep asked for while bananad wasn't running would otherwise come true at the next, unrelated SIGHUP
 	 * (any settings change): dropped */
@@ -2101,6 +2153,7 @@ int main(int argc, char **argv)
 	if (rf) fclose(rf);
 
 	for (;;) {
+		term_to_loop = 1;	/* (again after a sleep or a shutdown_now that came back here) */
 		struct pollfd pf[MAXDEV + 3];
 		int n = 0;
 		for (int i = 0; i < ndev; i++) pf[n++] = (struct pollfd){ devfd[i], POLLIN, 0 };
@@ -2136,9 +2189,15 @@ int main(int argc, char **argv)
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
-		in_poll = 1;
-		if (!stopping) poll(pf, n, timeout);
-		in_poll = 0;
+		/* SIGHUP and SIGTERM are held back from the look at their flags until the wait itself has begun (ppoll lets
+		 * them in as it starts to wait). A SIGHUP that came while the loop was busy (alsactl storing the volume, the
+		 * volume script, the 0.2 s for a new input device) only set its flag, and poll() then slept on for up to a
+		 * minute, until the next battery look or a button: a setting not taken, the menu's Sleep not slept, which
+		 * then came at the next press. A flag already up: no wait at all. */
+		struct timespec ts = { timeout / 1000, timeout % 1000 * 1000000L };
+		sigprocmask(SIG_BLOCK, &loop_sigs, &sigs_before);
+		if (!stopping && !reload) ppoll(pf, n, &ts, &sigs_before);
+		sigprocmask(SIG_SETMASK, &sigs_before, NULL);
 		double now = mono();
 		sound_poll();
 		if (stopping) {	/* a restart or a turn-off from the menu, an update: banana-ui's last events, then the card's copy */

@@ -2,8 +2,27 @@
 # the clock from the network once Wi-Fi is up (usr/libexec/banana/wifi)
 CONFIG_NTPD=y
 # /etc/sysctl.d/banana.conf at boot (rcS)
-CONFIG_SYSCTL=y
+CONFIG_BB_SYSCTL=y
 # PortMaster (its menu checks for running processes with pgrep -f) and port scripts
 CONFIG_PGREP=y
 CONFIG_PKILL=y
 CONFIG_TIMEOUT=y
+# a port on the second SD card runs with mounts of its own (usr/libexec/banana/run-port, #235)
+CONFIG_UNSHARE=y
+# tar that reads compressed archives, as PortMaster and ports expect (#275, #246). PortMaster's funcs.txt, sourced by
+# every port and by PortMaster itself, unpacks its fonts with `tar -xf NotoSans.tar.xz`; nine ports unpack with
+# `tar -xzf`, one with `tar -xjf`, one with `tar -xf data.tar.bz2`. Buildroot's tar knew none of these ("invalid
+# option -- 'z'", "invalid tar magic"), so the files a port's first start unpacks were never there.
+CONFIG_FEATURE_SEAMLESS_GZ=y
+CONFIG_FEATURE_SEAMLESS_BZ2=y
+CONFIG_FEATURE_SEAMLESS_XZ=y
+CONFIG_FEATURE_TAR_AUTODETECT=y
+# stat -c: seven ports size a file with it (`stat -c%s`) before patching or choosing what to run, one keeps a
+# device's owner and mode with `stat -c '%u:%g:%a'`; with no stat they read an empty size (#275)
+CONFIG_STAT=y
+CONFIG_FEATURE_STAT_FORMAT=y
+# find -delete: five ports tidy up after unpacking with it (Super Hexagon: the game's own x86_64 libSDL2, which box64
+# would load ahead of the SDL it wraps); the files stayed ("unrecognized: -delete")
+CONFIG_FEATURE_FIND_DELETE=y
+# bzip2 -d: VCMI unpacks the libicudata.so.63 it links against with `bzip2 -fd` (only bunzip2 was there)
+CONFIG_BZIP2=y

@@ -269,7 +269,7 @@
    "developer": "PortMaster",
    "genre": "Tool",
    "players": "1",
-   "releasedate": "20261003T000000",
+   "releasedate": "20261117T000000",
    "accent": "#3b8fd0",
    "summary": "Downloads and runs PC and homebrew game ports, on the Ports shelf.",
    "description": "Gets ports: PC games and homebrew made to run on handhelds (many free, some needing files from a copy of the game you own), downloaded from portmaster.games and started from the Ports shelf. Its entry and the ports it installs go in roms/ports on the card (the banana share's roms\\ports folder), and so does PortMaster itself; it updates itself. Removing it leaves your ports and the runtimes they need (PortMaster/libs), but a port needs PortMaster's folder to start: install it again to play them. Made by the PortMaster team (portmaster.games, MIT licence); it came with BananaOS until 0.5.3.",
@@ -282,10 +282,10 @@
     "rgds-plus"
    ],
    "release": {
-    "url": "https://github.com/PortsMaster/PortMaster-GUI/releases/download/2026.10.03-1041/PortMaster.zip",
-    "version": "2026.10.03",
-    "sha256": "6e4fa938c39efdb9237aa9973b3ce3f318242ada171f26cd72511b09e393fdf2",
-    "size": 24131471
+    "url": "https://github.com/PortsMaster/PortMaster-GUI/releases/download/2026.11.17-0700/PortMaster.zip",
+    "version": "2026.11.17",
+    "sha256": "d96a921ed3110f3c1b56b1f5b88d34539241723bd2fb003f29edbce5402a4fef",
+    "size": 24642993
    },
    "package": {
     "root": "PortMaster",

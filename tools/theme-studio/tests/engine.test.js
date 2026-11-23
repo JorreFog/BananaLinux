@@ -39,6 +39,9 @@ const now = execFileSync("sh", [path.join(STUDIO, "wasm", "sources.sh")]).toStri
 if (!build || build[1] !== now) {
   console.log("  NOTE banana-engine.js was built from other sources (" + (build ? build[1] : "?") + ", now " + now +
     "): rebuild it with sh tools/theme-studio/wasm/build.sh (the pictures below say whether it matters yet)");
+  // (on GitHub, a warning on the run's page too: the hash takes in every header in ui/src, so most changes there
+  // make it stale without changing a picture, and a failure on each would make CI red for no fault)
+  if (process.env.GITHUB_ACTIONS) console.log("::warning file=tools/theme-studio/wasm/banana-engine.js::built from other sources than these: rebuild it with wasm/build.sh");
 } else console.log("  banana-engine.js is current with the engine's sources (" + now + ")");
 
 // a PNG (8-bit RGB or RGBA, not interlaced) -> RGB bytes
@@ -98,6 +101,26 @@ function png(w, h, rgb) {
     system: B.cwrap("bt_system", "number", []), pixels: B.cwrap("bt_pixels", "number", ["number"]),
   };
 
+  // the native build reads the library the wasm build carries (its /fx: the games, the box art, systems.conf), not
+  // one fixture.sh draws here: fixture.sh drew the box art's titles with ImageMagick's default font, so on another
+  // computer the covers were other pictures, and comic-panel, coral-reef, felt-table, vinyl-lounge, hillside and
+  // turntable (the themes that show a cover's title big enough) differed by 90 to 1283 pixels with nothing wrong in
+  // either engine. It names Inter now, but the engine's covers are the ones drawn when it was built, and ImageMagick's
+  // and FreeType's versions still draw text a little apart. fixture.sh still gives the native run its fresh data
+  // (play stats, the favourite) each time
+  const fxRoms = path.join(work, "fx-roms"), fxSystems = path.join(work, "fx-systems.conf");
+  if (native) {
+    (function copy(from, to) {
+      fs.mkdirSync(to, { recursive: true });
+      for (const n of B.FS.readdir(from)) {
+        if (n === "." || n === "..") continue;
+        const f = from + "/" + n;
+        if (B.FS.isDir(B.FS.stat(f).mode)) copy(f, path.join(to, n)); else fs.writeFileSync(path.join(to, n), B.FS.readFile(f));
+      }
+    })("/fx/roms", fxRoms);
+    fs.writeFileSync(fxSystems, B.FS.readFile("/fx/systems.conf"));
+  }
+
   for (const size of ["640x480", "1024x768"]) {
     const [W, H] = size.split("x").map(Number);
     const retried = new Set();
@@ -131,7 +154,7 @@ function png(w, h, rgb) {
       execFileSync("sh", [path.join(UI, "tests/fixture.sh"), path.join(work, "fx")], { stdio: "ignore" });
       spawnSync(path.join(UI, "banana-ui"), ["--headless", path.join(nd, "out-"), "--size", size,
         "--assets", path.join(UI, "assets/rnds"), "--banana", path.join(UI, "assets/banana"),
-        "--systems", path.join(ROOT, "system/rootfs/etc/banana/systems.conf"), "--roms", path.join(work, "fx/roms"),
+        "--systems", fxSystems, "--roms", fxRoms,
         "--data", path.join(work, "fx/data"), "--theme", path.join(nd, "theme.json"), "--script", SCRIPT], { encoding: "utf8" });
       let worst = 0, where = "";
       for (const shot of shots.trim().split("\n")) {

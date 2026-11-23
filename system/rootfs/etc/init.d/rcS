@@ -98,11 +98,16 @@ data || {
 # the card; /etc/machine-id (the root is read-only) points at the copy in /run
 # machine_id <the card's file> <the copy>
 machine_id() {
-    # (32 hex digits, as systemd's: the kernel's random UUID without its dashes; a file that isn't that is made again)
-    case $(cat "$1" 2>/dev/null) in
-    *[!0-9a-f]*|"") tr -d '-' < /proc/sys/kernel/random/uuid > "$1.new" 2>/dev/null && mv -f "$1.new" "$1" ;;
-    esac
-    [ "$(wc -c < "$1" 2>/dev/null)" = 33 ] && cp "$1" "$2" 2>/dev/null
+    # (32 hex digits, as systemd's: the kernel's random UUID without its dashes; a file that isn't that is made again.
+    # By its length too: a file of hex digits only but not 32 of them, one cut short, counted as an id, was then not
+    # copied for its size and never made again, so that card had no machine id at any boot)
+    _m=$(cat "$1" 2>/dev/null)
+    case $_m in *[!0-9a-f]*) _m= ;; esac
+    if [ ${#_m} != 32 ]; then
+        tr -d '-' < /proc/sys/kernel/random/uuid > "$1.new" 2>/dev/null && mv -f "$1.new" "$1"
+        _m=$(cat "$1" 2>/dev/null)
+    fi
+    [ ${#_m} = 32 ] && echo "$_m" > "$2" 2>/dev/null
     return 0
 }
 machine_id /data/banana/machine-id /run/banana/machine-id

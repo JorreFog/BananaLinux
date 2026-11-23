@@ -36,6 +36,7 @@ namespace banana
 		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const PANEL_THEME[] = { "theme", "dark", nullptr };
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
@@ -102,6 +103,7 @@ namespace banana
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
+			{ "retroarch_panel_theme", "theme", ENUM, PANEL_THEME, 0, 0 },
 			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "game_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },

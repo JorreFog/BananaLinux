@@ -11,10 +11,25 @@ set -e
 # ...and a /data of its own the same way: Settings writes the emulators' own files where they are on the handheld
 # (/data/bananads/bananads.conf, /data/retroarch/retroarch.cfg) whatever --data says, so as root the checks changed
 # this machine's /data, and found there what the run before had set (BANANA_TEST_OWN_DATA: it is this run's alone)
+# ...and processes of its own where it can (a PID namespace, its own /proc): Settings tells bananad of a change with a
+# SIGHUP to every process named bananad that /proc shows, and the headless menus here sent theirs to this machine's
+# own too (a developer's, or a sleep test's beside this run). There the suite is a child of a shell of its own, the
+# namespace's init, and a stand-in bananad out here (a copy of sleep, which a SIGHUP ends) must outlive it; where
+# only the mount namespace is allowed, that alone, as before
 if [ -z "$BANANA_TEST_OWN_RUN" ] && [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
-    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c 'mount -t tmpfs tmpfs /run 2>/dev/null
+    own='mount -t tmpfs tmpfs /run 2>/dev/null
         mkdir -p /data 2>/dev/null && mount -t tmpfs tmpfs /data 2>/dev/null && export BANANA_TEST_OWN_DATA=1
-        exec "$0" "$@"' "$0" "$@"
+        '
+    if unshare -m -p -f --mount-proc true 2>/dev/null; then
+        SB=$(mktemp -d); cp "$(command -v sleep)" "$SB/bananad"; "$SB/bananad" 7200 & B=$!
+        BANANA_TEST_OWN_RUN=1 unshare -m -p -f --kill-child --mount-proc sh -c "$own"'"$0" "$@"' "$0" "$@" && r=0 || r=$?
+        case $(awk '{print $3}' "/proc/$B/stat" 2>/dev/null) in    # (ended: gone, or a zombie not reaped yet)
+            ''|Z) echo "FAIL: the menus' SIGHUP reached a process named bananad outside the test"; r=1 ;;
+            *) kill $B ;;
+        esac
+        rm -rf "$SB"; exit $r
+    fi
+    BANANA_TEST_OWN_RUN=1 exec unshare -m sh -c "$own"'exec "$0" "$@"' "$0" "$@"
 fi
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}
@@ -63,6 +78,8 @@ make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test"
 make -s -C "$HERE" tests/ach-test >/dev/null && "$HERE/tests/ach-test" "$OUT" 2> "$OUT/ach-test.log" || { echo "FAIL the achievements list's data: $(grep FAIL "$OUT/ach-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the reader's text: encodings, line ends, a file that isn't text, the wrap
+make -s -C "$HERE" tests/textfile-test >/dev/null && "$HERE/tests/textfile-test" 2> "$OUT/textfile-test.log" || { echo "FAIL the reader's text: $(grep FAIL "$OUT/textfile-test.log" | head -3)"; fail=1; }
 # the translations: a line's %d takes a number only, not a game's or a file's name
 make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the speaker EQ: profiles parsed as Equalizer APO's, the curves against reference values, headroom, no clipping, stability
@@ -214,6 +231,15 @@ for size in 640x480 1024x768; do
             press b; press start; shot smb-pass; press start; wait 300; shot smb-done" 2> "$alog" || { echo "FAIL $size: banana-ui (sharing login) exited $?"; fail=1; }
     grep -qx 'smb_user=banan' "$FX/data/accounts.conf" && grep -qx 'smb_password=linux' "$FX/data/accounts.conf" || { echo "FAIL $size: accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
     rm -f "$FX/data/accounts.conf"
+    # the RetroAchievements account outside the first-time setup (#56): System (the sixth tile) > RetroAchievements account
+    # (the row after Box art, "Not set"), the keyboard on the name, START, then on the password, START: both in
+    # accounts.conf, where the launchers read them, and the row shows the name (BANANA_RA_CHECK=0: no site here)
+    BANANA_RA_CHECK=0 "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press down; press right; press right; press a; press down; press down; press down; press down; shot ra-row; \
+            press a; type banana-fan; press start; shot ra-pass; type s3cret; press start; wait 300; shot ra-done" 2> "$OUT/$size-ra-account.log" || { echo "FAIL $size: banana-ui (RetroAchievements account) exited $?"; fail=1; }
+    grep -qx 'ra_user=banana-fan' "$FX/data/accounts.conf" && grep -qx 'ra_password=s3cret' "$FX/data/accounts.conf" || { echo "FAIL $size: the RetroAchievements account isn't in accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
+    cmp -s "$OUT/$size-ra-row-bot.png" "$OUT/$size-ra-done-bot.png" && { echo "FAIL $size: the RetroAchievements account row doesn't show the name typed"; fail=1; }
+    rm -f "$FX/data/accounts.conf"
     # Favorites starred itself (first on the shelf, ahead of every system): a GBA favourite launches with GBA's
     # emulator, not the shelf's one along (its systems' places moved when Favorites went in before them)
     flog=$OUT/$size-favorites.log
@@ -364,6 +390,24 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press a; press down; press left" 2> "$OUT/$size-res-order.log" \
         || { echo "FAIL $size: banana-ui (3D resolution order) exited $?"; fail=1; }
     grep -q 'press left: settings result 2' "$OUT/$size-res-order.log" || { echo "FAIL $size: Left from 2x on BananaDS's 3D resolution: $(grep 'press left' "$OUT/$size-res-order.log")"; fail=1; }
+    # Settings > Other systems > Picture & sound > Game Boy colours and GBC colour correction (#314): Gambatte's own
+    # core options, written into its file as RetroArch writes them (quoted; the folder made), each a change at once;
+    # a value RetroArch's menu left that isn't a choice here stays in the file until the row is changed
+    if [ -n "$BANANA_TEST_OWN_DATA" ]; then
+        GO=/data/retroarch/config/Gambatte/Gambatte.opt; rm -rf /data/retroarch/config/Gambatte
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press right; press a; press down; press a; press down; press down; press down; press down; press down; shot gb-colours; press right; press down; press right" 2> "$OUT/$size-gb-colours.log" \
+            || { echo "FAIL $size: banana-ui (Game Boy colours) exited $?"; fail=1; }
+        [ "$(grep -c 'press right: settings result 2' "$OUT/$size-gb-colours.log")" = 2 ] && grep -qx 'gambatte_gb_colorization = "internal"' $GO && grep -qx 'gambatte_gbc_color_correction = "disabled"' $GO ||
+            { echo "FAIL $size: Game Boy colours: $(grep 'press right' "$OUT/$size-gb-colours.log" | tr '\n' ' ') $(tr '\n' ' ' < $GO 2>&1)"; fail=1; }
+        printf 'gambatte_gb_colorization = "custom"\ngambatte_dark_filter_level = "10"\n' > $GO
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press right; press a; press down; press a; press down; press down; press down; press down; press down; press down; press right" 2>> "$OUT/$size-gb-colours.log" \
+            || { echo "FAIL $size: banana-ui (Game Boy colours 2) exited $?"; fail=1; }
+        [ "$(tr '\n' '|' < $GO)" = 'gambatte_gb_colorization = "custom"|gambatte_dark_filter_level = "10"|gambatte_gbc_color_correction = "disabled"|' ] ||
+            { echo "FAIL $size: Gambatte's other options: $(tr '\n' '|' < $GO 2>&1)"; fail=1; }
+        rm -rf /data/retroarch/config/Gambatte
+    fi
     # a DS game's own BananaDS timing (Origin HeartGold's Fast while Golden Sun stays Accurate): down to Timing (the row
     # after Microphone), right (Accurate), right (Fast): kept at once; left twice back to "As in Settings": no file left
     FT="$FX/data/nds-per-game-timing.conf"; rm -f "$FT"
@@ -586,6 +630,21 @@ for size in 640x480 1024x768; do
     done
     grep -q "gtouch 576 360: action 0 keys 1" "$KK" || { echo "FAIL $size: the Keys tile didn't open the keyboard"; fail=1; }
     grep -q "gtouch 590 350: action 0 keys 0" "$KK" || { echo "FAIL $size: Done didn't close the keyboard"; fail=1; }
+    # Second screen > Game panel theme > Dark (#75): under the light theme the game panel is the dark theme's own, pixel
+    # for pixel; with the row as it comes ("As the menu") it is light; and Settings after the game is light again
+    PT=$OUT/fixture-panel-theme
+    ptrun() {   # ptrun <name> <settings.conf lines> <script>
+        rm -rf "$PT"; cp -r "$FX/data" "$PT"; printf "$2" >> "$PT/settings.conf"
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$PT" --script "$3" 2> "$OUT/$size-$1.log" || { echo "FAIL $size: banana-ui ($1) exited $?"; fail=1; }
+    }
+    ptrun pt-light 'theme = light\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-light; gameclose; press start; shot pt-light-settings"
+    ptrun pt-dark 'theme = light\nretroarch_panel_theme = dark\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-dark; gameclose; press start; shot pt-dark-settings"
+    ptrun pt-ref 'theme = dark\nretroarch_panel_theme = dark\n' "home 0; gamepanel 1 /nonexistent.gba; gshot pt-ref"
+    cmp -s "$OUT/$size-pt-dark-bot.png" "$OUT/$size-pt-ref-bot.png" || { echo "FAIL $size: Game panel theme > Dark: the panel under the light theme isn't the dark theme's"; fail=1; }
+    cmp -s "$OUT/$size-pt-light-bot.png" "$OUT/$size-pt-ref-bot.png" && { echo "FAIL $size: the light theme's game panel is the dark one without being asked"; fail=1; }
+    cmp -s "$OUT/$size-pt-dark-settings-bot.png" "$OUT/$size-pt-light-settings-bot.png" || { echo "FAIL $size: Game panel theme > Dark: Settings after the game isn't in the light theme again"; fail=1; }
+    grep -q '^retroarch_panel_theme = dark$' "$PT/settings.conf" || { echo "FAIL $size: retroarch_panel_theme = dark didn't stay in settings.conf"; fail=1; }
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }
@@ -635,6 +694,8 @@ for size in 640x480 1024x768; do
     . "$HERE/tests/ux.sh"
     # the first-time setup's slides and the first boot's arrival
     . "$HERE/tests/setup.sh"
+    # the reader: text files from Files, a game's guide from its page (#173, #203)
+    . "$HERE/tests/reader.sh"
     # each view drew something of its own (not the same frame again)
     # (a ROM not supported: the tiles have no tabs and a battle leaves them be, so pk-game, pk-team and pk-battle match)
     for pair in "pk-party pk-game" "pk-party zh-pk-party"; do
@@ -1116,6 +1177,16 @@ for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; d
     "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
     grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
+done
+# ...and a Chinese name by the first letters of its pinyin (#212): "sed" is 塞尔达 (Sai Er Da), the name's Latin part as
+# it is, a letter that isn't the next character's finds nothing; and the table is the one its tool writes
+python3 -I "$HERE/../tools/pinyin-initials.py" --check || { echo "FAIL: ui/src/pinyin_initials.h is out of step with tools/pinyin-initials.py"; fail=1; }
+cp "$SX/roms/snes/Super Smoothie World.sfc" "$SX/roms/snes/塞尔达传说 时之笛 DX.sfc"
+for qn in "sed:1" "sedcs:1" "szd dx:1" "sedx:0" "rpg:2"; do
+    q=${qn%:*}
+    "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
+    grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" by pinyin (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
 done
 # a DS game's icon, cached per file: two games of one name in two folders each show their own, and a ROM replaced
 # under its name gets its own again

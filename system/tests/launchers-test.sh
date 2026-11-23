@@ -258,6 +258,23 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+# gw-meta on a full card (as above): the Game & Watch folder's gamelist.xml, with the scraper's entries, stays whole
+echo "a full card: gw-meta leaves gamelist.xml whole"
+GW=$T/gw; mkdir -p "$GW/run" "$GW/data" "$GW/roms"
+# a stand-in for MAME: its list of machines (the covers are never asked for: no artwork here)
+printf '%s\n' '#!/bin/sh' '[ "$1" = -listxml ] || exit 1' 'printf "<machine name=\"gnw_dkong2\">\n<description>Game &amp; Watch: Donkey Kong II</description>\n<year>1983</year>\n<manufacturer>Nintendo</manufacturer>\n</machine>\n"' > "$GW/mame"
+chmod +x "$GW/mame"
+: > "$GW/roms/gnw_dkong2.zip"
+gwlist() { printf '<?xml version="1.0"?>\n<gameList>\n'; i=0; while [ $i -lt 60 ]; do printf '\t<game>\n\t\t<path>./game%s.zip</path>\n\t\t<name>Game %s</name>\n\t\t<desc>What the scraper wrote about game %s.</desc>\n\t</game>\n' $i $i $i; i=$((i + 1)); done; printf '</gameList>\n'; }
+gw() { MAME=$GW/mame GW_META_RUN=$GW/run GW_META_DATA=$GW/data sh "$L/gw-meta" "$GW/roms" > /dev/null 2>&1; }
+gwlist > "$GW/roms/gamelist.xml"; want=$(wc -c < "$GW/roms/gamelist.xml" | tr -d ' ')
+( trap "" XFSZ; ulimit -f 4; gw )
+check "$(wc -c < "$GW/roms/gamelist.xml" | tr -d ' ') $(grep -c '</gameList>' "$GW/roms/gamelist.xml") $(ls "$GW/roms" | grep -c 'new$')" "$want 1 0" "gw-meta: gamelist.xml not cut short on a full card, no piece left beside it"
+gw
+check "$(grep -c '<game>' "$GW/roms/gamelist.xml") $(grep -c '<name>Donkey Kong II</name>' "$GW/roms/gamelist.xml") $(tail -n 1 "$GW/roms/gamelist.xml")" "61 1 </gameList>" "...and with room again the game's name is added to the 60 there"
+rm -f "$GW/roms/gamelist.xml"; gw
+check "$(grep -c '<game>' "$GW/roms/gamelist.xml") $(wc -l < "$GW/roms/gamelist.xml" | tr -d ' ')" "1 10" "no gamelist.xml yet: a new one"
+
 echo "rcS: the card the system booted from is the one the root is on"
 fn "$R/system/rootfs/etc/init.d/rcS" root_disk
 # a made-up /sys: the eMMC, this card in the first slot (mmcblk1), another Banana card in the second (mmcblk2)
@@ -288,6 +305,11 @@ machine_id "$T/mid/card2" "$T/mid/run2"
 check "$([ "$(cat "$T/mid/card2")" != "$id1" ] && echo other)" "other" "another card: another id"
 echo "not an id" > "$T/mid/card"; machine_id "$T/mid/card" "$T/mid/run"
 check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "a file that isn't an id is made again"
+# (hex digits only, but not 32 of them: it passed as an id, was never copied and never made again)
+echo "0123456789abcdef" > "$T/mid/card"; rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(grep -cE '^[0-9a-f]{32}$' "$T/mid/card") $(cmp -s "$T/mid/card" "$T/mid/run" && echo same)" "1 same" "an id cut short is made again"
+printf '%s' "$id1" > "$T/mid/card"; rm -f "$T/mid/run"; machine_id "$T/mid/card" "$T/mid/run"
+check "$(cat "$T/mid/card") $(cat "$T/mid/run" 2>/dev/null)" "$id1 $id1" "an id without its line end is that id still"
 
 echo "run-bananads: a zipped game is only kept when it unpacked whole"
 fn "$L/run-bananads" unpack
@@ -332,6 +354,72 @@ check "$(fg 'Golden Sun' "$G/sd2/roms/gba/Golden Sun.gba")" "$G/saves/Golden Sun
 fn "$L/run-bananafront" flat_gba_save
 check "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-bananafront" | cksum)" "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-retroarch" | cksum)" "run-bananafront's flat_gba_save is run-retroarch's"
 check "$(grep -c 'f=$(flat_gba_save "$n" ' "$L/run-retroarch" "$L/run-bananafront" | tr '\n' ' ')" "$L/run-retroarch:1 $L/run-bananafront:1 " "both launchers look there for a GBA game with no save yet"
+
+echo "run-port: a port on the second card runs with that card's ports at /roms/ports (#235)"
+# run-port itself down to where the port's place is settled, on a made-up pair of cards; what it prints then: the
+# script it would start, whose PortMaster is in /roms/ports, and what else is there
+PC=$T/portcards; SP=$PC/sys/roms/ports; CP=$PC/sd2/roms/ports
+mkdir -p "$PC/run/sd2" "$SP/PortMaster" "$SP/own" "$CP/PortMaster" "$CP/game"
+echo system > "$SP/PortMaster/which"; echo second > "$CP/PortMaster/which"; : > "$SP/Own.sh"; : > "$CP/Game.sh"
+{ sed -n '1,/^unset BANANA_PORT_NS$/p' "$L/run-port" | sed -e "s|^P=/data/roms/ports\$|P=$SP|" -e "s|/run/banana/sd2/roms|$PC/run/sd2/roms|" -e "s|/run/banana/port-pm|$PC/run/port-pm|"
+  echo 'echo "$1 $(cat $P/PortMaster/which 2>/dev/null): $(LC_ALL=C ls $P | tr "\n" " ")"'; } > "$PC/run-port"; chmod +x "$PC/run-port"
+check "$(grep -c "$PC" "$PC/run-port")" "3" "(the test's copy of run-port has the made-up cards' three paths)"
+port() { sh "$PC/run-port" "$1" 2>&1 | tail -n 1; }
+check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "no second card named in /run: as before"
+echo "$PC/sd2/roms" > "$PC/run/sd2/roms"
+check "$(port "$SP/Own.sh")" "$SP/Own.sh system: Own.sh PortMaster own " "a port on this card: as before"
+if [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a port on the second card: its script and folder at /roms/ports, this card's PortMaster"
+    check "$(LC_ALL=C ls "$SP" | tr '\n' ' ')$(cat "$CP/PortMaster/which")" "Own.sh PortMaster own second" "...for the port alone: both cards as they were afterwards"
+    rm -rf "$CP/PortMaster"
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a second card without PortMaster: this card's"
+    check "$(ls -A "$CP/PortMaster" | wc -l | tr -d ' ')" "0" "...and nothing of it written to the second card"
+    # a second card that can't be written (its switch, a worn card mounted read-only) and has no PortMaster folder:
+    # nowhere there to put this card's PortMaster, so the port runs with this card's /roms/ports, all of it
+    rm -rf "$CP/PortMaster"; mount --bind "$CP" "$CP" && mount -o remount,ro,bind "$CP"
+    check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "a read-only second card without PortMaster: this card's /roms/ports as it is, not the second card's without PortMaster"
+    umount "$CP"
+    mv "$SP/PortMaster" "$PC/away"; mkdir -p "$CP/PortMaster"; echo second > "$CP/PortMaster/which"
+    check "$(port "$CP/Game.sh")" "$SP/Game.sh second: Game.sh PortMaster game " "no PortMaster on this card: the second card's own"
+    mv "$PC/away" "$SP/PortMaster"
+else
+    echo "  skipped: the second card's port itself (root and unshare -m are needed for its mounts)"
+    check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "without unshare -m the port still starts, as before"
+fi
+
+echo "run-port: zip for ports, as Info-ZIP's (#275)"
+# the stand-in run-port puts last on PATH, on the lines ports run (GameMaker ports: zip -r -0 ./game.port ./assets/)
+Z=$R/system/rootfs/usr/share/banana/portmaster/bin/zip
+check "$(grep -c '^export PATH="$PATH:/usr/share/banana/portmaster/bin"$' "$L/run-port")" "1" "run-port puts the stand-ins' folder last on PATH"
+if command -v python3 >/dev/null; then
+    ZD=$T/zip; mkdir -p "$ZD/assets/sub" "$ZD/lib"
+    echo droid > "$ZD/assets/game.droid"; seq 1 500 > "$ZD/assets/sub/a.bin"; echo y > "$ZD/assets/place all game files here"
+    echo so > "$ZD/lib/libyoyo.so"; touch -d 1975-01-01 "$ZD/assets/sub/old"
+    # names <archive>: each entry's name, S for stored and D for deflated, and its size
+    names() { python3 -I -c 'import sys, zipfile
+for i in zipfile.ZipFile(sys.argv[1]).infolist(): print(i.filename, "SD"[i.compress_type != 0], i.file_size)' "$1" | tr '\n' ';'; }
+    (cd "$ZD" && python3 "$Z" -q -r -0 ./game.port ./assets/); check "$?" "0" "zip -r -0 ./game.port ./assets/ (a file from 1975 too)"
+    check "$(names "$ZD/game.port")" "assets/ S 0;assets/sub/ S 0;assets/game.droid S 6;assets/place all game files here S 2;assets/sub/a.bin S 1892;assets/sub/old S 0;" "...every file and folder under assets/, stored, no ./"
+    (cd "$ZD" && python3 "$Z" -q -r ./game.apk ./lib/ && python3 "$Z" -q -r -0 ./game.apk ./game.apk ./assets/ -x "assets/place all game files here" "assets/sub/*")
+    check "$(names "$ZD/game.apk")" "lib/ S 0;lib/libyoyo.so D 3;assets/ S 0;assets/game.droid S 6;" "an archive that is there: its entries kept, -x left out (assets/sub/ too, as Info-ZIP), not itself"
+    (cd "$ZD/assets" && python3 "$Z" -q -j ../game.apk sub/a.bin); check "$(names "$ZD/game.apk" | tr ';' '\n' | grep -c '^a.bin D 1892$')" "1" "-j: the name alone"
+    (cd "$ZD" && python3 "$Z" -q -r none.zip ./nothing 2>/dev/null); check "$?:$([ -e "$ZD/none.zip" ] && echo made)" "12:" "nothing to pack: exit 12 and no archive, as Info-ZIP"
+    (cd "$ZD" && python3 "$Z" -FF game.apk --out fixed.zip 2>/dev/null); check "$?" "16" "an option it doesn't know (-FF): exit 16, the archive left alone"
+    # a folder that is a link is gone into (Info-ZIP's way without -y), a link back up isn't gone round, a FIFO is left out
+    ZL=$T/ziplinks; mkdir -p "$ZL/assets/real" "$ZL/elsewhere"; echo in > "$ZL/elsewhere/f.txt"; echo r > "$ZL/assets/real/r.txt"
+    ln -s ../elsewhere "$ZL/assets/dirlink"; ln -s .. "$ZL/assets/real/up"; mkfifo "$ZL/assets/pipe"
+    (cd "$ZL" && timeout 20 python3 "$Z" -q -r -0 ./game.port ./assets/ 2>/dev/null); check "$?" "0" "a tree with a linked folder, a link back up and a FIFO: packed, not waited on for ever"
+    check "$(names "$ZL/game.port" | tr ';' '\n' | grep -c -e '^assets/dirlink/f.txt S 3$' -e '^assets/real/r.txt S 2$'):$(names "$ZL/game.port" | grep -c -e pipe -e 'up/assets')" "2:0" "...the linked folder's file is in, the FIFO and the way back up aren't"
+    # a quit while it writes (the port quit at its first start): the old archive whole, no temporary file left beside it
+    ZT=$T/zipterm; mkdir -p "$ZT/assets"; truncate -s 1500M "$ZT/assets/big"; echo old > "$ZT/keep.txt"
+    (cd "$ZT" && python3 "$Z" -q game.port keep.txt)
+    (cd "$ZT" && exec python3 "$Z" -q -r -6 ./game.port ./assets/) & zp=$!
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do ls -A "$ZT" | grep -q '^\.zip-' && break; sleep 0.1; done
+    during=$(ls -A "$ZT" | grep -c '^\.zip-'); kill -TERM $zp; wait $zp; zrc=$?
+    check "$during:$zrc:$(ls -A "$ZT" | grep -c '^\.zip-'):$(names "$ZT/game.port")" "1:143:0:keep.txt D 4;" "a TERM while it writes: exit 143, its temporary file gone, the archive as it was"
+else
+    echo "  skipped: the zip stand-in (no python3)"
+fi
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

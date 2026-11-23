@@ -7,27 +7,40 @@
 #
 # Targets: json (themes), expr (layout themes' expressions and colours), zip (.zip ROMs), romicon (a DS ROM's banner,
 # from a .nds and a .zip), cardfiles (systems.conf, settings.conf, favourites, play stats, bananad.conf), layout (a
-# layout theme: the menu drawn from it, used, at both panel sizes). The seeds
-# are made from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between runs.
-# A crash stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is
-# fuzzed, ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
+# layout theme: the menu drawn from it, used, at both panel sizes), ndsrom (the DS Pokémon companion's ROM reader: a
+# made-up game's cartridge image the input changes, its sprites and its cache on the card; or the input as the image),
+# gamecomp (a game companion's definition, index.tsv, the game's ROM and its memory: matched, every page read), gbarom
+# (a GBA Pokémon ROM as the GBA companion reads it: its profile, its tables, the DS pages' data), text (a text file in
+# the reader: decoded, wrapped). The seeds are made
+# from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between runs. A crash
+# stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is fuzzed,
+# ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOT=$(cd "$HERE/.." && pwd)
 OUT=${OUT:-$HERE/fuzz/out}
 SECONDS_EACH=${FUZZ_SECONDS:-60}
 CXX=${FUZZ_CXX:-clang++}
-TARGETS="json expr zip romicon cardfiles layout"
-# the targets' assets and systems list (cardfiles, layout)
+TARGETS="json expr zip romicon cardfiles layout ndsrom gamecomp gbarom text"
+# the targets' assets and systems list (cardfiles, layout), the companions' system maps (gamecomp)
 export BANANA_FUZZ_ASSETS="$HERE/assets/rnds" BANANA_FUZZ_SYSTEMS="$ROOT/system/rootfs/etc/banana/systems.conf"
+export BANANA_FUZZ_SYSTEMS_DIR="$ROOT/system/rootfs/usr/share/banana/companions/systems"
 mkdir -p "$OUT/obj"
 
 # ---- build: the menu's sources but main.cpp, once, then each target against them ----
 SAN="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
 # (-Isrc as the Makefile's UI_FLAGS: the sources include "nds/logic.h" and the like from src/; without it nothing built)
-FLAGS="-std=c++17 -O1 -g $SAN -I$HERE/src $(pkg-config --cflags freetype2 libdrm zlib)"
-LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread"
+# (-I rcheevos and its rhash objects, as the Makefile's RC_*: achievements.cpp includes rc_hash.h; without them the
+# build stopped there)
+RC=$HERE/third_party/rcheevos
+FLAGS="-std=c++17 -O1 -g $SAN -I$HERE/src -I$RC/include $(pkg-config --cflags freetype2 libdrm zlib)"
+LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread -ldl"
 OBJS=""
+for s in "$RC"/src/rhash/*.c "$RC/src/rc_compat.c"; do	# (upstream C: built with clang, its warnings off)
+    o=$OUT/obj/rc_$(basename "$s").o
+    [ "$o" -nt "$s" ] || ${FUZZ_CC:-clang} -O1 -g $SAN -fsanitize=fuzzer-no-link -I"$RC/include" -w -c "$s" -o "$o"
+    OBJS="$OBJS $o"
+done
 for s in $(sed -n 's/^SRC +*= //p' "$HERE/Makefile") fuzz/stb.cpp; do	# (stb's code is in main.cpp)
     [ "$s" = src/main.cpp ] && continue
     o=$OUT/obj/$(echo "$s" | tr / _).o
@@ -89,13 +102,56 @@ PY
         done > "$d/card"
         printf 'nds/Peel Quest.nds\n%sfavorites\n%snds/Peel Quest.nds\t3\t200\t1700000000\n%sbattery_shutdown_percent = 3\n' "$sep" "$sep" "$sep" >> "$d/card"
         ;;
+    ndsrom)
+        # each game the target makes (the first byte, 0-9; 10: the rest is the image), read once and through its cache
+        for g in 0 1 2 3 4 5 6 7 8 9; do printf "\\$(printf %o "$g")\\000" > "$d/game-$g"; printf "\\$(printf %o "$g")\\001" > "$d/game-$g-cache"; done
+        ;;
+    gbarom)
+        # a header for each of the codes the target writes (the first byte), and a pokeemerald-expansion build's
+        python3 -I - "$d" <<'PY'
+import sys
+for i in range(10):
+    open('%s/code-%d.gba' % (sys.argv[1], i), 'wb').write(bytes([i]) + bytes(0x3ff))
+open('%s/expansion.gba' % sys.argv[1], 'wb').write(bytes(0x10) + bytes(0xf0) + b'RHHEXP' + bytes(0x2fa))
+PY
+        ;;
+    gamecomp)
+        # every definition of the image's, with a memory, a ROM whose header is the definition's game, its index line
+        python3 -I - "$d" "$ROOT"/system/rootfs/usr/share/banana/companions/*.json "$ROOT"/system/rootfs/usr/share/banana/companions/*/*.json <<'PY'
+import json, os, sys
+out, sep = sys.argv[1], b'\xff\xfe\xfd\xfc'
+mem = bytes((i * 37 + (i >> 8)) & 0xff for i in range(4096)).replace(b'\xee', b'\xef')
+for p in sys.argv[2:]:
+    try:
+        text = open(p, 'rb').read()
+        m = json.loads(text).get('match', {}) or {}
+    except (OSError, ValueError, AttributeError):
+        continue
+    rom = bytearray(0x400)
+    rom[0xa0:0xac] = str(m.get('title12', ''))[:12].encode('latin-1', 'replace').ljust(12, b'\0')
+    code = m.get('code', m.get('codes', ['']))
+    rom[0xac:0xb0] = str(code[0] if isinstance(code, list) and code else code)[:4].encode('latin-1', 'replace').ljust(4, b'\0')
+    index = 'game.json\t%s\t%s\t\t0\t\n' % (rom[0xac:0xb0].rstrip(b'\0').decode('latin-1'), rom[0xa0:0xac].rstrip(b'\0').decode('latin-1'))
+    name = os.path.basename(os.path.dirname(p)) + '-' + os.path.basename(p)
+    open(os.path.join(out, name), 'wb').write(text + sep + mem + sep + bytes(rom) + sep + index.encode())
+PY
+        ;;
+    text)
+        # a cut byte and a width byte, then a text: the repo's documents, a translation, and the encodings decode() reads
+        for f in "$ROOT/README.md" "$ROOT/docs/ARCHITECTURE.md" "$HERE/assets/lang/zh-cn.tsv"; do
+            [ -f "$f" ] && { printf '\000\100'; head -c 65536 "$f"; } > "$d/$(basename "$f")"
+        done
+        printf '\001\040\377\376a\000\r\000\n\000\055\116\074\330\114\337' > "$d/utf16"
+        printf '\000\060caf\351 \223quoted\224\r\n\tTab\033[1mbold\033[0m\f\344\270' > "$d/legacy"
+        ;;
     esac
 }
 
-# the themes' own words (keys, element types, hook names) as a libFuzzer dictionary: mutations that splice them in keep
-# a theme a theme, where random bytes mostly break the JSON before the engine sees it
+# the themes' and the companions' own words (keys, element types, hook names) as a libFuzzer dictionary: mutations that
+# splice them in keep a theme a theme, where random bytes mostly break the JSON before the engine sees it
 dict() {
-    python3 -I - "$OUT/dict" "$ROOT"/docs/themes/*.json "$ROOT"/system/rootfs/usr/share/banana/themes/*.json <<'PY'
+    python3 -I - "$OUT/dict" "$ROOT"/docs/themes/*.json "$ROOT"/system/rootfs/usr/share/banana/themes/*.json \
+        "$ROOT"/system/rootfs/usr/share/banana/companions/*.json <<'PY'
 import re, sys
 words = set()
 for p in sys.argv[2:]:
@@ -128,7 +184,10 @@ for t in $TARGETS; do
     seeds "$t"
     mkdir -p "$OUT/corpus-$t"
     echo "== $t ($SECONDS_EACH s)"
-    case $t in json|expr|layout) D=-dict="$OUT/dict" ;; *) D= ;; esac
+    case $t in json|expr|layout|gamecomp) D=-dict="$OUT/dict" ;; *) D= ;; esac
+    # (ndsrom's seeds are two bytes: without a length to grow into, libFuzzer kept its inputs at a few bytes for minutes)
+    [ "$t" = ndsrom ] && D="-max_len=16384 -len_control=0"
+    [ "$t" = gbarom ] && D="-max_len=65536"
     "$OUT/fuzz-$t" $D -max_total_time="$SECONDS_EACH" -timeout=${FUZZ_TIMEOUT:-10} -rss_limit_mb=2048 \
         -artifact_prefix="$OUT/crash-$t-" -print_final_stats=1 "$OUT/corpus-$t" "$OUT/seeds-$t" > "$OUT/$t.log" 2>&1 ||
         { echo "FAIL $t: $(grep -m1 -E 'ERROR|runtime error|deadly signal|timeout' "$OUT/$t.log")"; ls "$OUT"/crash-$t-* 2>/dev/null

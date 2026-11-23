@@ -631,6 +631,10 @@ namespace banana
 			add(SS, "gamepad", "Second screen", "What the other screen shows while a game plays. A Commodore 64 or ZX Spectrum game also gets a touch keyboard there: put the game on the top screen.",
 				menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
 			items.back().hints = { "Achievements and tiles to save, load, open the menu, fast-forward and quit (by touch on the bottom screen).", "The other screen stays dark." };
+			// (#75: a light menu, and a panel beside the game that doesn't light the room)
+			add(SS, "picture", "Game panel theme", "The game panel's colours.",
+				menu, "retroarch_panel_theme", { "As the menu", "Dark" }, { "theme", "dark" });
+			items.back().hints = { "The menu's theme.", "Dark whatever the menu's theme is: less light beside the game." };
 			add(SS, "picture", "Game panel when idle", "What the game panel does when you leave it alone.",
 				menu, "bottom_idle_mode", { "Dims", "Turns off", "Stays on" }, { "dim", "off", "on" });
 			items.back().hints = { "It dims. A touch or a button lights it again.", "It turns off. A touch or a button lights it again.", "It stays on." };
@@ -666,6 +670,16 @@ namespace banana
 			add(PS, "picture", "Integer scaling", "Whether the picture is a whole multiple of the game's size.",
 				"/data/retroarch/retroarch.cfg", "video_scale_integer", { "Off", "On" }, { "false", "true" });
 			items.back().hints = { "The picture as large as the screen takes.", "Sharp pixels at a whole multiple, black around it." };
+			// (#314: Gambatte's own core options, in its file as RetroArch's Core Options writes them and BananaFront reads
+			// them - which has no menu for them. The file's keys and values: gambatte-libretro's libretro_core_options.h.
+			// A value from RetroArch's menu that isn't a choice here (custom, always) is shown as it is and kept, load())
+			const char* GO = "/data/retroarch/config/Gambatte/Gambatte.opt";
+			add(PS, "picture", "Game Boy colours", "The colours Game Boy games are drawn in, in the Gambatte emulator.",
+				GO, "gambatte_gb_colorization", { "Grey", "Green", "Game Boy Color's", "Super Game Boy's", "Auto" }, { "disabled", "internal", "GBC", "SGB", "auto" });
+			items.back().hints = { "Four shades of grey.", "The first Game Boy's green screen (or the Internal Palette chosen in RetroArch's Core Options).", "The colours a Game Boy Color gives the game.", "The colours a Super Game Boy gives the game.", "The most colourful of the game's own palettes." };
+			add(PS, "picture", "GBC colour correction", "Whether Game Boy Color games get the colours of its screen, in the Gambatte emulator.",
+				GO, "gambatte_gbc_color_correction", { "On", "Off" }, { "GBC only", "disabled" });
+			items.back().hints = { "Softer colours, as a Game Boy Color's screen showed them.", "The game's own colours: brighter and stronger." };
 		}
 		// the Emulators page (Other systems > Emulators): a row once some system has two cores to choose from
 		{
@@ -749,6 +763,10 @@ namespace banana
 		}
 		add(S, "gear", "Updates", "New versions of Banana: checking, installing, and going back.", "", "sys_updates", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games: fetching them, and where they come from.", "", "sys_boxart", {}, {}, Item::PAGE);
+		// the account the first-time setup asks for, here too (#56: skipped there, logging in meant the whole setup again):
+		// A types its name, then its password, and the site says at once whether they work (startRaCheck)
+		add(S, "gear", "RetroAchievements account", "Your retroachievements.org account, for achievements in every emulator. Type its name, then its password: the login is checked at once.",
+			"", "ra_account", {}, {}, Item::PAGE);
 		// the Updates page (System > Updates)
 		{
 			const char* UP = "Updates";
@@ -931,10 +949,10 @@ namespace banana
 			{ "Display & sound", { "Volume", "Speaker EQ", "Top brightness", "Bottom brightness", "Theme", "Accent colour", "Shown systems", "Menu sounds", "Screen colours", "Menu look", "Text on accent" } },
 			{ "Network", { "Wi-Fi", "Network", "Bluetooth", "Home server", "File sharing" } },
 			{ "Sleep & power", { "Sleep when idle", "Closing the lid", "Dim when idle", "Power off after sleeping", "LEDs", "Waking up" } },
-			{ "System", { "Updates", "Language", "Time zone", "Box art", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
+			{ "System", { "Updates", "Language", "Time zone", "Box art", "RetroAchievements account", "Hotkeys", "About", "Credits", "First-time setup", "Reset system settings", "Reset emulator settings" } },
 			{ "SuperDrastic", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Threaded 3D", "Microphone", "Low latency (experimental)", "Hotkeys", "Reset buttons", "Reset DraStic" } },
 			{ "BananaDS", { "Shader", "3D resolution", "CPU clock", "Frame pacing", "Timing", "DS CPU speed", "Microphone", "Mic sensitivity", "Edge marking", "Fog", "Low latency (experimental)", "Hotkeys", "Reset BananaDS" } },
-			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling" } },
+			{ "Picture & sound", { "Shader", "Screen border", "VSync", "Audio latency", "Integer scaling", "Game Boy colours", "GBC colour correction" } },
 			{ "Menu look", { "Clock", "Battery", "DS cartridges", "Motion", "Boot animation" } },
 		};
 		auto place = [&](const std::string& section, const std::string& name)
@@ -1137,6 +1155,7 @@ namespace banana
 		if (achLoader) achLoader->stop();	// (the Achievements page's threads end after what they are doing)
 		achLoader.reset();
 		achTex.clear();
+		rd.reset();	// (the reader's lines)
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1219,6 +1238,13 @@ namespace banana
 				if (system("mkdir -p /data/retroarch && cp -n /etc/banana/retroarch.cfg /data/retroarch/ 2>/dev/null") != 0) {}
 			}
 			setConfValue(it.file, it.key, "\"" + v + "\"");	// RetroArch quotes its values
+		}
+		else if (it.file.size() > 4 && it.file.compare(it.file.size() - 4, 4, ".opt") == 0)
+		{
+			// a RetroArch core's options (config/<core>/<core>.opt, quoted as RetroArch writes them): its folder is made
+			// at the core's first game, or now
+			if (system(("mkdir -p '" + it.file.substr(0, it.file.rfind('/')) + "'").c_str()) != 0) {}
+			setConfValue(it.file, it.key, "\"" + v + "\"");
 		}
 		else if (it.file.find("drastic.cfg") != std::string::npos)
 		{
@@ -1323,6 +1349,7 @@ namespace banana
 			if (it.key == "speaker_eq_page") { openEq(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
+			if (it.key == "ra_account") { startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", LIST, account("ra_user")); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
 			if (const Subpage* s = subpageFrom(it.key)) { message.clear(); openSection(s->section); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
@@ -1531,6 +1558,7 @@ namespace banana
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
 		if (page == FILES) return pressFiles(k);
+		if (page == TEXT) return pressText(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
 		if (page == SERVERS) return pressServers(k);
@@ -1719,6 +1747,7 @@ namespace banana
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
 		if (page == FILES) return touchFiles(cx, cy);
+		if (page == TEXT) return touchText(cx, cy);
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (askButtons): No, Yes
@@ -2423,6 +2452,9 @@ namespace banana
 		static const char* const PG[] = { "Emulator", "Shader", "Threaded 3D", "Microphone", "Name", "Sort title", "Box art", "Delete" };
 		for (int r = PG_EMU; r <= PG_DELETE; r++) one(std::string("Game page > ") + PG[r], gameHelpOf(r));
 		one("Game page > Achievements", gameHelpOf(PG_ACH));
+		pgGuide = "/data/roms/nds/" + std::string(pgRom.substr(0, pgRom.rfind('.'))) + ".txt";
+		one("Game page > Guide", gameHelpOf(PG_GUIDE));
+		pgGuide.clear();
 		pgRom = rom;
 		return n;
 	}
@@ -2453,6 +2485,7 @@ namespace banana
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (page == FILES) { renderFiles(); return; }
+		if (page == TEXT) { renderText(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }
 		if (page == SERVERS) { renderServers(); return; }
@@ -2556,6 +2589,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && (it.key == "update" || it.key == "sys_updates")) v = updatesWaiting(updatesDir, runDir, version);	// (and on its page's row)
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") { v = dsName().empty() ? "Not set" : dsName(); nameValue = v != "Not set"; }
+			else if (it.kind == Item::PAGE && it.key == "ra_account") { AsNamed named(*this, !account("ra_user").empty()); v = account("ra_user").empty() ? "Not set" : fit(account("ra_user"), true, 19, 300); nameValue = !account("ra_user").empty(); }
 			else if (it.kind == Item::PAGE && (it.key == "scrape" || it.key == "sys_boxart")) v = scrapeShort();
 			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
@@ -5637,6 +5671,17 @@ namespace banana
 			else if (ach::readId(achCacheDir(), ach::romKey(path), h, id) && id && ach::readList(achCacheDir(), id, l) && !l.items.empty())
 				pgAchValue = std::to_string(l.unlocked()) + " / " + std::to_string(l.items.size());
 		}
+		// the game's guide (#203): a walkthrough or a manual beside the game, as <the game's file name>.txt or .md
+		// (Peel Quest.nds, Peel Quest.txt), first when there is one: what the page is opened for then
+		pgGuide.clear();
+		if (!path.empty() && path.find('/') != std::string::npos)
+		{
+			std::string dir = path.substr(0, path.rfind('/')), base = baseOf(path.substr(path.rfind('/') + 1));
+			struct stat st;
+			for (const char* ext : { ".txt", ".md" })
+				if (pgGuide.empty() && stat((dir + "/" + base + ext).c_str(), &st) == 0 && S_ISREG(st.st_mode)) pgGuide = dir + "/" + base + ext;
+		}
+		if (!pgGuide.empty()) pgRows.insert(pgRows.begin(), PG_GUIDE);
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
 		if (nds && !path.empty()) pgRows.push_back(PG_ACH);
@@ -5746,6 +5791,13 @@ namespace banana
 			}
 			if (k == Key::START && row == PG_DELETE) return NONE;	// (START is Done, never a delete)
 			if (k == Key::A && row == PG_ACH) { openAch(); return MOVED; }
+			if (k == Key::A && row == PG_GUIDE)
+			{
+				// (one that isn't text after all, or gone since: why, on this page)
+				std::string why = openText(pgGuide, GAME);
+				if (!why.empty()) message = why;
+				return MOVED;
+			}
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -5769,7 +5821,7 @@ namespace banana
 			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements: its page)
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH || pgRows[r] == PG_GUIDE) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements, Guide: its page)
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -5805,6 +5857,8 @@ namespace banana
 				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
 				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
 				  "game, no BIOS. A asks first; A again deletes.")
+				: row == PG_GUIDE ? (!message.empty() ? message : "A text file beside the game with its name: " + pgGuide.substr(pgGuide.rfind('/') + 1) +
+				  ". A reads it on both panels: L and R turn its pages, B comes back here, and it opens where you left it while the menu runs.")
 				: row == PG_ACH ? lang::tr("Every achievement of this game on RetroAchievements: which are unlocked (when, and softcore or hardcore) and which "
 				  "are still locked, with their points and what each asks for. A shows the list. It is read from the site with the account in "
 				  "Settings > System > First-time setup, and kept on the card for when there is no connection.")
@@ -5851,9 +5905,9 @@ namespace banana
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
 		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : "Box art"; };
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : r == PG_GUIDE ? "Guide" : "Box art"; };
 		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue : r == PG_GUIDE ? pgGuide.substr(pgGuide.rfind('/') + 1)
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
@@ -5861,7 +5915,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : row == PG_GUIDE ? "This game's guide" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5880,7 +5934,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || (pgRows[r] == PG_DELETE && pgDelArmed);
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || pgRows[r] == PG_GUIDE || (pgRows[r] == PG_DELETE && pgDelArmed);
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -5890,7 +5944,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_GUIDE ? "Read" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();

@@ -164,9 +164,17 @@ eq(O.subst("{time} {{time}} {1e3 + time}", { time: "0" }), "{0} {{time}} {1e3 + 
     const f = O.analyze(doc);
     const safe = O.apply(doc, f.filter((x) => x.category === O.SAFE)).doc;
     const look = O.apply(doc, f.filter((x) => x.category !== O.ADVICE)).doc;
-    const a = draw(doc), b = draw(safe), l = draw(look);
-    let diff = 0;
-    Object.keys(a.px).forEach((n) => [0, 1].forEach((s) => { if (!a.px[n][s].equals(b.px[n][s])) diff++; }));
+    // (the themes draw the clock: a minute that turned over between the two drawings isn't a difference, so they are
+    // drawn once more; a difference within one minute always fails, as engine.test.js does)
+    let a, b, l, diff;
+    for (let tries = 0; tries < 2; tries++) {
+      const minute = Math.floor(Date.now() / 60000);
+      a = draw(doc); b = draw(safe); l = draw(look);
+      diff = 0;
+      Object.keys(a.px).forEach((n) => [0, 1].forEach((s) => { if (!a.px[n][s].equals(b.px[n][s])) diff++; }));
+      if (!diff || Math.floor(Date.now() / 60000) === minute) break;
+      console.log("  " + name + ": the minute turned over while it was drawn, once more");
+    }
     eq([diff, b.errors], [0, a.errors], name + ": the safe fixes (" + f.filter((x) => x.category === O.SAFE).length + ") change no pixel and no error");
     eq(l.errors, a.errors, name + ": the look fixes (" + f.filter((x) => x.category === O.LOOK).length + ") keep the theme's errors");
     eq(ids(O.analyze(safe)).filter((id) => /^(inline-time-var|unused-var|settle|dead-state|noop|hidden):/.test(id) || id === "settle"), [], name + ": no safe finding is left after applying them");

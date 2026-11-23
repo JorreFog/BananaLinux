@@ -11,11 +11,15 @@ with, so the page works on its own (from file:// or any static host) and shows e
 | `banana-engine.js` | The build (generated: don't edit). |
 
 ```sh
-git clone https://github.com/emscripten-core/emsdk ~/emsdk && ~/emsdk/emsdk install latest && ~/emsdk/emsdk activate latest
+git clone https://github.com/emscripten-core/emsdk ~/emsdk && ~/emsdk/emsdk install 6.0.13 && ~/emsdk/emsdk activate 6.0.13
 source ~/emsdk/emsdk_env.sh
 sh tools/theme-studio/wasm/build.sh          # ~15 s; needs ImageMagick for the fixture's box art
 node tools/theme-studio/tests/engine.test.js  # the same pixels as ui/banana-ui, on every example theme, at both sizes
 ```
+
+Emscripten 6.0.13 is the one `banana-engine.js` is built with (its first line says which): another version writes
+other JavaScript around the wasm, so a rebuild with it changes more than the change it is for. Its zlib and FreeType
+come from Emscripten's ports (downloaded from github.com on the first build).
 
 The theme being edited is written by `engine.js` to `/theme/theme.json` in the engine's memory file system, with its
 attached files beside it at their relative paths, and loaded as `banana-ui --theme` would load it (`applyTheme`, then

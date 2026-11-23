@@ -254,7 +254,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, ACHIEVEMENTS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, ACHIEVEMENTS, TEXT } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -302,12 +302,14 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0, pgRes = 0, pgTiming = 0, pgCpu = 0;	// (pg3d, pgMic, pgRes, pgTiming, pgCpu: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE, PG_RES, PG_TIMING, PG_CPU, PG_ACH, PG_GUIDE };
 		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
 		std::string pgSystem;	// the game's system id (the Achievements row's console)
 		std::string pgAchValue;	// the Achievements row's value: "12 / 40" from the card's cache, else "Show the list"
+		// the game's guide (#203): a text file beside it with its name (<name>.txt or .md), read in the reader; "" none
+		std::string pgGuide;
 		// ---- the Achievements page (settings_achievements.cpp): a game's whole list from RetroAchievements, read-only.
 		// The loader (achievements.h) does the hashing and the network on its threads; the page draws its snapshots
 		std::shared_ptr<ach::Loader> achLoader;
@@ -735,6 +737,7 @@ namespace banana
 		void gameStatesScan();
 		void gameStatesFrame(const SPal& p);
 		bool gTouch = true;
+		bool gPanelDark = false;	// the game panel is dark under a light theme (retroarch_panel_theme): gameClose puts the theme back
 		// the panel's on-screen keyboard (a computer's game: the C64's LOAD"*",8,1 with a finger on the bottom screen).
 		// vkbd is the emulator's own keyboard (vkbd.h), made before the game started and gone after it; the Keys tile
 		// opens the pages, a tap types the key into the game
@@ -835,6 +838,20 @@ namespace banana
 		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
 		std::vector<Chip> keyboardChips();
 		std::vector<Chip> achChips(int n);	// the Achievements page's buttons: Back, and L / R Page for a list longer than the panel
+		// the reader (settings_text.cpp, #173, #203): a text file on both panels, read-only, opened by Files and by a game's
+		// page (its guide); B goes back to textBack. openText: "" when it opened, else why not (a file that isn't text).
+		// The place in each file is kept for the session in Files' own store of where each folder was (readAt)
+		struct Reader;
+		std::shared_ptr<Reader> rd;
+		Page textBack = FILES;
+		std::string openText(const std::string& path, Page back);
+		Result pressText(Key k);
+		Result textTo(int line);
+		Result touchText(float cx, float cy);
+		void renderText();
+		std::vector<Chip> textChips();
+		int readAt(const std::string& path);
+		void keepReadAt(const std::string& path, int line);
 		static constexpr int ROWS = 5;
 		static constexpr float SETUP_Y = 82, SETUP_PITCH = 66, SETUP_H = 58;	// the setup's choices on the bottom panel
 	};

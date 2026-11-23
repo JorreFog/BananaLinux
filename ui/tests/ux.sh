@@ -29,6 +29,9 @@ ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo
 # START (y 328) the same colour as above it (y 300)
 ux_mean() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 'BEGIN { printf "%dx%d+%d+%d", 100 * k, 4 * k, 270 * k, y * k }')" -format '%[fx:int(255*mean.r)] %[fx:int(255*mean.g)] %[fx:int(255*mean.b)]' info: 2>/dev/null; }
 [ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 328)" = "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 300)" ] || { echo "FAIL $size: the plate's dark band runs into START"; fail=1; }
+# ...and its foot is one shade, the accent's own low as under Settings' picked row (#164: a straight dark band lay over
+# the curved shade there, which showed behind it): yellow's c98f12 at y 340
+[ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 340)" = "201 143 18" ] || { echo "FAIL $size: the plate's foot isn't the accent's low shade: $(ux_mean "$OUT/$size-ux-row-first-bot.png" 340)"; fail=1; }
 
 # the box art's frame (Pixel): it fits the picture (owner, 0.5.0: a square frame stood taller than a DS box): a tall
 # cover's frame top is elsewhere than a wide one's, and a game without one keeps the square
@@ -230,6 +233,26 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
+# a second card that has PortMaster's entry too (#235: two PortMasters on the Ports shelf, the second one nothing took
+# away): the shelf has this card's PortMaster alone, and the second card's ports; with none on this card, the second
+# card's entry is the one
+UX2=$OUT/ux-sd2-$size; rm -rf "$UX2"; mkdir -p "$UX2/run/sd2" "$UX2/card/roms/ports"
+printf '#!/bin/bash\n' > "$UX2/card/roms/ports/PortMaster.sh"; printf '#!/bin/bash\n' > "$UX2/card/roms/ports/Cave Story.sh"
+echo "$UX2/card/roms" > "$UX2/run/sd2/roms"
+ux_run ports2 "games ports" BANANA_RUN="$UX2/run"
+ux_check ports2 'games ports: \[@sd2/Cave Story.sh\] \[PortMaster.sh\]$'
+mv "$UXP/PortMaster.sh" "$UXP/PortMaster.off"
+ux_run ports2-only "games ports" BANANA_RUN="$UX2/run"
+ux_check ports2-only 'games ports: \[@sd2/Cave Story.sh\] \[@sd2/PortMaster.sh\]$'
+mv "$UXP/PortMaster.off" "$UXP/PortMaster.sh"
+
+# the home row and a game list sound by touch as by button (#276: they were silent, Settings' rows weren't): a tap on
+# the next tile is the d-pad's scroll, on the tile under the cursor A's select, on the game A's chime; a tap that
+# changes nothing has no sound
+ux_run touchsound "home 0; touch 1 470 240; wait 600; touch 1 320 240; wait 600; touch 1 320 240; wait 600; touch 1 600 20"
+[ "$(sed -n 's/.*touch sound: //p' "$OUT/$size-touchsound.log" | tr '\n' ' ')" = "scroll select ready " ] \
+    || { echo "FAIL $size: the menu's sounds by touch: $(sed -n 's/.*touch sound: //p' "$OUT/$size-touchsound.log" | tr '\n' ' ')"; fail=1; }
+
 # System > Language (its first row) opens the list of languages (2026-11-04: a list, not left/right); down, A on the
 # languages after English (es, then fi) asks before switching, No first: A keeps English; Yes (down, A) switches (the menu
 # starts again: settings result 9, LANGUAGE)
@@ -240,9 +263,9 @@ ux_run langyes "home 0; press start; press r; press r; press r; press r; press r
 grep -q '^language = fi' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
-# System > Credits (after About, before Hotkeys: up two from the first row) opens the credits from credits.txt; with no
+# System > Credits (after About: seven down from the first row, the RetroAchievements account row among them) opens the credits from credits.txt; with no
 # names in it, no row (up two is then About, which A leaves as it is)
-ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
+ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-credits-bot.png" "$OUT/$size-ux-credits-row-bot.png")" || { echo "FAIL $size: Credits didn't open"; fail=1; }
 grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo "FAIL: credits.txt lost Majirefy's credit"; fail=1; }
 
@@ -336,3 +359,16 @@ ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png
 # English: nothing too long on the home screen, so no marquee wakes the menu
 ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
 grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
+
+# Chinese: a word's characters stand in the middle of the capitals beside them (#296: on the Latin baseline the
+# fallback font's characters sat 3 px high in a button, 5 on the Plus). The library's B button: the middle of Back's
+# two characters within 2 px (of 640x480) of the middle of the key cap beside them (3.5 before)
+ZHFX=$OUT/ux-zh-fixture-$size
+rm -rf "$ZHFX"; "$HERE/tests/fixture.sh" "$ZHFX" >/dev/null; echo "language = zh-cn" >> "$ZHFX/data/settings.conf"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$ZHFX/roms" --data "$ZHFX/data" \
+    --script "lib 0 0; wait 2400; shot ux-zh-lib" 2> "$OUT/$size-zh.log" || { echo "FAIL $size: banana-ui (Chinese) exited $?"; fail=1; }
+ux_mid() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v x=$3 'BEGIN { printf "%dx%d+%d+%d", w * k, 30 * k, x * k, 428 * k }')" +repage -threshold 78% -trim -format '%[fx:page.y+h/2]' info: 2>/dev/null; }
+zh_word=$(ux_mid "$OUT/$size-ux-zh-lib-bot.png" 46 62); zh_cap=$(ux_mid "$OUT/$size-ux-zh-lib-bot.png" 20 34)
+awk -v a="$zh_word" -v b="$zh_cap" -v k=$ux_k 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(a != "" && b != "" && d <= 2 * k) }' \
+    || { echo "FAIL $size: Chinese text isn't in the middle of its button (the word's middle at $zh_word, the key cap's at $zh_cap)"; fail=1; }

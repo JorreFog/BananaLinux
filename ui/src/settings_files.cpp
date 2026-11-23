@@ -4,7 +4,8 @@
 //   cards     the job in the background (a download, an unpacking), the cards (this one, the second SD card while it
 //             is in), the servers; START Files' settings
 //   settings  Add a server, Download options (START from the cards, B or START back)
-//   folder    a folder: A opens (a file: the actions), Y marks, X the actions, B up
+//   folder    a folder: A opens (a text file: the reader, settings_text.cpp; another file: the actions), Y marks, X
+//             the actions, B up
 //   actions   for what is marked (or the row under the cursor) and for the folder: Paste here (a server's files copied:
 //             downloaded here), Copy, Move, Rename, Delete, Unpack..., New folder, Mark all, Clear the clipboard
 //   clash     a paste whose names are taken: Keep both, Replace, Skip those
@@ -18,6 +19,7 @@
 #include "settings_draw.h"
 #include "fileops.h"
 #include "fetch/names.h"
+#include "textfile.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -569,6 +571,15 @@ namespace banana
 			{
 				const files::Entry& e = entries[row.index];
 				if (e.dir) { message.clear(); openDir(pathJoin(dir, e.name)); return MOVED; }
+				// a text file: read (#173); one that isn't text after all, its actions and why
+				if (textfile::readable(e.name) && !parts.count(e.name))
+				{
+					std::string why = ui->openText(pathJoin(dir, e.name), FILES);
+					if (why.empty()) { message.clear(); return MOVED; }
+					openActions();
+					message = why;
+					return MOVED;
+				}
 				return openActions();	// (a file: what can be done with it)
 			}
 			case A_COPY: case A_MOVE:
@@ -922,7 +933,8 @@ namespace banana
 				}
 				else t.accent = files::bytes((uint64_t)e->size) + (e->mtime > 0 ? " \xc2\xb7 " + date(e->mtime) : "");
 				std::string name = ui->fit(e->name, true, 30, 420) == e->name ? "" : e->name + ". ";
-				t.help = name + (e->dir ? "A opens it, Y marks, X: " : "Y marks, A or X: ") + "copy, move, rename, delete, unpack, a new folder. B goes up." + clipNote;
+				bool reads = !e->dir && textfile::readable(e->name);
+				t.help = name + (e->dir ? "A opens it, Y marks, X: " : reads ? "A reads it, Y marks, X: " : "Y marks, A or X: ") + "copy, move, rename, delete, unpack, a new folder. B goes up." + clipNote;
 				if (parts.count(e->name)) t.help = name + "A download is writing it: it takes its own name once it is whole." + clipNote;
 				if (!marked.empty()) t.help = plural((long long)marked.size(), "item marked", "items marked") + ": X for what to do with them." + clipNote;
 				if (pick) t.help = pickNote + name + (e->dir ? "A opens it. Y takes" : "A or Y takes") + " the folder shown (" + where(dir) + "), X makes a new one in it. B goes up; from the cards, back to the download as it was.";
@@ -1147,8 +1159,8 @@ namespace banana
 				}
 				if (cur) cs.push_back({ Key::Y, "Y", marked.count(entries[cur->index].name) ? "Unmark" : "Mark" });
 				if (!dir.empty()) cs.push_back({ Key::X, "X", "Actions" });
-				// (A on a file, or in an empty folder, opens the actions as X does)
-				a = onDir ? "Open" : !dir.empty() ? "Actions" : "";
+				// (A on a file, or in an empty folder, opens the actions as X does; on a text file, the reader)
+				a = onDir ? "Open" : cur && textfile::readable(entries[cur->index].name) && !parts.count(entries[cur->index].name) ? "Read" : !dir.empty() ? "Actions" : "";
 				break;
 			}
 			case ACTIONS:
@@ -1183,7 +1195,8 @@ namespace banana
 	bool Settings::cardsChanged()
 	{
 		if (serversCardsChanged()) return true;	// (a download's page: its card may have gone)
-		if (fm && page == KEYBOARD && entryBack == FILES) { fm->cardsLater = true; return false; }
+		// (the reader opened from Files: the same, once it is closed)
+		if (fm && ((page == KEYBOARD && entryBack == FILES) || (page == TEXT && textBack == FILES))) { fm->cardsLater = true; return false; }
 		return fm && page == FILES && fm->cardsChanged();
 	}
 
@@ -1229,6 +1242,20 @@ namespace banana
 		fm->cards = files::cards(romRoot);
 		if (start.empty() || !fm->cardOf(start)) fm->home();
 		else fm->openDir(start);
+	}
+
+	// the reader's place in a file (settings_text.cpp): its line, kept in the folders' store of where each one was
+	// (by the file's path: a folder's never is one), for as long as the menu runs
+	int Settings::readAt(const std::string& path)
+	{
+		if (!fm) return 0;
+		auto c = fm->cursor.find(path);
+		return c == fm->cursor.end() ? 0 : c->second.first;
+	}
+	void Settings::keepReadAt(const std::string& path, int line)
+	{
+		if (!fm) { fm = std::make_shared<Files>(); fm->ui = this; }
+		fm->cursor[path] = { line, 0 };
 	}
 
 	void Settings::setRemoteClip(const RemoteClip& c)

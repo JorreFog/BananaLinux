@@ -161,6 +161,64 @@ namespace banana::nds
 		return i < r.species.size() ? i : species;
 	}
 
+	// ---- Gen IV's map headers --------------------------------------------------------------------------------------
+	// an entry (24 bytes): Diamond/Pearl/Platinum {..., u16 day music @10, night music @12, wild file @14, ...,
+	// name @18 (u16 in D/P, u8 in Pt)}; HGSS {u8 wild file @0, ..., music @12/@14, name u8 @18}.
+	// Music ids are the sound archive's sequences (1000 and up), which nothing before the table has.
+	bool gen4MapHeaders(GameId id, const nitro::Bytes& arm9, size_t count, const nitro::Bytes& archive, size_t names, size_t encs, Gen4Headers& out)
+	{
+		const bool hg = isHgss(id), dp = isDp(id);
+		auto entry = [&](const uint8_t* e, int& name, int& wild) {
+			if (hg) { wild = e[0] == 0xff ? -1 : e[0]; name = e[18]; }
+			else { uint16_t w = nitro::rd16(e + 14); wild = w == 0xffff ? -1 : w; name = dp ? nitro::rd16(e + 18) : e[18]; }
+			uint16_t m1 = nitro::rd16(e + (hg ? 12 : 10)), m2 = nitro::rd16(e + (hg ? 14 : 12));
+			return m1 >= 1000 && m1 < 2000 && m2 >= 1000 && m2 < 2000 && (size_t)name < names && wild < (int)encs;
+		};
+		out = Gen4Headers{};
+		// the archive of a hack built with DSPRE's "dynamic headers" patch (its PatchToolboxDialog.cs): the table moved
+		// out of the ARM9, one 24-byte file a map (Platinum: debug/cb_edit/d_test.narc, HGSS: a/0/5/0), so the hack can
+		// add maps. It comes first: the ARM9 keeps the table the game no longer reads. Told from the file the game itself
+		// has under that name by its shape: every member 24 bytes, three in four of them a header as the game's own are
+		// (a map a hack added may have music or a name of its own making: it gets the first name and no wild Pokémon)
+		nitro::Narc hn;
+		if (!archive.empty() && hn.parse(archive) && hn.size() > 0)
+		{
+			size_t fit = 0;
+			bool sized = true;
+			for (size_t m = 0; m < hn.size() && sized; m++)
+			{
+				int nm, w;
+				sized = hn[m].n == 24;
+				fit += sized && entry(hn[m].p, nm, w);
+			}
+			if (sized && fit * 4 >= hn.size() * 3)
+			{
+				for (size_t m = 0; m < hn.size(); m++)
+				{
+					int nm, w;
+					entry(hn[m].p, nm, w);
+					out.zone.push_back({ (size_t)nm < names ? nm : 0, w < (int)encs ? w : -1 });
+					out.table.insert(out.table.end(), hn[m].p, hn[m].p + 24);
+				}
+				out.at = 0;
+				return true;
+			}
+		}
+		// the game's own: a table in the ARM9 of as many entries as fielddata/maptable/mapname.bin has names, found by
+		// its shape
+		for (size_t s = 0; count && s + 24 * count <= arm9.size(); s += 4)
+		{
+			int nm, w;
+			size_t m = 0;
+			while (m < count && entry(&arm9[s + 24 * m], nm, w)) m++;
+			if (m < count) continue;
+			out.at = s;
+			for (m = 0; m < count; m++) { entry(&arm9[s + 24 * m], nm, w); out.zone.push_back({ nm, w }); }
+			return true;
+		}
+		return false;
+	}
+
 	// ---- decoding -----------------------------------------------------------------------------------------------------
 	namespace
 	{
@@ -184,7 +242,8 @@ namespace banana::nds
 			Bytes textBuf;
 			Narc text;
 			std::vector<int> zoneWild;	// per zone its encounter file (-1 none)
-			size_t mapHeaders = SIZE_MAX;	// Gen IV: where the map header table is in the ARM9 (zones())
+			size_t mapHeaders = SIZE_MAX;	// Gen IV: where the map header table is in the ARM9 (zones())...
+			Bytes headerTable;				// ...or, when not empty, in this: a hack's table, from its archive (gen4MapHeaders)
 			std::vector<std::string> bank(int i)
 			{
 				Span s = text[(size_t)i];
@@ -673,28 +732,14 @@ namespace banana::nds
 				{
 					Bytes mn;
 					if (!rom.file("fielddata/maptable/mapname.bin", mn)) { err = "no map name table"; return false; }
-					size_t count = mn.size() / 16;
-					const bool hg = isHgss(id()), dp = isDp(id());
-					// an entry: Diamond/Pearl/Platinum {..., u16 day music @10, night music @12, wild file @14, ...,
-					// name @18 (u16 in D/P, u8 in Pt)}; HGSS {u8 wild file @0, ..., music @12/@14, name u8 @18}.
-					// Music ids are the sound archive's sequences (1000 and up), which nothing before the table has.
-					auto entry = [&](size_t b, int& name, int& wild) {
-						if (hg) { wild = arm9[b] == 0xff ? -1 : arm9[b]; name = arm9[b + 18]; }
-						else { uint16_t w = nitro::rd16(&arm9[b + 14]); wild = w == 0xffff ? -1 : w; name = dp ? nitro::rd16(&arm9[b + 18]) : arm9[b + 18]; }
-						uint16_t m1 = nitro::rd16(&arm9[b + (hg ? 12 : 10)]), m2 = nitro::rd16(&arm9[b + (hg ? 14 : 12)]);
-						return m1 >= 1000 && m1 < 2000 && m2 >= 1000 && m2 < 2000 && (size_t)name < names && wild < (int)encs;
-					};
-					size_t at = SIZE_MAX;
-					for (size_t s = 0; count && s + 24 * count <= arm9.size() && at == SIZE_MAX; s += 4)
-					{
-						int nm, w;
-						size_t m = 0;
-						while (m < count && entry(s + 24 * m, nm, w)) m++;
-						if (m == count) at = s;
-					}
-					if (at == SIZE_MAX) { err = "no map headers in the ARM9"; return false; }
-					mapHeaders = at;
-					for (size_t m = 0; m < count; m++) { int nm, w; entry(at + 24 * m, nm, w); zone.push_back({ nm, w }); }
+					// (a hack built with DSPRE's "dynamic headers" keeps them in an archive instead, #264)
+					Bytes hb;
+					if (!rom.file(isHgss(id()) ? "a/0/5/0" : "debug/cb_edit/d_test.narc", hb)) hb.clear();
+					Gen4Headers h;
+					if (!gen4MapHeaders(id(), arm9, mn.size() / 16, hb, names, encs, h)) { err = "no map headers in the ARM9"; return false; }
+					mapHeaders = h.at;
+					headerTable = std::move(h.table);
+					zone = std::move(h.zone);
 				}
 				else
 				{
@@ -1595,7 +1640,7 @@ namespace banana::nds
 		if (isB2w2(r->game.id) && !d.grottos(d.zoneWild)) return fail(d.err);
 		{
 			auto t1 = std::chrono::steady_clock::now();
-			townmap::read(*rom, arm9, d.mapHeaders, *r);	// (no town map: no Map page, the rest still works)
+			townmap::read(*rom, d.headerTable.empty() ? arm9 : d.headerTable, d.mapHeaders, *r);	// (no town map: no Map page, the rest still works)
 			if (info) info->townmapMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t1).count();
 		}
 		step(0.8f);

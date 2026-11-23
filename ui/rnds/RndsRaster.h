@@ -116,6 +116,7 @@ namespace rnds
 		std::vector<uint8_t> mData;
 		FT_Face mFace = nullptr;
 		int mUpm = 1000, mAsc = 0, mDesc = 0;
+		int mCap = 700, mWideMid = 0;	// (Banana: capitals' height; the middle of a CJK character's box above the baseline, 0: has none)
 		std::unordered_map<uint32_t, unsigned> mGlyphIndex;
 		unsigned glyphIndex(uint32_t cp);
 		Font* faceFor(uint32_t cp, unsigned& gi);	// (Banana: this font, or the fallback for a character only it has)

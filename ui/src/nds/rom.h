@@ -8,6 +8,7 @@
 // decompilations (map headers, encounter slots and their odds, trainer data, sprite scrambling), PKHeX's
 // PersonalInfo5 (Gen V personal data), Universal Pokémon Randomizer ZX's Gen5RomHandler (Gen V records).
 #include "nds/model.h"
+#include "nds/nitro.h"
 #include "nds/ram.h"
 #include <functional>
 #include <memory>
@@ -57,6 +58,19 @@ namespace banana::nds
 	// the index in RomData::species of a species' form (0: the species itself; forms the game has no data of: the
 	// species itself)
 	uint16_t speciesIndex(const RomData& rom, uint16_t species, uint8_t form);
+
+	// Gen IV's map headers (24 bytes a map: its name, its wild Pokémon's file, its events...): the table in the ARM9, or,
+	// in a hack built with DSPRE's "dynamic headers" patch, the archive it moved them to (one file a map; the hack's own
+	// maps too). arm9: the binary, unpacked; count: the game's own number of maps (mapname.bin's names); archive: the
+	// bytes of debug/cb_edit/d_test.narc (Diamond, Pearl, Platinum) or a/0/5/0 (HeartGold, SoulSilver), empty when the
+	// ROM has none; names, encs: how many location names and encounter files the ROM has. false: neither is there
+	struct Gen4Headers
+	{
+		size_t at = SIZE_MAX;					// where the table is in the ARM9, or 0 in table when that isn't empty
+		nitro::Bytes table;						// the archive's headers, one after the other (empty: the ARM9's)
+		std::vector<std::pair<int, int>> zone;	// per map: its name's index, its encounter file (-1 none)
+	};
+	bool gen4MapHeaders(GameId id, const nitro::Bytes& arm9, size_t count, const nitro::Bytes& archive, size_t names, size_t encs, Gen4Headers& out);
 
 	// the cache file's format version (bump when RomData's fields or their meaning change)
 	constexpr uint32_t ROM_CACHE_VERSION = 4;	// (4: the region maps and spots, townmap.h)

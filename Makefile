@@ -12,6 +12,7 @@
 #   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
 #   make theme-studio-desktop  the PySide6 designer's smoke test
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
+#   make help          this list (a bare `make` too)
 #
 # The first image build downloads Buildroot (below) and everything it builds: expect an hour or more.
 BUILDROOT_VERSION = 2026.02.3
@@ -19,6 +20,11 @@ BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 ROCKNIXDS_STORE ?=	# (the Store's test: a rocknixds-store checkout with BananaOS's patches)
 OUT ?= $(CURDIR)/output
 BOARDS = rgds rgds-plus universal
+
+# the comment this file starts with (a bare `make` used to take the first rule below: a Buildroot clone and no more)
+.DEFAULT_GOAL := help
+help:
+	@sed -n '/^#/!q; s/^# \{0,1\}//p' $(firstword $(MAKEFILE_LIST))
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)
@@ -50,7 +56,8 @@ test: ui
 	sh store/apps/activity/tests/sync-test.sh
 	@if [ -n "$(ROCKNIXDS_STORE)" ]; then python3 store/test-banana.py "$(ROCKNIXDS_STORE)"; else echo "store test skipped (set ROCKNIXDS_STORE to a rocknixds-store checkout)"; fi
 
-# ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan
+# ui/fuzz: themes, expressions, zips, DS ROM banners, Banana's own files on the card, the DS Pokémon companion's ROM
+# reader, the game companions' definitions and the GBA Pokémon ROM readers, under libFuzzer, ASan and UBSan
 fuzz:
 	sh ui/fuzz/run.sh
 
@@ -66,4 +73,4 @@ clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test fuzz theme-studio theme-studio-desktop clean
+.PHONY: $(BOARDS) help ui test fuzz theme-studio theme-studio-desktop clean

@@ -1,9 +1,11 @@
 #include "library.h"
+#include "pinyin_initials.h"
 #include "theme.h"
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
 #include <fstream>
@@ -528,7 +530,8 @@ namespace banana
 	std::vector<std::string> Library::roots() const
 	{
 		std::vector<std::string> r = { romRoot };
-		std::ifstream f("/run/banana/sd2/roms");
+		const char* run = getenv("BANANA_RUN");	// (the tests' stand-in for /run/banana, as Settings')
+		std::ifstream f(std::string(run ? run : "/run/banana") + "/sd2/roms");
 		std::string ln;
 		if (f && std::getline(f, ln) && !trim(ln).empty() && trim(ln) != romRoot) r.push_back(trim(ln));
 		return r;
@@ -665,8 +668,13 @@ namespace banana
 				std::vector<std::string> rels;
 				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
 				auto gl = readGamelist(dir);
+				// PortMaster is the system card's (roms/ports/PortMaster there is where every port looks for it, and the
+				// Store installs and removes it). A second card with its entry too (a card PortMaster was once put on)
+				// made a second PortMaster on the Ports shelf, which started the same one and which nothing took away (#235)
+				bool ownPortMaster = ri > 0 && def.id == "ports" && exists(folderPath(rootList[0], def.folder) + "/PortMaster.sh");
 				for (auto& rel : rels)
 				{
+					if (ownPortMaster && rel == "PortMaster.sh") continue;
 					Game g;
 					g.rel = (ri > 0 ? "@sd2/" : "") + rel; g.path = dir + "/" + rel;
 					std::string base = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);
@@ -760,10 +768,33 @@ namespace banana
 		return words;
 	}
 
+	// a Chinese name as the first letters of its pinyin (#212: "sed" finds 塞尔达, Sai Er Da, with no input method on the
+	// keyboard): each character that has one (pinyin_initials.h) becomes its letter, everything else stays, so a name
+	// with Latin in it still reads on. Empty when the name has no such character
+	static std::string pinyinInitials(const std::string& s)
+	{
+		std::string out;
+		bool any = false;
+		for (size_t i = 0; i < s.size();)
+		{
+			unsigned char c = (unsigned char)s[i];
+			if ((c & 0xf0) == 0xe0 && i + 2 < s.size() && ((unsigned char)s[i + 1] & 0xc0) == 0x80 && ((unsigned char)s[i + 2] & 0xc0) == 0x80)
+			{
+				unsigned cp = (c & 0x0fu) << 12 | ((unsigned char)s[i + 1] & 0x3fu) << 6 | ((unsigned char)s[i + 2] & 0x3fu);
+				char l = cp >= PINYIN_FIRST && cp <= PINYIN_LAST ? PINYIN_INITIALS[cp - PINYIN_FIRST] : '.';
+				if (l != '.') { out += l; any = true; i += 3; continue; }
+			}
+			out += s[i++];
+		}
+		return any ? out : std::string();
+	}
+
 	static bool searchMatch(const Game& g, const std::vector<SearchWord>& words)
 	{
 		if (words.empty()) return false;
 		std::string t = lower(g.title) + " " + lower(g.rel) + " " + lower(g.genre) + " " + g.year;
+		const std::string py = pinyinInitials(t);
+		if (!py.empty()) t += " " + py;
 		auto has = [&](const std::string& w) { return t.find(w) != std::string::npos; };
 		for (auto& w : words)
 			if (!has(w.word) && (w.genre.empty() || !std::all_of(w.genre.begin(), w.genre.end(), has))) return false;

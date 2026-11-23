@@ -1,0 +1,44 @@
+name: An idea or a request
+description: Something BananaOS could do, or do differently
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One idea per request, please, so each can be answered and closed on its own.
+        Search the [requests so far](https://github.com/JorreFog/BananaLinux/issues?q=is%3Aissue) and look at [docs/ROADMAP.md](https://github.com/JorreFog/BananaLinux/blob/main/docs/ROADMAP.md) first: a thumbs-up on a request that is already there counts.
+        BananaOS is for the Anbernic RG DS and RG DS Plus; other handhelds are outside what it sets out to do.
+  - type: textarea
+    id: need
+    attributes:
+      label: What you'd like to do, and can't today
+      description: The situation you were in, more than the feature's name. "I play with romhacks and can't tell them apart in the library" says more than "show file names".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: Where it would be in the menu or the settings, what the buttons would do. A sketch or a photo of how another system does it is welcome.
+  - type: dropdown
+    id: handheld
+    attributes:
+      label: Your handheld
+      options:
+        - RG DS
+        - RG DS Plus
+        - Both
+        - None yet
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BananaOS version you looked at
+      description: Settings › System › About. A request is sometimes already answered by a newer version.
+      placeholder: "0.5.3.6"
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do instead for now
+      description: A workaround you use, if there is one.

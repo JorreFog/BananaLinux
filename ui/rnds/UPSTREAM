@@ -9,6 +9,8 @@ menu spent CPU on it all the time. Carry them into ROCKNIXDS's patch before impo
 Also for Banana's languages (RndsRaster): a translator hook every laid-out text goes through (setTranslator; the
 layout's own pieces go through lineOf/ellipsisOf untranslated), a fallback font for characters a style's font lacks
 (setFallbackFont: a CJK pixel font at whole multiples of its pixel size), and line breaks between CJK characters.
+And the fallback's CJK characters are drawn with the middle of their box at the middle of the style's capitals, not on
+the Latin baseline, where they sat high (#296: Font's mCap and mWideMid, renderLine's fbDown).
 Banana's Russian: assets/rnds/fonts/PixelifySans-{Regular,Medium}.ttf map Cyrillic О (U+041E) and П (U+041F), which
 Pixelify Sans 1.000 lacks, to its own O and Π glyphs (cmap entries only); keep them when importing the fonts again.
 And RndsRaster's upper() capitalises Cyrillic (а-я, ѐ-џ) for the styles in capitals; RndsUI's rail letter takes А-Я.
@@ -29,3 +31,4 @@ Banana UX (0.5.1, owner): the box art on the game list's top screen without its 
 Banana (bug hunt 2026-11-04): renderLine makes no bitmap for a line over 4096x4096 px's area (a theme's numbers; it ended the
 menu on bad_alloc).
 Banana: Verbatim (RndsRaster): texts laid out on a thread while one is alive skip the translator; RndsUI's game titles use it.
+Banana UX (#164): the play plate's foot is the accent's low shade alone, as Settings' picked row (plateBox: no dark band).

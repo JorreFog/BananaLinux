@@ -199,6 +199,8 @@ The first start after the update runs the new first-time setup once, prefilled w
 
 Coming from GammaOS or ROCKNIX? The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) backs up your saves, converts them and places them in the card's folders, all in your browser. A ROCKNIX `.dsv` next to a game is used as its save the first time.
 
+Where they are on the card: since 0.5.3 every system RetroArch and BananaFront run (PlayStation and N64 too) keeps its saves in `saves/` itself, one folder for all, so Home server sync finds them; only the Game Boy Advance's are in `saves/gba` (one save for gpSP and mGBA) and the DS's in `saves/nds` (BananaDS) and `drastic/backup` (DraStic). Older per-core folders were moved there once, a copy kept in `banana/saves-legacy`.
+
 <a id="a-tour"></a>
 <img src="docs/img/readme/h-tour.png" width="100%" alt="">
 
@@ -269,7 +271,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 - Ports and PICO-8: PortMaster (from the App Store) with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
 - App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster, GBA DS (dual-screen GBA by kyannon), Bshare (LocalSend) and eReaderDS from the menu.
 - Activity: your play time, a timeline and trends, and what to play next, from a tile on the home row.
-- Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
+- Search and artwork: search names, genres or years across every system (Select; a Chinese name also by the first letters of its pinyin, "sed" for 塞尔达), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
 - Your library on a home server: sync games, box art and saves with BananaOS's own Romhost or with RomM (Settings › Network › Home server).
 - Files: copy, move, rename and delete files and folders, and make folders, on the card and the RG DS Plus's second SD card, from a tile on the home screen (it stays open while it copies; Y twice stops). It also gets games from a NAS or a computer over SMB, SFTP or FTP(S): into the folder their type says, or any folder chosen (or made) on either card, or pasted where you want them. A cut download resumes where it stopped, whatever the protocol; zip, 7z and RAR archives are unpacked (multi-volume and password-protected ones as well), and archives already on a card too. Close the lid and the download finishes before the handheld sleeps.
 - File sharing: over Wi-Fi the card is `\\<address>\banana` (log in as `banana` / `linux`). Copied games show up in the menu.
@@ -301,6 +303,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 - Make your own, or edit one of these: open the [Banana Theme Studio](https://jorrefog.github.io/BananaLinux/theme-studio/). Nothing to install, and nothing you make leaves your computer.
 - Put your theme in `banana/themes/` on the card (over file sharing, or with the card in a computer), then pick it in Settings. A file there with the same name as a built-in theme replaces it. Pick **Dark** to go straight back to the normal look.
+- The built-in themes can't be deleted: they are part of the read-only system and always stay in the list. The copies in `banana/themes/` are yours to change or delete; a deleted copy only brings back the built-in one of that name.
 - The guide: [docs/MAKE-A-THEME.md](docs/MAKE-A-THEME.md). The file format: [docs/THEMES.md](docs/THEMES.md).
 
 <a id="made-for-it"></a>
@@ -309,6 +312,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 ## Built for two screens and a lid
 
 - Suspend and resume: close the lid and the game pauses, the card is flushed and the handheld sleeps. Open it and the game carries on. Woken in a bag, it goes back to sleep. With Power off after sleeping, a long sleep on the battery saves the game and turns the handheld off; press power and you are back in it.
+- Deep sleep is that same sleep, with nothing to switch on: closing the lid, a short press of the power button, **Sleep** in the Power menu (START on the home screen, then Y) and idle minutes in the menu (10 unless changed) all suspend the handheld to RAM (`mem_sleep = deep` in `bananad.conf`, the default). Only if a suspend fails does that one sleep use a lighter kind. On the charger it stays awake with the screens off instead, so the charging light stays on. `banana/logs/sleep.log` on the card has a line for every sleep.
 - Sound without setup: the speakers or headphones switch the moment headphones are plugged in, during a game too. Bluetooth headphones and speakers work as well, with aptX, aptX HD, LDAC and FastStream. A speaker EQ (Settings › Display & sound) has a tuned profile for the RG DS Plus speakers.
 - Battery care: while asleep it checks the battery and shuts down cleanly before it runs flat. The LEDs work as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging.
 
@@ -356,6 +360,7 @@ Known issues from 0.5.0:
 - **4x resolution** heats the handheld in heavy 3D games; use 2x for long sessions.
 - **A DS game can freeze after a very long sleep** (reported after 2 hours with the lid shut): the in-game menu still works and quitting is fine. Being investigated.
 - **Charging while switched off:** it charges, but no light shows it (the lights are the system's, and it isn't running), and after such a charge the percentage can read low, or stop near 95%, until the charge finishes ([#99](https://github.com/JorreFog/BananaLinux/issues/99), [#104](https://github.com/JorreFog/BananaLinux/issues/104), [#116](https://github.com/JorreFog/BananaLinux/issues/116)).
+- **Black screens at power-on that depend on the card:** some handhelds start BananaOS from one microSD card and not from another written with the same image, or only after the card is taken out and put back ([#183](https://github.com/JorreFog/BananaLinux/issues/183), [#267](https://github.com/JorreFog/BananaLinux/issues/267), [#311](https://github.com/JorreFog/BananaLinux/issues/311)). The cause isn't known yet. What has helped in the reports: another card (not the one that came with the handheld), written again.
 - **Bluetooth headphones** were tested with a SteelSeries headset (and AirPods on an earlier beta); tell us how others do.
 
 Not available yet:
@@ -388,6 +393,8 @@ No handheld needed:
 make ui            # ui/banana-ui for this computer
 make test          # renders the menu from a test library into ui/tests/out
 ```
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the packages to install, every test suite and what it needs, and how reports, translations and pull requests get in.
 
 | Path | What |
 |---|---|

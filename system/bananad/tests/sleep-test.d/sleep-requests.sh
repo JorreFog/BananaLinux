@@ -35,3 +35,15 @@ kill $SRD; wait $SRD 2>/dev/null || true
 if sr_asleep_in 9; then ok "asleep once the download is done"; echo 0 > /run/test/lid; wake; else bad "still awake after the download (lid shut)"; echo 0 > /run/test/lid; fi
 rm -f /run/banana/transfer.pid
 stop
+
+echo "sleep-requests 3. the menu's Sleep asked for while bananad is busy (a pad just plugged in) sleeps all the same"
+# (bananad waits 0.2 s for a new input device's node, outside its poll. A SIGHUP then set the flag and the poll that
+# followed slept on for up to a minute, until the next battery look or a button: Power > Sleep did nothing, and the
+# handheld went to sleep at the next press instead)
+rm -f /run/banana/game.pid
+start
+: > /dev/input/js0; sleep 0.05
+: > /run/banana/sleep-now; kill -HUP $BD
+if sr_asleep_in 3; then ok "asleep within 3 s"; wake; else bad "no sleep: the SIGHUP that came outside the poll waits for the next event"; fi
+rm -f /dev/input/js0 /run/banana/sleep-now
+stop

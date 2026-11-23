@@ -15,26 +15,27 @@ MAME=${MAME:-/usr/bin/mame-gnw}
 # panel mode would try to take the panels from the menu), SDL's plain dummy display and no sound
 unset SDL_BANANA_PANELS SDL_BANANA_TOP SDL_GAMECONTROLLERCONFIG BANANA_TARGET_HEIGHT BANANA_SVG_MAXW
 export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
-LOCK=/run/banana/gw-meta.lock
-mkdir -p /run/banana
+RUN=${GW_META_RUN:-/run/banana} DATA=${GW_META_DATA:-/data}   # (the variables: tests)
+LOCK=$RUN/gw-meta.lock
+mkdir -p $RUN
 if ! mkdir $LOCK 2>/dev/null; then
     # one is running: it looks once more before it ends (the games copied while it drew its covers)
     : > $LOCK/again 2>/dev/null
     exit 0
 fi
-TMP=/run/banana/gw-meta.$$
+TMP=$RUN/gw-meta.$$
 trap 'rm -rf $TMP $LOCK' EXIT INT TERM
 # its log (this run's), unless started with its output somewhere already (a terminal)
 if [ ! -t 1 ]; then
-    mkdir -p /data/banana/logs/mame-gnw 2>/dev/null
-    exec > /data/banana/logs/mame-gnw/meta.log 2>&1
+    mkdir -p $DATA/banana/logs/mame-gnw 2>/dev/null
+    exec > $DATA/banana/logs/mame-gnw/meta.log 2>&1
 fi
 mkdir -p $TMP
 
 if [ $# -eq 0 ]; then
-    set -- /data/roms/gameandwatch
-    SD2=$(cat /run/banana/sd2/roms 2>/dev/null)
-    if [ -n "$SD2" ] && [ "$SD2" != /data/roms ]; then
+    set -- $DATA/roms/gameandwatch
+    SD2=$(cat $RUN/sd2/roms 2>/dev/null)
+    if [ -n "$SD2" ] && [ "$SD2" != $DATA/roms ]; then
         set -- "$@" "$SD2/gameandwatch"
     fi
 fi
@@ -74,7 +75,7 @@ fi
 
 # while a game is playing (banana-ui's /run/banana/game.pid, its process still there), wait: no CPU taken from it
 wait_idle() {
-    while pid=$(cat /run/banana/game.pid 2>/dev/null) && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; do
+    while pid=$(cat $RUN/game.pid 2>/dev/null) && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; do
         sleep 10
     done
 }
@@ -154,15 +155,24 @@ for dir in "$@"; do
         fi
     done
     # the new entries into gamelist.xml (before its closing tag; a new file if there's none), written beside it and
-    # renamed over it
+    # renamed over it. Only a whole one: every line there (awk doesn't tell a failed write) and its closing tag. On a
+    # full card the list cut short went over the whole one, and having no closing tag it was then replaced by the new
+    # entries alone at the next run: the names and the scraper's texts of every other game gone
     if [ -s $TMP/new ]; then
         if [ -f "$GL" ] && grep -q '</gameList>' "$GL"; then
+            want=$(( $(awk 'END { print NR }' "$GL") + $(awk 'END { print NR }' $TMP/new) ))
             awk -v add="$TMP/new" '/<\/gameList>/ && !done { while ((getline l < add) > 0) print l; done = 1 } { print }' "$GL" > "$GL.new"
         else
+            want=$(( $(awk 'END { print NR }' $TMP/new) + 3 ))
             { printf '<?xml version="1.0"?>\n<gameList>\n'; cat $TMP/new; printf '</gameList>\n'; } > "$GL.new"
         fi
-        mv -f "$GL.new" "$GL"
-        echo "gw-meta: $(grep -c '<game>' $TMP/new) name(s) added to $GL"
+        if [ "$(awk 'END { print NR }' "$GL.new" 2>/dev/null)" = "$want" ] && grep -q '</gameList>' "$GL.new"; then
+            mv -f "$GL.new" "$GL"
+            echo "gw-meta: $(grep -c '<game>' $TMP/new) name(s) added to $GL"
+        else
+            rm -f "$GL.new"
+            echo "gw-meta: $GL couldn't be written (the card full?): left as it is" >&2
+        fi
     fi
 done
 }

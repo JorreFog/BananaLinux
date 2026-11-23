@@ -59,7 +59,9 @@ namespace banana::nds::nitro
 		for (size_t i = 0; i < fat_.size(); i++)
 		{
 			fat_[i] = { rd32(&fat[i * 8]), rd32(&fat[i * 8 + 4]) };
-			if (fat_[i].second < fat_[i].first || fat_[i].second > size_) return fail("a file outside the ROM");
+			// (a file outside the ROM - a hack's tool left an entry it doesn't use, or the image was trimmed - is one
+			// that doesn't read, not a ROM that doesn't open: #264's Following Platinum. Kept as "none", first > second)
+			if (fat_[i].second < fat_[i].first || fat_[i].second > size_) fat_[i] = { 1, 0 };
 		}
 		// FNT: per directory (id 0xF000 + n) an 8-byte entry: its sub-table's offset and its first file's id; the
 		// sub-table lists names: a length byte (bit 7: a directory, followed by its id), 0 ends it
@@ -104,14 +106,14 @@ namespace banana::nds::nitro
 
 	bool Rom::read(int id, Bytes& out) const
 	{
-		if (id < 0 || (size_t)id >= fat_.size()) return false;
+		if (id < 0 || (size_t)id >= fat_.size() || fat_[id].second < fat_[id].first) return false;
 		out.resize(fat_[id].second - fat_[id].first);
 		return readAt(fat_[id].first, out.size(), out.data());
 	}
 
 	bool Rom::readPart(int id, uint64_t off, size_t n, uint8_t* dst) const
 	{
-		if (id < 0 || (size_t)id >= fat_.size()) return false;
+		if (id < 0 || (size_t)id >= fat_.size() || fat_[id].second < fat_[id].first) return false;
 		const uint64_t len = fat_[id].second - fat_[id].first;
 		if (off > len || n > len - off) return false;
 		return readAt(fat_[id].first + off, n, dst);
