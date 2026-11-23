@@ -1,0 +1,121 @@
+#!/bin/sh
+# Dreamcast and PSP: EasyCast (Flycast) and EasyPSP (PPSSPP), artmanul7's builds for the RG DS Plus
+# (github.com/artmanul7/easycast, github.com/artmanul7/easypsp). They aren't in the image: each is its author's own
+# release on the card, /data/banana/<id>/{current, runtime/<version>/run.py, userdata}, put there by its own installer
+# and kept up to date from its own settings. A game picked on the Dreamcast or the PSP shelf starts in it; the first
+# time, with none on the card, its installer is fetched from its latest release and run (Wi-Fi; it shows its progress
+# on both screens, checks the download's SHA-256 and that its GPU module is built for this kernel).
+#
+# While a game runs they take Panfrost out of the kernel and load Arm's own Mali driver (mali_kbase.ko, with its Vulkan
+# library), and put Panfrost back when the game ends: their run.py does both. The menu draws with Panfrost, so a run.py
+# that ended without putting it back (killed; EasyPSP's has no handler for a TERM) would leave the menu without a GPU
+# until the next boot. So run.py is not exec'ed: a TERM to this script goes to the emulator itself, whose end run.py sees as a
+# game quit, and whatever happened, Panfrost is looked for afterwards and put back, and a panel left dark is lit.
+#   run-easy easycast|easypsp <game>
+case $1 in
+easycast) N=EasyCast E=flycast ;;
+easypsp) N=EasyPSP E=PPSSPPSDL ;;
+*) echo "run-easy easycast|easypsp <game>" >&2; exit 2 ;;
+esac
+ID=$1 ROM=$2
+# (the variables: tests)
+B=${RUN_EASY_DATA:-/data/banana} RUN=${RUN_EASY_RUN:-/run/banana} MOD=${RUN_EASY_MODULES:-/sys/module}
+BL=${RUN_EASY_BACKLIGHT:-/sys/class/backlight} URL=${RUN_EASY_URL:-https://github.com/artmanul7}
+R=$B/$ID
+# the RG DS Plus only: the one handheld they are made for and tested on (the panels' names, the backlights and the
+# picture's size are its own). The image names its board (/etc/banana/board, as the updater reads it).
+BOARD=${RUN_EASY_BOARD-$(cat /etc/banana/board 2>/dev/null)}
+if [ "$BOARD" != rgds-plus ]; then
+    echo "run-easy: $N is for the RG DS Plus only (this handheld: ${BOARD:-unknown})" >&2
+    exit 1
+fi
+
+# the installed version's folder: "current", else "previous" (what the version before left, as their own tiles look)
+runtime() {
+    for f in current previous; do
+        v=$(head -n 1 "$R/$f" 2>/dev/null | tr -d ' \r')
+        case $v in ""|*/*|.*) continue ;; esac
+        [ -f "$R/runtime/$v/run.py" ] && { echo "$R/runtime/$v"; return 0; }
+    done
+    return 1
+}
+
+export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
+export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+
+if ! D=$(runtime); then
+    I=$RUN/Install-$N.sh
+    echo "run-easy: $N isn't on the card: its installer from $URL/$ID (the latest release)" >&2
+    mkdir -p "$RUN" /data/home 2>/dev/null
+    if ! curl -sSL --connect-timeout 20 -m 120 -o "$I.part" "$URL/$ID/releases/latest/download/Install-$N.sh" ||
+       ! head -n 1 "$I.part" 2>/dev/null | grep -q '^#!/bin/sh'; then
+        rm -f "$I.part"
+        echo "run-easy: the installer couldn't be fetched (no Wi-Fi?): $N not installed, $ROM not started" >&2
+        exit 1
+    fi
+    mv -f "$I.part" "$I"
+    # in a session of its own, and waited for with a quit taken: a TERM here (the menu's quit, a shutdown) ended this
+    # script alone, and the installer went on by itself, drawing over the menu that had come back and waiting for a
+    # button there
+    setsid sh "$I" &    # (it takes itself away when it is done)
+    IP=$!
+    trap 'kill -TERM -$IP 2>/dev/null; sleep 0.5; kill -KILL -$IP 2>/dev/null; rm -f "$I"; echo "run-easy: quit while $N was being installed: $ROM not started" >&2; exit 1' TERM INT HUP
+    wait $IP
+    while kill -0 $IP 2>/dev/null; do wait $IP; done
+    trap - TERM INT HUP
+    rm -f "$I"
+    D=$(runtime) || { echo "run-easy: $N wasn't installed (its log: $R/downloads/install.log)" >&2; exit 1; }
+    echo "run-easy: $N $(basename "$D") installed" >&2
+fi
+
+# Panfrost back, the Mali module out, a dark panel lit: nothing to do after a game that ended as it should
+restore() {
+    if [ -d "$MOD/mali_kbase" ]; then
+        echo "run-easy: the Mali module was still loaded after $N: taken out" >&2
+        for i in 1 2 3 4 5 6 7 8 9 10; do
+            rmmod mali_kbase 2>/dev/null
+            [ -d "$MOD/mali_kbase" ] || break
+            sleep 0.25
+        done
+    fi
+    if [ ! -d "$MOD/panfrost" ]; then
+        echo "run-easy: Panfrost wasn't loaded after $N: put back" >&2
+        modprobe panfrost || echo "run-easy: Panfrost couldn't be loaded: the menu has no GPU until a restart" >&2
+    fi
+    for p in "$BL"/*/bl_power; do
+        [ "$(cat "$p" 2>/dev/null)" = 4 ] && { echo 0 > "$p"; echo "run-easy: ${p%/bl_power} was left dark: lit" >&2; }
+    done
+    return 0
+}
+
+[ $ID = easycast ] && export EASYCAST_ASYNC_PRESENT=1    # (as its own tile)
+# in this script's own process group, which is the game's for bananad: its stop before a sleep and its going on after
+# (SIGSTOP, SIGCONT to the group) reach the emulator as they reach every other game's. (In a session of its own it
+# ran on into the suspend, with Arm's driver loaded.)
+python3 "$D/run.py" "$ROM" &
+C=$!
+emu() { pidof $E 2>/dev/null; }
+# a quit from outside. To this script alone: passed on to the emulator, so run.py sees a game that ended and puts
+# Panfrost back itself; no emulator yet (run.py still switching drivers): asked again for 5 s, then run.py itself.
+# To the whole group (bananad's, at a shutdown or a sleep's power-off): run.py and the emulator have it already, and
+# EasyPSP's run.py ends without putting Panfrost back: restore, below, does.
+# (pidof, not pkill -x: BusyBox's pkill matches the whole path the emulator was started by, and found none)
+quit() {
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do
+        kill -0 $C 2>/dev/null || return 0
+        p=$(emu) && kill -TERM $p 2>/dev/null && return 0
+        sleep 0.2
+    done
+    kill -TERM $C 2>/dev/null
+}
+trap quit TERM INT HUP
+wait $C; S=$?
+while kill -0 $C 2>/dev/null; do wait $C; S=$?; done
+trap '' TERM INT HUP
+if p=$(emu); then    # (the emulator outlived run.py: the Mali module can't go while it has the GPU)
+    kill -TERM $p 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do emu >/dev/null || break; sleep 0.2; done
+    p=$(emu) && kill -KILL $p 2>/dev/null && sleep 0.3
+fi
+restore
+exit $S

@@ -35,3 +35,8 @@ BananaNES (the NES core: a fork of libretro-fceumm by CaH4e3 and the FCEUmm / li
 Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed and
 Mupen64Plus-Next: GPL-2.0; mGBA: MPL-2.0; libretro's GLSL shaders: per shader, mostly GPL/public domain; RGUI's bitmap fonts from libretro/retroarch-assets rgui/font (CC BY 4.0; the Chinese/Japanese ones from PixelMPlus, free licence; the Korean one Galmuri, SIL OFL 1.1); Snes9x and PicoDrive: non-commercial licences), MAME 0.289 built with only its Game & Watch driver (mame-gnw: GPL-2.0+; Banana's patches to it in buildroot/patches/mame-gnw under the same licence), libudev-zero (ISC), for Files' servers libsmb2 (LGPL-2.1+), libssh2 (BSD-3-Clause), libcurl (curl) and 7-Zip's 7zz (LGPL-2.1+ with the unRAR restriction for its RAR codecs; BSD for its LZFSE, Zstandard and xxHash parts, see its DOC/License.txt), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
 (proprietary freeware by Exophase, the build ROCKNIX packages; not redistributed by this repository).
+
+Not in the image and not downloaded at build time: EasyPSP and EasyCast (github.com/artmanul7/easypsp,
+github.com/artmanul7/easycast; PPSSPP and Flycast, GPL-2.0-or-later, with Arm's Mali userspace driver under Arm's
+end-user licence and the GPL-2.0 mali_kbase kernel module). The handheld fetches their author's own release, with
+its licences and source archive, when a PSP or Dreamcast game is first started (usr/libexec/banana/run-easy).
