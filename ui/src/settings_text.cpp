@@ -1,5 +1,6 @@
-// banana-ui: the reader, a text file on both panels, read-only (#173). Files opens it on a .txt, .md, .nfo or .log (A
-// on the file). The text runs from the top panel on to the bottom one, as a book's two pages: UP and DOWN move it a line, LEFT, RIGHT, L and R the two
+// banana-ui: the reader, a text file on both panels, read-only (#173, #203). Files opens it on a .txt, .md, .nfo or .log
+// (A on the file), and a game's page on the game's guide (a text file beside it with its name). The text runs from the
+// top panel on to the bottom one, as a book's two pages: UP and DOWN move it a line, LEFT, RIGHT, L and R the two
 // panels' worth, a drag on the bottom panel as far as the finger went; B goes back where it was opened from. The
 // place in each file is kept for the session, as Files keeps a folder's (Settings::readAt).
 // textfile.h reads the bytes (UTF-8, UTF-16, Windows-1252; line ends, tabs) and wraps the lines; this file draws.

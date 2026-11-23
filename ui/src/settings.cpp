@@ -2452,6 +2452,9 @@ namespace banana
 		static const char* const PG[] = { "Emulator", "Shader", "Threaded 3D", "Microphone", "Name", "Sort title", "Box art", "Delete" };
 		for (int r = PG_EMU; r <= PG_DELETE; r++) one(std::string("Game page > ") + PG[r], gameHelpOf(r));
 		one("Game page > Achievements", gameHelpOf(PG_ACH));
+		pgGuide = "/data/roms/nds/" + std::string(pgRom.substr(0, pgRom.rfind('.'))) + ".txt";
+		one("Game page > Guide", gameHelpOf(PG_GUIDE));
+		pgGuide.clear();
 		pgRom = rom;
 		return n;
 	}
@@ -5668,6 +5671,17 @@ namespace banana
 			else if (ach::readId(achCacheDir(), ach::romKey(path), h, id) && id && ach::readList(achCacheDir(), id, l) && !l.items.empty())
 				pgAchValue = std::to_string(l.unlocked()) + " / " + std::to_string(l.items.size());
 		}
+		// the game's guide (#203): a walkthrough or a manual beside the game, as <the game's file name>.txt or .md
+		// (Peel Quest.nds, Peel Quest.txt), first when there is one: what the page is opened for then
+		pgGuide.clear();
+		if (!path.empty() && path.find('/') != std::string::npos)
+		{
+			std::string dir = path.substr(0, path.rfind('/')), base = baseOf(path.substr(path.rfind('/') + 1));
+			struct stat st;
+			for (const char* ext : { ".txt", ".md" })
+				if (pgGuide.empty() && stat((dir + "/" + base + ext).c_str(), &st) == 0 && S_ISREG(st.st_mode)) pgGuide = dir + "/" + base + ext;
+		}
+		if (!pgGuide.empty()) pgRows.insert(pgRows.begin(), PG_GUIDE);
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
 		if (nds && !path.empty()) pgRows.push_back(PG_ACH);
@@ -5777,6 +5791,13 @@ namespace banana
 			}
 			if (k == Key::START && row == PG_DELETE) return NONE;	// (START is Done, never a delete)
 			if (k == Key::A && row == PG_ACH) { openAch(); return MOVED; }
+			if (k == Key::A && row == PG_GUIDE)
+			{
+				// (one that isn't text after all, or gone since: why, on this page)
+				std::string why = openText(pgGuide, GAME);
+				if (!why.empty()) message = why;
+				return MOVED;
+			}
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -5800,7 +5821,7 @@ namespace banana
 			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements: its page)
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE || pgRows[r] == PG_ACH || pgRows[r] == PG_GUIDE) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps; Achievements, Guide: its page)
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -5836,6 +5857,8 @@ namespace banana
 				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
 				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
 				  "game, no BIOS. A asks first; A again deletes.")
+				: row == PG_GUIDE ? (!message.empty() ? message : "A text file beside the game with its name: " + pgGuide.substr(pgGuide.rfind('/') + 1) +
+				  ". A reads it on both panels: L and R turn its pages, B comes back here, and it opens where you left it while the menu runs.")
 				: row == PG_ACH ? lang::tr("Every achievement of this game on RetroAchievements: which are unlocked (when, and softcore or hardcore) and which "
 				  "are still locked, with their points and what each asks for. A shows the list. It is read from the site with the account in "
 				  "Settings > System > First-time setup, and kept on the card for when there is no connection.")
@@ -5882,9 +5905,9 @@ namespace banana
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
 		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_RES ? "3D resolution" : r == PG_MIC ? "Microphone" : r == PG_TIMING ? "Timing" : r == PG_CPU ? "DS CPU speed"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : "Box art"; };
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : r == PG_ACH ? "Achievements" : r == PG_GUIDE ? "Guide" : "Box art"; };
 		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_RES ? vres : r == PG_MIC ? vmic : r == PG_TIMING ? vtiming : r == PG_CPU ? vcpu
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : r == PG_ACH ? pgAchValue : r == PG_GUIDE ? pgGuide.substr(pgGuide.rfind('/') + 1)
 			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
 			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
@@ -5892,7 +5915,7 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_RES ? "This game's 3D resolution" : row == PG_MIC ? "This game's microphone" : row == PG_TIMING ? "This game's timing" : row == PG_CPU ? "This game's DS CPU speed" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : row == PG_ACH ? "This game's achievements" : row == PG_GUIDE ? "This game's guide" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
@@ -5911,7 +5934,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || (pgRows[r] == PG_DELETE && pgDelArmed);
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_ACH || pgRows[r] == PG_GUIDE || (pgRows[r] == PG_DELETE && pgDelArmed);
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -5921,7 +5944,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_ACH ? "Show" : row == PG_GUIDE ? "Read" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();

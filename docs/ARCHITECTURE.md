@@ -218,8 +218,9 @@ it starts without them (the page says so). The settings' pages keep their textur
 times the panel's area; the least recently used go after each frame), as the menu's engine does, and a folder's rows
 get their words only for the window on screen: a folder of any number of names doesn't fill the memory.
 
-**The reader** (#173; `src/settings_text.cpp`, the text itself `src/textfile.cpp`): A on a `.txt`, `.md` (as it is
-written), `.nfo` or `.log` in Files reads it, read-only. The text runs from the top panel on to
+**The reader** (#173, #203; `src/settings_text.cpp`, the text itself `src/textfile.cpp`): A on a `.txt`, `.md` (as it
+is written), `.nfo` or `.log` in Files reads it, read-only, and a game's page has a Guide row, first, when a text file
+with the game's name is beside it (`Peel Quest.nds`, `Peel Quest.txt` or `.md`). The text runs from the top panel on to
 the bottom one, 13 lines each; UP and DOWN move it a line, LEFT, RIGHT, L and R both panels' worth, a drag on the bottom
 panel as far as the finger went, B goes back. The first MB of a file is read (a bigger one says so at the end); UTF-8,
 UTF-16 with its mark and old guides' Windows-1252 (a byte that isn't UTF-8 is read as that) are decoded, Windows', old

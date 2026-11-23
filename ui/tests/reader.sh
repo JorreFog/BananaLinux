@@ -1,5 +1,5 @@
-# The reader (settings_text.cpp, #173), sourced by run.sh once per panel size ($size, $OUT, $HERE and $fail are its):
-# text files opened from Files on a card of their own. A guide in UTF-8 with
+# The reader (settings_text.cpp, #173, #203), sourced by run.sh once per panel size ($size, $OUT, $HERE and $fail are
+# its): text files opened from Files on a card of their own, and a game's guide from its page. A guide in UTF-8 with
 # Windows' line ends, tabs, Chinese and a line longer than the panel, moved a line, a page, by a drag on the bottom
 # panel, and opened again where it was left; an empty file; a log bigger than the reader reads (its start, and the
 # note); a .txt that is a program's bytes (not opened: its actions, and why); an old guide in Windows-1252.
@@ -52,7 +52,11 @@ rcheck "text: $T/big.log: "
 rcheck ", the first 1048576 of $(stat -c %s "$T/big.log") bytes"
 rcheck "text: $T/junk.txt isn't text"
 rcheck "files: actions for junk.txt: Copy, Move, Rename, Delete"
-for s in reader-files reader-guide reader-page reader-empty reader-legacy reader-big reader-junk; do
+# a game's guide: Banana Kart DS.txt beside its game, the first row of its page; A reads it, B comes back to the page
+printf 'Banana Kart DS\nHold R to drift.\n' > "$RD/roms/nds/Banana Kart DS.txt"
+run_rd "lib 0 0; press x; shot reader-gamepage; press a; shot reader-gameguide; press down; press b; press b"
+rcheck "text: $RD/roms/nds/Banana Kart DS.txt: 2 lines"
+for s in reader-files reader-guide reader-page reader-empty reader-legacy reader-big reader-junk reader-gamepage reader-gameguide; do
     for p in top bot; do
         f=$OUT/$size-$s-$p.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
