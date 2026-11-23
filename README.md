@@ -286,6 +286,8 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 | ZX Spectrum | Fuse |
 | PlayStation | PCSX ReARMed |
 | N64 | Mupen64Plus-Next |
+| PSP (RG DS Plus) | [EasyPSP](https://github.com/artmanul7/easypsp) by artmanul7, downloaded at the first game |
+| Dreamcast (RG DS Plus) | [EasyCast](https://github.com/artmanul7/easycast) by artmanul7, downloaded at the first game |
 
 <a id="themes"></a>
 <img src="docs/img/readme/h-themes.png" width="100%" alt="">

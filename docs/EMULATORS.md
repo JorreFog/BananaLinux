@@ -289,6 +289,26 @@ too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo)
   25-37% less CPU. EarthBound (owner's game, Plus): identical picture and sound for 3600 frames, about -5% on top of the lazy timers (the profile is from the
   stress ROM and homebrew). Details, every attempt and the exactness gates: the repo's BANANA.md and tools/stress-roms/snes/CALIBRATION.md.
 
+## PSP and Dreamcast: EasyPSP and EasyCast (RG DS Plus)
+
+PSP games (`roms/psp`: `.iso .cso .chd .pbp`) start in [EasyPSP](https://github.com/artmanul7/easypsp) (PPSSPP) and
+Dreamcast games (`roms/dreamcast`: `.chd .cdi .gdi .cue .m3u`; an original BIOS, optional, in `bios/dc`) in
+[EasyCast](https://github.com/artmanul7/easycast) (Flycast), both by artmanul7 and made for the RG DS Plus. They are not
+in the image: each is its author's release on the card (`banana/easypsp`, `banana/easycast`: `current` names the
+version in `runtime/<version>`, `userdata` holds settings, saves and logs), with Arm's Mali driver for Vulkan in it,
+which BananaOS doesn't ship. `run-easy` (the launcher of both systems) starts the game in the version on the card;
+with none there it fetches the emulator's own installer from its latest release and runs it first (Wi-Fi; about 35 MB
+for EasyCast, 50 MB for EasyPSP; the installer checks the download's SHA-256 and that its GPU module is built for the
+running kernel). Updates are the emulators' own (EasyCast: Settings > About; EasyPSP: Settings > System > EasyPSP); a
+BananaOS update with a new kernel needs a release of theirs built for it, and until then their start says so.
+
+While a game runs they unload Panfrost and load Arm's kernel driver (`mali_kbase.ko`), and swap back at the end. The
+menu draws with Panfrost, so `run-easy` makes sure of the way back: a quit from outside (the menu's, a shutdown's
+TERM) is sent to the emulator, not to the Python launcher around it (EasyPSP's would die before swapping back), and
+after every game the Mali module is taken out and Panfrost loaded if they aren't already, and a panel left dark is
+lit. On the RG DS `run-easy` starts nothing: the emulators were made and tested for the RG DS Plus only. Quit:
+Select + Menu (EasyPSP), the emulator's own menu (EasyCast). The game is on one screen, the other is dark.
+
 ## Game & Watch (MAME)
 
 Nintendo's Game & Watch through MAME's own driver (`hh_sm510`), with the user's MAME ROM zips and MAME artwork zips

@@ -333,5 +333,85 @@ fn "$L/run-bananafront" flat_gba_save
 check "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-bananafront" | cksum)" "$(sed -n '/^flat_gba_save() {/,/^}/p' "$L/run-retroarch" | cksum)" "run-bananafront's flat_gba_save is run-retroarch's"
 check "$(grep -c 'f=$(flat_gba_save "$n" ' "$L/run-retroarch" "$L/run-bananafront" | tr '\n' ' ')" "$L/run-retroarch:1 $L/run-bananafront:1 " "both launchers look there for a GBA game with no save yet"
 
+echo "run-easy: a Dreamcast or PSP game starts in EasyCast / EasyPSP on the card, and Panfrost is back afterwards"
+# run-easy itself against a made-up card, kernel module folder and backlights; python3, curl, rmmod, modprobe and the
+# emulator are stand-ins first on PATH that write what they were asked into $EZ/log
+EZ=$T/easy; mkdir -p "$EZ/bin" "$EZ/data" "$EZ/run" "$EZ/mod/panfrost" "$EZ/bl/backlight0" "$EZ/bl/backlight1"
+echo 0 > "$EZ/bl/backlight0/bl_power"; echo 0 > "$EZ/bl/backlight1/bl_power"
+cat > "$EZ/bin/python3" <<EOF2
+#!/bin/sh
+echo "python3 \$* async=\${EASYCAST_ASYNC_PRESENT:-}" >> "$EZ/log"
+[ -f "$EZ/py-does" ] && . "$EZ/py-does"
+exit \$(cat "$EZ/py-status" 2>/dev/null || echo 0)
+EOF2
+cat > "$EZ/bin/rmmod" <<EOF2
+#!/bin/sh
+echo "rmmod \$*" >> "$EZ/log"; rmdir "$EZ/mod/\$1"
+EOF2
+cat > "$EZ/bin/modprobe" <<EOF2
+#!/bin/sh
+echo "modprobe \$*" >> "$EZ/log"; mkdir "$EZ/mod/\$1"
+EOF2
+cat > "$EZ/bin/curl" <<EOF2
+#!/bin/sh
+echo "curl \$*" >> "$EZ/log"
+[ -f "$EZ/installer" ] || exit 6
+while [ \$# -gt 1 ]; do [ "\$1" = -o ] && cp "$EZ/installer" "\$2"; shift; done
+EOF2
+chmod +x "$EZ/bin/"*
+easy() { PATH="$EZ/bin:$PATH" RUN_EASY_DATA="$EZ/data" RUN_EASY_RUN="$EZ/run" RUN_EASY_MODULES="$EZ/mod" RUN_EASY_BACKLIGHT="$EZ/bl" \
+    RUN_EASY_BOARD="${EZBOARD-rgds-plus}" RUN_EASY_URL=https://example.invalid sh "$L/run-easy" "$@" 2>"$EZ/err"; echo $?; }
+ezlog() { tr '\n' '|' < "$EZ/log" 2>/dev/null; : > "$EZ/log"; }
+: > "$EZ/log"
+check "$(easy nothing /g.chd)" "2" "a name that is neither: refused"
+check "$(EZBOARD=rgds easy easycast /g.chd) [$(ezlog)]" "1 []" "on the RG DS: not started, nothing fetched (the RG DS Plus only)"
+check "$(EZBOARD= easy easypsp /g.iso) [$(ezlog)]" "1 []" "a handheld U-Boot didn't name: neither"
+# installed: current's version, else previous'
+mkdir -p "$EZ/data/easycast/runtime/0.2.8" "$EZ/data/easycast/runtime/0.2.7"
+: > "$EZ/data/easycast/runtime/0.2.8/run.py"; : > "$EZ/data/easycast/runtime/0.2.7/run.py"
+echo 0.2.8 > "$EZ/data/easycast/current"; echo 0.2.7 > "$EZ/data/easycast/previous"
+check "$(easy easycast "/roms/dreamcast/A Game (USA).chd") [$(ezlog)]" "0 [python3 $EZ/data/easycast/runtime/0.2.8/run.py /roms/dreamcast/A Game (USA).chd async=1|]" "EasyCast: its current version's run.py with the game, and its tile's EASYCAST_ASYNC_PRESENT"
+rm "$EZ/data/easycast/runtime/0.2.8/run.py"
+check "$(easy easycast /g.chd) [$(ezlog)]" "0 [python3 $EZ/data/easycast/runtime/0.2.7/run.py /g.chd async=1|]" "current's version gone: the previous one"
+echo ../../x > "$EZ/data/easycast/current"; mkdir -p "$EZ/data/x"; : > "$EZ/data/x/run.py"
+check "$(easy easycast /g.chd) [$(ezlog)]" "0 [python3 $EZ/data/easycast/runtime/0.2.7/run.py /g.chd async=1|]" "a current that names a path: not followed"
+echo 7 > "$EZ/py-status"
+check "$(easy easycast /g.chd)" "7" "the emulator's exit status is run-easy's"; : > "$EZ/log"; rm "$EZ/py-status"
+# the drivers afterwards
+echo "rmdir '$EZ/mod/panfrost'; mkdir '$EZ/mod/mali_kbase'; echo 4 > '$EZ/bl/backlight0/bl_power'" > "$EZ/py-does"
+check "$(easy easycast /g.chd) [$(ezlog)] $(ls "$EZ/mod") $(cat "$EZ/bl/backlight0/bl_power")$(cat "$EZ/bl/backlight1/bl_power")" \
+    "0 [python3 $EZ/data/easycast/runtime/0.2.7/run.py /g.chd async=1|rmmod mali_kbase|modprobe panfrost|] panfrost 00" \
+    "a run.py that ended with the Mali module in and a panel dark: the module out, Panfrost back, the panel lit"
+rm "$EZ/py-does"
+check "$(easy easycast /g.chd) [$(ezlog)]" "0 [python3 $EZ/data/easycast/runtime/0.2.7/run.py /g.chd async=1|]" "a game that ended as it should: no module touched"
+# a TERM (the menu's quit, a shutdown) goes to the emulator, not to run.py: run.py lives to put Panfrost back
+cp "$(command -v sleep)" "$EZ/bin/PPSSPPSDL"
+mkdir -p "$EZ/data/easypsp/runtime/0.0.1"; : > "$EZ/data/easypsp/runtime/0.0.1/run.py"; echo 0.0.1 > "$EZ/data/easypsp/current"
+echo "rmdir '$EZ/mod/panfrost'; mkdir '$EZ/mod/mali_kbase'; '$EZ/bin/PPSSPPSDL' 30; echo \"emulator ended \$?\" >> '$EZ/log'; rmdir '$EZ/mod/mali_kbase'; mkdir '$EZ/mod/panfrost'" > "$EZ/py-does"
+( PATH="$EZ/bin:$PATH" RUN_EASY_DATA="$EZ/data" RUN_EASY_RUN="$EZ/run" RUN_EASY_MODULES="$EZ/mod" RUN_EASY_BACKLIGHT="$EZ/bl" \
+    RUN_EASY_BOARD=rgds-plus sh "$L/run-easy" easypsp /g.iso 2>"$EZ/err" & echo $! > "$EZ/pid"; wait )  &
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do [ -d "$EZ/mod/mali_kbase" ] && break; sleep 0.1; done
+t0=$(date +%s); kill -TERM "$(cat "$EZ/pid")"; wait
+check "$([ $(( $(date +%s) - t0 )) -lt 10 ] && echo soon) [$(ezlog)] $(ls "$EZ/mod")" \
+    "soon [python3 $EZ/data/easypsp/runtime/0.0.1/run.py /g.iso async=|emulator ended 143|] panfrost" \
+    "EasyPSP, a TERM while the game runs: the emulator ends, run.py goes on and puts Panfrost back itself"
+rm "$EZ/py-does"
+# not on the card: its installer from the latest release, run, then the game
+rm -rf "$EZ/data/easypsp"
+check "$(easy easypsp /g.iso) [$(ezlog | sed 's/curl .* -o [^ ]* /curl /')] $(ls "$EZ/run" | wc -l | tr -d ' ')" \
+    "1 [curl https://example.invalid/easypsp/releases/latest/download/Install-EasyPSP.sh|] 0" "not installed and no network: not started, nothing left in /run"
+printf '<html>Not Found</html>\n' > "$EZ/installer"
+check "$(easy easypsp /g.iso) $(ls "$EZ/run" | wc -l | tr -d ' ')" "1 0" "a page instead of the installer: not run"; : > "$EZ/log"
+printf '#!/bin/sh\necho "installer ran" >> "%s/log"\n' "$EZ" > "$EZ/installer"
+check "$(easy easypsp /g.iso) $(ls "$EZ/run" | wc -l | tr -d ' ')" "1 0" "an installer that installed nothing: no game started"; : > "$EZ/log"
+printf '#!/bin/sh\necho "installer ran" >> "%s/log"\nmkdir -p "%s/data/easypsp/runtime/0.0.1"; : > "%s/data/easypsp/runtime/0.0.1/run.py"; echo 0.0.1 > "%s/data/easypsp/current"\n' "$EZ" "$EZ" "$EZ" "$EZ" > "$EZ/installer"
+check "$(easy easypsp /g.iso) [$(ezlog | sed 's/curl .* -o [^ ]* /curl /')] $(ls "$EZ/run" | wc -l | tr -d ' ')" \
+    "0 [curl https://example.invalid/easypsp/releases/latest/download/Install-EasyPSP.sh|installer ran|python3 $EZ/data/easypsp/runtime/0.0.1/run.py /g.iso async=|] 0" \
+    "not installed: the installer fetched and run, then the game in what it installed"
+# the shelf
+SC=$R/system/rootfs/etc/banana/systems.conf
+sysrun() { sed -n "/^\[$1\]/,/^\[/{s/^run = //p}" "$SC"; }
+check "$(sysrun psp) / $(sysrun dreamcast)" "/usr/libexec/banana/run-easy easypsp %ROM% / /usr/libexec/banana/run-easy easycast %ROM%" "systems.conf: the PSP's games to EasyPSP, the Dreamcast's to EasyCast"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
