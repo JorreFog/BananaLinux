@@ -9,17 +9,18 @@
 # from a .nds and a .zip), cardfiles (systems.conf, settings.conf, favourites, play stats, bananad.conf), layout (a
 # layout theme: the menu drawn from it, used, at both panel sizes), ndsrom (the DS Pokémon companion's ROM reader: a
 # made-up game's cartridge image the input changes, its sprites and its cache on the card; or the input as the image),
-# gamecomp (a game companion's definition, index.tsv, the game's ROM and its memory: matched, every page read). The
-# seeds are made from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between
-# runs. A crash stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is
-# fuzzed, ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
+# gamecomp (a game companion's definition, index.tsv, the game's ROM and its memory: matched, every page read), gbarom
+# (a GBA Pokémon ROM as the GBA companion reads it: its profile, its tables, the DS pages' data). The seeds are made
+# from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between runs. A crash
+# stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is fuzzed,
+# ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOT=$(cd "$HERE/.." && pwd)
 OUT=${OUT:-$HERE/fuzz/out}
 SECONDS_EACH=${FUZZ_SECONDS:-60}
 CXX=${FUZZ_CXX:-clang++}
-TARGETS="json expr zip romicon cardfiles layout ndsrom gamecomp"
+TARGETS="json expr zip romicon cardfiles layout ndsrom gamecomp gbarom"
 # the targets' assets and systems list (cardfiles, layout), the companions' system maps (gamecomp)
 export BANANA_FUZZ_ASSETS="$HERE/assets/rnds" BANANA_FUZZ_SYSTEMS="$ROOT/system/rootfs/etc/banana/systems.conf"
 export BANANA_FUZZ_SYSTEMS_DIR="$ROOT/system/rootfs/usr/share/banana/companions/systems"
@@ -104,6 +105,15 @@ PY
         # each game the target makes (the first byte, 0-9; 10: the rest is the image), read once and through its cache
         for g in 0 1 2 3 4 5 6 7 8 9; do printf "\\$(printf %o "$g")\\000" > "$d/game-$g"; printf "\\$(printf %o "$g")\\001" > "$d/game-$g-cache"; done
         ;;
+    gbarom)
+        # a header for each of the codes the target writes (the first byte), and a pokeemerald-expansion build's
+        python3 -I - "$d" <<'PY'
+import sys
+for i in range(10):
+    open('%s/code-%d.gba' % (sys.argv[1], i), 'wb').write(bytes([i]) + bytes(0x3ff))
+open('%s/expansion.gba' % sys.argv[1], 'wb').write(bytes(0x10) + bytes(0xf0) + b'RHHEXP' + bytes(0x2fa))
+PY
+        ;;
     gamecomp)
         # every definition of the image's, with a memory, a ROM whose header is the definition's game, its index line
         python3 -I - "$d" "$ROOT"/system/rootfs/usr/share/banana/companions/*.json "$ROOT"/system/rootfs/usr/share/banana/companions/*/*.json <<'PY'
@@ -168,6 +178,7 @@ for t in $TARGETS; do
     case $t in json|expr|layout|gamecomp) D=-dict="$OUT/dict" ;; *) D= ;; esac
     # (ndsrom's seeds are two bytes: without a length to grow into, libFuzzer kept its inputs at a few bytes for minutes)
     [ "$t" = ndsrom ] && D="-max_len=16384 -len_control=0"
+    [ "$t" = gbarom ] && D="-max_len=65536"
     "$OUT/fuzz-$t" $D -max_total_time="$SECONDS_EACH" -timeout=${FUZZ_TIMEOUT:-10} -rss_limit_mb=2048 \
         -artifact_prefix="$OUT/crash-$t-" -print_final_stats=1 "$OUT/corpus-$t" "$OUT/seeds-$t" > "$OUT/$t.log" 2>&1 ||
         { echo "FAIL $t: $(grep -m1 -E 'ERROR|runtime error|deadly signal|timeout' "$OUT/$t.log")"; ls "$OUT"/crash-$t-* 2>/dev/null
