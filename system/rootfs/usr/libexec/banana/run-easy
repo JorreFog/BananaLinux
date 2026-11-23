@@ -23,8 +23,8 @@ B=${RUN_EASY_DATA:-/data/banana} RUN=${RUN_EASY_RUN:-/run/banana} MOD=${RUN_EASY
 BL=${RUN_EASY_BACKLIGHT:-/sys/class/backlight} URL=${RUN_EASY_URL:-https://github.com/artmanul7}
 R=$B/$ID
 # the RG DS Plus only: the one handheld they are made for and tested on (the panels' names, the backlights and the
-# picture's size are its own). U-Boot names the board.
-BOARD=${RUN_EASY_BOARD-$(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' /proc/cmdline 2>/dev/null)}
+# picture's size are its own). The image names its board (/etc/banana/board, as the updater reads it).
+BOARD=${RUN_EASY_BOARD-$(cat /etc/banana/board 2>/dev/null)}
 if [ "$BOARD" != rgds-plus ]; then
     echo "run-easy: $N is for the RG DS Plus only (this handheld: ${BOARD:-unknown})" >&2
     exit 1
