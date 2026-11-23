@@ -2,7 +2,7 @@
 # the clock from the network once Wi-Fi is up (usr/libexec/banana/wifi)
 CONFIG_NTPD=y
 # /etc/sysctl.d/banana.conf at boot (rcS)
-CONFIG_SYSCTL=y
+CONFIG_BB_SYSCTL=y
 # PortMaster (its menu checks for running processes with pgrep -f) and port scripts
 CONFIG_PGREP=y
 CONFIG_PKILL=y
