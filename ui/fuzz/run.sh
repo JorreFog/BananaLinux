@@ -10,7 +10,8 @@
 # layout theme: the menu drawn from it, used, at both panel sizes), ndsrom (the DS Pokémon companion's ROM reader: a
 # made-up game's cartridge image the input changes, its sprites and its cache on the card; or the input as the image),
 # gamecomp (a game companion's definition, index.tsv, the game's ROM and its memory: matched, every page read), gbarom
-# (a GBA Pokémon ROM as the GBA companion reads it: its profile, its tables, the DS pages' data). The seeds are made
+# (a GBA Pokémon ROM as the GBA companion reads it: its profile, its tables, the DS pages' data), text (a text file in
+# the reader: decoded, wrapped). The seeds are made
 # from the repo's own files; each target's corpus grows in $OUT/corpus-<target> and is kept between runs. A crash
 # stops that target, leaves its input at $OUT/crash-<target>-* and fails the run. Before each target is fuzzed,
 # ui/fuzz/regressions/<target>/ (inputs that crashed or hung it once, now fixed) are run once each.
@@ -20,7 +21,7 @@ ROOT=$(cd "$HERE/.." && pwd)
 OUT=${OUT:-$HERE/fuzz/out}
 SECONDS_EACH=${FUZZ_SECONDS:-60}
 CXX=${FUZZ_CXX:-clang++}
-TARGETS="json expr zip romicon cardfiles layout ndsrom gamecomp gbarom"
+TARGETS="json expr zip romicon cardfiles layout ndsrom gamecomp gbarom text"
 # the targets' assets and systems list (cardfiles, layout), the companions' system maps (gamecomp)
 export BANANA_FUZZ_ASSETS="$HERE/assets/rnds" BANANA_FUZZ_SYSTEMS="$ROOT/system/rootfs/etc/banana/systems.conf"
 export BANANA_FUZZ_SYSTEMS_DIR="$ROOT/system/rootfs/usr/share/banana/companions/systems"
@@ -134,6 +135,14 @@ for p in sys.argv[2:]:
     name = os.path.basename(os.path.dirname(p)) + '-' + os.path.basename(p)
     open(os.path.join(out, name), 'wb').write(text + sep + mem + sep + bytes(rom) + sep + index.encode())
 PY
+        ;;
+    text)
+        # a cut byte and a width byte, then a text: the repo's documents, a translation, and the encodings decode() reads
+        for f in "$ROOT/README.md" "$ROOT/docs/ARCHITECTURE.md" "$HERE/assets/lang/zh-cn.tsv"; do
+            [ -f "$f" ] && { printf '\000\100'; head -c 65536 "$f"; } > "$d/$(basename "$f")"
+        done
+        printf '\001\040\377\376a\000\r\000\n\000\055\116\074\330\114\337' > "$d/utf16"
+        printf '\000\060caf\351 \223quoted\224\r\n\tTab\033[1mbold\033[0m\f\344\270' > "$d/legacy"
         ;;
     esac
 }
