@@ -362,7 +362,7 @@ PC=$T/portcards; SP=$PC/sys/roms/ports; CP=$PC/sd2/roms/ports
 mkdir -p "$PC/run/sd2" "$SP/PortMaster" "$SP/own" "$CP/PortMaster" "$CP/game"
 echo system > "$SP/PortMaster/which"; echo second > "$CP/PortMaster/which"; : > "$SP/Own.sh"; : > "$CP/Game.sh"
 { sed -n '1,/^unset BANANA_PORT_NS$/p' "$L/run-port" | sed -e "s|^P=/data/roms/ports\$|P=$SP|" -e "s|/run/banana/sd2/roms|$PC/run/sd2/roms|" -e "s|/run/banana/port-pm|$PC/run/port-pm|"
-  echo 'echo "$1 $(cat $P/PortMaster/which 2>/dev/null): $(ls $P | tr "\n" " ")"'; } > "$PC/run-port"; chmod +x "$PC/run-port"
+  echo 'echo "$1 $(cat $P/PortMaster/which 2>/dev/null): $(LC_ALL=C ls $P | tr "\n" " ")"'; } > "$PC/run-port"; chmod +x "$PC/run-port"
 check "$(grep -c "$PC" "$PC/run-port")" "3" "(the test's copy of run-port has the made-up cards' three paths)"
 port() { sh "$PC/run-port" "$1" 2>&1 | tail -n 1; }
 check "$(port "$CP/Game.sh")" "$CP/Game.sh system: Own.sh PortMaster own " "no second card named in /run: as before"
@@ -370,7 +370,7 @@ echo "$PC/sd2/roms" > "$PC/run/sd2/roms"
 check "$(port "$SP/Own.sh")" "$SP/Own.sh system: Own.sh PortMaster own " "a port on this card: as before"
 if [ "$(id -u)" = 0 ] && unshare -m true 2>/dev/null; then
     check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a port on the second card: its script and folder at /roms/ports, this card's PortMaster"
-    check "$(ls "$SP" | tr '\n' ' ')$(cat "$CP/PortMaster/which")" "Own.sh PortMaster own second" "...for the port alone: both cards as they were afterwards"
+    check "$(LC_ALL=C ls "$SP" | tr '\n' ' ')$(cat "$CP/PortMaster/which")" "Own.sh PortMaster own second" "...for the port alone: both cards as they were afterwards"
     rm -rf "$CP/PortMaster"
     check "$(port "$CP/Game.sh")" "$SP/Game.sh system: Game.sh PortMaster game " "a second card without PortMaster: this card's"
     check "$(ls -A "$CP/PortMaster" | wc -l | tr -d ' ')" "0" "...and nothing of it written to the second card"
