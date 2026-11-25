@@ -1,0 +1,26 @@
+--- a/bananads/src/alsa.cpp
++++ b/bananads/src/alsa.cpp
+@@ -104,4 +104,6 @@
+     std::vector<int16_t> buf(chunk * 2);
+     int16_t last[2] = {0, 0};
++    int held_frames = 0;
++    const int hold_limit = 48000 * 40 / 1000;  // keep bridging short gaps for up to 40 ms
+     int since_check = 0;
+     float gain = 1.f;
+@@ -259,4 +261,5 @@
+             last[0] = buf[(got - 1) * 2];
+             last[1] = buf[(got - 1) * 2 + 1];
++            held_frames = 0;
+         }
+         // ALSA's writei blocks until there is room, which is what paces this loop. Short of samples, hold the
+@@ -299,6 +302,8 @@
+             }
+         }
+-        // muted (fast-forward): faded over ~5 ms each way, so neither end clicks
+-        const float target = a->mute.load(std::memory_order_relaxed) || refill ? 0.f : 1.f;
++        // Long gaps (menu, state load) and fast-forward fade only the game layer, over ~5 ms.
++        const bool out_of_samples = held_frames >= hold_limit;
++        held_frames = std::min(hold_limit, held_frames + n - got);
++        const float target = a->mute.load(std::memory_order_relaxed) || refill || out_of_samples ? 0.f : 1.f;
+         if (gain != target || target == 0.f)
+             for (int i = 0; i < n; i++) {
