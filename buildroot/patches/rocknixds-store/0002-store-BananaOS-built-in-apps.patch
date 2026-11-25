@@ -16,8 +16,8 @@ system's). The file is read as banana-ui reads it (case and spaces aside,
 "#" after the spaces). A system without the app's folder has it neither
 installed nor installable. The Store's own tile and its Apps shelf
 (rocknixdsstore, storeapps) are never a builtin. The toast and the done
-box say the tile is on the menu's home screen (an app from the Store is on
-the Apps shelf there, a built-in one has a tile of its own).
+box tell the user where to look: built-in apps are on the home row,
+downloaded apps are in Apps, and PortMaster is in Ports.
 ---
  store/device/rocknixds-store | 74 ++++++++++++++++++++++++++++++++++++
  store/src/main.c             |  6 +--
@@ -146,7 +146,7 @@ index 7762d17..483fb7c 100644
  #define STORE_NAME "Store"
  #define OS_NAME "BananaOS"
 -#define WHERE_TILE "on the menu's Apps shelf"
-+#define WHERE_TILE "on the menu's home screen"
++#define WHERE_TILE "on the home row, in Apps, or in Ports"
  #define AUTO_CHECK "Open the Store again to look for updates: START looks now."
  #else
  #define STORE_NAME "ROCKNIXDS Store"
