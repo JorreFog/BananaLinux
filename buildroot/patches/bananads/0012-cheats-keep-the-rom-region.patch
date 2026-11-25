@@ -1,0 +1,77 @@
+diff --git a/bananads/src/cheats.cpp b/bananads/src/cheats.cpp
+--- a/bananads/src/cheats.cpp
++++ b/bananads/src/cheats.cpp
+@@ -9,5 +9,7 @@
+ #include <cstdio>
+ #include <fstream>
++#include <iterator>
+ #include <map>
++#include <string_view>
+ #include "Platform.h"
+
+@@ -76,9 +78,48 @@
+ }
+
+-// RetroArch's file for the game: the same name, else the same name without regions (the USA's first, then Europe's)
++// The recognized region tags used in libretro's DS filenames, including combined tags such as (USA, Europe).
++static uint32_t regions(std::string_view name) {
++    static constexpr std::string_view keys[] = {
++        "USA", "Europe", "Japan", "Korea", "Germany", "France", "Spain", "Italy",
++        "Netherlands", "China", "Australia", "Taiwan", "Canada", "Brazil", "World", "Asia", "Russia"
++    };
++    for (size_t start = name.find_first_of("(["); start != name.npos; start = name.find_first_of("([", start)) {
++        if (name[start] == '[') {
++            const size_t end = name.find(']', start + 1);
++            if (end == name.npos) break;
++            start = end + 1;
++            continue;
++        }
++        size_t end = name.find(')', ++start);
++        if (end == name.npos) break;
++        auto tag = name.substr(start, end - start);
++        uint32_t mask = 0;
++        while (!tag.empty()) {
++            size_t comma = tag.find(',');
++            auto key = tag.substr(0, comma);
++            key = key.substr(0, key.find_last_not_of(' ') + 1);
++            const auto found = std::find(std::begin(keys), std::end(keys), key);
++            if (found == std::end(keys)) {
++                mask = 0;
++                break;
++            }
++            mask |= uint32_t{1} << (found - std::begin(keys));
++            if (comma == tag.npos) break;
++            tag.remove_prefix(comma + 1);
++            tag.remove_prefix(std::min(tag.find_first_not_of(' '), tag.size()));
++            if (tag.empty()) mask = 0;
++        }
++        if (mask) return mask;
++        start = end + 1;
++    }
++    return 0;
++}
++
++// Prefer an exact filename, then require matching regions if the ROM has a recognized region tag.
+ static std::string find_cht(const std::string& game, const std::string& ra_dir) {
+     DIR* d = opendir(ra_dir.c_str());
+     if (!d) return "";
+     const std::string want = plain(game);
++    const uint32_t wanted_regions = regions(game);
+     std::string best;
+     int best_rank = 99;
+@@ -89,6 +130,13 @@
+         int rank = 99;
+         if (base == game) rank = 0;
+-        else if (plain(base) == want)
+-            rank = base.find("(USA") != std::string::npos ? 1 : base.find("(Europe") != std::string::npos ? 2 : 3;
++        else if (plain(base) == want) {
++            if (wanted_regions) {
++                const uint32_t have = regions(base);
++                if ((have & wanted_regions) != wanted_regions) continue;
++                rank = have == wanted_regions ? 1 : 2;
++            } else {
++                rank = base.find("(USA") != std::string::npos ? 1 : base.find("(Europe") != std::string::npos ? 2 : 3;
++            }
++        }
+         if (rank < best_rank || (rank == best_rank && f < best)) {
+             best_rank = rank;
