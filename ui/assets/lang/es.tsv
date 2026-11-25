@@ -1165,6 +1165,7 @@ settings		Use	Usar
 settings		{shader} (not on the card)	{shader} (no está en la tarjeta)
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi apagado: actívalo primero en Ajustes > Red.
 settings		Box art: the game's name in libretro's collection	Carátula: el nombre del juego en la colección de libretro
+settings		ROM file	Archivo ROM
 settings		This game's name	Nombre de este juego
 settings		This game's sort title	Título de orden de este juego
 settings		As in Settings ({setting})	Como en Ajustes ({setting})

@@ -713,6 +713,7 @@ settings		{shader} (not on the card)	{shader} (нет на карте)
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi выключен: сначала включите его в «Настройки > Сеть».
 settings		Box art: the game's name in libretro's collection	Обложка: название игры в базе libretro
 settings		The game couldn't be deleted: the card may be read-only.	Не удалось удалить игру: возможно, карта памяти доступна только для чтения.
+settings		ROM file	Файл ROM
 settings		This game's name	Название этой игры
 settings		This game's sort title	Сортировочное имя игры
 settings		As in Settings ({setting})	Как в настройках ({setting})

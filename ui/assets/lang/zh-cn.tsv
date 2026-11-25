@@ -1197,6 +1197,7 @@ settings		Use	使用
 settings		{shader} (not on the card)	{shader}（卡上不存在）
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi 已关闭：请先在「设置 > 网络」中打开它。
 settings		Box art: the game's name in libretro's collection	封面：游戏在 libretro 图库中的名称
+settings		ROM file	ROM 文件
 settings		This game's name	本游戏的名称
 settings		This game's sort title	本游戏的排序标题
 settings		As in Settings ({setting})	与设置相同（{setting}）

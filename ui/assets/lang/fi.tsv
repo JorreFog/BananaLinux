@@ -718,6 +718,7 @@ settings		{shader} (not on the card)	{shader} (ei kortilla)
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi on pois: kytke se ensin päälle kohdassa Asetukset > Verkko.
 settings		Box art: the game's name in libretro's collection	Kansikuvat: pelin nimi libretron kokoelmassa
 settings		The game couldn't be deleted: the card may be read-only.	Peliä ei voitu poistaa: kortti voi olla vain luku -tilassa.
+settings		ROM file	ROM-tiedosto
 settings		This game's name	Tämän pelin nimi
 settings		This game's sort title	Tämän pelin lajittelunimi
 settings		As in Settings ({setting})	Kuten asetuksissa ({setting})
