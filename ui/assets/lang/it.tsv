@@ -717,6 +717,7 @@ settings		{shader} (not on the card)	{shader} (non presente sulla scheda)
 settings		Wi-Fi is off: switch it on in Settings > Network first.	Il Wi-Fi è spento: accendilo prima in Impostazioni > Rete.
 settings		Box art: the game's name in libretro's collection	Copertina: il nome del gioco nella raccolta di libretro
 settings		The game couldn't be deleted: the card may be read-only.	Impossibile eliminare il gioco: la scheda potrebbe essere in sola lettura.
+settings		ROM file	File ROM
 settings		This game's name	Nome di questo gioco
 settings		This game's sort title	Titolo di ordinamento di questo gioco
 settings		As in Settings ({setting})	Come nelle Impostazioni ({setting})

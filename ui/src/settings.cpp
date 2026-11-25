@@ -5865,8 +5865,15 @@ namespace banana
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
 		{ AsNamed named(*this); textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true); }
 		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
-		std::string help = gameHelpOf(row);
-		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
+		float helpTop = HELP_TOP;
+		if (!pgPath.empty())
+		{
+			std::string file = lang::tr("ROM file") + "  " + baseOf(pgRom);
+			AsNamed named(*this);
+			textFit(file, false, 17, HELP_X, HELP_TOP, HELP_W, p.muted, true);
+			helpTop += 30;
+		}
+		helpText(gameHelpOf(row), helpTop, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);

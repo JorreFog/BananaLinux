@@ -5,7 +5,7 @@ answers as files, eReaderDS as a made-up release. Checks where everything lands 
 a remove leaves the shelf's folder and a port of the same name alone, and that the apps that come with the system
 (Döda Kvarter, Poketool) are listed as installed, a remove takes their tile off the menu
 (/data/store/hidden-systems) and an install puts it back.
-  python3 store/test-banana.py <rocknixds-store, with BananaOS's patches>"""
+  python3 store/test-banana.py <rocknixds-store, with BananaOS's patches> [compiled BananaOS Store UI]"""
 import hashlib
 import io
 import json
@@ -16,11 +16,12 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def main(cli):
+def main(cli, ui=None):
     t = tempfile.mkdtemp(prefix="banana-store-")
     try:
         root = os.path.join(t, "root")
@@ -74,6 +75,14 @@ def main(cli):
             print(("ok   " if ok else "FAIL ") + what)
             if not ok:
                 fails.append(what)
+
+        if ui is not None:
+            binary = Path(ui).read_bytes()
+            location = b"on the home row, in Apps, or in Ports"
+            check(b"Installed: its tile is " + location in binary,
+                  "the installed toast lists the home row, Apps, and Ports")
+            check(b"Its tile is " + location + b" when you leave the Store." in binary,
+                  "the install completion lists the home row, Apps, and Ports")
 
         o = run("refresh")
         check(o.strip().endswith("OK"), "refresh with the catalog that came with the system: " + o.strip())
@@ -323,4 +332,4 @@ def main(cli):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1]))
+    sys.exit(main(*sys.argv[1:]))

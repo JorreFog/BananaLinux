@@ -235,6 +235,34 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press a; wait 3000; wait 1" 2>> "$tlog" || { echo "FAIL $size: banana-ui (titles 2) exited $?"; fail=1; }
     grep -q "launch 0: .*Yellow Planet" "$tlog" || { echo "FAIL $size: the sort title didn't put it first: $(grep launch "$tlog")"; fail=1; }
     rm -f "$T"
+    # #137: distinguish variants whose gamelist gives them the same label.
+    RF=$OUT/rom-filenames
+    mkdir -p "$RF/roms/nds" "$RF/data"
+    : > "$RF/roms/nds/Example (USA) [Original].nds"
+    : > "$RF/roms/nds/Example (USA) [Translation].nds"
+    cat > "$RF/roms/nds/gamelist.xml" <<'EOF'
+<gameList>
+    <game><path>./Example (USA) [Original].nds</path><name>Example Quest</name></game>
+    <game><path>./Example (USA) [Translation].nds</path><name>Example Quest</name></game>
+</gameList>
+EOF
+    rlog=$OUT/$size-rom-filenames.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size "$size" --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$RF/roms" --data "$RF/data" \
+        --script "lib 0 0; press x; shot original-rom; press b; lib 0 1; press x; shot translated-rom" 2> "$rlog" \
+        || { echo "FAIL $size: banana-ui (ROM filenames) exited $?"; fail=1; }
+    # Compare the filename band on the top panel, below the shared title and above the row's help.
+    rom_width=${size%x*}
+    rom_band="${rom_width}x$((30 * rom_width / 640))+0+$((152 * rom_width / 640))"
+    for variant in original translated; do
+        convert "$OUT/$size-$variant-rom-top.png" -crop "$rom_band" +repage "rgb:$RF/$variant.rgb" \
+            || { echo "FAIL $size: no $variant ROM filename band"; fail=1; }
+    done
+    if [ "$(grep -c 'game page title: Example Quest$' "$rlog")" -ne 2 ] ||
+        cmp -s "$RF/original.rgb" "$RF/translated.rgb"; then
+        echo "FAIL $size: ROMs with the same title are indistinguishable in game options"
+        fail=1
+    fi
     # #228: an app started from its tile on the home row (Activity: systems.conf's [activity], "[app]" in systems.cfg)
     # comes back to the home row on its tile when it quits, not to its one-entry list; a game still comes back to its
     # system's list on the game (Activity's folder is the image's /usr/share/banana/apps/activity: one in $OUT here)

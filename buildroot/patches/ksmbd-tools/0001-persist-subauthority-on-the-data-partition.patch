@@ -1,0 +1,24 @@
+Subject: [PATCH] ksmbd-tools: persist subauthority on the data partition
+
+The root image is read-only, so mountd cannot create its subauthority
+file under /etc. Keep it alongside BananaOS settings on the data
+partition so the server domain SID survives share restarts and reboots.
+
+Refs: https://github.com/JorreFog/BananaLinux/issues/252
+---
+ include/tools.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/include/tools.h b/include/tools.h
+--- a/include/tools.h
++++ b/include/tools.h
+@@ -80,5 +80,8 @@
+ #define PATH_PWDDB		SYSCONFDIR "/ksmbd/ksmbdpwd.db"
+ #define PATH_SMBCONF		SYSCONFDIR "/ksmbd/ksmbd.conf"
+-#define PATH_SUBAUTH		SYSCONFDIR "/ksmbd/ksmbd.subauth"
++#ifndef BANANA_DATA_DIR
++#define BANANA_DATA_DIR		"/data"
++#endif
++#define PATH_SUBAUTH		BANANA_DATA_DIR "/banana/ksmbd.subauth"
+ #define PATH_LOCK		RUNSTATEDIR "/ksmbd.lock"
+ #define PATH_FIFO		RUNSTATEDIR "/ksmbd.fifo"
